@@ -1,0 +1,7 @@
+This directory contains: 
+	- Common CMake files used by all platforms
+	- Common CMake utilities and extensions that are useful
+
+
+NOTE: Add FindCUDA.cmake and FindGLEW.cmake etc.
+

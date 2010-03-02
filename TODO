@@ -1,0 +1,55 @@
+Note: I broke away from Gordons code because I want to reorganize everything. I figure its easier to organize in my own repository because his will be a reference. 
+
+TODO: 
+=======
+- (DONE) Properly handle PDE boundary nodes
+- (DONE) Solve Heat equation
+- Add PARALLEL diagnostics for eigenvalue analysis, RMS, etc
+- Mercurial repository
+- Add command line options for CVT size, CVT input file, # of stencils, etc.
+- Submission scripts for ACM
+- 3D heat equation
+- Nonlinear diffusion
+- Improve and Compress Communication (non-blocking and asynchronous)
+- Visualize RBFs in 3D stereo (OpenGL/Avizo) 
+- Add Timers for benchmarking (Look at GPTL) 
+- OpenCL/Cuda implementations
+
+
+
+- (DONE) Pass stencils through GPU class. (note: sets Q\O, O, R give us idea of what nodes will be needed, but NOT their connectivity. We will need to send this once.)
+
+- (DONE) pass GPU.class properties to other CPUs
+- (DONE) Reconstruct GPU.class on CPUs using received data
+
+- (DONE) Compute Q\O (Interior) derivatives
+- (DONE) Send O to needy GPUs (bcast to all for now)
+- (DONE) Receive R
+- (DONE) Compute O derivatives
+- Verify solution
+- Non-blocking send/receive 
+
+- Compress sends (single ints can be grouped; arrays can be grouped)
+- Loop send/receive like sockets (for large amounts of information)
+- Classes inherit MPISendable (requires send and receive routines to automatically pass through communicator)
+
+- (DONE)Communicator class
+- Message structure defintion
+- Test stencil message passing
+- (DONE)GPU class use communicator to pass messages
+
+- (DONE) MPI build
+- (DONE) MPI tests (scalable tests): add_test(testname Exename arg1 arg2 ...)
+  where Exename can be arbitrary (i.e., add_test(name ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} PROCS ${MPIEXEC_PREFLAGS} EXECUTABLE  ${MPIEXEC_POSTFLAGS} ARGS")
+- (DONE) src directory for library
+- (DONE) tests directory for tests
+- cmake script to: 
+	- (DONE) Build library
+	- (DONE) Build Tests
+	- (DONE) Tar Distribution
+	- (DONE) Generate Doxygen
+	- (DONE) Run Tests
+	- Tar binaries + installers for distribution
+- Design idea: similar to a OSX framework. Idea is to first build a library and tests, then roll the library into framework and tests can bind to it independently.
+
+

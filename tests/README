@@ -1,0 +1,53 @@
+This directory contains:
+	- A collection of subdirs, each with a test for the rbf framework
+	- Each test is run independently. See each directory for details on test parameters
+
+Create a New Test from Template
+===============================
+(from RBF.framework/tests/)
+To create a new test, 
+
+1) copy the template test directory to your desired test name (e.g. "mytest"): 
+
+	$> cp -r template mytest
+
+2) Inside ./CMakelists.txt (That is: RBF.framework/tests/CMakeLists.txt), 
+   Append the name of the variable TEST_COLLECTION: 
+
+        SET (TEST_COLLECTION
+				mytest
+                template        # WORKS
+        )
+
+  Save the file and exit. 
+
+3) Modify ./mytest/CMakeLists.txt to rename the project: 
+   
+	< PROJECT (template_name)
+	---
+	> PROJECT (mytest)
+
+   Save the file and exit.
+
+4) Edit ./mytest/main.cpp to create your test source. Any additional *.cpp files
+   int ./mytest must be added to the ADD_EXECUTABLE call in ./mytest/CMakeLists.txt
+
+5) Specify command line arguments to the executable by appending to ARGV in 
+   ./mytest/CMakeLists.txt
+
+6) Specify the number of processes to execute with NUM_PROCS in 
+   ./mytest/CMakeLists.txt
+
+
+
+Multiple Tests for one Executable
+==================================
+(from RBF.framework/tests/)
+To add an additional execution/test of an executable, add additional "ADD_TEST"
+lines to the executable subdirectory CMakeLists.txt 
+(e.g. RBF.framework/tests/mytest/CMakeLists.txt): 
+
+Parallel Test Format: ADD_TEST( [TestName] [MPIExecutable] [MPINumProcFlag] [#ofProcs] [MPIOptions] [Executable] [Arg1] [Arg2] ... [ArgN])
+Serial Test Format: ADD_TEST( [TestName] [Executable] [Arg1] [Arg2] ... [ArgN])
+
+

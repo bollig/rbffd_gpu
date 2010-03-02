@@ -1,0 +1,50 @@
+project(rbfs)
+cmake_minimum_required(VERSION 2.6)
+
+set(src main.cpp gpu.cpp derivative.cpp rbf.cpp grid.cpp heat.cpp stencils.cpp contour_svd.cpp cvt.cpp)
+
+# SOME HARD-CODED PATHS
+set(GLIB /Users/erlebach/Documents/src/graphics_libs)
+#set(GLIB /home/erlebach/src/graphics_libs)
+find_library(utilities utilities PATHS ${GLIB}/utilities)
+find_library(amira amira PATHS ${GLIB}/amira)
+find_library(armadillo armadillo PATHS /Users/erlebach/Documents/src/armadillo-0.6.12)
+find_library(clapack clapack PATHS /usr/lib) 
+find_library(fftw fftw3 fftw3 PATHS /Users/erlebach/Documents/src/fftw-3.1.1/.libs)
+
+
+#add_subdirectory(utilities)
+#add_subdirectory(random)
+
+IF(APPLE)
+  #SET(ARMA_LIBS ${ARMA_LIBS} "-framework Accelerate")  # or "-framework accelerate" ?
+  find_library(accelerate NAMES Accelerate)
+  MESSAGE(STATUS "MacOS X detected. Added '-framework Accelerate' to compiler flags")
+ENDIF(APPLE)
+
+ADD_DEFINITIONS(-g)
+
+include_directories(
+#  ${GLIB}/graphics_utils
+  ${GLIB}/amira
+  ${GLIB}/utilities
+  /sw/include/
+  /Users/erlebach/Documents/src/armadillo-0.6.12/include
+  /opt/local/include   # for boost
+  #  ${GLIB}/random
+  )
+
+  # order of libraries is important in Linux. 
+  # does not matter on macOSX
+  set (libraries 
+  	${utilities}
+  	${amira}
+    ${armadillo}
+	#	${random}
+	${clapack}
+	${accelerate}
+	${fftw}
+	)
+
+add_executable(rbfs_grid ${src})
+target_link_libraries(rbfs_grid ${libraries})

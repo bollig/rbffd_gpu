@@ -1,0 +1,95 @@
+Decide whether you are a regular user or developer. Choose a set of build instructions below
+based on your decision. 
+
+[For Regular Users] 
+To make an in-source build:
+
+1) check out the RBF.framework from SVN
+2) Start build: 
+	cd RBF.framework
+	cmake .
+	make  
+
+[For Developers] 
+I usually make an out-of-source build so the CMake temp and build files do not muck with the source tree
+
+1) check out the RBF.framework from SVN 
+2) make the out of core build directory (OUTSIDE of RBF.framework):
+	mkdir <BUILD_DIR>				(e.g. mkdir rbf-build) 
+	cd <BUILD_DIR>					(e.g. cd rbf-build) 
+	cmake <PATH_TO_RBF.FRAMEWORK>	(e.g. cmake ../RBF.framework)
+	make 
+
+
+[For Users and Developers]
+
+Existing make targets: 
+
+make 						// Build library and tests
+make test					// Run ALL tests (use command "ctest" for SUBSET)
+make doc					// Run doxygen
+make package-source			// Build a source tarball for distribution
+
+
+Required software: 
+
+Armadillo v0.8.2 			(http://arma.sourceforge.net)
+FFTW 3.2.2 
+gordon_tests/utilities/libutilities.a 	(from https://svn.sc.fsu.edu/svn/collab-ge-bj/src/gordon_tests/utilities)
+OpenMPI  				(Installed by default on OSX10.6)
+
+
+Additional Notes: 
+===============
+1) To change the path for gordon_tests (i.e. the parent directory for the required utilities library),
+   modify RBF.framework/CMakeLists.txt
+
+	   Line 5:
+		SET(GLIB ~/gordon_tests)
+
+   CMake will search ${GLIB}/utilities to find libutilities.a
+
+2) To test a SUBSET of the tests in RBF.framework/tests you cannot use "make test".
+   Instead, call CTest directly (from BUILD_DIR or whatever directory you ran "make" in): 
+
+	$> ctest -R <regex> 
+   
+   where <regex> is a regular expression matched against all test names; only matches will 
+   be executed. For example (given tests "template", "mytest", "my_template_copy"): 
+
+	$> ctest -R temp
+
+   will execute tests: "template" and "my_template_copy"
+   but not: "mytest"
+
+
+3) The tests subdirectory has a few tests setup to run using MPI_EXEC. Output by default goes to 
+
+   	build/Testing/LastTest.log
+
+   To manually execute (from directory: BUILD_DIR):
+
+	cd tests/<testname>
+	make && mpiexec -np [#ofProcs] ./<testname> [options]
+
+   where the [options] are intended for the test executable. To get a list of available option
+   execute: 
+	./<testname> --help 
+
+4) For instructions on creating tests see RBF.framework/tests/README
+
+
+
+OS Specific Notes: 
+==================
+Linux
+	libarmadillo0 provided by Ubuntu 9.10 is outdated and INSUFFICIENT. 
+	Download Armadillo 0.8.2 from http://arma.sourceforge.net and install manually
+
+OSX
+	OpenMPI is installed by default on Snow Leopard (OSX 10.6)
+
+
+Windows
+	HAVENT TESTED OS YET
+

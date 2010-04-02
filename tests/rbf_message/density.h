@@ -20,7 +20,7 @@ public:
 	}
 
 	double operator()(double x, double y) {
-		#if 0
+		#if 1
 		e = (x-xc)*(x-xc)+(y-yc)*(y-yc);
 		rho = .05 + exp(-15.*e); // maxrho = 1.05
 		return rho;

@@ -27,6 +27,7 @@ private:
 	arma::colvec* sp;
 	std::vector<arma::mat> x_weights;
 	std::vector<arma::mat> y_weights;
+	std::vector<arma::mat> z_weights;
 	std::vector<arma::mat> lapl_weights;
 //	std::vector<arma::mat> xderiv_weights;
 	//std::vector<arma::mat> yderiv_weights;
@@ -67,6 +68,7 @@ public:
 
 	std::vector<arma::mat>& getXWeights() { return x_weights; }
 	std::vector<arma::mat>& getYWeights() { return y_weights; }
+	std::vector<arma::mat>& getZWeights() { return z_weights; }
 	std::vector<arma::mat>& getLaplWeights() { return lapl_weights; }
 	double computeEig();
 

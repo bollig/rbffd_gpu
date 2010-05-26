@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <Vec3.h>
+#include "parametric_patch.h"
 #include "density.h"
 
 class CVT
@@ -19,7 +20,12 @@ private:
 	// with random points
 	double major;
 	double minor;
+	double midax; // good for 3D case
 	std::vector<Vec3> bndry_pts;
+
+	ParametricPatch *outer_geom; // not quite the correct class. In reality, the 
+	ParametricPatch *geom; // not quite the correct class. In reality, the 
+	   // correct class is Geometry = vector<ParametricPatch>
 
 public:
 	CVT();
@@ -27,9 +33,8 @@ public:
 	char ch_cap ( char c );
 	bool ch_eqi ( char c1, char c2 );
 	int ch_to_digit ( char c );
-	void cvt ( int dim_num, int n, int batch, int init, int sample, int sample_num, 
-  	int it_max, int it_fixed, int *seed, double r[], int *it_num, 
-  	double *it_diff, double *energy );
+	void cvt ( int dim_num, int n, int batch, int init, int sample, int sample_num, int it_max, int it_fixed, int *seed, double r[], int *it_num, double *it_diff, double *energy );
+	void cvt3d ( int dim_num, int n, int batch, int init, int sample, int sample_num, int it_max, int it_fixed, int *seed, double r[],int *it_num, double *it_diff, double *energy );
 	double cvt_energy ( int dim_num, int n, int batch, int sample, bool initialize,
   	int sample_num, int *seed, double r[] );
 	void cvt_iterate ( int dim_num, int n, int batch, int sample, bool initialize, 
@@ -89,6 +94,11 @@ public:
 		this->major = major_;
 		this->minor = minor_;
 	}
+	void setEllipsoidAxes(double major_, double minor_, double midax_=1.) {
+		this->major = major_;
+		this->minor = minor_;
+		this->midax = midax_;
+	}
 	void setBoundaryPts(std::vector<Vec3>& bndry_pts_) {
 		this->bndry_pts = bndry_pts_;
 	}
@@ -96,6 +106,22 @@ public:
 	void rejection2d(int nb_samples, double area, double weighted_area, Density& density, std::vector<Vec3>& samples);
 	Vec3 singleRejection2d(double area, double weighted_area, Density& density);
 	double random(double a, double b=1.);
+
+	// Gordon Erlebacher: March 14, 2010
+	void ellipsoid ( int dim_num, int& n, int *seed, double r[] );
+	void ellipsoid_init ( int dim_num, int& n, int *seed, double r[] );
+	void rejection3d(int nb_samples, Density& density, std::vector<Vec3>& samples);
+	Vec3 singleRejection3d(Density& density);
+	void cvt_iterate_3d ( int dim_num, int n, int batch, int sample, bool initialize, int sample_num, int *seed, double r[], double *it_diff, double *energy );
+
+	void setGeometry(ParametricPatch* geom_) {
+		geom = geom_;
+	}
+	void setOuterGeometry(ParametricPatch* geom_) {
+		outer_geom = geom_;
+	}
+	void cvt_sample_3d ( int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[] );
+
 };
 
 #endif

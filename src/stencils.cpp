@@ -6,13 +6,14 @@ mat Stencils::computeDistMatrix2(mat& x1, mat& x2)
 {
 	int dim = x1.n_cols;
 	int nb  = x1.n_rows;
-
+        
 	mat dist(nb, nb);
 
 	for (int j=0; j < nb; j++) {
 	for (int i=0; i < nb; i++) {
-		dist(i,j) = (x1(i,0)-x2(j,0))*(x1(i,0)-x2(j,0)) + 
-		            (x1(i,1)-x2(j,1))*(x1(i,1)-x2(j,1));
+		dist(i,j) = (x1(i,0)-x2(j,0))*(x1(i,0)-x2(j,0)) +
+                            (x1(i,1)-x2(j,1))*(x1(i,1)-x2(j,1)) +
+		            (x1(i,2)-x2(j,2))*(x1(i,2)-x2(j,2));
 	}}
 
 	return dist;

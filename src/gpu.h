@@ -22,6 +22,8 @@ public: 		// Member Properties
 	double xmax;
 	double ymin;
 	double ymax;
+	double zmin;
+	double zmax;
 	double dt; 
 	
 	// 1) These are the sets of stencil centers
@@ -93,7 +95,7 @@ public: 	// Member Functions:
 	GPU(const GPU& subdomain); // Copy constructor
 
 	// Requires communicator to pass messages. This must be preconstructed comm_unit 
-	GPU(double _xmin, double _xmax, double _ymin, double _ymax, double _dt, int _comm_rank, int _comm_size); 
+	GPU(double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, double _dt, int _comm_rank, int _comm_size);
 	
 #if 0
 	// Constructor to reconstruct GPU instance based on data sent via MPI. 
@@ -114,7 +116,15 @@ public: 	// Member Functions:
 	// We could also make this polar coords, striped subdomains etcs. 
 	bool isInsideSubdomain(Vec3 pt) 
 	{
-		return (pt.x() < xmin || pt.x() > xmax || pt.y() < ymin || pt.y() > ymax);
+		// TODO : need to support xmin != xmax && zmin != zmax but ymin==ymax 
+		// 		  and other combinations
+		if (ymin == ymax) {
+			return (pt.x() < xmin || pt.x() > xmax);
+		} else if (zmin == zmax) {
+			return (pt.x() < xmin || pt.x() > xmax || pt.y() < ymin || pt.y() > ymax);
+		} else {
+			return (pt.x() < xmin || pt.x() > xmax || pt.y() < ymin || pt.y() > ymax || pt.z() < zmin || pt.z() > zmax);
+		} 
 	}
 
 	// local numbering: {Q\O, O, B}

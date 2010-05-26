@@ -26,6 +26,7 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil
 	sp = new colvec();
 	x_weights.resize(nb_rbfs);
 	y_weights.resize(nb_rbfs);
+	z_weights.resize(nb_rbfs);
 	lapl_weights.resize(nb_rbfs);
 
 	// derivative depends strongly on epsilon!
@@ -224,7 +225,7 @@ int Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
 	//mat ar(n,n);
 	// Derivative of a constant should be zero
 	// Derivative of a linear function should be constant
-	mat ar(n+3,n+3);
+	mat ar(n+4,n+4);
 
 	int st_center = -1;
 
@@ -236,7 +237,7 @@ int Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
 		}
 	}
 	if (st_center == -1) {
-		printf("inconsistency with global rbf %d\n", irbf);
+		printf("inconsistency with global rbf map (stencil should contain center: %d)\n", irbf);
 		exit(0);
 	}
 
@@ -254,16 +255,18 @@ int Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
 		ar(n, i) = 1.0;
 		ar(n+1, i) = rbf_centers[st[i]].x();
 		ar(n+2, i) = rbf_centers[st[i]].y();
+		ar(n+3, i) = rbf_centers[st[i]].z();
 		ar(i, n) = 1.0;
 		ar(i, n+1) = rbf_centers[st[i]].x();
 		ar(i, n+2) = rbf_centers[st[i]].y();
+		ar(i, n+3) = rbf_centers[st[i]].z();
 	}
-	for (int j=0; j < 3; j++) {
-	for (int i=0; i < 3; i++) {
+	for (int j=0; j < 4; j++) {
+	for (int i=0; i < 4; i++) {
 		ar(n+i, n+j) = 0.;
 	}}
 	n = n + 1; // deriv(constant) = 0
-	n = n + 2; // deriv(linear function) = constant
+	n = n + 3; // deriv(linear function) = constant
 
 	mat& U = *Up;
 	mat& V = *Vp;
@@ -301,19 +304,21 @@ int Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
 void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
 stencil, int irbf, const char* choice)
 {
-	//printf("stencil %d\n", irbf);
+	printf("Computing Weights for Stencil %d\n", irbf);
 
 	int st_center = -1;
 
 	// which stencil point is irbf
 	for (int i=0; i < stencil.size(); i++) {
+            //printf("[%d=%d]\t", i, stencil[i]);
 		if (irbf == stencil[i]) {
 			st_center = i;
+                        printf("Center is stencil element: %d\n", i);
 			break;
 		}
 	}
 	if (st_center == -1) {
-		printf("inconsistency with global rbf %d\n", irbf);
+		printf("inconsistency with global rbf map (stencil should contain center: %d)\n", irbf);
 		exit(0);
 	}
 
@@ -325,11 +330,12 @@ stencil, int irbf, const char* choice)
 
 	// estimate radius for contour-svd method
 	// distance matrix: each entry is the square of the internode distance
-	arma::mat xd(stencil.size(), 2);
+	arma::mat xd(stencil.size(), 3);
 	for (int i=0; i < stencil.size(); i++) {
 		Vec3& rc = rbf_centers[stencil[i]];
 		xd(i,0) = rc[0];
 		xd(i,1) = rc[1];
+		xd(i,2) = rc[2];
 	}
 
 	#if 0
@@ -375,6 +381,8 @@ stencil, int irbf, const char* choice)
 		x_weights[irbf] = fd_coeffs;
 	} else if (strcmp(choice, "y") == 0) {
 		y_weights[irbf] = fd_coeffs;
+	} else if (strcmp(choice, "z") == 0) {
+		z_weights[irbf] = fd_coeffs;
 	} else {
 		printf("not covered\n");
 	}
@@ -403,6 +411,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
 		Vec3& xjv = rbf_centers[st[j]];
 		bx(j) = rbf.xderiv(x0v, xjv);
 		by(j) = rbf.yderiv(x0v, xjv);
+		bz(j) = rbf.zderiv(x0v, xjv);
 		blapl(j) = rbf.lapl_deriv(x0v, xjv);
 		//printf("blapl(%d)= %f\n", j, blapl(j));
 	}
@@ -412,23 +421,35 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
 	bx(n)   = 0.0;
 	bx(n+1) = 1.;//1.0; (if =1, then sum x(i) w(i) = 1 (DO NOT KNOW WHY)
 	bx(n+2) = 0.0;
+	bx(n+3) = 0.0; 
+	
 	by(n)   = 0.0;
 	by(n+1) = 0.; // 1.0;
 	by(n+2) = 1.0;
+	by(n+3) = 0.0;
+	 
+	bz(n)   = 0.0;
+	bz(n+1) = 0.0; 
+	bz(n+2) = 0.0;
+	bz(n+3) = 1.0; 
+	
 	// laplacian of constant and linear functions is zero
 	blapl(n) = 0.0;
 	blapl(n+1) = 0.0;
 	blapl(n+2) = 0.0;
+	blapl(n+3) = 0.0;
 
 	n = n + 1; // deriv of constant is zero
-	n = n + 2; // deriv of linear function is exact
+	n = n + 3; // deriv of linear function is exact
 
 	colvec wwx(n);
 	colvec wwy(n);
+	colvec wwz(n);
 	colvec wwlapl(n);
 
 	wwx.zeros();
 	wwy.zeros();
+	wwz.zeros();
 	wwlapl.zeros();
 
 	mat& U = *Up;
@@ -439,10 +460,12 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
 	for (int i=0; i < nb_eig; i++) {
 		wwx = wwx +       dot(trans(U.col(i)),bx   )*V.col(i) / s(i); 
 		wwy = wwy +       dot(trans(U.col(i)),by   )*V.col(i) / s(i); 
+		wwy = wwz +       dot(trans(U.col(i)),bz   )*V.col(i) / s(i); 
 		wwlapl = wwlapl + dot(trans(U.col(i)),blapl)*V.col(i) / s(i); 
 	}
 	x_weights[irbf]    = wwx;
 	y_weights[irbf]    = wwy;
+	z_weights[irbf]	   = wwz; 
 	lapl_weights[irbf] = wwlapl;
 
 	#if 0
@@ -467,6 +490,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
 
 	bx.reset();
 	by.reset();
+	bz.reset();
 	blapl.reset();
 }
 //----------------------------------------------------------------------
@@ -582,6 +606,7 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
 
 	case Z:
 		//vector<mat>& weights = z_weights;
+		weights_p = &z_weights;
 		cout << "Z" << endl;
 		break;
 

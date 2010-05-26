@@ -1,6 +1,6 @@
 PROJECT (rbf_message)
 
-SET (TEST_NAME ${PROJECT_NAME})
+SET (TEST_NAME ${PROJECT_NAME}.x)
 
 ADD_EXECUTABLE (${TEST_NAME} 
 	main.cpp

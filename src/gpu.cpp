@@ -17,17 +17,17 @@ GPU::GPU(const GPU& subdomain) {
 }
 
 // Construct a new GPU object
-GPU::GPU(double _xmin, double _xmax, double _ymin, double _ymax, double _dt,
+GPU::GPU(double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, double _dt,
 		int _comm_rank, int _comm_size) :
-	xmin(_xmin), xmax(_xmax), ymin(_ymin), ymax(_ymax), dt(_dt),
+	xmin(_xmin), xmax(_xmax), ymin(_ymin), ymax(_ymax), zmin(_zmin), zmax(_zmax), dt(_dt),
 			id(_comm_rank), comm_size(_comm_size) {
 
 }
 
 int GPU::send(int my_rank, int receiver_rank) {
-	double buff[5] = { xmin, xmax, ymin, ymax, dt };
+	double buff[7] = { xmin, xmax, ymin, ymax, zmin, zmax, dt };
 
-	MPI_Send(&buff, 5, MPI::DOUBLE, receiver_rank, TAG, MPI_COMM_WORLD);
+	MPI_Send(&buff, 7, MPI::DOUBLE, receiver_rank, TAG, MPI_COMM_WORLD);
 
 	sendSTL(&Q, my_rank, receiver_rank); // All stencil centers in this CPUs QUEUE
 	sendSTL(&D, my_rank, receiver_rank); // Set of stencil centers DEPEND on nodes in R before evaluation
@@ -55,16 +55,18 @@ int GPU::send(int my_rank, int receiver_rank) {
 int GPU::receive(int my_rank, int sender_rank) {
 
 	MPI_Status stat;
-
+	
 	// Get the subdomain bounds and dt
-	double buff[5];
-	MPI_Recv(&buff, 5, MPI::DOUBLE, sender_rank, TAG, MPI_COMM_WORLD, &stat);
+	double buff[7];
+	MPI_Recv(&buff, 7, MPI::DOUBLE, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
 	xmin = buff[0];
 	xmax = buff[1];
 	ymin = buff[2];
 	ymax = buff[3];
-	dt = buff[4];
+	zmin = buff[4]; 
+	zmax = buff[5];
+	dt = buff[6];
 
 	recvSTL(&Q, my_rank, sender_rank); // All stencil centers in this CPUs QUEUE
 	recvSTL(&D, my_rank, sender_rank); // Set of stencil centers DEPEND on nodes in R before evaluation
@@ -262,7 +264,7 @@ int GPU::writeFinal(std::vector<Vec3> nodes, char* filename) {
 	for (it = global_U_G.begin(); it != global_U_G.end(); it++, i++) {
 		// TODO 3D print
 		//fout << nodes[(*it).first].x() << " " << nodes[(*it).first].y() << " " << (*it).second << endl;
-		fprintf(fdsol, "%f %f %f\n", nodes[(*it).first].x(), nodes[(*it).first].y(), (*it).second);
+		fprintf(fdsol, "%f %f %f %f\n", nodes[(*it).first].x(), nodes[(*it).first].y(), nodes[(*it).first].z(), (*it).second);
 	}
 	//fout.close();
 	fclose(fdsol);
@@ -306,8 +308,8 @@ void GPU::fillCenterSets(vector<Vec3>& rbf_centers, vector<int> boundary,
 	//
 	set<int>::iterator qit;
 
-	printf("gpu %d, xmin/max= %f, %f, ymin/max= %f, %f\n", id, xmin, xmax,
-			ymin, ymax);
+	printf("gpu %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f\n", id, xmin, xmax,
+			ymin, ymax, zmin, zmax);
 
 	// Generate sets Q and D
 	for (int i = 0; i < rbf_centers.size(); i++) {
@@ -469,20 +471,20 @@ void GPU::fillVarData(vector<Vec3>& rbf_centers) {
 
 	for (qit = QmB.begin(); qit != QmB.end(); qit++) {
 		Vec3& v = rbf_centers[*qit];
-		double s = 100 + *qit; //v.x() + 2.*v.y() + 3.*v.z();
+		double s = *qit; //v.x() + 2.*v.y() + 3.*v.z();
 		U_G.push_back(s);
 	}
 
 	for (qit = B.begin(); qit != B.end(); qit++) {
 		Vec3& v = rbf_centers[*qit];
-		double s = 100 + *qit;//v.x() + 2.*v.y() + 3.*v.z();
+		double s = *qit;//v.x() + 2.*v.y() + 3.*v.z();
 		U_G.push_back(s);
 	}
 
 	// Initial R values (these will be updated at each iteration)
 	for (qit = R.begin(); qit != R.end(); qit++) {
 		Vec3& v = rbf_centers[*qit];
-		double s = 100 + *qit;//v.x() + 2.*v.y() + 3.*v.z();
+		double s = *qit;//v.x() + 2.*v.y() + 3.*v.z();
 		U_G.push_back(s);
 	}
 }

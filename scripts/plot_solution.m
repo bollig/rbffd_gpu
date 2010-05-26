@@ -1,3 +1,5 @@
+function[] = plot_solution()
+
 % octave program to draw mesh as a series of points
 
 %file='voronoi_tmp.txt';
@@ -8,6 +10,13 @@ pts = load(file);
 efile = 'FINAL_ERROR.txt'; 
 epts = load(efile); 
 
+plot3D_data(pts, epts)
+
+end
+
+
+
+function [] = plot2D_data(pts, epts)
 
 %newplot;
 x = epts(:,1);
@@ -18,7 +27,7 @@ z = epts(:,3);
 % Borrowed from
 % http://www.mathworks.com/access/helpdesk/help/techdoc/visualize/f0-45715.html
 xlin = linspace(-1,1,1000);
-ylin = linspace(-0.5,0.5,500);
+ylin = linspace(-1,1,1000);
 
 [X,Y] = meshgrid(xlin,ylin);
 
@@ -63,4 +72,36 @@ ylabel('Pos Y');
 title('RBF Centers'); 
 vcb = colorbar('vert');
 colorbar('off');
+
+
+end
+
+function [] = plot3D_data(pts, epts)
+
+%newplot;
+x = pts(:,1);
+y = pts(:,2);
+z = pts(:,3);
+w = pts(:,4);
+
+xlin = linspace(-1,1,32);
+ylin = linspace(-1,1,32);
+zlin = linspace(-1,1,32);
+
+[X,Y,Z] = meshgrid(xlin,ylin,zlin);
+
+V = griddata3(x,y,z,w,X,Y,Z,'linear');
+
+sx = 0; 
+sy = 0; 
+sz = 0; 
+
+hold on;
+[s1] = slice(X,Y,Z,V,0,0,0);
+[s2] = slice(X,Y,Z,V,-1,-1,-1);
+set(s1,'LineStyle','none');
+set(s2,'LineStyle','none');
+hold off; 
+
+end
 

@@ -19,7 +19,7 @@ public:
 		max_rho = 1.0;
 	}
 
-	double operator()(double x, double y) {
+	double operator()(double x, double y, double z=0.) {
 		#if 0
 		e = (x-xc)*(x-xc)+(y-yc)*(y-yc);
 		rho = .05 + exp(-15.*e); // maxrho = 1.05

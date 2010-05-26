@@ -5,6 +5,7 @@
 #include <ArrayT.h>
 #include "communicator.h"
 #include "gpu.h"
+#include "exact_solution.h" 
 
 class Grid;
 class Derivative;
@@ -53,17 +54,17 @@ private:
 	int nb_rbf;
 	int nb_stencils;
 
-	// Physical domain
-	// elliptical boundary
-	double major, maji2, maji4;
-	double minor, mini2, mini4;
+	ExactSolution* exactSolution; 
+	
+	//double major, maji2, maji4;
+	//double minor, mini2, mini4;
 
 	int id; 		// Comm rank or comm id
 
 public:
-	Heat(std::vector<Vec3>* rb_centers_, int stencil_size, std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank);
+	Heat(ExactSolution* _solution, std::vector<Vec3>* rb_centers_, int stencil_size, std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank);
 	// Constructor #2:
-	Heat(GPU* subdomain_, Derivative* der_, int rank);
+	Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank);
 	Heat(Grid& grid_, Derivative& der_);
 	~Heat();
 
@@ -91,12 +92,18 @@ public:
 
 	double maxNorm();
 	double maxNorm(std::vector<double> sol);
-	double exactSolution(double x, double y, double t);
+
 	void computeDiffusion(std::vector<double>& sol);
 
+//	double exactSolution(Vec3& v, double t);
+
 	// forcing term to force an exact solution
-	// we are solving: d/dt(T) = lapl(T) + force
-	double force(double x, double y, double t);
+	// we are solving: dT/dt = lapl(T) + force(x,t)
+	// 						T (x, t) = f(x,t)
+	// 					dT/dt = lapl(T) + (df/dt - lapl(f)) = 
+	//					T(x,0) = f(x,0)
+	// so each iteration we 
+//	double force(Vec3& pt, double t);
 };
 
 #endif

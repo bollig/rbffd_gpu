@@ -752,8 +752,15 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
 rowvec ContourSVD::solver(rowvec& A, mat& B)
 // right / operator:  A * inv(B)
 {
-	mat c = solve(B, trans(A));
 
+	mat c = solve(B, trans(A));
+         if (!(c.n_cols > 0 && c.n_rows > 0)) {
+            printf("\n!!!!!!!!!!!!!!\nERROR! Linear System could not be solved! Possibly singular!\n!!!!!!!!!!!!!!\n\n");
+            cx_double dt = det(B);
+            printf("det(B)= (%f,%f)\n", real(dt), imag(dt));
+            exit(-10);
+        }
+	
 	return trans(c);
 }
 //----------------------------------------------------------------------
@@ -761,9 +768,17 @@ cx_rowvec ContourSVD::solver(cx_rowvec& A, cx_mat& B)
 // right / operator:  A * inv(B)
 {
 	cx_mat ac = htrans(A); // htrans?
+         
 	cx_mat c = solve(htrans(B), ac);
-
-	// Determinant computes as zero, although it cannot be!!
+        
+        if (!(c.n_cols > 0 && c.n_rows > 0)) {
+            printf("\n!!!!!!!!!!!!!!\nERROR! Linear System could not be solved! Possibly singular!\n!!!!!!!!!!!!!!\n\n");
+            cx_double dt = det(B);
+            printf("det(B)= (%f,%f)\n", real(dt), imag(dt));
+            exit(-10);
+        }
+	
+        // Determinant computes as zero, although it cannot be!!
 	// cx_double dt = det(B);
 	// wrong value of determinant of a complex matrix
 	// printf("det(B)= (%f,%f)\n", real(dt), imag(dt));

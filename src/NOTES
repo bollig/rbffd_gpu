@@ -1,0 +1,209 @@
+CVT for ellipsoid: 
+
+1) Create CCVT for a regions larger than the ellipsoid
+2) identify cells that intersect the boundary
+   - if all points in a cell are inside the ellipse, 
+      they are inside the domain  (x^2/a^2 + ... z^2/c^2) < 1 (ok)
+   - since no corners, cells that intersect the boundary have the centroid
+     projected to the boundary. 
+
+   Since ellipsoid is known analytically: solve projection equations: 
+
+       F(x,y,z) = x^2/a^2 + ... - 1
+	   m = grad(F) = (2x/a^2, 2y/b^2, 2z/c^2)
+
+	   starting at r0 = (x0,y0,z0):  (point on ellipsoid)
+	   starting at rc = (xc,yc,zc): 
+
+	      r = rc + m (r0-rc) 
+
+       Solve for (r0-rc) . grad(F) = 0
+	       (r0-rc) . (x0/a^2, y0/b^2, z0/c^2) = 0
+
+		   1 = xc*x0/a^2 + yc*y0/b^2 + zc*z0/c^2
+  
+      Solve for (x0,y0,z0). Use parametric equations: 
+
+	      xc = a*cos(t)*cos(p)
+	      yc = b*cos(t)*sin(p)
+		  zc = c*sin(t)
+
+      Solve for (t,p)
+
+  Solve:   (ru x rv) x (rc - r) = 0 combined with F(r) = 0
+
+			Solve system of quadratic equations
+            (grad F(r)) x (rc - r) = 0  (quadratic in (x,y,z))
+			 F(r) = 0  
+
+			 grad(F) \propto (x/a^2, y/b^2, z/c^2)
+			 (r-rc) = (x-xc, y-yc, z-c)
+			 Cross product: (x-xc)*yb-(y-yc)*xb = 0
+			       (x-xc)*y/b^2 = (y-yc)*x/a^2
+
+    Alternatively: minimize distance from point to surface: 
+
+	   (r-rc)^2 + l * F(r) = 0  (l is Lagrange multiplier)
+
+	   2*(x-xc) + l*2*x/a^2 = 0 ==> x = xc / (1+l/a^2)
+	   Same for y and z. Now use F(r) = 0 to compute l
+
+     (xc*a^2)^2 / (a^2+l)^2 + y terms + z terms = 1
+
+	 Can be solved exactly for a sphere:  a=b=c=R
+	 (R^2+l)^2 = (xc*R^2)^2 + ...
+	 R^2+l = \pm (xc^2+yc^2+zc^2)*R^2
+
+----------------------------------------------------------------------
+Need iterative method: 
+
+Given rc=(xc,yc,zc), and a point on the surface, minimize the distance to the surface. 
+
+1) generate 10,000 points on the surface
+2) generate 40 in u and 40 in v
+Fast search method? Divide domain into cells. For each cell, store list of surface points
+in that cell. (Octrees probably better). Only keep non-empty cells. Store CG (center of 
+gravity of the cell points) for each cell. 
+
+2) Given a point in the domain: compute CG that is such that DOT = grad(CG).(xc-CG) 
+is maximized (normalize all vectors to unity). 
+
+3) Search the face with CG to maximize further the dot product grad(r).(r-xc)
+
+4) iterative search to improve the approximation. 
+   - maximize DOT in the tangent plane at r ==> new point rp
+   - intersect the line (rp-xc) with F(r)= 0
+   - iterate. 
+
+MAXIMIZE DOT over xc lying on the surface. 
+----------------------------------------------------------------------
+Simpler method if rc is close to the surface. 
+
+
+
+----------------------------------------------------------------------
+
+
+
+
+
+
+
+    Point 1: point in Voronoi cell closest to the boundary: 
+
+	 min_{points} (xp^2/a^2 + ... + zp^2/c^2- 1)
+
+	 Use this point as an approximation to the boundary (xp,yp,zp) = rp. 
+
+	 rp: point closest to boundary
+	 rc: centroid
+----------------------------------------------------------------------
+Given some arbitrary surface, F(r) = 0, and a point rc nearby. 
+
+0) n=1
+1) get a point rs[n] on the surface:  send_to_boundary()
+2) Calculate gradient on the surface at rs[n]
+3) Project rc to the surface parallel to grad(F)(rs[n]); generate rs[n+1]
+4) n=n+1
+5) return to 1)
+----------------------------------------------------------------------
+Create a brute force search of the nearest point on the boundary to an arbitrary point. But for that I need a point on the surface. So method is as follows: 
+the surface is parametric. Create, say 100 points on the surface. Find the nearest point to a point inside the volume. Once the point is found, use a Newton-Raphson to get the closest point. 
+
+  x(u,v), y(u,v) z(u,v). 
+
+For each point on the surface, store (u,v). Once I find the closest point: parameters are (up, vp). Then do a Newton-Raphson from there. 
+----------------------------------------------------------------------
+Parametric Newton-Raphson
+Compute (u,v) of next iteration
+Given point rsd (seed point inside volume). 
+rsf: point on surface, psf (u,v on surface)
+(rsd-rsf)xgrad(rsf) = 0 = F(rsf) 
+Compute new rsf, given rsf0, an intial point on the surface. 
+F(rsf) = F(rsf0 + drsf) = F(rsf0) + (dF/dxsf) dxsf + (dF/dysf) dysf = 0
+F(u,v) = F(u0,v0) + (dF/du) du + (dF/dv) dv = 0
+S(u,v) = S(u0,v0) + (dS/du) du + (dS/dv) dv = 0
+where S(u,v) = 0 is the equation for the surface
+(u0,v0) is already on the surface. Therefore: S(u0,v0) = 0
+  Write: (dF/du) = Fu, etc.
+
+Solve: 
+    Fu du + Fv dv = -F0
+	Su du + sV dv = 0
+
+for (du,dv): 
+
+   D = (Fu*Sv-Su*Fv)
+   du = -F0*Sv / D = u - u0
+   dv =  F0*Su / D = v - v1
+
+new values for u and v: 
+
+   u = u0 - F0*Sv/D
+   v = v0 + f0*Su/D
+
+This formulation involves 2nd derivatives of the ellipsoid equation. 
+
+Better: if I am on the surface, create the tangent plane, and project the 
+seed onto the tangent plane. Intersect that line with the surface. Assume 
+I am close to the original point. Do this in parameter space. So problem is: 
+intersect a linear with a surface, and assume the intersection is close to an point already on the surface. 
+
+  rsf = rsd + lam (rsf0-rsd)
+  S(rsf) = S(rsd+lam dr) = S(rsf0 + drsrf) (drsrf << 1)
+    Solve for lam
+ xsrf = x0srf + xu*du + xv*dv  (du, dv << 1)
+ ysrf = y0srf + yu*du + yv*dv
+
+Given 
+
+----------------------------------------------------------------------
+Given a seed, and a point on the surface, compute the tangent to the surface: 
+This is given by the gradient at the surface point: grad(rsf). 
+Project from the seed to the surface along this direction. As a check, 
+the distance between the projection point and the seed should be closer than 
+the original distance. If not, there is an ERROR. 
+----------------------------------------------------------------------
+Given line: r = rsd + lam . dir
+Intersect a plane  (r-v0).m = 0 (v0 :  a point on the plane, m is normal to 
+   the plane)
+
+  r.m = v0.m
+  (rsd+lam*dir).m = v0.m
+  lam = (v0.m - rsd.m) / dir.m
+  r = rsd + lam.dir ("." is scalar project)
+----------------------------------------------------------------------
+Results from octree implementation and assigning boundary points to the leaf
+nodes. There are 1143 leaf nodes, yet only 418 printouts, which seems to indicate that some boundary points did not find a leaf. The fact that some leaves do not have points is ok. AFter all, the boundary points might all be located in a single area of the boundary. 
+total nb leaf nodes at max_level: 1143
+number of nodes with hit=1: 1143
+nb printouts: 418
+
+Fixed: I had to add a goto label to exit a triple loop structure from the inner loop.
+
+What is strange that some of the boundary pts do not have leaf nodes  that contain them. That is strange: if node 0 contains the entire boundary, the the entire boundary is contained by the 8 children if they form a partition fot their parent. 
+----------------------------------------------------------------------
+Some boundary points might end up in multiple nodes. That is fine. 
+----------------------------------------------------------------------
+Working version of octree. Every boundary is assigned to some node. 
+To project a point to the boundary, first find the node contained by that
+point. Two cases: if the node contains a boundary point, it is closeby. 
+If the node does not contain a boundary point, move up to the parent, 
+and choose the nearest boundary node amount all those in the 8 children. 
+
+Todo: for each node that intersects the boundary, compute a boundary point
+associated with it, not necessarily within it. Do this by finding the corner
+closest to the boundary (approximately), and projecting to the boundary. 
+----------------------------------------------------------------------
+I have a fully functional 3D octree (programmed from scratch: no libraries) to encode the boundary points. Each leaf node contains a set of boundary points. A boundary point is sometimes contained in more than one leaf node. Reason: boundary conditions: the boundary point is at the boudnary between two nodes. But no matter. 
+
+When doing CVT, and need to project to the boundary: first find the octree node that contains the point. Ideally, this node contains a boundary point. I have to add an algorithm to ensure this. At this point, this point will serve as a nearby point, and can be projected to the boundary. 
+----------------------------------------------------------------------
+Next: given a node that does not have a boundary point associated with it, 
+find a boundary point inside the node, using the bissection method: starting 
+from the center point, compute the gradient (points towards the boundary if 
+one is close enough), move a distance of 2* node width, or until one is on the other side of the boundary, and then use a bissection method. Once I am within 0.05 of the boundary, use a faster method (to be determined). 
+----------------------------------------------------------------------
+When there are several boundary points per node, compute the average 
+and assign the single boundary point for that node. 
+----------------------------------------------------------------------

@@ -1,0 +1,2 @@
+cvt: uses rejection_2d and ellipse
+(both must be generalized to 3D. Problem, they only work for special geometries.).

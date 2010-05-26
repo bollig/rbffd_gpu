@@ -32,6 +32,8 @@ public:
 		this->rad = rad_; // will be overwritten
 		this->rbf = rbf_;
 		this->xd = xd_;
+                this->xd->print("Stencil::xd = ");
+                printf("Stencil::rad = %f\t Stencil::eps = %f\n", this->rad, this->eps);
 		this->choice = choice;
 		//rd2 = new arma::mat(xd->n_rows, xd->n_cols);
 		//if (strcmp(choice, "lapl") == 0) {
@@ -49,6 +51,7 @@ public:
 
 		if (rad > 1/maxStencilDist) {
    			printf("Error: The radius is too large, it needs to be < %1.3e\n", 1./maxStencilDist);
+                        printf("Setting radius to 0.9*%1.3e (= %1.3e)\n", 1./maxStencilDist,  0.9/maxStencilDist);
 			this->rad = 0.9 / maxStencilDist;
 		}
 		// I need a way to compute the radius automatically

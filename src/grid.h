@@ -6,15 +6,19 @@
 #include <ArrayT.h>
 
 class Grid {
-private:
-// grid
-	double rmax; // = 15.;
-	double xmin; // = -rmax;
+
+public:
+        double xmin; // = -rmax;
 	double xmax; // =  rmax;
 	double ymin; // = -rmax;
 	double ymax; // =  rmax;
 	double zmin; // = 0.; // 2D
 	double zmax; //  =  0.;
+
+protected:
+// grid
+	double rmax; // = 15.;
+	
 	double dx; // = (xmax-xmin) / (nb_x-1.);
 	double dy; // = (ymax-ymin) / (nb_y-1.);
 	double dz; // = 1.0;
@@ -28,7 +32,8 @@ private:
 	std::vector<double> avg_distance;;		// Computed in avgStencilRadius(..); computeStencils has a locally scoped copy.
 
 	int nb_bnd; // number o fpoints on the domain boundary
-	double major, minor;
+	//double major, minor;
+	double princ_axis[3]; 
 
 	// Cartesion 5-point Laplacian
 	std::vector<double> laplacian;
@@ -62,14 +67,14 @@ private:
 public:
 	Grid(int n_x, int n_y, int stencil_size=9); // maximum stencil size
 	~Grid();
-	void generateGrid();
+	virtual void generateGrid();
 
-	// file: input file with grid points in two columns
+	// file: input file with grid points 1 per row
 	// nb_bnd: number of boundary points
 	// npts: total number of points
-	void generateGrid(const char* file, int nb_bnd, int npts);
+	virtual void generateGrid(const char* file, int nb_bnd, int npts);
 
-	void generateSubGrid();
+	virtual void generateSubGrid();
 
 	// compute stencil that contains the "n" nearest nodes 
 	void computeStencils();
@@ -98,10 +103,19 @@ public:
 
 	int getNbBnd() { return nb_bnd; }
 	void setNbBnd(int nb_bnd_) { this->nb_bnd = nb_bnd_; }
+	/*
 	double getMajor() { return major; }
 	void setMajor(double major_) { this->major = major_; } 
 	double getMinor() { return minor; }
 	void setMinor(double minor_) { this->minor = minor_; } 
+	*/
+	double getPrincipalAxis(int i) { return princ_axis[i+1]; }
+	void setPrincipalAxes(double axis1, double axis2, double axis3) { 
+		this->princ_axis[0] = axis1; 
+		this->princ_axis[1] = axis2; 
+		this->princ_axis[2] = axis3; 
+	}
+	
 	std::vector<double>& getAvgDist() { return avg_distance; };
 	double minimum(std::vector<double>& vec);
 	

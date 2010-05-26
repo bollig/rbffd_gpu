@@ -4,7 +4,7 @@
 	# Used by ALL compilers
 	ADD_DEFINITIONS(-g)
 	# Used by SPECIFIC compilers
-	# SET (CMAKE_CXX_FLAGS )
+ 	# SET (CMAKE_CXX_FLAGS)
 
 
 ###############################################
@@ -20,9 +20,6 @@
 # Locate Required Libraries
 ###############################################
 	# Find library: find_library(<VAR> name1 [path1 path2 ...])
-	# These are from gordon_tests (should repackage as subdirectories here for redistribution)
-	FIND_LIBRARY (utilities utilities PATHS ${GLIB}/utilities)
-	#FIND_LIBRARY (amira amira PATHS ${GLIB}/amira)
 
 	# Download and install Armadillo separately. 
 	# Specify local installation dir here. If installed globally the dir is unnecessary.
@@ -39,8 +36,6 @@
 	# If a directory does not exist it is skipped
 	SET (RBF_INCLUDE_DIRS 
 		.
-		#		${GLIB}/amira
-		${GLIB}/utilities
 		/Users/erlebach/Documents/src/fftw-3.2.2/include
 		/Users/erlebach/Documents/src/armadillo-0.6.12/include
 		/opt/local/include   # for boost

@@ -1,7 +1,7 @@
 #TODO 	- Make separate FindRBF.cmake to register test and add dependencies and includes
 PROJECT (density2)
 
-SET (TEST_NAME ${PROJECT_NAME})
+SET (TEST_NAME ${PROJECT_NAME}.x)
 
 ADD_EXECUTABLE (${TEST_NAME} 
 	main.cpp

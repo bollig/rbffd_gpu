@@ -1,0 +1,734 @@
+Feb. 14, 2008
+
+//----------------------------------------------------------------------
+Create a histogram routine based on my higher level functionality in ../utilities/
+How to interface with graphics remains to be seen. 
+//----------------------------------------------------------------------
+Histogram, brute force: 
+10,000 bins: 45 ms
+1,000 bins: 65 ms (because same element is called multiple times ==> cache conflict)
+100,000 bins: 55 ms
+256 bins: 67 ms (for a single call)
+
+Seeds from 1-n were randomly distributed. However, in the real case, if a cell has
+seed n, the 4 cells around will also probably have seed n. 
+
+
+How to speed up? 
+
+__global__ void
+binKernel(int* data, int* bins, int width, int h, int nb_bins)
+{
+    unsigned int x = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    unsigned int y = __mul24(blockIdx.y,blockDim.y) + threadIdx.y;
+	unsigned int indx = __mul24(y,width) + x;
+
+	unsigned int ix = data[indx];
+	bins[ix] = bins[ix] + 1;
+}
+//----------------------------------------------------------------------
+256^3 = 4096^2. 66 ms. If I remove the last line (bins[ix = ...), 
+the time goes to 1 ms. If I remove "ix = data[indx]", the time stays the same. 
+Problem: the results are incorrect, because different blocks can update same
+seed at different times. With AtomicAdd, the time is 340 ms!!! Too much.  (256 seeds)
+With AtomicAdd and 10,000 seeds, the time is 8 ms!!! But the results are not 
+always the same (bug?). Non-efficient version with AtomicAdd: 82 ms, and results
+are the same each time. Better results for larger number of seeds! Less contention. 
+STEP 1: get same result each time with efficient version. 
+----------------------------------------------------------------------
+We have a grid of 1024x1024. Break it up into subsections of 32 x 32.
+In each subsection, you would not have more than 64 seeds (= 8x8).
+We have two arrays:
+
+  glob_bin[nb_seeds) which will contain the nubmer of seeds of each type
+  loc_bin[64]  which only contains the seeds in the 32x32 tile.
+
+If a point is in cell i (corresponding to seed i), the points near it
+are probably also in cell i.
+
+we also have the array:
+
+   seed[64].
+
+bring the 32x32 tile into shared memory. Then:
+
+  for (int i=0; i < 32 ...; i++) {
+  for (int j=0; j < 32; j++) {
+       indx = i+j*row;
+       seed[dist[indx] % 64] = dist[indx];
+       loc_bin[dist[indx] % 64] += 1;   // counter
+  }}
+
+// Now put all the seeds back
+
+   for (int i=0; i < 64; i++) {
+      if (loc_bin[i] > 0)
+              glob_bin[seed[i]] += loc_bin[i];
+   }
+
+The only issue is making sure that two blocks cannot update the same
+global seed at the same time. In my cases, the number of seeds in a 32x32
+region will be much less than 64. 
+----------------------------------------------------------------------
+Warp-based histogram (modeled after Histogram256 case).
+Assume that each seed is a triplet of integers (cx,cy,cz) with ci in [0,255]
+Express each coordinate in base 32: cx=cx0+32*cx1.  Since I am in a z slice, it 
+is unlikely that cx0 and cy0 will be the same for two seeds (perhaps impossible). 
+So we implement the 2D case first. Let us do instead 16 bit arithmetic: 
+cx=cx0+16*cx1+16^2*cx2  (16*16=256). If there are very few Voronoi regions, then 
+there might be only two different seeds within the 32x1 texel region (a warp), 
+but they could be located far from each other in physical space, so cx0 could equal
+dx0, c1 could equal dx2 (however unlikely). 
+----------------------------------------------------------------------
+I use extern "C++" instead of extern"C" in .cu files so that the functions 
+might be called from .cpp files. This allows me to do templates and function 
+overloading. Seems to work. 
+----------------------------------------------------------------------
+In main: 
+extern "C++" template <class T>
+void createVBOonGPU(GLuint* vbo, int width, int height);
+
+In map.cpp: 
+extern "C++"
+template <class T>
+void createVBOonGPU(GLuint* vbo, int width, int height)
+
+main.cpp:(.text+0x566): undefined reference to `void createVBOonGPU<float>(unsigned int*, int, int)'
+TO BE FIXED
+----------------------------------------------------------------------
+Desired interface: 
+
+Draw into ping-pong buffer.
+Have a PingPongCuda class that allows access to and from a pingpong buffer
+PingPongCuda(PingPong& ping);
+PingPong pp(10,10);
+PingPongCuda ppc(pp); // registers: use with pingpong buffer
+
+ppc.begin(); // registers and maps the buffer (perhaps registering is overkill?)
+  // - Use Cuda to write into the texture. Texture is attached to 1D or 2D linear array
+  // - Use Cuda to read from the texture
+ppc.end(); // unregisters and unmaps
+
+T* ppc.getDataPtr(); // templatized
+
+Do the same with vertex buffer objects: 
+
+VBOCuda.begin();
+VBOCuda.end();
+
+----------------------------------------------------------------------
+Feb. 16, 2 pm
+- Creating a PingPongCuda class 
+Save to bak4/
+----------------------------------------------------------------------
+I am having problems with deletion of objects after several iterations (main.cpp). 
+Save to bak4/
+Problems solved. I should not delete the pingpong object within PingPongCuda. This is the 
+responsibility of the caller. 
+Save to bak4/
+----------------------------------------------------------------------
+12:00 am
+Problem: when taking a PBO and putting it into a subtexture, I can only use width/2 and height/2. 
+It must have something to do with format and overflowing the texture buffer size. But i do not 
+know why!
+
+I added a new target to Makefile to ensure that the library was alwasy made (it invokes Make_lib)
+----------------------------------------------------------------------
+Feb 17, 2008
+Problem with subTextures: Make sure that  PBO I am reading from has at least as many 
+bytes as the space available in the texture I am writing into. 
+
+void PingPongCuda::createPBO()
+{
+	fbo_id = pingpong->getTexFBOid();
+
+	glGenBuffers(1, &pbo);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+	glBufferData(GL_PIXEL_PACK_BUFFER, 4*szx*szy*sizeof(float), NULL, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+	printf("ping_pong_cuda, createPBO, pbo = %d\n", pbo);
+}
+//----------------------------------------------------------------------
+OpenGL
+Use: glClampColorARB(GL_CLAMP_FRAGMENT_COLOR_ARB, GL_FALSE);
+in void PingPong::setSubTexture(GLuint pbo, int xoff, int yoff, int width, int height)
+otherwise, there is color clamping when copying to a subtexture. (Rectangular textur)
+This is tested by adding 2.f in a CUDA program and noticing the results clamped to 1.
+But somehow, my results have been translated to single precision. I know have floating
+point buffers, but why have I lost precision? Also, it added 2.2 to zero, and not to 0.5
+as it should have. 
+//----------------------------------------------------------------------
+Everything appears to work. 
+Must still work on 1,2,3,4 channel textures (all in floating point format, rectangular textures). 
+Works on G8800 cards only (at least if ATOMIC is used).  There might be problems on the mac. do 
+not know yet. 
+
+Store in bak_works_feb-18-2008
+----------------------------------------------------------------------
+TODO: 
+pingpong->swap() should have other methods that are synonymous: 
+  pingpong->drawIntoTexture(); // equivalent to swap(), or equivalent to drawTexture() when 
+  applied to pingpong->getTexture(). However, I might wish to draw some other texture
+  into the pingpong buffer. HOW TO DO THIS? (texture to texture copy via a PBO? or simply draw
+  into the FBO buffer?)
+
+Did I really require Pingpong for this CUDA example?
+
+
+CUentry entry1; // default constructor not working!
+entry1.setBlock(16,8);
+entry1.setGrid(512/16,512/32);
+dim3& g = entry1.getGrid(); // ERROR WITH THESE???
+dim3& b = entry1.getBlock();
+add(g, b, data, data_out, 512, 512);
+
+I should be able to rewrite as: 
+
+dim3 g(512/16, 512/32);
+dim3 b(16,8)
+add(g, b, data, data_out, 512, 512);
+
+However, the CUentry has classes to simplify creation of a grid: 
+Given a block size, determine the grid, given an arbitrary array. 
+Or provide default block size, and generate an appropriate grid. 
+----------------------------------------------------------------------
+Feb. 18, 2:24 pm
+The code executes on the GE8800GT card, but not on the GE7900GTX card. This 
+might be related to the use of ATOMIC. 
+----------------------------------------------------------------------
+I have created two more tests: 
+1. Add 2 numbers in Cuda and attach to a PBO (device to device copy), then print the PBO
+2. Create two PBOs (one for input, one for outpu), add 2 numbers in Cuda, then 
+  use copyFromDeviceToHost to demonstrate direct copying from the device array associated
+  with the cuda array, to the host. The print the results out. 
+----------------------------------------------------------------------
+When creating the PBO, I assign a certain number of bytes, into which must fit the CUDA array. 
+I assigned floats (4 floats per element). When I did a subTexture..., it created 16 bit numbers 
+because I used FLOAT_BUFFER =    . I should have used #define FLOAT_BUFFER GL_RGBA_FLOAT16_APPLE
+     FLOAT_BUFFER  GL_RGBA32F_ARB   instead 
+Note: GL_RGBA_FLOAT32_APPLE and GL_RGBA32F_ARB have the same hex values in glew.h
+----------------------------------------------------------------------
+Each seed: 6 numbers (base 16) (2 in x, y and z). 
+Max 3D domain: x + y*128 + z*128*128; // maximum 3D case (128^3)
+trunc(x*16) = integer in [0,16] (1/2 byte = 4 bits). 256 = 1 byte. 
+In a long, I can encode (x,y,z). 
+Perhaps I need an efficient scan line algorithm to do histograms. One approach in the litterature
+(2006) scans each color separately in a subregion of the flat texture. It would be better to 
+use a real scan algorithm with CUDA. 
+----------------------------------------------------------------------
+How to use CUDA for scanning? 
+----------------------------------------------------------------------
+Feb. 19, 2008
+distanceTransform3D: add POINT4: store seed number in 4th seed coordinate as a float
+----------------------------------------------------------------------
+printPBO: I should be getting seed number in alpha channel. Does not work. It works
+now. I had to change POINT3 to POINT4 inside the distanceTransform3D, and use gl_FragColor
+set to all 4 components of the seed, and not just the first 3 components. 
+----------------------------------------------------------------------
+printPBO() works with 64^3, but with 128^3, the pbo should be 2000 x 1000, but
+the values only appear to be correct up to 2000 x 127. Wonder why?
+----------------------------------------------------------------------
+One histogram per block. Assume a maximum of 100,000 seeds, and assume
+100 blocks (5 block per processor, and there are <= 20 multiprocessors on the GPU). 
+This implies 10,000,000 total bins (4 floats per bin) =-> 160 million byte (large chunk
+of the memory). But I could rewrite over the Voronoi mesh to save memory.
+If could have an algorithm where each raster point took the value of the centroid corresponding 
+to the underlyling seed, then memory is not an issue. But how?
+----------------------------------------------------------------------
+Consider 2D case: 2,048 x 2,048 with 65,000 = 256 x 256 seeds. Each seed covers an 
+area of about (2^{11} / 2^8 = 2^3 = 8}^2 = 8 x 8 pixels. So we will do an area 
+scan with blocks of size 32 x 32 (to make sure we cover each seed). This is overkill.
+I tried scan (from NVIDIA, single block), and it runs fine with 32 points. But
+I need a scan on a block of 32 x 32 (as opposed to a 1D array). I'll start with the 
+naive algorithm. I wish to scan many blocks in parallel. 
+1. write to shared memory
+2. zero out non-essential blocks
+3. area sum
+4. send single element to memory (I only require a reduction)
+
+I wish to scan many blocks of the same size, in parallel. Use single block scan for this. 
+Create a large array of structures (one per block). This structure contains: 
+  (x,y,size) of block to extract:  (x-size,y-size),(x+size,y-size),(x+size,y+size),(x-size,y+size)
+  (x,y) is the center of the block. 2*size is the edge dimension. The result array is the sum. 
+----------------------------------------------------------------------
+Feb. 21, 2008
+- started implementing scan in add_one_kernel.cu and scan_efficient.cu
+bak6/
+----------------------------------------------------------------------
+I must implement 2D arrays so that I can copy 2D subsets of my array to shared memory, or 2D subsets
+to a smaller device array and from there to shared memory (details must be hashed out). 
+----------------------------------------------------------------------
+Feb 22, 2008
+Fixed problem with my code: I had forgotten to transform newSeeds to the device
+64^3 Voronoi: approx. 60 fps ==> 18 ms/frame. So I'd like my histogram to occur in <= 18 ms
+(am doing this with 10,000 seeds, assuming a 2D flat texture)
+----------------------------------------------------------------------
+64^3 data
+3 ms for 1,024 seeds with 16x16 edge (occupancy: 0.125)
+42 ms for 16,000 seeds (50fps) (occupancy: 0.125) (edge: 16x16
+6 ms for 16,000 seeds (350 fps) (occupancy: 0.25), edge: 8x8
+But Voronoi goes at 700+ fps on 512x512 = 64x64x64
+----------------------------------------------------------------------
+Scanning appears to work in 2D, although it has only been tested for 3D data. 
+----------------------------------------------------------------------
+Working 2D version: bak_works/ 
+(I would need more tests)
+512x512, 16x16 window per tile
+500 seeds: 0.9 ms
+5000 seeds: 8.3 ms
+2048x2048, 16x16 window per tile
+5000 seeds: 8.9 ms
+50000 seeds: 84 ms (avg voronoi: 4 x 4)
+2048x2048, 8x8 window per tile
+50000 seeds: 13.3 ms (avg voronoi: 4 x 4)
+
+1024x1024: 18 ms/it. including histogram with 5000 seeds and 8x8 tiles) (50 fps)
+1024x1024: 25 ms/it. including histogram with 5000 seeds and 16x16 tiles) (40 fps)
+1024x1024: 11 ms/it, without the histogram (100 fps)
+16x16 tile, histogram with 5000 seeds: 8.5 ms.
+----------------------------------------------------------------------
+Here are some timings:
+
+1024x1024: 18 ms/it. including histogram with 5000 seeds and 8x8 tiles) (50 fps)
+1024x1024: 25 ms/it. including histogram with 5000 seeds and 16x16 tiles) (40 fps)
+1024x1024: 11 ms/it, without the histogram (100 fps)
+
+Note: with 5000 seeds, uniformly distributed, the average Voronoi size is 16 x 16,
+so in practice, we expect 40 fps. (16x16 tiles are best). But we could use 8x8 tiles
+using every other point in either direction for a larget square. This becomes similar
+to probability-based approach.
+
+The histogram is NOT optimized. A tile of 16x16 uses 256 thread, and I use 13 registers.
+The occupancy is 0.167, which means there is the potential to accelerate the histogram
+by a factor of 6.
+
+If my tile is 16x16, I use 128 threads. Each element is a float4. If I use smaller tiles,
+I have less wraps. I use too many registers: I should bring it below 10.  I could use
+8x8 tiles and assign four blocks to every seed. I could use more threads per block and
+have 4 threads do the work of a single thread: an operation such as
+
+  float4 a;
+  float4 b;
+  a += b;
+
+could be done with 4 threads, one for each component. That woud put more threads to
+work, with a maximum acceleration of 4. Then, the occupancy should
+become 0.167*4 = 0.666, which would be ok.
+
+store in bak_works/
+store in bak4/
+
+Typical line from profiler: 
+method=[ _Z20scan_workefficient_2P6float4S0_P4int4iii ] gputime=[ 7522.560 ] cputime=[ 7536.000 ] occupancy=[ 0.167 ] gld_incoherent=[ 451712 ] gld_coherent=[ 0 ] gst_incoherent=[ 1344 ] gst_coherent=[ 656 ]
+
+Non-coalesced loads: 451,712   ==> Can be sped up. Float4 is probably the culprit. 
+Coalesced loads: 0  
+----------------------------------------------------------------------
+TODO: compute actual center of gravity. 
+
+Feb. 25, 2008
+  
+1024x1024, 16x16 tile, 5000 seeds: cuda_scan: 7.5 ms
+CUDA profiler log
+method=[ _Z20scan_workefficient_3P6float4S0_P4int4iii ] gputime=[ 7507.200 ] cputime=[ 7521.000 ] occupancy=[ 0.167 ] gld_incoherent=[ 454912 ] gld_coherent=[ 0 ] gst_incoherent=[ 1340 ] gst_coherent=[ 704 ]
+
+OBJECTIVE: get rid of incohrent reads
+__align__(256) in cuda_array_t did not work
+
+method=[ _Z20scan_workefficient_3P6float4S0_P4int4iii ] gputime=[ 5251.360 ] cputime=[ 5265.000 ] occupancy=[ 0.167 ] gld_incoherent=[ 91392 ] gld_coherent=[ 22848 ] gst_incoherent=[ 1330 ] gst_coherent=[ 784 ]
+
+method=[ _Z20scan_workefficient_3P6float4S0_P4int4iii ] gputime=[ 5067.072 ] cputime=[ 5081.000 ] occupancy=[ 0.167 ] gld_incoherent=[ 91392 ] gld_coherent=[ 22848 ] gst_incoherent=[ 1332 ] gst_coherent=[ 768 ]
+
+registers down to 9
+method=[ _Z20scan_workefficient_3P6float4S0_P4int4iii ] gputime=[ 5790.240 ] cputime=[ 5804.000 ] occupancy=[ 0.167 ] gld_incoherent=[ 91392 ] gld_coherent=[ 34272 ] gst_incoherent=[ 1356 ] gst_coherent=[ 576 ]
+
+Current gain: 22 - 33% (depending on small variations of data access etc. But in all cases for the 16x16 tile, 
+I get only 0.167 occupancy. We need HIGHER efficiency. 
+
+NEXT step: increase the number of threads.  That will increase (hopefully) the occupancy, which is the 
+key to higher efficiency I believe. 
+----------------------------------------------------------------------
+extern "C++" void centroid_voronoi_4(dim3& grid , dim3& block, float4* h, float4* bins, int w, int he, 
+    int nb_bins, int sz3d, int4* newSeeds, int edge, int nbSeeds) 
+
+I will implement a single thread per element of my tile. That should increase occupancy to 0.33, 
+and reduce execution time to about 2.5 ms for 1024x1024 with tiles of 16x16 and 5,000 seeds. 
+
+Doubling number of threads increased occupancy by factor of 2. Time doubled, but code had not been changed yet. 
+
+__global__ void scan_workefficient_3(float4 *g_idata, float4 *sum, int4* seeds, int n, int edge, int width)
+// The next line creates non-coalesced reads since all threads read the same area in 
+// global memory. 
+	//int4& seed = *(seeds+blockId);
+// This line prevents coalesced reads, and the code speeds up, with very good speed (gpu: 4.6 ms). 
+	int4 seed = make_int4(100,40,0,5);
+method=[ _Z20scan_workefficient_3P6float4S0_P4int4iii ] gputime=[ 4620.928 ] cputime=[ 4634.000 ] occupancy=[ 0.167 ] gld_incoherent=[ 0 ] gld_coherent=[ 11424 ] gst_incoherent=[ 1330 ] gst_coherent=[ 784 ]
+
+Possible trick: Copy each seed 16 times (5,000 seeds ==> 80,000 slots). This will 
+prevent non-coalesced reads for the seeds.  Bad approach. 
+Better: first thread of block reads the seed into shared memory (or constant memory). 
+
+in scan_efficient_3: 
+	if (thid == 0) {   // prevents incoherence of seed fetching
+		seed = *(seeds+blockId);
+		temp[numThreads*2+1] = make_float4(seed.x,seed.y,seed.z,seed.w);
+	}
+	__syncthreads();
+	seed = MAKE_INT4(temp[numThreads*2+1]);
+method=[ _Z20scan_workefficient_3P6float4S0_P4int4iii ] gputime=[ 4904.768 ] cputime=[ 4918.000 ] occupancy=[ 0.167 ] gld_incoherent=[ 659 ] gld_coherent=[ 11498 ] gst_incoherent=[ 1342 ] gst_coherent=[ 656 ]
+
+Speed has gone from 7.5 ms to 4.9 ms: speedup: gain: 35 percent!!!
+Trick now is to increase number of threads, or to read floats and not float4s. 
+
+----------------------------------------------------------------------
+extern "C++" void centroid_voronoi_4(dim3& grid , dim3& block, float4* h, float4* bins, int w, int he, 
+   calls 
+scan_workefficient_4<<<g, b, shared_mem_size>>>(h, bins, newSeeds_d, nb_threads*2, edge, width);
+
+Try to have no coalescing. One float per string (instead of float4). Remove bank
+conflicts. 
+----------------------------------------------------------------------
+__global__ void scan_workefficient_5(float4 *g_idata, float4 *sum, int4* seeds, int n, int edge, int width)
+method=[ _Z20scan_workefficient_4P6float4S0_P4int4iii ] gputime=[ 4899.296 ] cputime=[ 4913.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 356864 ] gld_coherent=[ 1280 ] gst_incoherent=[ 1336 ] gst_coherent=[ 784 ]
+
+Reading from global memory: order is unimportant. Read x,y,z,w, x,y,z,w, ... one float at a time
+
+-----
+extern "C++" void centroid_voronoi_5(dim3& grid , dim3& block, float4* h, float4* bins, int w, int he, 
+__global__ void scan_workefficient_5(float4 *g_idata, float4 *sum, int4* seeds, int n, int edge, int width)
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 2512.288 ] cputime=[ 2526.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 7222 ] gld_coherent=[ 28299 ] gst_incoherent=[ 1306 ] gst_coherent=[ 864 ]
+
+(speedup of factor 3 over original version. Still low occupancy. Reason unclear. 
+----------------------------------------------------------------------
+in scan_workefficient_5(...)
+{
+        if (threadIdx.x < d)      
+        {
+			int j = threadIdx.x - (threadIdx.x >> 2) << 2;
+			int tid = threadIdx.x >> 2; // thread id divided by 4
+
+            int ai = offset*(2*tid+1)-1;
+            int bi = offset*(2*tid+2)-1;
+
+			ai = ai << 2 + j;
+			bi = bi << 2 + j;
+
+            tempf[bi] += tempf[ai];
+        }
+
+        offset <<= 1;
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 1733.248 ] cputime=[ 1748.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 8549 ] gld_coherent=[ 28191 ] gst_incoherent=[ 1338 ] gst_coherent=[ 704 ]
+
+// tempf[bi] += tempf[ai];   //  not really the source of many incoherent ...
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 2050.592 ] cputime=[ 2065.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 9408 ] gld_coherent=[ 28172 ] gst_incoherent=[ 1356 ] gst_coherent=[ 560 ]
+
+8 registers used. 
+
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 5010.720 ] cputime=[ 5025.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 393600 ] gst_incoherent=[ 1338 ] warp_serialize=[ 126618 ] cta_launched=[ 711 ]
+Appears to work: bak3/
+Uploaded to svn: version 8
+//----------------------------------------------------------------------
+
+Feb 28, 2008
+
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 5644.064 ] cputime=[ 5658.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 391808 ] gst_incoherent=[ 1328 ] warp_serialize=[ 145175 ] cta_launched=[ 717 ]
+(20) sum= 0.441179, 0.413018, 0.000000, 159.000000
+(20) sum= 0.443298, 0.412034, 0.000000, 159.000000
+
+I must draw the center of gravities. It appears that the Voronoi mesh centers are almost at the center of gravity. 
+I should also draw the actual window over which we are searching. (16x16 tile).
+
+Removed "if statement" for seed calculation. Of course, results are wrong. (time decreased!)
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 4470.688 ] cputime=[ 4484.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 664 ] gst_incoherent=[ 1332 ] warp_serialize=[ 130431 ] cta_launched=[ 711 ]
+(20) sum= 2796202.750000, -0.001790, 0.000000, 192.000000
+
+Using "if statement" Why so large?
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 5443.712 ] cputime=[ 5457.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 378257 ] gst_incoherent=[ 1336 ] warp_serialize=[ 140200 ] cta_launched=[ 711 ]
+(20) sum= 0.441179, 0.413018, 0.000000, 159.000000
+
+Place a "return" right after the "if statement" for seed storage.
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 95.264 ] cputime=[ 110.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 666 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 711 ]
+
+Place a "return" right before the "if statement" for seed storage.
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 43.328 ] cputime=[ 57.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 0 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 713 ]
+
+Place a return after the first loop that brings in global memory to local memory. 
+MANY ld_incoherents!!
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 2438.688 ] cputime=[ 2453.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 345563 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 713 ]
+
+Place a return after the first loop that brings in global memory to local memory. But comment
+out the single line
+		//	tempf[j*4*edge+threadIdx.x] = g_idata_f[arrayid1];
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 369.376 ] cputime=[ 383.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 671 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 714 ]
+
+
+-------
+__global__ void scan_workefficient_5(float4 *g_idata, float4 *sum, int4* seeds, int n, int edge, int width)
+
+    for (int j=0; j < edge; j++) { // the loop added 2 registers (could be unrolled)
+        __syncthreads();
+
+        flag1 = 1;
+
+        // need for each of the strings separately 
+        if (xid < 0 || xid >= (WW*4)) flag1 = 0; 
+
+        int yid1 = yorig + j;
+        if (yid1 < 0 || yid1 >= HH) flag1 = 0;
+
+        int arrayid1 = xid + yid1*WW*4; // WW*4 floats
+
+        // I MUST ALSO CHECK THE SEED VALUE
+
+        tempf[j*4*edge+threadIdx.x] = 0.;
+
+        // crashes without this test
+        if (flag1 != 0) {
+            tempf[j*4*edge+threadIdx.x] = g_idata_f[arrayid1];
+            //tempf[j*4*edge+threadIdx.x] = 0.; // very low overhead
+        }
+
+
+xorig = (xorig >> 4) << 4; // xorig is divisble by 2^4
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 1571.200 ] cputime=[ 1585.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 670 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 710 ]
+
+xorig = (xorig >> 3) << 3; // xorig is divisble by 2^3
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 1562.336 ] cputime=[ 1576.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 674 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 713 ]
+
+xorig = (xorig >> 2) << 2; // xorig is divisble by 2^2
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 1568.512 ] cputime=[ 1585.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 655 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 710 ]
+
+xorig = (xorig >> 1) << 1; // xorig is divisble by 2^1
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 2453.120 ] cputime=[ 2467.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 358223 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 708 ]
+
+xorig = (xorig >> 0) << 0; // xorig is divisble by 2^0=1
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 3194.912 ] cputime=[ 3209.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 556645 ] gst_incoherent=[ 0 ] warp_serialize=[ 0 ] cta_launched=[ 715 ]
+
+
+The problem is that shifting xorig by 4, means that at worst, it will shift 2 slots to the left or right. 
+That means that the domain would extend from -6 --> 9 instead of -8 --> 7
+
+Cases:   xorig = 12  : leave alone
+         xorig = 13  : shift one float4 to left
+         xorig = 14  : shift two float4 to right
+         xorig = 15  : shift one float4 to right
+It worked! I got 1.5 ms. 
+
+with the entire program running, 
+
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 5600.992 ] cputime=[ 5615.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 655 ] gst_incoherent=[ 1340 ] warp_serialize=[ 142632 ] cta_launched=[ 710 ]
+
+Return statement after the section of code that runs 3 times through entire domain with 64 threads: 
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 5209.152 ] cputime=[ 5223.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 674 ] gst_incoherent=[ 0 ] warp_serialize=[ 132187 ] cta_launched=[ 712 ]
+
+(time for full code: 5600). Objective: decrease the time for this outer loop
+
+(time for full code: 4600microsec), but wrong results. Objective: decrease the time for this outer loop
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 4690.848 ] cputime=[ 4705.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 669 ] gst_incoherent=[ 0 ] warp_serialize=[ 107977 ] cta_launched=[ 712 ]
+
+I have to compute ai, bi, ... inside the loops
+method=[ _Z20scan_workefficient_5P6float4S0_P4int4iii ] gputime=[ 6632.320 ] cputime=[ 6646.000 ] occupancy=[ 0.250 ] gld_incoherent=[ 668 ] gst_incoherent=[ 0 ] warp_serialize=[ 123072 ] cta_launched=[ 710 ]
+
+
+
+----------------------------------------------------------------------
+Feb 28, 2008
+
+Create scan_workefficient_6: remove bank conflicts, possible cause for warp_serialize. 
+First experiment: wrong result. No gain, slight loss. I used: 
+#define TMPF(index)  (tempf[(index) + CONFLICT_FREE_OFFSET(index)])
+everywhere I used tempf(index)
+----------------------------------------------------------------------
+I figured it out:
+
+My shared memory per block is 4,100 bytes ==> max of 3 blocks per
+multiprocessor.
+I have 64 threads per block. Therefore, I have 2 warps per block.
+
+A block can have up to 24 active warps  (24*32 = 768 = max nb threads).
+But I have
+3 blocks with only 2 warps each = 6 warps. Therefore, I only have 6/24
+active warps.
+
+6/24 = 0.25 .
+
+Therefore, I must find a way to use 256 threads instead of 64. I can
+then only have
+2 blocks since max nb threads per block = 512. 256 threads => 256//32= 8
+warps.
+8 warps * 2blocks = 16 warps ==> occupancy = 2/3 = 0.666
+
+If I have 128 threads, I could have 3 blocks. Then I have 4 warps per block
+and 12 warps total ==> occupancy = 0.5 .
+
+Best case then is to use 256 threads. But two blocks per multiprocessor
+is the
+bare minimum.
+----------------------------------------------------------------------
+extern "C++" void centroid_voronoi_7(dim3& grid , dim3& block, float4* h, float4* bins, int w, int he, 
+// Use 256 threads. Make occupancy go to 1. Hopefully, drive down cost. 
+
+// Exclude last loop, which is the actual scan algorithm
+method=[ _Z20scan_workefficient_7P6float4S0_P4int4iii ] gputime=[ 3254.400 ] cputime=[ 3268.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 2676 ] gst_incoherent=[ 0 ] warp_serialize=[ 87136 ] cta_launched=[ 709 ]
+
+// include the last loop.  Big jump in warp_serialize!
+method=[ _Z20scan_workefficient_7P6float4S0_P4int4iii ] gputime=[ 6292.992 ] cputime=[ 6306.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 2724 ] gst_incoherent=[ 0 ] warp_serialize=[ 241151 ] cta_launched=[ 717 ]
+----------------------------------------------------------------------
+seed13 has warp serialization (166 after the first loop with offset=1). 
+There are others seeds that serialize. Most do notnot. 
+----------------------------------------------------------------------
+When I comment out the section that sets temp array to zero if seed not correct value, 
+method=[ _Z20scan_workefficient_7P6float4S0_P4int4iii ] gputime=[ 1714.848 ] cputime=[ 1728.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 2676 ] gst_incoherent=[ 0 ] warp_serialize=[ 7947 ] cta_launched=[ 714 ]
+
+Without  commenting out above section
+method=[ _Z20scan_workefficient_7P6float4S0_P4int4iii ] gputime=[ 2160.064 ] cputime=[ 2173.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 2688 ] gst_incoherent=[ 0 ] warp_serialize=[ 8306 ] cta_launched=[ 714 ]
+
+Full code: 
+method=[ _Z20scan_workefficient_7P6float4S0_P4int4iii ] gputime=[ 4981.408 ] cputime=[ 4995.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 2672 ] gst_incoherent=[ 0 ] warp_serialize=[ 165474 ] cta_launched=[ 716 ]
+
+single block: appears to work
+all blocks: something wrong: count cannot be more than 256
+----------------------------------------------------------------------
+scan_work3efficient_7 : seems to work: but I have still not seed=1 
+method=[ _Z20scan_workefficient_7P6float4S0_P4int4iii ] gputime=[ 3835.040 ] cputime=[ 3847.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 2344 ] gst_incoherent=[ 4664 ] warp_serialize=[ 85219 ] cta_launched=[ 624 ]
+----------------------------------------------------------------------
+method=[ _Z20scan_workefficient_7P6float4S0_P4int4iii ] gputime=[ 4184.736 ] cputime=[ 4197.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 2304 ] gst_incoherent=[ 4720 ] warp_serialize=[ 104472 ] cta_launched=[ 624 ]
+
+// running without seed update
+method=[ _Z20scan_workefficient_8P6float4S0_P4int4iii ] gputime=[ 2269.504 ] cputime=[ 2282.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 10752 ] gst_incoherent=[ 21504 ] warp_serialize=[ 176682 ] cta_launched=[ 715 ]
+
+// running with seed update (seed update: 0.400  ms)
+method=[ _Z20scan_workefficient_8P6float4S0_P4int4iii ] gputime=[ 2611.744 ] cputime=[ 2625.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 191436 ] gst_incoherent=[ 21344 ] warp_serialize=[ 209589 ] cta_launched=[ 716 ]
+
+// without final loop
+// Major difference with previous case: warp_serialization. This means shared memory bank conflicts, 
+method=[ _Z20scan_workefficient_8P6float4S0_P4int4iii ] gputime=[ 1309.792 ] cputime=[ 1323.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 186728 ] gst_incoherent=[ 20864 ] warp_serialize=[ 24889 ] cta_launched=[ 700 ]
+
+method=[ _Z20scan_workefficient_8P6float4S0_P4int4iii ] gputime=[ 2076.672 ] cputime=[ 2090.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 191488 ] gst_incoherent=[ 21280 ] warp_serialize=[ 97556 ] cta_launched=[ 713 ]
+
+----------------------------------------------------------------------
+12 registers
+5000 seeds
+method=[ _Z20scan_workefficient_8P6float4S0_P4int4iii ] gputime=[ 2082.976 ] cputime=[ 2098.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 191728 ] gst_incoherent=[ 21248 ] warp_serialize=[ 98688 ] cta_launched=[ 713 ]
+50000 seeds
+method=[ _Z20scan_workefficient_8P6float4S0_P4int4iii ] gputime=[ 20833.312 ] cputime=[ 20848.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 1916900 ] gst_incoherent=[ 214368 ] warp_serialize=[ 1055180 ] cta_launched=[ 7134 ]
+----------------------------------------------------------------------
+Time to copy 1024x1024 float4's from GPU to CPU = 10 ms. 
+histogram: tot: 17.923000, avg: 17.923000 (ms), (count=1)
+Histogram on the CPU: 9.8ms (compared to 2 ms on GPU) (20 ms on cpu in debug mode)
+HOWEVER: on CPU, independent of number of seeds. On GPU: 50,000 seeds => 20 ms)
+So 50,000 seeds is breakeven point on CPU. 
+----------------------------------------------------------------------
+I have computed the errors on the centroid (computed on GPU versus on CPU)
+I have also computed the error on the displacement on the Seed to the centroid, 
+computed on the CPU , so th displacement error is exact. 
+  SAVE to svn
+----------------------------------------------------------------------
+Create a new kernel method to do a 32x32 grid (16x16, skip every other two.) 
+method=[ _Z27scan_workefficient_8_largerP6float4S0_P4int4iii ] gputime=[ 2132.448 ] cputime=[ 2146.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 184255 ] gst_incoherent=[ 21120 ] warp_serialize=[ 106428 ] cta_launched=[ 715 ]
+----------------------------------------------------------------------
+method=[ _Z27scan_workefficient_8_largerP6float4S0_P4int4iii ] gputime=[ 2129.536 ] cputime=[ 2142.000 ] occupancy=[ 1.000 ] gld_incoherent=[ 186466 ] gst_incoherent=[ 21184 ] warp_serialize=[ 106071 ] cta_launched=[ 713 ]
+----------------------------------------------------------------------
+Results: I get higher accuracy centroids (compared to centroids computed on the CPU)
+when using 32x32 grid (skipping every other point) rather than 16x16 (using all points). 
+This is good news. As the scheme converges, one can adjust the size of the tile. 
+----------------------------------------------------------------------
+With 625 cells: 25x25, each Voronoi cell is approx. (1000/25)=40x40. Ideally, I should 
+sample with 64x64 tile. I should try to have a tile size as argument to the 
+kernel, or a skip factor (1,2,4). 
+----------------------------------------------------------------------
+March 1, 2008
+Create an interative procedure. First put histogram into its own class
+for ease of use. 
+
+Time for Voronoi generation (11 ms), time for GPU (2 ms on the GPU), 
+but 8 ms on the CPU (includes the 2ms on the GPU). Do not know why. 
+
+Some timings in Centroid::computeOnGPU()
+		// the entire method is clocked at 17.9 ms!!! (GPU only takes 2 ms)
+		// the entire method minus call to centroid_voronoi_7 (takes 15 ms)
+	    // the time between ppc->begin() and ppc->end() is 1.8 ms (with call to voronoi)
+		// the time for ppc->begin(): between 5.3 ms and 14 ms (do not know why)
+		// the time for ppc->end(): 0.7 ms
+bottom line: it is ppc->begin() that is taking 7 times more time than the time on 
+  the GPU!!! Two solutions: 1) compute Voronoi directly on the GPU (possible in 2D), 
+  and 2), reduce times in pingpongCuda time. 
+----------------------------------------------------------------------
+FBO_to_PBO(); (dominant time!)
+PingPongCuda::misc: tot: 13.552000, avg: 13.552000 (ms), (count=1)
+PingPongCuda::misc: tot: 0.772000, avg: 0.772000 (ms), (count=1)
+
+registerBufferObject(pbo);
+PingPongCuda::misc: tot: 1.005000, avg: 1.005000 (ms), (count=1)
+PingPongCuda::misc: tot: 1.017000, avg: 1.017000 (ms), (count=1)
+
+mapBufferObject<float4>(&data4, pbo); // does this guarantee data4 is aligned?
+PingPongCuda::misc: tot: 3.551000, avg: 3.551000 (ms), (count=1)
+PingPongCuda::misc: tot: 0.022000, avg: 0.022000 (ms), (count=1)
+
+Incredible!
+	glReadPixels(0, 0, tex.getWidth(), tex.getHeight(), GL_RGBA, GL_FLOAT, 0);  // 13ms?
+takes  13 ms  for 1024 x 1024 x float4!!! VERY SLOW on bones!!!
+
+So far, glGetTexImage() (replacing glReadPixels) is not working
+
+glReadPixels() has very inconsistent times. 
+
+glGetTexImage takes 0.001 ms!!! instead of the 10 ms of glReadPixels(), but I eventually 
+get a segmentation error. DO NOT KNOW WHY.  MUST STILL CHECK THE RESULT. 
+----------------------------------------------------------------------
+centroids on the gpu: tot: 14.124000, avg: 14.124000 (ms), (count=1)
+ppc->begin: now takes 5.5 ms (consistent) 
+
+(sometimes 1 ms, sometimes 5.5 ms)
+    registerBufferObject(pbo);
+	mapBufferObject<float4>(&data4, pbo); // does this guarantee data4 is aligned?
+	data = (float*) data4;
+
+    registerBufferObject(pbo);  (1 ms or 5 ms: oscillates)
+	mapBufferObject<float4>(&data4, pbo); (0 ms or 3.5 ms)
+
+Question: I'd like to avoid calling them multiple times
+
+Unregister: 0.7 ms
+
+Does not seem to work when I register in the constructor and unregister in 
+the destructor. DO NOT KNOW WHY.  Actually, it does not work when I use
+glGetTexImage. Do not know why!!! Something wrong with the data returned
+via the texture. 
+
+glGetTexImage: 18 ms!!! (rectangular texture), ppc->begin(): 70 ms
+glGetTexImage: 0.01 ms!!! (2D  texture) (probably nothing is executed)
+compute centroid on cpu: 9.5 ms
+`
+I am running out of memory. I obviously am not deallocating something. 
+
+Bottom  line: (20ms per iteration) 50 fps (histogram + cuda).
+I could probably double the frame rate with a fully CUDA implementation. 
+(5000 seeds)
+
+With 50000 seeds, 42 ms per iteration: 20 fps. Reason is that it 
+now takes 20 ms for histogram (instead of 2ms). 
+
+Something to do. 
+----------------------------------------------------------------------
+In this version, 5000 seeds, results of centroid calculation on 32x32
+tile (skipping other element) is quite good. Check output file to 
+see first 20 seeds, first 20 centroids computed on CPU and first 20 centroids
+computed on the GPU, in addition to various errors.  (svn version 22)
+----------------------------------------------------------------------
+Implemented LLoyd algorithm. 5000 seeds, convergence in 3-4 iterations. 
+That seems contrary to literature where convergence is much slower. 
+Better results with 32x32 tiles. But even on 1st iteration, the seed
+is less than 1 percent off from the centroid. Strange. Must check this
+graphically. Check main.cpp (display) to see how this is done. 
+svn version 23
+----------------------------------------------------------------------
+Check on CPU the GPU histogram, using the exact same algorith: 
+tilings of 16x16 and tilings of 32x32.
+
+Simulation of GPU on CPU does not provide exactly the same results. 
+There is a problem that must be debugged. How to debug? 
+svn version 24
+----------------------------------------------------------------------

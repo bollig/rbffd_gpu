@@ -1,11 +1,11 @@
 MESSAGE(STATUS "LINUX detected.")
 
 # One or more dirs split by spaces. This is a command so it can be called multiple times
-INCLUDE_DIRECTORIES (AFTER
+INCLUDE_DIRECTORIES (
 )
 
 # One or more dirs split by spaces. This is a command so it can be called multiple times
-LINK_DIRECTORIES (AFTER
+LINK_DIRECTORIES (
 )
 
 

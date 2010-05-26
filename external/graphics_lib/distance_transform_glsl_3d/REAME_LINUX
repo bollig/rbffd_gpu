@@ -1,0 +1,497 @@
+Feb. 2, 2008
+- Based on distance_transform_glsl_2
+- 3D Voronoi version, based on Multigrid approach
+
+Slice by slice manipulation of texture
+- I need some lower level routines to manage texture slicing. 
+
+- First implementation: create a large 2D texture to represent the 
+  3D texture, with 9 lookups. Make sure that all the seeds are
+  represented. 
+- Second implementation: large 2D texture with 9 lookups (make sure
+  that all seeds are copied to all levels. Ideally, the seeds from
+  slices n-1 and n+1 in texture T_{N} should go to slice n in 
+  texture T_{N-1} (finer texture). 
+  Solution: prior to starting the algorithm, sort the seeds with 
+  respect to z. If initial texture is $MxMxM$, create a histogram
+  with $M$ bins.  Only copy a selected number of values. 
+  
+On mac: 100 fps for 512x512, 25 fps for 1024x1024, 5 fps for 2048x2048
+Maximum possible speed: 1 fps on 8 GPUS for 512 x 512 x 512
+----------------------------------------------------------------------
+
+Create Flat texture library. 
+
+class FlatTexture {
+private:
+	TexOGL& tex;
+
+	/// lookup[i] is the z texture coordinate
+	TexOGL1D& lookup; // Need 1D texture library
+	int size;  // assume uniform cube
+public:
+	FlatTexture();
+	~FlatTexture();
+}
+
+// assume rectangular texture
+texture3D(x,y,z)  // Nx x Ny x Nz texture
+2D grid: size Mx x My
+1) compute offset into 2D grid: (ox, oy)
+2D coordinate is 
+x:   ox + x
+y:   oy + y
+(ox and oy depends on how the texture are distributed). 
+
+For now, only implement 16x16x16 = 16^3, and 64^3. Equivalent 2D
+grids:   64 x 64  and  256 x 256. 
+
+NEXT: implement cube 3D texture, but rectangular 3D texture: 
+example:   128x128x128 ==> (128x16) x (128x8) = 2048 x 1024
+   (I should get approximately 10 fps) on a single GPU on my mac 
+   with a Radeon X1600.  (or 50 fps on a NVidia 8800GT)
+    
+
+Advantages of our method: 
+- cache friendly
+- effectively single pass: 1.33 * single pass in 2D
+- flat texture: minimize texture binding, etc.
+- completely on the GPU
+- minimize errors: redraw seeds at every pass
+- construction of LOD rasterized voronoi meshes. 
+- parallel algorithm: only seeds need be communicated. Not
+  the partial grid data.
+Disadvantages: 
+- preprocessing might become expensive for many seeds
+- require seed histogram in z to speed up seed resampling at
+  each pass (INITIALLY reseed with all seeds, but that might not 
+  be practical)
+
+Seeds: array of 3D coordinates in [0,1]
+
+Change voronoi.frag to work with 3D distances. 
+
+----------------------------------------------------------------------
+Given (x,y) on 2D texture, compute the 3D coordinates. 
+1. What grid am I in: 
+   x *= tex_size; // rect. coord.
+   y *= tex_size; // rect. coord.
+   ox = x / sz3d; // integer division
+   oy = y / sz3d; // integer division
+   int x3 = x - ox;
+   int y3 = y - oy;
+   int z3 = oy*z3d + ox;
+----------------------------------------------------------------------
+There are serious problems with the multigrid version in the 3D case, 
+having to do with 2D to 3D interpolation from the flat texture to the 3D 
+texture. Also, as the 3D texture is reduced in size, how to deal with 
+tiling? 
+
+First test only single level. 
+----------------------------------------------------------------------
+Feb 2, 2008, 5:35 pm. 
+Saved working case in bak2. However, this is not the multigrid version, 
+but the original flooding algorithm version. 
+----------------------------------------------------------------------
+Feb 2, 2008, 
+Make this work with 2D texture of size mx x my, such that mx*my = sz^3
+----------------------------------------------------------------------
+Assume 512^3 and 50000 Voronoi points. It is unrealistic to place all oints 
+at all grids. One must create a histogram for more efficiency.
+----------------------------------------------------------------------
+distance_transform_glsl_3d
+T^n(k) interpolate to T^{n+1}(k) and T^{n+1}(k+1)
+Level k is coarse than level 
+----------------------------------------------------------------------
+!!! 
+Modify voronoi.frag to reflect new pingpong datastructures, and Texsz vector. 
+In ::run, when i=5, I should be in a 8 x 4 grid. SOMETHING WRONG!
+
+How best to choose gluOrtho2D when doing interpolations? After all, the domain 
+is not square. Probably, glOrtho should be the same size as the textures. 
+----------------------------------------------------------------------
+Feb. 3, 2007
+I have fixed some bugs related to interpolating from one level to another in 3D.
+Taking into account that the 2D flat texture is not always square. I had
+to interpolate vertical tiles one at a time to the next level. However, it should 
+be efficient: no context switches, fully on the GPU. I use GL_quads. I could use
+an array of array buffer objects.
+
+Stored in bak4/
+----------------------------------------------------------------------
+11:45 am. 
+There are errors, even in when doing a single Voronoi mesh. 
+Problem is this: flat texture is 512x512, 3D texture is 64x64x64. 
+In 3D case, there are 6 levels of Multigrid. For flat texture, 
+there are 9 levels. If the seeds are placed arbitrarily in the 2D 
+grid, the proper seeds might not make it to their proper location 
+with 6 levels in a flat texture. However, if the seeds are all 
+placed in each 3D tile, this problem might not occur.  The other 
+problem is that in a flat texture with step = 1, horizontal 
+sampling samples adjacing 3D grids, vertical sampling between 
+two tiles accesses data at height locations separated by the width
+of the tile.
+
+When adding new seeds, I must be careful not to knock out the Original 
+seeds. Now clear how since in 3D it is easy to overwrite x,y. Perhaps
+with histogram, one should write all seeds starting with those
+furthest away, and then writing those that are closer to the slice
+location?
+
+The cost is NOT independent of the number of seeds, since the preprocessing
+and seed redrawing is has an associated cost!!!
+----------------------------------------------------------------------
+1:03 pm
+Store to bak5/ I get 3D results. tex_size and sz3d no longer used. 
+All information from from pingpong. The more seeds I put, the less
+frames are required for the result (although I doubt it is correct). 
+I should get the result before the first glutSwapbuffers(). DO NOT 
+KNOW  WHAT IS WRONG!
+----------------------------------------------------------------------
+I wrote the routine draw_seeds_3D to draw the seed at the proper
+location in the flat texture, but with the color determined by the 
+original (x,y,z) (stored in the ping-pong texture). 
+
+Store in bak5/
+----------------------------------------------------------------------
+TODO: 
+Change the voronoi_gpu_full_3d to sample in all three directions: 
+27 samples per point. Expensive, but perhaps unavoidable
+----------------------------------------------------------------------
+For fragment shader: Given (x,y) position in 2D flat texture, 
+1) translate to 3D position (perhaps
+
+For each tile on 2D texture, do: 
+Translate (x,y) position to (x3,y3,z3) (3d position in 3D texture). 
+For (x,y) position in flat texture, compute all 27 texture fetches. 
+Do this in rectangular texture mode. So assume we know (x2i,y2i) 
+in 2d space. What are 27 points that need to be accessed? 
+
+(x2i,y2i) => 
+  ox = x2i / sz3d;
+  oy = y2i / sz3d; 
+  k0 = jj*gx + ii; // k layer
+  x0 = x2i - ox*sz3d; // x,y coord within a tile (integers)
+  y0 = y2i - oy*sz3d;
+
+  Need points P = (x0 \pmz 1, y0 \pmz 1, k0 \pmz 1) 
+      (x0,y0,k0), (x0+1,y0,k0), etc.
+
+  Transform P into 2D coordinates in the tile. The formulas must work 
+  in all case. Define these in the vertex shader. Translate these 
+
+  given step (or s) (integer value, usually equal to 1), the following 
+  are the 27 sample points: 
+
+  Lower plane:   (k0-1)
+    (x0-step,y0-step), (x0, y0-step), (x0+step, y0-step)
+	(x0-step,y0)     , (x0, y0),      (x0+step, y0)
+    (x0-step,y0+step), (x0, y0+step), (x0+step, y0+step)
+
+  Middle plane: (k0) (xy the same as above)
+  Upper  plane: (k0+1) (xy the same as above)
+
+Given kk (k0-1,k0 or k0+1), compute the (ox,oy) position of the tile origin:
+  (in rect. tex coordinates) : 
+
+  oy = kk / gx;
+  ox = kk - oy * gx;
+
+  Given the 9 sample points on the plane, all one has to do 
+  is change the tile origin (different value of k). Treat all 
+  three planes the same. No need to start with the center point. 
+
+----------------------------------------------------------------------
+Need two routines: two2three and three2two. In both cases, translate
+from 2D -> 3D and 3D -> 2D coordinates, but in tex rect coordinates. 
+----------------------------------------------------------------------
+I will draw a series of quads (probably using ArrayBuffer objects)
+I need one ArrayBufferObject per texture level
+level 0: gluOrtho2D(0,1,0,1)
+level 1: gluOrtho2D(0,1,0,0.5)
+level 2*n  : same as level 0
+level 2*n+1: same as level 1
+
+Nb quads = nb of points in k direction: 1,2,4,8,16,32,64,128,256,512
+----------------------------------------------------------------------
+Every time one does  pingpong->end(), the buffers are swapped and the old texture
+is NOT copied into the new one.  Be careful when doing successive successive
+begin/end pairs. Perhaps I should have a pingpong->swap() command. 
+----------------------------------------------------------------------
+Problem with seed placement. In 3D, I expect color to vary continuously 
+along horizontal lines, bottom to top. It is approximately correct: but
+the variation is not smooth. 
+
+Problem is fixed. Look at draw_seed.vert
+
+Default gluOrtho2d is (-1,1) in both directions. To transform to (0,1) in both 
+directions (as specified in the program), I do a (since I cannot used ftransform()
+since I am not using gl_Vertex as input.
+
+	  gl_Position = gl_ModelViewProjectionMatrix * pos;
+
+Feb. 4, 2008, 6:44 pm
+Version is stored in bak6/
+----------------------------------------------------------------------
+Feb. 6, 2008
+- TODO: Try glReadBuffer from the console. Does not work with my mac with
+DISPLAY=:0.0, although I get no errors. 
+----------------------------------------------------------------------
+Feb. 7, 2008
+Be careful with vertex buffer. I was going from 2D to 3D, when in reality only the z component
+was important to determine required shifts. I must be careful regarding 0.5 shifts. When texture
+goes from 0 - 512, when retrieving pixel values (glReadPixels), coordinates go from 0.5 to 511.5 (512 values). 
+This may or may not be important. 
+----------------------------------------------------------------------
+I am having problems seeing the back buffer, followed by swap. The screen remains white!
+This problem is solved by using
+#define FLOAT_BUFFER GL_RGBA_FLOAT16_APPLE
+or #define FLOAT_BUFFER GL_RGBA_FLOAT32_APPLE (takes more memory)
+instead of 
+//#define FLOAT_BUFFER GL_FLOAT_RGBA32_NV
+----------------------------------------------------------------------
+Program works, but z interpolation still not ok. 
+----------------------------------------------------------------------
+Stored current version (works, full mg, 27 texture fetches). However, I cannot 
+get perfect results with only 2 passes per level. Do not know why. Perhaps some subtle
+problem with interpolation or with the Voronoi solver itself. 
+----------------------------------------------------------------------
+Feb. 6
+Version from kirk has inconsistent FBO . Not clear how it is possible.
+----------------------------------------------------------------------
+128^3: 150 ms/frame (timings appear to be off by 10) (one level)
+128^3: 130 ms/frame (two levels). Way too slow!
+----------------------------------------------------------------------
+bak7: version works, but inefficient in updateTextureFull. I will 
+1) remove glBegins;
+2) decrease number of set_param1
+----------------------------------------------------------------------
+Cannot have varying of type int and bool in vertex shaders
+----------------------------------------------------------------------
+Efficiency: If I call set_param a lot, consider separating out 
+the glGetUniformLocation from the actual setting of the parameter
+(which costs much less). 
+----------------------------------------------------------------------
+bak8/ code works, is more efficient. I need timers based on wall clock time
+to time fps. I'll try to get 1D texture offsets for k0 working. 
+
+I cannot have 1D rectangular textures. For now, I'll create vbos with 
+Vertex/Texture1D that store k0. But I'll use color instead of texture. 
+----------------------------------------------------------------------
+There is an error in shader *full*frag in bak_shaders/. It has to 
+do with vbo_list, which is obviously not working properly. 
+----------------------------------------------------------------------
+128^3: 5 fps on my mac in 2-level mode. Results appear to be correct. 
+I am sure that shaders could be made more efficient, as well as
+interpolation and drawSeeds. 
+
+bak9/ : 2-level appears to work, reasonably efficiently.  Shoudl do 
+better profiling. 
+----------------------------------------------------------------------
+Feb 10, 10:30 pm
+I put a timer in the code: (based on gettimeofday)
+128^3: 6.6 fps (2 levels), 1.3 fps (1 level)
+   Acceleration: 5 . However, it is using a number of sweeps
+   based on the width of the flat texture. Using the width 
+   of the 3D texture does not work properly. There must be an 
+   error somewhere, or the seeds are improperly positionned!
+	That explains why the acceleration is so high! 
+	There are 27 texture fetches. 
+
+64^3: 24 fps (2 levels, nbl=8), 9.3 fps (1 level)
+(speedup: almost a factor of 3). Of course, once again nbl
+is larger than it should be, which means that the actual
+speedup will be less. 
+
+
+Store working code in bak10/ 
+----------------------------------------------------------------------
+Since the program does not work with log2(sz3d) iterations and one level, 
+there is a bug, either with drawSeeds3D or with drawVoronoi, or in 
+the distance*3D.cpp file (when using single level). THe program appears 
+to work ok with log2(max(szx,szy)), which is overkill
+----------------------------------------------------------------------
+pos = (0.9,0.9,0.9)
+sz3d = 64
+p3 = (57, 57, 57)
+gx = 512/64 = 8
+oxy.y = 57/8 = 7
+oxy.x = 57-8*7 = 1
+p2.x = 64*(1,7) + (57,57) = (121, 505)
+p2f = (0.236, 0.986)
+position
+position = (0.236, 0.986, 0., 1.)   // in [0,1]^4
+
+    curCol = gl_Color; // x,y,z in [0,1]
+    vec4 pos = gl_Vertex;  // 3D point in [0.,1.]^3
+
+    ivec3 p3 = ivec3(pos.xyz * float(sz3d)); // [0,sz3d]^3
+    //p3.z = int(0.5 * float(sz3d));
+
+    ivec2 oxy;
+    int gx = int(szx) / sz3d;
+    oxy.y = p3.z / gx;
+    oxy.x = p3.z - gx*oxy.y;
+    ivec2 p2 = sz3d*oxy + p3.xy;
+
+    vec2 p2f = vec2(p2) / vec2(szx, szy); // in [0,1] x [0,1]
+    position = vec4(p2f,0.,1.);
+
+//----------------------------------------------------------------------
+ix= 5, curTexSz->sz3d= 32
+curTexSz->szx/y= 256, 128
+point: 0.9, 0.9, 0.9  (color as well)
+pixels[3,14]: 0.099976, 0.099976, 0.099976, 1.000000
+gx = 256 / 32 = 8
+
+pos.xyz*float(sz3d) = 28.8
+p3 = (28,28,28)
+oxy.y = 28 / 8 = 3
+oxy.x = 28 - 8*3 = 4
+p2.x = 32 * 4 + 28 = 156
+p2.y = 32 * 3 + 28 = 124
+p2.x/256 = 156/256 = 0.609
+p2.y/128 = 124/128 = 0.968
+p2f = (0.609, 0.968)
+position = (0.609, 0.968)
+
+szx,szy = 256 x 128
+sz3d = 32
+gx,gy= 8, 4
+What about if pos.x = (0.1,0.1,0.1)
+p3 = pos.xyz*float(sz3d) = (3.2, 3.2, 3.2)
+p3 = (3,3,3)
+oxy.y = 3/8 = 0
+oxy.x = 3 - 0 = 3 (max value might create problems)
+p2.x = 32*3 + 3 = 99
+p2.y = 32*0 + 3  = 3
+p2.x/256 = 0.386
+p2.y/128 = 0.0234
+pixels[3,14]: 0.099976, 0.099976, 0.099976, 1.000000 (WRONG LOCATION!!)
+
+----------------------------------------------------------------------
+0.5,0.5  ends up at pixel[16,79]  (16 is 1/2 way through)
+gx = 8, gy = 4
+P (0.5,0.5,0.5) --> 32*P = (16,16,16). oxy.y = 16/8= 2, oxy.x = 16-2*8 = 0
+P3d = (0*32+16, 2*32+16) = (16,80) (CLOSE ENOUGH)
+----------------------------------------------------------------------
+P=(0.9,0.9,0.9)  --> 32*P = (28,28,28). oxy.y = 28/8=3, oxy.x = 28-3*8=4
+P3d = (4*32+28, 3*32+28) = (156, 124)
+----------------------------------------------------------------------
+32*P = (16,16,24). oxy.y = 24/8 = 3, oxy.x = 24-3*8 = 0, oxy=(0,3)
+P3d = (0*32+16, 3*32+16) = (16,114)
+// SOMETHING WRONG WITH COUNTING
+16+256*114=29200
+16+256*111=28432
+16+16*32+24*32*32=25104
+pixels[16,111]: 0.500000, 0.500000, 0.500000, 0.500000
+The same code running on uhura gives 112!!!  (y off by 1)
+----------------------------------------------------------------------
+ivec3 ip3 = ivec3(1,1,25); // [0,sz3d]^3
+What are the 2D coordinates.
+oxy.y = 25/8 = 3, oxy.x = 25-3*8 = 1, oxy = (1,3)
+P3d = (1*32+1, 3*32+1) = (33,97)
+  (correct on Nvidia, incorrect on my mac! WHY?)
+  The mac gives (1,100) instead of (33,97)
+----------------------------------------------------------------------
+The following sometimes works in the vertex shader on the mac: 
+	//int xx = 8;
+	//int ii = 25;
+	//int oo = ii / xx;
+	// oxy.y = oo;  // THIS APPROACH WORKS ON THE MAC
+
+The following does not always work in the vertex shader on the mac: 
+	ivec2 oxy;
+	//int xx = 8;
+	//int ii = 25;
+	oxy.y = ii / xx;
+----------------------------------------------------------------------
+Under certain circumstances, the following give different answers
+
+// CASE I
+	ivec3 ip3;
+	ivec2 oxy;
+	int gx;
+	gx = 8;
+	ip3.z = 25;
+	oxy.y = ip3.z / gx; 
+	oxy.x = ip3.z - gx * oxy.y;   
+//OR
+// CASE II
+	//ivec3 ip3;
+	//ivec2 oxy;
+	//oxy.y = 25 / 8;          // oxy = [1,2]
+	//oxy.x = ip3.z - gx * oxy.y;
+
+
+	position = vec4(vec2(oxy),0.,1.);
+	gl_Position = gl_ModelViewProjectionMatrix * position;
+	// CASE I   gl_Position  = [0,3]
+	// CASE II  gl_Position  = [1,2]
+//----------------------------------------------------------------------
+On Uhura: 64^3: 5.1 ms/frame versus 1.34 ms/frame (with smaller nbl steps)
+  (speedup: 3.3)
+On Uhura: 64^3: 7.9 ms/frame versus 1.95 ms/frame (with larger nbl steps)
+  (speedup: 4)
+
+Single seed point
+
+128^3: smaller nbl (the one that really counts), 11.13 ms/frame (2 levels)
+128^3: smaller nbl (the one that really counts), 46.23 ms/frame (1 level)
+  (speedup:  4.1)  (slightly more than 8 times slower than 64^3)
+
+256^3: smaller nbl (the one that really counts), 92.4 ms/frame (2 levels)
+256^3: smaller nbl (the one that really counts), 422.23 ms/frame (1 level)
+  (speedup:  4.5)  (slightly more than 8 times slower than 64^3)
+
+
+            1 level         2 levels	speedup
+
+64^3		5.1 (200)		1.34 (745)		3.3
+128^3		46. (22)		11.1 (91)		4.1
+256^3		422. (2)		92.4 (11)		4.5
+
+
+  Display time (ms) (fps)
+----------------------------------------------------------------------
+10000 seeds
+
+128^3: 11.2 (89 fps) with 2 levels (so cost of seeds is minimal)
+----------------------------------------------------------------------
+Note: I can still accelerate this code by decreasing the number of sweeps. 
+for 128^3, I should be able to decrease number of sweeps by two. 
+In that case, the time for 2 levels is: 9.45 (105 fps)
+----------------------------------------------------------------------
+Tue. Feb 12, uhura
+Still a slight bug: the code does not converge with the minimum number of iterations 
+required. Of course, this could be fixed by adding random seeds, but I should find 
+the bug. Ideally, the number of iterations should be log2(sz3d), but in reality, 
+the algorithm only works with log2(flat_texture.width()). Perhaps it is because the seeds
+sometimes end up in the wrong tile in the flat texture.  I should first get this working 
+with the single level algorithm.
+
+With 5 seeds, final level, sz3d=64 (finest), requires 6 frames to converge to proper Voronoi. 
+It should require a single frame.  Must be a bug of some kind. 
+----------------------------------------------------------------------
+nbl = log2(pc->getTexture().getWidth()+.001); // SEEMS to converge to proper solution
+//nbl =  log2(curTexSz->sz3d+.001);  // DOES NOT always converge to proper solution, even after many frames
+
+To see this, look at evolution of Voronoi structure between successive rows. The smaller nbl leads to 
+discontinuities. 
+
+Store in bak11/
+----------------------------------------------------------------------
+128^3: 16ms/frame (accelerated) (62 fps) 
+(it is possible to accelerate to 60 fps)
+----------------------------------------------------------------------
+Feb. 13, 2008, 9:25 am
+Working version: bak12 (bones)
+----------------------------------------------------------------------
+Feb. 13, 2008, 9:25 am
+The glReadPixels appear to give me results at lower accuracy than FLOAT 32 bit. 
+
+Key point: in voronoi_gpu_3d_full.{vert,frag}, only lxy should be interpolated
+across vertices. oxy, oxym, oxyp should remain constant within a tile. 
+
+Next for Centroid Voronoi: need histogram routine. Start with inefficient one.
+----------------------------------------------------------------------

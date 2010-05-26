@@ -5,10 +5,7 @@
 
 using namespace std;
 
-Heat::Heat(std::vector<Vec3>* rbf_centers_, int stencil_size,
-		std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank) :
-	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),
-			id(rank), subdomain(NULL) {
+Heat::Heat(ExactSolution* _solution, std::vector<Vec3>* rbf_centers_, int stencil_size, std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank) :	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),	id(rank), subdomain(NULL), exactSolution(_solution) {
 	nb_stencils = stencil_size;
 	nb_rbf = rbf_centers->size();
 
@@ -16,18 +13,7 @@ Heat::Heat(std::vector<Vec3>* rbf_centers_, int stencil_size,
 	freq = PI / 2.;
 	decay = 1.;
 
-	// should be placed elsewhere, perhaps in grid
-
-	// HARDCODED EB FIX THIS!
-	major = 1.0;//grid.getMajor();
-	minor = 0.5;//grid.getMinor();
-
 	time = 0.0; // physical time
-
-	maji2 = 1. / (major * major);
-	mini2 = 1. / (minor * minor);
-	maji4 = maji2 * maji2;
-	mini4 = mini2 * mini2;
 
 	// solution + temporary array (for time advancement)
 	sol[0].resize(nb_rbf);
@@ -47,10 +33,7 @@ Heat::Heat(std::vector<Vec3>* rbf_centers_, int stencil_size,
 	//grid.laplace();
 }
 
-Heat::Heat(GPU* subdomain_, Derivative* der_, int rank) :
-	rbf_centers(&subdomain_->G_centers), boundary_set(
-			&subdomain_->global_boundary_nodes), der(der_), id(rank),
-			subdomain(subdomain_) {
+Heat::Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank) : exactSolution(_solution), rbf_centers(&subdomain_->G_centers), boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank),subdomain(subdomain_) {
 	nb_stencils = subdomain->Q_stencils.size();
 	nb_rbf = subdomain->G_centers.size();
 
@@ -58,18 +41,7 @@ Heat::Heat(GPU* subdomain_, Derivative* der_, int rank) :
 	freq = PI / 2.;
 	decay = 1.;
 
-	// should be placed elsewhere, perhaps in grid
-
-	// HARDCODED EB FIX THIS!
-	major = 1.0;//grid.getMajor();
-	minor = 0.5;//grid.getMinor();
-
 	time = 0.0; // physical time
-
-	maji2 = 1. / (major * major);
-	mini2 = 1. / (minor * minor);
-	maji4 = maji2 * maji2;
-	mini4 = mini2 * mini2;
 
 	// solution + temporary array (for time advancement)
 	sol[0].resize(nb_rbf);
@@ -89,26 +61,14 @@ Heat::Heat(GPU* subdomain_, Derivative* der_, int rank) :
 	//grid.laplace();
 }
 
-Heat::Heat(Grid& grid_, Derivative& der_) :
-	rbf_centers(&(grid_.getRbfCenters())),
-			boundary_set(&(grid_.getBoundary())), der(&der_), id(0), subdomain(
-					NULL) {
+Heat::Heat(Grid& grid_, Derivative& der_) : rbf_centers(&(grid_.getRbfCenters())),boundary_set(&(grid_.getBoundary())), der(&der_), id(0), subdomain(NULL) {
 	nb_stencils = grid_.getStencil().size();
 	nb_rbf = grid_.getRbfCenters().size();
 	PI = acos(-1.);
 	freq = PI / 2.;
 	decay = 1.;
 
-	// should be placed elsewhere, perhaps in grid
-	major = grid_.getMajor();
-	minor = grid_.getMinor();
-
 	time = 0.0; // physical time
-
-	maji2 = 1. / (major * major);
-	mini2 = 1. / (minor * minor);
-	maji4 = maji2 * maji2;
-	mini4 = mini2 * mini2;
 
 	// solution + temporary array (for time advancement)
 	sol[0].resize(nb_rbf);
@@ -186,8 +146,8 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 #if 1
 		for (int i = 0; i < lapl_deriv.size(); i++) {
 			Vec3& v = (*rbf_centers)[i];
-			printf("(local: %d), lapl(%f,%f)= %f\t%f\n", i, v.x(), v.y(),
-					lapl_deriv[i], s[i]);
+			printf("(local: %d), lapl(%f,%f,%f)= %f\t%f\n", i, v.x(), v.y(),v.z(),
+								lapl_deriv[i], s[i]);
 		}
 		//exit(0);
 #endif
@@ -204,7 +164,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 			// first order
 			Vec3& v = (*rbf_centers)[i];
 			//printf("dt= %f, time= %f\n", dt, time);
-			double f = force(v[0], v[1], time);
+			double f = exactSolution->tderiv(v, time) - exactSolution->laplacian(v, time);
 			printf("force (local: %d) = %f\n", i, f);
 #ifdef SECOND
 			s1[i] = s[i] + 0.5 * dt * (lapl_deriv[i] + f);
@@ -226,7 +186,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		for (int i = 0; i < bnd_sol.size(); i++) {
 			// first order
 			Vec3& v = (*rbf_centers)[bnd_index[i]];
-			printf("bnd[%d] = {%d} %f, %f\n", i, bnd_index[i], v.x(), v.y());
+			printf("bnd[%d] = {%d} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
 #ifdef SECOND
 			s1[bnd_index[i]] = bnd_sol[i];
 #else
@@ -253,7 +213,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 			Vec3& v = (*rbf_centers)[i];
 			//printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
 			//v.print("v");
-			double f = force(v[0], v[1], time + 0.5 * dt);
+			double f = exactSolution->tderiv(v, time + 0.5 * dt) - exactSolution->laplacian(v, time + 0.5 * dt);
 			s[i] = s[i] + dt * (lapl_deriv[i] + f); // RHS at time+0.5*dt
 		}
 
@@ -282,7 +242,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		// exact solution
 		for (int i = 0; i < nb_stencils; i++) {
 			Vec3& v = (*rbf_centers)[i];
-			sol_ex[i] = exactSolution(v[0], v[1], time);
+			sol_ex[i] = exactSolution->at(v, time);
 			sol_error[i] = sol_ex[i] - s[i];
 		}
 
@@ -296,7 +256,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		FILE* fderr = fopen(filename, "w");
 		for (int i = 0; i < nb_stencils; i++) {
 			Vec3& v = (*rbf_centers)[i];
-			fprintf(fderr, "%f %f %f\n", v[0], v[1], sol_error[i]);
+			fprintf(fderr, "%f %f %f %f\n", v[0], v[1], v[2], sol_error[i]);
 		}
 		fclose(fderr);
 
@@ -306,7 +266,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		FILE* fdsol = fopen(filename, "w");
 		for (int i = 0; i < nb_stencils; i++) {
 			Vec3& v = (*rbf_centers)[i];
-			fprintf(fdsol, "%f %f %f\n", v.x(), v.y(), s[i]);
+			fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
 		}
 		fclose(fdsol);
 
@@ -366,7 +326,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 #if 1
 	for (int i = 0; i < lapl_deriv.size(); i++) {
 		Vec3& v = (*rbf_centers)[i];
-		printf("(local: %d), lapl(%f,%f)= %f\t%f\n", i, v.x(), v.y(),
+		printf("(local: %d), lapl(%f,%f,%f)= %f\t%f\n", i, v.x(), v.y(), v.z(), 
 				lapl_deriv[i], s[i]);
 	}
 	//exit(0);
@@ -384,7 +344,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 		// first order
 		Vec3& v = (*rbf_centers)[i];
 		//printf("dt= %f, time= %f\n", dt, time);
-		double f = force(v[0], v[1], time);
+		double f = exactSolution->tderiv(v, time) - exactSolution->laplacian(v, time);
 		printf("force (local: %d) = %f\n", i, f);
 #ifdef SECOND
 		s1[i] = s[i] + 0.5 * dt * (lapl_deriv[i] + f);
@@ -406,7 +366,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	for (int i = 0; i < sz; i++) {
 		// first order
 		Vec3& v = (*rbf_centers)[bnd_index[i]];
-		printf("bnd[%d] = {%d} %f, %f\n", i, bnd_index[i], v.x(), v.y());
+		printf("bnd[%d] = {%d} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
 #ifdef SECOND
 		s1[bnd_index[i]] = bnd_sol[i];
 #else
@@ -423,7 +383,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 		Vec3& v = (*rbf_centers)[i];
 		//printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
 		//v.print("v");
-		double f = force(v[0], v[1], time + 0.5 * dt);
+		double f = exactSolution->tderiv(v, time+0.5 * dt) - exactSolution->laplacian(v, time + 0.5 * dt);
 		s[i] = s[i] + dt * (lapl_deriv[i] + f); // RHS at time+0.5*dt
 	}
 
@@ -437,7 +397,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 #if 0
 	for (int i=0; i < nb_rbf; i++) {
 		Vec3* v = rbf_centers[i];
-		printf("(%f,%f): T(%d)=%f\n", v.x(), v.y(), i, s[i]);
+		printf("(%f,%f,%f): T(%d)=%f\n", v.x(), v.y(), v.z(), i, s[i]);
 	}
 #endif
 
@@ -452,7 +412,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	// exact solution
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		sol_ex[i] = exactSolution(v[0], v[1], time);
+		sol_ex[i] = exactSolution->at(v, time);
 		sol_error[i] = sol_ex[i] - s[i];
 	}
 
@@ -466,7 +426,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	FILE* fderr = fopen(filename, "w");
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		fprintf(fderr, "%f %f %f\n", v[0], v[1], sol_error[i]);
+		fprintf(fderr, "%f %f %f %f\n", v[0], v[1], v[2], sol_error[i]);
 	}
 	fclose(fderr);
 
@@ -476,7 +436,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	FILE* fdsol = fopen(filename, "w");
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		fprintf(fdsol, "%f %f %f\n", v.x(), v.y(), s[i]);
+		fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
 	}
 	fclose(fdsol);
 
@@ -542,7 +502,7 @@ void Heat::advanceOneStepDivGrad() {
 		// first order
 		Vec3& v = (*rbf_centers)[i];
 		//printf("dt= %f, time= %f\n", dt, time);
-		double f = force(v[0], v[1], time);
+		double f = exactSolution->tderiv(v, time) - exactSolution->laplacian(v, time);
 		//printf("f= %f\n", f);
 #ifdef SECOND
 		s1[i] = s[i] + 0.5 * dt * (lapl_deriv[i] + f);
@@ -594,7 +554,7 @@ void Heat::advanceOneStepDivGrad() {
 		Vec3& v = (*rbf_centers)[i];
 		//printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
 		//v.print("v");
-		double f = force(v[0], v[1], time + 0.5 * dt);
+		double f = exactSolution->tderiv(v, time + 0.5 * dt) - exactSolution->laplacian(v, time + 0.5 * dt);
 		s[i] = s[i] + dt * (lapl_deriv[i] + f); // RHS at time+0.5*dt
 	}
 
@@ -623,7 +583,7 @@ void Heat::advanceOneStepDivGrad() {
 	// exact solution
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		sol_ex[i] = exactSolution(v[0], v[1], time);
+		sol_ex[i] = exactSolution->at(v, time);
 		sol_error[i] = sol_ex[i] - s[i];
 	}
 
@@ -634,7 +594,7 @@ void Heat::advanceOneStepDivGrad() {
 	FILE* fderr = fopen("error.out", "w");
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		fprintf(fderr, "%f %f %f\n", v[0], v[1], sol_error[i]);
+		fprintf(fderr, "%f %f %f %f\n", v[0], v[1], v[2], sol_error[i]);
 	}
 	fclose(fderr);
 
@@ -642,7 +602,7 @@ void Heat::advanceOneStepDivGrad() {
 	FILE* fdsol = fopen("solution.out", "w");
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		fprintf(fdsol, "%f %f %f\n", v.x(), v.y(), s[i]);
+		fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
 	}
 	fclose(fdsol);
 
@@ -708,7 +668,7 @@ void Heat::advanceOneStepTwoTerms() {
 		// first order
 		Vec3& v = (*rbf_centers)[i];
 		//printf("dt= %f, time= %f\n", dt, time);
-		double f = force(v[0], v[1], time);
+		double f = exactSolution->tderiv(v, time) - exactSolution->laplacian(v, time);
 		//printf("f= %f\n", f);
 		double grad = diff_x[i] * x_deriv[i] + diff_y[i] * y_deriv[i];
 #ifdef SECOND
@@ -759,7 +719,7 @@ void Heat::advanceOneStepTwoTerms() {
 		Vec3& v = (*rbf_centers)[i];
 		//printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
 		//v.print("v");
-		double f = force(v[0], v[1], time + 0.5 * dt);
+		double f = exactSolution->tderiv(v, time + 0.5 * dt) - exactSolution->laplacian(v, time + 0.5 * dt);
 		double grad = diff_x[i] * x_deriv[i] + diff_y[i] * y_deriv[i];
 		s[i] = s[i] + dt * (grad + diffusion[i] * lapl_deriv[i] + f);
 	}
@@ -789,7 +749,7 @@ void Heat::advanceOneStepTwoTerms() {
 	// exact solution
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		sol_ex[i] = exactSolution(v[0], v[1], time);
+		sol_ex[i] = exactSolution->at(v, time);
 		sol_error[i] = sol_ex[i] - s[i];
 	}
 
@@ -800,7 +760,7 @@ void Heat::advanceOneStepTwoTerms() {
 	FILE* fderr = fopen("error.out", "w");
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		fprintf(fderr, "%f %f %f\n", v[0], v[1], sol_error[i]);
+		fprintf(fderr, "%f %f %f %f\n", v[0], v[1], v[2], sol_error[i]);
 	}
 	fclose(fderr);
 
@@ -808,7 +768,7 @@ void Heat::advanceOneStepTwoTerms() {
 	FILE* fdsol = fopen("solution.out", "w");
 	for (int i = 0; i < nb_rbf; i++) {
 		Vec3& v = (*rbf_centers)[i];
-		fprintf(fdsol, "%f %f %f\n", v.x(), v.y(), s[i]);
+		fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
 	}
 	fclose(fdsol);
 
@@ -835,7 +795,7 @@ void Heat::initialConditions(std::vector<double> *solution) {
 		Vec3& v = (*rbf_centers)[i];
 		//s[i] = exp(-alpha*v.square());
 		//s[i] = 1. - v.square();
-		s[i] = exactSolution(v[0], v[1], 0.);
+		s[i] = exactSolution->at(v, 0.);
 		//s[i] = 1.0;
 		//printf("s[%d]= %f\n", i, s[i]);
 	}
@@ -848,7 +808,7 @@ void Heat::initialConditions(std::vector<double> *solution) {
 	for (int i = 0; i < sz; i++) {
 		bnd_sol[i] = s[bnd_index[i]];
 		Vec3& v = (*rbf_centers)[bnd_index[i]];
-		printf("bnd(x,y) = %f, %f\n", v.x(), v.y());
+		printf("bnd(x,y) = %f, %f, %f\n", v.x(), v.y(), v.z());
 		printf("   sol(bnd)= %f\n", bnd_sol[i]);
 	}
 
@@ -897,8 +857,15 @@ double Heat::maxNorm(vector<double> sol) {
 }
 //----------------------------------------------------------------------
 // solution at point v and time t
-double Heat::exactSolution(double x, double y, double t) {
-	double r = sqrt(x * x * maji2 + y * y * mini2);
+#if 0
+double Heat::exactSolution(Vec3& v, double t) {
+	
+	double x_contrib = v.x() * v.x() * princ_axis1_inv2; 
+	double y_contrib = v.y() * v.y() * princ_axis2_inv2; 
+	double z_contrib = v.z() * v.z() * princ_axis3_inv2; 
+	
+	double r = sqrt(x_contrib + y_contrib + z_contrib); 
+//	double r = sqrt(v.x() * v.x() * maji2 + v.y() * v.y() * mini2 + v.z() * v.z() * min2i2);
 
 	// if temporal decay is too large, time step will have to decrease
 
@@ -906,9 +873,23 @@ double Heat::exactSolution(double x, double y, double t) {
 	return T;
 }
 //----------------------------------------------------------------------
-double Heat::force(double x, double y, double t) {
-	double r2 = x * x * maji2 + y * y * mini2;
-	double r4 = x * x * maji4 + y * y * mini4;
+// EVAN : gordon says this is the laplacian(exactSolution) provided analytically
+double Heat::force(Vec3& v, double t) {
+	
+	double x_contrib2 = v.x() * v.x() * princ_axis1_inv2; 
+	double y_contrib2 = v.y() * v.y() * princ_axis2_inv2; 
+	double z_contrib2 = v.z() * v.z() * princ_axis3_inv2;
+	
+	double x_contrib4 = v.x() * v.x() * princ_axis1_inv4; 
+	double y_contrib4 = v.y() * v.y() * princ_axis2_inv4; 
+	double z_contrib4 = v.z() * v.z() * princ_axis3_inv4;
+	
+	//double r2 = pt.x() * pt.x() * maji2 + pt.y() * pt.y() * mini2 + pt.z() * pt.z() * min2i2;
+	//double r4 = pt.x() * pt.x() * maji4 + pt.y() * pt.y() * mini4 + pt.z() * pt.z() * min2i4;
+	
+	double r2 = x_contrib2 + y_contrib2 + z_contrib2; 
+	double r4 = x_contrib4 + y_contrib4 + z_contrib4; 
+
 	double r = sqrt(r2);
 	double f1;
 	double f2;
@@ -917,9 +898,11 @@ double Heat::force(double x, double y, double t) {
 
 	double nn = freq * r;
 	double freq2 = freq * freq;
-
+//Evan: 
 	f1 = cos(nn) * ((freq2 / r2) * r4 - decay);
-	f2 = freq2 * (maji2 + mini2 - r4 / r2);
+	//	f2 = freq2 * (maji2 + mini2 - r4 / r2);
+	f2 = freq2 * (princ_axis1_inv2 + princ_axis2_inv2 - r4 / r2);	
+
 
 	if (nn < 1.e-5) {
 		f2 *= (1. - nn * nn / 6.);
@@ -927,10 +910,14 @@ double Heat::force(double x, double y, double t) {
 		f2 *= sin(nn) / nn;
 	}
 
+	// force = exp(-decay*t) * cos(freq * r) * (derivative of exponent) 
+	//		 + exp(-decay*t) * sin(freq*r)/(freq*r) * (freq^2) * ()
+
 	f1 = (f1 + f2) * exp(-decay * t);
 	//printf("t= %f, alpha= %f\n", t, alpha);
 	//printf("exp= %f, nn= %f, f1= %f, f2= %f\n", exp(-alpha*t), nn, f1, f2);
 
 	return f1;
 }
+#endif 
 //----------------------------------------------------------------------

@@ -1,0 +1,19 @@
+Execute:  (first manually execute makefiles  or CMake in library directories)
+
+   make
+
+----------------------------------------------------------------------
+I changed the root directory so that executable is in ./linux/{release,debug}
+   ( see ROOTBINDIR = . )
+----------------------------------------------------------------------
+
+Look at display() in main.cpp , and look over the various #ifdefs
+
+----------------------------------------------------------------------
+To change from debug to non-debug mode, change "dbg=1" to "dbg=0" in the 
+Makefile
+----------------------------------------------------------------------
+When compiling, the libcutilD.a might not be available (if one is in debug mode). 
+Got to NVIDIA distribution, and type:   make dbg=1 . This will generate the file 
+and place it under NVI*SDK*1_1/lib/
+----------------------------------------------------------------------

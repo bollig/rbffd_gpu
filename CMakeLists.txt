@@ -1,18 +1,11 @@
 PROJECT(RBF_framework)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-# SOME HARD-CODED PATHS NECESSARY: 
-SET(GLIB ~/gordon_tests)
-
-SET (FRAMEWORK_LIBRARY RBF)
-SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
 ################ BEGIN OS DEPENDENT CONFIGS ###################
 	
 SET( CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_SOURCE_DIR}/common
 	${CMAKE_CURRENT_SOURCE_DIR}/common/UseDoxygen
-	${CMAKE_CURRENT_SOURCE_DIR}/common/trilinos_cmake
 )
 
 
@@ -44,7 +37,28 @@ ENDIF(WIN32)
 # Get common build instructions used by all operating systems
 INCLUDE (COMMON_CONFIG)
 
+# Setup any external libraries we might need
+ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/external)
+
+# These must come AFTER the external subdir so we have 
+# access to CMake variables for each dependency
+SET (FRAMEWORK_LIBRARY RBF)	# Name of the framework lib (i.e., lib<name>.dylib)
+SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# This is an external dependency
+# Its name should not change
+SET( FRAMEWORK_DEPENDENCIES
+	utilities
+)
+
+# This is a neat trick: since the external deps are now part of
+# this source tree we can reference their subtree as ${<name>_SOURCE_DIR}
+# so long as CMake is told that they are subdirs (i.e., add_subdirectory) 
+SET( FRAMEWORK_DEP_INCLUDE_DIRS
+	${utilities_SOURCE_DIR}
+)
 
 # Make sure we build library and tests subtrees
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/src)
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/tests)
+

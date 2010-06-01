@@ -5,4 +5,4 @@ set(timings timingGE.cpp)
 
 
 include_directories( . )
-add_library(timer STATIC ${timings})
+add_library(timing STATIC ${timings})

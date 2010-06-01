@@ -12,6 +12,8 @@
 		3d_octree           # WORKS (build and test a 3D octree)
 		regulargrid3D_heat  # WORKS (Compute Diffusion equation inside 3D cube volume)
 		regular_square2D_heat # WORKS (compute Diffusion equation inside 2D Square)
+
+                cubeHeat3D_benchmarks # INCOMPLETE (regulargrid3D_heat plus benchmarking)
 	)
 
 	FOREACH (test ${TEST_COLLECTION})

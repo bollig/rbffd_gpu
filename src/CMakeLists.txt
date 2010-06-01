@@ -12,7 +12,6 @@
 		derivative.cpp
 		gpu.cpp 
 		grid.cpp 
-		#grid3d.cpp
 		heat.cpp 
 		rbf.cpp 
 		stencils.cpp 

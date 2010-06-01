@@ -4,6 +4,7 @@
 ###############################################
 	SET (GRAPHICS_LIB_PROJECTS
 		utilities
+                timing
 	)
 
 	FOREACH (lib ${GRAPHICS_LIB_PROJECTS})

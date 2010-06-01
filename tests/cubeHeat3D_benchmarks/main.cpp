@@ -362,11 +362,11 @@ int main(int argc, char** argv) {
         int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
         t3.end();
     }
-     
+
 #if 0
-       comm_unit->consolidateObjects(subdomain);
-        subdomain->writeFinal(grid->getRbfCenters(), (char*) "INITIAL_SOLUTION.txt");
-        exit(0);
+    comm_unit->consolidateObjects(subdomain);
+    subdomain->writeFinal(grid->getRbfCenters(), (char*) "INITIAL_SOLUTION.txt");
+    exit(0);
 
     char buf[32];
     sprintf(&buf[0], "Set AVG_DISTS", my_rank);
@@ -406,13 +406,13 @@ int main(int argc, char** argv) {
         if (irbf == subdomain->Q_stencils[irbf][0]) {
             printf("PASS\n");
             subdomain->printStencil(subdomain->Q_stencils[irbf], "S");
-	} else {
+        } else {
             printf("FAIL\n");
         }
     }
 
     printf("start computing weights\n");
-    
+
     for (int irbf = 0; irbf < subdomain->Q_stencils.size(); irbf++) {
         //		der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "x");
         //		der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "y");
@@ -421,7 +421,7 @@ int main(int argc, char** argv) {
         char label[256];
         sprintf(label, "Stencil[%d]", irbf);
         subdomain->printStencil(subdomain->Q_stencils[irbf], label);
-       
+
         // Centers are vec<Vec3> where Vec3=(double,double,double)
         // Stencils are vec<int> where int=index into centers vec<Vec3>
         t4.start();
@@ -430,12 +430,12 @@ int main(int argc, char** argv) {
 
         der.computeWeightsSVD(subdomain->G_centers,
                 subdomain->Q_stencils[irbf], irbf, "y");
-    
+
         der.computeWeightsSVD(subdomain->G_centers,
                 subdomain->Q_stencils[irbf], irbf, "lapl");
         t4.end();
     }
-    
+
     printf("after all computeWeights\n");
     // MY BUG IS INSIDE HERE:
     //double maxEig = der.computeEig(subdomain->Q_stencils); // needs lapl_weights
@@ -547,7 +547,7 @@ int main(int argc, char** argv) {
     comm_unit->broadcastObjectUpdates(subdomain);
     comm_unit->barrier();
     t7.end();
-    
+
     // This is HARDCODED because we dont have the ability currently to call
     // maxEig = der.computeEig() and therefore we have a different timestep than
     // the original code. I will address this next.
@@ -573,6 +573,22 @@ int main(int argc, char** argv) {
         if (nrm > 5.)
             break;
         //if (iter > 0) break;
+
+        if (iter % 10 == 0) {   // Dump solution to file every 10 iterations
+            t8.start();
+            comm_unit->consolidateObjects(subdomain);
+            t8.end();
+            if (comm_unit->getRank() == 0) {
+                char fname[256];
+
+                sprintf(fname, "solution_%.5d.txt", iter);
+                // TODO assemble final solution
+                subdomain->writeFinal(grid->getRbfCenters(), fname);
+                // TODO print solution to file
+                cout << "SOLUTION FOR ITER: " << iter << " WRITTEN TO: " << fname << endl;
+            }
+        }
+
     }
 
     printf("after heat\n");
@@ -586,7 +602,7 @@ int main(int argc, char** argv) {
         // TODO assemble final solution
         subdomain->writeFinal(grid->getRbfCenters(), (char*) "FINAL_SOLUTION.txt");
         // TODO print solution to file
-        cout << "FINAL ITER: " << iter << endl;
+        cout << "FINAL ITER: " << iter << ", SOLUTION WRITTEN TO FINAL_SOLUTION.txt" << endl;
     }
     printf("REACHED THE END OF MAIN\n");
 

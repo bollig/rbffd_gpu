@@ -3,15 +3,13 @@
 # Project Testing
 ###############################################
 	SET (TEST_COLLECTION
-#		helloworld      # WORKS
-#		message_test	# WORKS
-#		density1	# WORKS
-#		density2	# WORKS
-#		density3	# WORKS
-#		bollig_main	# INCOMPLETE
+#		density1            # WORKS
+#		density2            # WORKS
+#		density3            # WORKS
+#		bollig_main         # INCOMPLETE
 		3D_test
-		original	# WORKS
-		template	# WORKS
+		original            # WORKS (base case without parallel support. 2D ellipse)
+		template            # WORKS (empty test)
 		surface_integral
 		surface_projection
 		3d_ccvt

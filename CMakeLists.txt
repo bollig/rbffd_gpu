@@ -50,6 +50,7 @@ SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 SET( FRAMEWORK_DEPENDENCIES
 	utilities
         timing
+	${CUDA_LIBRARIES}
 )
 
 # This is a neat trick: since the external deps are now part of
@@ -58,6 +59,7 @@ SET( FRAMEWORK_DEPENDENCIES
 SET( FRAMEWORK_DEP_INCLUDE_DIRS
 	${utilities_SOURCE_DIR}
         ${timing_SOURCE_DIR}
+	${CUDA_INCLUDE_DIRS}
 )
 
 # Make sure we build library and tests subtrees

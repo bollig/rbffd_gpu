@@ -14,6 +14,7 @@
 	INCLUDE (CPack)
 	INCLUDE (UseDoxygen)
 	FIND_PACKAGE (MPI)
+	FIND_PACKAGE (CUDA)
 
 
 ###############################################

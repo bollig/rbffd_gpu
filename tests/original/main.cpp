@@ -169,8 +169,9 @@ void testEigen(int stencil_size, int nb_bnd, int tot_nb_pts)
 	// need another constructor for ellipses
 	Grid grid(nx, ny, stencil_size);
 
-	grid.setMajor(major);
-	grid.setMinor(minor);
+	//grid.setMajor(major);
+	//grid.setMinor(minor);
+        grid.setPrincipalAxes(major, minor, 0.);
 	grid.setNbBnd(nb_bnd);
 
 	// 2nd argument: known number of boundary points (stored ahead of interior points) 
@@ -1138,8 +1139,9 @@ int main()
 
 	Grid grid(nx, ny, stencil_size);
 
-	grid.setMajor(major);
-	grid.setMinor(minor);
+//	grid.setMajor(major);
+//	grid.setMinor(minor);
+        grid.setPrincipalAxes(major, minor, 0.);
 	grid.setNbBnd(nb_bnd);
 
 	// 2nd argument: known number of boundary points (stored ahead of interior points) 

@@ -2,7 +2,7 @@
 #define _BURKARDT_CVT_H_
 
 #include <vector>
-#include <Vec3.h>
+#include "Vec3.h"
 #include "parametric_patch.h"
 #include "density.h"
 

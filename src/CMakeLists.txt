@@ -16,7 +16,7 @@
 		rbf.cpp 
 		stencils.cpp 
 		regulargrid3d.cpp
-		regulargrid2D.cpp
+		regulargrid2d.cpp
 		exact_regulargrid.cpp
 	)
 

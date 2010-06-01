@@ -3,7 +3,7 @@
 # Project Testing
 ###############################################
 	SET (TEST_COLLECTION
-		3D_test
+		3D_test             # INCOMPLETE (3D ellipsoid test which fails to generate points correctly resulting in singular systems)
 		original            # WORKS (base case without parallel support. 2D ellipse)
 		template            # WORKS (empty test)
 		surface_integral    # WORKS (compute a simple surf integral on parametric geometry)

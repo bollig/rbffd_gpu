@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include <vector>
 #include <Vec3.h>
 #include "parametric_patch.h"

@@ -1,5 +1,6 @@
-#include "octree.h"
+#include <stdlib.h>
 
+#include "octree.h"
 #include "parametric_patch.h"
 
 #define I(i,j,k) ((i)+2*((j)+2*(k)))

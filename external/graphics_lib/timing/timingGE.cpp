@@ -1,5 +1,6 @@
 #ifndef WINDOWS
 #include "timingGE.h"
+#include <stdio.h>
 
 void Timer::start(int type) 
 {

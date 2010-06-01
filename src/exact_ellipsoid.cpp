@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include "exact_ellipsoid.h"
 
 //----------------------------------------------------------------------

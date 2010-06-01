@@ -9,7 +9,7 @@
 // Surface = Use Mathemtica or Maple to get approximate formulas
 
 #include <math.h>
-
+#include <stdio.h>
 #include <vector>
 #include <Vec3.h>
 

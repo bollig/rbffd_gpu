@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "cvt.h"
 #include <vector>
+#include <string.h>
 #include <ellipsoid_patch.h>
 #include <parametric_patch.h>
 

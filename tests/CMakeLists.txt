@@ -11,7 +11,6 @@
 #		bollig_main	# INCOMPLETE
 		3D_test
 #		original	# WORKS
-#		rbf_message	# INCOMPLETE
 		template	# WORKS
 		surface_integral
 		surface_projection

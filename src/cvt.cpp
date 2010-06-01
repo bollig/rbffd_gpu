@@ -4307,7 +4307,9 @@ void CVT::cvt_iterate_3d ( int dim_num, int n, int batch, int sample, bool initi
 	// project points with intersect == 1
   }
   printf("nb intersections: %d\n", cnt);
-  exit(0);
+  
+  printf("(%s, Line: %d) EXIT_FAILURE\n", __FILE__, __LINE__);
+  exit(EXIT_FAILURE);
 
 
   //printf("r2: %f, %f\n", r2[0+nb_bnd*dim_num], r2[1+nb_bnd*dim_num]);

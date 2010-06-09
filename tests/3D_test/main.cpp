@@ -22,7 +22,7 @@
 #include "grid.h"
 #include "heat.h"
 #include "density.h"
-#include "cvt.h"
+#include "ellipse_cvt.h"
 #include "communicator.h"
 #include "exact_ellipsoid.h"
 #include "ellipsoid_patch.h"
@@ -54,7 +54,7 @@ struct Dist {
 //----------------------------------------------------------------------
 
 // GLOBAL VARIABLES
-CVT* cvt;
+EllipseCVT* cvt;
 vector<Vec3> rbf_centers;
 void checkDerivatives(Derivative& der, Grid& grid);
 void checkXDerivatives(Derivative& der, Grid& grid);
@@ -1344,7 +1344,7 @@ int main(int argc, char** argv) {
 		if (stat("cvt_circle.txt", &fileInfo)) {
 			cout << "No cvt_circle.txt in current directory. Generating...."
 					<< endl;
-			cvt = new CVT();
+			cvt = new EllipseCVT(princ_axis1, princ_axis2);
 			createCVT(tot_nb_pts, nb_bnd, rho, bndry_pts, dom_intg);
 		}
 

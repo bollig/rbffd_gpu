@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "cvt.h"
+#include "ellipsoid_cvt.h"
 #include <vector>
 #include <string.h>
 #include <ellipsoid_patch.h>
@@ -8,7 +8,7 @@
 using namespace std;
 
 // GLOBAL VARIABLES
-CVT* cvt;
+EllipsoidCVT* cvt;
 double major;
 double minor;
 double midax;
@@ -103,7 +103,7 @@ int main (int argc, char** argv)
 	create_cvt = true;
 
 	if (create_cvt) {
-		cvt = new CVT();
+		cvt = new EllipsoidCVT();
 		create_3d_CVT(tot_nb_pts, rho);
 		exit(0);
 	}

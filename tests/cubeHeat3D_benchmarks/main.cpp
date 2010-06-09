@@ -23,7 +23,7 @@
 #include "exact_regulargrid.h"
 #include "heat.h"
 #include "density.h"
-#include "cvt.h"
+#include "ellipse_cvt.h"
 #include "communicator.h"
 
 #include "timingGE.h"

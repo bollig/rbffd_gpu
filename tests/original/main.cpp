@@ -21,7 +21,7 @@
 #include "grid.h"
 #include "heat.h"
 #include "density.h"
-#include "cvt.h"
+#include "ellipse_cvt.h"
 
 // used go generate random seed that changes between runs
 #include <time.h> 
@@ -50,7 +50,7 @@ struct Dist {
 //----------------------------------------------------------------------
 
 // GLOBAL VARIABLES
-CVT* cvt;
+EllipseCVT* cvt;
 vector<Vec3> rbf_centers;
 void checkDerivatives(Derivative& der, Grid& grid);
 void checkXDerivatives(Derivative& der, Grid& grid);
@@ -1121,7 +1121,7 @@ int main()
 	create_cvt = false;
 
 	if (create_cvt) {
-		cvt = new CVT();
+		cvt = new EllipseCVT(major, minor);
 		createCVT(tot_nb_pts, nb_bnd, rho, bndry_pts, dom_intg);
 		exit(0);
 	}

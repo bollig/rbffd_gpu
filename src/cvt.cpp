@@ -14,10 +14,10 @@
 using namespace std;
 
 //****************************************************************************80
-CVT::CVT()
+CVT::CVT(int DEBUG_)
 {
-	print_sample_count = 0;
-	nb_bnd = 0;
+    DEBUG = DEBUG_; 
+    nb_bnd = 0;
 }
 //****************************************************************************80
 
@@ -245,13 +245,6 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
 //    by the number of sample points.
 //
 {
-
-	// controls printing of sample points
-	print_sample_count = 0;
-
-	//printf("CVT:: major,  minor= %f, %f\n", major, minor); exit(0);
-
-  bool DEBUG = false;
   int i;
   bool initialize;
   int seed_base;
@@ -290,8 +283,7 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
   if ( init != 4 )
   {
     initialize = true;
-	// Initial seed
-    //NO NEED FOR ELLIPSE cvt_sample ( dim_num, n, n, init, initialize, seed, r );
+    cvt_sample ( dim_num, n, n, init, initialize, seed, r );
   }
   if ( DEBUG )
   {
@@ -311,6 +303,17 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
   {
     initialize = true;
   }
+
+  if (initialize) {
+       char intermediate_file[80];
+       sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", 0);
+
+       cout << "Writing initial voronoi to file (from CVT::cvt())\n";
+
+       cvt_write ( dim_num, n, batch, seed_init, *seed, "none",
+    		it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r,
+    		intermediate_file, false );
+    }
 //
 //  Carry out the iteration.
 //
@@ -334,9 +337,6 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
     *it_num = *it_num + 1;
     seed_init = *seed;
 
-	//exit(0);
-	// I should modify so that the number of samples changes from one iteration to the next (for non-rectangular
-	// or non-regular domains
     cvt_iterate ( dim_num, n, batch, sample, initialize, sample_num, seed,
       r, it_diff, energy );
 
@@ -351,16 +351,24 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
            << setw(14) << *energy    << "\n";
     }
 
+// BOLLIG:
+// TODO: only do this if a boolean is set for intermediate writes
+// 	not the same as DEBUG
 	if ((*it_num) % 20 == 0) {
+            char intermediate_file[80];
+            sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", *it_num);
+
       cout                          << "  "
            << setw(4)  << *it_num   << "  "
            << setw(12) << seed_init << "  "
            << setw(14) << *it_diff  << "  "
            << setw(14) << *energy    << "\n";
-  
+ 
+	cout << "Writing intermediate voronoi to file (from CVT::cvt())\n"; 
+
   		cvt_write ( dim_num, n, batch, seed_init, *seed, "none", 
     		it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r, 
-    		"voronoi_tmp.txt", false );
+    		intermediate_file, false );
 			//exit(0);
 	}
   }
@@ -573,9 +581,6 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
 //  algorithm by guaranteeing that no region is completely missed
 //  by the sampling.
 //
-
-	printf("enter cvt_iterate\n");
-
   *energy = 0.0;
   r2 = new double[dim_num*n];
   count = new int[n];
@@ -609,7 +614,7 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
 //
 //  Find the index N of the nearest cell generator to each sample point S.
 //
-	// brute force (GE: MUST IMPROVE!!)
+	//TODO: this is brute force (It must be improved!!)
 	// find nearest r point to each s point
     find_closest ( dim_num, n, get, s, r, nearest );
 //
@@ -626,20 +631,17 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
       count[j2] = count[j2] + 1;
     }
   }
-
-	#if 0
-	printf("sample_num= %d\n", sample_num);
-	//for (int ii=sample_num-5; ii < sample_num; ii++) {
-	for (int ii=0; ii < sample_num; ii++) {
-		printf("iter: s[%d]= %f\n", ii, s[ii]);
-	}
-	exit(0);
-	#endif
 //
 //  Estimate the centroids.
-//  Leave the first nb_bnd points unchanged ( n = nb centroids)
+//  NOTE: this leaves the first nb_bnd points unchanged ( n = nb centroids)
+// 	since we want to manually specify them elsewhere and then generate
+// 	the interior points only with the CVT algorithm. 
+// 	If nb_bnd = 0, then we peform a CCVT on all points.
+// 	If nb_bnd > 0, then we should perform a CVT without 
+//		constraining points to the surface (so only nb_bnd
+// 		end up exactly on the surface; all others are interior)
 //
-	//printf("estimate the centroids, n= %d\n", n);
+  //printf("Computing CVT for %d points with %d presets on the boundary\n", n, nb_bnd);
   for ( j = nb_bnd; j < n; j++ )
   {
     for ( i = 0; i < dim_num; i++ )
@@ -667,45 +669,14 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
 //
 // Gordon Erlebacher (9/9/2009)
 // Leaving boundary points fixed does not always appear to work, e.g. when axes are 1 and 0.3 .
-// Move the boundary points along the boundary. Specialize to the ellipse. 
-
-	double dtheta;
-	double theta;
-
-	//for (j=0; j < nb_bnd; j++) {
-	for (j=0; j < 0; j++) {
-		double oldx = r[0+j*dim_num];
-		double oldy = r[1+j*dim_num];
-		theta = atan2(oldy, oldx);
-		double newx = r2[0+j*dim_num];
-		double newy = r2[1+j*dim_num];
-		double ctheta =  oldx/major;
-		double stheta =  oldy/minor;
-		if (ctheta > stheta) {
-			dtheta = (newy-oldy) / (minor*ctheta);
-		} else {
-			dtheta = -(newx-oldx) / (major*ctheta);
-		}
-		theta += dtheta;
-		newx = major*cos(theta);
-		newy = minor*sin(theta);
-		r2[0+j*dim_num] = newx;
-		r2[1+j*dim_num] = newy;
-	}
-
-// Displace the interior points
-
+// Below: Displace the interior points
   for ( j = nb_bnd; j < n; j++ )
-  //for ( j = nb_bnd; j < 0; j++ )
   {
     for ( i = 0; i < dim_num; i++ )
     {
       r[i+j*dim_num] = r2[i+j*dim_num];
     }
   }
-
-  //printf("r2: %f, %f\n", r2[0+nb_bnd*dim_num], r2[1+nb_bnd*dim_num]);
-  //exit(0);
 //
 //  Normalize the discrete energy estimate.
 //
@@ -800,8 +771,6 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
     exit ( 1 );
   }
 
-  print_sample_count++;
-
   if ( sample == -1 )
   {
     if ( initialize )
@@ -813,6 +782,7 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
     {
       for ( i = 0; i < dim_num; i++ )
       {
+	// This is Gordon Erlebacher's random(,) routine (defined below) 
         r[i+j*dim_num] = random(0,1);
       }
     }
@@ -890,25 +860,7 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
   }
   else if ( sample == 3 )
   {
-	#if 0
     user ( dim_num, n_now, seed, r );
-	#else
-	//int nb_bnd = 0;
-	//ellipse(dim_num, n_now, nb_bnd, seed, rd);
-	//r = &rd[0];
-	if (initialize) {
-		ellipse(dim_num, nb_pts, nb_bnd, seed, r);
-	} else {
-		//printf("randomize, n_now= %d\n", n_now); 
-		ellipse(dim_num, n_now, nb_bnd, seed, r);
-	}
-	#endif
-	#if 0
-	for (int i=n_now-5; i < n_now; i++) {
-		printf("r= %f\n", r[i]);
-	}
-	printf("\n");
-	#endif
   }
   else
   {
@@ -919,20 +871,17 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
   }
 
   // print seeds
-  #if 0
-  if (print_sample_count == 1) {
-  printf("Initial seed positions\n");
-  for (int i=0; i < n_now; i++) {
-	printf("(%d): \n", i)
-  	for (int j=0; j < dim_num; j++) {
-  		printf("%f ", r[j+i*dim_num]);
+  if (DEBUG) {
+	printf("Initial seed positions\n");
+	for (int i=0; i < n_now; i++) {
+		printf("(%d): \n", i);
+	  	for (int j=0; j < dim_num; j++) {
+  			printf("%f ", r[j+i*dim_num]);
+	  	}
+		printf("\n");
   	}
-	printf("\n");
+	printf("  -  end initial seeds --------------------\n");
   }
-  printf("  -  end initial seeds --------------------\n");
-  }
-  #endif
-
   return;
 }
 //****************************************************************************80
@@ -1039,7 +988,6 @@ void CVT::cvt_write ( int dim_num, int n, int batch, int seed_init, int seed,
 
   s = timestring ( );
 
-
   if ( comment )
   {
     file_out << "#  " << file_out_name << "\n";
@@ -1074,14 +1022,6 @@ void CVT::cvt_write ( int dim_num, int n, int batch, int seed_init, int seed,
   }
 
   file_out.close ( );
-
-  #if 0
-  printf("nb_bnd= %d\n", nb_bnd);
-  printf("write_cvt:: r= %f, %f\n", r[nb_bnd-1+0*dim_num], r[nb_bnd-1+1*dim_num]);
-  printf("write_cvt:: r= %f, %f\n", r[nb_bnd+0*dim_num], r[nb_bnd+1*dim_num]);
-  // voronoi.tmp is correct
-  exit(0);
-  #endif
 
   delete [] s;
 
@@ -2674,8 +2614,6 @@ unsigned long CVT::random_initialize ( int seed )
 //    that was zero, the value selected by this routine.
 //
 {
-# define DEBUG 0
-
   unsigned long ul_seed;
 
   if ( seed != 0 )
@@ -2704,7 +2642,6 @@ unsigned long CVT::random_initialize ( int seed )
   srand ( ul_seed );
 
   return ul_seed;
-# undef DEBUG
 }
 //****************************************************************************80
 
@@ -3481,1063 +3418,11 @@ void CVT::user ( int dim_num, int n, int *seed, double r[] )
   return;
 # undef PI
 }
-//
-
 //----------------------------------------------------------------------
-void CVT::ellipse_init ( int dim_num, int& n, int& nb_bnd, int *seed, double r[] )
-{
-# define PI 3.141592653589793
-
-	double dtheta = 1.*PI / nb_bnd; // periodic in theta
-
-	//printf("nb_bnd= %d\n", nb_bnd);
-
-	// boundary points
-	for (int i=0; i < nb_bnd; i++) {
-		//double angle = i*dtheta;
-		//r.push_back(major * cos(angle));
-		//r.push_back(minor * sin(angle));
-		r[0+i*2] = bndry_pts[i].x();
-		r[1+i*2] = bndry_pts[i].y();
-		//printf("bndry(%d)= %f, %f\n", i, r[i*2], r[1+i*2]);
-	}
-
-	//void CVT::rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples)
-	vector<Vec3> samples;
-	samples.resize(n-nb_bnd);
-	
-	// We lock our nb_bnd seeds in place and generate an additional set of 
-	// random seeds with rejection2d.
-	printf("ellipse_init: rejection2d\n");
-	rejection2d(n-nb_bnd, 0., 1., *rho, samples);
-	printf("n-nb_bnd= %d\n", n-nb_bnd);
-	//exit(0);
-
-  	for ( int j = nb_bnd; j < n; j++ ) {
-    	//double angle = 2.0 * PI * random(0.,1.);
-    	//double radius = sqrt ( random(0.,1.) );
-    	r[0+j*2] = samples[j-nb_bnd].x();
-    	r[1+j*2] = samples[j-nb_bnd].y();
-    	//r[0+j*2] = radius*major*cos(angle);
-    	//r[1+j*2] = radius*minor*sin(angle);
-  	}
-
-  // print initial seeds
-  printf("Initial seed positions, %d seeds\n", n);
-  for (int i=0; i < n; i++) {
-	printf("(%d): \n", i);
-  	for (int j=0; j < dim_num; j++) {
-  		printf("%f ", r[j+i*dim_num]);
-  	}
-	printf("\n");
-  }
-  printf(" -----  end initial seeds --------------------\n");
-
-  return;
-# undef PI
-}
-//----------------------------------------------------------------------
-void CVT::ellipse ( int dim_num, int& n, int& nb_bnd, int *seed, vector<double>& r )
-
-// return number boundary points
-// n = total number of points
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    USER samples points within an ellipse, given the boundary points 
-//    Grid points are uniform. For each point, compute r and theta. Remove the points outside the ellipse 
-//
-//  Modified:
-//    1 September 2009
-//
-//  Author:
-//    Gordon Erlebacher
-//
-//  Parameters:
-//    Input, integer DIM_NUM, the spatial dimension.
-//    Input, integer N, the number of sample points desired.
-//    Input/output, int *SEED, the "seed" value.  On output, SEED has 
-//       been updated.
-//    Output, double R[DIM_NUM*N], the sample values.
-//
-// Ellipse:  
-//   x= a*cos(theta)
-//   y= b*sin(theta)
-{
-
-	printf("SHOULD NOT GET HERE: ellipse, n= %d\n", n);
-	exit(0);
-
-
-# define PI 3.141592653589793
-
-// na : is the number of points along the major axis
-// nb : is the number of points along the minor axis
-
-	r.resize(n*dim_num);
-
-	//double dx = 2.*major / (na - 1);
-	//double dy = 2.*minor / (nb - 1);
-	double dtheta = 2.*PI / nb_bnd; // periodic in theta
-
-	// boundary points
-	for (int i=0; i < nb_bnd; i++) {
-		double angle = i*dtheta;
-		//r.push_back(major * cos(angle));
-		//r.push_back(minor * sin(angle));
-		r[0+i*2] = major * cos(angle);
-		r[1+i*2] = minor * sin(angle);
-	}
-
-	//int nb_bound = r.size() / 2;
-	//if (nb_bnd != nb_bound) {
-		//printf("error in boundary points\n");
-		//exit(0);
- 	//}	
-
-
-  	for ( int j = nb_bnd; j < n; j++ ) {
-    	double angle = 2.0 * PI * random(0.,1.); 
-    	double radius = sqrt ( random(0.,1.));
-		//radius = radius * .95; // avoid boundary
-    	//r.push_back(radius*major*cos(angle));
-    	//r.push_back(radius*minor*sin(angle));
-    	r[0+j*2] = radius*major*cos(angle);
-    	r[1+j*2] = radius*minor*sin(angle);
-		//printf("%f, %f\n", r[0+j*2], r[1+j*2]);
-  	}
-
-	//exit(0);
-
-  return;
-# undef PI
-}
-//----------------------------------------------------------------------
-void CVT::ellipse ( int dim_num, int& n, int& nb_bnd, int *seed, double r[] )
-
-// return number boundary points
-// n = total number of points
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    USER samples points within an ellipse, given the boundary points 
-//    Grid points are uniform. For each point, compute r and theta. Remove the points outside the ellipse 
-//
-//  Modified:
-//    1 September 2009
-//
-//  Author:
-//    Gordon Erlebacher
-//
-//  Parameters:
-//    Input, integer DIM_NUM, the spatial dimension.
-//    Input, integer N, the number of sample points desired.
-//    Input/output, int *SEED, the "seed" value.  On output, SEED has 
-//       been updated.
-//    Output, double R[DIM_NUM*N], the sample values.
-//
-// Ellipse:  
-//   x= a*cos(theta)
-//   y= b*sin(theta)
-{
-# define PI 3.141592653589793
-
-// na : is the number of points along the major axis
-// nb : is the number of points along the minor axis
-
-	printf("enter ellipse\n");
-
-	//r.resize(n*dim_num);
-	//printf("***1 rhomax: %f\n", rho->getMax()); exit(0);
-
-	//double dx = 2.*major / (na - 1);
-	//double dy = 2.*minor / (nb - 1);
-
-	double dtheta;
-	if (nb_bnd > 0) {
-		dtheta = 2.*PI / nb_bnd; // periodic in theta
-	} else {
-		dtheta = 1.;
-	}
-	
-	//// boundary points
-	#if 0
-	for (int i=0; i < nb_bnd; i++) {
-		double angle = i*dtheta;
-		r[0+i*2] = bndry_pts[i].x();
-		r[1+i*2] = bndry_pts[i].y();
-		//r.push_back(major * cos(angle));
-		//r.push_back(minor * sin(angle));
-		//r[0+i*2] = major * cos(angle);
-		//r[1+i*2] = minor * sin(angle);
-	}
-	printf("nb_bnd= %d\n", nb_bnd);
-	printf("n= %d\n", n);
-	//exit(0);
-	#endif
-
-	vector<Vec3> samples;
-	samples.resize(n);
-	printf("ellipse: rejection2d\n");
-	rejection2d(n, 0., 1., *rho, samples);
-
-
-	// interior points
-	//for (int i=nb_bnd; i < n; i++) {
-	//printf("n= %d\n", n);
-	for (int i=0; i < n; i++) {
-    	//double angle = 2.0 * PI * ( double ) ::random ( ) / ( double ) RAND_MAX;
-    	//double radius = sqrt ( ( double ) ::random ( ) / ( double ) RAND_MAX );  // in [0,1]
-		//r.push_back(major * cos(angle));
-		//r.push_back(minor * sin(angle));
-		//r[0+i*2] = major * radius * cos(angle);
-		//r[1+i*2] = minor * radius * sin(angle);
-		//printf("%f, %f\n", r[0+j*2], r[1+j*2]);
-
-		r[0+i*2] = samples[i].x();
-		r[1+i*2] = samples[i].y();
-  	}
-
-	//printf("ellipse: n = %d\n", n);
-
-  return;
-# undef PI
-}
-//---------------------------------------------------------------------- 
+// Generate a random number between a and b
 double CVT::random(double a, double b)
 {
 	// use system version of random, not class version
 	double r = ::random() / (double) RAND_MAX;
 	return a + r*(b-a);
 }
-//----------------------------------------------------------------------
-void CVT::rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples)
-// Given a pdf p(x,y) (zero outside the ellipse, with unit integral over the elliptic domain)
-// and given a constant bound M, such that p(x,y) < M q(x,y), where q(x,y) is uniform distribution 
-// over the ellipse. 
-// Generate a sample (x*,y*), and a sample u* in [0,1]
-// x* \in [-a,a], y* \in [-b,b]
-// Two cases: 
-// 1.   u < p(x,y) / M q(x,y) : accept (x*,y*)
-// 2.   u > p(x,y) / M q(x,y)   reject (x*,y*)
-//
-// What is q(x,y): simply   1. / area(ellipse)
-// Choose M = max_{x,y}   p(x,y)*area(ellipse)
-// Given x*,y*, compute r*^2 = (x*/a)^2 + (y*/b*)^2
-// if r*^2 > 1., reject the point (outside the ellipse)
-
-// Used in ellipse_init (constructor helper) and ellipse
-// 3D version should be written though, but the ellipse is a special case
-// (no hurry)
-{
-	//printf("area= %f\n", area);
-	//printf("weighted area= %f\n", weighted_area); 
-
-	samples.resize(nb_samples);
-
-	//Vec3 rnd;
-
-	for (int i=0; i < nb_samples; i++) {
-		samples[i] = singleRejection2d(area, weighted_area, density);
-		//samples[i].print("rnd");
-	}
-	//printf("nb_samples= %d\n", nb_samples);
-
-	//exit(0);
-}
-//----------------------------------------------------------------------
-Vec3 CVT::singleRejection2d(double area, double weighted_area, Density& density)
-{
-// Apparently not used in this file
-// 3D version should be written though, but the ellipse is a special case
-// (no hurry)
-
-	double xs, ys;
-	double u;
-	double r2;
-	double maxrhoi = 1. / rho->getMax();
-	//printf("maxrhoi= %f\n", maxrhoi);
-
-	double maj2i = 1./major/major;
-	double min2i = 1./minor/minor;
-	//printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
-
-	while (1) {
-		xs = random(-major, major);
-		ys = random(-major, major); // to make sure that cells are all same size
-		//printf("xs,ys= %f, %f\n", xs, ys);
-		r2 = xs*xs*maj2i + ys*ys*min2i;
-		//printf("r2= %f\n", r2);
-		if (r2 >= 1.) continue;  // inside the ellipse
-
-		// rejection part if non-uniform distribution
-		u = random(0.,1.);
-		//printf("rho= %f\n", density(xs,ys));
-		if (u < (density(xs,ys))*maxrhoi) break;
-	}
-	return Vec3(xs,ys);
-}
-//----------------------------------------------------------------------
-void CVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
-{
-# define PI 3.141592653589793
-
-// r[] is a vector of with 3 components at each point. Make sure memory is properly allocated!
-
-	vector<Vec3> samples;
-	samples.resize(n); // total number of points
-
-	// random seeds with rejection2d.
-	printf("ellipsoid_init: rejection3d\n");
-	rejection3d(n,  *rho, samples);
-	printf("n= %d\n", n);
-	//exit(0);
-
-  	for ( int j = 0; j < n; j++ ) {
-    	r[0+j*3] = samples[j].x();
-    	r[1+j*3] = samples[j].y();
-    	r[2+j*3] = samples[j].z();
-  	}
-
-  // print initial seeds
-  printf("Initial seed positions, %d seeds\n", n);
-  for (int i=0; i < n; i++) {
-	printf("(%d): \n", i);
-  	for (int j=0; j < dim_num; j++) {
-  		printf("%f ", r[j+i*dim_num]);
-  	}
-	printf("\n");
-  }
-  printf(" -----  end initial seeds --------------------\n");
-
-  return;
-# undef PI
-}
-//----------------------------------------------------------------------
-void CVT::ellipsoid ( int dim_num, int& n, int *seed, double r[] )
-
-// return number boundary points
-// n = total number of points
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    USER samples points within an ellipse, given the boundary points 
-//    Grid points are uniform. For each point, compute r and theta. Remove the points outside the ellipse 
-//
-//  Modified:
-//    14 March 2010
-//
-//  Author:
-//    Gordon Erlebacher
-//
-//  Parameters:
-//    Input, integer DIM_NUM, the spatial dimension.
-//    Input, integer N, the number of sample points desired.
-//    Input/output, int *SEED, the "seed" value.  On output, SEED has 
-//       been updated.
-//    Output, double R[DIM_NUM*N], the sample values.
-//
-// Ellipsoid: (phi in [0,2*pi], theta in [0,pi]
-//   x= a*cos(theta)*cos(phi)
-//   y= b*sin(theta)*cos(phi)
-//   z= c*sin(phi)
-{
-# define PI 3.141592653589793
-
-// na : is the number of points along the major axis
-// nb : is the number of points along the minor axis
-// nc : is the number of points along the middle axis
-
-	printf("enter ellipsoid\n");
-
-	vector<Vec3> samples;
-	samples.resize(n);
-	rejection3d(n, *rho, samples);
-
-	for (int i=0; i < n; i++) {
-		r[0+i*3] = samples[i].x();
-		r[1+i*3] = samples[i].y();
-		r[2+i*3] = samples[i].z();
-  	}
-
-  return;
-# undef PI
-}
-//---------------------------------------------------------------------- 
-void CVT::rejection3d(int nb_samples, Density& density, vector<Vec3>& samples)
-// Given a pdf p(x,y) (zero outside the ellipse, with unit integral over the ellipsoid domain)
-// and given a constant bound M, such that p(x,y,z) < M q(x,y,z), where q(x,y,z) is uniform distribution over the ellipse. 
-// Generate a sample (x*,y*,z*), and a sample u* in [0,1]
-// x* \in [-a,a], y* \in [-b,b], z* \in [-c,c]
-// Two cases: 
-// 1.   u < p(x,y,z) / M q(x,y,z) : accept (x*,y*,z*)
-// 2.   u > p(x,y,z) / M q(x,y,z)   reject (x*,y*,z*)
-//
-// What is q(x,y): simply   1. / volume(ellipsoid)
-// Choose M = max_{x,y}   p(x,y)*volume(ellipsoid)
-// Given x*,y*,z* compute r*^2 = (x*/a)^2 + (y*/b*)^2 + (z*/c*)^2
-// if r*^2 > 1., reject the point (outside the ellipsoid)
-
-// Used in ellipse_init (constructor helper) and ellipsoid
-// 3D version should be written though, but the ellipse is a special case
-// (no hurry)
-{
-	samples.resize(nb_samples);
-	printf("nb_samples= %d\n", nb_samples);
-
-	for (int i=0; i < nb_samples; i++) {
-		samples[i] = singleRejection3d(density);
-		samples[i].print("samples3d");
-		Vec3& s = samples[i];
-		//printf("dist=%f\n", outer_geom->how_far(s.x(), s.y(), s.z()));
-	}
-}
-//----------------------------------------------------------------------
-Vec3 CVT::singleRejection3d(Density& density)
-{
-// Apparently not used in this file
-// 3D version should be written though, but the ellipse is a special case
-// (no hurry)
-
-	double xs, ys, zs;
-	double u;
-	double r2;
-	double maxrhoi = 1. / rho->getMax();
-
-	double dist;
-
-	while (1) {
-		// should use other geometry
-		xs = random(-major, major);
-		ys = random(-major, major);
-		zs = random(-major, major);
-
-		// use outer geometry for seed and random point distribution 
-		dist = outer_geom->how_far(xs,ys,zs);
-		if (dist > 0.) continue;  // outside the ellipse
-
-		// rejection part if non-uniform distribution
-		u = random(0.,1.);
-		if (u < (density(xs,ys,zs))*maxrhoi) break;
-	}
-	return Vec3(xs,ys,zs);
-}
-//----------------------------------------------------------------------
-void CVT::cvt3d ( int dim_num, int n, int batch, int init, int sample, int sample_num, int it_max, int it_fixed, int *seed, double r[],int *it_num, double *it_diff, double *energy )
-{
-	// controls printing of sample points
-	print_sample_count = 0;
-
-	//printf("CVT:: major,  minor= %f, %f\n", major, minor); exit(0);
-
-  bool DEBUG = false;
-  int i;
-  bool initialize;
-  int seed_base;
-  int seed_init;
-
-  if ( batch < 1 )
-  {
-    cout << "\n";
-    cout << "CVT - Fatal error!\n";
-    cout << "  The input value BATCH < 1.\n";
-    exit ( 1 );
-  }
-
-  if ( seed <= 0 )
-  {
-    cout << "\n";
-    cout << "CVT - Fatal error!\n";
-    cout << "  The input value SEED <= 0.\n";
-    exit ( 1 );
-  }
-
-  if ( DEBUG )
-  {
-    cout << "\n";
-    cout << "  Step       SEED          L2-Change        Energy\n";
-    cout << "\n";
-  }
-
-  *it_num = 0;
-  *it_diff = 0.0;
-  *energy = 0.0;
-  seed_init = *seed;
-//
-//  Initialize the data, unless the user has already done that.
-//
-  if ( init != 4 )
-  {
-    initialize = true;
-	// Initial seed
-    //NO NEED FOR ELLIPSE cvt_sample ( dim_num, n, n, init, initialize, seed, r );
-  }
-  if ( DEBUG )
-  {
-    cout                          << "  "
-         << setw(4)  << *it_num   << "  "
-         << setw(12) << seed_init << "\n";
-  }
-//
-//  If the initialization and sampling steps use the same random number
-//  scheme, then the sampling scheme does not have to be initialized.
-//
-  if ( init == sample )
-  {
-    initialize = false;
-  }
-  else
-  {
-    initialize = true;
-  }
-//
-//  Carry out the iteration.
-//
-  while ( *it_num < it_max )
-  {
-//
-//  If it's time to update the seed, save its current value
-//  as the starting value for all iterations in this cycle.
-//  If it's not time to update the seed, restore it to its initial
-//  value for this cycle.
-//
-    if ( ( (*it_num) % it_fixed ) == 0 )
-    {
-      seed_base = *seed;
-    }
-    else
-    {
-      *seed = seed_base;
-    }
-
-    *it_num = *it_num + 1;
-    seed_init = *seed;
-
-	//exit(0);
-	// I should modify so that the number of samples changes from one iteration to the next (for non-rectangular
-	// or non-regular domains
-    cvt_iterate_3d ( dim_num, n, batch, sample, initialize, sample_num, seed,
-      r, it_diff, energy );
-
-    initialize = false;
-
-    if ( DEBUG )
-    {
-      cout                          << "  "
-           << setw(4)  << *it_num   << "  "
-           << setw(12) << seed_init << "  "
-           << setw(14) << *it_diff  << "  "
-           << setw(14) << *energy    << "\n";
-    }
-
-	if ((*it_num) % 20 == 0) {
-      cout                          << "  "
-           << setw(4)  << *it_num   << "  "
-           << setw(12) << seed_init << "  "
-           << setw(14) << *it_diff  << "  "
-           << setw(14) << *energy    << "\n";
-  
-  		cvt_write ( dim_num, n, batch, seed_init, *seed, "none", 
-    		it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r, 
-    		"voronoi_tmp.txt", false );
-			//exit(0);
-	}
-  }
-  return;
-}
-//****************************************************************************
-
-void CVT::cvt_iterate_3d ( int dim_num, int n, int batch, int sample, bool initialize, 
-  int sample_num, int *seed, double r[], double *it_diff, double *energy )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    CVT_ITERATE takes one step of the CVT iteration.
-//
-//  Discussion:
-//
-//    The routine is given a set of points, called "generators", which
-//    define a tessellation of the region into Voronoi cells.  Each point
-//    defines a cell.  Each cell, in turn, has a centroid, but it is
-//    unlikely that the centroid and the generator coincide.
-//
-//    Each time this CVT iteration is carried out, an attempt is made
-//    to modify the generators in such a way that they are closer and
-//    closer to being the centroids of the Voronoi cells they generate.
-//
-//    A large number of sample points are generated, and the nearest generator
-//    is determined.  A count is kept of how many points were nearest to each
-//    generator.  Once the sampling is completed, the location of all the
-//    generators is adjusted.  This step should decrease the discrepancy
-//    between the generators and the centroids.
-//
-//    The centroidal Voronoi tessellation minimizes the "energy",
-//    defined to be the integral, over the region, of the square of
-//    the distance between each point in the region and its nearest generator.
-//    The sampling technique supplies a discrete estimate of this
-//    energy.
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license. 
-//
-//  Modified:
-//
-//    20 September 2004
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Reference:
-//
-//    Qiang Du, Vance Faber, and Max Gunzburger,
-//    Centroidal Voronoi Tessellations: Applications and Algorithms,
-//    SIAM Review, Volume 41, 1999, pages 637-676.
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//
-//    Input, int N, the number of Voronoi cells.
-//
-//    Input, int BATCH, sets the maximum number of sample points
-//    generated at one time.  It is inefficient to generate the sample
-//    points 1 at a time, but memory intensive to generate them all
-//    at once.  You might set BATCH to min ( SAMPLE_NUM, 10000 ), for instance.
-//    BATCH must be at least 1.
-//
-//    Input, int SAMPLE, specifies how the sampling is done.
-//    -1, 'RANDOM', using C++ RANDOM function;
-//     0, 'UNIFORM', using a simple uniform RNG;
-//     1, 'HALTON', from a Halton sequence;
-//     2, 'GRID', points from a grid;
-//     3, 'USER', call "user" routine.
-//
-//    Input, bool INITIALIZE, is TRUE if the SEED must be reset to SEED_INIT
-//    before computation.  Also, the pseudorandom process may need to be
-//    reinitialized.
-//
-//    Input, int SAMPLE_NUM, the number of sample points.
-//
-//    Input/output, int *SEED, the random number seed.
-//
-//    Input/output, double R[DIM_NUM*N], the Voronoi
-//    cell generators.  On output, these have been modified
-//
-//    Output, double *IT_DIFF, the L2 norm of the difference
-//    between the iterates.
-//
-//    Output, double *ENERGY,  the discrete "energy", divided
-//    by the number of sample points.
-//
-{
-  int *count;
-  int get;
-  int have;
-  int i;
-  int j;
-  int j2;
-  int *nearest;
-  double *r2;
-  double *s;
-  bool success;
-  double term;
-//
-//  Take each generator as the first sample point for its region.
-//  This can slightly slow the convergence, but it simplifies the
-//  algorithm by guaranteeing that no region is completely missed
-//  by the sampling.
-//
-
-	printf("enter cvt_iterate_3d\n");
-
-  *energy = 0.0;
-  r2 = new double[dim_num*n];
-  count = new int[n];
-  nearest = new int[sample_num];
-  s = new double[dim_num*sample_num];
-
-  for ( j = 0; j < n; j++ ) {
-    for ( i = 0; i < dim_num; i++ ) {
-      r2[i+j*dim_num] = r[i+j*dim_num];
-  }}
-  for ( j = 0; j < n; j++ ) {
-    count[j] = 0;   // 3/12/10
-    //count[j] = 1; // original code (wrong in GE opinion)
-  }
-//
-//  Generate the sampling points S.
-//
-  have = 0;
-
-	// GE: track whether Voronoi cell "intersects the boundary
-	int* intersect_bnd = new int [n]; // n seeds
-	//printf("n= %d\n", n); exit(0);
-
-	for (int i=0; i < n; i++) {
-		intersect_bnd[i] = 0;
-	}
-
-  while ( have < sample_num ) {   // ***********************
-    get = i4_min ( sample_num - have, batch );
-    cvt_sample_3d ( dim_num, sample_num, get, sample, initialize, seed, s );
-
-	//printf("cvt_sample3d\n");exit(0);
-
-    initialize = false;
-    have = have + get;
-//
-//  Find the index N of the nearest cell generator to each sample point S.
-//
-	// brute force (GE: MUST IMPROVE!!)
-	// find nearest r point to each s point
-    find_closest ( dim_num, n, get, s, r, nearest );
-//
-//  Add S to the centroid associated with generator N.
-//  Gordon Erlebacher: Build in check for including within the geometry 
-//    at this point. Each time a sample point is inside the geometry, set 
-//    a flag stating that the seed "intersects" the boundary
-//
-	Vec3 inside;
-
-    for ( j = 0; j < get; j++ ) {
-      j2 = nearest[j];
-      for ( i = 0; i < dim_num; i++ ) {
-		// r2: centroid, s: sample point
-        r2[i+j2*dim_num] = r2[i+j2*dim_num] + s[i+j*dim_num];
-	  }
-	  inside.setValue(s[0+j*dim_num],s[1+j*dim_num],s[2+j*dim_num]);
-	  double dist = geom->how_far(inside); // use actual geometry
-	  if (dist > 0.) { // outside
-		//printf("** dist= %f, j2= %d\n", dist, j2);
-		//inside.print("inside vec");
-		intersect_bnd[j2] += 1; // j2 is the seed
-	  } else {
-		intersect_bnd[j2] -= 1;
-	  }
-	  //printf("dist (< 0 if inside) = %f\n", dist);
-
-      for ( i = 0; i < dim_num; i++ ) {
-        *energy = *energy + pow ( r[i+j2*dim_num] - s[i+j*dim_num], 2 );
-      }
-      count[j2] = count[j2] + 1;
-    }
-  } //******************
-
-//
-//  Estimate the centroids.
-//
-  for ( j = 0; j < n; j++ ) {
-    for ( i = 0; i < dim_num; i++ ) {
-	  if (count[j] > 0) {
-      	r2[i+j*dim_num] = r2[i+j*dim_num] / ( double ) ( count[j] );
-	  } else {
-      	printf("count[j] should never be zero\n");
-		//exit(1);
-	  }
-  }}
-//
-//  Determine the sum of the distances between generators and centroids.
-//
-  *it_diff = 0.0;
-
-  for ( j = 0; j < n; j++ ) {
-    term = 0.0;
-    for ( i = 0; i < dim_num; i++ ) {
-      term = term + ( r2[i+j*dim_num] - r[i+j*dim_num] ) 
-                  * ( r2[i+j*dim_num] - r[i+j*dim_num] );
-    }
-    *it_diff = *it_diff + sqrt ( term );
-  }
-//
-//  Replace the generators by the centroids.
-//
-
-// Identify which cells intersect the boundary. 
-// When a cell intersects a boundary (i.e., a sample point is outside the 
-// ellipse), project the centroid onto the boundary. 
-
-// Displace all the points 
-// after displacement, project  "boundary centroids" to the surface
-
-  for ( j = 0; j < n; j++ ) {
-    for ( i = 0; i < dim_num; i++ ) {
-      r[i+j*dim_num] = r2[i+j*dim_num];
-  }}
-
-  int cnt = 0;
-  Vec3 pt, ptc;
-  for (j=0; j < n; j++) {
-    // if count == abs(intersect_bnd), then there is no intersection
-	if (count[j] != abs(intersect_bnd[j])) {
-		cnt++;
-		printf("===========================\n");
-		//printf("intersect with bndry\n");
-		ptc.setValue(r[0+j*dim_num],r[1+j*dim_num],r[2+j*dim_num]);
-		//pt = geom->projectToBoundary(ptc);
-		pt = geom->project(ptc);
-		//ptc.print("pt off bnd (ptc)");
-		//pt.print("pt on bnd");
-
-		double howfar = geom->how_far(pt);
-		Vec3 slope = (pt-ptc);
-		slope.normalize();
-		Vec3 grad = geom->gradient(pt.x(), pt.y(), pt.z());
-		Vec3 gradptc = geom->gradient(ptc.x(), ptc.y(), ptc.z());
-		grad.normalize();
-		gradptc.normalize();
-		ptc.print("ptc");
-		pt.print("pt");
-		grad.print("grad(@pt)");
-		gradptc.print("grad(@ptc)");
-		slope.print("slope (pt-ptc)");
-		grad.print("grad(pt)");
-	}
-  	//printf("count: %d, intersect: %d, diff= %d\n", count[j], intersect_bnd[j],
-	     //count[j]-abs(intersect_bnd[j]));
-	// project points with intersect == 1
-  }
-  printf("nb intersections: %d\n", cnt);
-  
-  printf("(%s, Line: %d) EXIT_FAILURE\n", __FILE__, __LINE__);
-  exit(EXIT_FAILURE);
-
-
-  //printf("r2: %f, %f\n", r2[0+nb_bnd*dim_num], r2[1+nb_bnd*dim_num]);
-  //exit(0);
-//
-//  Normalize the discrete energy estimate.
-//
-  *energy = *energy / sample_num;
-
-  printf("exit iterate_3d\n");
-
-  delete [] count;
-  delete [] nearest;
-  delete [] r2;
-  delete [] s;
-
-  return;
-}
-//****************************************************************************80
-void CVT::cvt_sample_3d ( int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[] )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    CVT_SAMPLE returns sample points.
-//
-//  Discussion:
-//
-//    N sample points are to be taken from the unit box of dimension DIM_NUM.
-//
-//    These sample points are usually created by a pseudorandom process
-//    for which the points are essentially indexed by a quantity called
-//    SEED.  To get N sample points, we generate values with indices
-//    SEED through SEED+N-1.
-//
-//    It may not be practical to generate all the sample points in a 
-//    single call.  For that reason, the routine allows the user to
-//    request a total of N points, but to require that only N_NOW be
-//    generated now (on this call).  
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license. 
-//
-//  Modified:
-//
-//    23 June 2005
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//
-//    Input, int N, the number of Voronoi cells.
-//
-//    Input, int N_NOW, the number of sample points to be generated
-//    on this call.  N_NOW must be at least 1.
-//
-//    Input, int SAMPLE, specifies how the sampling is done.
-//    -1, 'RANDOM', using C++ RANDOM function;
-//     0, 'UNIFORM', using a simple uniform RNG;
-//     1, 'HALTON', from a Halton sequence;
-//     2, 'GRID', points from a grid;
-//     3, 'USER', call "user" routine.
-//
-//    Input, bool INITIALIZE, is TRUE if the pseudorandom process should be
-//    reinitialized.
-//
-//    Input/output, int *SEED, the random number seed.
-//
-//    Output, double R[DIM_NUM*N_NOW], the sample points.
-//
-{
-  double exponent;
-  static int *halton_base = NULL;
-  static int *halton_leap = NULL;
-  static int *halton_seed = NULL;
-  int halton_step;
-  int i;
-  int j;
-  int k;
-  static int ngrid;
-  static int rank;
-  int rank_max;
-  static int *tuple = NULL;
-
-  if ( n_now < 1 )
-  {
-    cout << "\n";
-    cout << "CVT_SAMPLE - Fatal error!\n";
-    cout << "  N_NOW < 1.\n";
-    exit ( 1 );
-  }
-
-  print_sample_count++;
-
-  if ( sample == -1 )
-  {
-    if ( initialize )
-    {
-      random_initialize ( *seed );
-    }
-
-    for ( j = 0; j < n_now; j++ )
-    {
-      for ( i = 0; i < dim_num; i++ )
-      {
-        r[i+j*dim_num] = random(0,1);
-      }
-    }
-    *seed = ( *seed ) + n_now * dim_num;
-  }
-  else if ( sample == 0 )
-  {
-    r8mat_uniform_01 ( dim_num, n_now, seed, r );
-  }
-  else if ( sample == 1 )
-  {
-    halton_seed = new int[dim_num];
-    halton_leap = new int[dim_num];
-    halton_base = new int[dim_num];
-      
-    halton_step = *seed;
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_seed[i] = 0;
-    }
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_leap[i] = 1;
-    }
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_base[i] = prime ( i + 1 );
-    }
-
-    i4_to_halton_sequence ( dim_num, n_now, halton_step, halton_seed,
-      halton_leap, halton_base, r );
-
-    delete [] halton_seed;
-    delete [] halton_leap;
-    delete [] halton_base;
-
-    *seed = *seed + n_now;
-  }
-  else if ( sample == 2 )
-  {
-    exponent = 1.0 / ( double ) ( dim_num );
-    ngrid = ( int ) pow ( ( double ) n, exponent );
-    rank_max = ( int ) pow ( ( double ) ngrid, ( double ) dim_num );
-    tuple = new int[dim_num];
-
-    if ( rank_max < n )
-    {
-      ngrid = ngrid + 1;
-      rank_max = ( int ) pow ( ( double ) ngrid, ( double ) dim_num );
-    }
-
-    if ( initialize )
-    {
-      rank = -1;
-      tuple_next_fast ( ngrid, dim_num, rank, tuple );
-    }
-
-    rank = ( *seed ) % rank_max;
-
-    for ( j = 0; j < n_now; j++ )
-    {
-      tuple_next_fast ( ngrid, dim_num, rank, tuple );
-      rank = rank + 1;
-      rank = rank % rank_max;
-      for ( i = 0; i < dim_num; i++ )
-      {
-        r[i+j*dim_num] = double ( 2 * tuple[i] - 1 ) / double ( 2 * ngrid );
-      }
-    }
-    delete [] tuple;
-    *seed = *seed + n_now;
-  }
-  else if ( sample == 3 )
-  {
-	#if 0
-    user ( dim_num, n_now, seed, r );
-	#else
-	int nb_bnd = 0;
-	if (initialize) {
-		ellipsoid(dim_num, nb_pts, seed, r);
-	} else {
-		ellipsoid(dim_num, n_now, seed, r);
-	}
-	#endif
-	#if 0
-	for (int i=n_now-5; i < n_now; i++) {
-		printf("r= %f\n", r[i]);
-	}
-	printf("\n");
-	#endif
-  }
-  else
-  {
-    cout << "\n";
-    cout << "CVT_SAMPLE - Fatal error!\n";
-    cout << "  The value of SAMPLE = " << sample << " is illegal.\n";
-    exit ( 1 );
-  }
-
-  // print seeds
-  #if 0
-  if (print_sample_count == 1) {
-  printf("Initial seed positions\n");
-  for (int i=0; i < n_now; i++) {
-	printf("(%d): \n", i)
-  	for (int j=0; j < dim_num; j++) {
-  		printf("%f ", r[j+i*dim_num]);
-  	}
-	printf("\n");
-  }
-  printf("  -  end initial seeds --------------------\n");
-  }
-  #endif
-
-  return;
-}
-//****************************************************************************80

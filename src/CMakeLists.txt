@@ -9,6 +9,8 @@
 		mpisendable.cpp
 		contour_svd.cpp 
 		cvt.cpp
+                ellipse_cvt.cpp
+                ellipsoid_cvt.cpp
 		derivative.cpp
 		gpu.cpp 
 		grid.cpp 

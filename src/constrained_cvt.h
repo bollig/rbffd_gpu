@@ -37,6 +37,8 @@ public:
 
     // This is the projection routine
     virtual void project(int ndim, int n, double generator[], int npp);
+    void projectSquare ( int ndim, int n, double generator[], int npp );
+    void projectCube ( int ndim, int n, double generator[], int npp );
 };
 
 #endif //_ELLIPSE_CVT_H_

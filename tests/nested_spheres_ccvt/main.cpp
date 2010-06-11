@@ -15,9 +15,9 @@ void testNestedSpheres(int N);
 #endif
 
 int main(int argc, char** argv) {
-int N = 100;
+int N = 1000;
 
-test2DSquareCCVT(N);
+//test2DSquareCCVT(N);
 test3DCubeCCVT(N);
 #if 0
 test2DCircle(N); 

@@ -22,14 +22,8 @@ public:
     char ch_cap(char c);
     bool ch_eqi(char c1, char c2);
     int ch_to_digit(char c);
-    void cvt(int dim_num, int n, int batch, int init, int sample, int sample_num, int it_max, int it_fixed, int *seed, double r[], int *it_num, double *it_diff, double *energy);
-    void cvt3d(int dim_num, int n, int batch, int init, int sample, int sample_num, int it_max, int it_fixed, int *seed, double r[], int *it_num, double *it_diff, double *energy);
     double cvt_energy(int dim_num, int n, int batch, int sample, bool initialize,
             int sample_num, int *seed, double r[]);
-    void cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize,
-            int sample_num, int *seed, double r[], double *it_diff, double *energy);
-    void cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize,
-            int *seed, double r[]);
     void cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
             const char *init_string, int it_max, int it_fixed, int it_num,
             double it_diff, double energy, const char *sample_string, int sample_num, double r[],
@@ -69,11 +63,26 @@ public:
     char *timestring(void);
     void tuple_next_fast(int m, int n, int rank, int x[]);
 
+
+    // Gordon Erlebacher and Evan Bollig:
+    
     // Override this routine for a custom sampling routine
     // over your desired region.
     virtual void user(int dim_num, int n, int *seed, double r[]);
 
-    // Gordon Erlebacher and Evan Bollig: 
+    // Override this routine to change initialization and execution details
+    // (e.g., if you want to project as part of the initialization)
+    virtual void cvt(int dim_num, int n, int batch, int init, int sample, int sample_num, int it_max, int it_fixed, int *seed, double r[], int *it_num, double *it_diff, double *energy);
+
+    // Override this to customize the sampling within the domain (e.g., if you
+    // want to sample uniformly in the SPHERE and not the CUBE.
+    // NOTE: this is called within cvt_iterate multiple times and once form cvt(). 
+    virtual void cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[]);
+
+    // Override this to customize what happens during each iteration
+    // of the CVT generation (e.g., if you want to perform projections
+    virtual void cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize, int sample_num, int *seed, double r[], double *it_diff, double *energy);
+
     double random(double a, double b);
     
     void setNbBnd(int nb_bnd_) {

@@ -241,7 +241,7 @@ void ConstrainedCVT::cvt(int dim_num, int n, int batch, int init, int sample, in
 
 void ConstrainedCVT::project(int ndim, int n, double generator[], int npp) {
     // if (ndim == 2) {
-    //    projectSquare(ndim, n, generator, npp);
+    //   projectSquare(ndim, n, generator, npp);
     // } else if (ndim == 3) {
     projectCube(ndim, n, generator, npp);
     // }
@@ -406,7 +406,7 @@ void ConstrainedCVT::projectCube(int ndim, int n, double generator[], int npp)
     // voxels and project only a subset of points that are in the domain to the
     // surface.
 
-    nx = ny = (int) sqrt(npp);
+    nx = ny = (int) pow(npp, 0.33);
     if (ndim > 2) {
         nz = nx; // TODO: get this related to npp
     } else {
@@ -473,7 +473,13 @@ void ConstrainedCVT::projectCube(int ndim, int n, double generator[], int npp)
 
                     double x1 = generator[0 + nearest[0] * ndim] - sample[0];
                     double y1 = generator[1 + nearest[0] * ndim] - sample[1];
-                    double z1 = generator[2 + nearest[0] * ndim] - sample[2];
+                    double z1;
+                    if (ndim > 2) {
+                        z1 = generator[2 + nearest[0] * ndim] - sample[2];
+                    } else {
+                        z1 = 0;
+                    }
+
                     double dist = sqrt(x1 * x1 + y1 * y1 + z1 * z1);
 
                     if (dist < dx) {

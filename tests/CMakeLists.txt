@@ -15,7 +15,9 @@
                 3d_ccvt             # INCOMPLETE (compute a 3D ccvt inside ellipsoid)
                 cubeHeat3D_benchmarks # INCOMPLETE (regulargrid3D_heat plus benchmarking)
 
-                square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection not perfect.)
+                square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection is incomplete (not perfect)).
+
+		nested_spheres_ccvt # INCOMPLETE (nested spheres with ccvt of the boundary and cvt of interior.)
 	)
 
 	FOREACH (test ${TEST_COLLECTION})

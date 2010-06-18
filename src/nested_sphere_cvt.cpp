@@ -5,28 +5,28 @@ using namespace std;
 
 #include "nested_sphere_cvt.h"
 
-NestedSphereCVT::NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, double inner_radius, double outer_radius, int dimension, int DEBUG_)
+NestedSphereCVT::NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int dimension, double inner_radius, double outer_radius, int DEBUG_)
 : CVT(DEBUG_), inner_r(inner_radius), outer_r(outer_radius), dim_num(dimension),
 nb_inner(nb_inner_bnd), nb_outer(nb_outer_bnd), nb_int(nb_interior),
 seed(123456789), batch(1000), it_fixed(1), init(-1), sample(-1) {
     nb_bnd = 0;
 
-   
+
 #if 0
     // For testing: quarter spheres
     geom_extents = new double[2 * dim_num];
     for (int i = 0; i < dim_num; i++) {
-        geom_extents[0 + i*2] = -1;
-        geom_extents[1 + i*2] = 0;
+        geom_extents[0 + i * 2] = -1;
+        geom_extents[1 + i * 2] = 0;
     }
-    geom_extents[0 + 0*2] = -1;
-    geom_extents[1 + 0*2] = 0;
+    geom_extents[0 + 0 * 2] = -1;
+    geom_extents[1 + 0 * 2] = 0;
 #else
-     // Create bounding volume: [-1,1]^3
+    // Create bounding volume: [-1,1]^3
     geom_extents = new double[2 * dim_num];
     for (int i = 0; i < dim_num; i++) {
-        geom_extents[0 + i*2] = -1;
-        geom_extents[1 + i*2] = 1;
+        geom_extents[0 + i * 2] = -1;
+        geom_extents[1 + i * 2] = 1;
     }
 #endif
 }
@@ -38,7 +38,7 @@ seed(123456789), batch(1000), it_fixed(1), init(-1), sample(-1) {
 // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot]
 
 void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior, double *it_diff, double *energy,
-        int it_max, int sample_num) {
+        int it_max_boundary, int it_max_interior, int sample_num) {
     int i;
     bool initialize;
     int seed_base;
@@ -87,11 +87,11 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         project_to_sphere(&r[0], nb_inner, dim_num, inner_r);
 
         // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
-        project_to_sphere(&r[nb_inner*dim_num], nb_outer, dim_num, outer_r);
+        project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
 
         // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
 
-        energyAfter = cvt_energy(dim_num, nb_inner + nb_outer + nb_int, batch, sample, initialize, sample_num, &seed, r);
+        energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
         *energy = energyAfter;
 
@@ -118,22 +118,27 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
     // if (initialize) {
     char intermediate_file[80];
 
-    cout << "Writing initial voronoi to file (from CVT::cvt())\n";
-
     sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter.txt", nb_inner, nb_outer, 0);
     cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
-            it_max, it_fixed, *it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
+            it_max_boundary, it_fixed, *it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
             intermediate_file, false);
-
+    cout << "--> Writing intermediate file " << intermediate_file << "\n";
     sprintf(intermediate_file, "interior_nodes_%.5d_interior_%.5d_iter.txt", nb_int, 0);
     cvt_write(dim_num, nb_int, batch, seed_init, seed, "none",
-            it_max, it_fixed, *it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer)*dim_num],
+            it_max_interior, it_fixed, *it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer) * dim_num],
             intermediate_file, false);
+    cout << "--> Writing intermediate file " << intermediate_file << "\n";
     //}
+    
     //
-    //  Carry out the iteration.
+    //  Carry out the boundary iterations.
     //
-    while (*it_num_boundary < it_max) {
+
+    // The base CVT class is designed to ignore centroid updates for the first nb_bnd generators
+    // so we must ensure that they are included here.
+    this->nb_bnd = 0;
+
+    while (*it_num_boundary < it_max_boundary) {
         //
         //  If it's time to update the seed, save its current value
         //  as the starting value for all iterations in this cycle.
@@ -149,16 +154,18 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         *it_num_boundary = *it_num_boundary + 1;
         seed_init = seed;
 
-        cvt_iterate(dim_num, nb_inner + nb_outer + nb_int, batch, sample, initialize, sample_num, &seed, r, it_diff, &energyBefore);
+        // Iterate for only the first generators on the boundary (NOTE: The energy returned here is junk because it
+        // considers only the boundary and no the energy of the whole system with the interior points)
+        cvt_iterate(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r, it_diff, &energyBefore);
 
         // Inner is [0] -> [nb_inner-1]
         project_to_sphere(&r[0], nb_inner, dim_num, inner_r);
 
         // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
-        project_to_sphere(&r[nb_inner*dim_num], nb_outer, dim_num, outer_r);
+        project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
 
-
-        energyAfter = cvt_energy(dim_num, nb_inner + nb_outer + nb_int, batch, sample, initialize, sample_num, &seed, r);
+        // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
+        energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
         *energy = energyAfter;
 
@@ -186,20 +193,26 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
                     << setw(14) << energyBefore << "  "
                     << setw(14) << energyAfter << "\n";
 
-            cout << "Writing intermediate voronoi to file (from CVT::cvt())\n";
-
             sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter.txt", nb_inner, nb_outer, *it_num_boundary);
+            cout << "--> Writing intermediate file " << intermediate_file << "\n";
             cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
-                    it_max, it_fixed, *it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
+                    it_max_boundary, it_fixed, *it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
                     intermediate_file, false);
         }
     }
 
-    // Wait on interior until we know boundary works
-#if 0
+    cout << "--> FINISHED BOUNDARY DISTRIBUTION\n";
+
+    // 
     // Now that the boundary is locked, we form the interior CVT using the boundary
     // as reference
-    while (*it_num_interior < it_max) {
+    //
+    
+    // The base CVT class is designed to ignore centroid updates for the first nb_bnd generators
+    // so we set that number here.
+    this->nb_bnd = nb_inner + nb_outer; 
+
+    while (*it_num_interior < it_max_interior) {
         //
         //  If it's time to update the seed, save its current value
         //  as the starting value for all iterations in this cycle.
@@ -207,32 +220,21 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         //  value for this cycle.
         //
         if (((*it_num_interior) % it_fixed) == 0) {
-            seed_base = *seed;
+            seed_base = seed;
         } else {
-            *seed = seed_base;
+            seed = seed_base;
         }
 
         *it_num_interior = *it_num_interior + 1;
-        seed_init = *seed;
+        seed_init = seed;
 
-        cvt_iterate(dim_num, n, batch, sample, initialize, sample_num, seed, r, it_diff, &energyBefore);
-
-        // Inner is [0] -> [nb_inner-1]
-        project_to_sphere(&r[0], nb_inner, dim_num, inner_r);
-
-        // Outer is [nb_inner] -> [nb_inner+nb_outer-1]
-
-        // Interior is [nb_inner+nb_outer] -> [nb_tot]
-
-        energyAfter = cvt_energy(dim_num, n, batch, sample, initialize, sample_num, seed, r);
-
-        *energy = energyAfter;
+        cvt_iterate(dim_num, nb_inner + nb_outer + nb_int, batch, sample, initialize, sample_num, &seed, r, it_diff, energy);
 
         initialize = false;
 
         if (DEBUG) {
             cout << "  "
-                    << setw(4) << *it_num << "  "
+                    << setw(4) << *it_num_interior << "  "
                     << setw(12) << seed_init << "  "
                     << setw(14) << *it_diff << "  "
                     << setw(14) << energyBefore << "  "
@@ -242,30 +244,26 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         // BOLLIG:
         // TODO: only do this if a boolean is set for intermediate writes
         // 	not the same as DEBUG
-        if ((*it_num) % 20 == 0) {
+        if ((*it_num_interior) % 20 == 0) {
             char intermediate_file[80];
 
             cout << "  "
-                    << setw(4) << *it_num << "  "
+                    << setw(4) << *it_num_interior << "  "
                     << setw(12) << seed_init << "  "
                     << setw(14) << *it_diff << "  "
                     << setw(14) << energyBefore << "  "
                     << setw(14) << energyAfter << "\n";
 
-            cout << "Writing intermediate voronoi to file (from CVT::cvt())\n";
-
-            sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter.txt", nb_inner, nb_outer, 0);
-            cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, *seed, "none",
-                    it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, &r[0],
-                    intermediate_file, false);
-
-            sprintf(intermediate_file, "interior_nodes_%.5d_interior_%.5d_iter.txt", nb_int, 0);
-            cvt_write(dim_num, nb_int, batch, seed_init, *seed, "none",
-                    it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, &r[nb_inner + nb_outer],
+            sprintf(intermediate_file, "interior_nodes_%.5d_interior_%.5d_iter.txt", nb_int, *it_num_interior);
+            cout << "--> Writing intermediate file " << intermediate_file << "\n";
+            cvt_write(dim_num, nb_int, batch, seed_init, seed, "none",
+                    it_max_interior, it_fixed, *it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer)*dim_num],
                     intermediate_file, false);
         }
     }
-#endif
+
+    cout << "--> FINISHED INTERIOR DISTRIBUTION\n";
+
     return;
 }
 
@@ -355,7 +353,7 @@ void NestedSphereCVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool
         while (is_rejected) {
             for (i = 0; i < dim_num; i++) {
                 // This is Gordon Erlebacher's random(,) routine (defined below)
-                r[i + j * dim_num] = random(geom_extents[0 + i*2], geom_extents[1 + i*2]);
+                r[i + j * dim_num] = random(geom_extents[0 + i * 2], geom_extents[1 + i * 2]);
             }
 
             // We have a sample point in the bounding box, so lets try to
@@ -417,7 +415,8 @@ void NestedSphereCVT::project_to_sphere(double generator[], int k, int ndim, dou
         // Projected point is r*(p/||p||)
         // That is, the normalized vector times radius of desired sphere.
         for (int i = 0; i < ndim; i++) {
-            generator[i + j * ndim] *= (radius/norm);
+            generator[i + j * ndim] /= norm;
+            generator[i + j * ndim] *= radius;
         }
     }
 

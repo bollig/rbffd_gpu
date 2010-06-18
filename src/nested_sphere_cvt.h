@@ -23,7 +23,7 @@ protected:
     int init, sample; 
 
 public:
-    NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, double inner_radius = 0.5, double outer_radius = 1.0, int dimension = 3, int DEBUG_ = 0);
+    NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int dimension = 3, double inner_radius = 0.5, double outer_radius = 1.0, int DEBUG_ = 0);
 
     // Generate the boundary nodes first as an independent CVT
     // Then using the boundary nodes locked into position, generate the interior
@@ -32,7 +32,7 @@ public:
     // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
     // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot]
     virtual void cvt(double r[], int *it_num_boundary, int *it_num_interior, double *it_diff, double *energy,
-            int it_max = 1000, int sample_num = 3000);
+            int it_max_boundary = 1000, int it_max_interior = 1000, int sample_num = 3000);
 
     // Set/Get the number of iterations that the seed is fixed. That is,
     // the number of iterations during which random samples are the same.

@@ -30,19 +30,19 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /opt/local/bin/cmake
+CMAKE_COMMAND = "/Applications/CMake 2.8-1.app/Contents/bin/cmake"
 
 # The command to remove a file.
-RM = /opt/local/bin/cmake -E remove -f
+RM = "/Applications/CMake 2.8-1.app/Contents/bin/cmake" -E remove -f
 
 # The program to use to edit the cache.
-CMAKE_EDIT_COMMAND = /opt/local/bin/ccmake
+CMAKE_EDIT_COMMAND = "/Applications/CMake 2.8-1.app/Contents/bin/ccmake"
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/bollig/RBF.framework
+CMAKE_SOURCE_DIR = /Users/bollig/NetBeansProjects/trunk
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/bollig/RBF.framework
+CMAKE_BINARY_DIR = /Users/bollig/NetBeansProjects/trunk
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -50,7 +50,7 @@ CMAKE_BINARY_DIR = /Users/bollig/RBF.framework
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
-	/opt/local/bin/ccmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	"/Applications/CMake 2.8-1.app/Contents/bin/ccmake" -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -60,7 +60,7 @@ edit_cache/fast: edit_cache
 # Special rule for the target package
 package: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool..."
-	cd /Users/bollig/RBF.framework && /opt/local/bin/cpack --config ./CPackConfig.cmake
+	cd /Users/bollig/NetBeansProjects/trunk && "/Applications/CMake 2.8-1.app/Contents/bin/cpack" --config ./CPackConfig.cmake
 .PHONY : package
 
 # Special rule for the target package
@@ -70,7 +70,7 @@ package/fast: package
 # Special rule for the target package_source
 package_source:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool for source..."
-	cd /Users/bollig/RBF.framework && /opt/local/bin/cpack --config ./CPackSourceConfig.cmake /Users/bollig/RBF.framework/CPackSourceConfig.cmake
+	cd /Users/bollig/NetBeansProjects/trunk && "/Applications/CMake 2.8-1.app/Contents/bin/cpack" --config ./CPackSourceConfig.cmake /Users/bollig/NetBeansProjects/trunk/CPackSourceConfig.cmake
 .PHONY : package_source
 
 # Special rule for the target package_source
@@ -80,7 +80,7 @@ package_source/fast: package_source
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/opt/local/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	"/Applications/CMake 2.8-1.app/Contents/bin/cmake" -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : rebuild_cache
 
 # Special rule for the target rebuild_cache
@@ -90,7 +90,7 @@ rebuild_cache/fast: rebuild_cache
 # Special rule for the target test
 test:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests..."
-	/opt/local/bin/ctest --force-new-ctest-process $(ARGS)
+	"/Applications/CMake 2.8-1.app/Contents/bin/ctest" --force-new-ctest-process $(ARGS)
 .PHONY : test
 
 # Special rule for the target test
@@ -99,14 +99,14 @@ test/fast: test
 
 # The main all target
 all: cmake_check_build_system
-	cd /Users/bollig/RBF.framework && $(CMAKE_COMMAND) -E cmake_progress_start /Users/bollig/RBF.framework/CMakeFiles /Users/bollig/RBF.framework/tests/nested_spheres_ccvt/CMakeFiles/progress.marks
-	cd /Users/bollig/RBF.framework && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/bollig/RBF.framework/CMakeFiles 0
+	cd /Users/bollig/NetBeansProjects/trunk && $(CMAKE_COMMAND) -E cmake_progress_start /Users/bollig/NetBeansProjects/trunk/CMakeFiles /Users/bollig/NetBeansProjects/trunk/tests/nested_spheres_ccvt/CMakeFiles/progress.marks
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/bollig/NetBeansProjects/trunk/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /Users/bollig/RBF.framework && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/clean
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/clean
 .PHONY : clean
 
 # The main clean target
@@ -115,22 +115,22 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /Users/bollig/RBF.framework && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/preinstall
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /Users/bollig/RBF.framework && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/preinstall
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /Users/bollig/RBF.framework && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /Users/bollig/NetBeansProjects/trunk && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Convenience name for target.
 tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/rule:
-	cd /Users/bollig/RBF.framework && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/rule
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f CMakeFiles/Makefile2 tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/rule
 .PHONY : tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/rule
 
 # Convenience name for target.
@@ -139,7 +139,7 @@ nested_spheres_ccvt.x: tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.
 
 # fast build rule for target.
 nested_spheres_ccvt.x/fast:
-	cd /Users/bollig/RBF.framework && $(MAKE) -f tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build.make tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build.make tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build
 .PHONY : nested_spheres_ccvt.x/fast
 
 main.o: main.cpp.o
@@ -147,7 +147,7 @@ main.o: main.cpp.o
 
 # target to build an object file
 main.cpp.o:
-	cd /Users/bollig/RBF.framework && $(MAKE) -f tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build.make tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/main.cpp.o
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build.make tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -155,7 +155,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	cd /Users/bollig/RBF.framework && $(MAKE) -f tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build.make tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/main.cpp.i
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build.make tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -163,7 +163,7 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	cd /Users/bollig/RBF.framework && $(MAKE) -f tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build.make tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/main.cpp.s
+	cd /Users/bollig/NetBeansProjects/trunk && $(MAKE) -f tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/build.make tests/nested_spheres_ccvt/CMakeFiles/nested_spheres_ccvt.x.dir/main.cpp.s
 .PHONY : main.cpp.s
 
 # Help Target
@@ -192,6 +192,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /Users/bollig/RBF.framework && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /Users/bollig/NetBeansProjects/trunk && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

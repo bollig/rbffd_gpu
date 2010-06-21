@@ -4,6 +4,7 @@
 ###############################################
 	SET (EXTERNAL_LIBS
 		graphics_lib
+		kdtree
 	)
 
 	FOREACH (lib ${EXTERNAL_LIBS})

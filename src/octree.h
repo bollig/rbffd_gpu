@@ -101,10 +101,10 @@ private:
 	double zmin, zmax;
 
 public:
-	Octree(ParametricPatch* patch);
+	Octree(ParametricPatch* patch_, double xmin=0., double xmax=1., double ymin=0., double ymax=1., double zmin=0., double zmax=1.);
 	~Octree();
 	void create();
-	void intersectBoundary(Node& node);
+	//void intersectBoundary(Node& node);
 	Node* getRoot() { return root; }
 	void parseTree(BaseCheck& check);
 

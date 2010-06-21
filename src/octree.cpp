@@ -11,13 +11,14 @@ int BaseCheck::nb_hits = 0;
 int Node::nb_nodes = 0;
 
 //----------------------------------------------------------------------
-Octree::Octree(ParametricPatch* patch_) : patch(*patch_)
+Octree::Octree(ParametricPatch* patch_, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax)
+: patch(*patch_)
 {
 	root = new Node();
 	root->setPatch(&patch);
 	// Set, manually for now, the limits of the domain
 
-	setDomain(0., 1., 0., 1., 0., 1.);
+	setDomain(xmin, xmax, ymin, ymax, zmin, zmax);
 }
 //----------------------------------------------------------------------
 Octree::~Octree()
@@ -48,6 +49,7 @@ void Octree::create()
 	root->subdivide();
 }
 //----------------------------------------------------------------------
+#if 0
 void Octree::intersectBoundary(Node& node)
 {
 	// does node intersection the boundary
@@ -75,7 +77,21 @@ inters:
 
 	exit(0);
 }
+#endif 
 //----------------------------------------------------------------------
+void Octree::parseTree(BaseCheck& check)
+{
+	root->parseTree(check);
+}
+//----------------------------------------------------------------------
+void Octree::assignNode(Vec3& pt)
+{
+	root->assignNode(pt);
+}
+//----------------------------------------------------------------------
+
+
+
 #if 1
 void Node::intersectBoundary()
 {
@@ -266,11 +282,6 @@ Vec3 Node::getBoundaryPt()
 	printf("how_far: %g\n", patch->how_far(pt));
 }
 //----------------------------------------------------------------------
-void Octree::parseTree(BaseCheck& check)
-{
-	root->parseTree(check);
-}
-//----------------------------------------------------------------------
 void Node::parseTree(BaseCheck& check)
 // Should be able to combine the above routines
 {
@@ -282,6 +293,38 @@ void Node::parseTree(BaseCheck& check)
 	}
 }
 //----------------------------------------------------------------------
+void Node::assignNode(Vec3& pt)
+{
+	// check whether pt is inside node
+	if (level == Node::max_level) {
+		if (pt.x() >= x[0] && pt.x() <= x[1] &&
+			pt.y() >= y[0] && pt.y() <= y[1] &&
+			pt.z() >= z[0] && pt.z() <= z[1]) {
+
+			//printf("... bnd point assigned ...\n");
+			//pt.print("       bnd pt");
+			//printf("node bounds: x: %f, %f\n", x[0], x[1]);
+			//printf("           : y: %f, %f\n", y[0], y[1]);
+			//printf("           : z: %f, %f\n", z[0], z[1]);
+			boundary_pts.push_back(pt);
+			nb_hits++;
+			//printf("nb_hits= %d\n", nb_hits);
+			return;
+		}
+	}
+
+	if (!next) return;
+
+	for (int i=0; i < 8; i++) {
+		next[i].assignNode(pt);
+	}
+}
+//----------------------------------------------------------------------
+
+
+
+
+
 void TreeParseCheck::operator()(Node* node)
 {
 	if (node->level == Node::max_level) {
@@ -405,39 +448,7 @@ void TreeParseProject::operator()(Node* node)
 	nb_hits++;
 	printf("nb_hits: %d\n", nb_hits);
 }
-//----------------------------------------------------------------------
-void Octree::assignNode(Vec3& pt)
-{
-	root->assignNode(pt);
-}
-//----------------------------------------------------------------------
-void Node::assignNode(Vec3& pt)
-{
-	// check whether pt is inside node
-	if (level == Node::max_level) {
-		if (pt.x() >= x[0] && pt.x() <= x[1] && 
-			pt.y() >= y[0] && pt.y() <= y[1] &&
-			pt.z() >= z[0] && pt.z() <= z[1]) {
 
-			//printf("... bnd point assigned ...\n");
-			//pt.print("       bnd pt");
-			//printf("node bounds: x: %f, %f\n", x[0], x[1]);
-			//printf("           : y: %f, %f\n", y[0], y[1]);
-			//printf("           : z: %f, %f\n", z[0], z[1]);
-			boundary_pts.push_back(pt);
-			nb_hits++;
-			//printf("nb_hits= %d\n", nb_hits);
-			return;
-		}
-	}
-
-	if (!next) return;
-
-	for (int i=0; i < 8; i++) {
-		next[i].assignNode(pt);
-	}
-}
-//----------------------------------------------------------------------
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------

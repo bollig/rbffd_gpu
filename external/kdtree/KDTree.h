@@ -1,10 +1,11 @@
 // SUGGESTED TAB SIZE: 4
 #ifndef _KDTREE_H_
 #define _KDTREE_H_
- 
-#ifndef CPPONLY
-	#include "mex.h"
-#endif
+
+// REMOVED BY EVAN BOLLIG 6/21/10 (NO NEED FOR THIS HERE IF IT APPEARS IN EACH CPP FILE
+//#ifndef CPPONLY
+//	#include "mex.h"
+//#endif
 
 #include <vector>    // point datatype
 #include <math.h>    // fabs operation

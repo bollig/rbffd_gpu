@@ -58,6 +58,7 @@ SET( FRAMEWORK_DEPENDENCIES
 # so long as CMake is told that they are subdirs (i.e., add_subdirectory) 
 SET( FRAMEWORK_DEP_INCLUDE_DIRS
 	${utilities_SOURCE_DIR}
+	${kdtree_SOURCE_DIR}
         ${timing_SOURCE_DIR}
 	#${CUDA_INCLUDE_DIRS}
 )

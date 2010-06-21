@@ -988,6 +988,8 @@ void CVT::cvt_write ( int dim_num, int n, int batch, int seed_init, int seed,
 
   s = timestring ( );
 
+  file_out << "ASCII" << "\n";
+
   if ( comment )
   {
     file_out << "#  " << file_out_name << "\n";
@@ -1029,6 +1031,157 @@ void CVT::cvt_write ( int dim_num, int n, int batch, int seed_init, int seed,
 }
 //****************************************************************************80
 
+void CVT::cvt_write_binary ( int dim_num, int n, int batch, int seed_init, int seed,
+  const char *init_string, int it_max, int it_fixed, int it_num,
+  double it_diff, double energy, const char *sample_string, int sample_num,
+  double r[], const char *file_out_name, bool comment )
+
+//****************************************************************************80
+//
+//  Purpose:
+//
+//    CVT_WRITE_BINARY writes a CVT dataset to a binary file. Based on
+//    John Burkardts "CVT_WRITE"
+//
+//  Discussion:
+//
+//    The initial lines of the file are comments, which begin with a
+//    "#" character.
+//
+//    Thereafter, each line of the file contains the M-dimensional
+//    components of the next entry of the dataset.
+//
+//  Licensing:
+//
+//    This code is distributed with no license. Cite me, and acknowledge
+//    the origin of the source code.
+//
+//  Modified:
+//
+//    6/21/2010
+//
+//  Author:
+//
+//    Evan Bollig
+//
+//  Parameters:
+//
+//    Input, int DIM_NUM, the spatial dimension.
+//
+//    Input, int N, the number of points.
+//
+//    Input, int BATCH, sets the maximum number of sample points
+//    generated at one time.  It is inefficient to generate the sample
+//    points 1 at a time, but memory intensive to generate them all
+//    at once.  You might set BATCH to min ( SAMPLE_NUM, 10000 ), for instance.
+//
+//    Input, int SEED_INIT, the initial random number seed.
+//
+//    Input, int SEED, the current random number seed.
+//
+//    Input, char *INIT_STRING, specifies how the initial
+//    generators are chosen:
+//    filename, by reading data from a file;
+//    'GRID', picking points from a grid;
+//    'HALTON', from a Halton sequence;
+//    'RANDOM', using the C++ RANDOM function;
+//    'UNIFORM', using a simple uniform RNG;
+//    'USER', call "user" routine.
+//
+//    Input, int IT_MAX, the maximum number of iterations allowed.
+//
+//    Input, int IT_FIXED, the number of iterations to take with a
+//    fixed set of sample points.
+//
+//    Input, int IT_NUM, the actual number of iterations taken.
+//
+//    Input, double IT_DIFF, the L2 norm of the change
+//    in the CVT coordinates on the last iteration.
+//
+//    Input, double *ENERGY,  the discrete "energy", divided
+//    by the number of sample points.
+//
+//    Input, char *SAMPLE_STRING, specifies how the region is sampled:
+//    'GRID', picking points from a grid;
+//    'HALTON', from a Halton sequence;
+//    'RANDOM', using the C++ RANDOM function;
+//    'UNIFORM', using a simple uniform RNG;
+//    'USER', call "user" routine.
+//
+//    Input, int SAMPLE_NUM, the number of sampling points used on
+//    each iteration.
+//
+//    Input, double R(DIM_NUM,N), the points.
+//
+//    Input, char *FILE_OUT_NAME, the name of the output file.
+//
+//    Input, bool COMMENT, is true if comments may be included in the file.
+//
+{
+  ofstream file_out;
+  int i;
+  int j;
+  char *s;
+
+  file_out.open ( file_out_name );
+
+  if ( !file_out )
+  {
+    cout << "\n";
+    cout << "CVT_WRITE - Fatal error!\n";
+    cout << "  Could not open the output file.\n";
+    exit ( 1 );
+  }
+
+  s = timestring ( );
+
+  file_out << "BINARY" << "\n";
+
+  if ( comment )
+  {
+    file_out << "#  " << file_out_name << "\n";
+    file_out << "#  created by routine CVT_WRITE.C" << "\n";
+    file_out << "#  at " << s << "\n";
+    file_out << "#\n";
+
+    file_out << "#  Dimension DIM_NUM =        "  << dim_num       << "\n";
+    file_out << "#  Number of points N =       "  << n             << "\n";
+    file_out << "#  Initial SEED_INIT =        "  << seed_init     << "\n";
+    file_out << "#  Current SEED =             "  << seed          << "\n";
+    file_out << "#  INIT =                    \"" << init_string   << "\".\n";
+    file_out << "#  Max iterations IT_MAX =    "  << it_max        << "\n";
+    file_out << "#  IT_FIXED (fixed samples) = "  << it_fixed      << "\n";
+    file_out << "#  Iterations IT_NUM =        "  << it_num        << "\n";
+    file_out << "#  Difference IT_DIFF =       "  << it_diff       << "\n";
+    file_out << "#  CVT ENERGY =               "  << energy        << "\n";
+    file_out << "#  SAMPLE =                  \"" << sample_string << "\".\n";
+    file_out << "#  Samples SAMPLE_NUM =       "  << sample_num    << "\n";
+    file_out << "#  Sampling BATCH size =      "  << batch         << "\n";
+    file_out << "#  EPSILON (unit roundoff) =  "  << r8_epsilon ( ) << "\n";
+    file_out << "#\n";
+  }
+
+  file_out.write((char*)r, n*dim_num*sizeof(double));
+
+  /*for ( j = 0; j < n; j++ )
+  {
+    for ( i = 0; i < dim_num; i++ )
+    {
+      file_out << setw(10) << r[i+j*dim_num] << "  ";
+    }
+    file_out << "\n";
+  }
+   */
+  file_out << "\n";
+  
+  file_out.close ( );
+
+  delete [] s;
+
+  return;
+}
+//****************************************************************************80
+
 void CVT::data_read ( const char *file_in_name, int dim_num, int n, double r[] )
 
 //****************************************************************************80
@@ -1039,12 +1192,17 @@ void CVT::data_read ( const char *file_in_name, int dim_num, int n, double r[] )
 //
 //  Discussion:
 //
-//    The file is assumed to contain one record per line.
+//    The file is assumed to contain one record per line if ascii.
 //
 //    Records beginning with the '#' character are comments, and are ignored.
 //    Blank lines are also ignored.
 //
-//    Each line that is not ignored is assumed to contain exactly (or at least)
+//    The first line of the file must specify "ASCII" or "BINARY" to distinguish
+//    how the data is read. Binary format can have a header with # delimited
+//    lines, but they must ALL be at the top of the file below the format specification
+//    and before the binary data.
+//
+//    Each line in ascii format that is not ignored is assumed to contain exactly (or at least)
 //    M real numbers, representing the coordinates of a point.
 //
 //    There are assumed to be exactly (or at least) N such records.
@@ -1055,11 +1213,11 @@ void CVT::data_read ( const char *file_in_name, int dim_num, int n, double r[] )
 //
 //  Modified:
 //
-//    03 August 2004
+//    6/21/2010
 //
 //  Author:
 //
-//    John Burkardt
+//    John Burkardt (Modified by Evan Bollig)
 //
 //  Parameters:
 //
@@ -1079,6 +1237,7 @@ void CVT::data_read ( const char *file_in_name, int dim_num, int n, double r[] )
   int j;
   char line[255];
   double *x;
+  bool ascii = false;
 
   file_in.open ( file_in_name );
 
@@ -1090,42 +1249,63 @@ void CVT::data_read ( const char *file_in_name, int dim_num, int n, double r[] )
     exit ( 1 );
   }
 
-  x = new double[dim_num];
+  file_in.getline ( line, sizeof (line) );
+  if ( !strcmp(line, "ASCII") ) {
+      ascii = true;
+  } else if ( !strcmp(line, "BINARY") ) {
+      ascii = false; 
+  } else {
+    cout << "\n";
+    cout << "DATA_READ - Fatal error!\n";
+    cout << "  File must start with ASCII or BINARY specifier! Found: \"" << line << "\"\n";
+    exit ( 1 );
+  }
 
-  j = 0;
+  if (ascii) {
+      x = new double[dim_num];
 
-  while ( j < n )
-  {
-    file_in.getline ( line, sizeof ( line ) );
+      j = 0;
 
-    if ( file_in.eof ( ) )
-    {
-      break;
-    }
+      while ( j < n )
+      {
+        file_in.getline ( line, sizeof ( line ) );
 
-    if ( line[0] == '#' || s_len_trim ( line ) == 0 )
-    {
-      continue;
-    }
+        if ( file_in.eof ( ) )
+        {
+          break;
+        }
 
-    error = s_to_r8vec ( line, dim_num, x );
+        if ( line[0] == '#' || s_len_trim ( line ) == 0 )
+        {
+          continue;
+        }
 
-    if ( error )
-    {
-      continue;
-    }
+        error = s_to_r8vec ( line, dim_num, x );
 
-    for ( i = 0; i < dim_num; i++ )
-    {
-      r[i+j*dim_num] = x[i];
-    }
-    j = j + 1;
+        if ( error )
+        {
+          continue;
+        }
 
+        for ( i = 0; i < dim_num; i++ )
+        {
+          r[i+j*dim_num] = x[i];
+        }
+        j = j + 1;
+
+      }
+      delete [] x;
+  } else {
+      while (file_in.peek() == '#') {
+          file_in.getline(line, sizeof(line));
+        //  cout << "Comment" << line << "\n";
+      }
+      //cout << "TRYING TO READ DATA: " << endl;
+      file_in.read((char*)&r[0], n*dim_num*sizeof(double));
+      //cout << " DONE\n";
   }
 
   file_in.close ( );
-
-  delete [] x;
 
   cout << "\n";
   cout << "DATA_READ:\n";

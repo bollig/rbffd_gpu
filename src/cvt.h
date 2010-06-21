@@ -28,6 +28,10 @@ public:
             const char *init_string, int it_max, int it_fixed, int it_num,
             double it_diff, double energy, const char *sample_string, int sample_num, double r[],
             const char *file_out_name, bool comment);
+    void cvt_write_binary(int dim_num, int n, int batch, int seed_init, int seed,
+            const char *init_string, int it_max, int it_fixed, int it_num,
+            double it_diff, double energy, const char *sample_string, int sample_num, double r[],
+            const char *file_out_name, bool comment);
     void data_read(const char *file_in_name, int dim_num, int n, double r[]);
     char digit_to_ch(int i);
     void find_closest(int dim_num, int n, int sample_num, double s[], double r[],

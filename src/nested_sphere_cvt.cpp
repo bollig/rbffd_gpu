@@ -4,6 +4,7 @@
 using namespace std;
 
 #include "nested_sphere_cvt.h"
+#include "KDTree.h"
 
 NestedSphereCVT::NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int dimension, double inner_radius, double outer_radius, int DEBUG_)
 : CVT(DEBUG_), inner_r(inner_radius), outer_r(outer_radius), dim_num(dimension),
@@ -118,8 +119,8 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
     // if (initialize) {
     char intermediate_file[80];
 
-    sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter.txt", nb_inner, nb_outer, 0);
-    cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
+    sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter.bin", nb_inner, nb_outer, 0);
+    cvt_write_binary(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
             it_max_boundary, it_fixed, *it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
             intermediate_file, false);
     cout << "--> Writing intermediate file " << intermediate_file << "\n";
@@ -227,6 +228,7 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
 
         *it_num_interior = *it_num_interior + 1;
         seed_init = seed;
+        energyBefore = *energy; 
 
         cvt_iterate(dim_num, nb_inner + nb_outer + nb_int, batch, sample, initialize, sample_num, &seed, r, it_diff, energy);
 
@@ -238,7 +240,7 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
                     << setw(12) << seed_init << "  "
                     << setw(14) << *it_diff << "  "
                     << setw(14) << energyBefore << "  "
-                    << setw(14) << energyAfter << "\n";
+                    << setw(14) << *energy << "\n";
         }
 
         // BOLLIG:
@@ -252,7 +254,7 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
                     << setw(12) << seed_init << "  "
                     << setw(14) << *it_diff << "  "
                     << setw(14) << energyBefore << "  "
-                    << setw(14) << energyAfter << "\n";
+                    << setw(14) << *energy << "\n";
 
             sprintf(intermediate_file, "interior_nodes_%.5d_interior_%.5d_iter.txt", nb_int, *it_num_interior);
             cout << "--> Writing intermediate file " << intermediate_file << "\n";

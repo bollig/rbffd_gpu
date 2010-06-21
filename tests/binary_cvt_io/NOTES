@@ -1,0 +1,4 @@
+First pass through ellpsoid, all points should be inside! So Centroid should not intersect the ellipsoid
+
+Perhaps need exact projection.  (implement in ellipse_patch)
+----------------------------------------------------------------------

@@ -10,6 +10,7 @@
 		3d_octree           # WORKS (build and test a 3D octree)
 		regulargrid3D_heat  # WORKS (Compute Diffusion equation inside 3D cube volume)
 		regular_square2D_heat # WORKS (compute Diffusion equation inside 2D Square)
+		binary_cvt_io       # COMPLETE (test if reading and writing a binary CVT file functions the same as ascii data)
 
 		3D_test             # INCOMPLETE (3D ellipsoid test which fails to generate points correctly resulting in singular systems)
                 3d_ccvt             # INCOMPLETE (compute a 3D ccvt inside ellipsoid)
@@ -18,6 +19,7 @@
                 square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection is incomplete (not perfect)).
 
 		nested_spheres_ccvt # INCOMPLETE (nested spheres with ccvt of the boundary and cvt of interior.)
+
 	)
 
 	FOREACH (test ${TEST_COLLECTION})

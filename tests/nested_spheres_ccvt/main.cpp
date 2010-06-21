@@ -4,16 +4,16 @@
 
 using namespace std;
 
-#define NB_INNER_BND 100
-#define NB_OUTER_BND 100
-#define NB_INTERIOR 100
+#define NB_INNER_BND 500
+#define NB_OUTER_BND 500
+#define NB_INTERIOR 1000
 #define NB_SAMPLES 10000
+#define DIM_NUM 2
+
 
 int main(int argc, char** argv) {
 
     int N_TOT = NB_INNER_BND + NB_OUTER_BND + NB_INTERIOR;
-
-    int DIM_NUM = 3;
 
     // Discrete energy divided by number of sample pts
     double energy;

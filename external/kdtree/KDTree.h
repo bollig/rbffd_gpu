@@ -1,8 +1,7 @@
 // SUGGESTED TAB SIZE: 4
 #ifndef _KDTREE_H_
 #define _KDTREE_H_
-
-// REMOVED BY EVAN BOLLIG 6/21/10 (NO NEED FOR THIS HERE IF IT APPEARS IN EACH CPP FILE
+ 
 //#ifndef CPPONLY
 //	#include "mex.h"
 //#endif
@@ -125,11 +124,37 @@ class KDTree {
      * 				   the number of points and the dimensionality is inferred 
      *                 by the data
      */
+
+public: KDTree(const double dpoints[], int nbpts, int dim_num) {
+
+        vector<Point> vector_points;
+        for (int i = 0; i < nbpts; i++) {
+            Point p(dim_num);
+            for (int j = 0; j < dim_num; j++) {
+                p[j] = dpoints[i * dim_num + j];
+            }
+            vector_points.push_back(p);
+        }
+
+        this -> npoints = vector_points.size();
+        this -> ndim = vector_points[0].size();
+        this -> points = vector_points;
+
+        init_common();
+    }
+
+
 	public: KDTree(const vector<Point>& points){
     	// initialize data
     	this -> npoints   = points.size();
     	this -> ndim      = points[0].size();
         this -> points    = points;
+        
+        init_common();
+        }
+
+private: void init_common() {
+
         nodesPtrs.reserve( npoints );
         workarray.resize( npoints, -1 ); //used in sorting based construction
         
@@ -365,6 +390,13 @@ class KDTree {
 			d += (a[i]-b[i])*(a[i]-b[i]);
 		return d;
 	}
+        inline double distance_squared( double a[], const vector<double>& b){
+		double d = 0;
+		double N = b.size();
+		for( int i=0; i<N; i++ )
+			d += (a[i]-b[i])*(a[i]-b[i]);
+		return d;
+	}
 	
 	/**
 	 * k-NN query: computes the k closest points in the database to a given point 
@@ -547,6 +579,11 @@ class KDTree {
 
 	/// Computes the closest point in the set to the query point "p"
 	public: int closest_point(Point p){
+            return closest_point(p.data());
+	}
+        
+        	/// Computes the closest point in the set to the query point "p"
+	public: int closest_point(double p[]){
 		// search closest leaf
 		int dim = 0; // variable to cycle through dimensions
 		Node* leaf = nodesPtrs[0];
@@ -569,6 +606,7 @@ class KDTree {
 		check_border_distance(ROOT, 0, p, cdistsq, closest_neighbor); 		//check if anything else can do better
 		return closest_neighbor;
 	}
+
 	/** @ see closest_point
 	 * 
 	 * This function is the algorithm in support of "closest_point" for 
@@ -580,7 +618,7 @@ class KDTree {
 	 * @param cdistsq the euclidean distance for query to the point "idx"
 	 * @param idx     the index to the "currently" valid closest point
 	 */
-	private: void check_border_distance(int nodeIdx, int dim, Point pnt, double& cdistsq, int& idx){
+	private: void check_border_distance(int nodeIdx, int dim, double pnt[], double& cdistsq, int& idx){
 		Node* node = nodesPtrs[ nodeIdx ];
 		// cout << "checking node: " << node->idx+1 << endl;
 		

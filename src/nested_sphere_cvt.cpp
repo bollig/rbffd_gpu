@@ -4,7 +4,6 @@
 using namespace std;
 
 #include "nested_sphere_cvt.h"
-#include "KDTree.h"
 
 NestedSphereCVT::NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int dimension, double inner_radius, double outer_radius, int DEBUG_)
 : CVT(DEBUG_), inner_r(inner_radius), outer_r(outer_radius), dim_num(dimension),
@@ -40,6 +39,7 @@ seed(123456789), batch(1000), it_fixed(1), init(-1), sample(-1) {
 
 void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior, double *it_diff, double *energy,
         int it_max_boundary, int it_max_interior, int sample_num) {
+    t1.start();
     int i;
     bool initialize;
     int seed_base;
@@ -81,6 +81,9 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         // overridden to achieve this sampling
         cvt_sample(dim_num, nb_inner + nb_outer + nb_int, nb_inner + nb_outer + nb_int, init, initialize, &seed, r);
 
+        // KDTree is used by cvt_energy, cvt_iterate to range query generators and samples.
+        kdtree = new KDTree(&r[0], nb_inner + nb_outer, dim_num);
+
         // BOLLIG: Added check for energy and a check for
         energyBefore = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
@@ -92,9 +95,14 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
 
         // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
 
+        // Free kdtree and rebuild it (inefficient! We need to find a datastructure that supports moving nodes)
+        delete(kdtree);
+        kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+
         energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
         *energy = energyAfter;
+        
 
     }
     //if ( DEBUG )
@@ -119,8 +127,8 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
     // if (initialize) {
     char intermediate_file[80];
 
-    sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter.bin", nb_inner, nb_outer, 0);
-    cvt_write_binary(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
+    sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter.txt", nb_inner, nb_outer, 0);
+    cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
             it_max_boundary, it_fixed, *it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
             intermediate_file, false);
     cout << "--> Writing intermediate file " << intermediate_file << "\n";
@@ -164,6 +172,9 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
 
         // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
         project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
+
+        delete(kdtree);
+        kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
 
         // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
         energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
@@ -265,7 +276,7 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
     }
 
     cout << "--> FINISHED INTERIOR DISTRIBUTION\n";
-
+    t1.end();
     return;
 }
 
@@ -331,6 +342,7 @@ void NestedSphereCVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool
 //    Output, double R[DIM_NUM*N_NOW], the sample points.
 //
 {
+    t3.start();
     int i;
     int j;
 
@@ -379,6 +391,7 @@ void NestedSphereCVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool
         }
         printf("  -  end initial seeds --------------------\n");
     }
+    t3.end();
     return;
 }
 //****************************************************************************80

@@ -9,12 +9,16 @@
 #include <math.h>
 #include <vector>
 
-# include "cvt.h"
+#include "cvt.h"
 
 using namespace std;
 
 //****************************************************************************80
 CVT::CVT(int DEBUG_)
+: t1(tm, "[cvt_t1] Total"),
+  t2(tm, "[cvt_t2] CVT_ITERATE"),
+  t3(tm, "[cvt_t3] CVT_SAMPLE"),
+  t4(tm, "[cvt_t4] CVT_ENERGY")
 {
     DEBUG = DEBUG_; 
     nb_bnd = 0;
@@ -245,6 +249,8 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
 //    by the number of sample points.
 //
 {
+
+    t1.start(); 
   int i;
   bool initialize;
   int seed_base;
@@ -285,6 +291,10 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
     initialize = true;
     cvt_sample ( dim_num, n, n, init, initialize, seed, r );
   }
+
+  // Construct a kdtree for range_query
+  kdtree = new KDTree(r, n, dim_num);
+
   if ( DEBUG )
   {
     cout                          << "  "
@@ -372,6 +382,7 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
 			//exit(0);
 	}
   }
+  t1.end(); 
   return;
 }
 //****************************************************************************80
@@ -433,6 +444,7 @@ double CVT::cvt_energy ( int dim_num, int n, int batch, int sample, bool initial
 //    Output, double CVT_ENERGY, the estimated CVT energy.
 //
 {
+    t4.start();
   double energy;
   int get;
   int have;
@@ -473,6 +485,7 @@ double CVT::cvt_energy ( int dim_num, int n, int batch, int sample, bool initial
   delete [] nearest;
   delete [] s;
 
+  t4.end();
   return energy;
 }
 //****************************************************************************80
@@ -563,7 +576,8 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
 //    Output, double *ENERGY,  the discrete "energy", divided
 //    by the number of sample points.
 //
-{
+{     
+    t2.start();
   int *count;
   int get;
   int have;
@@ -687,6 +701,11 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
   delete [] r2;
   delete [] s;
 
+  // Reconstruct our kdtree for range queries using the new seeds
+  delete(kdtree);
+  kdtree = new KDTree(r, n, dim_num);
+
+  t2.end();
   return;
 }
 //****************************************************************************80
@@ -750,6 +769,8 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
 //    Output, double R[DIM_NUM*N_NOW], the sample points.
 //
 {
+   
+    t3.start();
   double exponent;
   static int *halton_base = NULL;
   static int *halton_leap = NULL;
@@ -882,6 +903,7 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
   	}
 	printf("  -  end initial seeds --------------------\n");
   }
+  t3.end();
   return;
 }
 //****************************************************************************80
@@ -988,7 +1010,7 @@ void CVT::cvt_write ( int dim_num, int n, int batch, int seed_init, int seed,
 
   s = timestring ( );
 
-  file_out << "ASCII" << "\n";
+  //file_out << "ASCII" << "\n";
 
   if ( comment )
   {
@@ -1412,6 +1434,8 @@ void CVT::find_closest ( int dim_num, int n, int sample_num, double s[], double 
 //    cell generator.
 //
 {
+    // Original: 
+    #if 0
   double dist_sq_min;
   double dist_sq;
   int i;
@@ -1438,8 +1462,32 @@ void CVT::find_closest ( int dim_num, int n, int sample_num, double s[], double 
         nearest[js] = jr;
       }
     }
+    
+     vector<double> p;
+      for (int j = 0; j < dim_num; j++) {
+          p.push_back(s[js*dim_num+j]);
+      }
+     int kdresult = kdtree->closest_point(p);
+     int kd2 = kdtree->closest_point(&s[js*dim_num]);
+     
+     if (kdresult != nearest[js]) {
+      cout << "WARNING! CLOSEST DOES NOT MATCH!\n";
+     } else {
+         if (kdresult != kd2) {
+          cout << "WARNING! INCONSISTENT KD SEARCH!\n";
+         }
+     }
   }
+  #else
 
+  // KDTREE:
+  for ( int i = 0; i < sample_num; i++ ) {
+
+     nearest[i] = kdtree->closest_point(&s[i*dim_num]);
+  }
+  
+  #endif
+   
   return;
 }
 //****************************************************************************80

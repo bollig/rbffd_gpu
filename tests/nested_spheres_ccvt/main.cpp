@@ -1,18 +1,18 @@
 #include <stdlib.h>
+
 #include "nested_sphere_cvt.h"
-#include <vector>
 
 using namespace std;
 
-#define NB_INNER_BND 500
-#define NB_OUTER_BND 500
-#define NB_INTERIOR 1000
-#define NB_SAMPLES 10000
+#define NB_INNER_BND 1000
+#define NB_OUTER_BND 1000
+#define NB_INTERIOR 5000
+#define NB_SAMPLES 1000
 #define DIM_NUM 2
 
 
 int main(int argc, char** argv) {
-
+    
     int N_TOT = NB_INNER_BND + NB_OUTER_BND + NB_INTERIOR;
 
     // Discrete energy divided by number of sample pts
@@ -39,6 +39,8 @@ int main(int argc, char** argv) {
 
     Density* rho = new Density();
 
+
+
     NestedSphereCVT* cvt = new NestedSphereCVT(NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, DIM_NUM);
 
     //    cvt->SetDensity(rho);
@@ -48,6 +50,7 @@ int main(int argc, char** argv) {
     cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
 
 
+    delete(cvt);
     //    cvt->cvt_write(DIM_NUM, N_TOT, batch, seed_init, seed, init_string,
     //          it_max, it_fixed, it_num, it_diff, energy, sample_string, sample_num, r,
     //        file_out_name, comment);

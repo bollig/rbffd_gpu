@@ -4,6 +4,8 @@
 #include <vector>
 #include "Vec3.h"
 #include "density.h"
+#include "timingGE.h"
+#include "KDTree.h"
 
 class CVT {
 protected:
@@ -15,10 +17,16 @@ protected:
 
     // 0 = Debug output off; 1 = Verbose output and write intermediate files
     int DEBUG;
+    Timings tm;
+    Timer t1, t2, t3, t4;
+    KDTree* kdtree; 
 
 public:
     CVT(int DEBUG_ = 0);
-
+    ~CVT() {
+        delete(kdtree);
+        tm.dumpTimings();
+    }
     char ch_cap(char c);
     bool ch_eqi(char c1, char c2);
     int ch_to_digit(char c);
@@ -69,7 +77,7 @@ public:
 
 
     // Gordon Erlebacher and Evan Bollig:
-    
+
     // Override this routine for a custom sampling routine
     // over your desired region.
     virtual void user(int dim_num, int n, int *seed, double r[]);
@@ -88,7 +96,7 @@ public:
     virtual void cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize, int sample_num, int *seed, double r[], double *it_diff, double *energy);
 
     double random(double a, double b);
-    
+
     void setNbBnd(int nb_bnd_) {
         this->nb_bnd = nb_bnd_;
     }

@@ -7,7 +7,7 @@ using namespace std;
 #define NB_INNER_BND 1000
 #define NB_OUTER_BND 1000
 #define NB_INTERIOR 5000
-#define NB_SAMPLES 1000
+#define NB_SAMPLES 100000
 #define DIM_NUM 2
 
 

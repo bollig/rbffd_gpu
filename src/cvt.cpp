@@ -18,7 +18,10 @@ CVT::CVT(int DEBUG_)
 : t1(tm, "[cvt_t1] Total"),
   t2(tm, "[cvt_t2] CVT_ITERATE"),
   t3(tm, "[cvt_t3] CVT_SAMPLE"),
-  t4(tm, "[cvt_t4] CVT_ENERGY")
+  t4(tm, "[cvt_t4] CVT_ENERGY"),
+  t5(tm, "[cvt_t5] Delete + Reconstruct KDTree"),
+  t6(tm, "[cvt_t6] Update KDTree"),
+  t7(tm, "[cvt_t7] FIND CLOSEST")
 {
     DEBUG = DEBUG_; 
     nb_bnd = 0;
@@ -701,9 +704,20 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
   delete [] r2;
   delete [] s;
 
+  //cout << "TESTING TREE REBUILD: \n\n";
   // Reconstruct our kdtree for range queries using the new seeds
-  delete(kdtree);
-  kdtree = new KDTree(r, n, dim_num);
+  //delete(kdtree);
+  //kdtree = new KDTree(r, n, dim_num);
+  //kdtree->linear_tree_print();
+
+//cout << "NOW AN UPDATE: \n\n";
+  t6.start();
+  kdtree->updateTree(r, n, dim_num);
+  //kdtree->linear_tree_print();
+  t6.end();
+  
+  //cout << "DONE: \n\n";
+  //exit(0);
 
   t2.end();
   return;
@@ -1434,6 +1448,7 @@ void CVT::find_closest ( int dim_num, int n, int sample_num, double s[], double 
 //    cell generator.
 //
 {
+    t7.start();
     // Original: 
     #if 0
   double dist_sq_min;
@@ -1487,7 +1502,7 @@ void CVT::find_closest ( int dim_num, int n, int sample_num, double s[], double 
   }
   
   #endif
-   
+  t7.end();
   return;
 }
 //****************************************************************************80

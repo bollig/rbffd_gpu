@@ -96,9 +96,12 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
 
         // Free kdtree and rebuild it (inefficient! We need to find a datastructure that supports moving nodes)
-        delete(kdtree);
-        kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
-
+        //delete(kdtree);
+        //kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+        t6.start();
+        kdtree->updateTree(r, nb_inner+nb_outer, dim_num);
+        t6.end();
+        
         energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
         *energy = energyAfter;
@@ -173,8 +176,9 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
         project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
 
-        delete(kdtree);
-        kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+        //delete(kdtree);
+        //kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+        kdtree->updateTree(r, nb_inner+nb_outer, dim_num);
 
         // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
         energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
@@ -219,6 +223,11 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
     // Now that the boundary is locked, we form the interior CVT using the boundary
     // as reference
     //
+    
+    t5.start();
+    delete(kdtree);
+    kdtree = new KDTree(r, nb_inner + nb_outer + nb_int, dim_num);
+    t5.end();
     
     // The base CVT class is designed to ignore centroid updates for the first nb_bnd generators
     // so we set that number here.

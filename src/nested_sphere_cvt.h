@@ -20,7 +20,7 @@ protected:
     int seed, batch, it_fixed;
     // NOTE: we dont have support for changing "init","sample" and their corresponding strings.
     //      ONLY random sampling is supported in this class.
-    int init, sample; 
+    int init, sample;
 
 public:
     NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int dimension = 3, double inner_radius = 0.5, double outer_radius = 1.0, int DEBUG_ = 0);

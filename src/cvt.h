@@ -18,7 +18,7 @@ protected:
     // 0 = Debug output off; 1 = Verbose output and write intermediate files
     int DEBUG;
     Timings tm;
-    Timer t1, t2, t3, t4;
+    Timer t1, t2, t3, t4, t5, t6, t7;
     KDTree* kdtree; 
 
 public:

@@ -81,8 +81,10 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         // overridden to achieve this sampling
         cvt_sample(dim_num, nb_inner + nb_outer + nb_int, nb_inner + nb_outer + nb_int, init, initialize, &seed, r);
 
+#if USE_KDTREE
         // KDTree is used by cvt_energy, cvt_iterate to range query generators and samples.
         kdtree = new KDTree(&r[0], nb_inner + nb_outer, dim_num);
+#endif
 
         // BOLLIG: Added check for energy and a check for
         energyBefore = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
@@ -95,17 +97,28 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
 
         // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
 
-        // Free kdtree and rebuild it (inefficient! We need to find a datastructure that supports moving nodes)
-        //delete(kdtree);
-        //kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+        // Free kdtree and rebuild it (inefficient! We need to find a datastructure that supports moving nodes
+#if USE_KDTREE
+#if 0
+        t5.start();
+        delete(kdtree);
+        kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+        //kdtree->linear_tree_print();
+        //cout << "NOW AN UPDATE: \n\n";
+        t5.end();
+#else
         t6.start();
-        kdtree->updateTree(r, nb_inner+nb_outer, dim_num);
+        kdtree->updateTree(r, nb_inner + nb_outer, dim_num);
+        //kdtree->linear_tree_print();
         t6.end();
-        
+#endif
+#endif
+
+
         energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
         *energy = energyAfter;
-        
+
 
     }
     //if ( DEBUG )
@@ -141,7 +154,7 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
             intermediate_file, false);
     cout << "--> Writing intermediate file " << intermediate_file << "\n";
     //}
-    
+
     //
     //  Carry out the boundary iterations.
     //
@@ -176,9 +189,23 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
         // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
         project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
 
-        //delete(kdtree);
-        //kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
-        kdtree->updateTree(r, nb_inner+nb_outer, dim_num);
+#if USE_KDTREE
+#if 0
+        t5.start();
+        delete(kdtree);
+        kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+        //kdtree->linear_tree_print();
+        //cout << "NOW AN UPDATE: \n\n";
+        t5.end();
+#else
+
+        t6.start();
+        kdtree->updateTree(r, nb_inner + nb_outer, dim_num);
+        //kdtree->linear_tree_print();
+        t6.end();
+#endif 
+#endif
+
 
         // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
         energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
@@ -223,15 +250,17 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
     // Now that the boundary is locked, we form the interior CVT using the boundary
     // as reference
     //
-    
+
+#if USE_KDTREE
     t5.start();
     delete(kdtree);
     kdtree = new KDTree(r, nb_inner + nb_outer + nb_int, dim_num);
     t5.end();
-    
+#endif
+
     // The base CVT class is designed to ignore centroid updates for the first nb_bnd generators
     // so we set that number here.
-    this->nb_bnd = nb_inner + nb_outer; 
+    this->nb_bnd = nb_inner + nb_outer;
 
     while (*it_num_interior < it_max_interior) {
         //
@@ -248,7 +277,7 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
 
         *it_num_interior = *it_num_interior + 1;
         seed_init = seed;
-        energyBefore = *energy; 
+        energyBefore = *energy;
 
         cvt_iterate(dim_num, nb_inner + nb_outer + nb_int, batch, sample, initialize, sample_num, &seed, r, it_diff, energy);
 
@@ -279,7 +308,7 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
             sprintf(intermediate_file, "interior_nodes_%.5d_interior_%.5d_iter.txt", nb_int, *it_num_interior);
             cout << "--> Writing intermediate file " << intermediate_file << "\n";
             cvt_write(dim_num, nb_int, batch, seed_init, seed, "none",
-                    it_max_interior, it_fixed, *it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer)*dim_num],
+                    it_max_interior, it_fixed, *it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer) * dim_num],
                     intermediate_file, false);
         }
     }

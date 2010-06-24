@@ -295,8 +295,10 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
     cvt_sample ( dim_num, n, n, init, initialize, seed, r );
   }
 
-  // Construct a kdtree for range_query
-  kdtree = new KDTree(r, n, dim_num);
+#if USE_KDTREE
+    // Construct a kdtree for range_query
+    kdtree = new KDTree(r, n, dim_num);
+#endif
 
   if ( DEBUG )
   {
@@ -706,15 +708,22 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
 
   //cout << "TESTING TREE REBUILD: \n\n";
   // Reconstruct our kdtree for range queries using the new seeds
-  //delete(kdtree);
-  //kdtree = new KDTree(r, n, dim_num);
-  //kdtree->linear_tree_print();
 
+  #if USE_KDTREE
+  #if 0
+  t5.start();
+  delete(kdtree);
+  kdtree = new KDTree(r, n, dim_num);
+  //kdtree->linear_tree_print();
 //cout << "NOW AN UPDATE: \n\n";
+  t5.end();
+  #else
   t6.start();
   kdtree->updateTree(r, n, dim_num);
   //kdtree->linear_tree_print();
   t6.end();
+  #endif
+  #endif
   
   //cout << "DONE: \n\n";
   //exit(0);
@@ -1450,60 +1459,42 @@ void CVT::find_closest ( int dim_num, int n, int sample_num, double s[], double 
 {
     t7.start();
     // Original: 
-    #if 0
-  double dist_sq_min;
-  double dist_sq;
-  int i;
-  int jr;
-  int js;
+#if USE_KDTREE
 
-  for ( js = 0; js < sample_num; js++ )
-  {
-    dist_sq_min = r8_huge ( );
-    nearest[js] = -1;
 
-    for ( jr = 0; jr < n; jr++ )
-    {
-      dist_sq = 0.0;
-      for ( i = 0; i < dim_num; i++ )
-      {
-        dist_sq = dist_sq + ( s[i+js*dim_num] - r[i+jr*dim_num] ) 
-                          * ( s[i+js*dim_num] - r[i+jr*dim_num] );
-      }
+    // KDTREE:
+    for (int i = 0; i < sample_num; i++) {
 
-      if ( jr == 0 || dist_sq < dist_sq_min )
-      {
-        dist_sq_min = dist_sq;
-        nearest[js] = jr;
-      }
+        nearest[i] = kdtree->closest_point(&s[i * dim_num]);
     }
-    
-     vector<double> p;
-      for (int j = 0; j < dim_num; j++) {
-          p.push_back(s[js*dim_num+j]);
-      }
-     int kdresult = kdtree->closest_point(p);
-     int kd2 = kdtree->closest_point(&s[js*dim_num]);
-     
-     if (kdresult != nearest[js]) {
-      cout << "WARNING! CLOSEST DOES NOT MATCH!\n";
-     } else {
-         if (kdresult != kd2) {
-          cout << "WARNING! INCONSISTENT KD SEARCH!\n";
-         }
-     }
-  }
-  #else
 
-  // KDTREE:
-  for ( int i = 0; i < sample_num; i++ ) {
+#else
+    double dist_sq_min;
+    double dist_sq;
+    int i;
+    int jr;
+    int js;
 
-     nearest[i] = kdtree->closest_point(&s[i*dim_num]);
-  }
-  
-  #endif
-  t7.end();
-  return;
+    for (js = 0; js < sample_num; js++) {
+        dist_sq_min = r8_huge();
+        nearest[js] = -1;
+
+        for (jr = 0; jr < n; jr++) {
+            dist_sq = 0.0;
+            for (i = 0; i < dim_num; i++) {
+                dist_sq = dist_sq + (s[i + js * dim_num] - r[i + jr * dim_num])
+                        * (s[i + js * dim_num] - r[i + jr * dim_num]);
+            }
+
+            if (jr == 0 || dist_sq < dist_sq_min) {
+                dist_sq_min = dist_sq;
+                nearest[js] = jr;
+            }
+        }
+    }
+#endif 
+    t7.end();
+    return;
 }
 //****************************************************************************80
 

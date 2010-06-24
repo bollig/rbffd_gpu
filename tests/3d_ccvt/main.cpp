@@ -62,8 +62,9 @@ void create_3d_CVT(int N, Density& rho)
   cvt->setGeometry(geometry);
   cvt->setOuterGeometry(outer_geometry);
 
-  cvt->ellipsoid_init(DIM_NUM, N, &seed, r );
-  cvt->cvt3d( DIM_NUM, N, batch, init, sample, sample_num, it_max, it_fixed, 
+  //cvt->ellipsoid_init(DIM_NUM, N, &seed, r );
+  //cvt->cvt3d( DIM_NUM, N, batch, init, sample, sample_num, it_max, it_fixed,
+  cvt->cvt( DIM_NUM, N, batch, init, sample, sample_num, it_max, it_fixed,
     &seed, r, &it_num, &it_diff, &energy );
   exit(0);
 

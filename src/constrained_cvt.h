@@ -39,6 +39,13 @@ public:
     virtual void project(int ndim, int n, double generator[], int npp);
     void projectSquare ( int ndim, int n, double generator[], int npp );
     void projectCube ( int ndim, int n, double generator[], int npp );
+
+
+public: // Overridden Methods:
+
+    virtual void user_sample ( int dim_num, int n, int *seed, double r[] );
+    // For this class: redirect to user_sample(...)
+    virtual void user_init ( int dim_num, int n, int *seed, double r[] );
 };
 
 #endif //_ELLIPSE_CVT_H_

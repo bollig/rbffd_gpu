@@ -292,7 +292,7 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
   if ( init != 4 )
   {
     initialize = true;
-    cvt_sample ( dim_num, n, n, init, initialize, seed, r );
+    cvt_init ( dim_num, n, n, init, initialize, seed, r );
   }
 
 #if USE_KDTREE
@@ -904,7 +904,7 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
   }
   else if ( sample == 3 )
   {
-    user ( dim_num, n_now, seed, r );
+    user_sample ( dim_num, n_now, seed, r );
   }
   else
   {
@@ -929,6 +929,206 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
   t3.end();
   return;
 }
+
+//****************************************************************************80
+
+void CVT::cvt_init ( int dim_num, int n, int n_now, int sample, bool initialize,
+  int *seed, double r[] )
+
+//****************************************************************************80
+//
+//  Purpose:
+//
+//    CVT_INIT returns sample points.
+//
+//  Discussion:
+//
+//    N sample points are to be taken from the unit box of dimension DIM_NUM.
+//
+//    These sample points are usually created by a pseudorandom process
+//    for which the points are essentially indexed by a quantity called
+//    SEED.  To get N sample points, we generate values with indices
+//    SEED through SEED+N-1.
+//
+//    It may not be practical to generate all the sample points in a
+//    single call.  For that reason, the routine allows the user to
+//    request a total of N points, but to require that only N_NOW be
+//    generated now (on this call).
+//
+//  Licensing:
+//
+//    This code is distributed under the GNU LGPL license.
+//
+//  Modified:
+//
+//    6/24/10
+//
+//  Author:
+//
+//    Evan Bollig
+//
+//  Parameters:
+//
+//    Input, int DIM_NUM, the spatial dimension.
+//
+//    Input, int N, the number of Voronoi cells.
+//
+//    Input, int N_NOW, the number of sample points to be generated
+//    on this call.  N_NOW must be at least 1.
+//
+//    Input, int SAMPLE, specifies how the sampling is done.
+//    -1, 'RANDOM', using C++ RANDOM function;
+//     0, 'UNIFORM', using a simple uniform RNG;
+//     1, 'HALTON', from a Halton sequence;
+//     2, 'GRID', points from a grid;
+//     3, 'USER', call "user" routine.
+//
+//    Input, bool INITIALIZE, is TRUE if the pseudorandom process should be
+//    reinitialized.
+//
+//    Input/output, int *SEED, the random number seed.
+//
+//    Output, double R[DIM_NUM*N_NOW], the sample points.
+//
+{
+
+    t3.start();
+  double exponent;
+  static int *halton_base = NULL;
+  static int *halton_leap = NULL;
+  static int *halton_seed = NULL;
+  int halton_step;
+  int i;
+  int j;
+  int k;
+  static int ngrid;
+  static int rank;
+  int rank_max;
+  static int *tuple = NULL;
+
+  if ( n_now < 1 )
+  {
+    cout << "\n";
+    cout << "CVT_SAMPLE - Fatal error!\n";
+    cout << "  N_NOW < 1.\n";
+    exit ( 1 );
+  }
+
+  if ( sample == -1 )
+  {
+    if ( initialize )
+    {
+      random_initialize ( *seed );
+    }
+
+    for ( j = 0; j < n_now; j++ )
+    {
+      for ( i = 0; i < dim_num; i++ )
+      {
+	// This is Gordon Erlebacher's random(,) routine (defined below)
+        r[i+j*dim_num] = random(0,1);
+      }
+    }
+    *seed = ( *seed ) + n_now * dim_num;
+  }
+  else if ( sample == 0 )
+  {
+    r8mat_uniform_01 ( dim_num, n_now, seed, r );
+  }
+  else if ( sample == 1 )
+  {
+    halton_seed = new int[dim_num];
+    halton_leap = new int[dim_num];
+    halton_base = new int[dim_num];
+
+    halton_step = *seed;
+
+    for ( i = 0; i < dim_num; i++ )
+    {
+      halton_seed[i] = 0;
+    }
+
+    for ( i = 0; i < dim_num; i++ )
+    {
+      halton_leap[i] = 1;
+    }
+
+    for ( i = 0; i < dim_num; i++ )
+    {
+      halton_base[i] = prime ( i + 1 );
+    }
+
+    i4_to_halton_sequence ( dim_num, n_now, halton_step, halton_seed,
+      halton_leap, halton_base, r );
+
+    delete [] halton_seed;
+    delete [] halton_leap;
+    delete [] halton_base;
+
+    *seed = *seed + n_now;
+  }
+  else if ( sample == 2 )
+  {
+    exponent = 1.0 / ( double ) ( dim_num );
+    ngrid = ( int ) pow ( ( double ) n, exponent );
+    rank_max = ( int ) pow ( ( double ) ngrid, ( double ) dim_num );
+    tuple = new int[dim_num];
+
+    if ( rank_max < n )
+    {
+      ngrid = ngrid + 1;
+      rank_max = ( int ) pow ( ( double ) ngrid, ( double ) dim_num );
+    }
+
+    if ( initialize )
+    {
+      rank = -1;
+      tuple_next_fast ( ngrid, dim_num, rank, tuple );
+    }
+
+    rank = ( *seed ) % rank_max;
+
+    for ( j = 0; j < n_now; j++ )
+    {
+      tuple_next_fast ( ngrid, dim_num, rank, tuple );
+      rank = rank + 1;
+      rank = rank % rank_max;
+      for ( i = 0; i < dim_num; i++ )
+      {
+        r[i+j*dim_num] = double ( 2 * tuple[i] - 1 ) / double ( 2 * ngrid );
+      }
+    }
+    delete [] tuple;
+    *seed = *seed + n_now;
+  }
+  else if ( sample == 3 )
+  {
+    user_init ( dim_num, n_now, seed, r );
+  }
+  else
+  {
+    cout << "\n";
+    cout << "CVT_SAMPLE - Fatal error!\n";
+    cout << "  The value of SAMPLE = " << sample << " is illegal.\n";
+    exit ( 1 );
+  }
+
+  // print seeds
+  if (DEBUG) {
+	printf("Initial seed positions\n");
+	for (int i=0; i < n_now; i++) {
+		printf("(%d): \n", i);
+	  	for (int j=0; j < dim_num; j++) {
+  			printf("%f ", r[j+i*dim_num]);
+	  	}
+		printf("\n");
+  	}
+	printf("  -  end initial seeds --------------------\n");
+  }
+  t3.end();
+  return;
+}
+
 //****************************************************************************80
 
 void CVT::cvt_write ( int dim_num, int n, int batch, int seed_init, int seed, 
@@ -3587,8 +3787,8 @@ void CVT::tuple_next_fast ( int m, int n, int rank, int x[] )
 }
 //****************************************************************************80
 
-void CVT::user ( int dim_num, int n, int *seed, double r[] )
-
+void CVT::user_init ( int dim_num, int n, int *seed, double r[] )
+// Originally "user(...)" 
 //****************************************************************************80
 //
 //  Purpose:
@@ -3652,6 +3852,74 @@ void CVT::user ( int dim_num, int n, int *seed, double r[] )
   return;
 # undef PI
 }
+#if 0
+void CVT::user_sample ( int dim_num, int n, int *seed, double r[] )
+// Originally: "user(...)"
+//****************************************************************************80
+//
+//  Purpose:
+//
+//    USER samples points in a user-specified region with given density.
+//
+//  Discussion:
+//
+//    This routine can be used to
+//
+//    * specify an interesting initial configuration for the data,
+//      by specifing that USER be used for initialization (INIT = 3);
+//
+//    * specify the shape of the computational region, by specifying
+//      that sample points are to be generated by this routine,
+//      (SAMPLE = 3) and then returning sample points uniformly at random.
+//
+//    * specify the distribution or density function, by specifying
+//      that sample points are to be generated by this routine,
+//      (SAMPLE = 3 ) and then returning sample points according to a
+//      given probability density function.
+//
+//  Licensing:
+//
+//    This code is distributed under the GNU LGPL license.
+//
+//  Modified:
+//
+//    23 June 2005
+//
+//  Author:
+//
+//    John Burkardt
+//
+//  Parameters:
+//
+//    Input, integer DIM_NUM, the spatial dimension.
+//
+//    Input, integer N, the number of sample points desired.
+//
+//    Input/output, int *SEED, the "seed" value.  On output, SEED has
+//    been updated.
+//
+//    Output, double R[DIM_NUM*N], the sample values.
+//
+{
+# define PI 3.141592653589793
+
+  double angle;
+  int j;
+  double radius;
+
+  for ( j = 0; j < n; j++ )
+  {
+    angle = 2.0 * PI * random(0.,1.);
+    radius = sqrt ( random(0.,1.) );
+    r[0+j*2] = radius * cos ( angle );
+    r[1+j*2] = radius * sin ( angle );
+  }
+
+  return;
+# undef PI
+}
+
+#endif 
 //----------------------------------------------------------------------
 // Generate a random number between a and b
 double CVT::random(double a, double b)

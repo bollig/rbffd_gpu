@@ -11,14 +11,17 @@
 		regulargrid3D_heat  # WORKS (Compute Diffusion equation inside 3D cube volume)
 		regular_square2D_heat # WORKS (compute Diffusion equation inside 2D Square)
 		binary_cvt_io       # COMPLETE (test if reading and writing a binary CVT file functions the same as ascii data)
+		nested_spheres_ccvt # COMPLETE (nested spheres with ccvt of the boundary and cvt of interior.)
+
+
 
 		3D_test             # INCOMPLETE (3D ellipsoid test which fails to generate points correctly resulting in singular systems)
                 3d_ccvt             # INCOMPLETE (compute a 3D ccvt inside ellipsoid)
                 cubeHeat3D_benchmarks # INCOMPLETE (regulargrid3D_heat plus benchmarking)
 
-                square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection is incomplete (not perfect)).
+                square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection is incomplete (not perfect for distribution; code projects points as they near boundary but the distance is not guesswork)).
 
-		nested_spheres_ccvt # INCOMPLETE (nested spheres with ccvt of the boundary and cvt of interior.)
+
 
 	)
 

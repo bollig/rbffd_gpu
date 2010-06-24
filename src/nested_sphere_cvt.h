@@ -47,11 +47,21 @@ public:
     void SetBatch(int new_batch) { batch = new_batch; }
     int GetBatch() { return batch; }
 
-    // Generate n_now random samples within our geometry.
+    void SetInitType(int init_type) { init = init_type; }
+    int GetInitType() { return init; }
+    void SetSampleType(int sample_type) { sample = sample_type; }
+    int GetSampleType() { return sample; }
+    
+
+public: // Overridden Methods:
+    
+    // Generate n random samples within our geometry.
     // The sampling is random is the bounding box described by box_extents.
     // If a sample is found to be outside of the geometry (by calling reject_point(...)
     // then we must re-sample and until we get a point inside the geometry.
-    virtual void cvt_sample ( int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[] );
+    virtual void user_sample ( int dim_num, int n, int *seed, double r[] );
+    // For this class: redirect to user_sample(...)
+    virtual void user_init ( int dim_num, int n, int *seed, double r[] );
 
 protected:
     // Check if the point of dimension ndim is contained within the boundary and interior

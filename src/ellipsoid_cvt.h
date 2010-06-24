@@ -28,6 +28,15 @@ protected:
 public:
     EllipsoidCVT(double major_ = 1., double minor_ = 1., double midax_ = 1., int DEBUG_ = 0);
 
+    // Custom "sample" routine (sample inside box with rejection outside of the ellipse).
+    virtual void user_sample(int dim_num, int n, int *seed, double r[]);
+
+    // custom "user" initialization
+    // NOTE: we should rewrite the base CVT class so there is a separate
+    // custom_init and custom_sample routine (since they CAN be different like in this case).
+    virtual void user_init(int dim_num, int n, int *seed, double r[]);
+
+
     void setEllipsoidAxes(double major_, double minor_, double midax_ = 1.) {
         this->major = major_;
         this->minor = minor_;
@@ -40,11 +49,10 @@ public:
 
     void rejection3d(int nb_samples, Density& density, std::vector<Vec3>& samples);
     Vec3 singleRejection3d(Density& density);
-    
-    void cvt3d(int dim_num, int n, int batch, int init, int sample, int sample_num, int it_max, int it_fixed, int *seed, double r[], int *it_num, double *it_diff, double *energy);
-    void cvt_iterate_3d(int dim_num, int n, int batch, int sample, bool initialize, int sample_num, int *seed, double r[], double *it_diff, double *energy);
-    void cvt_sample_3d(int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[]);
 
+    // Overrdie the default behavior of cvt_iterate (includes projection of boundary points to the surface)
+    virtual void cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize, int sample_num, int *seed, double r[], double *it_diff, double *energy);
+   
     void setGeometry(ParametricPatch* geom_) {
         geom = geom_;
     }

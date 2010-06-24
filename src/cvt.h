@@ -84,8 +84,12 @@ public:
     // Gordon Erlebacher and Evan Bollig:
 
     // Override this routine for a custom sampling routine
-    // over your desired region.
-    virtual void user(int dim_num, int n, int *seed, double r[]);
+    // over your desired region. THIS IS FOR INITIALIZATION ONLY
+    virtual void user_init (int dim_num, int n, int *seed, double r[]) = 0;
+
+    // Override this routine for custom sampling for user defined sampling
+    // (perhaps sampling with rejection outside your domain?)
+    virtual void user_sample (int dim_num, int n, int *seed, double r[]) = 0;
 
     // Override this routine to change initialization and execution details
     // (e.g., if you want to project as part of the initialization)
@@ -95,6 +99,9 @@ public:
     // want to sample uniformly in the SPHERE and not the CUBE.
     // NOTE: this is called within cvt_iterate multiple times and once form cvt(). 
     virtual void cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[]);
+
+    // Override this to customize the initialization 
+    virtual void cvt_init(int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[]);
 
     // Override this to customize what happens during each iteration
     // of the CVT generation (e.g., if you want to perform projections

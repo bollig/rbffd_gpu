@@ -8,9 +8,8 @@ using namespace std;
 NestedSphereCVT::NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int dimension, double inner_radius, double outer_radius, int DEBUG_)
 : CVT(DEBUG_), inner_r(inner_radius), outer_r(outer_radius), dim_num(dimension),
 nb_inner(nb_inner_bnd), nb_outer(nb_outer_bnd), nb_int(nb_interior),
-seed(123456789), batch(1000), it_fixed(1), init(-1), sample(-1) {
+seed(123456789), batch(1000), it_fixed(1), init(3 /*USER*/), sample(3 /*USER*/) {
     nb_bnd = 0;
-
 
 #if 0
     // For testing: quarter spheres
@@ -75,52 +74,51 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
     //
     //  Initialize the data, unless the user has already done that.
     //
-    if (init != 4) {
-        initialize = true;
-        // Randomly sample all initial generators from nested spheres (note: cvt_sample is
-        // overridden to achieve this sampling
-        cvt_sample(dim_num, nb_inner + nb_outer + nb_int, nb_inner + nb_outer + nb_int, init, initialize, &seed, r);
+  
+    initialize = true;
 
+    // Randomly sample all initial generators from nested spheres (note: cvt_sample is
+    // overridden to achieve this sampling
+    cvt_init(dim_num, nb_inner + nb_outer + nb_int, nb_inner + nb_outer + nb_int, init, initialize, &seed, r);
+    
 #if USE_KDTREE
-        // KDTree is used by cvt_energy, cvt_iterate to range query generators and samples.
-        kdtree = new KDTree(&r[0], nb_inner + nb_outer, dim_num);
+    // KDTree is used by cvt_energy, cvt_iterate to range query generators and samples.
+    kdtree = new KDTree(&r[0], nb_inner + nb_outer, dim_num);
 #endif
 
-        // BOLLIG: Added check for energy and a check for
-        energyBefore = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
+    // BOLLIG: Added check for energy and a check for
+    energyBefore = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
-        // Inner is [0] -> [nb_inner-1]
-        project_to_sphere(&r[0], nb_inner, dim_num, inner_r);
+    // Inner is [0] -> [nb_inner-1]
+    project_to_sphere(&r[0], nb_inner, dim_num, inner_r);
 
-        // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
-        project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
+    // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
+    project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
 
-        // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
+    // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
 
-        // Free kdtree and rebuild it (inefficient! We need to find a datastructure that supports moving nodes
+    // Free kdtree and rebuild it (inefficient! We need to find a datastructure that supports moving nodes
 #if USE_KDTREE
 #if 0
-        t5.start();
-        delete(kdtree);
-        kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
-        //kdtree->linear_tree_print();
-        //cout << "NOW AN UPDATE: \n\n";
-        t5.end();
+    t5.start();
+    delete(kdtree);
+    kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+    //kdtree->linear_tree_print();
+    //cout << "NOW AN UPDATE: \n\n";
+    t5.end();
 #else
-        t6.start();
-        kdtree->updateTree(r, nb_inner + nb_outer, dim_num);
-        //kdtree->linear_tree_print();
-        t6.end();
+    t6.start();
+    kdtree->updateTree(r, nb_inner + nb_outer, dim_num);
+    //kdtree->linear_tree_print();
+    t6.end();
 #endif
 #endif
 
 
-        energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
+    energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
-        *energy = energyAfter;
+    *energy = energyAfter;
 
-
-    }
     //if ( DEBUG )
     {
         cout << "  "
@@ -320,90 +318,12 @@ void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior
 
 //****************************************************************************80
 
-void NestedSphereCVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize,
-        int *seed, double r[])
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    CVT_SAMPLE returns sample points.
-//
-//  Discussion:
-//
-//    N sample points are to be taken from the box of dimension DIM_NUM with
-//    specified extent.
-//
-//    These sample points are usually created by a pseudorandom process
-//    for which the points are essentially indexed by a quantity called
-//    SEED.  To get N sample points, we generate values with indices
-//    SEED through SEED+N-1.
-//
-//    It may not be practical to generate all the sample points in a
-//    single call.  For that reason, the routine allows the user to
-//    request a total of N points, but to require that only N_NOW be
-//    generated now (on this call).
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    16 June 2010 (Bollig)
-//
-//  Author:
-//
-//    John Burkardt and Evan Bollig
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//
-//    Input, int N, the number of Voronoi cells.
-//
-//    Input, int N_NOW, the number of sample points to be generated
-//    on this call.  N_NOW must be at least 1.
-//
-//    Input, int SAMPLE, specifies how the sampling is done.
-//    -1, 'RANDOM', using C++ RANDOM function;
-//
-//    Input, bool INITIALIZE, is TRUE if the pseudorandom process should be
-//    reinitialized.
-//
-//    double BOX_EXTENTS[2*NDIM], specify the extents of the bounding box to sample. Originally
-//     this routine samples unit box ([0,1]^ndim). This allows us to change the extents
-//     and sample for example [-1,1]^ndim. Data stored as: [xMin,xMax,yMin,yMax,zMin,zMax, ...]
-//
-//    Input/output, int *SEED, the random number seed.
-//
-//    Output, double R[DIM_NUM*N_NOW], the sample points.
-//
+void NestedSphereCVT::user_sample(int dim_num, int n, int *seed, double r[])
 {
-    t3.start();
-    int i;
-    int j;
-
-    if (n_now < 1) {
-        cout << "\n";
-        cout << "CVT_SAMPLE - Fatal error!\n";
-        cout << "  N_NOW < 1.\n";
-        exit(1);
-    }
-
-    if (sample != -1) {
-
-        printf("WARNING! ONLY RANDOM SAMPLING IS SUPPORTED IN %s. Exiting...\n", __FILE__);
-        exit(EXIT_FAILURE);
-    }
-    if (initialize) {
-        random_initialize(*seed);
-    }
-
-    for (j = 0; j < n_now; j++) {
+    for (int j = 0; j < n; j++) {
         bool is_rejected = true;
         while (is_rejected) {
-            for (i = 0; i < dim_num; i++) {
+            for (int i = 0; i < dim_num; i++) {
                 // This is Gordon Erlebacher's random(,) routine (defined below)
                 r[i + j * dim_num] = random(geom_extents[0 + i * 2], geom_extents[1 + i * 2]);
             }
@@ -414,24 +334,19 @@ void NestedSphereCVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool
             is_rejected = reject_point(&r[j * dim_num], dim_num);
         }
     }
-    *seed = (*seed) + n_now * dim_num;
+    *seed = (*seed) + n * dim_num;
 
-
-    // print seeds
-    if (DEBUG) {
-        printf("Initial seed positions\n");
-        for (int i = 0; i < n_now; i++) {
-            printf("(%d): \n", i);
-            for (int j = 0; j < dim_num; j++) {
-                printf("%f ", r[j + i * dim_num]);
-            }
-            printf("\n");
-        }
-        printf("  -  end initial seeds --------------------\n");
-    }
-    t3.end();
     return;
 }
+//****************************************************************************80
+
+void NestedSphereCVT::user_init(int dim_num, int n, int *seed, double r[])
+{
+    user_sample(dim_num, n, seed, r);
+    
+    return;
+}
+
 //****************************************************************************80
 
 bool NestedSphereCVT::reject_point(double point[], int ndim) {

@@ -1,9 +1,9 @@
-# include <cstdlib>
-# include <cmath>
-# include <ctime>
-# include <iostream>
-# include <iomanip>
-# include <fstream>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <iostream>
+#include <iomanip>
+#include <fstream>
 #include <string.h>
 
 #include <math.h>
@@ -14,69 +14,70 @@
 using namespace std;
 
 //****************************************************************************80
-EllipseCVT::EllipseCVT(double major_, double minor_ , int DEBUG_) : CVT(DEBUG_)
-{
-        this->major = major_;
-        this->minor = minor_;
-	nb_bnd = 0;
+
+EllipseCVT::EllipseCVT(double major_, double minor_, int DEBUG_) : CVT(DEBUG_) {
+    this->major = major_;
+    this->minor = minor_;
+    nb_bnd = 0;
 }
 //****************************************************************************80
 
 //----------------------------------------------------------------------
-void EllipseCVT::ellipse_init ( int dim_num, int& n, int& nb_bnd, int *seed, double r[] )
-{
-# define PI 3.141592653589793
 
-	double dtheta = 1.*PI / nb_bnd; // periodic in theta
+void EllipseCVT::ellipse_init(int dim_num, int& n, int& nb_bnd, int *seed, double r[]) {
+#define PI 3.141592653589793
 
-	//printf("nb_bnd= %d\n", nb_bnd);
+    double dtheta = 1. * PI / nb_bnd; // periodic in theta
 
-	// boundary points
-	for (int i=0; i < nb_bnd; i++) {
-		//double angle = i*dtheta;
-		//r.push_back(major * cos(angle));
-		//r.push_back(minor * sin(angle));
-		r[0+i*2] = bndry_pts[i].x();
-		r[1+i*2] = bndry_pts[i].y();
-		//printf("bndry(%d)= %f, %f\n", i, r[i*2], r[1+i*2]);
-	}
+    //printf("nb_bnd= %d\n", nb_bnd);
 
-	//void EllipseCVT::rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples)
-	vector<Vec3> samples;
-	samples.resize(n-nb_bnd);
+    // boundary points
+    for (int i = 0; i < nb_bnd; i++) {
+        //double angle = i*dtheta;
+        //r.push_back(major * cos(angle));
+        //r.push_back(minor * sin(angle));
+        r[0 + i * 2] = bndry_pts[i].x();
+        r[1 + i * 2] = bndry_pts[i].y();
+        //printf("bndry(%d)= %f, %f\n", i, r[i*2], r[1+i*2]);
+    }
 
-	// We lock our nb_bnd seeds in place and generate an additional set of
-	// random seeds with rejection2d.
-	printf("ellipse_init: rejection2d\n");
-	rejection2d(n-nb_bnd, 0., 1., *rho, samples);
-	printf("n-nb_bnd= %d\n", n-nb_bnd);
-	//exit(0);
+    //void EllipseCVT::rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples)
+    vector<Vec3> samples;
+    samples.resize(n - nb_bnd);
 
-  	for ( int j = nb_bnd; j < n; j++ ) {
-    	//double angle = 2.0 * PI * random(0.,1.);
-    	//double radius = sqrt ( random(0.,1.) );
-    	r[0+j*2] = samples[j-nb_bnd].x();
-    	r[1+j*2] = samples[j-nb_bnd].y();
-    	//r[0+j*2] = radius*major*cos(angle);
-    	//r[1+j*2] = radius*minor*sin(angle);
-  	}
+    // We lock our nb_bnd seeds in place and generate an additional set of
+    // random seeds with rejection2d.
+    printf("ellipse_init: rejection2d\n");
+    rejection2d(n - nb_bnd, 0., 1., *rho, samples);
+    printf("n-nb_bnd= %d\n", n - nb_bnd);
+    //exit(0);
 
-  // print initial seeds
-  printf("Initial seed positions, %d seeds\n", n);
-  for (int i=0; i < n; i++) {
-	printf("(%d): \n", i);
-  	for (int j=0; j < dim_num; j++) {
-  		printf("%f ", r[j+i*dim_num]);
-  	}
-	printf("\n");
-  }
-  printf(" -----  end initial seeds --------------------\n");
+    for (int j = nb_bnd; j < n; j++) {
+        //double angle = 2.0 * PI * random(0.,1.);
+        //double radius = sqrt ( random(0.,1.) );
+        r[0 + j * 2] = samples[j - nb_bnd].x();
+        r[1 + j * 2] = samples[j - nb_bnd].y();
+        //r[0+j*2] = radius*major*cos(angle);
+        //r[1+j*2] = radius*minor*sin(angle);
+    }
 
-  return;
-# undef PI
+    // print initial seeds
+    printf("Initial seed positions, %d seeds\n", n);
+    for (int i = 0; i < n; i++) {
+        printf("(%d): \n", i);
+        for (int j = 0; j < dim_num; j++) {
+            printf("%f ", r[j + i * dim_num]);
+        }
+        printf("\n");
+    }
+    printf(" -----  end initial seeds --------------------\n");
+
+    return;
+#undef PI
 }
 //----------------------------------------------------------------------
-void EllipseCVT::ellipse ( int dim_num, int& n, int& nb_bnd, int *seed, vector<double>& r )
+
+void EllipseCVT::ellipse(int dim_num, int& n, int& nb_bnd, int *seed, vector<double>& r)
 
 // return number boundary points
 // n = total number of points
@@ -106,55 +107,56 @@ void EllipseCVT::ellipse ( int dim_num, int& n, int& nb_bnd, int *seed, vector<d
 //   y= b*sin(theta)
 {
 
-	printf("SHOULD NOT GET HERE: ellipse, n= %d\n", n);
-	exit(0);
+    printf("SHOULD NOT GET HERE: ellipse, n= %d\n", n);
+    exit(0);
 
 
-# define PI 3.141592653589793
+#define PI 3.141592653589793
 
-// na : is the number of points along the major axis
-// nb : is the number of points along the minor axis
+    // na : is the number of points along the major axis
+    // nb : is the number of points along the minor axis
 
-	r.resize(n*dim_num);
+    r.resize(n * dim_num);
 
-	//double dx = 2.*major / (na - 1);
-	//double dy = 2.*minor / (nb - 1);
-	double dtheta = 2.*PI / nb_bnd; // periodic in theta
+    //double dx = 2.*major / (na - 1);
+    //double dy = 2.*minor / (nb - 1);
+    double dtheta = 2. * PI / nb_bnd; // periodic in theta
 
-	// boundary points
-	for (int i=0; i < nb_bnd; i++) {
-		double angle = i*dtheta;
-		//r.push_back(major * cos(angle));
-		//r.push_back(minor * sin(angle));
-		r[0+i*2] = major * cos(angle);
-		r[1+i*2] = minor * sin(angle);
-	}
+    // boundary points
+    for (int i = 0; i < nb_bnd; i++) {
+        double angle = i*dtheta;
+        //r.push_back(major * cos(angle));
+        //r.push_back(minor * sin(angle));
+        r[0 + i * 2] = major * cos(angle);
+        r[1 + i * 2] = minor * sin(angle);
+    }
 
-	//int nb_bound = r.size() / 2;
-	//if (nb_bnd != nb_bound) {
-		//printf("error in boundary points\n");
-		//exit(0);
- 	//}
+    //int nb_bound = r.size() / 2;
+    //if (nb_bnd != nb_bound) {
+    //printf("error in boundary points\n");
+    //exit(0);
+    //}
 
 
-  	for ( int j = nb_bnd; j < n; j++ ) {
-    	double angle = 2.0 * PI * random(0.,1.);
-    	double radius = sqrt ( random(0.,1.));
-		//radius = radius * .95; // avoid boundary
-    	//r.push_back(radius*major*cos(angle));
-    	//r.push_back(radius*minor*sin(angle));
-    	r[0+j*2] = radius*major*cos(angle);
-    	r[1+j*2] = radius*minor*sin(angle);
-		//printf("%f, %f\n", r[0+j*2], r[1+j*2]);
-  	}
+    for (int j = nb_bnd; j < n; j++) {
+        double angle = 2.0 * PI * random(0., 1.);
+        double radius = sqrt(random(0., 1.));
+        //radius = radius * .95; // avoid boundary
+        //r.push_back(radius*major*cos(angle));
+        //r.push_back(radius*minor*sin(angle));
+        r[0 + j * 2] = radius * major * cos(angle);
+        r[1 + j * 2] = radius * minor * sin(angle);
+        //printf("%f, %f\n", r[0+j*2], r[1+j*2]);
+    }
 
-	//exit(0);
+    //exit(0);
 
-  return;
-# undef PI
+    return;
+#undef PI
 }
 //----------------------------------------------------------------------
-void EllipseCVT::ellipse ( int dim_num, int& n, int& nb_bnd, int *seed, double r[] )
+
+void EllipseCVT::ellipse(int dim_num, int& n, int& nb_bnd, int *seed, double r[])
 
 // return number boundary points
 // n = total number of points
@@ -183,69 +185,70 @@ void EllipseCVT::ellipse ( int dim_num, int& n, int& nb_bnd, int *seed, double r
 //   x= a*cos(theta)
 //   y= b*sin(theta)
 {
-# define PI 3.141592653589793
+#define PI 3.141592653589793
 
-// na : is the number of points along the major axis
-// nb : is the number of points along the minor axis
+    // na : is the number of points along the major axis
+    // nb : is the number of points along the minor axis
 
-	printf("enter ellipse\n");
+    printf("enter ellipse\n");
 
-	//r.resize(n*dim_num);
-	//printf("***1 rhomax: %f\n", rho->getMax()); exit(0);
+    //r.resize(n*dim_num);
+    //printf("***1 rhomax: %f\n", rho->getMax()); exit(0);
 
-	//double dx = 2.*major / (na - 1);
-	//double dy = 2.*minor / (nb - 1);
+    //double dx = 2.*major / (na - 1);
+    //double dy = 2.*minor / (nb - 1);
 
-	double dtheta;
-	if (nb_bnd > 0) {
-		dtheta = 2.*PI / nb_bnd; // periodic in theta
-	} else {
-		dtheta = 1.;
-	}
+    double dtheta;
+    if (nb_bnd > 0) {
+        dtheta = 2. * PI / nb_bnd; // periodic in theta
+    } else {
+        dtheta = 1.;
+    }
 
-	//// boundary points
-	/*
-	for (int i=0; i < nb_bnd; i++) {
-		double angle = i*dtheta;
-		r[0+i*2] = bndry_pts[i].x();
-		r[1+i*2] = bndry_pts[i].y();
-		//r.push_back(major * cos(angle));
-		//r.push_back(minor * sin(angle));
-		//r[0+i*2] = major * cos(angle);
-		//r[1+i*2] = minor * sin(angle);
-	}
-	printf("nb_bnd= %d\n", nb_bnd);
-	printf("n= %d\n", n);
-	*/
-        
-	vector<Vec3> samples;
-	samples.resize(n);
-	printf("ellipse: rejection2d\n");
-	rejection2d(n, 0., 1., *rho, samples);
+    //// boundary points
+    /*
+    for (int i=0; i < nb_bnd; i++) {
+            double angle = i*dtheta;
+            r[0+i*2] = bndry_pts[i].x();
+            r[1+i*2] = bndry_pts[i].y();
+            //r.push_back(major * cos(angle));
+            //r.push_back(minor * sin(angle));
+            //r[0+i*2] = major * cos(angle);
+            //r[1+i*2] = minor * sin(angle);
+    }
+    printf("nb_bnd= %d\n", nb_bnd);
+    printf("n= %d\n", n);
+     */
+
+    vector<Vec3> samples;
+    samples.resize(n);
+    printf("ellipse: rejection2d\n");
+    rejection2d(n, 0., 1., *rho, samples);
 
 
-	// interior points
-	//for (int i=nb_bnd; i < n; i++) {
-	//printf("n= %d\n", n);
-	for (int i=0; i < n; i++) {
-    	//double angle = 2.0 * PI * ( double ) ::random ( ) / ( double ) RAND_MAX;
-    	//double radius = sqrt ( ( double ) ::random ( ) / ( double ) RAND_MAX );  // in [0,1]
-		//r.push_back(major * cos(angle));
-		//r.push_back(minor * sin(angle));
-		//r[0+i*2] = major * radius * cos(angle);
-		//r[1+i*2] = minor * radius * sin(angle);
-		//printf("%f, %f\n", r[0+j*2], r[1+j*2]);
+    // interior points
+    //for (int i=nb_bnd; i < n; i++) {
+    //printf("n= %d\n", n);
+    for (int i = 0; i < n; i++) {
+        //double angle = 2.0 * PI * ( double ) ::random ( ) / ( double ) RAND_MAX;
+        //double radius = sqrt ( ( double ) ::random ( ) / ( double ) RAND_MAX );  // in [0,1]
+        //r.push_back(major * cos(angle));
+        //r.push_back(minor * sin(angle));
+        //r[0+i*2] = major * radius * cos(angle);
+        //r[1+i*2] = minor * radius * sin(angle);
+        //printf("%f, %f\n", r[0+j*2], r[1+j*2]);
 
-		r[0+i*2] = samples[i].x();
-		r[1+i*2] = samples[i].y();
-  	}
+        r[0 + i * 2] = samples[i].x();
+        r[1 + i * 2] = samples[i].y();
+    }
 
-	//printf("ellipse: n = %d\n", n);
+    //printf("ellipse: n = %d\n", n);
 
-  return;
-# undef PI
+    return;
+#undef PI
 }
 //----------------------------------------------------------------------
+
 void EllipseCVT::rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples)
 // Given a pdf p(x,y) (zero outside the ellipse, with unit integral over the elliptic domain)
 // and given a constant bound M, such that p(x,y) < M q(x,y), where q(x,y) is uniform distribution
@@ -265,50 +268,60 @@ void EllipseCVT::rejection2d(int nb_samples, double area, double weighted_area, 
 // 3D version should be written though, but the ellipse is a special case
 // (no hurry)
 {
-	//printf("area= %f\n", area);
-	//printf("weighted area= %f\n", weighted_area);
+    //printf("area= %f\n", area);
+    //printf("weighted area= %f\n", weighted_area);
 
-	samples.resize(nb_samples);
+    samples.resize(nb_samples);
 
-	//Vec3 rnd;
+    //Vec3 rnd;
 
-	for (int i=0; i < nb_samples; i++) {
-		samples[i] = singleRejection2d(area, weighted_area, density);
-		//samples[i].print("rnd");
-	}
-	//printf("nb_samples= %d\n", nb_samples);
+    for (int i = 0; i < nb_samples; i++) {
+        samples[i] = singleRejection2d(area, weighted_area, density);
+        //samples[i].print("rnd");
+    }
+    //printf("nb_samples= %d\n", nb_samples);
 
-	//exit(0);
+    //exit(0);
 }
 //----------------------------------------------------------------------
-Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& density)
-{
-// Apparently not used in this file
-// 3D version should be written though, but the ellipse is a special case
-// (no hurry)
 
-	double xs, ys;
-	double u;
-	double r2;
-	double maxrhoi = 1. / rho->getMax();
-	//printf("maxrhoi= %f\n", maxrhoi);
+Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& density) {
+    // Apparently not used in this file
+    // 3D version should be written though, but the ellipse is a special case
+    // (no hurry)
 
-	double maj2i = 1./major/major;
-	double min2i = 1./minor/minor;
-	//printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
+    double xs, ys;
+    double u;
+    double r2;
+    double maxrhoi = 1. / rho->getMax();
+    //printf("maxrhoi= %f\n", maxrhoi);
 
-	while (1) {
-		xs = random(-major, major);
-		ys = random(-major, major); // to make sure that cells are all same size
-		//printf("xs,ys= %f, %f\n", xs, ys);
-		r2 = xs*xs*maj2i + ys*ys*min2i;
-		//printf("r2= %f\n", r2);
-		if (r2 >= 1.) continue;  // inside the ellipse
+    double maj2i = 1. / major / major;
+    double min2i = 1. / minor / minor;
+    //printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
 
-		// rejection part if non-uniform distribution
-		u = random(0.,1.);
-		//printf("rho= %f\n", density(xs,ys));
-		if (u < (density(xs,ys))*maxrhoi) break;
-	}
-	return Vec3(xs,ys);
+    while (1) {
+        xs = random(-major, major);
+        ys = random(-major, major); // to make sure that cells are all same size
+        //printf("xs,ys= %f, %f\n", xs, ys);
+        r2 = xs * xs * maj2i + ys * ys*min2i;
+        //printf("r2= %f\n", r2);
+        if (r2 >= 1.) continue; // inside the ellipse
+
+        // rejection part if non-uniform distribution
+        u = random(0., 1.);
+        //printf("rho= %f\n", density(xs,ys));
+        if (u < (density(xs, ys)) * maxrhoi) break;
+    }
+    return Vec3(xs, ys);
+}
+
+void EllipseCVT::user_sample(int dim_num, int n, int *seed, double r[]) {
+    // The guts and glory (this is the user defined ellipse sampling)
+    ellipse(dim_num, n, nb_bnd, seed, r);
+}
+
+void EllipseCVT::user_init(int dim_num, int n, int *seed, double r[]) {
+    // This is the user defined initialization
+    ellipse_init(dim_num, n, nb_bnd, seed, r);
 }

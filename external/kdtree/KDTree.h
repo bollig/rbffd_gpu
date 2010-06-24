@@ -10,6 +10,7 @@
 #include <math.h>    // fabs operation
 #include "MyHeaps.h" // priority queues
 #include "float.h"   // max floating point number
+#include "timingGE.h" 
 
 using namespace std;
 
@@ -44,6 +45,10 @@ public:
 };
 
 class KDTree {
+private:
+    Timings tm;
+    Timer t1, t2, t3, t4, t5;
+
     // Core data contained in the tree
 private:
     vector<Point> points; // Points data
@@ -76,6 +81,7 @@ public:
     ~KDTree() {
         for (unsigned int i = 0; i < nodesPtrs.size(); i++)
             delete nodesPtrs[i];
+       // tm.dumpTimings();
     }
 
     /// Heapsort algorithm used by fast KDtree construction
@@ -143,7 +149,13 @@ public:
 
 public:
 
-    KDTree(const double dpoints[], int nbpts, int dim_num) {
+    KDTree(const double dpoints[], int nbpts, int dim_num) 
+    : t1(tm, "[kdtree_t1] Update Recursively"),
+      t2(tm, "[kdtree_t2] Build Recursively"),
+      t3(tm, "[kdtree_t3] Init_common"),
+      t4(tm, "[kdtree_t4] Heapsort Input Points (before Partitioning)"),
+      t5(tm, "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
+    {
 
         vector<Point> vector_points;
         for (int i = 0; i < nbpts; i++) {
@@ -158,7 +170,9 @@ public:
         this -> ndim = vector_points[0].size();
         this -> points = vector_points;
 
+        t3.start();
         init_common();
+        t3.end();
     }
 
 
@@ -171,13 +185,21 @@ public:
      */
 public:
 
-    KDTree(const vector<Point>& points) {
+    KDTree(const vector<Point>& points)
+    : t1(tm, "[kdtree_t1] Update Recursively"),
+      t2(tm, "[kdtree_t2] Build Recursively"),
+      t3(tm, "[kdtree_t3] Init_common"),
+      t4(tm, "[kdtree_t4] Heapsort Input Points (before Partitioning)"),
+      t5(tm, "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
+    {
         // initialize data
         this -> npoints = points.size();
         this -> ndim = points[0].size();
         this -> points = points;
 
+        t3.start();
         init_common();
+        t3.end();
     }
 
 private:
@@ -196,8 +218,11 @@ private:
         // Invoke heap sort generating indexing vectors
         // indexes[dim][i]: in dimension dim, which is the index of the i-th smallest element?
         vector< vector<int> > indexes(ndim, vector<int>(npoints, 0));
-        for (int dIdx = 0; dIdx < ndim; dIdx++)
+        for (int dIdx = 0; dIdx < ndim; dIdx++) {
+            t4.start();
             heaps[dIdx].heapsort(indexes[dIdx]);
+            t4.end();
+        }
 
         // Invert the indexing structure!!
         // srtidx[dim][j]: in dimension dim, which is ordering number of point j-th?
@@ -226,7 +251,9 @@ private:
         // First partition is on every single point ([1:npoints])
         vector<int> pidx(npoints, 0);
         for (int i = 0; i < npoints; i++) pidx[i] = i;
+        t2.start();
         build_recursively(srtidx, pidx, 0);
+        t2.end();
     }
 
 public:
@@ -257,8 +284,11 @@ public:
             // Invoke heap sort generating indexing vectors
             // indexes[dim][i]: in dimension dim, which is the index of the i-th smallest element?
             vector< vector<int> > indexes(ndim, vector<int>(npoints, 0));
-            for (int dIdx = 0; dIdx < ndim; dIdx++)
+            for (int dIdx = 0; dIdx < ndim; dIdx++) {
+                t4.start();
                 heaps[dIdx].heapsort(indexes[dIdx]);
+                t4.end();
+            }
 
             // Invert the indexing structure!!
             // srtidx[dim][j]: in dimension dim, which is ordering number of point j-th?
@@ -276,7 +306,9 @@ public:
             }
             globalNodeIndx = 0; // Start indexing the nodesPtrs from the front
 
+            t1.start();
             updateTree_recursively(srtidx, pidx, 0);
+            t1.end();
     }
 
     // @return the number of points in the kd-tree
@@ -351,7 +383,9 @@ private:
         if ((double) pidx.size() * log((double) pidx.size()) < npoints) {
             Larray.resize(pidx.size() / 2 + (pidx.size() % 2 == 0 ? 0 : 1), -1);
             Rarray.resize(pidx.size() / 2, -1);
+            t5.start();
             heapsort(dim, pidx, pidx.size());
+            t5.end();
             std::copy(pidx.begin(), pidx.begin() + Larray.size(), Larray.begin());
             std::copy(pidx.begin() + Larray.size(), pidx.end(), Rarray.begin());
             pivot = pidx[(pidx.size() - 1) / 2];
@@ -464,7 +498,9 @@ private:
         if ((double) pidx.size() * log((double) pidx.size()) < npoints) {
             Larray.resize(pidx.size() / 2 + (pidx.size() % 2 == 0 ? 0 : 1), -1);
             Rarray.resize(pidx.size() / 2, -1);
+            t5.start();
             heapsort(dim, pidx, pidx.size());
+            t5.end();
             std::copy(pidx.begin(), pidx.begin() + Larray.size(), Larray.begin());
             std::copy(pidx.begin() + Larray.size(), pidx.end(), Rarray.begin());
             pivot = pidx[(pidx.size() - 1) / 2];

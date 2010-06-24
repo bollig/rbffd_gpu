@@ -27,6 +27,14 @@ protected:
 public:
     EllipseCVT(double major_ = 1., double minor_ = 1., int DEBUG = 0);
 
+    // Custom "sample" routine (sample inside box with rejection outside of the ellipse).
+     virtual void user_sample(int dim_num, int n, int *seed, double r[]);
+
+    // custom "user" initialization
+    // NOTE: we should rewrite the base CVT class so there is a separate
+    // custom_init and custom_sample routine (since they CAN be different like in this case).
+    virtual void user_init(int dim_num, int n, int *seed, double r[]);
+
     // Gordon Erlebacher, 9/1/2009
     void ellipse(int dim_num, int& n, int& nb_bnd, int *seed, std::vector<double>& r);
     void ellipse(int dim_num, int& n, int& nb_bnd, int *seed, double r[]);
@@ -34,7 +42,7 @@ public:
 
     void rejection2d(int nb_samples, double area, double weighted_area, Density& density, std::vector<Vec3>& samples);
     Vec3 singleRejection2d(double area, double weighted_area, Density& density);
-    
+
     void setEllipseAxes(double major_, double minor_) {
         this->major = major_;
         this->minor = minor_;

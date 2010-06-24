@@ -2,3 +2,7 @@ This directory contains:
 	- Original source written by Gordon Erlebacher in the rbf_grid program
 	- Source has been restructured to build as independent library
 ----------------------------------------------------------------------
+
+
+
+WARNING! The ellipse and ellipsoid CVT classes have been broken in this version. I need to update the classes so they override the CVT::cvt() routine so generating the mesh is done using the Ellips(e|oid)::ellips(e|oid)(..) routines.  

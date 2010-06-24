@@ -11,7 +11,11 @@ ConstrainedCVT::ConstrainedCVT(int DEBUG_) : CVT(DEBUG_) {
 }
 
 //****************************************************************************80
-
+//
+// Same as default CVT master routine EXCEPT this one attempts to project points
+// after each call to CVT_ITERATE
+//
+//
 void ConstrainedCVT::cvt(int dim_num, int n, int batch, int init, int sample, int sample_num,
         int it_max, int it_fixed, int *seed, double r[], int *it_num, double *it_diff,
         double *energy)
@@ -133,17 +137,7 @@ void ConstrainedCVT::cvt(int dim_num, int n, int batch, int init, int sample, in
     //
     if (init != 4) {
         initialize = true;
-        cvt_sample(dim_num, n, n, init, initialize, seed, r);
-
-        // BOLLIG: Added check for energy and a check for
-        energyBefore = cvt_energy(dim_num, n, batch, sample, initialize, sample_num, seed, r);
-
-        project(dim_num, n, r, npp);
-
-        energyAfter = cvt_energy(dim_num, n, batch, sample, initialize, sample_num, seed, r);
-
-        *energy = energyAfter;
-
+        cvt_init(dim_num, n, n, init, initialize, seed, r);
     }
     //if ( DEBUG )
     {
@@ -508,4 +502,28 @@ void ConstrainedCVT::projectCube(int ndim, int n, double generator[], int npp)
     delete [] sample;
 
     return;
+}
+
+void ConstrainedCVT::user_sample(int dim_num, int n, int *seed, double r[]) {
+
+    // Generate random samples (-1 == random)
+    cvt_sample(dim_num, n, n, -1, true, seed, r);
+}
+
+// Custom initialization:
+//  Generate random samples and attempt to project them to the boundary
+// WARNING! Bad projection... needs to be fixed
+void ConstrainedCVT::user_init(int dim_num, int n, int *seed, double r[]) {
+    double energyBefore = 0.0, energyAfter = 0.0;
+
+    // Generate random samples (-1 == random)
+    cvt_init(dim_num, n, n, -1, true, seed, r);
+
+    // BOLLIG: Added check for energy and a check for
+    //energyBefore = cvt_energy(dim_num, n, batch, sample, initialize, sample_num, seed, r);
+
+    // Attempt to project nodes to the boundary
+    project(dim_num, n, r, npp);
+
+    //energyAfter = cvt_energy(dim_num, n, batch, sample, initialize, sample_num, seed, r);
 }

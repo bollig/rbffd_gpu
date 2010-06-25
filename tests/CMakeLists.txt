@@ -3,7 +3,6 @@
 # Project Testing
 ###############################################
 	SET (TEST_COLLECTION
-		original            # WORKS (base case without parallel support. 2D ellipse)
 		template            # WORKS (empty test)
 		surface_integral    # WORKS (compute a simple surf integral on parametric geometry)
 		surface_projection  # WORKS (compute a simple projection on parametric geometry)
@@ -22,6 +21,7 @@
                 square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection is incomplete (not perfect for distribution; code projects points as they near boundary but the distance is not guesswork)).
 
 
+		original            # BROKEN (base case without parallel support. 2D ellipse) new heat design broke support for exact solution on ellispe. Working to fix this.)
 
 	)
 

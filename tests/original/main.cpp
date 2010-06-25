@@ -22,6 +22,7 @@
 #include "heat.h"
 #include "density.h"
 #include "ellipse_cvt.h"
+#include "exact_ellipsoid.h"
 
 // used go generate random seed that changes between runs
 #include <time.h> 
@@ -1118,7 +1119,7 @@ int main()
 	// create or read from file
 	bool create_cvt;
 	create_cvt = true;
-	//create_cvt = false;
+	create_cvt = false;
 
 	if (create_cvt) {
 		cvt = new EllipseCVT(major, minor);
@@ -1127,9 +1128,9 @@ int main()
 	}
 
 	
-	int stencil_size = 9;
-	int nx = 20;
-	int ny = 20;
+	int stencil_size = 5;
+	int nx = 10;
+	int ny = 10;
 
 	#if 0
 	// disable if not running tests
@@ -1291,7 +1292,8 @@ int main()
 	printf("dt (0.2*avgdx^2 = %f\n", dt);
 	//dt = 2. / maxEig;
 	//printf("dt (2/lambda_max)= %f\n", dt);
-	Heat heat(grid, der);
+        ExactEllipsoid exact_solution(acos(-1.)/2., 1., major, minor, 1.);
+	Heat heat(&exact_solution, grid, der);
 	heat.initialConditions();
 	heat.setDt(dt);
 	subdomain->printVector(grid.getBoundary(), "GLOBAL BOUNDARY NODES: "); 

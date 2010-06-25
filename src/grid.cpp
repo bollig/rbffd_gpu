@@ -145,7 +145,7 @@ void Grid::computeStencils() {
     if (stencil_size > nb_rbf) {
         int new_stencil_size = (int) (0.5 * nb_rbf);
         new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
-        printf("\n!!!!!!!!!!!!!!!!!!!\nWARNING! Not enough centers to reach specified stencil_size (size: %d)! Using new stencil size: %d\n!!!!!!!!!!!!!!!!!!!\n\n", stencil_size, new_stencil_size);
+        printf("\n!!!!!!!!!!!!!!!!!!!\nWARNING! Not enough centers to reach specified stencil_size (size: %d for %d RBFs)! Using new stencil size: %d\n!!!!!!!!!!!!!!!!!!!\n\n", stencil_size, nb_rbf, new_stencil_size);
         stencil_size = new_stencil_size;
     }
 
@@ -357,7 +357,8 @@ void Grid::generateGrid(const char* file, int nb_bnd, int npts)
 
     z = 0.;
 
-    int nb_rbf = npts;
+    nb_rbf = npts;
+    printf("READING %d POINTS FROM FILE: %s\n", nb_rbf, file);
     coord = new ArrayT<double>(3, nb_rbf);
     ArrayT<double>& coordr = *coord;
 

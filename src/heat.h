@@ -65,7 +65,7 @@ public:
 	Heat(ExactSolution* _solution, std::vector<Vec3>* rb_centers_, int stencil_size, std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank);
 	// Constructor #2:
 	Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank);
-	Heat(Grid& grid_, Derivative& der_);
+	Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_);
 	~Heat();
 
 	// set the time step

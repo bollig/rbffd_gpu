@@ -47,9 +47,9 @@ void EllipseCVT::ellipse_init(int dim_num, int& n, int& nb_bnd, int *seed, doubl
 
     // We lock our nb_bnd seeds in place and generate an additional set of
     // random seeds with rejection2d.
-    printf("ellipse_init: rejection2d\n");
+    //printf("ellipse_init: rejection2d\n");
     rejection2d(n - nb_bnd, 0., 1., *rho, samples);
-    printf("n-nb_bnd= %d\n", n - nb_bnd);
+    //printf("n-nb_bnd= %d\n", n - nb_bnd);
     //exit(0);
 
     for (int j = nb_bnd; j < n; j++) {
@@ -190,7 +190,7 @@ void EllipseCVT::ellipse(int dim_num, int& n, int& nb_bnd, int *seed, double r[]
     // na : is the number of points along the major axis
     // nb : is the number of points along the minor axis
 
-    printf("enter ellipse\n");
+//    printf("enter ellipse\n");
 
     //r.resize(n*dim_num);
     //printf("***1 rhomax: %f\n", rho->getMax()); exit(0);
@@ -222,7 +222,7 @@ void EllipseCVT::ellipse(int dim_num, int& n, int& nb_bnd, int *seed, double r[]
 
     vector<Vec3> samples;
     samples.resize(n);
-    printf("ellipse: rejection2d\n");
+   // printf("ellipse: rejection2d\n");
     rejection2d(n, 0., 1., *rho, samples);
 
 

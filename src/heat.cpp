@@ -2,6 +2,7 @@
 #include "grid.h"
 #include "derivative.h"
 #include "heat.h"
+#include "exact_solution.h"
 
 using namespace std;
 
@@ -61,7 +62,11 @@ Heat::Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank
 	//grid.laplace();
 }
 
-Heat::Heat(Grid& grid_, Derivative& der_) : rbf_centers(&(grid_.getRbfCenters())),boundary_set(&(grid_.getBoundary())), der(&der_), id(0), subdomain(NULL) {
+Heat::Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_) : exactSolution(_solution), rbf_centers(&(grid_.getRbfCenters())),boundary_set(&(grid_.getBoundary())), der(&der_), id(0), subdomain(NULL) {
+
+    //printf("WARNING!!!!  (BAD CODE DESIGN) DEFAULTING TO EXACT_REGULARGRID.H SOLUTION. YOU SHOULD USE A DIFFERENT CONSTRUCTOR FOR HEAT\n");
+    //exactSolution = new ExactRegularGrid(acos(-1.) / 2., 1.);
+
 	nb_stencils = grid_.getStencil().size();
 	nb_rbf = grid_.getRbfCenters().size();
 	PI = acos(-1.);
@@ -795,6 +800,7 @@ void Heat::initialConditions(std::vector<double> *solution) {
 		Vec3& v = (*rbf_centers)[i];
 		//s[i] = exp(-alpha*v.square());
 		//s[i] = 1. - v.square();
+                printf("filling: %f %f %f\n", v.x(), v.y(), v.z()); 
 		s[i] = exactSolution->at(v, 0.);
 		//s[i] = 1.0;
 		//printf("s[%d]= %f\n", i, s[i]);

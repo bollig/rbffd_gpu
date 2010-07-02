@@ -1,5 +1,5 @@
-#ifndef EXACT_SOLUTION
-#define EXACT_SOLUTION
+#ifndef _EXACT_SOLUTION_
+#define _EXACT_SOLUTION_
 
 #include "Vec3.h"
 

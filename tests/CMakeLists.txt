@@ -13,6 +13,8 @@
 		nested_spheres_ccvt # COMPLETE (nested spheres with ccvt of the boundary and cvt of interior.)
 
 
+		ncar_poisson1       # INCOMPLETE (poisson equation on nested spheres)
+
 
 		3D_test             # INCOMPLETE (3D ellipsoid test which fails to generate points correctly resulting in singular systems)
                 3d_ccvt             # INCOMPLETE (compute a 3D ccvt inside ellipsoid)

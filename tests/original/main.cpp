@@ -22,7 +22,7 @@
 #include "heat.h"
 #include "density.h"
 #include "ellipse_cvt.h"
-#include "exact_ellipsoid.h"
+#include "exact_ellipse.h"
 
 // used go generate random seed that changes between runs
 #include <time.h> 
@@ -1128,9 +1128,9 @@ int main()
 	}
 
 	
-	int stencil_size = 5;
-	int nx = 10;
-	int ny = 10;
+	int stencil_size = 10;
+	int nx = 20;
+	int ny = 20;
 
 	#if 0
 	// disable if not running tests
@@ -1215,7 +1215,7 @@ int main()
 
 	vector<double> U_G;
 	for (int i = 0; i < rbf_centers.size(); i++) {
-		U_G.push_back(100+i); 
+		U_G.push_back(i); 
 	}
 	
 	subdomain->printVector(U_G, "U_G"); 
@@ -1286,13 +1286,13 @@ int main()
 	// SOLVE HEAT EQUATION
 	double avgarea = pi*major*minor/tot_nb_pts; // 200 points
 	double avgdx = sqrt(avgarea);
-	avgdx = 0.02;
+	//avgdx = 0.02;
 	printf("avgdx= %f\n", avgdx);
 	dt = 0.2*avgdx*avgdx;
 	printf("dt (0.2*avgdx^2 = %f\n", dt);
 	//dt = 2. / maxEig;
 	//printf("dt (2/lambda_max)= %f\n", dt);
-        ExactEllipsoid exact_solution(acos(-1.)/2., 1., major, minor, 1.);
+        ExactEllipse exact_solution(pi/2., 1., major, minor);
 	Heat heat(&exact_solution, grid, der);
 	heat.initialConditions();
 	heat.setDt(dt);
@@ -1313,7 +1313,8 @@ int main()
 		
 		double nrm = heat.maxNorm();
 		if (nrm > 5.) break;
-	//	if (iter > 0) break;
+
+		if (iter > 10) break;
 	}
 
 	printf("after heat\n");

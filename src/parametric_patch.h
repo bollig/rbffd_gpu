@@ -1,5 +1,5 @@
-#ifndef PARAMETRIC_PATCH
-#define PARAMETRIC_PATCH
+#ifndef _PARAMETRIC_PATCH_
+#define _PARAMETRIC_PATCH_
 
 // CHECK sphere
 // x = r*cos(u)*cos(v), y=r*cos(u)*sin(v), z=r*sin(u)

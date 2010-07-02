@@ -13,17 +13,14 @@ class NestedSphereCVT : public CVT {
 protected:
     double inner_r, outer_r;
     double* geom_extents;
-    int dim_num;
+    
     int nb_inner, nb_outer, nb_int;
-
-    // These correspond to John Burkardts CVT implementation parameters
-    int seed, batch, it_fixed;
-    // NOTE: we dont have support for changing "init","sample" and their corresponding strings.
-    //      ONLY random sampling is supported in this class.
-    int init, sample;
+   
+    int it_max_interior, it_max_boundary;
+    int it_num_interior, it_num_boundary;
 
 public:
-    NestedSphereCVT(int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int dimension = 3, double inner_radius = 0.5, double outer_radius = 1.0, int DEBUG_ = 0);
+    NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int it_max_bndry=60, int it_max_inter = 240, int dimension = 3, double inner_radius = 0.5, double outer_radius = 1.0, int DEBUG_ = 0);
 
     // Generate the boundary nodes first as an independent CVT
     // Then using the boundary nodes locked into position, generate the interior
@@ -31,8 +28,22 @@ public:
     // Inner generators are r[0] -> r[nb_inner-1]
     // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
     // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot]
-    virtual void cvt(double r[], int *it_num_boundary, int *it_num_interior, double *it_diff, double *energy,
-            int it_max_boundary = 1000, int it_max_interior = 1000, int sample_num = 3000);
+    virtual void cvt(int *it_num, double *it_diff, double *energy);
+
+    // Redirect custom call to the default CVT generation routine
+    virtual void cvt(double r[], int *it_num_boundary_, int *it_num_interior_, double *it_diff, double *energy, int it_max_boundary_, int it_max_interior_, int sample_num) {
+        int it_num;
+        it_max_boundary = it_max_boundary_;
+        it_max_interior = it_max_interior_;
+        delete [] generators;
+        generators = &r[0];
+        this->cvt(&it_num, it_diff, energy);
+        *it_num_boundary_ = it_num_boundary;
+        *it_num_interior_ = it_num_interior;
+    }
+
+    // Override the filename generation 
+    virtual void cvt_get_file_prefix(char* filename_buffer);
 
     // Set/Get the number of iterations that the seed is fixed. That is,
     // the number of iterations during which random samples are the same.

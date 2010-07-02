@@ -1,5 +1,5 @@
-#ifndef EXACT_ELLIPSOID
-#define EXACT_ELLIPSOID
+#ifndef _EXACT_ELLIPSOID_
+#define _EXACT_ELLIPSOID_
 
 #include "exact_solution.h"
 

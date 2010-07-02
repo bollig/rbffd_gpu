@@ -1,9 +1,9 @@
-# include <cstdlib>
-# include <cmath>
-# include <ctime>
-# include <iostream>
-# include <iomanip>
-# include <fstream>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <iostream>
+#include <iomanip>
+#include <fstream>
 #include <string.h>
 
 #include <math.h>
@@ -14,21 +14,32 @@
 using namespace std;
 
 //****************************************************************************80
-CVT::CVT(int DEBUG_)
-: t1(tm, "[cvt_t1] Total"),
-  t2(tm, "[cvt_t2] CVT_ITERATE"),
-  t3(tm, "[cvt_t3] CVT_SAMPLE"),
-  t4(tm, "[cvt_t4] CVT_ENERGY"),
-  t5(tm, "[cvt_t5] Delete + Reconstruct KDTree"),
-  t6(tm, "[cvt_t6] Update KDTree"),
-  t7(tm, "[cvt_t7] FIND CLOSEST")
-{
-    DEBUG = DEBUG_; 
+
+CVT::CVT(int num_generators, int dimension_, const char* filename, int init_, int sample_, int seed_, int batch_, int sample_num_, int it_max_, int it_fixed_, int DEBUG_)
+: nb_pts(num_generators),
+dim_num(dimension_),
+cvt_file_name(filename),
+init(init_), sample(sample_),
+seed(seed_), batch(batch_),
+        sample_num(sample_num_),
+        it_max(it_max_),
+it_fixed(it_fixed_), DEBUG(DEBUG_),
+t1(tm, "[cvt_t1] Total"),
+t2(tm, "[cvt_t2] CVT_ITERATE"),
+t3(tm, "[cvt_t3] CVT_SAMPLE"),
+t4(tm, "[cvt_t4] CVT_ENERGY"),
+t5(tm, "[cvt_t5] Delete + Reconstruct KDTree"),
+t6(tm, "[cvt_t6] Update KDTree"),
+t7(tm, "[cvt_t7] FIND CLOSEST") {
+
+    generators = new double[nb_pts * dim_num];
+    
     nb_bnd = 0;
+    PI = acos(-1.);
 }
 //****************************************************************************80
 
-char CVT::ch_cap ( char c )
+char CVT::ch_cap(char c)
 
 //****************************************************************************80
 //
@@ -59,16 +70,15 @@ char CVT::ch_cap ( char c )
 //    Output, char CH_CAP, the capitalized character.
 //
 {
-  if ( 97 <= c && c <= 122 ) 
-  {
-    c = c - 32;
-  }   
+    if (97 <= c && c <= 122) {
+        c = c - 32;
+    }
 
-  return c;
+    return c;
 }
 //****************************************************************************80
 
-bool CVT::ch_eqi ( char c1, char c2 )
+bool CVT::ch_eqi(char c1, char c2)
 
 //****************************************************************************80
 //
@@ -96,20 +106,18 @@ bool CVT::ch_eqi ( char c1, char c2 )
 //    disregarding case.
 //
 {
-  if ( 97 <= c1 && c1 <= 122 ) 
-  {
-    c1 = c1 - 32;
-  } 
-  if ( 97 <= c2 && c2 <= 122 ) 
-  {
-    c2 = c2 - 32;
-  }     
+    if (97 <= c1 && c1 <= 122) {
+        c1 = c1 - 32;
+    }
+    if (97 <= c2 && c2 <= 122) {
+        c2 = c2 - 32;
+    }
 
-  return ( c1 == c2 );
+    return ( c1 == c2);
 }
 //****************************************************************************80
 
-int CVT::ch_to_digit ( char c )
+int CVT::ch_to_digit(char c)
 
 //****************************************************************************80
 //
@@ -148,28 +156,21 @@ int CVT::ch_to_digit ( char c )
 //    'illegal', then DIGIT is -1.
 //
 {
-  int digit;
+    int digit;
 
-  if ( '0' <= c && c <= '9' )
-  {
-    digit = c - '0';
-  }
-  else if ( c == ' ' )
-  {
-    digit = 0;
-  }
-  else
-  {
-    digit = -1;
-  }
+    if ('0' <= c && c <= '9') {
+        digit = c - '0';
+    } else if (c == ' ') {
+        digit = 0;
+    } else {
+        digit = -1;
+    }
 
-  return digit;
+    return digit;
 }
 //****************************************************************************80
 
-void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_num, 
-  int it_max, int it_fixed, int *seed, double r[],int *it_num, double *it_diff, 
-  double *energy )
+void CVT::cvt(int *it_num, double *it_diff, double *energy)
 
 //****************************************************************************80
 //
@@ -252,148 +253,137 @@ void CVT::cvt ( int dim_num, int n, int batch, int init, int sample, int sample_
 //    by the number of sample points.
 //
 {
+    t1.start();
+    int i;
+    bool initialize;
+    int seed_base;
+    int seed_init;
+    double *r = &generators[0];
 
-    t1.start(); 
-  int i;
-  bool initialize;
-  int seed_base;
-  int seed_init;
+    if (batch < 1) {
+        cout << "\n";
+        cout << "CVT - Fatal error!\n";
+        cout << "  The input value BATCH < 1.\n";
+        exit(1);
+    }
 
-  if ( batch < 1 )
-  {
-    cout << "\n";
-    cout << "CVT - Fatal error!\n";
-    cout << "  The input value BATCH < 1.\n";
-    exit ( 1 );
-  }
+    if (seed <= 0) {
+        cout << "\n";
+        cout << "CVT - Fatal error!\n";
+        cout << "  The input value SEED <= 0.\n";
+        exit(1);
+    }
 
-  if ( seed <= 0 )
-  {
-    cout << "\n";
-    cout << "CVT - Fatal error!\n";
-    cout << "  The input value SEED <= 0.\n";
-    exit ( 1 );
-  }
+    if (DEBUG) {
+        cout << "\n";
+        cout << "  Step       SEED          L2-Change        Energy\n";
+        cout << "\n";
+    }
 
-  if ( DEBUG )
-  {
-    cout << "\n";
-    cout << "  Step       SEED          L2-Change        Energy\n";
-    cout << "\n";
-  }
-
-  *it_num = 0;
-  *it_diff = 0.0;
-  *energy = 0.0;
-  seed_init = *seed;
-//
-//  Initialize the data, unless the user has already done that.
-//
-  if ( init != 4 )
-  {
-    initialize = true;
-    cvt_init ( dim_num, n, n, init, initialize, seed, r );
-  }
+    *it_num = 0;
+    *it_diff = 0.0;
+    *energy = 0.0;
+    seed_init = seed;
+    //
+    //  Initialize the data, unless the user has already done that.
+    //
+    if (init != 4) {
+        initialize = true;
+        cvt_init(dim_num, nb_pts, nb_pts, init, initialize, &seed, r);
+    }
 
 #if USE_KDTREE
     // Construct a kdtree for range_query
     kdtree = new KDTree(r, n, dim_num);
 #endif
 
-  if ( DEBUG )
-  {
-    cout                          << "  "
-         << setw(4)  << *it_num   << "  "
-         << setw(12) << seed_init << "\n";
-  }
-//
-//  If the initialization and sampling steps use the same random number
-//  scheme, then the sampling scheme does not have to be initialized.
-//
-  if ( init == sample )
-  {
-    initialize = false;
-  }
-  else
-  {
-    initialize = true;
-  }
-
-  if (initialize) {
-       char intermediate_file[80];
-       sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", 0);
-
-       cout << "Writing initial voronoi to file (from CVT::cvt())\n";
-
-       cvt_write ( dim_num, n, batch, seed_init, *seed, "none",
-    		it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r,
-    		intermediate_file, false );
+    if (DEBUG) {
+        cout << "  "
+                << setw(4) << *it_num << "  "
+                << setw(12) << seed_init << "\n";
     }
-//
-//  Carry out the iteration.
-//
-  while ( *it_num < it_max )
-  {
-//
-//  If it's time to update the seed, save its current value
-//  as the starting value for all iterations in this cycle.
-//  If it's not time to update the seed, restore it to its initial
-//  value for this cycle.
-//
-    if ( ( (*it_num) % it_fixed ) == 0 )
-    {
-      seed_base = *seed;
-    }
-    else
-    {
-      *seed = seed_base;
+    //
+    //  If the initialization and sampling steps use the same random number
+    //  scheme, then the sampling scheme does not have to be initialized.
+    //
+    if (init == sample) {
+        initialize = false;
+    } else {
+        initialize = true;
     }
 
-    *it_num = *it_num + 1;
-    seed_init = *seed;
+    if (initialize) {
+        //char intermediate_file[80];
+        //sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", 0);
 
-    cvt_iterate ( dim_num, n, batch, sample, initialize, sample_num, seed,
-      r, it_diff, energy );
+        // cout << "Writing initial voronoi to file (from CVT::cvt())\n";
 
-    initialize = false;
-
-    if ( DEBUG )
-    {
-      cout                          << "  "
-           << setw(4)  << *it_num   << "  "
-           << setw(12) << seed_init << "  "
-           << setw(14) << *it_diff  << "  "
-           << setw(14) << *energy    << "\n";
+        //cvt_write(dim_num, n, batch, seed_init, *seed, "none",
+        //        it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r,
+        //        intermediate_file, false);
+        this->cvt_checkpoint(-2);
     }
+    //
+    //  Carry out the iteration.
+    //
+    while (*it_num < it_max) {
+        //
+        //  If it's time to update the seed, save its current value
+        //  as the starting value for all iterations in this cycle.
+        //  If it's not time to update the seed, restore it to its initial
+        //  value for this cycle.
+        //
+        if (((*it_num) % it_fixed) == 0) {
+            seed_base = seed;
+        } else {
+            seed = seed_base;
+        }
 
-// BOLLIG:
-// TODO: only do this if a boolean is set for intermediate writes
-// 	not the same as DEBUG
-	if ((*it_num) % 20 == 0) {
+        *it_num = *it_num + 1;
+        seed_init = seed;
+
+        cvt_iterate(dim_num, nb_pts, batch, sample, initialize, sample_num, &seed,
+                r, it_diff, energy);
+
+        initialize = false;
+
+        if (DEBUG) {
+            cout << "  "
+                    << setw(4) << *it_num << "  "
+                    << setw(12) << seed_init << "  "
+                    << setw(14) << *it_diff << "  "
+                    << setw(14) << *energy << "\n";
+        }
+
+        // BOLLIG:
+        // TODO: only do this if a boolean is set for intermediate writes
+        // 	not the same as DEBUG
+        if ((*it_num) % 20 == 0) {
             char intermediate_file[80];
-            sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", *it_num);
+            //sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", *it_num);
 
-      cout                          << "  "
-           << setw(4)  << *it_num   << "  "
-           << setw(12) << seed_init << "  "
-           << setw(14) << *it_diff  << "  "
-           << setw(14) << *energy    << "\n";
- 
-	cout << "Writing intermediate voronoi to file (from CVT::cvt())\n"; 
+            cout << "  "
+                    << setw(4) << *it_num << "  "
+                    << setw(12) << seed_init << "  "
+                    << setw(14) << *it_diff << "  "
+                    << setw(14) << *energy << "\n";
 
-  		cvt_write ( dim_num, n, batch, seed_init, *seed, "none", 
-    		it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r, 
-    		intermediate_file, false );
-			//exit(0);
-	}
-  }
-  t1.end(); 
-  return;
+            //cout << "Writing intermediate voronoi to file (from CVT::cvt())\n";
+
+            //cvt_write(dim_num, nb_pts, batch, seed_init, *seed, "none",
+            //        it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r,
+            //        intermediate_file, false);
+            cvt_checkpoint(*it_num);
+            //exit(0);
+        }
+    }
+    t1.end();
+    return;
 }
 //****************************************************************************80
 
-double CVT::cvt_energy ( int dim_num, int n, int batch, int sample, bool initialize,
-  int sample_num, int *seed, double r[] )
+double CVT::cvt_energy(int dim_num, int n, int batch, int sample, bool initialize,
+        int sample_num, int *seed, double r[])
 
 //****************************************************************************80
 //
@@ -450,53 +440,50 @@ double CVT::cvt_energy ( int dim_num, int n, int batch, int sample, bool initial
 //
 {
     t4.start();
-  double energy;
-  int get;
-  int have;
-  int i;
-  int j;
-  int *nearest;
-  double *s;
+    double energy;
+    int get;
+    int have;
+    int i;
+    int j;
+    int *nearest;
+    double *s;
 
-  nearest = new int[batch];
-  s = new double [dim_num*batch];
+    nearest = new int[batch];
+    s = new double [dim_num * batch];
 
-  have = 0;
-  energy = 0.0;
+    have = 0;
+    energy = 0.0;
 
-  while ( have < sample_num )
-  {
-    get = i4_min ( sample_num - have, batch );
+    while (have < sample_num) {
+        get = i4_min(sample_num - have, batch);
 
-    cvt_sample ( dim_num, sample_num, get, sample, initialize, seed, s );
+        cvt_sample(dim_num, sample_num, get, sample, initialize, seed, s);
 
-    have = have + get;
+        have = have + get;
 
-    find_closest ( dim_num, n, get, s, r, nearest );
+        find_closest(dim_num, n, get, s, r, nearest);
 
-    for ( j = 0; j < get; j++ )
-    {
-      for ( i = 0; i < dim_num; i++ )
-      {
-        energy = energy + ( s[i+j*dim_num] - r[i+nearest[j]*dim_num] )
-                        * ( s[i+j*dim_num] - r[i+nearest[j]*dim_num] );
-      }
+        for (j = 0; j < get; j++) {
+            for (i = 0; i < dim_num; i++) {
+                energy = energy + (s[i + j * dim_num] - r[i + nearest[j] * dim_num])
+                        * (s[i + j * dim_num] - r[i + nearest[j] * dim_num]);
+            }
+        }
+
     }
 
-  }
+    energy = energy / (double) (sample_num);
 
-  energy = energy / ( double ) ( sample_num );
+    delete [] nearest;
+    delete [] s;
 
-  delete [] nearest;
-  delete [] s;
-
-  t4.end();
-  return energy;
+    t4.end();
+    return energy;
 }
 //****************************************************************************80
 
-void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initialize, 
-  int sample_num, int *seed, double r[], double *it_diff, double *energy )
+void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize,
+        int sample_num, int *seed, double r[], double *it_diff, double *energy)
 
 //****************************************************************************80
 //
@@ -581,160 +568,150 @@ void CVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initiali
 //    Output, double *ENERGY,  the discrete "energy", divided
 //    by the number of sample points.
 //
-{     
+{
     t2.start();
-  int *count;
-  int get;
-  int have;
-  int i;
-  int j;
-  int j2;
-  int *nearest;
-  double *r2;
-  double *s;
-  bool success;
-  double term;
-//
-//  Take each generator as the first sample point for its region.
-//  This can slightly slow the convergence, but it simplifies the
-//  algorithm by guaranteeing that no region is completely missed
-//  by the sampling.
-//
-  *energy = 0.0;
-  r2 = new double[dim_num*n];
-  count = new int[n];
-  nearest = new int[sample_num];
-  s = new double[dim_num*sample_num];
+    int *count;
+    int get;
+    int have;
+    int i;
+    int j;
+    int j2;
+    int *nearest;
+    double *r2;
+    double *s;
+    bool success;
+    double term;
+    //
+    //  Take each generator as the first sample point for its region.
+    //  This can slightly slow the convergence, but it simplifies the
+    //  algorithm by guaranteeing that no region is completely missed
+    //  by the sampling.
+    //
+    *energy = 0.0;
+    r2 = new double[dim_num * n];
+    count = new int[n];
+    nearest = new int[sample_num];
+    s = new double[dim_num * sample_num];
 
-  for ( j = 0; j < n; j++ )
-  {
-    for ( i = 0; i < dim_num; i++ )
-    {
-      r2[i+j*dim_num] = r[i+j*dim_num];
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < dim_num; i++) {
+            r2[i + j * dim_num] = r[i + j * dim_num];
+        }
     }
-  }
-  for ( j = 0; j < n; j++ )
-  {
-    count[j] = 1;
-  }
-//
-//  Generate the sampling points S.
-//
-  have = 0;
-
-  while ( have < sample_num )
-  {
-    get = i4_min ( sample_num - have, batch );
-
-    cvt_sample ( dim_num, sample_num, get, sample, initialize, seed, s );
-
-    initialize = false;
-    have = have + get;
-//
-//  Find the index N of the nearest cell generator to each sample point S.
-//
-	//TODO: this is brute force (It must be improved!!)
-	// find nearest r point to each s point
-    find_closest ( dim_num, n, get, s, r, nearest );
-//
-//  Add S to the centroid associated with generator N.
-//
-    for ( j = 0; j < get; j++ ) {
-      j2 = nearest[j];
-      for ( i = 0; i < dim_num; i++ ) {
-        r2[i+j2*dim_num] = r2[i+j2*dim_num] + s[i+j*dim_num];
-      }
-      for ( i = 0; i < dim_num; i++ ) {
-        *energy = *energy + pow ( r[i+j2*dim_num] - s[i+j*dim_num], 2 );
-      }
-      count[j2] = count[j2] + 1;
+    for (j = 0; j < n; j++) {
+        count[j] = 1;
     }
-  }
-//
-//  Estimate the centroids.
-//  NOTE: this leaves the first nb_bnd points unchanged ( n = nb centroids)
-// 	since we want to manually specify them elsewhere and then generate
-// 	the interior points only with the CVT algorithm. 
-// 	If nb_bnd = 0, then we peform a CCVT on all points.
-// 	If nb_bnd > 0, then we should perform a CVT without 
-//		constraining points to the surface (so only nb_bnd
-// 		end up exactly on the surface; all others are interior)
-//
-  //printf("Computing CVT for %d points with %d presets on the boundary\n", n, nb_bnd);
-  for ( j = nb_bnd; j < n; j++ )
-  {
-    for ( i = 0; i < dim_num; i++ )
-    {
-      r2[i+j*dim_num] = r2[i+j*dim_num] / ( double ) ( count[j] );
+    //
+    //  Generate the sampling points S.
+    //
+    have = 0;
+
+    while (have < sample_num) {
+        get = i4_min(sample_num - have, batch);
+
+        cvt_sample(dim_num, sample_num, get, sample, initialize, seed, s);
+
+        initialize = false;
+        have = have + get;
+        //
+        //  Find the index N of the nearest cell generator to each sample point S.
+        //
+        //TODO: this is brute force (It must be improved!!)
+        // find nearest r point to each s point
+        find_closest(dim_num, n, get, s, r, nearest);
+        //
+        //  Add S to the centroid associated with generator N.
+        //
+        for (j = 0; j < get; j++) {
+            j2 = nearest[j];
+            for (i = 0; i < dim_num; i++) {
+                r2[i + j2 * dim_num] = r2[i + j2 * dim_num] + s[i + j * dim_num];
+            }
+            for (i = 0; i < dim_num; i++) {
+                *energy = *energy + pow(r[i + j2 * dim_num] - s[i + j * dim_num], 2);
+            }
+            count[j2] = count[j2] + 1;
+        }
     }
-  }
-//
-//  Determine the sum of the distances between generators and centroids.
-//
-  *it_diff = 0.0;
-
-  for ( j = nb_bnd; j < n; j++ )
-  {
-    term = 0.0;
-    for ( i = 0; i < dim_num; i++ )
-    {
-      term = term + ( r2[i+j*dim_num] - r[i+j*dim_num] ) 
-                  * ( r2[i+j*dim_num] - r[i+j*dim_num] );
+    //
+    //  Estimate the centroids.
+    //  NOTE: this leaves the first nb_bnd points unchanged ( n = nb centroids)
+    // 	since we want to manually specify them elsewhere and then generate
+    // 	the interior points only with the CVT algorithm.
+    // 	If nb_bnd = 0, then we peform a CCVT on all points.
+    // 	If nb_bnd > 0, then we should perform a CVT without
+    //		constraining points to the surface (so only nb_bnd
+    // 		end up exactly on the surface; all others are interior)
+    //
+    //printf("Computing CVT for %d points with %d presets on the boundary\n", n, nb_bnd);
+    for (j = nb_bnd; j < n; j++) {
+        for (i = 0; i < dim_num; i++) {
+            r2[i + j * dim_num] = r2[i + j * dim_num] / (double) (count[j]);
+        }
     }
-    *it_diff = *it_diff + sqrt ( term );
-  }
-//
-//  Replace the generators by the centroids.
-//
-// Gordon Erlebacher (9/9/2009)
-// Leaving boundary points fixed does not always appear to work, e.g. when axes are 1 and 0.3 .
-// Below: Displace the interior points
-  for ( j = nb_bnd; j < n; j++ )
-  {
-    for ( i = 0; i < dim_num; i++ )
-    {
-      r[i+j*dim_num] = r2[i+j*dim_num];
+    //
+    //  Determine the sum of the distances between generators and centroids.
+    //
+    *it_diff = 0.0;
+
+    for (j = nb_bnd; j < n; j++) {
+        term = 0.0;
+        for (i = 0; i < dim_num; i++) {
+            term = term + (r2[i + j * dim_num] - r[i + j * dim_num])
+                    * (r2[i + j * dim_num] - r[i + j * dim_num]);
+        }
+        *it_diff = *it_diff + sqrt(term);
     }
-  }
-//
-//  Normalize the discrete energy estimate.
-//
-  *energy = *energy / sample_num;
+    //
+    //  Replace the generators by the centroids.
+    //
+    // Gordon Erlebacher (9/9/2009)
+    // Leaving boundary points fixed does not always appear to work, e.g. when axes are 1 and 0.3 .
+    // Below: Displace the interior points
+    for (j = nb_bnd; j < n; j++) {
+        for (i = 0; i < dim_num; i++) {
+            r[i + j * dim_num] = r2[i + j * dim_num];
+        }
+    }
+    //
+    //  Normalize the discrete energy estimate.
+    //
+    *energy = *energy / sample_num;
 
-  delete [] count;
-  delete [] nearest;
-  delete [] r2;
-  delete [] s;
+    delete [] count;
+    delete [] nearest;
+    delete [] r2;
+    delete [] s;
 
-  //cout << "TESTING TREE REBUILD: \n\n";
-  // Reconstruct our kdtree for range queries using the new seeds
+    //cout << "TESTING TREE REBUILD: \n\n";
+    // Reconstruct our kdtree for range queries using the new seeds
 
-  #if USE_KDTREE
-  #if 0
-  t5.start();
-  delete(kdtree);
-  kdtree = new KDTree(r, n, dim_num);
-  //kdtree->linear_tree_print();
-//cout << "NOW AN UPDATE: \n\n";
-  t5.end();
-  #else
-  t6.start();
-  kdtree->updateTree(r, n, dim_num);
-  //kdtree->linear_tree_print();
-  t6.end();
-  #endif
-  #endif
-  
-  //cout << "DONE: \n\n";
-  //exit(0);
+#if USE_KDTREE
+#if 0
+    t5.start();
+    delete(kdtree);
+    kdtree = new KDTree(r, n, dim_num);
+    //kdtree->linear_tree_print();
+    //cout << "NOW AN UPDATE: \n\n";
+    t5.end();
+#else
+    t6.start();
+    kdtree->updateTree(r, n, dim_num);
+    //kdtree->linear_tree_print();
+    t6.end();
+#endif
+#endif
 
-  t2.end();
-  return;
+    //cout << "DONE: \n\n";
+    //exit(0);
+
+    t2.end();
+    return;
 }
 //****************************************************************************80
 
-void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initialize, 
-  int *seed, double r[] )
+void CVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize,
+        int *seed, double r[])
 
 //****************************************************************************80
 //
@@ -792,148 +769,126 @@ void CVT::cvt_sample ( int dim_num, int n, int n_now, int sample, bool initializ
 //    Output, double R[DIM_NUM*N_NOW], the sample points.
 //
 {
-   
+
     t3.start();
-  double exponent;
-  static int *halton_base = NULL;
-  static int *halton_leap = NULL;
-  static int *halton_seed = NULL;
-  int halton_step;
-  int i;
-  int j;
-  int k;
-  static int ngrid;
-  static int rank;
-  int rank_max;
-  static int *tuple = NULL;
+    double exponent;
+    static int *halton_base = NULL;
+    static int *halton_leap = NULL;
+    static int *halton_seed = NULL;
+    int halton_step;
+    int i;
+    int j;
+    int k;
+    static int ngrid;
+    static int rank;
+    int rank_max;
+    static int *tuple = NULL;
 
-  if ( n_now < 1 )
-  {
-    cout << "\n";
-    cout << "CVT_SAMPLE - Fatal error!\n";
-    cout << "  N_NOW < 1.\n";
-    exit ( 1 );
-  }
-
-  if ( sample == -1 )
-  {
-    if ( initialize )
-    {
-      random_initialize ( *seed );
+    if (n_now < 1) {
+        cout << "\n";
+        cout << "CVT_SAMPLE - Fatal error!\n";
+        cout << "  N_NOW < 1.\n";
+        exit(1);
     }
 
-    for ( j = 0; j < n_now; j++ )
-    {
-      for ( i = 0; i < dim_num; i++ )
-      {
-	// This is Gordon Erlebacher's random(,) routine (defined below) 
-        r[i+j*dim_num] = random(0,1);
-      }
+    if (sample == -1) {
+        if (initialize) {
+            random_initialize(*seed);
+        }
+
+        for (j = 0; j < n_now; j++) {
+            for (i = 0; i < dim_num; i++) {
+                // This is Gordon Erlebacher's random(,) routine (defined below)
+                r[i + j * dim_num] = random(0, 1);
+            }
+        }
+        *seed = (*seed) + n_now * dim_num;
+    } else if (sample == 0) {
+        r8mat_uniform_01(dim_num, n_now, seed, r);
+    } else if (sample == 1) {
+        halton_seed = new int[dim_num];
+        halton_leap = new int[dim_num];
+        halton_base = new int[dim_num];
+
+        halton_step = *seed;
+
+        for (i = 0; i < dim_num; i++) {
+            halton_seed[i] = 0;
+        }
+
+        for (i = 0; i < dim_num; i++) {
+            halton_leap[i] = 1;
+        }
+
+        for (i = 0; i < dim_num; i++) {
+            halton_base[i] = prime(i + 1);
+        }
+
+        i4_to_halton_sequence(dim_num, n_now, halton_step, halton_seed,
+                halton_leap, halton_base, r);
+
+        delete [] halton_seed;
+        delete [] halton_leap;
+        delete [] halton_base;
+
+        *seed = *seed + n_now;
+    } else if (sample == 2) {
+        exponent = 1.0 / (double) (dim_num);
+        ngrid = (int) pow((double) n, exponent);
+        rank_max = (int) pow((double) ngrid, (double) dim_num);
+        tuple = new int[dim_num];
+
+        if (rank_max < n) {
+            ngrid = ngrid + 1;
+            rank_max = (int) pow((double) ngrid, (double) dim_num);
+        }
+
+        if (initialize) {
+            rank = -1;
+            tuple_next_fast(ngrid, dim_num, rank, tuple);
+        }
+
+        rank = (*seed) % rank_max;
+
+        for (j = 0; j < n_now; j++) {
+            tuple_next_fast(ngrid, dim_num, rank, tuple);
+            rank = rank + 1;
+            rank = rank % rank_max;
+            for (i = 0; i < dim_num; i++) {
+                r[i + j * dim_num] = double ( 2 * tuple[i] - 1) / double ( 2 * ngrid);
+            }
+        }
+        delete [] tuple;
+        *seed = *seed + n_now;
+    } else if (sample == 3) {
+        user_sample(dim_num, n_now, seed, r);
+    } else {
+        cout << "\n";
+        cout << "CVT_SAMPLE - Fatal error!\n";
+        cout << "  The value of SAMPLE = " << sample << " is illegal.\n";
+        exit(1);
     }
-    *seed = ( *seed ) + n_now * dim_num;
-  }
-  else if ( sample == 0 )
-  {
-    r8mat_uniform_01 ( dim_num, n_now, seed, r );
-  }
-  else if ( sample == 1 )
-  {
-    halton_seed = new int[dim_num];
-    halton_leap = new int[dim_num];
-    halton_base = new int[dim_num];
-      
-    halton_step = *seed;
 
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_seed[i] = 0;
+    // print seeds
+    if (DEBUG) {
+        printf("Initial seed positions\n");
+        for (int i = 0; i < n_now; i++) {
+            printf("(%d): \n", i);
+            for (int j = 0; j < dim_num; j++) {
+                printf("%f ", r[j + i * dim_num]);
+            }
+            printf("\n");
+        }
+        printf("  -  end initial seeds --------------------\n");
     }
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_leap[i] = 1;
-    }
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_base[i] = prime ( i + 1 );
-    }
-
-    i4_to_halton_sequence ( dim_num, n_now, halton_step, halton_seed,
-      halton_leap, halton_base, r );
-
-    delete [] halton_seed;
-    delete [] halton_leap;
-    delete [] halton_base;
-
-    *seed = *seed + n_now;
-  }
-  else if ( sample == 2 )
-  {
-    exponent = 1.0 / ( double ) ( dim_num );
-    ngrid = ( int ) pow ( ( double ) n, exponent );
-    rank_max = ( int ) pow ( ( double ) ngrid, ( double ) dim_num );
-    tuple = new int[dim_num];
-
-    if ( rank_max < n )
-    {
-      ngrid = ngrid + 1;
-      rank_max = ( int ) pow ( ( double ) ngrid, ( double ) dim_num );
-    }
-
-    if ( initialize )
-    {
-      rank = -1;
-      tuple_next_fast ( ngrid, dim_num, rank, tuple );
-    }
-
-    rank = ( *seed ) % rank_max;
-
-    for ( j = 0; j < n_now; j++ )
-    {
-      tuple_next_fast ( ngrid, dim_num, rank, tuple );
-      rank = rank + 1;
-      rank = rank % rank_max;
-      for ( i = 0; i < dim_num; i++ )
-      {
-        r[i+j*dim_num] = double ( 2 * tuple[i] - 1 ) / double ( 2 * ngrid );
-      }
-    }
-    delete [] tuple;
-    *seed = *seed + n_now;
-  }
-  else if ( sample == 3 )
-  {
-    user_sample ( dim_num, n_now, seed, r );
-  }
-  else
-  {
-    cout << "\n";
-    cout << "CVT_SAMPLE - Fatal error!\n";
-    cout << "  The value of SAMPLE = " << sample << " is illegal.\n";
-    exit ( 1 );
-  }
-
-  // print seeds
-  if (DEBUG) {
-	printf("Initial seed positions\n");
-	for (int i=0; i < n_now; i++) {
-		printf("(%d): \n", i);
-	  	for (int j=0; j < dim_num; j++) {
-  			printf("%f ", r[j+i*dim_num]);
-	  	}
-		printf("\n");
-  	}
-	printf("  -  end initial seeds --------------------\n");
-  }
-  t3.end();
-  return;
+    t3.end();
+    return;
 }
 
 //****************************************************************************80
 
-void CVT::cvt_init ( int dim_num, int n, int n_now, int sample, bool initialize,
-  int *seed, double r[] )
+void CVT::cvt_init(int dim_num, int n, int n_now, int sample, bool initialize,
+        int *seed, double r[])
 
 //****************************************************************************80
 //
@@ -993,148 +948,126 @@ void CVT::cvt_init ( int dim_num, int n, int n_now, int sample, bool initialize,
 {
 
     t3.start();
-  double exponent;
-  static int *halton_base = NULL;
-  static int *halton_leap = NULL;
-  static int *halton_seed = NULL;
-  int halton_step;
-  int i;
-  int j;
-  int k;
-  static int ngrid;
-  static int rank;
-  int rank_max;
-  static int *tuple = NULL;
+    double exponent;
+    static int *halton_base = NULL;
+    static int *halton_leap = NULL;
+    static int *halton_seed = NULL;
+    int halton_step;
+    int i;
+    int j;
+    int k;
+    static int ngrid;
+    static int rank;
+    int rank_max;
+    static int *tuple = NULL;
 
-  if ( n_now < 1 )
-  {
-    cout << "\n";
-    cout << "CVT_SAMPLE - Fatal error!\n";
-    cout << "  N_NOW < 1.\n";
-    exit ( 1 );
-  }
-
-  if ( sample == -1 )
-  {
-    if ( initialize )
-    {
-      random_initialize ( *seed );
+    if (n_now < 1) {
+        cout << "\n";
+        cout << "CVT_SAMPLE - Fatal error!\n";
+        cout << "  N_NOW < 1.\n";
+        exit(1);
     }
 
-    for ( j = 0; j < n_now; j++ )
-    {
-      for ( i = 0; i < dim_num; i++ )
-      {
-	// This is Gordon Erlebacher's random(,) routine (defined below)
-        r[i+j*dim_num] = random(0,1);
-      }
+    if (sample == -1) {
+        if (initialize) {
+            random_initialize(*seed);
+        }
+
+        for (j = 0; j < n_now; j++) {
+            for (i = 0; i < dim_num; i++) {
+                // This is Gordon Erlebacher's random(,) routine (defined below)
+                r[i + j * dim_num] = random(0, 1);
+            }
+        }
+        *seed = (*seed) + n_now * dim_num;
+    } else if (sample == 0) {
+        r8mat_uniform_01(dim_num, n_now, seed, r);
+    } else if (sample == 1) {
+        halton_seed = new int[dim_num];
+        halton_leap = new int[dim_num];
+        halton_base = new int[dim_num];
+
+        halton_step = *seed;
+
+        for (i = 0; i < dim_num; i++) {
+            halton_seed[i] = 0;
+        }
+
+        for (i = 0; i < dim_num; i++) {
+            halton_leap[i] = 1;
+        }
+
+        for (i = 0; i < dim_num; i++) {
+            halton_base[i] = prime(i + 1);
+        }
+
+        i4_to_halton_sequence(dim_num, n_now, halton_step, halton_seed,
+                halton_leap, halton_base, r);
+
+        delete [] halton_seed;
+        delete [] halton_leap;
+        delete [] halton_base;
+
+        *seed = *seed + n_now;
+    } else if (sample == 2) {
+        exponent = 1.0 / (double) (dim_num);
+        ngrid = (int) pow((double) n, exponent);
+        rank_max = (int) pow((double) ngrid, (double) dim_num);
+        tuple = new int[dim_num];
+
+        if (rank_max < n) {
+            ngrid = ngrid + 1;
+            rank_max = (int) pow((double) ngrid, (double) dim_num);
+        }
+
+        if (initialize) {
+            rank = -1;
+            tuple_next_fast(ngrid, dim_num, rank, tuple);
+        }
+
+        rank = (*seed) % rank_max;
+
+        for (j = 0; j < n_now; j++) {
+            tuple_next_fast(ngrid, dim_num, rank, tuple);
+            rank = rank + 1;
+            rank = rank % rank_max;
+            for (i = 0; i < dim_num; i++) {
+                r[i + j * dim_num] = double ( 2 * tuple[i] - 1) / double ( 2 * ngrid);
+            }
+        }
+        delete [] tuple;
+        *seed = *seed + n_now;
+    } else if (sample == 3) {
+        user_init(dim_num, n_now, seed, r);
+    } else {
+        cout << "\n";
+        cout << "CVT_SAMPLE - Fatal error!\n";
+        cout << "  The value of SAMPLE = " << sample << " is illegal.\n";
+        exit(1);
     }
-    *seed = ( *seed ) + n_now * dim_num;
-  }
-  else if ( sample == 0 )
-  {
-    r8mat_uniform_01 ( dim_num, n_now, seed, r );
-  }
-  else if ( sample == 1 )
-  {
-    halton_seed = new int[dim_num];
-    halton_leap = new int[dim_num];
-    halton_base = new int[dim_num];
 
-    halton_step = *seed;
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_seed[i] = 0;
+    // print seeds
+    if (DEBUG) {
+        printf("Initial seed positions\n");
+        for (int i = 0; i < n_now; i++) {
+            printf("(%d): \n", i);
+            for (int j = 0; j < dim_num; j++) {
+                printf("%f ", r[j + i * dim_num]);
+            }
+            printf("\n");
+        }
+        printf("  -  end initial seeds --------------------\n");
     }
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_leap[i] = 1;
-    }
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-      halton_base[i] = prime ( i + 1 );
-    }
-
-    i4_to_halton_sequence ( dim_num, n_now, halton_step, halton_seed,
-      halton_leap, halton_base, r );
-
-    delete [] halton_seed;
-    delete [] halton_leap;
-    delete [] halton_base;
-
-    *seed = *seed + n_now;
-  }
-  else if ( sample == 2 )
-  {
-    exponent = 1.0 / ( double ) ( dim_num );
-    ngrid = ( int ) pow ( ( double ) n, exponent );
-    rank_max = ( int ) pow ( ( double ) ngrid, ( double ) dim_num );
-    tuple = new int[dim_num];
-
-    if ( rank_max < n )
-    {
-      ngrid = ngrid + 1;
-      rank_max = ( int ) pow ( ( double ) ngrid, ( double ) dim_num );
-    }
-
-    if ( initialize )
-    {
-      rank = -1;
-      tuple_next_fast ( ngrid, dim_num, rank, tuple );
-    }
-
-    rank = ( *seed ) % rank_max;
-
-    for ( j = 0; j < n_now; j++ )
-    {
-      tuple_next_fast ( ngrid, dim_num, rank, tuple );
-      rank = rank + 1;
-      rank = rank % rank_max;
-      for ( i = 0; i < dim_num; i++ )
-      {
-        r[i+j*dim_num] = double ( 2 * tuple[i] - 1 ) / double ( 2 * ngrid );
-      }
-    }
-    delete [] tuple;
-    *seed = *seed + n_now;
-  }
-  else if ( sample == 3 )
-  {
-    user_init ( dim_num, n_now, seed, r );
-  }
-  else
-  {
-    cout << "\n";
-    cout << "CVT_SAMPLE - Fatal error!\n";
-    cout << "  The value of SAMPLE = " << sample << " is illegal.\n";
-    exit ( 1 );
-  }
-
-  // print seeds
-  if (DEBUG) {
-	printf("Initial seed positions\n");
-	for (int i=0; i < n_now; i++) {
-		printf("(%d): \n", i);
-	  	for (int j=0; j < dim_num; j++) {
-  			printf("%f ", r[j+i*dim_num]);
-	  	}
-		printf("\n");
-  	}
-	printf("  -  end initial seeds --------------------\n");
-  }
-  t3.end();
-  return;
+    t3.end();
+    return;
 }
 
 //****************************************************************************80
 
-void CVT::cvt_write ( int dim_num, int n, int batch, int seed_init, int seed, 
-  const char *init_string, int it_max, int it_fixed, int it_num, 
-  double it_diff, double energy, const char *sample_string, int sample_num, 
-  double r[], const char *file_out_name, bool comment )
+void CVT::cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
+        const char *init_string, int it_max, int it_fixed, int it_num,
+        double it_diff, double energy, const char *sample_string, int sample_num,
+        double r[], const char *file_out_name, bool comment)
 
 //****************************************************************************80
 //
@@ -1216,70 +1149,68 @@ void CVT::cvt_write ( int dim_num, int n, int batch, int seed_init, int seed,
 //    Input, bool COMMENT, is true if comments may be included in the file.
 //
 {
-  ofstream file_out;
-  int i;
-  int j;
-  char *s;
+    ofstream file_out;
+    int i;
+    int j;
+    char *s;
 
-  file_out.open ( file_out_name );
+    file_out.open(file_out_name);
 
-  if ( !file_out )
-  {
-    cout << "\n";
-    cout << "CVT_WRITE - Fatal error!\n";
-    cout << "  Could not open the output file.\n";
-    exit ( 1 );
-  }
-
-  s = timestring ( );
-
-  //file_out << "ASCII" << "\n";
-
-  if ( comment )
-  {
-    file_out << "#  " << file_out_name << "\n";
-    file_out << "#  created by routine CVT_WRITE.C" << "\n";
-    file_out << "#  at " << s << "\n";
-    file_out << "#\n";
-
-    file_out << "#  Dimension DIM_NUM =        "  << dim_num       << "\n";
-    file_out << "#  Number of points N =       "  << n             << "\n";
-    file_out << "#  Initial SEED_INIT =        "  << seed_init     << "\n";
-    file_out << "#  Current SEED =             "  << seed          << "\n";
-    file_out << "#  INIT =                    \"" << init_string   << "\".\n";
-    file_out << "#  Max iterations IT_MAX =    "  << it_max        << "\n";
-    file_out << "#  IT_FIXED (fixed samples) = "  << it_fixed      << "\n";
-    file_out << "#  Iterations IT_NUM =        "  << it_num        << "\n";
-    file_out << "#  Difference IT_DIFF =       "  << it_diff       << "\n";
-    file_out << "#  CVT ENERGY =               "  << energy        << "\n";
-    file_out << "#  SAMPLE =                  \"" << sample_string << "\".\n";
-    file_out << "#  Samples SAMPLE_NUM =       "  << sample_num    << "\n";
-    file_out << "#  Sampling BATCH size =      "  << batch         << "\n";
-    file_out << "#  EPSILON (unit roundoff) =  "  << r8_epsilon ( ) << "\n";
-    file_out << "#\n";
-  }
-
-  for ( j = 0; j < n; j++ )
-  {
-    for ( i = 0; i < dim_num; i++ )
-    {
-      file_out << setw(10) << r[i+j*dim_num] << "  ";
+    if (!file_out) {
+        cout << "\n";
+        cout << "CVT_WRITE - Fatal error!\n";
+        cout << "  Could not open the output file.\n";
+        exit(1);
+    } else {
+        printf(" --> Writing generators to: %s\n", file_out_name);
     }
-    file_out << "\n";
-  }
 
-  file_out.close ( );
+    s = timestring();
 
-  delete [] s;
+    file_out << "ASCII" << "\n";
 
-  return;
+    if (comment) {
+        file_out << "#  " << file_out_name << "\n";
+        file_out << "#  created by routine CVT_WRITE.C" << "\n";
+        file_out << "#  at " << s << "\n";
+        file_out << "#\n";
+
+        file_out << "#  Dimension DIM_NUM =        " << dim_num << "\n";
+        file_out << "#  Number of points N =       " << n << "\n";
+        file_out << "#  Initial SEED_INIT =        " << seed_init << "\n";
+        file_out << "#  Current SEED =             " << seed << "\n";
+        file_out << "#  INIT =                    \"" << init_string << "\".\n";
+        file_out << "#  Max iterations IT_MAX =    " << it_max << "\n";
+        file_out << "#  IT_FIXED (fixed samples) = " << it_fixed << "\n";
+        file_out << "#  Iterations IT_NUM =        " << it_num << "\n";
+        file_out << "#  Difference IT_DIFF =       " << it_diff << "\n";
+        file_out << "#  CVT ENERGY =               " << energy << "\n";
+        file_out << "#  SAMPLE =                  \"" << sample_string << "\".\n";
+        file_out << "#  Samples SAMPLE_NUM =       " << sample_num << "\n";
+        file_out << "#  Sampling BATCH size =      " << batch << "\n";
+        file_out << "#  EPSILON (unit roundoff) =  " << r8_epsilon() << "\n";
+        file_out << "#\n";
+    }
+
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < dim_num; i++) {
+            file_out << setw(10) << r[i + j * dim_num] << "  ";
+        }
+        file_out << "\n";
+    }
+
+    file_out.close();
+
+    delete [] s;
+
+    return;
 }
 //****************************************************************************80
 
-void CVT::cvt_write_binary ( int dim_num, int n, int batch, int seed_init, int seed,
-  const char *init_string, int it_max, int it_fixed, int it_num,
-  double it_diff, double energy, const char *sample_string, int sample_num,
-  double r[], const char *file_out_name, bool comment )
+void CVT::cvt_write_binary(int dim_num, int n, int batch, int seed_init, int seed,
+        const char *init_string, int it_max, int it_fixed, int it_num,
+        double it_diff, double energy, const char *sample_string, int sample_num,
+        double r[], const char *file_out_name, bool comment)
 
 //****************************************************************************80
 //
@@ -1363,71 +1294,69 @@ void CVT::cvt_write_binary ( int dim_num, int n, int batch, int seed_init, int s
 //    Input, bool COMMENT, is true if comments may be included in the file.
 //
 {
-  ofstream file_out;
-  int i;
-  int j;
-  char *s;
+    ofstream file_out;
+    int i;
+    int j;
+    char *s;
 
-  file_out.open ( file_out_name );
+    file_out.open(file_out_name);
 
-  if ( !file_out )
-  {
-    cout << "\n";
-    cout << "CVT_WRITE - Fatal error!\n";
-    cout << "  Could not open the output file.\n";
-    exit ( 1 );
-  }
-
-  s = timestring ( );
-
-  file_out << "BINARY" << "\n";
-
-  if ( comment )
-  {
-    file_out << "#  " << file_out_name << "\n";
-    file_out << "#  created by routine CVT_WRITE.C" << "\n";
-    file_out << "#  at " << s << "\n";
-    file_out << "#\n";
-
-    file_out << "#  Dimension DIM_NUM =        "  << dim_num       << "\n";
-    file_out << "#  Number of points N =       "  << n             << "\n";
-    file_out << "#  Initial SEED_INIT =        "  << seed_init     << "\n";
-    file_out << "#  Current SEED =             "  << seed          << "\n";
-    file_out << "#  INIT =                    \"" << init_string   << "\".\n";
-    file_out << "#  Max iterations IT_MAX =    "  << it_max        << "\n";
-    file_out << "#  IT_FIXED (fixed samples) = "  << it_fixed      << "\n";
-    file_out << "#  Iterations IT_NUM =        "  << it_num        << "\n";
-    file_out << "#  Difference IT_DIFF =       "  << it_diff       << "\n";
-    file_out << "#  CVT ENERGY =               "  << energy        << "\n";
-    file_out << "#  SAMPLE =                  \"" << sample_string << "\".\n";
-    file_out << "#  Samples SAMPLE_NUM =       "  << sample_num    << "\n";
-    file_out << "#  Sampling BATCH size =      "  << batch         << "\n";
-    file_out << "#  EPSILON (unit roundoff) =  "  << r8_epsilon ( ) << "\n";
-    file_out << "#\n";
-  }
-
-  file_out.write((char*)r, n*dim_num*sizeof(double));
-
-  /*for ( j = 0; j < n; j++ )
-  {
-    for ( i = 0; i < dim_num; i++ )
-    {
-      file_out << setw(10) << r[i+j*dim_num] << "  ";
+    if (!file_out) {
+        cout << "\n";
+        cout << "CVT_WRITE - Fatal error!\n";
+        cout << "  Could not open the output file.\n";
+        exit(1);
     }
+
+    s = timestring();
+
+    file_out << "BINARY" << "\n";
+
+    if (comment) {
+        file_out << "#  " << file_out_name << "\n";
+        file_out << "#  created by routine CVT_WRITE.C" << "\n";
+        file_out << "#  at " << s << "\n";
+        file_out << "#\n";
+
+        file_out << "#  Dimension DIM_NUM =        " << dim_num << "\n";
+        file_out << "#  Number of points N =       " << n << "\n";
+        file_out << "#  Initial SEED_INIT =        " << seed_init << "\n";
+        file_out << "#  Current SEED =             " << seed << "\n";
+        file_out << "#  INIT =                    \"" << init_string << "\".\n";
+        file_out << "#  Max iterations IT_MAX =    " << it_max << "\n";
+        file_out << "#  IT_FIXED (fixed samples) = " << it_fixed << "\n";
+        file_out << "#  Iterations IT_NUM =        " << it_num << "\n";
+        file_out << "#  Difference IT_DIFF =       " << it_diff << "\n";
+        file_out << "#  CVT ENERGY =               " << energy << "\n";
+        file_out << "#  SAMPLE =                  \"" << sample_string << "\".\n";
+        file_out << "#  Samples SAMPLE_NUM =       " << sample_num << "\n";
+        file_out << "#  Sampling BATCH size =      " << batch << "\n";
+        file_out << "#  EPSILON (unit roundoff) =  " << r8_epsilon() << "\n";
+        file_out << "#\n";
+    }
+
+    file_out.write((char*) r, n * dim_num * sizeof (double));
+
+    /*for ( j = 0; j < n; j++ )
+    {
+      for ( i = 0; i < dim_num; i++ )
+      {
+        file_out << setw(10) << r[i+j*dim_num] << "  ";
+      }
+      file_out << "\n";
+    }
+     */
     file_out << "\n";
-  }
-   */
-  file_out << "\n";
-  
-  file_out.close ( );
 
-  delete [] s;
+    file_out.close();
 
-  return;
+    delete [] s;
+
+    return;
 }
 //****************************************************************************80
 
-void CVT::data_read ( const char *file_in_name, int dim_num, int n, double r[] )
+int CVT::data_read(const char *file_in_name, int dim_num, int n, double r[])
 
 //****************************************************************************80
 //
@@ -1475,92 +1404,89 @@ void CVT::data_read ( const char *file_in_name, int dim_num, int n, double r[] )
 //
 //    Output, double R[DIM_NUM*N], the point coordinates.
 //
+//  RETURNS:
+//     0 if file exists and was read
+//     nonzero if the file does not exist or the read is incomplete due to other errors
 {
-  bool error;
-  ifstream file_in;
-  int i;
-  int j;
-  char line[255];
-  double *x;
-  bool ascii = false;
+    bool error;
+    ifstream file_in;
+    int i;
+    int j;
+    char line[255];
+    double *x;
+    bool ascii = false;
 
-  file_in.open ( file_in_name );
+    file_in.open(file_in_name);
 
-  if ( !file_in )
-  {
+    if (!file_in) {
+        cout << "\n";
+        cout << "DATA_READ - Fatal error!\n";
+        cout << "  Could not open the input file: \"" << file_in_name << "\"\n";
+        return 1;
+    }
+
+    file_in.getline(line, sizeof (line));
+    if (!strcmp(line, "ASCII")) {
+        ascii = true;
+    } else if (!strcmp(line, "BINARY")) {
+        ascii = false;
+    } else {
+        cout << "\n";
+        cout << "DATA_READ - Fatal error!\n";
+        cout << "  File must start with ASCII or BINARY specifier! Found: \"" << line << "\"\n";
+        return -1;
+    }
+
+    if (ascii) {
+        x = new double[dim_num];
+
+        j = 0;
+
+        while (j < n) {
+            file_in.getline(line, sizeof ( line));
+
+            if (file_in.eof()) {
+                break;
+            }
+
+            if (line[0] == '#' || s_len_trim(line) == 0) {
+                continue;
+            }
+
+            error = s_to_r8vec(line, dim_num, x);
+
+            if (error) {
+                continue;
+            }
+
+            for (i = 0; i < dim_num; i++) {
+                r[i + j * dim_num] = x[i];
+            }
+            j = j + 1;
+
+        }
+        delete [] x;
+    } else {
+        while (file_in.peek() == '#') {
+            file_in.getline(line, sizeof (line));
+            //  cout << "Comment" << line << "\n";
+        }
+        //cout << "TRYING TO READ DATA: " << endl;
+        file_in.read((char*) &r[0], n * dim_num * sizeof (double));
+        //cout << " DONE\n";
+    }
+
+    file_in.close();
+
     cout << "\n";
-    cout << "DATA_READ - Fatal error!\n";
-    cout << "  Could not open the input file: \"" << file_in_name << "\"\n";
-    exit ( 1 );
-  }
+    cout << "DATA_READ:\n";
+    cout << "  Read coordinate data from file.\n";
 
-  file_in.getline ( line, sizeof (line) );
-  if ( !strcmp(line, "ASCII") ) {
-      ascii = true;
-  } else if ( !strcmp(line, "BINARY") ) {
-      ascii = false; 
-  } else {
-    cout << "\n";
-    cout << "DATA_READ - Fatal error!\n";
-    cout << "  File must start with ASCII or BINARY specifier! Found: \"" << line << "\"\n";
-    exit ( 1 );
-  }
-
-  if (ascii) {
-      x = new double[dim_num];
-
-      j = 0;
-
-      while ( j < n )
-      {
-        file_in.getline ( line, sizeof ( line ) );
-
-        if ( file_in.eof ( ) )
-        {
-          break;
-        }
-
-        if ( line[0] == '#' || s_len_trim ( line ) == 0 )
-        {
-          continue;
-        }
-
-        error = s_to_r8vec ( line, dim_num, x );
-
-        if ( error )
-        {
-          continue;
-        }
-
-        for ( i = 0; i < dim_num; i++ )
-        {
-          r[i+j*dim_num] = x[i];
-        }
-        j = j + 1;
-
-      }
-      delete [] x;
-  } else {
-      while (file_in.peek() == '#') {
-          file_in.getline(line, sizeof(line));
-        //  cout << "Comment" << line << "\n";
-      }
-      //cout << "TRYING TO READ DATA: " << endl;
-      file_in.read((char*)&r[0], n*dim_num*sizeof(double));
-      //cout << " DONE\n";
-  }
-
-  file_in.close ( );
-
-  cout << "\n";
-  cout << "DATA_READ:\n";
-  cout << "  Read coordinate data from file.\n";
-
-  return;
+    return 0;
 }
 //****************************************************************************80
 
-char CVT::digit_to_ch ( int i )
+char CVT::digit_to_ch(int i)
 
 //****************************************************************************80
 //
@@ -1598,23 +1524,20 @@ char CVT::digit_to_ch ( int i )
 //    Output, char DIGIT_TO_CH, the appropriate character '0' through '9' or '*'.
 //
 {
-  char c;
+    char c;
 
-  if ( 0 <= i && i <= 9 )
-  {
-    c = '0' + i;
-  }
-  else
-  {
-    c = '*';
-  }
+    if (0 <= i && i <= 9) {
+        c = '0' + i;
+    } else {
+        c = '*';
+    }
 
-  return c;
+    return c;
 }
 //****************************************************************************80
 
-void CVT::find_closest ( int dim_num, int n, int sample_num, double s[], double r[],
-  int nearest[] )
+void CVT::find_closest(int dim_num, int n, int sample_num, double s[], double r[],
+        int nearest[])
 
 //****************************************************************************80
 //
@@ -1698,7 +1621,7 @@ void CVT::find_closest ( int dim_num, int n, int sample_num, double s[], double 
 }
 //****************************************************************************80
 
-int CVT::get_seed ( void )
+int CVT::get_seed(void)
 
 //****************************************************************************80
 //
@@ -1723,64 +1646,62 @@ int CVT::get_seed ( void )
 //    Output, int GET_SEED, a random seed value.
 //
 {
-# define I_MAX 2147483647
+#define I_MAX 2147483647
 
-  time_t clock;
-  int i;
-  int ihour;
-  int imin;
-  int isec;
-  int seed;
-  struct tm *lt;
-  time_t tloc;
-//
-//  If the internal seed is 0, generate a value based on the time.
-//
-  clock = time ( &tloc );
-  lt = localtime ( &clock );
-//
-//  Hours is 1, 2, ..., 12.
-//
-  ihour = lt->tm_hour;
+    time_t clock;
+    int i;
+    int ihour;
+    int imin;
+    int isec;
+    int seed;
+    struct tm *lt;
+    time_t tloc;
+    //
+    //  If the internal seed is 0, generate a value based on the time.
+    //
+    clock = time(&tloc);
+    lt = localtime(&clock);
+    //
+    //  Hours is 1, 2, ..., 12.
+    //
+    ihour = lt->tm_hour;
 
-  if ( 12 < ihour )
-  {
-    ihour = ihour - 12;
-  }
-//
-//  Move Hours to 0, 1, ..., 11
-//
-  ihour = ihour - 1;
+    if (12 < ihour) {
+        ihour = ihour - 12;
+    }
+    //
+    //  Move Hours to 0, 1, ..., 11
+    //
+    ihour = ihour - 1;
 
-  imin = lt->tm_min;
+    imin = lt->tm_min;
 
-  isec = lt->tm_sec;
+    isec = lt->tm_sec;
 
-  seed = isec + 60 * ( imin + 60 * ihour );
-//
-//  We want values in [1,43200], not [0,43199].
-//
-  seed = seed + 1;
-//
-//  Remap ISEED from [1,43200] to [1,IMAX].
-//
-  seed = ( int ) 
-    ( ( ( double ) seed )
-    * ( ( double ) I_MAX ) / ( 60.0 * 60.0 * 12.0 ) );
-//
-//  Never use a seed of 0.
-//
-  if ( seed == 0 )
-  {
-    seed = 1;
-  }
+    seed = isec + 60 * (imin + 60 * ihour);
+    //
+    //  We want values in [1,43200], not [0,43199].
+    //
+    seed = seed + 1;
+    //
+    //  Remap ISEED from [1,43200] to [1,IMAX].
+    //
+    seed = (int)
+            (((double) seed)
+            * ((double) I_MAX) / (60.0 * 60.0 * 12.0));
+    //
+    //  Never use a seed of 0.
+    //
+    if (seed == 0) {
+        seed = 1;
+    }
 
-  return seed;
-# undef I_MAX
+    return seed;
+#undef I_MAX
 }
 //****************************************************************************80
 
-bool CVT::halham_leap_check ( int dim_num, int leap[] )
+bool CVT::halham_leap_check(int dim_num, int leap[])
 
 //****************************************************************************80
 //
@@ -1810,29 +1731,27 @@ bool CVT::halham_leap_check ( int dim_num, int leap[] )
 //    Output, bool HALHAM_LEAP_CHECK, is true if LEAP is legal.
 //
 {
-  int i;
-  bool value;
+    int i;
+    bool value;
 
-  value = true;
+    value = true;
 
-  for ( i = 0; i < dim_num; i++ )
-  {
-    if ( leap[i] < 1 ) 
-    {
-      cout << "\n";
-      cout << "HALHAM_LEAP_CHECK - Fatal error!\n";
-      cout << "  Leap entries must be greater than 0.\n";
-      cout << "  leap[" << i << "] = " << leap[i] << "\n";
-      value = false;
-      break;
+    for (i = 0; i < dim_num; i++) {
+        if (leap[i] < 1) {
+            cout << "\n";
+            cout << "HALHAM_LEAP_CHECK - Fatal error!\n";
+            cout << "  Leap entries must be greater than 0.\n";
+            cout << "  leap[" << i << "] = " << leap[i] << "\n";
+            value = false;
+            break;
+        }
     }
-  }
 
-  return value;
+    return value;
 }
 //****************************************************************************80
 
-bool CVT::halham_n_check ( int n )
+bool CVT::halham_n_check(int n)
 
 //****************************************************************************80
 //
@@ -1860,26 +1779,23 @@ bool CVT::halham_n_check ( int n )
 //    Output, bool HALHAM_N_CHECK, is true if N is legal.
 //
 {
-  bool value;
+    bool value;
 
-  if ( n < 1 ) 
-  {
-    cout << "\n";
-    cout << "HALHAM_N_CHECK - Fatal error!\n";
-    cout << "  N < 0.";
-    cout << "  N = " << n << "\n";
-    value = false;
-  }
-  else
-  {
-    value = true;
-  }
+    if (n < 1) {
+        cout << "\n";
+        cout << "HALHAM_N_CHECK - Fatal error!\n";
+        cout << "  N < 0.";
+        cout << "  N = " << n << "\n";
+        value = false;
+    } else {
+        value = true;
+    }
 
-  return value;
+    return value;
 }
 //****************************************************************************80
 
-bool CVT::halham_dim_num_check ( int dim_num )
+bool CVT::halham_dim_num_check(int dim_num)
 
 //****************************************************************************80
 //
@@ -1907,26 +1823,23 @@ bool CVT::halham_dim_num_check ( int dim_num )
 //    Output, bool HALHAM_DIM_NUM_CHECK, is true if DIM_NUM is legal.
 //
 {
-  bool value;
+    bool value;
 
-  if ( dim_num < 1 ) 
-  {
-    cout << "\n";
-    cout << "HALHAM_DIM_NUM_CHECK - Fatal error!\n";
-    cout << "  DIM_NUM < 0.";
-    cout << "  DIM_NUM = " << dim_num << "\n";
-    value = false;
-  }
-  else
-  {
-    value = true;
-  }
+    if (dim_num < 1) {
+        cout << "\n";
+        cout << "HALHAM_DIM_NUM_CHECK - Fatal error!\n";
+        cout << "  DIM_NUM < 0.";
+        cout << "  DIM_NUM = " << dim_num << "\n";
+        value = false;
+    } else {
+        value = true;
+    }
 
-  return value;
+    return value;
 }
 //****************************************************************************80
 
-bool CVT::halham_seed_check ( int dim_num, int seed[] )
+bool CVT::halham_seed_check(int dim_num, int seed[])
 
 //****************************************************************************80
 //
@@ -1956,29 +1869,27 @@ bool CVT::halham_seed_check ( int dim_num, int seed[] )
 //    Output, bool HALHAM_SEED_CHECK, is true if SEED is legal.
 //
 {
-  int i;
-  bool value;
+    int i;
+    bool value;
 
-  value = true;
+    value = true;
 
-  for ( i = 0; i < dim_num; i++ )
-  {
-    if ( seed[i] < 0 ) 
-    {
-      cout << "\n";
-      cout << "HALHAM_SEED_CHECK - Fatal error!\n";
-      cout << "  SEED entries must be nonnegative.\n";
-      cout << "  seed[" << i << "] = " << seed[i] << "\n";
-      value = false;
-      break;
+    for (i = 0; i < dim_num; i++) {
+        if (seed[i] < 0) {
+            cout << "\n";
+            cout << "HALHAM_SEED_CHECK - Fatal error!\n";
+            cout << "  SEED entries must be nonnegative.\n";
+            cout << "  seed[" << i << "] = " << seed[i] << "\n";
+            value = false;
+            break;
+        }
     }
-  }
 
-  return value;
+    return value;
 }
 //****************************************************************************80
 
-bool CVT::halham_step_check ( int step )
+bool CVT::halham_step_check(int step)
 
 //****************************************************************************80
 //
@@ -2006,27 +1917,24 @@ bool CVT::halham_step_check ( int step )
 //    Output, bool HALHAM_STEP_CHECK, is true if STEP is legal.
 //
 {
-  int i;
-  bool value;
+    int i;
+    bool value;
 
-  if ( step < 0 ) 
-  {
-    cout << "\n";
-    cout << "HALHAM_STEP_CHECK - Fatal error!\n";
-    cout << "  STEP < 0.";
-    cout << "  STEP = " << step << "\n";
-    value = false;
-  }
-  else
-  {
-    value = true;
-  }
+    if (step < 0) {
+        cout << "\n";
+        cout << "HALHAM_STEP_CHECK - Fatal error!\n";
+        cout << "  STEP < 0.";
+        cout << "  STEP = " << step << "\n";
+        value = false;
+    } else {
+        value = true;
+    }
 
-  return value;
+    return value;
 }
 //****************************************************************************80
 
-bool CVT::halton_base_check ( int dim_num, int base[] )
+bool CVT::halton_base_check(int dim_num, int base[])
 
 //****************************************************************************80
 //
@@ -2055,29 +1963,27 @@ bool CVT::halton_base_check ( int dim_num, int base[] )
 //    Output, bool HALTON_BASE_CHECK, is true if BASE is legal.
 //
 {
-  int i;
-  bool value;
+    int i;
+    bool value;
 
-  value = true;
+    value = true;
 
-  for ( i = 0; i < dim_num; i++ )
-  {
-    if ( base[i] <= 1 ) 
-    {
-      cout << "\n";
-      cout << "HALTON_BASE_CHECK - Fatal error!\n";
-      cout << "  Bases must be greater than 1.\n";
-      cout << "  base[" << i << "] = " << base[i] << "\n";
-      value = false;
-      break;
+    for (i = 0; i < dim_num; i++) {
+        if (base[i] <= 1) {
+            cout << "\n";
+            cout << "HALTON_BASE_CHECK - Fatal error!\n";
+            cout << "  Bases must be greater than 1.\n";
+            cout << "  base[" << i << "] = " << base[i] << "\n";
+            value = false;
+            break;
+        }
     }
-  }
 
-  return value;
+    return value;
 }
 //****************************************************************************80
 
-int CVT::i4_log_10 ( int i )
+int CVT::i4_log_10(int i)
 
 //****************************************************************************80
 //
@@ -2135,25 +2041,24 @@ int CVT::i4_log_10 ( int i )
 //    Output, int I4_LOG_10, the whole part of the logarithm of abs ( I ).
 //
 {
-  int ten_pow;
-  int value;
+    int ten_pow;
+    int value;
 
-  i = abs ( i );
+    i = abs(i);
 
-  ten_pow = 10;
-  value = 0;
+    ten_pow = 10;
+    value = 0;
 
-  while ( ten_pow <= i )
-  {
-    ten_pow = ten_pow * 10;
-    value = value + 1;
-  }
+    while (ten_pow <= i) {
+        ten_pow = ten_pow * 10;
+        value = value + 1;
+    }
 
-  return value;
+    return value;
 }
 //****************************************************************************80
 
-int CVT::i4_max ( int i1, int i2 )
+int CVT::i4_max(int i1, int i2)
 
 //****************************************************************************80
 //
@@ -2181,19 +2086,16 @@ int CVT::i4_max ( int i1, int i2 )
 //
 //
 {
-  if ( i2 < i1 )
-  {
-    return i1;
-  }
-  else
-  {
-    return i2;
-  }
+    if (i2 < i1) {
+        return i1;
+    } else {
+        return i2;
+    }
 
 }
 //****************************************************************************80
 
-int CVT::i4_min ( int i1, int i2 )
+int CVT::i4_min(int i1, int i2)
 
 //****************************************************************************80
 //
@@ -2220,20 +2122,17 @@ int CVT::i4_min ( int i1, int i2 )
 //    Output, int I4_MIN, the smaller of i1 and i2.
 //
 {
-  if ( i1 < i2 ) 
-  {
-    return i1;
-  }
-  else 
-  {
-    return i2;
-  }
+    if (i1 < i2) {
+        return i1;
+    } else {
+        return i2;
+    }
 
 }
 //**********************************************************************
 
-void CVT::i4_to_halton_sequence ( int dim_num, int n, int step, int seed[], int leap[],
-  int base[], double r[] )
+void CVT::i4_to_halton_sequence(int dim_num, int n, int step, int seed[], int leap[],
+        int base[], double r[])
 
 //****************************************************************************80
 //
@@ -2318,81 +2217,70 @@ void CVT::i4_to_halton_sequence ( int dim_num, int n, int step, int seed[], int 
 //    leaped Halton subsequence, beginning with element STEP.
 //
 {
-  double base_inv;
-  int digit;
-  int i;
-  int j;
-  int *seed2;
-//
-//  Check the input.
-//
-  if ( !halham_dim_num_check ( dim_num ) )
-  {
-    exit ( 1 );
-  }
-  
-  if ( !halham_n_check ( n ) )
-  {
-    exit ( 1 );
-  }
-  
-  if ( !halham_step_check ( step ) )
-  {
-    exit ( 1 );
-  }
-  
-  if ( !halham_seed_check ( dim_num, seed ) )
-  {
-    exit ( 1 );
-  }
-
-  if ( !halham_leap_check ( dim_num, leap ) )
-  {
-    exit ( 1 );
-  }
-
-  if ( !halton_base_check ( dim_num, base ) )
-  {
-    exit ( 1 );
-  }
-//
-//  Calculate the data.
-//
-  seed2 = new int[n];
-
-  for ( i = 0; i < dim_num; i++ )
-  {
-    for ( j = 0; j < n; j++ )
-    {
-      seed2[j] = seed[i] + ( step + j ) * leap[i];
+    double base_inv;
+    int digit;
+    int i;
+    int j;
+    int *seed2;
+    //
+    //  Check the input.
+    //
+    if (!halham_dim_num_check(dim_num)) {
+        exit(1);
     }
 
-    for ( j = 0; j < n; j++ )
-    {
-      r[i+j*dim_num] = 0.0;
+    if (!halham_n_check(n)) {
+        exit(1);
     }
 
-    for ( j = 0; j < n; j++ )
-    {
-      base_inv = 1.0 / ( ( double ) base[i] );
-
-      while ( seed2[j] != 0 )
-      {
-        digit = seed2[j] % base[i];
-        r[i+j*dim_num] = r[i+j*dim_num] + ( ( double ) digit ) * base_inv;
-        base_inv = base_inv / ( ( double ) base[i] );
-        seed2[j] = seed2[j] / base[i];
-      }
+    if (!halham_step_check(step)) {
+        exit(1);
     }
-  }
 
-  delete [] seed2;
+    if (!halham_seed_check(dim_num, seed)) {
+        exit(1);
+    }
 
-  return;
+    if (!halham_leap_check(dim_num, leap)) {
+        exit(1);
+    }
+
+    if (!halton_base_check(dim_num, base)) {
+        exit(1);
+    }
+    //
+    //  Calculate the data.
+    //
+    seed2 = new int[n];
+
+    for (i = 0; i < dim_num; i++) {
+        for (j = 0; j < n; j++) {
+            seed2[j] = seed[i] + (step + j) * leap[i];
+        }
+
+        for (j = 0; j < n; j++) {
+            r[i + j * dim_num] = 0.0;
+        }
+
+        for (j = 0; j < n; j++) {
+            base_inv = 1.0 / ((double) base[i]);
+
+            while (seed2[j] != 0) {
+                digit = seed2[j] % base[i];
+                r[i + j * dim_num] = r[i + j * dim_num] + ((double) digit) * base_inv;
+                base_inv = base_inv / ((double) base[i]);
+                seed2[j] = seed2[j] / base[i];
+            }
+        }
+    }
+
+    delete [] seed2;
+
+    return;
 }
 //****************************************************************************80
 
-char* CVT::i4_to_s ( int i )
+char* CVT::i4_to_s(int i)
 
 //****************************************************************************80
 //
@@ -2430,65 +2318,61 @@ char* CVT::i4_to_s ( int i )
 //    Output, char *I4_TO_S, the representation of the integer.
 //
 {
-  int digit;
-  int j;
-  int length;
-  int ten_power;
-  char *s;
+    int digit;
+    int j;
+    int length;
+    int ten_power;
+    char *s;
 
-  length = i4_log_10 ( i );
+    length = i4_log_10(i);
 
-  ten_power = ( int ) pow ( ( double ) 10, ( double ) length );
+    ten_power = (int) pow((double) 10, (double) length);
 
-  if ( i < 0 )
-  {
+    if (i < 0) {
+        length = length + 1;
+    }
+    //
+    //  Add one position for the trailing null.
+    //
     length = length + 1;
-  }
-//
-//  Add one position for the trailing null.
-//
-  length = length + 1;
 
-  s = new char[length];
+    s = new char[length];
 
-  if ( i == 0 )
-  {
-    s[0] = '0';
-    s[1] = '\0';
+    if (i == 0) {
+        s[0] = '0';
+        s[1] = '\0';
+        return s;
+    }
+    //
+    //  Now take care of the sign.
+    //
+    j = 0;
+    if (i < 0) {
+        s[j] = '-';
+        j = j + 1;
+        i = abs(i);
+    }
+    //
+    //  Find the leading digit of I, strip it off, and stick it into the string.
+    //
+    while (0 < ten_power) {
+        digit = i / ten_power;
+        s[j] = digit_to_ch(digit);
+        j = j + 1;
+        i = i - digit * ten_power;
+        ten_power = ten_power / 10;
+    }
+    //
+    //  Tack on the trailing NULL.
+    //
+    s[j] = '\0';
+    j = j + 1;
+
     return s;
-  }
-//
-//  Now take care of the sign.
-//
-  j = 0;
-  if ( i < 0 )
-  {
-    s[j] = '-';
-    j = j + 1;
-    i = abs ( i );
-  }
-//
-//  Find the leading digit of I, strip it off, and stick it into the string.
-//
-  while ( 0 < ten_power )
-  {
-    digit = i / ten_power;
-    s[j] = digit_to_ch ( digit );
-    j = j + 1;
-    i = i - digit * ten_power;
-    ten_power = ten_power / 10;
-  }
-//
-//  Tack on the trailing NULL.
-//
-  s[j] = '\0';
-  j = j + 1;
-
-  return s;
 }
 //****************************************************************************80
 
-int CVT::prime ( int n )
+int CVT::prime(int n)
 
 //****************************************************************************80
 //
@@ -2536,196 +2420,190 @@ int CVT::prime ( int n )
 //    is returned as -1.
 //
 {
-# define PRIME_MAX 1600
+#define PRIME_MAX 1600
 
-  int npvec[PRIME_MAX] = {
-        2,    3,    5,    7,   11,   13,   17,   19,   23,   29,
-       31,   37,   41,   43,   47,   53,   59,   61,   67,   71,
-       73,   79,   83,   89,   97,  101,  103,  107,  109,  113,
-      127,  131,  137,  139,  149,  151,  157,  163,  167,  173,
-      179,  181,  191,  193,  197,  199,  211,  223,  227,  229,
-      233,  239,  241,  251,  257,  263,  269,  271,  277,  281,
-      283,  293,  307,  311,  313,  317,  331,  337,  347,  349,
-      353,  359,  367,  373,  379,  383,  389,  397,  401,  409,
-      419,  421,  431,  433,  439,  443,  449,  457,  461,  463,
-      467,  479,  487,  491,  499,  503,  509,  521,  523,  541,
-      547,  557,  563,  569,  571,  577,  587,  593,  599,  601,
-      607,  613,  617,  619,  631,  641,  643,  647,  653,  659,
-      661,  673,  677,  683,  691,  701,  709,  719,  727,  733,
-      739,  743,  751,  757,  761,  769,  773,  787,  797,  809,
-      811,  821,  823,  827,  829,  839,  853,  857,  859,  863,
-      877,  881,  883,  887,  907,  911,  919,  929,  937,  941,
-      947,  953,  967,  971,  977,  983,  991,  997, 1009, 1013,
-     1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
-     1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151,
-     1153, 1163, 1171, 1181, 1187, 1193, 1201, 1213, 1217, 1223,
-     1229, 1231, 1237, 1249, 1259, 1277, 1279, 1283, 1289, 1291, 
-     1297, 1301, 1303, 1307, 1319, 1321, 1327, 1361, 1367, 1373, 
-     1381, 1399, 1409, 1423, 1427, 1429, 1433, 1439, 1447, 1451, 
-     1453, 1459, 1471, 1481, 1483, 1487, 1489, 1493, 1499, 1511, 
-     1523, 1531, 1543, 1549, 1553, 1559, 1567, 1571, 1579, 1583, 
-     1597, 1601, 1607, 1609, 1613, 1619, 1621, 1627, 1637, 1657, 
-     1663, 1667, 1669, 1693, 1697, 1699, 1709, 1721, 1723, 1733, 
-     1741, 1747, 1753, 1759, 1777, 1783, 1787, 1789, 1801, 1811, 
-     1823, 1831, 1847, 1861, 1867, 1871, 1873, 1877, 1879, 1889,
-     1901, 1907, 1913, 1931, 1933, 1949, 1951, 1973, 1979, 1987,
-     1993, 1997, 1999, 2003, 2011, 2017, 2027, 2029, 2039, 2053,
-     2063, 2069, 2081, 2083, 2087, 2089, 2099, 2111, 2113, 2129,
-     2131, 2137, 2141, 2143, 2153, 2161, 2179, 2203, 2207, 2213,
-     2221, 2237, 2239, 2243, 2251, 2267, 2269, 2273, 2281, 2287,
-     2293, 2297, 2309, 2311, 2333, 2339, 2341, 2347, 2351, 2357, 
-     2371, 2377, 2381, 2383, 2389, 2393, 2399, 2411, 2417, 2423, 
-     2437, 2441, 2447, 2459, 2467, 2473, 2477, 2503, 2521, 2531, 
-     2539, 2543, 2549, 2551, 2557, 2579, 2591, 2593, 2609, 2617, 
-     2621, 2633, 2647, 2657, 2659, 2663, 2671, 2677, 2683, 2687, 
-     2689, 2693, 2699, 2707, 2711, 2713, 2719, 2729, 2731, 2741,
-     2749, 2753, 2767, 2777, 2789, 2791, 2797, 2801, 2803, 2819, 
-     2833, 2837, 2843, 2851, 2857, 2861, 2879, 2887, 2897, 2903, 
-     2909, 2917, 2927, 2939, 2953, 2957, 2963, 2969, 2971, 2999, 
-     3001, 3011, 3019, 3023, 3037, 3041, 3049, 3061, 3067, 3079, 
-     3083, 3089, 3109, 3119, 3121, 3137, 3163, 3167, 3169, 3181, 
-     3187, 3191, 3203, 3209, 3217, 3221, 3229, 3251, 3253, 3257, 
-     3259, 3271, 3299, 3301, 3307, 3313, 3319, 3323, 3329, 3331, 
-     3343, 3347, 3359, 3361, 3371, 3373, 3389, 3391, 3407, 3413, 
-     3433, 3449, 3457, 3461, 3463, 3467, 3469, 3491, 3499, 3511, 
-     3517, 3527, 3529, 3533, 3539, 3541, 3547, 3557, 3559, 3571,
-     3581, 3583, 3593, 3607, 3613, 3617, 3623, 3631, 3637, 3643,
-     3659, 3671, 3673, 3677, 3691, 3697, 3701, 3709, 3719, 3727,
-     3733, 3739, 3761, 3767, 3769, 3779, 3793, 3797, 3803, 3821,
-     3823, 3833, 3847, 3851, 3853, 3863, 3877, 3881, 3889, 3907,
-     3911, 3917, 3919, 3923, 3929, 3931, 3943, 3947, 3967, 3989,
-     4001, 4003, 4007, 4013, 4019, 4021, 4027, 4049, 4051, 4057,
-     4073, 4079, 4091, 4093, 4099, 4111, 4127, 4129, 4133, 4139,
-     4153, 4157, 4159, 4177, 4201, 4211, 4217, 4219, 4229, 4231,
-     4241, 4243, 4253, 4259, 4261, 4271, 4273, 4283, 4289, 4297,
-     4327, 4337, 4339, 4349, 4357, 4363, 4373, 4391, 4397, 4409,
-     4421, 4423, 4441, 4447, 4451, 4457, 4463, 4481, 4483, 4493, 
-     4507, 4513, 4517, 4519, 4523, 4547, 4549, 4561, 4567, 4583, 
-     4591, 4597, 4603, 4621, 4637, 4639, 4643, 4649, 4651, 4657, 
-     4663, 4673, 4679, 4691, 4703, 4721, 4723, 4729, 4733, 4751, 
-     4759, 4783, 4787, 4789, 4793, 4799, 4801, 4813, 4817, 4831, 
-     4861, 4871, 4877, 4889, 4903, 4909, 4919, 4931, 4933, 4937, 
-     4943, 4951, 4957, 4967, 4969, 4973, 4987, 4993, 4999, 5003, 
-     5009, 5011, 5021, 5023, 5039, 5051, 5059, 5077, 5081, 5087, 
-     5099, 5101, 5107, 5113, 5119, 5147, 5153, 5167, 5171, 5179, 
-     5189, 5197, 5209, 5227, 5231, 5233, 5237, 5261, 5273, 5279,
-     5281, 5297, 5303, 5309, 5323, 5333, 5347, 5351, 5381, 5387,
-     5393, 5399, 5407, 5413, 5417, 5419, 5431, 5437, 5441, 5443,
-     5449, 5471, 5477, 5479, 5483, 5501, 5503, 5507, 5519, 5521,
-     5527, 5531, 5557, 5563, 5569, 5573, 5581, 5591, 5623, 5639,
-     5641, 5647, 5651, 5653, 5657, 5659, 5669, 5683, 5689, 5693,
-     5701, 5711, 5717, 5737, 5741, 5743, 5749, 5779, 5783, 5791,
-     5801, 5807, 5813, 5821, 5827, 5839, 5843, 5849, 5851, 5857,
-     5861, 5867, 5869, 5879, 5881, 5897, 5903, 5923, 5927, 5939,
-     5953, 5981, 5987, 6007, 6011, 6029, 6037, 6043, 6047, 6053,
-     6067, 6073, 6079, 6089, 6091, 6101, 6113, 6121, 6131, 6133,
-     6143, 6151, 6163, 6173, 6197, 6199, 6203, 6211, 6217, 6221,
-     6229, 6247, 6257, 6263, 6269, 6271, 6277, 6287, 6299, 6301,
-     6311, 6317, 6323, 6329, 6337, 6343, 6353, 6359, 6361, 6367, 
-     6373, 6379, 6389, 6397, 6421, 6427, 6449, 6451, 6469, 6473, 
-     6481, 6491, 6521, 6529, 6547, 6551, 6553, 6563, 6569, 6571, 
-     6577, 6581, 6599, 6607, 6619, 6637, 6653, 6659, 6661, 6673, 
-     6679, 6689, 6691, 6701, 6703, 6709, 6719, 6733, 6737, 6761, 
-     6763, 6779, 6781, 6791, 6793, 6803, 6823, 6827, 6829, 6833, 
-     6841, 6857, 6863, 6869, 6871, 6883, 6899, 6907, 6911, 6917, 
-     6947, 6949, 6959, 6961, 6967, 6971, 6977, 6983, 6991, 6997,
-     7001, 7013, 7019, 7027, 7039, 7043, 7057, 7069, 7079, 7103, 
-     7109, 7121, 7127, 7129, 7151, 7159, 7177, 7187, 7193, 7207, 
-     7211, 7213, 7219, 7229, 7237, 7243, 7247, 7253, 7283, 7297, 
-     7307, 7309, 7321, 7331, 7333, 7349, 7351, 7369, 7393, 7411, 
-     7417, 7433, 7451, 7457, 7459, 7477, 7481, 7487, 7489, 7499, 
-     7507, 7517, 7523, 7529, 7537, 7541, 7547, 7549, 7559, 7561, 
-     7573, 7577, 7583, 7589, 7591, 7603, 7607, 7621, 7639, 7643, 
-     7649, 7669, 7673, 7681, 7687, 7691, 7699, 7703, 7717, 7723, 
-     7727, 7741, 7753, 7757, 7759, 7789, 7793, 7817, 7823, 7829, 
-     7841, 7853, 7867, 7873, 7877, 7879, 7883, 7901, 7907, 7919,
-     7927, 7933, 7937, 7949, 7951, 7963, 7993, 8009, 8011, 8017,
-     8039, 8053, 8059, 8069, 8081, 8087, 8089, 8093, 8101, 8111,
-     8117, 8123, 8147, 8161, 8167, 8171, 8179, 8191, 8209, 8219,
-     8221, 8231, 8233, 8237, 8243, 8263, 8269, 8273, 8287, 8291,
-     8293, 8297, 8311, 8317, 8329, 8353, 8363, 8369, 8377, 8387,
-     8389, 8419, 8423, 8429, 8431, 8443, 8447, 8461, 8467, 8501,
-     8513, 8521, 8527, 8537, 8539, 8543, 8563, 8573, 8581, 8597,
-     8599, 8609, 8623, 8627, 8629, 8641, 8647, 8663, 8669, 8677,
-     8681, 8689, 8693, 8699, 8707, 8713, 8719, 8731, 8737, 8741, 
-     8747, 8753, 8761, 8779, 8783, 8803, 8807, 8819, 8821, 8831,
-     8837, 8839, 8849, 8861, 8863, 8867, 8887, 8893, 8923, 8929,
-     8933, 8941, 8951, 8963, 8969, 8971, 8999, 9001, 9007, 9011,
-     9013, 9029, 9041, 9043, 9049, 9059, 9067, 9091, 9103, 9109,
-     9127, 9133, 9137, 9151, 9157, 9161, 9173, 9181, 9187, 9199,
-     9203, 9209, 9221, 9227, 9239, 9241, 9257, 9277, 9281, 9283,
-     9293, 9311, 9319, 9323, 9337, 9341, 9343, 9349, 9371, 9377,
-     9391, 9397, 9403, 9413, 9419, 9421, 9431, 9433, 9437, 9439,
-     9461, 9463, 9467, 9473, 9479, 9491, 9497, 9511, 9521, 9533,
-     9539, 9547, 9551, 9587, 9601, 9613, 9619, 9623, 9629, 9631,
-     9643, 9649, 9661, 9677, 9679, 9689, 9697, 9719, 9721, 9733,
-     9739, 9743, 9749, 9767, 9769, 9781, 9787, 9791, 9803, 9811,
-     9817, 9829, 9833, 9839, 9851, 9857, 9859, 9871, 9883, 9887,
-     9901, 9907, 9923, 9929, 9931, 9941, 9949, 9967, 9973,10007,
-    10009,10037,10039,10061,10067,10069,10079,10091,10093,10099,
-    10103,10111,10133,10139,10141,10151,10159,10163,10169,10177,
-    10181,10193,10211,10223,10243,10247,10253,10259,10267,10271,
-    10273,10289,10301,10303,10313,10321,10331,10333,10337,10343,
-    10357,10369,10391,10399,10427,10429,10433,10453,10457,10459,
-    10463,10477,10487,10499,10501,10513,10529,10531,10559,10567,
-    10589,10597,10601,10607,10613,10627,10631,10639,10651,10657,
-    10663,10667,10687,10691,10709,10711,10723,10729,10733,10739,
-    10753,10771,10781,10789,10799,10831,10837,10847,10853,10859,
-    10861,10867,10883,10889,10891,10903,10909,10937,10939,10949,
-    10957,10973,10979,10987,10993,11003,11027,11047,11057,11059,
-    11069,11071,11083,11087,11093,11113,11117,11119,11131,11149,
-    11159,11161,11171,11173,11177,11197,11213,11239,11243,11251,
-    11257,11261,11273,11279,11287,11299,11311,11317,11321,11329,
-    11351,11353,11369,11383,11393,11399,11411,11423,11437,11443,
-    11447,11467,11471,11483,11489,11491,11497,11503,11519,11527,
-    11549,11551,11579,11587,11593,11597,11617,11621,11633,11657,
-    11677,11681,11689,11699,11701,11717,11719,11731,11743,11777,
-    11779,11783,11789,11801,11807,11813,11821,11827,11831,11833,
-    11839,11863,11867,11887,11897,11903,11909,11923,11927,11933,
-    11939,11941,11953,11959,11969,11971,11981,11987,12007,12011,
-    12037,12041,12043,12049,12071,12073,12097,12101,12107,12109,
-    12113,12119,12143,12149,12157,12161,12163,12197,12203,12211,
-    12227,12239,12241,12251,12253,12263,12269,12277,12281,12289,
-    12301,12323,12329,12343,12347,12373,12377,12379,12391,12401,
-    12409,12413,12421,12433,12437,12451,12457,12473,12479,12487,
-    12491,12497,12503,12511,12517,12527,12539,12541,12547,12553,
-    12569,12577,12583,12589,12601,12611,12613,12619,12637,12641, 
-    12647,12653,12659,12671,12689,12697,12703,12713,12721,12739, 
-    12743,12757,12763,12781,12791,12799,12809,12821,12823,12829, 
-    12841,12853,12889,12893,12899,12907,12911,12917,12919,12923, 
-    12941,12953,12959,12967,12973,12979,12983,13001,13003,13007, 
-    13009,13033,13037,13043,13049,13063,13093,13099,13103,13109, 
-    13121,13127,13147,13151,13159,13163,13171,13177,13183,13187, 
-    13217,13219,13229,13241,13249,13259,13267,13291,13297,13309, 
-    13313,13327,13331,13337,13339,13367,13381,13397,13399,13411, 
-    13417,13421,13441,13451,13457,13463,13469,13477,13487,13499 };
+    int npvec[PRIME_MAX] = {
+        2, 3, 5, 7, 11, 13, 17, 19, 23, 29,
+        31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
+        73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+        127, 131, 137, 139, 149, 151, 157, 163, 167, 173,
+        179, 181, 191, 193, 197, 199, 211, 223, 227, 229,
+        233, 239, 241, 251, 257, 263, 269, 271, 277, 281,
+        283, 293, 307, 311, 313, 317, 331, 337, 347, 349,
+        353, 359, 367, 373, 379, 383, 389, 397, 401, 409,
+        419, 421, 431, 433, 439, 443, 449, 457, 461, 463,
+        467, 479, 487, 491, 499, 503, 509, 521, 523, 541,
+        547, 557, 563, 569, 571, 577, 587, 593, 599, 601,
+        607, 613, 617, 619, 631, 641, 643, 647, 653, 659,
+        661, 673, 677, 683, 691, 701, 709, 719, 727, 733,
+        739, 743, 751, 757, 761, 769, 773, 787, 797, 809,
+        811, 821, 823, 827, 829, 839, 853, 857, 859, 863,
+        877, 881, 883, 887, 907, 911, 919, 929, 937, 941,
+        947, 953, 967, 971, 977, 983, 991, 997, 1009, 1013,
+        1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
+        1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151,
+        1153, 1163, 1171, 1181, 1187, 1193, 1201, 1213, 1217, 1223,
+        1229, 1231, 1237, 1249, 1259, 1277, 1279, 1283, 1289, 1291,
+        1297, 1301, 1303, 1307, 1319, 1321, 1327, 1361, 1367, 1373,
+        1381, 1399, 1409, 1423, 1427, 1429, 1433, 1439, 1447, 1451,
+        1453, 1459, 1471, 1481, 1483, 1487, 1489, 1493, 1499, 1511,
+        1523, 1531, 1543, 1549, 1553, 1559, 1567, 1571, 1579, 1583,
+        1597, 1601, 1607, 1609, 1613, 1619, 1621, 1627, 1637, 1657,
+        1663, 1667, 1669, 1693, 1697, 1699, 1709, 1721, 1723, 1733,
+        1741, 1747, 1753, 1759, 1777, 1783, 1787, 1789, 1801, 1811,
+        1823, 1831, 1847, 1861, 1867, 1871, 1873, 1877, 1879, 1889,
+        1901, 1907, 1913, 1931, 1933, 1949, 1951, 1973, 1979, 1987,
+        1993, 1997, 1999, 2003, 2011, 2017, 2027, 2029, 2039, 2053,
+        2063, 2069, 2081, 2083, 2087, 2089, 2099, 2111, 2113, 2129,
+        2131, 2137, 2141, 2143, 2153, 2161, 2179, 2203, 2207, 2213,
+        2221, 2237, 2239, 2243, 2251, 2267, 2269, 2273, 2281, 2287,
+        2293, 2297, 2309, 2311, 2333, 2339, 2341, 2347, 2351, 2357,
+        2371, 2377, 2381, 2383, 2389, 2393, 2399, 2411, 2417, 2423,
+        2437, 2441, 2447, 2459, 2467, 2473, 2477, 2503, 2521, 2531,
+        2539, 2543, 2549, 2551, 2557, 2579, 2591, 2593, 2609, 2617,
+        2621, 2633, 2647, 2657, 2659, 2663, 2671, 2677, 2683, 2687,
+        2689, 2693, 2699, 2707, 2711, 2713, 2719, 2729, 2731, 2741,
+        2749, 2753, 2767, 2777, 2789, 2791, 2797, 2801, 2803, 2819,
+        2833, 2837, 2843, 2851, 2857, 2861, 2879, 2887, 2897, 2903,
+        2909, 2917, 2927, 2939, 2953, 2957, 2963, 2969, 2971, 2999,
+        3001, 3011, 3019, 3023, 3037, 3041, 3049, 3061, 3067, 3079,
+        3083, 3089, 3109, 3119, 3121, 3137, 3163, 3167, 3169, 3181,
+        3187, 3191, 3203, 3209, 3217, 3221, 3229, 3251, 3253, 3257,
+        3259, 3271, 3299, 3301, 3307, 3313, 3319, 3323, 3329, 3331,
+        3343, 3347, 3359, 3361, 3371, 3373, 3389, 3391, 3407, 3413,
+        3433, 3449, 3457, 3461, 3463, 3467, 3469, 3491, 3499, 3511,
+        3517, 3527, 3529, 3533, 3539, 3541, 3547, 3557, 3559, 3571,
+        3581, 3583, 3593, 3607, 3613, 3617, 3623, 3631, 3637, 3643,
+        3659, 3671, 3673, 3677, 3691, 3697, 3701, 3709, 3719, 3727,
+        3733, 3739, 3761, 3767, 3769, 3779, 3793, 3797, 3803, 3821,
+        3823, 3833, 3847, 3851, 3853, 3863, 3877, 3881, 3889, 3907,
+        3911, 3917, 3919, 3923, 3929, 3931, 3943, 3947, 3967, 3989,
+        4001, 4003, 4007, 4013, 4019, 4021, 4027, 4049, 4051, 4057,
+        4073, 4079, 4091, 4093, 4099, 4111, 4127, 4129, 4133, 4139,
+        4153, 4157, 4159, 4177, 4201, 4211, 4217, 4219, 4229, 4231,
+        4241, 4243, 4253, 4259, 4261, 4271, 4273, 4283, 4289, 4297,
+        4327, 4337, 4339, 4349, 4357, 4363, 4373, 4391, 4397, 4409,
+        4421, 4423, 4441, 4447, 4451, 4457, 4463, 4481, 4483, 4493,
+        4507, 4513, 4517, 4519, 4523, 4547, 4549, 4561, 4567, 4583,
+        4591, 4597, 4603, 4621, 4637, 4639, 4643, 4649, 4651, 4657,
+        4663, 4673, 4679, 4691, 4703, 4721, 4723, 4729, 4733, 4751,
+        4759, 4783, 4787, 4789, 4793, 4799, 4801, 4813, 4817, 4831,
+        4861, 4871, 4877, 4889, 4903, 4909, 4919, 4931, 4933, 4937,
+        4943, 4951, 4957, 4967, 4969, 4973, 4987, 4993, 4999, 5003,
+        5009, 5011, 5021, 5023, 5039, 5051, 5059, 5077, 5081, 5087,
+        5099, 5101, 5107, 5113, 5119, 5147, 5153, 5167, 5171, 5179,
+        5189, 5197, 5209, 5227, 5231, 5233, 5237, 5261, 5273, 5279,
+        5281, 5297, 5303, 5309, 5323, 5333, 5347, 5351, 5381, 5387,
+        5393, 5399, 5407, 5413, 5417, 5419, 5431, 5437, 5441, 5443,
+        5449, 5471, 5477, 5479, 5483, 5501, 5503, 5507, 5519, 5521,
+        5527, 5531, 5557, 5563, 5569, 5573, 5581, 5591, 5623, 5639,
+        5641, 5647, 5651, 5653, 5657, 5659, 5669, 5683, 5689, 5693,
+        5701, 5711, 5717, 5737, 5741, 5743, 5749, 5779, 5783, 5791,
+        5801, 5807, 5813, 5821, 5827, 5839, 5843, 5849, 5851, 5857,
+        5861, 5867, 5869, 5879, 5881, 5897, 5903, 5923, 5927, 5939,
+        5953, 5981, 5987, 6007, 6011, 6029, 6037, 6043, 6047, 6053,
+        6067, 6073, 6079, 6089, 6091, 6101, 6113, 6121, 6131, 6133,
+        6143, 6151, 6163, 6173, 6197, 6199, 6203, 6211, 6217, 6221,
+        6229, 6247, 6257, 6263, 6269, 6271, 6277, 6287, 6299, 6301,
+        6311, 6317, 6323, 6329, 6337, 6343, 6353, 6359, 6361, 6367,
+        6373, 6379, 6389, 6397, 6421, 6427, 6449, 6451, 6469, 6473,
+        6481, 6491, 6521, 6529, 6547, 6551, 6553, 6563, 6569, 6571,
+        6577, 6581, 6599, 6607, 6619, 6637, 6653, 6659, 6661, 6673,
+        6679, 6689, 6691, 6701, 6703, 6709, 6719, 6733, 6737, 6761,
+        6763, 6779, 6781, 6791, 6793, 6803, 6823, 6827, 6829, 6833,
+        6841, 6857, 6863, 6869, 6871, 6883, 6899, 6907, 6911, 6917,
+        6947, 6949, 6959, 6961, 6967, 6971, 6977, 6983, 6991, 6997,
+        7001, 7013, 7019, 7027, 7039, 7043, 7057, 7069, 7079, 7103,
+        7109, 7121, 7127, 7129, 7151, 7159, 7177, 7187, 7193, 7207,
+        7211, 7213, 7219, 7229, 7237, 7243, 7247, 7253, 7283, 7297,
+        7307, 7309, 7321, 7331, 7333, 7349, 7351, 7369, 7393, 7411,
+        7417, 7433, 7451, 7457, 7459, 7477, 7481, 7487, 7489, 7499,
+        7507, 7517, 7523, 7529, 7537, 7541, 7547, 7549, 7559, 7561,
+        7573, 7577, 7583, 7589, 7591, 7603, 7607, 7621, 7639, 7643,
+        7649, 7669, 7673, 7681, 7687, 7691, 7699, 7703, 7717, 7723,
+        7727, 7741, 7753, 7757, 7759, 7789, 7793, 7817, 7823, 7829,
+        7841, 7853, 7867, 7873, 7877, 7879, 7883, 7901, 7907, 7919,
+        7927, 7933, 7937, 7949, 7951, 7963, 7993, 8009, 8011, 8017,
+        8039, 8053, 8059, 8069, 8081, 8087, 8089, 8093, 8101, 8111,
+        8117, 8123, 8147, 8161, 8167, 8171, 8179, 8191, 8209, 8219,
+        8221, 8231, 8233, 8237, 8243, 8263, 8269, 8273, 8287, 8291,
+        8293, 8297, 8311, 8317, 8329, 8353, 8363, 8369, 8377, 8387,
+        8389, 8419, 8423, 8429, 8431, 8443, 8447, 8461, 8467, 8501,
+        8513, 8521, 8527, 8537, 8539, 8543, 8563, 8573, 8581, 8597,
+        8599, 8609, 8623, 8627, 8629, 8641, 8647, 8663, 8669, 8677,
+        8681, 8689, 8693, 8699, 8707, 8713, 8719, 8731, 8737, 8741,
+        8747, 8753, 8761, 8779, 8783, 8803, 8807, 8819, 8821, 8831,
+        8837, 8839, 8849, 8861, 8863, 8867, 8887, 8893, 8923, 8929,
+        8933, 8941, 8951, 8963, 8969, 8971, 8999, 9001, 9007, 9011,
+        9013, 9029, 9041, 9043, 9049, 9059, 9067, 9091, 9103, 9109,
+        9127, 9133, 9137, 9151, 9157, 9161, 9173, 9181, 9187, 9199,
+        9203, 9209, 9221, 9227, 9239, 9241, 9257, 9277, 9281, 9283,
+        9293, 9311, 9319, 9323, 9337, 9341, 9343, 9349, 9371, 9377,
+        9391, 9397, 9403, 9413, 9419, 9421, 9431, 9433, 9437, 9439,
+        9461, 9463, 9467, 9473, 9479, 9491, 9497, 9511, 9521, 9533,
+        9539, 9547, 9551, 9587, 9601, 9613, 9619, 9623, 9629, 9631,
+        9643, 9649, 9661, 9677, 9679, 9689, 9697, 9719, 9721, 9733,
+        9739, 9743, 9749, 9767, 9769, 9781, 9787, 9791, 9803, 9811,
+        9817, 9829, 9833, 9839, 9851, 9857, 9859, 9871, 9883, 9887,
+        9901, 9907, 9923, 9929, 9931, 9941, 9949, 9967, 9973, 10007,
+        10009, 10037, 10039, 10061, 10067, 10069, 10079, 10091, 10093, 10099,
+        10103, 10111, 10133, 10139, 10141, 10151, 10159, 10163, 10169, 10177,
+        10181, 10193, 10211, 10223, 10243, 10247, 10253, 10259, 10267, 10271,
+        10273, 10289, 10301, 10303, 10313, 10321, 10331, 10333, 10337, 10343,
+        10357, 10369, 10391, 10399, 10427, 10429, 10433, 10453, 10457, 10459,
+        10463, 10477, 10487, 10499, 10501, 10513, 10529, 10531, 10559, 10567,
+        10589, 10597, 10601, 10607, 10613, 10627, 10631, 10639, 10651, 10657,
+        10663, 10667, 10687, 10691, 10709, 10711, 10723, 10729, 10733, 10739,
+        10753, 10771, 10781, 10789, 10799, 10831, 10837, 10847, 10853, 10859,
+        10861, 10867, 10883, 10889, 10891, 10903, 10909, 10937, 10939, 10949,
+        10957, 10973, 10979, 10987, 10993, 11003, 11027, 11047, 11057, 11059,
+        11069, 11071, 11083, 11087, 11093, 11113, 11117, 11119, 11131, 11149,
+        11159, 11161, 11171, 11173, 11177, 11197, 11213, 11239, 11243, 11251,
+        11257, 11261, 11273, 11279, 11287, 11299, 11311, 11317, 11321, 11329,
+        11351, 11353, 11369, 11383, 11393, 11399, 11411, 11423, 11437, 11443,
+        11447, 11467, 11471, 11483, 11489, 11491, 11497, 11503, 11519, 11527,
+        11549, 11551, 11579, 11587, 11593, 11597, 11617, 11621, 11633, 11657,
+        11677, 11681, 11689, 11699, 11701, 11717, 11719, 11731, 11743, 11777,
+        11779, 11783, 11789, 11801, 11807, 11813, 11821, 11827, 11831, 11833,
+        11839, 11863, 11867, 11887, 11897, 11903, 11909, 11923, 11927, 11933,
+        11939, 11941, 11953, 11959, 11969, 11971, 11981, 11987, 12007, 12011,
+        12037, 12041, 12043, 12049, 12071, 12073, 12097, 12101, 12107, 12109,
+        12113, 12119, 12143, 12149, 12157, 12161, 12163, 12197, 12203, 12211,
+        12227, 12239, 12241, 12251, 12253, 12263, 12269, 12277, 12281, 12289,
+        12301, 12323, 12329, 12343, 12347, 12373, 12377, 12379, 12391, 12401,
+        12409, 12413, 12421, 12433, 12437, 12451, 12457, 12473, 12479, 12487,
+        12491, 12497, 12503, 12511, 12517, 12527, 12539, 12541, 12547, 12553,
+        12569, 12577, 12583, 12589, 12601, 12611, 12613, 12619, 12637, 12641,
+        12647, 12653, 12659, 12671, 12689, 12697, 12703, 12713, 12721, 12739,
+        12743, 12757, 12763, 12781, 12791, 12799, 12809, 12821, 12823, 12829,
+        12841, 12853, 12889, 12893, 12899, 12907, 12911, 12917, 12919, 12923,
+        12941, 12953, 12959, 12967, 12973, 12979, 12983, 13001, 13003, 13007,
+        13009, 13033, 13037, 13043, 13049, 13063, 13093, 13099, 13103, 13109,
+        13121, 13127, 13147, 13151, 13159, 13163, 13171, 13177, 13183, 13187,
+        13217, 13219, 13229, 13241, 13249, 13259, 13267, 13291, 13297, 13309,
+        13313, 13327, 13331, 13337, 13339, 13367, 13381, 13397, 13399, 13411,
+        13417, 13421, 13441, 13451, 13457, 13463, 13469, 13477, 13487, 13499
+    };
 
-  if ( n == -1 )
-  {
-    return PRIME_MAX;
-  }
-  else if ( n == 0 )
-  {
-    return 1;
-  }
-  else if ( n <= PRIME_MAX )
-  {
-    return npvec[n-1];
-  }
-  else
-  {
-    cout << "\n";
-    cout << "PRIME - Fatal error!\n";
-    cout << "  Unexpected input value of n = " << n << "\n";
-    exit ( 1 );
-  }
+    if (n == -1) {
+        return PRIME_MAX;
+    } else if (n == 0) {
+        return 1;
+    } else if (n <= PRIME_MAX) {
+        return npvec[n - 1];
+    } else {
+        cout << "\n";
+        cout << "PRIME - Fatal error!\n";
+        cout << "  Unexpected input value of n = " << n << "\n";
+        exit(1);
+    }
 
-  return 0;
-# undef PRIME_MAX
+    return 0;
+#undef PRIME_MAX
 }
 //****************************************************************************80
 
-double CVT::r8_epsilon ( void )
+double CVT::r8_epsilon(void)
 
 //****************************************************************************80
 //
@@ -2758,20 +2636,19 @@ double CVT::r8_epsilon ( void )
 //    Output, double R8_EPSILON, the double precision point round-off unit.
 //
 {
-  double r;
+    double r;
 
-  r = 1.0;
+    r = 1.0;
 
-  while ( 1.0 < ( double ) ( 1.0 + r )  )
-  {
-    r = r / 2.0;
-  }
+    while (1.0 < (double) (1.0 + r)) {
+        r = r / 2.0;
+    }
 
-  return ( 2.0 * r );
+    return ( 2.0 * r);
 }
 //****************************************************************************80
 
-double CVT::r8_huge ( void )
+double CVT::r8_huge(void)
 
 //****************************************************************************80
 //
@@ -2801,11 +2678,11 @@ double CVT::r8_huge ( void )
 //    Output, double R8_HUGE, a "huge" R8.
 //
 {
-  return HUGE_VAL;
+    return HUGE_VAL;
 }
 //****************************************************************************80
 
-void CVT::r8mat_transpose_print ( int m, int n, double a[], const char *title )
+void CVT::r8mat_transpose_print(int m, int n, double a[], const char *title)
 
 //****************************************************************************80
 //
@@ -2834,14 +2711,14 @@ void CVT::r8mat_transpose_print ( int m, int n, double a[], const char *title )
 //    Input, char *TITLE, an optional title.
 //
 {
-  r8mat_transpose_print_some ( m, n, a, 1, 1, m, n, title );
+    r8mat_transpose_print_some(m, n, a, 1, 1, m, n, title);
 
-  return;
+    return;
 }
 //****************************************************************************80
 
-void CVT::r8mat_transpose_print_some ( int m, int n, double a[], int ilo, int jlo, 
-  int ihi, int jhi, const char *title )
+void CVT::r8mat_transpose_print_some(int m, int n, double a[], int ilo, int jlo,
+        int ihi, int jhi, const char *title)
 
 //****************************************************************************80
 //
@@ -2874,62 +2751,57 @@ void CVT::r8mat_transpose_print_some ( int m, int n, double a[], int ilo, int jl
 //    Input, char *TITLE, an optional title.
 //
 {
-# define INCX 5
+#define INCX 5
 
-  int i;
-  int i2;
-  int i2hi;
-  int i2lo;
-  int inc;
-  int j;
-  int j2hi;
-  int j2lo;
+    int i;
+    int i2;
+    int i2hi;
+    int i2lo;
+    int inc;
+    int j;
+    int j2hi;
+    int j2lo;
 
-  if ( 0 < s_len_trim ( title ) )
-  {
-    cout << "\n";
-    cout << title << "\n";
-  }
+    if (0 < s_len_trim(title)) {
+        cout << "\n";
+        cout << title << "\n";
+    }
 
-  for ( i2lo = i4_max ( ilo, 1 ); i2lo <= i4_min ( ihi, m ); i2lo = i2lo + INCX )
-  {
-    i2hi = i2lo + INCX - 1;
-    i2hi = i4_min ( i2hi, m );
-    i2hi = i4_min ( i2hi, ihi );
+    for (i2lo = i4_max(ilo, 1); i2lo <= i4_min(ihi, m); i2lo = i2lo + INCX) {
+        i2hi = i2lo + INCX - 1;
+        i2hi = i4_min(i2hi, m);
+        i2hi = i4_min(i2hi, ihi);
 
-    inc = i2hi + 1 - i2lo;
+        inc = i2hi + 1 - i2lo;
 
-    cout << "\n";
-    cout << "  Row: ";
-    for ( i = i2lo; i <= i2hi; i++ )
-    {
-      cout << setw(7) << i << "       ";
+        cout << "\n";
+        cout << "  Row: ";
+        for (i = i2lo; i <= i2hi; i++) {
+            cout << setw(7) << i << "       ";
+        }
+        cout << "\n";
+        cout << "  Col\n";
+
+        j2lo = i4_max(jlo, 1);
+        j2hi = i4_min(jhi, n);
+
+        for (j = j2lo; j <= j2hi; j++) {
+            cout << setw(5) << j << " ";
+            for (i2 = 1; i2 <= inc; i2++) {
+                i = i2lo - 1 + i2;
+                cout << setw(14) << a[(i - 1)+(j - 1) * m];
+            }
+            cout << "\n";
+        }
     }
     cout << "\n";
-    cout << "  Col\n";
 
-    j2lo = i4_max ( jlo, 1 );
-    j2hi = i4_min ( jhi, n );
-
-    for ( j = j2lo; j <= j2hi; j++ )
-    {
-      cout << setw(5) << j << " ";
-      for ( i2 = 1; i2 <= inc; i2++ )
-      {
-        i = i2lo - 1 + i2;
-        cout << setw(14) << a[(i-1)+(j-1)*m];
-      }
-      cout << "\n";
-    }
-  }
-  cout << "\n";
-
-  return;
-# undef INCX
+    return;
+#undef INCX
 }
 //****************************************************************************80
 
-void CVT::r8mat_uniform_01 ( int m, int n, int *seed, double r[] )
+void CVT::r8mat_uniform_01(int m, int n, int *seed, double r[])
 
 //****************************************************************************80
 //
@@ -2982,32 +2854,29 @@ void CVT::r8mat_uniform_01 ( int m, int n, int *seed, double r[] )
 //    Output, double R[M*N], a matrix of pseudorandom values.
 //
 {
-  int i;
-  int j;
-  int k;
+    int i;
+    int j;
+    int k;
 
-  for ( j = 0; j < n; j++ )
-  {
-    for ( i = 0; i < m; i++ )
-    {
-      k = *seed / 127773;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < m; i++) {
+            k = *seed / 127773;
 
-      *seed = 16807 * ( *seed - k * 127773 ) - k * 2836;
+            *seed = 16807 * (*seed - k * 127773) - k * 2836;
 
-      if ( *seed < 0 )
-      {
-        *seed = *seed + 2147483647;
-      }
+            if (*seed < 0) {
+                *seed = *seed + 2147483647;
+            }
 
-      r[i+j*m] = ( double ) ( *seed ) * 4.656612875E-10;
+            r[i + j * m] = (double) (*seed) * 4.656612875E-10;
+        }
     }
-  }
 
-  return;
+    return;
 }
 //****************************************************************************80
 
-unsigned long CVT::random_initialize ( int seed )
+unsigned long CVT::random_initialize(int seed)
 
 //****************************************************************************80
 //
@@ -3048,38 +2917,33 @@ unsigned long CVT::random_initialize ( int seed )
 //    that was zero, the value selected by this routine.
 //
 {
-  unsigned long ul_seed;
+    unsigned long ul_seed;
 
-  if ( seed != 0 )
-  {
-    if ( DEBUG )
-    {
-      cout << "\n";
-      cout << "RANDOM_INITIALIZE\n";
-      cout << "  Initialize RANDOM with user SEED = " << seed << "\n";
+    if (seed != 0) {
+        if (DEBUG) {
+            cout << "\n";
+            cout << "RANDOM_INITIALIZE\n";
+            cout << "  Initialize RANDOM with user SEED = " << seed << "\n";
+        }
+    } else {
+        seed = get_seed();
+        if (DEBUG) {
+            cout << "\n";
+            cout << "RANDOM_INITIALIZE\n";
+            cout << "  Initialize RAND with arbitrary SEED = " << seed << "\n";
+        }
     }
-  }
-  else
-  {
-    seed = get_seed ( );
-    if ( DEBUG )
-    {
-      cout << "\n";
-      cout << "RANDOM_INITIALIZE\n";
-      cout << "  Initialize RAND with arbitrary SEED = " << seed << "\n";
-    }
-  }
-//
-//  Now set the seed.
-//
-  ul_seed = ( unsigned long ) seed;
-  srand ( ul_seed );
+    //
+    //  Now set the seed.
+    //
+    ul_seed = (unsigned long) seed;
+    srand(ul_seed);
 
-  return ul_seed;
+    return ul_seed;
 }
 //****************************************************************************80
 
-bool CVT::s_eqi ( const char *s1, const char *s2 )
+bool CVT::s_eqi(const char *s1, const char *s2)
 
 //****************************************************************************80
 //
@@ -3102,57 +2966,48 @@ bool CVT::s_eqi ( const char *s1, const char *s2 )
 //    Output, bool S_EQI, is true if the strings are equal. 
 //
 {
-  int i;
-  int nchar;
-  int nchar1;
-  int nchar2;
+    int i;
+    int nchar;
+    int nchar1;
+    int nchar2;
 
-  nchar1 = strlen ( s1 );
-  nchar2 = strlen ( s2 );
-  nchar = i4_min ( nchar1, nchar2 );
+    nchar1 = strlen(s1);
+    nchar2 = strlen(s2);
+    nchar = i4_min(nchar1, nchar2);
 
-//
-//  The strings are not equal if they differ over their common length.
-//
-  for ( i = 0; i < nchar; i++ ) 
-  {
+    //
+    //  The strings are not equal if they differ over their common length.
+    //
+    for (i = 0; i < nchar; i++) {
 
-    if ( ch_cap ( s1[i] ) != ch_cap ( s2[i] ) ) 
-    {
-      return false;
+        if (ch_cap(s1[i]) != ch_cap(s2[i])) {
+            return false;
+        }
     }
-  }
-//
-//  The strings are not equal if the longer one includes nonblanks
-//  in the tail.
-//
-  if ( nchar < nchar1 ) 
-  {
-    for ( i = nchar; i < nchar1; i++ ) 
-    {
-      if ( s1[i] != ' ' ) 
-      {
-        return false;
-      }
-    } 
-  }
-  else if ( nchar < nchar2 ) 
-  {
-    for ( i = nchar; i < nchar2; i++ )
-    {
-      if ( s2[i] != ' ' ) 
-      {
-        return false;
-      }
-    } 
-  }
+    //
+    //  The strings are not equal if the longer one includes nonblanks
+    //  in the tail.
+    //
+    if (nchar < nchar1) {
+        for (i = nchar; i < nchar1; i++) {
+            if (s1[i] != ' ') {
+                return false;
+            }
+        }
+    } else if (nchar < nchar2) {
+        for (i = nchar; i < nchar2; i++) {
+            if (s2[i] != ' ') {
+                return false;
+            }
+        }
+    }
 
-  return true;
+    return true;
 
 }
 //****************************************************************************80
 
-int CVT::s_len_trim ( const char* s )
+int CVT::s_len_trim(const char* s)
 
 //****************************************************************************80
 //
@@ -3180,27 +3035,25 @@ int CVT::s_len_trim ( const char* s )
 //    If S_LEN_TRIM is 0, then the string is entirely blank.
 //
 {
-  int n;
-  char* t;
+    int n;
+    char* t;
 
-  n = strlen ( s );
-  t = (char*) (s + strlen ( s ) - 1);
+    n = strlen(s);
+    t = (char*) (s + strlen(s) - 1);
 
-  while ( 0 < n ) 
-  {
-    if ( *t != ' ' )
-    {
-      return n;
+    while (0 < n) {
+        if (*t != ' ') {
+            return n;
+        }
+        t--;
+        n--;
     }
-    t--;
-    n--;
-  }
 
-  return n;
+    return n;
 }
 //****************************************************************************80
 
-double CVT::s_to_r8 ( const char *s, int *lchar, bool *error )
+double CVT::s_to_r8(const char *s, int *lchar, bool *error)
 
 //****************************************************************************80
 //
@@ -3281,244 +3134,181 @@ double CVT::s_to_r8 ( const char *s, int *lchar, bool *error )
 //    Output, double S_TO_R8, the real value that was read from the string.
 //
 {
-  char c;
-  int ihave;
-  int isgn;
-  int iterm;
-  int jbot;
-  int jsgn;
-  int jtop;
-  int nchar;
-  int ndig;
-  double r;
-  double rbot;
-  double rexp;
-  double rtop;
-  char TAB = 9;
+    char c;
+    int ihave;
+    int isgn;
+    int iterm;
+    int jbot;
+    int jsgn;
+    int jtop;
+    int nchar;
+    int ndig;
+    double r;
+    double rbot;
+    double rexp;
+    double rtop;
+    char TAB = 9;
 
-  nchar = s_len_trim ( s );
-  *error = false;
-  r = 0.0;
-  *lchar = -1;
-  isgn = 1;
-  rtop = 0.0;
-  rbot = 1.0;
-  jsgn = 1;
-  jtop = 0;
-  jbot = 1;
-  ihave = 1;
-  iterm = 0;
+    nchar = s_len_trim(s);
+    *error = false;
+    r = 0.0;
+    *lchar = -1;
+    isgn = 1;
+    rtop = 0.0;
+    rbot = 1.0;
+    jsgn = 1;
+    jtop = 0;
+    jbot = 1;
+    ihave = 1;
+    iterm = 0;
 
-  for ( ; ; )
-  {
-    c = s[*lchar+1];
-    *lchar = *lchar + 1;
-//
-//  Blank or TAB character.
-//
-    if ( c == ' ' || c == TAB )
-    {
-      if ( ihave == 2 )
-      {
-      }
-      else if ( ihave == 6 || ihave == 7 )
-      {
-        iterm = 1;
-      }
-      else if ( 1 < ihave )
-      {
-        ihave = 11;
-      }
-    }
-//
-//  Comma.
-//
-    else if ( c == ',' || c == ';' )
-    {
-      if ( ihave != 1 )
-      {
-        iterm = 1;
-        ihave = 12;
+    for (;;) {
+        c = s[*lchar + 1];
         *lchar = *lchar + 1;
-      }
-    }
-//
-//  Minus sign.
-//
-    else if ( c == '-' )
-    {
-      if ( ihave == 1 )
-      {
-        ihave = 2;
-        isgn = -1;
-      }
-      else if ( ihave == 6 )
-      {
-        ihave = 7;
-        jsgn = -1;
-      }
-      else
-      {
-        iterm = 1;
-      }
-    }
-//
-//  Plus sign.
-//
-    else if ( c == '+' )
-    {
-      if ( ihave == 1 )
-      {
-        ihave = 2;
-      }
-      else if ( ihave == 6 )
-      {
-        ihave = 7;
-      }
-      else
-      {
-        iterm = 1;
-      }
-    }
-//
-//  Decimal point.
-//
-    else if ( c == '.' )
-    {
-      if ( ihave < 4 )
-      {
-        ihave = 4;
-      }
-      else if ( 6 <= ihave && ihave <= 8 )
-      {
-        ihave = 9;
-      }
-      else
-      {
-        iterm = 1;
-      }
-    }
-//
-//  Exponent marker.
-//
-    else if ( ch_eqi ( c, 'E' ) || ch_eqi ( c, 'D' ) )
-    {
-      if ( ihave < 6 )
-      {
-        ihave = 6;
-      }
-      else
-      {
-        iterm = 1;
-      }
-    }
-//
-//  Digit.
-//
-    else if ( ihave < 11 && '0' <= c && c <= '9' )
-    {
-      if ( ihave <= 2 )
-      {
-        ihave = 3;
-      }
-      else if ( ihave == 4 )
-      {
-        ihave = 5;
-      }
-      else if ( ihave == 6 || ihave == 7 )
-      {
-        ihave = 8;
-      }
-      else if ( ihave == 9 )
-      {
-        ihave = 10;
-      }
+        //
+        //  Blank or TAB character.
+        //
+        if (c == ' ' || c == TAB) {
+            if (ihave == 2) {
+            } else if (ihave == 6 || ihave == 7) {
+                iterm = 1;
+            } else if (1 < ihave) {
+                ihave = 11;
+            }
+        }//
+            //  Comma.
+            //
+        else if (c == ',' || c == ';') {
+            if (ihave != 1) {
+                iterm = 1;
+                ihave = 12;
+                *lchar = *lchar + 1;
+            }
+        }//
+            //  Minus sign.
+            //
+        else if (c == '-') {
+            if (ihave == 1) {
+                ihave = 2;
+                isgn = -1;
+            } else if (ihave == 6) {
+                ihave = 7;
+                jsgn = -1;
+            } else {
+                iterm = 1;
+            }
+        }//
+            //  Plus sign.
+            //
+        else if (c == '+') {
+            if (ihave == 1) {
+                ihave = 2;
+            } else if (ihave == 6) {
+                ihave = 7;
+            } else {
+                iterm = 1;
+            }
+        }//
+            //  Decimal point.
+            //
+        else if (c == '.') {
+            if (ihave < 4) {
+                ihave = 4;
+            } else if (6 <= ihave && ihave <= 8) {
+                ihave = 9;
+            } else {
+                iterm = 1;
+            }
+        }//
+            //  Exponent marker.
+            //
+        else if (ch_eqi(c, 'E') || ch_eqi(c, 'D')) {
+            if (ihave < 6) {
+                ihave = 6;
+            } else {
+                iterm = 1;
+            }
+        }//
+            //  Digit.
+            //
+        else if (ihave < 11 && '0' <= c && c <= '9') {
+            if (ihave <= 2) {
+                ihave = 3;
+            } else if (ihave == 4) {
+                ihave = 5;
+            } else if (ihave == 6 || ihave == 7) {
+                ihave = 8;
+            } else if (ihave == 9) {
+                ihave = 10;
+            }
 
-      ndig = ch_to_digit ( c );
+            ndig = ch_to_digit(c);
 
-      if ( ihave == 3 )
-      {
-        rtop = 10.0 * rtop + ( double ) ndig;
-      }
-      else if ( ihave == 5 )
-      {
-        rtop = 10.0 * rtop + ( double ) ndig;
-        rbot = 10.0 * rbot;
-      }
-      else if ( ihave == 8 )
-      {
-        jtop = 10 * jtop + ndig;
-      }
-      else if ( ihave == 10 )
-      {
-        jtop = 10 * jtop + ndig;
-        jbot = 10 * jbot;
-      }
+            if (ihave == 3) {
+                rtop = 10.0 * rtop + (double) ndig;
+            } else if (ihave == 5) {
+                rtop = 10.0 * rtop + (double) ndig;
+                rbot = 10.0 * rbot;
+            } else if (ihave == 8) {
+                jtop = 10 * jtop + ndig;
+            } else if (ihave == 10) {
+                jtop = 10 * jtop + ndig;
+                jbot = 10 * jbot;
+            }
+
+        }//
+            //  Anything else is regarded as a terminator.
+            //
+        else {
+            iterm = 1;
+        }
+        //
+        //  If we haven't seen a terminator, and we haven't examined the
+        //  entire string, go get the next character.
+        //
+        if (iterm == 1 || nchar <= *lchar + 1) {
+            break;
+        }
 
     }
-//
-//  Anything else is regarded as a terminator.
-//
-    else
-    {
-      iterm = 1;
+    //
+    //  If we haven't seen a terminator, and we have examined the
+    //  entire string, then we're done, and LCHAR is equal to NCHAR.
+    //
+    if (iterm != 1 && (*lchar) + 1 == nchar) {
+        *lchar = nchar;
     }
-//
-//  If we haven't seen a terminator, and we haven't examined the
-//  entire string, go get the next character.
-//
-    if ( iterm == 1 || nchar <= *lchar + 1 )
-    {
-      break;
+    //
+    //  Number seems to have terminated.  Have we got a legal number?
+    //  Not if we terminated in states 1, 2, 6 or 7!
+    //
+    if (ihave == 1 || ihave == 2 || ihave == 6 || ihave == 7) {
+        *error = true;
+        return r;
+    }
+    //
+    //  Number seems OK.  Form it.
+    //
+    if (jtop == 0) {
+        rexp = 1.0;
+    } else {
+        if (jbot == 1) {
+            rexp = pow(10.0, jsgn * jtop);
+        } else {
+            rexp = jsgn * jtop;
+            rexp = rexp / jbot;
+            rexp = pow(10.0, rexp);
+        }
+
     }
 
-  }
-//
-//  If we haven't seen a terminator, and we have examined the
-//  entire string, then we're done, and LCHAR is equal to NCHAR.
-//
-  if ( iterm != 1 && (*lchar) + 1 == nchar )
-  {
-    *lchar = nchar;
-  }
-//
-//  Number seems to have terminated.  Have we got a legal number?
-//  Not if we terminated in states 1, 2, 6 or 7!
-//
-  if ( ihave == 1 || ihave == 2 || ihave == 6 || ihave == 7 )
-  {
-    *error = true;
+    r = isgn * rexp * rtop / rbot;
+
     return r;
-  }
-//
-//  Number seems OK.  Form it.
-//
-  if ( jtop == 0 )
-  {
-    rexp = 1.0;
-  }
-  else
-  {
-    if ( jbot == 1 )
-    {
-      rexp = pow ( 10.0, jsgn * jtop );
-    }
-    else
-    {
-      rexp = jsgn * jtop;
-      rexp = rexp / jbot;
-      rexp = pow ( 10.0, rexp );
-    }
-
-  }
-
-  r = isgn * rexp * rtop / rbot;
-
-  return r;
 }
 //****************************************************************************80
 
-bool CVT::s_to_r8vec ( const char *s, int n, double rvec[] )
+bool CVT::s_to_r8vec(const char *s, int n, double rvec[])
 
 //****************************************************************************80
 //
@@ -3549,29 +3339,27 @@ bool CVT::s_to_r8vec ( const char *s, int n, double rvec[] )
 //    Output, bool S_TO_R8VEC, is true if an error occurred.
 //
 {
-  bool error;
-  int i;
-  int lchar;
-  double x;
+    bool error;
+    int i;
+    int lchar;
+    double x;
 
-  for ( i = 0; i < n; i++ )
-  {
-    rvec[i] = s_to_r8 ( s, &lchar, &error );
+    for (i = 0; i < n; i++) {
+        rvec[i] = s_to_r8(s, &lchar, &error);
 
-    if ( error )
-    {
-      return error;
+        if (error) {
+            return error;
+        }
+
+        s = s + lchar;
+
     }
 
-    s = s + lchar;
-
-  }
-
-  return error;
+    return error;
 }
 //****************************************************************************80
 
-void CVT::timestamp ( void )
+void CVT::timestamp(void)
 
 //****************************************************************************80
 //
@@ -3600,26 +3388,26 @@ void CVT::timestamp ( void )
 //    None
 //
 {
-# define TIME_SIZE 40
+#define TIME_SIZE 40
 
-  static char time_buffer[TIME_SIZE];
-  const struct tm *tm;
-  size_t len;
-  time_t now;
+    static char time_buffer[TIME_SIZE];
+    const struct tm *tm;
+    size_t len;
+    time_t now;
 
-  now = time ( NULL );
-  tm = localtime ( &now );
+    now = time(NULL);
+    tm = localtime(&now);
 
-  len = strftime ( time_buffer, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm );
+    len = strftime(time_buffer, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm);
 
-  cout << time_buffer << "\n";
+    cout << time_buffer << "\n";
 
-  return;
-# undef TIME_SIZE
+    return;
+#undef TIME_SIZE
 }
 //****************************************************************************80
 
-char* CVT::timestring ( void )
+char* CVT::timestring(void)
 
 //****************************************************************************80
 //
@@ -3648,26 +3436,26 @@ char* CVT::timestring ( void )
 //    Output, char *TIMESTRING, a string containing the current YMDHMS date.
 //
 {
-# define TIME_SIZE 40
+#define TIME_SIZE 40
 
-  const struct tm *tm;
-  size_t len;
-  time_t now;
-  char *s;
+    const struct tm *tm;
+    size_t len;
+    time_t now;
+    char *s;
 
-  now = time ( NULL );
-  tm = localtime ( &now );
+    now = time(NULL);
+    tm = localtime(&now);
 
-  s = new char[TIME_SIZE];
+    s = new char[TIME_SIZE];
 
-  len = strftime ( s, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm );
+    len = strftime(s, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm);
 
-  return s;
-# undef TIME_SIZE
+    return s;
+#undef TIME_SIZE
 }
 //****************************************************************************80
 
-void CVT::tuple_next_fast ( int m, int n, int rank, int x[] )
+void CVT::tuple_next_fast(int m, int n, int rank, int x[])
 
 //****************************************************************************80
 //
@@ -3738,56 +3526,47 @@ void CVT::tuple_next_fast ( int m, int n, int rank, int x[] )
 //    is being done.
 //
 {
-  static int *base = NULL;
-  int i;
-//
-  if ( rank < 0 )
-  {
-    if ( m <= 0 )
-    {
-      cout << "\n";
-      cout << "TUPLE_NEXT_FAST - Fatal error!\n";
-      cout << "  The value M <= 0 is not legal.\n";
-      cout << "  M = " << m << "\n";
-      exit ( 1 );
-    }
-    if ( n <= 0 )
-    {
-      cout << "\n";
-      cout << "TUPLE_NEXT_FAST - Fatal error!\n";
-      cout << "  The value N <= 0 is not legal.\n";
-      cout << "  N = " << n << "\n";
-      exit ( 1 );
-    }
+    static int *base = NULL;
+    int i;
+    //
+    if (rank < 0) {
+        if (m <= 0) {
+            cout << "\n";
+            cout << "TUPLE_NEXT_FAST - Fatal error!\n";
+            cout << "  The value M <= 0 is not legal.\n";
+            cout << "  M = " << m << "\n";
+            exit(1);
+        }
+        if (n <= 0) {
+            cout << "\n";
+            cout << "TUPLE_NEXT_FAST - Fatal error!\n";
+            cout << "  The value N <= 0 is not legal.\n";
+            cout << "  N = " << n << "\n";
+            exit(1);
+        }
 
-    if ( base )
-    {
-      delete [] base;
-    }
-    base = new int[n];
+        if (base) {
+            delete [] base;
+        }
+        base = new int[n];
 
-    base[n-1] = 1;
-    for ( i = n-2; 0 <= i; i-- )
-    {
-      base[i] = base[i+1] * m;
+        base[n - 1] = 1;
+        for (i = n - 2; 0 <= i; i--) {
+            base[i] = base[i + 1] * m;
+        }
+        for (i = 0; i < n; i++) {
+            x[i] = -1;
+        }
+    } else {
+        for (i = 0; i < n; i++) {
+            x[i] = ((rank / base[i]) % m) + 1;
+        }
     }
-    for ( i = 0; i < n; i++ )
-    {
-      x[i] = -1;
-    }
-  }
-  else
-  {
-    for ( i = 0; i < n; i++ )
-    {
-      x[i] = ( ( rank / base[i] ) % m ) + 1;
-    }
-  }
-  return;
+    return;
 }
 //****************************************************************************80
 
-void CVT::user_init ( int dim_num, int n, int *seed, double r[] )
+void CVT::user_init(int dim_num, int n, int *seed, double r[])
 // Originally "user(...)" 
 //****************************************************************************80
 //
@@ -3835,25 +3614,22 @@ void CVT::user_init ( int dim_num, int n, int *seed, double r[] )
 //    Output, double R[DIM_NUM*N], the sample values.
 //
 {
-# define PI 3.141592653589793
+    double angle;
+    int j;
+    double radius;
 
-  double angle;
-  int j;
-  double radius;
+    for (j = 0; j < n; j++) {
+        angle = 2.0 * PI * random(0., 1.);
+        radius = sqrt(random(0., 1.));
+        r[0 + j * 2] = radius * cos(angle);
+        r[1 + j * 2] = radius * sin(angle);
+    }
 
-  for ( j = 0; j < n; j++ )
-  {
-    angle = 2.0 * PI * random(0.,1.);
-    radius = sqrt ( random(0.,1.) );
-    r[0+j*2] = radius * cos ( angle );
-    r[1+j*2] = radius * sin ( angle );
-  }
-
-  return;
-# undef PI
+    return;
 }
 #if 0
-void CVT::user_sample ( int dim_num, int n, int *seed, double r[] )
+
+void CVT::user_sample(int dim_num, int n, int *seed, double r[])
 // Originally: "user(...)"
 //****************************************************************************80
 //
@@ -3901,30 +3677,91 @@ void CVT::user_sample ( int dim_num, int n, int *seed, double r[] )
 //    Output, double R[DIM_NUM*N], the sample values.
 //
 {
-# define PI 3.141592653589793
 
-  double angle;
-  int j;
-  double radius;
+    double angle;
+    int j;
+    double radius;
 
-  for ( j = 0; j < n; j++ )
-  {
-    angle = 2.0 * PI * random(0.,1.);
-    radius = sqrt ( random(0.,1.) );
-    r[0+j*2] = radius * cos ( angle );
-    r[1+j*2] = radius * sin ( angle );
-  }
+    for (j = 0; j < n; j++) {
+        angle = 2.0 * PI * random(0., 1.);
+        radius = sqrt(random(0., 1.));
+        r[0 + j * 2] = radius * cos(angle);
+        r[1 + j * 2] = radius * sin(angle);
+    }
 
-  return;
-# undef PI
+    return;
 }
 
 #endif 
 //----------------------------------------------------------------------
 // Generate a random number between a and b
-double CVT::random(double a, double b)
-{
-	// use system version of random, not class version
-	double r = ::random() / (double) RAND_MAX;
-	return a + r*(b-a);
+
+double CVT::random(double a, double b) {
+    // use system version of random, not class version
+    double r = ::random() / (double) RAND_MAX;
+    return a + r * (b - a);
+}
+
+
+// Load the output file for specified iteration
+//  INPUT:
+//  -1 = "final"
+//  -2 = "initial"
+//  0->inf = that specific iteration number.
+//  OUTPUT:
+//   0 = Everything loaded ok
+//   nonzero = ERRORS loading file (most likely file does not exist
+int CVT::cvt_load(int iter) {
+
+    char intermediate_file[80];
+
+    cvt_get_filename(iter, intermediate_file);
+
+    int error = data_read(intermediate_file, dim_num, nb_pts, generators);
+
+    if (!error) {
+        printf("Finished loading generators\n");
+    } else {
+        printf("ERRORS encountered loading file for specified iteration\n");
+    }
+    return error;
+}
+
+// Write the output file for a specified iteration (should call to
+// cvt_write(...)
+
+void CVT::cvt_checkpoint(int iter) {
+
+    char intermediate_file[80];
+
+    cvt_get_filename(iter, intermediate_file);
+
+    // Checkpoint with essential information only. When we load with cvt_load,
+    // the non-essential information is ignored. That is, the non-essential info
+    // is part of the comment section in the file. And by passing false as the
+    // last parameter we prevent the comments from writing to file anyway. 
+    cvt_write(dim_num, nb_pts, 0, 0, 0, "none",
+            0, 0, iter, 0, 0, "none", 0, generators,
+            intermediate_file, false);
+}
+
+void CVT::cvt_get_file_prefix(char* filename_buffer) {
+    sprintf(filename_buffer, "%s", cvt_file_name);
+}
+
+void CVT::cvt_get_filename(int iter, char *filename_buffer) {
+    if (iter < -2) {
+        printf("ERROR! UNKNOWN iter FLAG IN %s!", __FILE__);
+        exit(EXIT_FAILURE);
+    }
+    char prefix[80];
+    this->cvt_get_file_prefix(prefix);
+
+    if (iter == -2) {
+        sprintf(filename_buffer, "%s_initial.txt", prefix);
+    } else if (iter == -1) {
+        sprintf(filename_buffer, "%s_final.txt", prefix);
+    } else {
+        sprintf(filename_buffer, "%s_%.5d.txt", prefix, iter);
+    }
 }

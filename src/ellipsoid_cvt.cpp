@@ -16,7 +16,7 @@ using namespace std;
 //****************************************************************************80
 EllipsoidCVT::EllipsoidCVT(double major_, double minor_, double midax_, int DEBUG_)
 : CVT(DEBUG_) 
-{
+{ 
 	nb_bnd = 0;
 }
 //****************************************************************************80
@@ -24,8 +24,6 @@ EllipsoidCVT::EllipsoidCVT(double major_, double minor_, double midax_, int DEBU
 //----------------------------------------------------------------------
 void EllipsoidCVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
 {
-# define PI 3.141592653589793
-
 // r[] is a vector of with 3 components at each point. Make sure memory is properly allocated!
 
 	vector<Vec3> samples;
@@ -55,7 +53,6 @@ void EllipsoidCVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
   printf(" -----  end initial seeds --------------------\n");
 
   return;
-# undef PI
 }
 //----------------------------------------------------------------------
 void EllipsoidCVT::ellipsoid ( int dim_num, int& n, int *seed, double r[] )
@@ -88,7 +85,6 @@ void EllipsoidCVT::ellipsoid ( int dim_num, int& n, int *seed, double r[] )
 //   y= b*sin(theta)*cos(phi)
 //   z= c*sin(phi)
 {
-# define PI 3.141592653589793
 
 // na : is the number of points along the major axis
 // nb : is the number of points along the minor axis
@@ -107,7 +103,6 @@ void EllipsoidCVT::ellipsoid ( int dim_num, int& n, int *seed, double r[] )
   	}
 
   return;
-# undef PI
 }
 //----------------------------------------------------------------------
 void EllipsoidCVT::rejection3d(int nb_samples, Density& density, vector<Vec3>& samples)

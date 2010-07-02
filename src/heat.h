@@ -103,7 +103,7 @@ public:
 	// 					dT/dt = lapl(T) + (df/dt - lapl(f)) = 
 	//					T(x,0) = f(x,0)
 	// so each iteration we 
-//	double force(Vec3& pt, double t);
+	double force(Vec3& pt, double t);
 };
 
 #endif

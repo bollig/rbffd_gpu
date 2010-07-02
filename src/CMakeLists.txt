@@ -5,6 +5,7 @@
 		octree.cpp
 		parametric_patch.cpp
 		exact_ellipsoid.cpp
+		exact_ellipse.cpp
 		communicator.cpp
 		mpisendable.cpp
 		contour_svd.cpp 
@@ -17,6 +18,7 @@
 		gpu.cpp 
 		grid.cpp 
 		heat.cpp 
+		ncar_poisson1.cpp
 		rbf.cpp 
 		stencils.cpp 
 		regulargrid3d.cpp

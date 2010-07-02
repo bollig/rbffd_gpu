@@ -70,6 +70,12 @@ public:
 	std::vector<arma::mat>& getYWeights() { return y_weights; }
 	std::vector<arma::mat>& getZWeights() { return z_weights; }
 	std::vector<arma::mat>& getLaplWeights() { return lapl_weights; }
+        
+        arma::mat& getXWeights(int indx) { return x_weights[indx]; }
+        arma::mat& getYWeights(int indx) { return y_weights[indx]; }
+        arma::mat& getZWeights(int indx) { return z_weights[indx]; }
+        arma::mat& getLaplWeights(int indx) { return lapl_weights[indx]; }
+
 	double computeEig();
 
 

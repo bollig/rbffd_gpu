@@ -19,17 +19,32 @@ protected:
     int DEBUG;
     Timings tm;
     Timer t1, t2, t3, t4, t5, t6, t7;
-    #if USE_KDTREE
-    KDTree* kdtree; 
-    #endif
+#if USE_KDTREE
+    KDTree* kdtree;
+#endif
+
+    double PI;
+
+    double *generators;
+    int dim_num;
     
+    // These correspond to John Burkardts CVT implementation parameters
+    int seed, batch, it_fixed;
+    // NOTE: we dont have support for changing "init","sample" and their corresponding strings.
+    //      ONLY random sampling is supported in this class.
+    int init, sample;
+    int sample_num, it_max; 
+    const char* cvt_file_name;
+
 public:
-    CVT(int DEBUG_ = 0);
+    
+    CVT(int num_generators = 10, int dimension_=2, const char* filename = "cvt", int init=-1, int sample=-1, int seed=123456789, int batch=1000, int sample_num_=100, int it_max_=100, int it_fixed=1, int DEBUG_ = 0);
+
     ~CVT() {
-        #if USE_KDTREE
+#if USE_KDTREE
         delete(kdtree);
-        #endif
-        
+#endif
+
         tm.dumpTimings();
     }
     char ch_cap(char c);
@@ -45,7 +60,7 @@ public:
             const char *init_string, int it_max, int it_fixed, int it_num,
             double it_diff, double energy, const char *sample_string, int sample_num, double r[],
             const char *file_out_name, bool comment);
-    void data_read(const char *file_in_name, int dim_num, int n, double r[]);
+    int data_read(const char *file_in_name, int dim_num, int n, double r[]);
     char digit_to_ch(int i);
     void find_closest(int dim_num, int n, int sample_num, double s[], double r[],
             int nearest[]);
@@ -85,15 +100,38 @@ public:
 
     // Override this routine for a custom sampling routine
     // over your desired region. THIS IS FOR INITIALIZATION ONLY
-    virtual void user_init (int dim_num, int n, int *seed, double r[]) = 0;
+    virtual void user_init(int dim_num, int n, int *seed, double r[]) = 0;
 
     // Override this routine for custom sampling for user defined sampling
     // (perhaps sampling with rejection outside your domain?)
-    virtual void user_sample (int dim_num, int n, int *seed, double r[]) = 0;
+    virtual void user_sample(int dim_num, int n, int *seed, double r[]) = 0;
 
     // Override this routine to change initialization and execution details
     // (e.g., if you want to project as part of the initialization)
-    virtual void cvt(int dim_num, int n, int batch, int init, int sample, int sample_num, int it_max, int it_fixed, int *seed, double r[], int *it_num, double *it_diff, double *energy);
+
+    // INPUT ONLY : sample_num, it_max
+    // OUTPUT ONLY: r, it_num, it_diff, energy
+    virtual void cvt(int *it_num, double *it_diff, double *energy);
+
+    // generate cvt using provided memory array r;
+    void cvt(int *it_num, double *it_diff, double *energy, double r[]) {
+        delete [] generators;
+        generators = &r[0];
+        this->cvt(it_num, it_diff, energy);
+    }
+    virtual void cvt(int dim_num_, int n, int batch_, int init_, int sample_, int sample_num_, int it_max_, int it_fixed_, int *seed_, double r[], int *it_num, double *it_diff, double *energy) {
+        dim_num = dim_num_;
+        nb_pts = n;
+        seed = *seed_;
+        batch = batch_;
+        it_fixed = it_fixed_;
+        init = init_;
+        sample = sample_;
+        sample_num = sample_num_;
+        it_max = it_max_;
+        
+        this->cvt(it_num, it_diff, energy, r);
+    }
 
     // Override this to customize the sampling within the domain (e.g., if you
     // want to sample uniformly in the SPHERE and not the CUBE.
@@ -106,6 +144,22 @@ public:
     // Override this to customize what happens during each iteration
     // of the CVT generation (e.g., if you want to perform projections
     virtual void cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize, int sample_num, int *seed, double r[], double *it_diff, double *energy);
+
+    // Load the output file for specified iteration
+    //  -1 = "final"
+    //  -2 = "initial"
+    //  0->inf = that specific iteration number.
+    virtual int cvt_load(int iter = -1);
+
+    // Write the output file for a specified iteration (should call to
+    // cvt_write(...) 
+    virtual void cvt_checkpoint(int iter);
+
+    // Override this to change the prefix of the filename
+    virtual void cvt_get_file_prefix(char* filename_buffer);
+
+    // Override this to change suffix (iteration detail) format for the cvt output files
+    virtual void cvt_get_filename(int iter, char *filename_buffer);
 
     double random(double a, double b);
 

@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
 
     //Density* rho = new Density();
 
-    NestedSphereCVT* cvt = new NestedSphereCVT(NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, DIM_NUM);
+    NestedSphereCVT* cvt = new NestedSphereCVT("binary_io_test", NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, DIM_NUM);
 
     //    cvt->SetDensity(rho);
 

@@ -342,20 +342,22 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	printf("heat, dt= %f, time= %f\n", dt, time);
 
 	// second order time advancement if SECOND is defined
-#define SECOND 
+//#define SECOND
 
 	// explicit scheme
 	for (int i = 0; i < nb_stencils; i++) {
 		// first order
 		Vec3& v = (*rbf_centers)[i];
 		//printf("dt= %f, time= %f\n", dt, time);
-		double f = exactSolution->tderiv(v, time) - exactSolution->laplacian(v, time);
+		double f = force(v, time);
 		printf("force (local: %d) = %f\n", i, f);
+                printf("Before %f,", s[i]);
 #ifdef SECOND
 		s1[i] = s[i] + 0.5 * dt * (lapl_deriv[i] + f);
 #else
 		s[i] = s[i] + dt* ( lapl_deriv[i] + f);
 #endif
+                printf("After %f\n", s[i]);
 	}
 
 	time = time + dt;
@@ -388,12 +390,11 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 		Vec3& v = (*rbf_centers)[i];
 		//printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
 		//v.print("v");
-		double f = exactSolution->tderiv(v, time+0.5 * dt) - exactSolution->laplacian(v, time + 0.5 * dt);
+		double f = force(v, time+0.5*dt);
 		s[i] = s[i] + dt * (lapl_deriv[i] + f); // RHS at time+0.5*dt
 	}
 
 	// reset boundary solution
-
 	for (int i = 0; i < sz; i++) {
 		s[bnd_index[i]] = bnd_sol[i];
 	}
@@ -419,6 +420,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 		Vec3& v = (*rbf_centers)[i];
 		sol_ex[i] = exactSolution->at(v, time);
 		sol_error[i] = sol_ex[i] - s[i];
+                printf("%d Force: %f\tLapl: %f\t Solution: %f\t Exact: %f \t Error: %f\n",i, force(v, time), lapl_deriv[i], s[i], sol_ex[i], sol_error[i]);
 	}
 
 	// print error to a file
@@ -800,8 +802,8 @@ void Heat::initialConditions(std::vector<double> *solution) {
 		Vec3& v = (*rbf_centers)[i];
 		//s[i] = exp(-alpha*v.square());
 		//s[i] = 1. - v.square();
-                printf("filling: %f %f %f\n", v.x(), v.y(), v.z()); 
 		s[i] = exactSolution->at(v, 0.);
+                printf("filling: %f %f %f ==> %f\n", v.x(), v.y(), v.z(),s[i]);
 		//s[i] = 1.0;
 		//printf("s[%d]= %f\n", i, s[i]);
 	}
@@ -861,69 +863,15 @@ double Heat::maxNorm(vector<double> sol) {
 
 	return nrm;
 }
-//----------------------------------------------------------------------
-// solution at point v and time t
-#if 0
-double Heat::exactSolution(Vec3& v, double t) {
-	
-	double x_contrib = v.x() * v.x() * princ_axis1_inv2; 
-	double y_contrib = v.y() * v.y() * princ_axis2_inv2; 
-	double z_contrib = v.z() * v.z() * princ_axis3_inv2; 
-	
-	double r = sqrt(x_contrib + y_contrib + z_contrib); 
-//	double r = sqrt(v.x() * v.x() * maji2 + v.y() * v.y() * mini2 + v.z() * v.z() * min2i2);
 
-	// if temporal decay is too large, time step will have to decrease
-
-	double T = cos(freq * r) * exp(-decay * t);
-	return T;
-}
 //----------------------------------------------------------------------
-// EVAN : gordon says this is the laplacian(exactSolution) provided analytically
+// The forcing term.
+// Here we get the term using the method of manufactured solutions.
+// (plugin lapl(u) to get rhs of the equation). 
 double Heat::force(Vec3& v, double t) {
-	
-	double x_contrib2 = v.x() * v.x() * princ_axis1_inv2; 
-	double y_contrib2 = v.y() * v.y() * princ_axis2_inv2; 
-	double z_contrib2 = v.z() * v.z() * princ_axis3_inv2;
-	
-	double x_contrib4 = v.x() * v.x() * princ_axis1_inv4; 
-	double y_contrib4 = v.y() * v.y() * princ_axis2_inv4; 
-	double z_contrib4 = v.z() * v.z() * princ_axis3_inv4;
-	
-	//double r2 = pt.x() * pt.x() * maji2 + pt.y() * pt.y() * mini2 + pt.z() * pt.z() * min2i2;
-	//double r4 = pt.x() * pt.x() * maji4 + pt.y() * pt.y() * mini4 + pt.z() * pt.z() * min2i4;
-	
-	double r2 = x_contrib2 + y_contrib2 + z_contrib2; 
-	double r4 = x_contrib4 + y_contrib4 + z_contrib4; 
 
-	double r = sqrt(r2);
-	double f1;
-	double f2;
-
-	// if temporal decay is too large, time step will have to decrease
-
-	double nn = freq * r;
-	double freq2 = freq * freq;
-//Evan: 
-	f1 = cos(nn) * ((freq2 / r2) * r4 - decay);
-	//	f2 = freq2 * (maji2 + mini2 - r4 / r2);
-	f2 = freq2 * (princ_axis1_inv2 + princ_axis2_inv2 - r4 / r2);	
-
-
-	if (nn < 1.e-5) {
-		f2 *= (1. - nn * nn / 6.);
-	} else {
-		f2 *= sin(nn) / nn;
-	}
-
-	// force = exp(-decay*t) * cos(freq * r) * (derivative of exponent) 
-	//		 + exp(-decay*t) * sin(freq*r)/(freq*r) * (freq^2) * ()
-
-	f1 = (f1 + f2) * exp(-decay * t);
-	//printf("t= %f, alpha= %f\n", t, alpha);
-	//printf("exp= %f, nn= %f, f1= %f, f2= %f\n", exp(-alpha*t), nn, f1, f2);
-
-	return f1;
+    //cout << "TDERIV: " << exactSolution->tderiv(v,t) << "\tLapl: " << exactSolution->laplacian(v,t) << endl;
+    return exactSolution->laplacian(v,t);
+    //return exactSolution->tderiv(v, t) - exactSolution->laplacian(v, t);
 }
-#endif 
 //----------------------------------------------------------------------

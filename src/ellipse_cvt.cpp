@@ -25,8 +25,6 @@ EllipseCVT::EllipseCVT(double major_, double minor_, int DEBUG_) : CVT(DEBUG_) {
 //----------------------------------------------------------------------
 
 void EllipseCVT::ellipse_init(int dim_num, int& n, int& nb_bnd, int *seed, double r[]) {
-#define PI 3.141592653589793
-
     double dtheta = 1. * PI / nb_bnd; // periodic in theta
 
     //printf("nb_bnd= %d\n", nb_bnd);
@@ -73,7 +71,6 @@ void EllipseCVT::ellipse_init(int dim_num, int& n, int& nb_bnd, int *seed, doubl
     printf(" -----  end initial seeds --------------------\n");
 
     return;
-#undef PI
 }
 //----------------------------------------------------------------------
 
@@ -109,9 +106,6 @@ void EllipseCVT::ellipse(int dim_num, int& n, int& nb_bnd, int *seed, vector<dou
 
     printf("SHOULD NOT GET HERE: ellipse, n= %d\n", n);
     exit(0);
-
-
-#define PI 3.141592653589793
 
     // na : is the number of points along the major axis
     // nb : is the number of points along the minor axis
@@ -152,7 +146,6 @@ void EllipseCVT::ellipse(int dim_num, int& n, int& nb_bnd, int *seed, vector<dou
     //exit(0);
 
     return;
-#undef PI
 }
 //----------------------------------------------------------------------
 
@@ -185,8 +178,6 @@ void EllipseCVT::ellipse(int dim_num, int& n, int& nb_bnd, int *seed, double r[]
 //   x= a*cos(theta)
 //   y= b*sin(theta)
 {
-#define PI 3.141592653589793
-
     // na : is the number of points along the major axis
     // nb : is the number of points along the minor axis
 
@@ -245,7 +236,6 @@ void EllipseCVT::ellipse(int dim_num, int& n, int& nb_bnd, int *seed, double r[]
     //printf("ellipse: n = %d\n", n);
 
     return;
-#undef PI
 }
 //----------------------------------------------------------------------
 

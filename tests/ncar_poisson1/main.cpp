@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     rbf_centers = cvt->getGenerators();
 
     for (int i =0; i < N_TOT; i++) {
-        printf("Generator[%d]: ");
+        printf("Generator[%d]: ",i);
         for (int j = 0; j < DIM_NUM; j++) {
             printf("%f ", rbf_centers[i*DIM_NUM + j]);
         }

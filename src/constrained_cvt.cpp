@@ -160,7 +160,7 @@ void ConstrainedCVT::cvt(int dim_num, int n, int batch, int init, int sample, in
 
     if (initialize) {
         char intermediate_file[80];
-        sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", 0);
+        sprintf(intermediate_file, "voronoi_tmp_%.5d", 0);
 
         cout << "Writing initial voronoi to file (from CVT::cvt())\n";
 
@@ -211,7 +211,7 @@ void ConstrainedCVT::cvt(int dim_num, int n, int batch, int init, int sample, in
         // 	not the same as DEBUG
         if ((*it_num) % 20 == 0) {
             char intermediate_file[80];
-            sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", *it_num);
+            sprintf(intermediate_file, "voronoi_tmp_%.5d", *it_num);
 
             cout << "  "
                     << setw(4) << *it_num << "  "

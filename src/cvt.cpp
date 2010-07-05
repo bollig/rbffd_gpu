@@ -1144,7 +1144,8 @@ void CVT::cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
 //
 //    Input, double R(DIM_NUM,N), the points.
 //
-//    Input, char *FILE_OUT_NAME, the name of the output file.
+//    Input, char *FILE_OUT_NAME, the name of the output file. NOTE: this routine automatically adds
+//                                          an extension to the filename (*.ascii)
 //
 //    Input, bool COMMENT, is true if comments may be included in the file.
 //
@@ -1154,7 +1155,10 @@ void CVT::cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
     int j;
     char *s;
 
-    file_out.open(file_out_name);
+    // No need for header if we use file extensions instead.
+    string file_out_name_with_extension(file_out_name);
+    file_out_name_with_extension.append(".ascii");
+    file_out.open(file_out_name_with_extension.c_str());
 
     if (!file_out) {
         cout << "\n";
@@ -1166,8 +1170,6 @@ void CVT::cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
     }
 
     s = timestring();
-
-    file_out << "ASCII" << "\n";
 
     if (comment) {
         file_out << "#  " << file_out_name << "\n";
@@ -1289,7 +1291,7 @@ void CVT::cvt_write_binary(int dim_num, int n, int batch, int seed_init, int see
 //
 //    Input, double R(DIM_NUM,N), the points.
 //
-//    Input, char *FILE_OUT_NAME, the name of the output file.
+//    Input, char *FILE_OUT_NAME, the name of the output file. NOTE: routine auto appends ".bin" as file extension to FILE_OUT_NAME
 //
 //    Input, bool COMMENT, is true if comments may be included in the file.
 //
@@ -1299,7 +1301,10 @@ void CVT::cvt_write_binary(int dim_num, int n, int batch, int seed_init, int see
     int j;
     char *s;
 
-    file_out.open(file_out_name);
+    // No need for header if we use file extensions instead.
+    string file_out_name_with_extension(file_out_name);
+    file_out_name_with_extension.append(".bin");
+    file_out.open(file_out_name_with_extension.c_str());
 
     if (!file_out) {
         cout << "\n";
@@ -1309,8 +1314,6 @@ void CVT::cvt_write_binary(int dim_num, int n, int batch, int seed_init, int see
     }
 
     s = timestring();
-
-    file_out << "BINARY" << "\n";
 
     if (comment) {
         file_out << "#  " << file_out_name << "\n";
@@ -1416,25 +1419,28 @@ int CVT::data_read(const char *file_in_name, int dim_num, int n, double r[])
     double *x;
     bool ascii = false;
 
-    file_in.open(file_in_name);
+    string file_in_name_ascii(file_in_name);
+    file_in_name_ascii.append(".ascii");
+
+    string file_in_name_binary(file_in_name);
+    file_in_name_binary.append(".bin");
+
+    file_in.open(file_in_name_ascii.c_str());
 
     if (!file_in) {
-        cout << "\n";
-        cout << "DATA_READ - Fatal error!\n";
-        cout << "  Could not open the input file: \"" << file_in_name << "\"\n";
-        return 1;
-    }
-
-    file_in.getline(line, sizeof (line));
-    if (!strcmp(line, "ASCII")) {
-        ascii = true;
-    } else if (!strcmp(line, "BINARY")) {
-        ascii = false;
+        file_in.open(file_in_name_binary.c_str());
+        if (!file_in) {
+            cout << "\n";
+           cout << "DATA_READ - Fatal error!\n";
+            cout << "  Could not open the input file: \"" << file_in_name << "\"\n";
+          return 1;
+      } else {
+          cout << "FOUND BINARY FILE: " << file_in_name_binary << endl;
+          ascii = false;
+      }
     } else {
-        cout << "\n";
-        cout << "DATA_READ - Fatal error!\n";
-        cout << "  File must start with ASCII or BINARY specifier! Found: \"" << line << "\"\n";
-        return -1;
+        cout << "FOUND ASCII FILE: " << file_in_name_ascii << endl;
+        ascii = true;
     }
 
     if (ascii) {
@@ -3758,10 +3764,10 @@ void CVT::cvt_get_filename(int iter, char *filename_buffer) {
     this->cvt_get_file_prefix(prefix);
 
     if (iter == -2) {
-        sprintf(filename_buffer, "%s_initial.txt", prefix);
+        sprintf(filename_buffer, "%s_initial", prefix);
     } else if (iter == -1) {
-        sprintf(filename_buffer, "%s_final.txt", prefix);
+        sprintf(filename_buffer, "%s_final", prefix);
     } else {
-        sprintf(filename_buffer, "%s_%.5d.txt", prefix, iter);
+        sprintf(filename_buffer, "%s_%.5d", prefix, iter);
     }
 }

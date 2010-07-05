@@ -82,6 +82,8 @@ void RegularGrid3D::generateGrid() {
 
     nb_rbf = rbf_centers.size();
     nb_bnd = boundary.size();
+    
+    this->sortNodes();
 
     printf("count = %d\n", count);
     printf("nb_x, nb_y, nb_z= %d, %d, %d\n", nb_x, nb_y, nb_z);

@@ -123,6 +123,10 @@ public:
 	// of stencil lists (one for each cpu)
 	std::vector< std::vector< Vec3* > > decomposeDomain(int num_cpus);
 
+
+        // Run through the list of nodes and sort them so the boundary nodes appear first in the list
+        virtual void sortNodes(); 
+
 //----------------------------------------------------------------------
 };
 

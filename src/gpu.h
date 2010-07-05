@@ -80,6 +80,9 @@ public: 		// Member Properties
 	// The points in this subdomain which are also part of the global PDE boundary
 	// NOTE: global indices
 	std::vector<int> global_boundary_nodes;
+
+        // Since we have global_boundary_nodes we can get the indices of the interior
+        // nodes by doing a difference on the set Q and the global boundary nodes.
 	 
 private:
 	// A map for global INDEX=VALUE storage of the final solution
@@ -202,7 +205,10 @@ public: 	// Member Functions:
 	bool dependsOnSet( const int global_stencil_id, const std::set<int> center_set);
 	
 	// Determine if a center is member of a set (center is global index)
-	bool isInSet(const int center, const std::set<int> center_set) const;	
+	bool isInSet(const int center, const std::set<int> center_set) const;
+
+        // Determine if a center is member of a vector (center is global index)
+	bool isInVector(const int center, const std::vector<int> center_set) const;
 };
 
 #endif

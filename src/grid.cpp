@@ -174,16 +174,16 @@ void Grid::computeStencils() {
 
     // O(n^2) algorithm, whose cost is independent of the number of nearest sought
 
-    for (int i = 0; i < nb_rbf; i++) { 
+    for (int i = 0; i < nb_rbf; i++) {
         Vec3& v = rbf_centers[i];
         vector<int>& st = stencil[i];
         set<int, ltvec> se;
         ltvec::setRbfCenters(rbf_centers);
         ltvec::setXi(v);
-        
+
         // find nearest points to center
         for (int j = 0; j < nb_rbf; j++) {
-            se.insert(j); 
+            se.insert(j);
         }
 
         set<int, ltvec>::iterator sei = se.begin();
@@ -194,7 +194,7 @@ void Grid::computeStencils() {
         double min_dist = (rbf_centers[*seii] - rbf_centers[i]).square();
         min_dist = sqrt(min_dist);
         //printf("min distance: %f\n", min_dist);
-        
+
 #if 1
         this->avg_distance[i] = 0.;
         if (i < nb_bnd) {
@@ -600,3 +600,34 @@ vector< vector< int > > Grid::decomposeDomain(int num_cpus) {
 }
 #endif
 //----------------------------------------------------------------------
+
+void Grid::sortNodes() {
+    ArrayT<double>& coordr = *coord;
+    for (int i = 0; i < this->boundary.size(); i++) {
+        // We only need to roughly sort the nodes so the boundary is first and the
+        // interior is second
+
+        // Run through all boundary nodes. If the node is in the boundary set (which should be ordered),
+
+        if (boundary[i] != i) {
+            // backup interior
+            double tempx = coordr(0, i);
+            double tempy = coordr(1, i);
+            double tempz = coordr(2, i);
+
+            // overwrite interior with boundary
+            coordr(0, i) = coordr(0,boundary[i]);
+            coordr(1, i) = coordr(1,boundary[i]);
+            coordr(2, i) = coordr(2,boundary[i]);
+
+            // restore interior in the boundary position
+            coordr(0, boundary[i]) = tempx;
+            coordr(1, boundary[i]) = tempy;
+            coordr(2, boundary[i]) = tempz;
+
+            // Update the boundary index into coords
+            boundary[i] = i;
+        }
+    }
+
+}

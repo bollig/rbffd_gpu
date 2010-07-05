@@ -88,6 +88,7 @@ int GPU::receive(int my_rank, int sender_rank) {
 	recvSTL(&O_by_rank, my_rank, sender_rank); // Subsets of O that this GPU will send out to each other GPU
 	recvSTL(&global_boundary_nodes, my_rank, sender_rank);
 
+        cout << "EVAN YOURE WRONG HERE!" <<endl;
 	set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
 
 	// Verify we everything passed correctly.
@@ -430,6 +431,7 @@ void GPU::fillLocalData(vector<Vec3>& rbf_centers,
 		}
 	}
 
+        // This forms the boundary set (needed)
 	printf("BOUNDARY.size= %d\n", (int) boundary.size());
 	set_intersection(Q.begin(), Q.end(), boundary.begin(), boundary.end(),
 			inserter(global_boundary_nodes, global_boundary_nodes.end()));
@@ -520,7 +522,7 @@ void GPU::printCenterMemberships(const set<int> center_set,
 	//  R  --> depends on nodes in R? 
 	//  +  --> is the center in R?
 	cout << "\t" << display_name
-			<< "[ local_index | global_index ] = \t[Q|.]   [D|.]   [Q|.]   [R][+]"
+			<< "[ local_index | global_index ] = \t[Q|.]   [D|.]   [Q|.]   [R][+]   [B|.]"
 			<< endl;
 	cout << "\tCONDITIONS: " << endl;
 	cout << "\t\tQ  --> in set Q?" << endl;
@@ -528,6 +530,7 @@ void GPU::printCenterMemberships(const set<int> center_set,
 	cout << "\t\tO  --> in set O?" << endl;
 	cout << "\t\tR  --> depends on set R?" << endl;
 	cout << "\t\t+  --> is the center in R?" << endl;
+	cout << "\t\tB*  --> is the center on the global Boundary?" << endl;
 	int i = 0;
 	for (set<int>::const_iterator setiter = center_set.begin(); setiter
 			!= center_set.end(); setiter++, i++) {
@@ -560,6 +563,12 @@ void GPU::printCenterMemberships(const set<int> center_set,
 		if (isInSet(*setiter, R)) {
 			cout << "+";
 		}
+                cout << "   ";
+                if (isInVector(*setiter, this->global_boundary_nodes)) {
+			cout << "B*";
+		} else {
+			cout << ".";
+		}
 		cout << endl;
 	}
 }
@@ -567,6 +576,18 @@ void GPU::printCenterMemberships(const set<int> center_set,
 bool GPU::isInSet(const int center, const set<int> center_set) const {
 	//bool inSet = false;
 	for (set<int>::const_iterator setiter = center_set.begin(); setiter
+			!= center_set.end(); setiter++) {
+		// True -> stencil[i][j] is in center set
+		if (center == *setiter) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool GPU::isInVector(const int center, const vector<int> center_set) const {
+	//bool inSet = false;
+	for (vector<int>::const_iterator setiter = center_set.begin(); setiter
 			!= center_set.end(); setiter++) {
 		// True -> stencil[i][j] is in center set
 		if (center == *setiter) {

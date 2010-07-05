@@ -311,9 +311,9 @@ int main(int argc, char** argv) {
     if (!my_rank) { // Master thread 0
 
         int stencil_size = 7;
-        int nx = 30;
-        int ny = 30;
-        int nz = 30;
+        int nx = 5;
+        int ny = 5;
+        int nz = 5;
 
         grid = new RegularGrid3D(nx, ny, nz, -1.,1., -1.,1., -1.,1., stencil_size);
 
@@ -339,6 +339,7 @@ int main(int argc, char** argv) {
         // from this routine.
         //comm_unit->distributeStencils(grid.decomposeDomain(comm_unit->getSize()));
         subdomain = distributeNodesAcrossGPUs(grid, comm_unit, 0.0001);
+        subdomain->printCenterMemberships(subdomain->G, "G(CPU0)");
 
     }// endif (!my_rank)
     else {

@@ -26,6 +26,7 @@ protected:
     double PI;
 
     double *generators;
+    
     int dim_num;
     
     // These correspond to John Burkardts CVT implementation parameters
@@ -44,7 +45,7 @@ public:
 #if USE_KDTREE
         delete(kdtree);
 #endif
-
+        delete [] generators;
         tm.dumpTimings();
     }
     char ch_cap(char c);
@@ -185,6 +186,10 @@ public:
 
     void setBoundaryPts(std::vector<Vec3>& bndry_pts_) {
         this->bndry_pts = bndry_pts_;
+    }
+
+    double* getGenerators() {
+        return this->generators;
     }
 };
 

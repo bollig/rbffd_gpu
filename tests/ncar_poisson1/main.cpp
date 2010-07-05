@@ -37,19 +37,29 @@ int main(int argc, char** argv) {
     int sample_num = NB_SAMPLES;
 
     // generator points
-    double r[DIM_NUM * N_TOT];
+    //double r[DIM_NUM * N_TOT];
+    double *rbf_centers;
 
     CVT* cvt = new NestedSphereCVT("nested_spheres", NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, it_max_bnd, it_max_int, DIM_NUM);
     //    cvt->SetDensity(rho);
     // Generate the CVT
-    //cvt->cvt(N, batch, init, sample, sample_num, it_max, it_fixed, &seed, r, &it_num, &it_diff, &energy);
-    //cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
     int load_errors = cvt->cvt_load(-1);
-
     if (load_errors) { // File does not exist
-        cvt->cvt(&it_num, &it_diff, &energy, &r[0]);
+        //cvt->cvt(N, batch, init, sample, sample_num, it_max, it_fixed, &seed, r, &it_num, &it_diff, &energy);
+        //cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
+        cvt->cvt(&it_num, &it_diff, &energy);
+    }
+    rbf_centers = cvt->getGenerators();
+
+    for (int i =0; i < N_TOT; i++) {
+        printf("Generator[%d]: ");
+        for (int j = 0; j < DIM_NUM; j++) {
+            printf("%f ", rbf_centers[i*DIM_NUM + j]);
+        }
+        printf("\n");
     }
 
+    
 
     delete(cvt);
     //    cvt->cvt_write(DIM_NUM, N_TOT, batch, seed_init, seed, init_string,

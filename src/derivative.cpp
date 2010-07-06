@@ -20,7 +20,6 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil
 {
 	this->nb_bnd = nb_bnd_;
 	this->nb_rbfs = rbf_centers.size();
-	//this->nb_rbfs = stencil.size();
 	Up = new mat();
 	Vp = new mat();
 	sp = new colvec();
@@ -310,10 +309,8 @@ stencil, int irbf, const char* choice)
 
 	// which stencil point is irbf
 	for (int i=0; i < stencil.size(); i++) {
-            //printf("[%d=%d]\t", i, stencil[i]);
 		if (irbf == stencil[i]) {
 			st_center = i;
-                        printf("Center is stencil element: %d\n", i);
 			break;
 		}
 	}
@@ -349,11 +346,12 @@ stencil, int irbf, const char* choice)
 	//exit(0);
 	#endif
 
+#if 0
 	var_eps[irbf] = 1.; // works
 	var_eps[irbf] *= .07; // TEMP Does not work
-
+#endif
 	double rad = 1.1;              // rad should also be proportional to (1/avg_stencil_radius)
-	double eps = 1.1; // * var_eps[irbf]; // variable epsilon (for 300 pts)
+        double eps = 1.1; // * var_eps[irbf]; // variable epsilon (for 300 pts)
 	//double eps = 1.5 * var_eps[irbf]; // variable epsilon (for 1000 pts)
 
 	//printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
@@ -460,7 +458,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
 	for (int i=0; i < nb_eig; i++) {
 		wwx = wwx +       dot(trans(U.col(i)),bx   )*V.col(i) / s(i); 
 		wwy = wwy +       dot(trans(U.col(i)),by   )*V.col(i) / s(i); 
-		wwy = wwz +       dot(trans(U.col(i)),bz   )*V.col(i) / s(i); 
+		wwz = wwz +       dot(trans(U.col(i)),bz   )*V.col(i) / s(i); 
 		wwlapl = wwlapl + dot(trans(U.col(i)),blapl)*V.col(i) / s(i); 
 	}
 	x_weights[irbf]    = wwx;
@@ -580,8 +578,8 @@ Derivative::AF& Derivative::matmul(AF& arr, AF& x)
 // derivative array already allocated
 void Derivative::computeDeriv(DerType which, vector<double>& u, vector<double>& deriv)
 {
-	//printf("computeDeriv, u= %d, deriv= %d\n", &u[0], &deriv[0]);
-	//printf("computeDeriv, u.size= %d, deriv.size= %d\n", u.size(), deriv.size());
+   // printf("computeDeriv, u= %d, deriv= %d\n", &u[0], &deriv[0]);
+  //  printf("computeDeriv, u.size= %d, deriv.size= %d\n", u.size(), deriv.size());
 	computeDeriv(which, &u[0], &deriv[0], deriv.size());
 }
 //----------------------------------------------------------------------
@@ -646,7 +644,7 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
 		//printf("i=%d, w[0] = %f\n", i, w[0]);
 		der = 0.0;
 		int n = st.size(); 
-		cout << "STENCIL " << i << ": " << endl;
+                cout << "STENCIL " << i << "(" << n << "): " << endl;
 		//printf("(%d) stencil size: %d\n", i, n);
 		for (int s=0; s < n; s++) {
 			printf("\tw[%d]= %f * ", s, w[s]);

@@ -5,8 +5,8 @@ using namespace std;
 
 #include "nested_sphere_cvt.h"
 
-NestedSphereCVT::NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int it_max_bndry, int it_max_inter, int dimension, double inner_radius, double outer_radius, int DEBUG_)
-: CVT(nb_inner_bnd + nb_outer_bnd + nb_interior, dimension, file_name, 3 /*USER INIT*/, 3 /*USER SAMPLE*/),
+NestedSphereCVT::NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int sample_num_, int it_max_bndry, int it_max_inter, int dimension, double inner_radius, double outer_radius, int DEBUG_)
+: CVT(nb_inner_bnd + nb_outer_bnd + nb_interior, dimension, file_name, 3 /*USER INIT*/, 3 /*USER SAMPLE*/, sample_num_),
 inner_r(inner_radius), outer_r(outer_radius),
 nb_inner(nb_inner_bnd), nb_outer(nb_outer_bnd), nb_int(nb_interior),
 it_max_interior(it_max_inter), it_max_boundary(it_max_bndry)
@@ -269,7 +269,7 @@ void NestedSphereCVT::cvt(int *it_num, double *it_diff, double *energy) {
     // The base CVT class is designed to ignore centroid updates for the first nb_bnd generators
     // so we set that number here.
     this->nb_bnd = nb_inner + nb_outer;
-
+    cout << "SAMPLES_NUM: " << sample_num << endl;
     while (it_num_interior < it_max_interior) {
         //
         //  If it's time to update the seed, save its current value

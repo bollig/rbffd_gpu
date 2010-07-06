@@ -276,11 +276,11 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		fclose(fdsol);
 
 		double nrm_ex = maxNorm(sol_ex);
-		printf("exact max norm: %f\n", nrm_ex);
+                printf("(time: %f) exact max norm: %f\n", time, nrm_ex);
 		double nrm_sol0 = maxNorm(s);
-		printf("max norm(s[0]): %f\n", nrm_sol0);
+                printf("(time: %f) max norm(s[0]): %f\n", time, nrm_sol0);
 		double nrm_error = maxNorm(sol_error);
-		printf("nrm_error= %f\n", nrm_error);
+                printf("(time: %f) nrm_error= %f\n", time, nrm_error);
 
 		// And now we have full derivative calculated so we need to overwrite U_G
 		for (int i = 0; i < s.size(); i++) {
@@ -384,7 +384,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 #ifdef SECOND
 	// compute laplace u^* 
 	der->computeDeriv(Derivative::LAPL, s1, lapl_deriv);
-	cerr << "SECOND ORDER TIME" << endl;
+        //cerr << "SECOND ORDER TIME" << endl;
 	// compute u^{n+1} = u^n + dt*lapl(u^*)
 	for (int i = 0; i < nb_stencils; i++) {
 		Vec3& v = (*rbf_centers)[i];
@@ -448,11 +448,11 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	fclose(fdsol);
 
 	double nrm_ex = maxNorm(sol_ex);
-	printf("exact max norm: %f\n", nrm_ex);
+        printf("(time: %f) exact max norm: %f\n", time, nrm_ex);
 	double nrm_sol0 = maxNorm(s);
-	printf("max norm(s[0]): %f\n", nrm_sol0);
+        printf("(time: %f) max norm(s[0]): %f\n", time, nrm_sol0);
 	double nrm_error = maxNorm(sol_error);
-	printf("nrm_error= %f\n", nrm_error);
+        printf("(time: %f) nrm_error= %f\n", time, nrm_error);
 
 	if (updated_solution != NULL) {
 		for (int i = 0; i < s.size(); i++) {
@@ -614,11 +614,11 @@ void Heat::advanceOneStepDivGrad() {
 	fclose(fdsol);
 
 	double nrm_ex = maxNorm(sol_ex);
-	printf("exact max norm: %f\n", nrm_ex);
+        printf("(time: %f) exact max norm: %f\n", time, nrm_ex);
 	double nrm_sol0 = maxNorm(s);
-	printf("max norm(s[0]): %f\n", nrm_sol0);
+        printf("(time: %f) max norm(s[0]): %f\n", time, nrm_sol0);
 	double nrm_error = maxNorm(sol_error);
-	printf("nrm_error= %f\n", nrm_error);
+        printf("(time: %f) nrm_error= %f\n", time, nrm_error);
 
 	return;
 
@@ -780,11 +780,11 @@ void Heat::advanceOneStepTwoTerms() {
 	fclose(fdsol);
 
 	double nrm_ex = maxNorm(sol_ex);
-	printf("exact max norm: %f\n", nrm_ex);
+        printf("(time: %f) exact max norm: %f\n", time, nrm_ex);
 	double nrm_sol0 = maxNorm(s);
-	printf("max norm(s[0]): %f\n", nrm_sol0);
+        printf("(time: %f) max norm(s[0]): %f\n", time, nrm_sol0);
 	double nrm_error = maxNorm(sol_error);
-	printf("nrm_error= %f\n", nrm_error);
+        printf("(time: %f) nrm_error= %f\n", time, nrm_error);
 
 	return;
 
@@ -871,7 +871,7 @@ double Heat::maxNorm(vector<double> sol) {
 double Heat::force(Vec3& v, double t) {
 
     //cout << "TDERIV: " << exactSolution->tderiv(v,t) << "\tLapl: " << exactSolution->laplacian(v,t) << endl;
-    return exactSolution->laplacian(v,t);
-    //return exactSolution->tderiv(v, t) - exactSolution->laplacian(v, t);
+    //return exactSolution->laplacian(v,t);
+    return exactSolution->tderiv(v, t) - exactSolution->laplacian(v, t);
 }
 //----------------------------------------------------------------------

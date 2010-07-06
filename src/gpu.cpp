@@ -88,7 +88,7 @@ int GPU::receive(int my_rank, int sender_rank) {
 	recvSTL(&O_by_rank, my_rank, sender_rank); // Subsets of O that this GPU will send out to each other GPU
 	recvSTL(&global_boundary_nodes, my_rank, sender_rank);
 
-        cout << "EVAN YOURE WRONG HERE!" <<endl;
+        // cout << "EVAN YOURE WRONG HERE!" <<endl;
 	set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
 
 	// Verify we everything passed correctly.
@@ -370,12 +370,15 @@ void GPU::fillCenterSets(vector<Vec3>& rbf_centers, vector<int> boundary,
 	set_difference(Q.begin(), Q.end(), B.begin(), B.end(), inserter(QmB,
 			QmB.end()));
 
+       set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
+
 	printf("Q size= %d\n", (int) Q.size());
 	printf("O.size= %d\n", (int) O.size());
 	printf("D.size= %d\n", (int) D.size());
 	printf("B.size= %d\n", (int) B.size());
 	printf("QmB.size= %d\n", (int) QmB.size());
 	printf("R.size= %d\n", (int) R.size());
+        printf("G.size = %d\n", (int) G.size());
 
 	delete &SAmQ;
 	delete &SQ;

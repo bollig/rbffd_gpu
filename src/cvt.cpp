@@ -15,7 +15,7 @@ using namespace std;
 
 //****************************************************************************80
 
-CVT::CVT(int num_generators, int dimension_, const char* filename, int init_, int sample_, int seed_, int batch_, int sample_num_, int it_max_, int it_fixed_, int DEBUG_)
+CVT::CVT(int num_generators, int dimension_, const char* filename, int init_, int sample_, int sample_num_, int seed_, int batch_, int it_max_, int it_fixed_, int DEBUG_)
 : nb_pts(num_generators),
 dim_num(dimension_),
 cvt_file_name(filename),
@@ -1155,8 +1155,12 @@ void CVT::cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
     int j;
     char *s;
 
+    char dim_string[80];
+    sprintf(dim_string, "_%dD", dim_num);
+
     // No need for header if we use file extensions instead.
     string file_out_name_with_extension(file_out_name);
+    file_out_name_with_extension.append(dim_string);
     file_out_name_with_extension.append(".ascii");
     file_out.open(file_out_name_with_extension.c_str());
 
@@ -1301,8 +1305,13 @@ void CVT::cvt_write_binary(int dim_num, int n, int batch, int seed_init, int see
     int j;
     char *s;
 
+
+    char dim_string[80];
+    sprintf(dim_string, "_%dD", dim_num);
+
     // No need for header if we use file extensions instead.
     string file_out_name_with_extension(file_out_name);
+    file_out_name_with_extension.append(dim_string);
     file_out_name_with_extension.append(".bin");
     file_out.open(file_out_name_with_extension.c_str());
 
@@ -1419,10 +1428,16 @@ int CVT::data_read(const char *file_in_name, int dim_num, int n, double r[])
     double *x;
     bool ascii = false;
 
+
+    char dim_string[80];
+    sprintf(dim_string, "_%dD", dim_num);
+
     string file_in_name_ascii(file_in_name);
+    file_in_name_ascii.append(dim_string);
     file_in_name_ascii.append(".ascii");
 
     string file_in_name_binary(file_in_name);
+    file_in_name_ascii.append(dim_string);
     file_in_name_binary.append(".bin");
 
     file_in.open(file_in_name_ascii.c_str());

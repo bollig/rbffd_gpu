@@ -2,15 +2,17 @@
 #define _EXACT_SOLUTION_
 
 #include "Vec3.h"
+#include <cmath>
 
 //----------------------------------------------------------------------
 class ExactSolution
 {
-private:
+protected:
+	double Pi; 
 
 public:
 
-//	ExactSolution(); 
+	ExactSolution() : Pi(acos(-1.)) {}; 
 //	~ExactSolution() {}; 
  
 	virtual double operator()(double x, double y, double z, double t) = 0;
@@ -55,6 +57,11 @@ public:
 		return tderiv(r.x(), r.y(), r.z(), t);
 	}
 
+protected:
+	inline double Power(double a, double b) { return pow(a, b); }
+	inline double Sqrt(double a) { return sqrt(a); }
+	inline double Sin(double a) { return sin(a); }
+	inline double Cos(double a) { return cos(a); }
 
 	//virtual double divergence() = 0; // if vector function (not used)
 };

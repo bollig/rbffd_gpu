@@ -31,7 +31,7 @@ double ExactEllipse::operator()(double x, double y, double z, double t) {
 //----------------------------------------------------------------------
 
 double ExactEllipse::laplacian(double x, double y, double z, double t) {
-#if 0
+#if 1
     // This is based on mathematica simplified laplacian of exact solution
     // F = lapl(f)
     double x2 = x*x;
@@ -59,9 +59,29 @@ double ExactEllipse::laplacian(double x, double y, double z, double t) {
         /(axis1_2*axis2_2*exp(decay*t)*(axis2_2*x2 + axis1_2*y2)*sqrt(x2/axis1_2 + y2/axis2_2));
 
     printf("Diff (simpLapl - mylapl) = %f\n", simpLapl - mylapl);
+#if 1
+    // Below is directly from Mathematica's "CForm[...]" except Power(E,Q*t) has been changed to exp(Q*t)
+double Xx = x;
+double Yy = y;
+double Zz = z;
+double A = princ_axis1;
+double B = princ_axis2;
+double P = freq;
+double Q = decay;
 
-    return mylapl;
+    double LA = -((P*(P*(Power(B,4)*Power(Xx,2) + Power(A,4)*Power(Yy,2))*
+                     Sqrt(Power(Xx,2)/Power(A,2) + Power(Yy,2)/Power(B,2))*
+                     Cos(P*Sqrt(Power(Xx,2)/Power(A,2) + Power(Yy,2)/Power(B,2))) +
+                    Power(A,2)*Power(B,2)*(Power(Xx,2) + Power(Yy,2))*
+                     Sin(P*Sqrt(Power(Xx,2)/Power(A,2) + Power(Yy,2)/Power(B,2)))))/
+                (Power(A,2)*Power(B,2)*exp(Q*t)*
+                  (Power(B,2)*Power(Xx,2) + Power(A,2)*Power(Yy,2))*
+                  Sqrt(Power(Xx,2)/Power(A,2) + Power(Yy,2)/Power(B,2))));
+
+#endif
+    //return mylapl;
     //return simpLapl;
+    return LA;
 #else
     double r2 = x * x * princ_axis1_inv2 + y * y*princ_axis2_inv2;
     double r4 = x * x * princ_axis1_inv4 + y * y*princ_axis2_inv4;

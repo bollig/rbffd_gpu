@@ -9,11 +9,9 @@ public:
 	ExactEllipse(double freq, double decay, double axis1, double axis2);
 	~ExactEllipse();
 
-	double operator()(double x, double y, double z, double t);
-	double laplacian(double x, double y, double z, double t);
-
-	double tderiv(double x, double y, double z, double t); 
-
+        virtual double operator()(double x, double y, double z, double t);
+        virtual double laplacian(double x, double y, double z, double t);
+        virtual double tderiv(double x, double y, double z, double t);
 	//virtual double divergence() = 0; // if vector function (not used)
 };
 //----------------------------------------------------------------------

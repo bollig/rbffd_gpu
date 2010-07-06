@@ -4,8 +4,42 @@
 
 using namespace std;
 
-//----------------------------------------------------------------------
+// Default constructor
+//  Specify the size of the stencil we wish to generate
+//  and handle
+Grid::Grid(int dim_num, int stencil_size) {
 
+    // BEGIN JUNK: everything up to END JUNK should
+    // be considered for removal to put into a subclass
+    // for 2D regular grid.
+
+    // grid size
+    nb_x = 1;
+    nb_y = 1;
+    nb_z = 1;
+
+    laplacian.resize(nb_x * nb_y * nb_z);
+
+    // subgrid size
+    nx = nb_x / 2;
+    ny = nb_y / 2;
+    nz = 1;
+    subgrid_index_list = new ArrayT<vector<int> >(nx, ny);
+
+    // END JUNK
+
+    // BEGIN NECESSARY:
+
+    this->stencil_size = stencil_size;
+    this->dim = dim_num;
+
+    // END NECESSARY
+}
+
+//----------------------------------------------------------------------
+// regular grid constructor, allows us to specify the number of nodes to
+// generate in 2D.
+// This should be in a subclass of grid.(TODO)
 Grid::Grid(int n_x, int n_y, int stencil_size) {
     // grid size
     nb_x = n_x;
@@ -140,7 +174,35 @@ void Grid::avgStencilRadius() {
 }
 //----------------------------------------------------------------------
 
+void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes) {
+    this->stencil_size = st_size;
+    this->rbf_centers.resize(nb_tot_nodes);
+    for (int i = 0; i < nb_tot_nodes; i++) {
+        Vec3 v;
+        for (int j = 0; j < this->dim; j++) {
+            v[j] = nodes[i*dim + j];
+        }
+        this->rbf_centers[i] = v;
+    }
+    this->nb_rbf = nb_tot_nodes;
+    this->nb_bnd = nb_boundary_nodes;
+    boundary.resize(nb_boundary_nodes);
+    for (int i = 0; i < nb_boundary_nodes; i++) {
+        boundary[i] = i;
+    }
+
+    this->computeStencils();
+}
+
+//----------------------------------------------------------------------
 void Grid::computeStencils() {
+
+    if (nb_bnd == 0) {
+        printf("**** WARNING! nb_bnd == 0; Did generateGrid() update this value properly?! ******\n");
+        printf("**** Resetting nb_bnd and nb_rbf ****\n");
+        this->nb_bnd = boundary.size();
+        this->nb_rbf = rbf_centers.size();
+    }
 
     if (stencil_size > nb_rbf) {
         int new_stencil_size = (int) (0.5 * nb_rbf);
@@ -149,12 +211,6 @@ void Grid::computeStencils() {
         stencil_size = new_stencil_size;
     }
 
-    if (nb_bnd == 0) {
-        printf("**** WARNING! nb_bnd == 0; Did generateGrid() update this value properly?! ******\n");
-        printf("**** Resetting nb_bnd and nb_rbf ****\n");
-        this->nb_bnd = boundary.size();
-        this->nb_rbf = rbf_centers.size();
-    }
     // for each node, a vector of stencil nodes (global indexing)
     stencil.resize(nb_rbf);
     //printf("stencil size: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
@@ -224,7 +280,7 @@ void Grid::computeStencils() {
             }
 #endif
 
-            // printf("(%d, %d) dist= %f\n", i, k, ss);
+           // printf("(%d, %d) dist= %f\n", i, k, ss);
 
             // printf("el %d, d= %f\n", *sei, d);
             sei++;
@@ -248,7 +304,7 @@ void Grid::computeStencils() {
     double avgbnd = 0.;
 
     printf("avg_int.size() = %d\n", avg_int.size());
-    printf("avg_int.size() = %d\n", avg_bnd.size());
+    printf("avg_bnd.size() = %d\n", avg_bnd.size());
 
     if (nb_rbf - nb_bnd > 0) {
         for (int i = 0; i < avg_int.size(); i++) {

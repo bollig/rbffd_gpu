@@ -17,6 +17,9 @@ public:
 
 protected:
 // grid
+        // The dimension of the points in space.
+        int dim;
+
 	double rmax; // = 15.;
 	
 	double dx; // = (xmax-xmin) / (nb_x-1.);
@@ -65,6 +68,8 @@ protected:
 	int count; // = 0;
 
 public:
+        Grid(int dim_num, int stencil_size=9); // maximum stencil size
+
 	Grid(int n_x, int n_y, int stencil_size=9); // maximum stencil size
 	~Grid();
 	virtual void generateGrid();
@@ -76,8 +81,13 @@ public:
 
 	virtual void generateSubGrid();
 
-	// compute stencil that contains the "n" nearest nodes 
+        // compute stencil that contains the "n" nearest nodes for the grid generated nodes
 	void computeStencils();
+
+        // Compute stencils for the provided nodes using the specified stencil size and
+        // specified number of boundary nodes.
+        void computeStencils(double* nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes);
+
 	void avgStencilRadius();
 
 	// use subgrid to compute stencils: a stencil is all points in all 

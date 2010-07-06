@@ -21,9 +21,9 @@
 #include "grid.h"
 #include "heat.h"
 #include "density.h"
+#include "cvt.h"
 #include "ellipse_cvt.h"
 #include "exact_ellipse.h"
-
 // used go generate random seed that changes between runs
 #include <time.h> 
 
@@ -170,8 +170,8 @@ void testEigen(int stencil_size, int nb_bnd, int tot_nb_pts)
 	// need another constructor for ellipses
 	Grid grid(nx, ny, stencil_size);
 
-	//grid.setMajor(major);
-	//grid.setMinor(minor);
+//	grid.setMajor(major);
+//	grid.setMinor(minor);
         grid.setPrincipalAxes(major, minor, 0.);
 	grid.setNbBnd(nb_bnd);
 
@@ -768,23 +768,23 @@ void createCVT(int N, int nb_bnd, Density& rho, vector<Vec3>& bndry_pts, double 
 
   #if 0
   for (int i=0; i < nb_bnd; i++) {
-  	bndry_pts[i].print("bndry");
+        bndry_pts[i].print("bndry");
   }
   bndry_pts[nb_bnd].print("bndry");
   //exit(0);
   #endif
 
   cvt->ellipse_init(DIM_NUM, N, nb_bnd, &seed, r );
-  cvt->cvt( DIM_NUM, N, batch, init, sample, sample_num, it_max, it_fixed, 
+  cvt->cvt( DIM_NUM, N, batch, init, sample, sample_num, it_max, it_fixed,
     &seed, r, &it_num, &it_diff, &energy );
 
   comment = false; // comment lines at the top of the output file
 
-  cvt->cvt_write ( DIM_NUM, N, batch, seed_init, seed, init_string, 
-    it_max, it_fixed, it_num, it_diff, energy, sample_string, sample_num, r, 
+  cvt->cvt_write ( DIM_NUM, N, batch, seed_init, seed, init_string,
+    it_max, it_fixed, it_num, it_diff, energy, sample_string, sample_num, r,
     file_out_name, comment );
 
-	return;
+        return;
 
 # undef DIM_NUM
 # undef N
@@ -1097,7 +1097,7 @@ int main()
 
 	// total nb points used to compute Voronoi mesh. 
 	// Only (nb_interior_pts-nb_bnd) will be able to move freely
-	int tot_nb_pts = 50;
+	int tot_nb_pts = 300;
 	// number of boundary points, automatically calculated
 	printf("tot_nb_pts= %d\n", tot_nb_pts);
 	printf("dom_intg= %f\n", dom_intg);
@@ -1122,20 +1122,20 @@ int main()
 	create_cvt = false;
 
 	if (create_cvt) {
-		cvt = new EllipseCVT(major, minor);
+                cvt = new EllipseCVT();
 		createCVT(tot_nb_pts, nb_bnd, rho, bndry_pts, dom_intg);
 		exit(0);
 	}
 
 	
-	int stencil_size = 10;
+	int stencil_size = 9;
 	int nx = 20;
 	int ny = 20;
 
 	#if 0
 	// disable if not running tests
 	testEigen(stencil_size, nb_bnd, tot_nb_pts);
-//	exit(0);
+	exit(0);
 	#endif
 
 	Grid grid(nx, ny, stencil_size);
@@ -1196,35 +1196,15 @@ int main()
 	der.setVariableEpsilon(epsv);
 	//exit(0);
 
-	GPU* subdomain = new GPU(); 
-	
-	subdomain->printCenters(rbf_centers, "Center"); 
-	
 	printf("start computing weights\n");
 	for (int irbf=0; irbf < rbf_centers.size(); irbf++) {
 	   //printf("stencil[%d]= %d\n", irbf, &stencil[irbf]);
 		//der.computeWeights(rbf_centers, stencil[irbf], irbf);
-		char label[256]; 
-		sprintf(label, "Stencil[%d]", irbf);
-		subdomain->printStencil(stencil[irbf], label);
 
 		der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "x");
 		der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "y");
 		der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "lapl");
 	}
-
-	vector<double> U_G;
-	for (int i = 0; i < rbf_centers.size(); i++) {
-		U_G.push_back(i); 
-	}
-	
-	subdomain->printVector(U_G, "U_G"); 
-	
-	// Test a single derivative
-	vector<double> lapl_deriv(stencil.size());
-	der.computeDeriv(Derivative::LAPL, U_G, lapl_deriv);
-
-	subdomain->printVector(lapl_deriv, "LAPL_U_G");
 
 	double maxEig = der.computeEig(); // needs lapl_weights
 	//printf("after all computeWeights\n");
@@ -1286,41 +1266,36 @@ int main()
 	// SOLVE HEAT EQUATION
 	double avgarea = pi*major*minor/tot_nb_pts; // 200 points
 	double avgdx = sqrt(avgarea);
-	//avgdx = 0.02;
+	avgdx = 0.02;
 	printf("avgdx= %f\n", avgdx);
 	dt = 0.2*avgdx*avgdx;
 	printf("dt (0.2*avgdx^2 = %f\n", dt);
-	//dt = 2. / maxEig;
-	//printf("dt (2/lambda_max)= %f\n", dt);
-        ExactEllipse exact_solution(pi/2., 1., major, minor);
-	Heat heat(&exact_solution, grid, der);
+	dt = 2. / maxEig;
+	printf("dt (2/lambda_max)= %f\n", dt);
+        ExactSolution* exact_solution = new ExactEllipse(pi/2., 1., major, minor);
+        Heat heat(exact_solution, grid, der);
 	heat.initialConditions();
 	heat.setDt(dt);
-	subdomain->printVector(grid.getBoundary(), "GLOBAL BOUNDARY NODES: "); 
-	
-	vector<double> solution; 
-	solution.resize(nb_rbf); 
+
 	// Even with Cartesian, the max norm stays at one. Strange
 	for (int iter=0; iter < 1000; iter++) {
-		cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter << ") *************" << endl;
 	//for (int iter=0; iter < 1; iter++) {
 		printf("iter= %d\n", iter);
-		heat.advanceOneStep(&solution);   // use Laplace operator once
+		heat.advanceOneStep();   // use Laplace operator once
 		//heat.advanceOneStepDivGrad(); // use 1st order operators twice
 		//heat.advanceOneStepTwoTerms();
-		
-		subdomain->printVector(solution, "SOLUTION");
-		
 		double nrm = heat.maxNorm();
 		if (nrm > 5.) break;
-
-		if (iter > 10) break;
 	}
 
 	printf("after heat\n");
-	
-	subdomain->printVector(solution, "FINAL SOLUTION");
-	
-	exit(EXIT_SUCCESS);
+
+	std::vector<double> solution = heat.getSolution(); 
+	cout << "FINAL SOLUTION = " << endl;
+	for (int iter=0; iter<solution.size(); iter++) {
+	 	cout << "\t[" << iter << "] = " << solution[iter] << endl;
+	}
+
+	exit(0);
 }
 //----------------------------------------------------------------------

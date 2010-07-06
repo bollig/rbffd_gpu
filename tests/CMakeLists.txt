@@ -11,6 +11,7 @@
 		regular_square2D_heat # WORKS (compute Diffusion equation inside 2D Square)
 		binary_cvt_io       # COMPLETE (test if reading and writing a binary CVT file functions the same as ascii data)
 		nested_spheres_ccvt # COMPLETE (nested spheres with ccvt of the boundary and cvt of interior.)
+		original            # WORKS (base case without parallel support. 2D ellipse)
 
 
 		ncar_poisson1       # INCOMPLETE (poisson equation on nested spheres)
@@ -23,7 +24,7 @@
                 square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection is incomplete (not perfect for distribution; code projects points as they near boundary but the distance is not guesswork)).
 
 
-		original            # BROKEN (base case without parallel support. 2D ellipse) new heat design broke support for exact solution on ellispe. Working to fix this.)
+
 
 	)
 

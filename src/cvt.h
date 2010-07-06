@@ -39,7 +39,7 @@ protected:
 
 public:
     
-    CVT(int num_generators = 10, int dimension_=2, const char* filename = "cvt", int init=-1, int sample=-1, int seed=123456789, int batch=1000, int sample_num_=100, int it_max_=100, int it_fixed=1, int DEBUG_ = 0);
+    CVT(int num_generators = 10, int dimension_=2, const char* filename = "cvt", int init=-1, int sample=-1, int sample_num_=100, int seed=123456789, int batch=1000, int it_max_=100, int it_fixed=1, int DEBUG_ = 0);
 
     ~CVT() {
 #if USE_KDTREE

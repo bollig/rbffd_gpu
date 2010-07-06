@@ -104,6 +104,8 @@ public:
 	//					T(x,0) = f(x,0)
 	// so each iteration we 
 	double force(Vec3& pt, double t);
+
+        std::vector<double> getSolution() { return sol[0]; }
 };
 
 #endif

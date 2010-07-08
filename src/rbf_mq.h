@@ -48,7 +48,7 @@ public:
 	// added Aug. 15, 2009
 	inline double eval(double x) {
 	    //printf("eval, x= %f, eps2= %f, rbf= %21.14e\n", x, eps2, sqrt(1.+eps2*x*x));
-		cout << "ceps= " << ceps << endl;
+                //cout << "ceps= " << ceps << endl;
 		return sqrt(1+(eps2*x*x));
 	}
 
@@ -80,7 +80,9 @@ public:
 
 	CMPLX xderiv(const CVec3& xvec) {
 		//printf("inside xderiv CVec3\n");
-		CMPLX f = eval(xvec);
+                //cout << xvec.x() << "\t" << xvec.y() << "\t" << xvec.z() << endl;
+                CMPLX f = eval(xvec);
+                //cout << real(f) << "+" << imag(f) << "i" << endl;
 		return(ceps2*xvec.x()/f);
 	}
 
@@ -90,7 +92,9 @@ public:
 	}
 
 	CMPLX yderiv(const CVec3& xvec) {
-		CMPLX f = eval(xvec);
+            //cout << xvec.x() << "\t" << xvec.y() << "\t" << xvec.z() << endl;
+            CMPLX f = eval(xvec);
+            //cout << real(f) << "+" << imag(f) << "i" << endl;
 		return(ceps2*xvec.y()/f);
 	}
 
@@ -99,8 +103,8 @@ public:
 		return(eps2*(xvec.y()-xi.y())/f);
 	}
 
-	double zderiv(const Vec3& xvec, const Vec3& xi) {
-		double f = eval(xvec, xi);
+        double zderiv(const Vec3& xvec, const Vec3& xi) {
+                double f = eval(xvec, xi);
 		return(eps2*(xvec.z()-xi.z())/f);
 	}
 
@@ -110,10 +114,12 @@ public:
                 return(eps2*zvec.z()/f);
         }
 
-        CMPLX zderiv(const CVec3& zvec) {
+        CMPLX zderiv(const CVec3& xvec) {
                 //printf("inside zderiv CVec3\n");
-                CMPLX f = eval(zvec);
-                return(ceps2*zvec.z()/f);
+            //cout << xvec.x() << "\t" << xvec.y() << "\t" << xvec.z() << endl;
+            CMPLX f = eval(xvec);
+            //cout << real(f) << "+" << imag(f) << "i" << endl;
+                return(ceps2*xvec.z()/f);
         }
 
 

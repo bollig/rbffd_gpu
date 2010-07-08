@@ -401,6 +401,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
 
 	bx.zeros(n+3); // extra lines to enforce d/dx(constant)=0, d/dx(linear fct) is constant
 	by.zeros(n+3);
+        bz.zeros(n+3);
 	blapl.zeros(n+3);
 
 	// stencil includes the point itself

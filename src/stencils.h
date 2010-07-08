@@ -62,9 +62,9 @@ public:
 		arma::mat matr = rd2.row(0); 
 		arma::mat rr0_norm = rd2 * (rad*rad); // normalized
 
-		ArrayT<Vec3> rdvec_norm = rdvec * rad;  // each element is only proportional to r
+                ArrayT<Vec3> rdvec_norm = rdvec * rad;  // each element is only proportional to r
 		const int* dims1 = rdvec_norm.getDims();
-		//printf("dims1(rdvec_norm)= %d, %d\n", dims1[0], dims1[1]);
+                //printf("dims1(rdvec_norm)= %d, %d, %d\n", dims1[0], dims1[1], dims1[2]);
 		//exit(0);
 
 		arma::mat rrd_norm = matr * (rad*rad); // normalized
@@ -78,9 +78,10 @@ public:
 	ArrayT<Vec3> computeDistMatrixVec(arma::mat& x1, arma::mat& x2);
 
 	arma::mat execute(int N) { 
+            // TODO: no z coeffs output here.
 		svd->setChoice(choice);
 		svd->execute(N); 
-		arma::mat coefs = svd->getFDCoeffs(); 
+		arma::mat coefs = svd->getFDCoeffs();                 
 		// the only 2nd order operator
 		if (strcmp(choice, "lapl") == 0) { 
 			return coefs*rad*rad;

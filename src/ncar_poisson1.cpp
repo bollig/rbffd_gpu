@@ -95,7 +95,6 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // with the . indicating that I include that block in Block 21.
         // NOTE: the matrix is nn x nn
         //
-
         for (int i = 0; i < nb + ni; i++) {
             // Compute all derivatives for our centers
             der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "x");
@@ -162,6 +161,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
             arma::mat& z_weights = der->getZWeights(indx);
             for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
+                cout << "Filling: " << z_weights(j);
                 L(bindx,subdomain->Q_stencils[indx][j]) = z_weights(j);        // Block 4 (weights for d/dz)
             }
             // Stencil always contains center at element 0

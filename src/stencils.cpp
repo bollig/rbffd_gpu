@@ -30,7 +30,7 @@ ArrayT<Vec3> Stencils::computeDistMatrixVec(arma::mat& x1, arma::mat& x2)
 
 	for (int j=0; j < nb; j++) {
 	for (int i=0; i < nb; i++) {
-		dist(i,j) = Vec3(x1(j,0)-x2(i,0), x1(j,1)-x2(i,1));
+                dist(i,j) = Vec3(x1(j,0)-x2(i,0), x1(j,1)-x2(i,1), x1(j,2)-x2(i,2));
 	}}
 
 	return dist;

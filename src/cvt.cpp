@@ -1437,7 +1437,7 @@ int CVT::data_read(const char *file_in_name, int dim_num, int n, double r[])
     file_in_name_ascii.append(".ascii");
 
     string file_in_name_binary(file_in_name);
-    file_in_name_ascii.append(dim_string);
+    file_in_name_binary.append(dim_string);
     file_in_name_binary.append(".bin");
 
     file_in.open(file_in_name_ascii.c_str());

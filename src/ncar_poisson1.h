@@ -55,6 +55,7 @@ public:
 
         double maxNorm();
 	double maxNorm(std::vector<double> sol);
+        double maxNorm(arma::mat sol);
 
         double boundaryValues(Vec3& v);
 

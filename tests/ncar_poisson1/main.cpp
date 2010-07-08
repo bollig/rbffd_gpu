@@ -15,10 +15,10 @@
 
 using namespace std;
 
-#define NB_INNER_BND 3
-#define NB_OUTER_BND 3
-#define NB_INTERIOR 4
-#define NB_SAMPLES 200
+#define NB_INNER_BND 100
+#define NB_OUTER_BND 200
+#define NB_INTERIOR 300
+#define NB_SAMPLES 20000
 #define DIM_NUM 3
 
 int main(int argc, char** argv) {
@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     // maximum number of iterations
     int it_max_bnd = 60;    // Boundary
     int it_max_int = 100;   // Interior
-    int stencil_size = 5;
+    int stencil_size = 100;
 
     // number of iterations taken (output by cvt3d, input to cvt_write)
     int it_num_boundary = 0;

@@ -161,7 +161,6 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
             arma::mat& z_weights = der->getZWeights(indx);
             for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
-                cout << "Filling: " << z_weights(j);
                 L(bindx,subdomain->Q_stencils[indx][j]) = z_weights(j);        // Block 4 (weights for d/dz)
             }
             // Stencil always contains center at element 0
@@ -193,6 +192,33 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
 
         L.print("L = ");
 
+        for (int i = 0; i < nb + ni; i ++) {
+            Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+            F(i) = exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
+        }
+
+        F.print("F = ");
+
+        arma::colvec A = arma::solve(L,F);
+
+        A.print("Full Solution (A) = ");
+
+        // Get the subset of our full solution that corresponds to the solution we need
+        arma::mat A_sol = A.rows(0,nb+ni-1);
+
+        // Fill our exact solution
+        arma::colvec exact(nb+ni);
+        for (int i = 0; i < nb + ni; i++) {
+            exact(i) = exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.);
+        }
+
+        // Compute our errors
+        arma::colvec error = (A_sol - exact);
+
+        error.print("Error = ");
+
+        double err_norm = this->maxNorm(error);
+        cout << "INF NORM (ERROR) : " << err_norm << endl;
 
         return ;
 #if 0
@@ -263,13 +289,13 @@ void NCARPoisson1::initialConditions(std::vector<double> *solution) {
         //s[i] = exp(-alpha*v.square());
         //s[i] = 1. - v.square();
         s[i] = exactSolution->at(v, 0.);
-        printf("filling: %f %f %f ==> %f\n", v.x(), v.y(), v.z(), s[i]);
+        //printf("filling: %f %f %f ==> %f\n", v.x(), v.y(), v.z(), s[i]);
         //s[i] = 1.0;
         //printf("s[%d]= %f\n", i, s[i]);
     }
 
     if (solution != NULL) {
-        cout << "Filling solution parameter in addition to internal solution vector (initial condition)" << endl;
+        //cout << "Filling solution parameter in addition to internal solution vector (initial condition)" << endl;
         for (int i = 0; i < s.size(); i++) {
             (*solution)[i] = s[i];
         }
@@ -308,6 +334,21 @@ double NCARPoisson1::maxNorm(vector<double> sol) {
 }
 //----------------------------------------------------------------------
 
+double NCARPoisson1::maxNorm(arma::mat sol) {
+    double nrm = 0.;
+    for (int i = 0; i < sol.n_rows; i++) {
+        for (int j = 0; j < sol.n_cols; j++) {
+        double s = abs(sol(i,j));
+        if (s > nrm)
+            nrm = s;
+        }
+    }
+
+    //printf("max norm: %f\n", nrm);
+
+    return nrm;
+}
+//----------------------------------------------------------------------
 
 double NCARPoisson1::boundaryValues(Vec3& v) {
     return 0.;

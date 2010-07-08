@@ -104,6 +104,19 @@ public:
 		return(eps2*(xvec.z()-xi.z())/f);
 	}
 
+        double zderiv(const Vec3& zvec) {
+                // not called for zderiv svd
+                double f = eval(zvec);
+                return(eps2*zvec.z()/f);
+        }
+
+        CMPLX zderiv(const CVec3& zvec) {
+                //printf("inside zderiv CVec3\n");
+                CMPLX f = eval(zvec);
+                return(ceps2*zvec.z()/f);
+        }
+
+
 	double xxderiv(const Vec3& xvec, const Vec3& xi) {
 		return(0.);
 	}

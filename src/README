@@ -6,3 +6,5 @@ This directory contains:
 
 
 WARNING! The ellipse and ellipsoid CVT classes have been broken in this version. I need to update the classes so they override the CVT::cvt() routine so generating the mesh is done using the Ellips(e|oid)::ellips(e|oid)(..) routines.  
+
+WARNING! the RBF_MQ should be simplified so the base RBF class redirects overloaded calls to pure virtual routines xderiv, yderiv, zderiv, etc. The pure virtual can be defined inside RBF_MQ to keep simple code. RBF_Gaussian is not even complete. It does not contain xderiv, yderiv and zderiv overloads. 

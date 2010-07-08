@@ -662,7 +662,9 @@ mat ContourSVD::rbffdapp(double eps, mat& rd, ArrayT<Vec3>& re, const char* choi
 		vald = rbf->xderiv(re);
 	} else if (strcmp(choice, "y") == 0) {
 		vald = rbf->yderiv(re);
-	} else if (strcmp(choice, "lapl") == 0) {
+        } else if (strcmp(choice, "z") == 0) {
+            vald = rbf->zderiv(re);
+        } else if (strcmp(choice, "lapl") == 0) {
 		vald = rbf->lapl_deriv(re);
 	} else {
 		printf("mat rbfdapp:: unknown derivative type\n");
@@ -720,7 +722,10 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
 	} else if (strcmp(choice, "y") == 0) {
 		vald = rbf->yderiv(re);
 		//vald.print("vald(y)");
-	} else if (strcmp(choice, "lapl") == 0) {
+        } else if (strcmp(choice, "z") == 0) {
+            vald = rbf->zderiv(re);
+            //vald.print("vald(y)");
+        } else if (strcmp(choice, "lapl") == 0) {
 		vald = rbf->lapl_deriv(re);
 	} else {
 		printf("cx_mat rbfdapp:: unknown derivative type\n");

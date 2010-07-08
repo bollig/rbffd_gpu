@@ -3,7 +3,7 @@
 // INTERESTING: the poisson include must come first. Otherwise I get an
 // error in the constant definitions for MPI. I wonder if its because
 // nested_sphere_cvt.h accidentally overrides one of the defines for MPI
-#include "ncar_poisson1_explicit.h"
+#include "ncar_poisson1.h"
 #include "nested_sphere_cvt.h"
 #include "cvt.h"
 #include "grid.h"
@@ -15,10 +15,10 @@
 
 using namespace std;
 
-#define NB_INNER_BND 4000
-#define NB_OUTER_BND 4000
-#define NB_INTERIOR 20000
-#define NB_SAMPLES 200000
+#define NB_INNER_BND 3
+#define NB_OUTER_BND 3
+#define NB_INTERIOR 4
+#define NB_SAMPLES 200
 #define DIM_NUM 3
 
 int main(int argc, char** argv) {
@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
     // maximum number of iterations
     int it_max_bnd = 60;    // Boundary
     int it_max_int = 100;   // Interior
+    int stencil_size = 5;
 
     // number of iterations taken (output by cvt3d, input to cvt_write)
     int it_num_boundary = 0;
@@ -55,16 +56,15 @@ int main(int argc, char** argv) {
         //cvt->cvt(N, batch, init, sample, sample_num, it_max, it_fixed, &seed, r, &it_num, &it_diff, &energy);
         //cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
         cvt->cvt(&it_num, &it_diff, &energy);
-        exit(0);
     }
     double* generators = cvt->getGenerators();
-    int stencil_size = 20;
 
     // TODO: run this in parallel:
 
     Grid* grid = new Grid(DIM_NUM);
     // Compute stencils given a set of generators
     grid->computeStencils(generators, stencil_size, NB_INNER_BND + NB_OUTER_BND, N_TOT);
+    grid->avgStencilRadius();
 
     GPU* subdomain = new GPU(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());      // TODO: get these extents from the cvt class (add constructor to GPU)
 
@@ -80,8 +80,9 @@ int main(int argc, char** argv) {
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
+    der->setAvgStencilRadius(subdomain->Q_avg_dists);
 
-    NCARPoisson1Explicit* poisson = new NCARPoisson1Explicit(exact_poisson, subdomain, der, 0);
+    NCARPoisson1* poisson = new NCARPoisson1(exact_poisson, subdomain, der, 0);
 
     poisson->initialConditions();
     poisson->solve(comm_unit);

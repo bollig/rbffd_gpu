@@ -24,7 +24,7 @@ private:
 	const char* choice;
 
 public:
-	/// choice : "lapl", "x", "y"
+        /// choice : "lapl", "x", "y", "z"
 	Stencils(RBF* rbf_, double rad_, double eps_, arma::mat* xd_, 
 	  const char* choice_) {
 	    this->choice = choice_;

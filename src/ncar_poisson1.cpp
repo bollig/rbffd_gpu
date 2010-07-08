@@ -36,7 +36,6 @@ NCARPoisson1::~NCARPoisson1() {
 
 void NCARPoisson1::solve(Communicator* comm_unit) {
 
-    exit(EXIT_FAILURE);
     if (subdomain == NULL) {
         cerr
                 << "In " << __FILE__
@@ -45,9 +44,6 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         exit(EXIT_FAILURE);
     } else {
 
-   
-        vector<double>& s = sol[0];
-        vector<double>& s1 = sol[1];
 
         // TODO: solve this in parallel
         //     comm_unit->broadcastObjectUpdates(subdomain);
@@ -58,9 +54,6 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         //for (int i = 0; i < s.size(); i++) {
         //    s[i] = subdomain->U_G[i];
         //}
-
-        //der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
-        //der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
 
         //for (int i = 0; i < lapl_deriv.size(); i++) {
         //  Vec3& v = (*rbf_centers)[i];
@@ -74,59 +67,135 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // 2) Build a full vector F = laplacian(u)
         // 3)
 
-        int nn = rbf_centers->size();
-        int kk = boundary_set->size();
+        int nb = subdomain->global_boundary_nodes.size();
+        // All interior and boundary nodes are included in the stencils.
+        // The first nb Q_stencils should be the global boundary nodes
+        int ni = subdomain->Q_stencils.size() - nb;
+
+        int nn = (nb + ni) + nb + nb + nb;
 
         // We are forming:
         //
-        //   LA_i * a_i = F - LA_b * a_b
+        //  [ w_lapl    |   0   |    0   |   0   ]  [ A_boundary ]      [ f_bondary  ]
+        //  [ w_x       |   -I  |    0   |   0   ]  [ A_interior ]      [ f_interior ]
+        //  [ w_y       |   0   |    -I  |   0   ]  [ dA/dx      ]  =   [     0      ]
+        //  [ w_z       |   0   |    0   |   -I  ]  [ dA/dy      ]      [     0      ]
+        //  [-1/r*I | 0 |   x*I |    y*I |   z*I ]  [ dA/dz      ]      [     0      ]
         //
-        // where _i indicates interior and _b indicates boundary
-        // LA_i is sparse and filled with laplacian weights from Derivative class
+        // where w_lapl are the laplacian RBFFD weights for interior nodes (ni x nb + ni)
+        // w_x are the d/dx RBFFD weights, etc. NOTE: w_lapl * [A_boundary; A_interior]' = [f_boundary; f_interior]'
+        //
+        // In the comments below I number the blocks as:
+        //
+        //  [ 1 |   6  |  11  |  16 ]  [ 21 ]      [ 25  ]
+        //  [ 2 |   7  |  12  |  17 ]  [ .  ]      [ 26  ]
+        //  [ 3 |   8  |  13  |  18 ]  [ 22 ]  =   [ 27  ]
+        //  [ 4 |   9  |  14  |  19 ]  [ 23 ]      [ 28  ]
+        //  [ 5 |   10 |  15  |  20 ]  [ 24 ]      [ 29  ]
+        // with the . indicating that I include that block in Block 21.
+        // NOTE: the matrix is nn x nn
+        //
+
+        for (int i = 0; i < nb + ni; i++) {
+            // Compute all derivatives for our centers
+            der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "x");
+            der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "y");
+            der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "z");
+            der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "lapl");
+        }
 
         // The derivative weights go into a matrix that is TotNumNodes x TotNumNodes
         // This is a sparse matrix though, so we're wasting memory and computation
         // TODO: replace this with a sparse solver
-        arma::mat la_interior(nn,nn);
-        la_interior.zeros();
+        arma::mat L(nn,nn);
+        L.zeros();
 
-        arma::mat la_boundary(nn, nn);
-        la_boundary.zeros();
-        
-        arma::colvec f(nn);
-     
-        for (int i = 0; i < nn; i++) {
-            f(i) = exactSolution->laplacian((*rbf_centers)[i],this->time);
-        }
+        arma::colvec F(nn);
+        F.zeros();
 
-        arma::colvec a_b(nn);
-        a_b.zeros();
-        
-        // Fill only the elements corresponding to boundary nodes
-        for (int i = 0; i < boundary_set->size(); i++) {
-            a_b((*boundary_set)[i]) = this->boundaryValues((*rbf_centers)[(*boundary_set)[i]]);
-        }
+        cout << "WARNING! using hardcoded constants for the boundaries!" << endl;
+        cout << "WARNING! using x,y,z weights separately to compute d/dr!" << endl;
 
-        std::vector< std::vector<int> >& sten = subdomain->Q_stencils;
-
-        // Fill Interior laplacian matrix
-        for (int i = 0; i < sten.size(); i++) {
-            arma::mat& weights = der->getLaplWeights(i);
-            for (int j = 0; j < sten[i].size(); j++) {
-                la_interior(i,sten[i][j]) = weights(j);
+        // Block 1 (top left corner): laplacian weights for ni interior points using nb+ni possible weights
+        for (int i = 0; i < ni; i++) {
+            int indx = i + nb; // offset into Q_stencils to get the interior stencils only
+            arma::mat& l_weights = der->getLaplWeights(indx);
+            for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
+                L(i,subdomain->Q_stencils[indx][j]) = l_weights(j);        // Block 1 (weights for laplacian)
             }
         }
 
-        // Fill Boundary laplacian matrix
-        for (int i = 0; i < boundary_set->size(); i++) {
-            int indx = (*boundary_set)[i];  // The ith boundary stencil
-            arma::mat& weights = der->getLaplWeights(indx);
-            for (int j = 0; j < sten[indx].size(); j++) {
-                la_boundary(indx,sten[indx][j]) = weights(j);
-                la_interior(indx,sten[indx][j]) = 0.;
+        // Block 2 (below top left corner): dA/dx weights for nb boundary points using nb+ni possible weights
+        // Block 7 (right of Block 2): -I which indicates that the linear combination of weights in Block 2
+        // approximating d/dx have 0 residual (i.e., if Sum(w_x * A) = d/dx, then Sum(w_x * A) - d/dx = 0)
+        for (int i = 0; i < nb; i++) {
+            int bindx = ni+i;   // Offset to start of block row
+            int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
+            arma::mat& x_weights = der->getXWeights(indx);
+            for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
+                L(bindx,subdomain->Q_stencils[indx][j]) = x_weights(j);        // Block 2 (weights for d/dx)
             }
+            // Stencil always contains center at element 0
+            // Offset by nb+ni to shift into the matrix.
+            L(bindx, subdomain->Q_stencils[indx][0] + (nb+ni)) = -1;
         }
 
+        // Block 3 (below block 2): dA/dy weights for nb boundary points using nb+ni possible weights
+        // Block 13: -I indicating linear combination for d/dy has 0 residual.
+        for (int i = 0; i < nb; i++) {
+            int bindx = (ni+nb)+i;   // Offset to start of block row
+            int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
+            arma::mat& y_weights = der->getYWeights(indx);
+            for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
+                L(bindx,subdomain->Q_stencils[indx][j]) = y_weights(j);        // Block 3 (weights for d/dy)
+            }
+            // Stencil always contains center at element 0
+            // Offset by nb+ni+nb to shift into the block 13
+            L(bindx, subdomain->Q_stencils[indx][0] + (nb+ni+nb)) = -1;
+        }
+
+
+        // Block 4 (below block 3): dA/dz weights for nb boundary points using nb+ni possible weights
+        // Block 19: -I indicating linear combination for d/dy has 0 residual
+        for (int i = 0; i < nb; i++) {
+            int bindx = (ni+nb+nb)+i;   // Offset to start of block row
+            int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
+            arma::mat& z_weights = der->getZWeights(indx);
+            for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
+                L(bindx,subdomain->Q_stencils[indx][j]) = z_weights(j);        // Block 4 (weights for d/dz)
+            }
+            // Stencil always contains center at element 0
+            // Offset by nb+ni to shift into the block 19.
+            L(bindx, subdomain->Q_stencils[indx][0] + (nb+ni+nb+nb)) = -1;
+        }
+
+        // Block 5 (below block 4): diagonal -1/r to get A/r in expression (dA/dr - A/r = 0)
+        // for nb boundary points with the first nb x nb subblock as diagonal; the rest of the nb x ni elements are 0.
+        // Block 10, 15 and 20: diagonal x, y, or z elements to evaluate d/dr = x*d/dx + y*d/dy + z*d/dz.
+        // When combined with block 5, we have ( x*d/dx + y*d/dy + z*d/dz - 1/r = 0 ).
+        for (int i = 0; i < nb; i++) {
+            int bindx = (ni+nb+nb+nb)+i;   // Offset to start of block row
+            int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
+            Vec3& center = subdomain->G_centers[indx];
+            double r = sqrt(center.x()*center.x() + center.y()*center.y() + center.z()*center.z());
+            if (r < 1e-8) {
+                cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
+                exit(EXIT_FAILURE);
+            }
+            // Again, make sure we use Q_stencils[i][0] so we are forming the diagonals
+            // correctly using the stencil center index (WARNING! this is not consistent for
+            // domain decomposition... how to address this? TODO in the future..)
+            L(bindx,subdomain->Q_stencils[indx][0]) = -1./r;                          // Block 5  (-1/r*I)
+            L(bindx,subdomain->Q_stencils[indx][0]+(nb+ni)) = center.x();             // Block 10 (x*I)
+            L(bindx,subdomain->Q_stencils[indx][0]+(nb+ni+nb)) = center.y();          // Block 15 (y*I)
+            L(bindx,subdomain->Q_stencils[indx][0]+(nb+ni+nb+nb)) = center.z();       // Block 20 (z*I)
+        }
+
+        L.print("L = ");
+
+
+        return ;
+#if 0
         vector<double> sol_ex;
         vector<double> sol_error;
 
@@ -175,6 +244,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         for (int i = 0; i < s.size(); i++) {
             subdomain->U_G[i] = s[i];
         }
+        #endif
     }
     return;
 }

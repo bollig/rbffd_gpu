@@ -15,7 +15,7 @@ private:
 
 	std::vector<Vec3>* rbf_centers;
 	std::vector<int>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
-	
+
 
 	GPU* subdomain;
 	Derivative* der;

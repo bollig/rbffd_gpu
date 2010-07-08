@@ -102,6 +102,8 @@ public:
 	virtual CMPLX  xderiv(const CVec3& xvec) = 0;
 	virtual double yderiv(const Vec3& xvec)  = 0;
 	virtual CMPLX  yderiv(const CVec3& xvec) = 0;
+        virtual double zderiv(const Vec3& xvec)  = 0;
+        virtual CMPLX  zderiv(const CVec3& xvec) = 0;
 
 	virtual double xxderiv(const Vec3& xvec, const Vec3& xi) = 0;
 	virtual double yyderiv(const Vec3& xvec, const Vec3& xi) {
@@ -190,6 +192,18 @@ public:
 		return values;
 	}
 
+        arma::mat zderiv(const ArrayT<Vec3>& arr) {
+                const int* dims = arr.getDims();
+                int nr = dims[0];
+                int nc = dims[1];
+                arma::mat values(nr, nc);
+                for (int j=0; j < nc; j++) {
+                for (int i=0; i < nr; i++) {
+                        values(i,j) = zderiv(arr(i,j));
+                }}
+                return values;
+        }
+
 
 	arma::cx_mat xderiv(const ArrayT<CVec3>& arr) {
 		//printf("inside xderiv ArrayT<CVec3>\n");
@@ -213,6 +227,17 @@ public:
 		}}
 		return values;
 	}
+
+        arma::cx_mat zderiv(const ArrayT<CVec3>& arr) {
+                const int* dims = arr.getDims();
+                arma::cx_mat values(dims[0], dims[1]);
+                for (int j=0; j < dims[1]; j++) {
+                for (int i=0; i < dims[0]; i++) {
+                        CVec3 v = arr(i,j);
+                        values(i,j) = zderiv(v);
+                }}
+                return values;
+        }
 
 	void setEpsilon(double e) { 
 		eps = e; 

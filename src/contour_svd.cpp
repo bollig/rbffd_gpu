@@ -749,6 +749,9 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
 
     cx_rowvec valrow = fds;
 
+	// TODO (EVAN): accelerate this solve. its many small solves
+	// But we could do many small solves at the same time on a GPU
+	// Or change this to an iterative solver or something
     cx_rowvec row = solver(valrow, a);
 
     return row.cols(0,nc-1);

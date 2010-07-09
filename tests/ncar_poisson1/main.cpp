@@ -21,7 +21,7 @@ using namespace std;
 #define NB_INTERIOR 1000
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
-#define STENCIL_SIZE 100
+#define STENCIL_SIZE 200
 
 
 

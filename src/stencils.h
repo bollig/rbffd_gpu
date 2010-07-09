@@ -68,7 +68,15 @@ public:
 		//exit(0);
 
 		arma::mat rrd_norm = matr * (rad*rad); // normalized
-
+                // Constructor 3/3 for contoursvd
+                // rbf = this.rbf = RBF choice class (i.e., RBF_MQ for multiquadric)
+                // td2 = this.rd2 = Squared distance matrix (||x-xi||^2)
+                // ep = this.eps_norm = RBF support parameter divided by stencil radius (eps/rad)
+                // rr0 = this.rr0_norm = Squared distance matrix scaled by the radius squared
+                // rrd = this.rrd_norm = Squared distance vector for separation between stencil nodes and stencil center Vec(||x-xi||^2)
+                // rrdvec_ = this.rdvec_norm = Vec3 vectors representing separation between stencil nodes and the stencil center (x-xi) and scaled by the radius
+                //              NOTE: this is NOT the same as rrd_norm (as in Vec(||x-xi||^2)); it is Vec(Vec3(x-xi));
+                // rad = this.rad/this.rad = 1. (presumably because all other parameters were scaled by radius) {????}
 		svd = new ContourSVD(rbf, rd2, eps_norm, rr0_norm, rrd_norm, rdvec_norm, rad/rad);
 	}
 

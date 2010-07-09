@@ -16,12 +16,12 @@
 
 using namespace std;
 
-#define NB_INNER_BND 100
-#define NB_OUTER_BND 200
-#define NB_INTERIOR 1000
+#define NB_INNER_BND 5
+#define NB_OUTER_BND 5
+#define NB_INTERIOR 10
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
-#define STENCIL_SIZE 200
+#define STENCIL_SIZE 5
 
 
 

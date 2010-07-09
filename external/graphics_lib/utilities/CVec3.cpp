@@ -163,10 +163,9 @@ double CVec3::magnitude() const
 void CVec3::print(const char *msg) const
 {
 	if (msg) {
-    	printf("%s: %g, %g, %g\n", msg, (real(vec[0]), imag(vec[0])), (real(vec[1]), imag(vec[1])), (real(vec[2]), imag(vec[2])) );
-	} else {
-    	printf("%g, %g, %g\n", (real(vec[0]), imag(vec[0])), (real(vec[1]), imag(vec[1])), (real(vec[2]), imag(vec[2])) );
-	}
+        cout << msg;
+        }
+        cout << vec[0] << ", " << vec[1] << ", " << vec[2] << endl;
 }
 //----------------------------------------------------------------------
 std::ostream&

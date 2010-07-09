@@ -30,11 +30,28 @@ ContourSVD::ContourSVD(RBF* rbf, mat& rd2, double ep, mat& rr0, mat& rrd, ArrayT
     init(rbf, rd2, eps, rr0, rrd, rrdvec, rad);
 }
 //----------------------------------------------------------------------
+// Constructor 3/3 for contoursvd
+// rbf = RBF choice class (i.e., RBF_MQ for multiquadric)
+// td2 = Squared distance matrix (||x-xi||^2)
+// ep = RBF support parameter divided by stencil radius (eps/rad)
+// rr0 = Squared distance matrix scaled by the radius squared
+// rrd = Squared distance vector for separation between stencil nodes and stencil center Vec(||x-xi||^2)
+// rrdvec = Vec3 vectors representing separation between stencil nodes and the stencil center (x-xi) and scaled by the radius
+//              NOTE: this is NOT the same as rrd_norm (as in Vec(||x-xi||^2)); it is Vec(Vec3(x-xi));
+// rad = {???} typically passed 1.
 ContourSVD::ContourSVD(RBF* rbf, mat& rd2, rowvec& ep, mat& rr0, mat& rrd, ArrayT<Vec3>& rrdvec, double rad)
 {
     init(rbf, rd2, ep, rr0, rrd, rrdvec, rad);
 }
 //----------------------------------------------------------------------
+// rbf = RBF choice class (i.e., RBF_MQ for multiquadric)
+// td2 = Squared distance matrix (||x-xi||^2)
+// ep = RBF support parameter divided by stencil radius (eps/rad)
+// rr0 = Squared distance matrix scaled by the radius squared
+// rrd = Squared distance vector for separation between stencil nodes and stencil center Vec(||x-xi||^2)
+// rrdvec = Vec3 vectors representing separation between stencil nodes and the stencil center (x-xi) and scaled by the radius
+//              NOTE: this is NOT the same as rrd_norm (as in Vec(||x-xi||^2)); it is Vec(Vec3(x-xi));
+// rad = {???} typically passed 1.
 void ContourSVD::init(RBF* rbf, mat& rd2, rowvec& ep, mat& rr0, mat& rrd, ArrayT<Vec3>& rrdvec_, double rad)
 {
     this->rd2 = rd2; // matrix can be changed in calling program without affecting values here
@@ -133,6 +150,8 @@ void ContourSVD::execute(int N_)
     for (int i=0; i < numCoeffs; i++) {
         C[i] = new cx_mat(mg,mc);
         //cout << "z= " << z[i] << endl;
+        // RBFFDAPP: complex epsilon, distance matrix, ? , weight choice
+        //CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char* choice
         *C[i] = rbffdapp(z[i], crr0, *crrdvec, choice);
         //print(*C[i], "C[i]");
         //printf("BEFORE EXIT\n"); exit(0);
@@ -710,11 +729,13 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
     //printf("CMPLX: rbffdapp::eps= %f, %f, choice= %s\n", real(eps), imag(eps), choice);
     //exit(0);
     rbf->setEpsilon(eps);
+
+    // Generate matrix Phi. This is \Phi(distanceMatrix). in other words,
+    // the rbf evaluted for all distances in the distance matrix.
     cx_mat vals = (*rbf)(rd);
 
     // replace by rbf->xderiv and rbf->yderiv for the appropriate methods
     cx_mat vald;
-
     if (strcmp(choice, "x") == 0) {
         vald = rbf->xderiv(re);
         //printf("rbff..., x deriv\n");
@@ -732,6 +753,9 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
         exit(1);
     }
 
+   // re.printcx("RE = ");
+   // rd.print("RD = ");
+   // vald.print("VALD = ");
     // Add constraint: derivative of a constant = 0
 
     int nr = rd.n_rows;
@@ -747,12 +771,19 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
     fds.submat(0,0,0,nc-1) = vald;
     fds(0,nc) = 0.;
 
+    // This is a vector of the rbf derivative evaluated at
+    // stencil centers
     cx_rowvec valrow = fds;
 
 	// TODO (EVAN): accelerate this solve. its many small solves
 	// But we could do many small solves at the same time on a GPU
 	// Or change this to an iterative solver or something
+
+    // A is the distance matrix of all stencil nodes versus each other
     cx_rowvec row = solver(valrow, a);
+
+   // valrow.print("VAL ROW = ");
+   // a.print("a = ");
 
     return row.cols(0,nc-1);
 }

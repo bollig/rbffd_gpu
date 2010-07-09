@@ -1,4 +1,4 @@
-// I must add consts everywhere as much as possible, since I can pass a non-const to a 
+// I must add consts everywhere as much as possible, since I can pass a non-const to a
 // const argument, but not vice-versa!
 // getDims(), dims should be set when np1, np2 or np3 is changed. AT NO OTHER TIME!!!
 
@@ -22,6 +22,7 @@
 #include <typeinfo>
 #include "GEtypes.h"
 #include "Vec3i.h"
+#include "CVec3.h"
 
 template <class T>
 class ArrayT {
@@ -256,6 +257,7 @@ public:
     void print(const char*, Vec3i orig, Vec3i size);
     void printi(const char*, Vec3i orig, Vec3i size);
     void printcx(const char*, Vec3i orig, Vec3i size);
+    void printcx(const char* msg, CVec3 orig, CVec3 size);
     // can only resize arrays allocated internally
     void resize(Vec3i& arraySize, Vec3i& origin); // max nb points in 3 directions, origin
     void resize(Vec3i& arraySize); // max nb points in 3 directions, origin
@@ -534,6 +536,27 @@ void ArrayT<T>::print(const char* msg)
 }
 //----------------------------------------------------------------------
 template <class T>
+void ArrayT<T>::printcx(const char* msg, CVec3 orig, CVec3 size)
+{
+        // print complex numbers
+        // size: number of elements to print
+
+        //Vec3i mx = orig + size;
+        Vec3i mx = orig + size;
+        size.print("size: ");
+        orig.print("orig: ");
+        mx.print("mx: ");
+    printf("\n-------------- %s ---------------\n", msg);
+
+    for (int k=orig[2]; k < mx[2]; k++) {
+    for (int j=orig[1]; j < mx[1]; j++) {
+    for (int i=orig[0]; i < mx[0]; i++) {
+        printf("  i,j,k=  %d, %d, %d, arr= (%21.14g, %21.14g)\n", i,j,k, real(get(i,j,k)), imag(get(i,j,k)));
+    }}}
+    printf("----------------------------------\n");
+}
+//----------------------------------------------------------------------
+template <class T>
 void ArrayT<T>::printcx(const char* msg, Vec3i orig, Vec3i size)
 {
 	// print complex numbers
@@ -549,7 +572,10 @@ void ArrayT<T>::printcx(const char* msg, Vec3i orig, Vec3i size)
     for (int k=orig[2]; k < mx[2]; k++) {
     for (int j=orig[1]; j < mx[1]; j++) {
     for (int i=orig[0]; i < mx[0]; i++) {
-        printf("  i,j,k=  %d, %d, %d, arr= (%21.14g, %21.14g)\n", i,j,k, real(get(i,j,k)), imag(get(i,j,k)));
+        //printf("  i,j,k=  %d, %d, %d, arr= (%21.14g, %21.14g)\n", i,j,k, real(get(i,j,k)), imag(get(i,j,k)));
+        printf("  i,j,k=  %d, %d, %d, arr=",i,j,k);
+        get(i,j,k).print();
+        printf("\n");
     }}}
     printf("----------------------------------\n");
 }

@@ -40,7 +40,15 @@ public:
 	ContourSVD();
 	ContourSVD(RBF* rbf, arma::mat& rd2, arma::rowvec& ep, arma::mat& rr0, arma::mat& rrd, 
 		ArrayT<Vec3>& rrdvec, double rad);
-	ContourSVD(RBF* rbf, arma::mat& rd2, double ep, arma::mat& rr0, arma::mat& rrd, ArrayT<Vec3>& rrdvec, double rad);
+        // rbf = RBF choice class (i.e., RBF_MQ for multiquadric)
+        // td2 = Squared distance matrix (||x-xi||^2)
+        // ep = RBF support parameter divided by stencil radius (eps/rad)
+        // rr0 = Squared distance matrix scaled by the radius squared
+        // rrd = Squared distance vector for separation between stencil nodes and stencil center Vec(||x-xi||^2)
+        // rrdvec = Vec3 vectors representing separation between stencil nodes and the stencil center (x-xi) and scaled by the radius
+        //              NOTE: this is NOT the same as rrd_norm (as in Vec(||x-xi||^2)); it is Vec(Vec3(x-xi));
+        // rad = {???} typically passed 1.
+        ContourSVD(RBF* rbf, arma::mat& rd2, double ep, arma::mat& rr0, arma::mat& rrd, ArrayT<Vec3>& rrdvec, double rad);
 	void init(RBF* rbf, arma::mat& rd2, arma::rowvec& ep, arma::mat& rr0, arma::mat& rrd, ArrayT<Vec3>& rrdvec, double rad);
 	void execute(int N);
 	void getPoles();

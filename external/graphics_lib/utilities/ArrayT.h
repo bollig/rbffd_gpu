@@ -131,7 +131,7 @@ public:
 	}
 
     virtual ~ArrayT() {
-		printf("remove ArrayT\n");
+		//printf("remove ArrayT\n");
         remove();
     }
     inline void remove() {
@@ -292,7 +292,7 @@ ArrayT<T>& ArrayT<T>::operator=(const ArrayT& arr)
 		//printf("inside init\n");
 		init(0, t[0], t[1], t[2], o[0], o[1], o[2]);
 		arr.copyTo(*this);
-		printf("operator=, copyto\n");
+		//printf("operator=, copyto\n");
 	} else {
 		printf("operator= (no copy)\n");
 	}

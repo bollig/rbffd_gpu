@@ -219,6 +219,8 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
 
         double err_norm = this->maxNorm(error);
         cout << "INF NORM (ERROR) : " << err_norm << endl;
+	
+	cout.flush(); 
 
         return ;
 #if 0

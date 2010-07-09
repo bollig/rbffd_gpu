@@ -363,9 +363,11 @@ stencil, int irbf, const char* choice)
 	int N = 128; // Why can't I increase N?
 	arma::mat fd_coeffs = sten.execute(N);
 
+	#if DEBUG
 	char label[256]; 
 	sprintf(label, "%s Derivative Coefficients =", choice); 
 	fd_coeffs.print(label);
+	#endif
 	//exit(0);
 
 	// There should be a better way of doing this

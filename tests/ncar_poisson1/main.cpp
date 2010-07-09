@@ -12,18 +12,24 @@
 #include "exact_solution.h"
 #include "exact_ncar_poisson1.h"
 #include "communicator.h"
+#include "parse_command_line.h"
 
 using namespace std;
 
 #define NB_INNER_BND 100
 #define NB_OUTER_BND 200
-#define NB_INTERIOR 300
-#define NB_SAMPLES 20000
+#define NB_INTERIOR 1000
+#define NB_SAMPLES 80000
 #define DIM_NUM 3
+#define STENCIL_SIZE 100
+
+
 
 int main(int argc, char** argv) {
     
     Communicator* comm_unit = new Communicator(argc, argv);
+
+    parseCommandLineArgs(argc, argv, comm_unit->getRank());
 
     int N_TOT = NB_INNER_BND + NB_OUTER_BND + NB_INTERIOR;
 
@@ -36,7 +42,7 @@ int main(int argc, char** argv) {
     // maximum number of iterations
     int it_max_bnd = 60;    // Boundary
     int it_max_int = 100;   // Interior
-    int stencil_size = 100;
+    int stencil_size = STENCIL_SIZE;
 
     // number of iterations taken (output by cvt3d, input to cvt_write)
     int it_num_boundary = 0;
@@ -87,9 +93,15 @@ int main(int argc, char** argv) {
     poisson->initialConditions();
     poisson->solve(comm_unit);
 
+	
+
     delete(subdomain);
     delete(grid);
     delete(cvt);
+ 
+    cout.flush();
+ 
+    exit(EXIT_SUCCESS);
     //    cvt->cvt_write(DIM_NUM, N_TOT, batch, seed_init, seed, init_string,
     //          it_max, it_fixed, it_num, it_diff, energy, sample_string, sample_num, r,
     //        file_out_name, comment);

@@ -63,6 +63,8 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 	#${CUDA_INCLUDE_DIRS}
 )
 
+add_definitions( -DUSE_KDTREE )
+
 # Make sure we build library and tests subtrees
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/src)
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/tests)

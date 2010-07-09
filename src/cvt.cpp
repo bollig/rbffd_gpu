@@ -294,7 +294,7 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
 
 #if USE_KDTREE
     // Construct a kdtree for range_query
-    kdtree = new KDTree(r, n, dim_num);
+    kdtree = new KDTree(r, nb_pts, dim_num);
 #endif
 
     if (DEBUG) {

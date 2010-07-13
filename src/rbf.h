@@ -97,6 +97,7 @@ public:
 	virtual double xderiv(const Vec3& xvec, const Vec3& xi) = 0;
 	virtual double yderiv(const Vec3& xvec, const Vec3& xi) = 0;
 	virtual double zderiv(const Vec3& xvec, const Vec3& xi) = 0;
+        virtual double rderiv(const Vec3& xvec, const Vec3& xi) = 0;
 
 	virtual double xderiv(const Vec3& xvec)  = 0;
 	virtual CMPLX  xderiv(const CVec3& xvec) = 0;

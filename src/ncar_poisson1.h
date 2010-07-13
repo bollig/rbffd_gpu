@@ -43,13 +43,16 @@ private:
 	
 	int id; 		// Comm rank or comm id
 
+        int dim_num;
+
 public:
-	NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank);
+        NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
 	~NCARPoisson1();
 
         // Solve the Poisson problem
 	void solve(Communicator* comm_unit);
-        
+        void solve_OLD(Communicator* comm_unit);
+
 	// Only update the updated_solution vector if it is non-null (i.e. we actually pass something to the routine)
 	void initialConditions(std::vector<double>* solution = NULL);
 

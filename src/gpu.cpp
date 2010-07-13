@@ -448,7 +448,7 @@ void GPU::fillLocalData(vector<Vec3>& rbf_centers,
 	printf("l2g size= %d\n", (int) loc_to_glob.size());
 	printf("g2l size= %d\n", (int) globmap.size());
 	printf("G_centers size= %d\n", (int) G_centers.size());
-	printf("avg_dists size= %d\n", (int) Q_avg_dists.size());
+        printf("Q_avg_dists size= %d\n", (int) Q_avg_dists.size());
 }
 //----------------------------------------------------------------------
 set<int>& GPU::stencilSet(set<int>& s, vector<vector<int> >& stencil) {

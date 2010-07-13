@@ -16,13 +16,12 @@
 
 using namespace std;
 
-#define NB_INNER_BND 5
-#define NB_OUTER_BND 5
-#define NB_INTERIOR 10
+#define NB_INNER_BND 100
+#define NB_OUTER_BND 200
+#define NB_INTERIOR 800
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
-#define STENCIL_SIZE 5
-
+#define STENCIL_SIZE 80
 
 
 int main(int argc, char** argv) {
@@ -80,15 +79,14 @@ int main(int argc, char** argv) {
     subdomain->fillVarData(grid->getRbfCenters()); // Sets function values in U
 
     // Verbosely print the memberships of all nodes within the subdomain
-    subdomain->printCenterMemberships(subdomain->G, "G");
+    //subdomain->printCenterMemberships(subdomain->G, "G");
 
     ExactSolution* exact_poisson = new ExactNCARPoisson1();
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
-    der->setAvgStencilRadius(subdomain->Q_avg_dists);
 
-    NCARPoisson1* poisson = new NCARPoisson1(exact_poisson, subdomain, der, 0);
+    NCARPoisson1* poisson = new NCARPoisson1(exact_poisson, subdomain, der, 0, DIM_NUM);
 
     poisson->initialConditions();
     poisson->solve(comm_unit);

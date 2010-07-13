@@ -30,12 +30,12 @@ public:
 	// f = (1+eps2*r^2)^{1/2}
 	inline double eval(const Vec3& x, const Vec3& xi) {
 		double r2 = (x-xi).square();
-		return sqrt(1+(eps2*r2));
+                return sqrt(1.+(eps2*r2));
 	}
 	// added Aug. 15, 2009
 	inline double eval(const Vec3& x) {
 		double r2 = x.square();
-		return sqrt(1+(eps2*r2));
+                return sqrt(1.+(eps2*r2));
 	}
 
 	// added Sept. 11, 2009
@@ -49,7 +49,7 @@ public:
 	inline double eval(double x) {
 	    //printf("eval, x= %f, eps2= %f, rbf= %21.14e\n", x, eps2, sqrt(1.+eps2*x*x));
                 //cout << "ceps= " << ceps << endl;
-		return sqrt(1+(eps2*x*x));
+                return sqrt(1.+(eps2*x*x));
 	}
 
 	// added Aug. 16, 2009
@@ -122,6 +122,10 @@ public:
                 return(ceps2*xvec.z()/f);
         }
 
+        // xvec is the center
+        double rderiv(const Vec3& xvec, const Vec3& xi) {
+                return xvec.x() * xderiv(xvec, xi) + xvec.y() * yderiv(xvec, xi) + xvec.z() * zderiv(xvec, xi);
+        }
 
 	double xxderiv(const Vec3& xvec, const Vec3& xi) {
 		return(0.);

@@ -152,7 +152,7 @@ void Grid::avgStencilRadius() {
 
         avg_distance[i] /= vor_poly_sz[i];
 
-        printf("avg_dist[%d]= %f\n", i, avg_distance[i]);
+        printf("%s:%d\tavg_dist[%d]= %f\n", __FILE__,__LINE__,i, avg_distance[i]);
         printf("    nb points in stencil (excluding center): %d\n", (int) vor_poly_sz[i]);
     }
 

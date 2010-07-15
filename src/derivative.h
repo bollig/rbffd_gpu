@@ -60,7 +60,7 @@ public:
                            stencil, int irbf, const char* choice);
 
     int distanceMatrixSVD(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf, int nb_eig);
-    void distanceMatrix(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil,int irbf, arma::mat* distance_matrix);
+    void distanceMatrix(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil,int irbf, arma::mat* distance_matrix, int dim_num);
     AF& solve(AF& l, AF& b);
     AF& matmul(AF& arr, AF& x);
 

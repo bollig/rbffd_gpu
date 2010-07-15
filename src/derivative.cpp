@@ -215,7 +215,7 @@ int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stenci
     int n = stencil.size();
     arma::mat ar(n+4, n+4);
     ar.zeros(n+4,n+4);
-    this->distanceMatrix(rbf_centers, stencil, irbf, &ar);
+    this->distanceMatrix(rbf_centers, stencil, irbf, &ar, 3);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -280,11 +280,10 @@ int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stenci
 }
 
 //----------------------------------------------------------------------
-void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,int irbf, arma::mat* distance_matrix)
+void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,int irbf, arma::mat* distance_matrix, int dim_num)
 {
     Vec3& c = rbf_centers[irbf];
-    vector<int>& st= stencil;
-    int n = st.size();
+    int n = stencil.size();
     //printf("stencil size= %d\n", n);
 
     //printf("stencil size(%d): n= %d\n", irbf, n);
@@ -292,7 +291,7 @@ void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
 
     arma::mat &ar = *distance_matrix;
 
-    IRBF rbf(epsilon);
+    IRBF rbf(epsilon, dim_num);
 
     //mat ar(n,n);
     // Derivative of a constant should be zero
@@ -320,10 +319,10 @@ void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
 
     // stencil includes the point itself
     for (int i=0; i < n; i++) {
-        Vec3& xiv = rbf_centers[st[i]];
+        Vec3& xiv = rbf_centers[stencil[i]];
         for (int j=0; j < n; j++) {
-            // rbf
-            Vec3& xjv = rbf_centers[st[j]];
+            // rbf centered at xi
+            Vec3& xjv = rbf_centers[stencil[j]];
             ar(i,j) = rbf(xiv, xjv);
         }}
 }
@@ -385,7 +384,7 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
 
     //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
 
-    IRBF rbf(eps);
+    IRBF rbf(eps, 3);
     Stencils sten(&rbf, rad, eps, &xd, choice);
     //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);
 
@@ -420,14 +419,9 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
 //----------------------------------------------------------------------
 void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf, int dim_num)
 {
-    int nb_eig = stencil.size();
-    //epsilon = pow(avg_stencil_radius[irbf], nb_eig);
-    //epsilon = avg_stencil_radius[irbf] * avg_stencil_radius[irbf];
-    //epsilon = 1. / pow(avg_stencil_radius[irbf], nb_eig);
-    //epsilon = 5.0;
-    IRBF rbf(epsilon);
+    IRBF rbf(epsilon, dim_num);
     int n = stencil.size();
-    int np = 1;// + dim_num; // +3 for the x,y,z monomials
+    int np = 1;//+dim_num; // +3 for the x,y,z monomials
 
     // +4 to get the monomial parts
     bx.zeros(n+np); // extra lines to enforce d/dx(constant)=0, d/dx(linear fct) is constant
@@ -441,7 +435,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
 
     Vec3& x0v = rbf_centers[stencil[0]];
     //printf("CenterSize:%d\tStencilSize: %d\n", rbf_centers.size(), stencil.size());
-    //x0v.print("x0v = ");
+   // x0v.print("x0v = ");
     for (int j=0; j < n; j++) {
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3& xjv = rbf_centers[stencil[j]];
@@ -449,9 +443,10 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
         bx(j) = rbf.xderiv(x0v, xjv);
         by(j) = rbf.yderiv(x0v, xjv);
         bz(j) = rbf.zderiv(x0v, xjv);
-        br(j) = rbf.rderiv(x0v, xjv);
+        br(j) = rbf.radialderiv(x0v, xjv);
         blapl(j) = rbf.lapl_deriv(x0v, xjv);
-        //printf("blapl(%d)= %f\n", j, blapl(j));
+       // printf("blapl(%d)= %f [lapl(%f, %f)]\n", j, blapl(j), (x0v-xjv).magnitude(), epsilon);
+       // (x0v-xjv).print("lapl(x)");
     }
 
     if (np > 1) {
@@ -467,14 +462,14 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
         by(n)   = 0.0;
         by(n+1) = 0.; // 1.0;
         by(n+2) = 1.0;
-        if(dim_num == 3) {
+        if(np == 4) {
             by(n+3) = 0.0;
         }
 
         bz(n)   = 0.0;
         bz(n+1) = 0.0;
         bz(n+2) = 0.0;
-        if(dim_num == 3) {
+        if(np == 4) {
             bx(n+3) = 1.0;
         }
 
@@ -486,12 +481,15 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
             blapl(n+3) = 0.0;
         }
 
-        // d/dr = (x d/dx + y d/dy + z d/dz)  = [ 0 x*1 y*1 z*1 ]
+        // d/dr = ((x/r) d/dx + (y/r) d/dy + (z/r) d/dz)  => [ 0 x/r y/r z/r ]
+        // NOTE: we apply d/dr to each: 1, x, y, z
+        // (x/r) dx/dx + (y/r) dx/dy + (z/r) dx/dz = x/r
+        double rp = x0v.magnitude();
         br(n)   = 0.0;
-        br(n+1) = x0v.x();
-        br(n+2) = x0v.y();
-        if(dim_num == 3) {
-            br(n+3) = x0v.z();
+        br(n+1) = x0v.x() / rp;
+        br(n+2) = x0v.y() / rp;
+        if(np == 4) {
+            br(n+3) = x0v.z() / rp;
         }
     }
 
@@ -499,7 +497,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
     // n+4 = 1 + dim(3) for x,y,z
     arma::mat d_matrix(n+np, n+np);
     d_matrix.zeros(n+np,n+np);
-    this->distanceMatrix(rbf_centers, stencil, irbf, &d_matrix);
+    this->distanceMatrix(rbf_centers, stencil, irbf, &d_matrix, dim_num);
 
    // d_matrix.print("DISTANCE MATRIX: ");
 
@@ -516,7 +514,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
             d_matrix(n+2, i) = rbf_centers[stencil[i]].y();
             d_matrix(i, n+2) = rbf_centers[stencil[i]].y();
 
-            if (dim_num == 3) {
+            if (np == 4) {
                 d_matrix(n+3, i) = rbf_centers[stencil[i]].z();
                 d_matrix(i, n+3) = rbf_centers[stencil[i]].z();
             }
@@ -534,12 +532,37 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
     this->z_weights[irbf] = bz * Ainv;
     this->r_weights[irbf] = br * Ainv;
     this->lapl_weights[irbf] = blapl * Ainv;
+
 #if 0
+    double sum_r = 0.;
+    double sum_l = 0.;
+    for (int is = 0; is < n; is++) {
+        sum_r += this->r_weights[irbf][is];
+        sum_l += this->lapl_weights[irbf][is];
+    }
+
+    if (sum_r > 1e-7) {
+        cout << "WARNING! SUM OF WEIGHTS FOR R IS NOT ZERO: " << sum_r << endl;
+        exit(EXIT_FAILURE);
+    }
+    if (sum_l > 1e-7) {
+        cout << "WARNING! SUM OF WEIGHTS FOR LAPL IS NOT ZERO: " << sum_l << endl;
+        exit(EXIT_FAILURE);
+    }
+#if 1
     //br.print("br = ");
-    //d_matrix.print("Distance Matrix =");
+   // d_matrix.print("Distance Matrix =");
+
+    blapl.print("A_l");
     this->lapl_weights[irbf].print("Laplacian Weights = ");
+
+    br.print("A_r");
     this->r_weights[irbf].print("R Weights = ");
 
+    cout << "LAPL WEIGHT SUM: " << sum_l << endl;
+    cout << "R WEIGHT SUM: " << sum_r << endl;
+
+#endif
 #endif
 
     bx.reset();
@@ -553,7 +576,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
 void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf)
 {
     int nb_eig = stencil.size();
-    IRBF rbf(epsilon);
+    IRBF rbf(epsilon, 3);
     int n = stencil.size();
 
     bx.zeros(n+4); // extra lines to enforce d/dx(constant)=0, d/dx(linear fct) is constant

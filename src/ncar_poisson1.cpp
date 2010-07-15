@@ -6,7 +6,10 @@
 
 using namespace std;
 
-NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) : dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->G_centers), boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_) {
+NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+        dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->G_centers),
+        boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_)
+{
     nb_stencils = subdomain->Q_stencils.size();
     nb_rbf = subdomain->G_centers.size();
 
@@ -53,7 +56,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         double prev_err_norm = 100;
 
         double left_eps = 0.1;
-        double right_eps = 10.;
+        double right_eps = 5.;
         double new_eps = left_eps;
 
         double prev_eps = left_eps;
@@ -128,16 +131,14 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // Block 1 (top left corner): d/dr weights for nb boundary points using nb+ni possible weights
         for (int i = 0; i < nb; i++) {
             arma::mat& r_weights = der->getRWeights(subdomain->Q_stencils[i][0]);
+
             for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
                 L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = r_weights(j);        // Block 1 (weights for d/dr)
             }
 
- //           L(i, nb+ni) = r_weights(subdomain->Q_stencils[i].size());        // The weight for the 1's monomial
-         //s   L(nb+ni, i) = r_weights(subdomain->Q_stencils[i].size());        // The weight for the 1's monomial
-
             // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
             Vec3& center = subdomain->G_centers[subdomain->Q_stencils[i][0]];
-            double r = sqrt(center.x()*center.x() + center.y()*center.y() + center.z()*center.z());
+            double r = center.magnitude();
             if (r < 1e-8) {
                 cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
                 exit(EXIT_FAILURE);
@@ -157,15 +158,17 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             }
         }
 
-//       L.print("L = ");
+       //L.print("L = ");
 
-        for (int i = nb; i < nb + ni; i ++) {
-            Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
-            F(subdomain->Q_stencils[i][0]) = exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
+        for (int i = 0; i < ni; i ++) {
+            int indx = i + nb;
+            Vec3& v = subdomain->G_centers[subdomain->Q_stencils[indx][0]];
+            F(subdomain->Q_stencils[indx][0]) = exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
         }
 
-        //F.print("F = ");
+//        F.print("F = ");
 
+        approx_sol.zeros();
         approx_sol = arma::solve(L,F);
 
         // Get the subset of our full solution that corresponds to the solution we need
@@ -173,7 +176,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
 
         // Fill our exact solution
         exact.zeros();
-        for (int i = nb; i < nb + ni; i++) {
+        for (int i = 0; i < nb + ni; i++) {
             exact(subdomain->Q_stencils[i][0]) = exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.);
         }
 
@@ -221,7 +224,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         results.col(0) = approx_sol;
         results.col(1) = exact;
         results.col(2) = error;
-        results.print("\n\nRESULTS (APPROX SOLUTION; \tEXACT SOLUTION; \tAbs ERROR");
+        results.print("\n\nRESULTS\n (APPROX SOLUTION; \tEXACT SOLUTION; \tAbs ERROR");
         //A.print("Full Solution (A) = ");
         //exact.print("Exact = ");
         //error.print("Error = ");

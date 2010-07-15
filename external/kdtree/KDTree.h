@@ -17,7 +17,8 @@ using namespace std;
 typedef vector<double> Point;
 
 /// The root node is stored in position 0 of nodesPtrs
-#define ROOT 0
+/// EVAN BOLLIG: changed ROOT to KDTREE_ROOT since OpenMP depends on the macro ROOT and it was causing problems
+#define KDTREE_ROOT 0
 
 class Node {
 public:
@@ -861,7 +862,7 @@ public:
         double cdistsq = distance_squared(p, points[leaf->pIdx]); // best distance at the moment
         // cout << "first approximation: " << leaf->idx+1 << endl;
         int closest_neighbor = leaf->pIdx;
-        check_border_distance(ROOT, 0, p, cdistsq, closest_neighbor); //check if anything else can do better
+        check_border_distance(KDTREE_ROOT, 0, p, cdistsq, closest_neighbor); //check if anything else can do better
         return closest_neighbor;
     }
 
@@ -938,7 +939,7 @@ public:
             pmax[dim] = point[dim] + radius;
         }
         // start from root at zero-th dimension
-        ball_bbox_query(ROOT, pmin, pmax, idxsInRange, distances, point, radius*radius, 0);
+        ball_bbox_query(KDTREE_ROOT, pmin, pmax, idxsInRange, distances, point, radius*radius, 0);
     }
     /** @see ball_query, range_query
      *

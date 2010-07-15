@@ -48,6 +48,17 @@ public:
         delete [] generators;
         tm.dumpTimings();
     }
+
+#if USE_KDTREE
+    KDTree* getKDTree() {
+        if (kdtree) {
+    // Construct a kdtree for range_query
+            kdtree = new KDTree(generators, nb_pts, dim_num);
+        }
+        return kdtree;
+    }
+#endif
+
     char ch_cap(char c);
     bool ch_eqi(char c1, char c2);
     int ch_to_digit(char c);

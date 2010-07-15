@@ -15,10 +15,10 @@ class RBF_Gaussian : public RBF{
 private:
 
 public:
-	RBF_Gaussian(double epsilon) : RBF(epsilon) {
+        RBF_Gaussian(double epsilon, int dim_num) : RBF(epsilon, dim_num) {
 	}
 
-	RBF_Gaussian(CMPLX epsilon) : RBF(epsilon) {
+        RBF_Gaussian(CMPLX epsilon, int dim_num) : RBF(epsilon, dim_num) {
 	}
 
 	~RBF_Gaussian() {};

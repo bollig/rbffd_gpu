@@ -4,6 +4,7 @@
 #include <vector>
 #include <Vec3.h>
 #include <ArrayT.h>
+#include "KDTree.h"
 
 class Grid {
 
@@ -88,6 +89,9 @@ public:
         // specified number of boundary nodes.
         void computeStencils(double* nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes);
 
+        // Use a kdtree when computing stencils
+        void computeStencils(double* nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes, KDTree* kdtree);
+
 	void avgStencilRadius();
 
 	// use subgrid to compute stencils: a stencil is all points in all 
@@ -136,6 +140,11 @@ public:
 
         // Run through the list of nodes and sort them so the boundary nodes appear first in the list
         virtual void sortNodes(); 
+
+
+    protected:
+        // compute stencil that contains the "n" nearest nodes for the grid generated nodes
+        void computeStencilsKDTree(KDTree* kdtree);
 
 //----------------------------------------------------------------------
 };

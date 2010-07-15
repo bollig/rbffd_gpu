@@ -194,6 +194,27 @@ void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, in
     this->computeStencils();
 }
 
+void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes, KDTree* kdtree) {
+    this->stencil_size = st_size;
+    this->rbf_centers.resize(nb_tot_nodes);
+    for (int i = 0; i < nb_tot_nodes; i++) {
+        Vec3 v;
+        for (int j = 0; j < this->dim; j++) {
+            v[j] = nodes[i*dim + j];
+        }
+        this->rbf_centers[i] = v;
+    }
+    this->nb_rbf = nb_tot_nodes;
+    this->nb_bnd = nb_boundary_nodes;
+    boundary.resize(nb_boundary_nodes);
+    for (int i = 0; i < nb_boundary_nodes; i++) {
+        boundary[i] = i;
+    }
+
+    this->computeStencilsKDTree(kdtree);
+}
+
+
 //----------------------------------------------------------------------
 void Grid::computeStencils() {
 
@@ -300,6 +321,89 @@ void Grid::computeStencils() {
     }
 
 #if 1
+    double avgint = 0.;
+    double avgbnd = 0.;
+
+    printf("avg_int.size() = %d\n", avg_int.size());
+    printf("avg_bnd.size() = %d\n", avg_bnd.size());
+
+    if (nb_rbf - nb_bnd > 0) {
+        for (int i = 0; i < avg_int.size(); i++) {
+            avgint += avg_int[i];
+        }
+        avgint /= avg_int.size();
+    } else {
+        avgint = 0.;
+    }
+
+    // There should always be boundary point(s)
+    for (int i = 0; i < avg_bnd.size(); i++) {
+        avgbnd += avg_bnd[i];
+    }
+    avgbnd /= avg_bnd.size();
+
+    printf("mean of mean interior distances: %f (size: %d)\n", avgint, avg_int.size());
+    printf("mean of mean boundary distances: %f (size: %d)\n", avgbnd, avg_bnd.size());
+#endif
+}
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+void Grid::computeStencilsKDTree(KDTree* kdtree) {
+
+    if (nb_bnd == 0) {
+        printf("**** WARNING! nb_bnd == 0; Did generateGrid() update this value properly?! ******\n");
+        printf("**** Resetting nb_bnd and nb_rbf ****\n");
+        this->nb_bnd = boundary.size();
+        this->nb_rbf = rbf_centers.size();
+    }
+
+    if (stencil_size > nb_rbf) {
+        int new_stencil_size = (int) (0.5 * nb_rbf);
+        new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
+        printf("\n!!!!!!!!!!!!!!!!!!!\nWARNING! Not enough centers to reach specified stencil_size (size: %d for %d RBFs)! Using new stencil size: %d\n!!!!!!!!!!!!!!!!!!!\n\n", stencil_size, nb_rbf, new_stencil_size);
+        stencil_size = new_stencil_size;
+    }
+
+    // for each node, a vector of stencil nodes (global indexing)
+    stencil.resize(nb_rbf);
+    printf("stencil size: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
+
+    this->avg_distance.resize(nb_rbf);
+    avg_bnd.resize(nb_bnd);
+    avg_int.resize(nb_rbf - nb_bnd);
+
+    printf("nb_rbf= %d (bnd: %d)\n", nb_rbf, nb_bnd);
+    //printf("nb_bnd= %d\n", nb_bnd);
+    //exit(0);
+
+    // O(n^2) algorithm, whose cost is independent of the number of nearest sought
+    for (int i = 0; i < nb_rbf; i++) {
+        vector<double> center(dim, 0);
+        for (int j = 0; j < dim; j++) {
+            center[j] = rbf_centers[i][j];
+        }
+
+        stencil[i].resize(stencil_size);
+
+        vector<double> nearest_dists;
+        vector<int> nearest_ids;
+        kdtree->k_closest_points(center, stencil_size, nearest_ids, nearest_dists);
+
+       // printf("Stencil[%d] = {", i);
+        for (int j=0; j < stencil_size; j++) {
+            int rev_indx = (stencil_size-1)-j;
+            stencil[i][j] = nearest_ids[rev_indx];
+         //   printf(" %d(%f) ", stencil[i][j], nearest_dists[rev_indx]);
+            this->avg_distance[i] += nearest_dists[rev_indx];
+        }
+        //printf("}\n");
+        this->avg_distance[i] /= (stencil_size-1); // ignore the center node
+        printf("avg_dist[%d]= %f\n", i,  this->avg_distance[i]);
+        printf("nb points in stencil: %d\n", (int) stencil[i].size());
+    }
+
+#if 0
     double avgint = 0.;
     double avgbnd = 0.;
 

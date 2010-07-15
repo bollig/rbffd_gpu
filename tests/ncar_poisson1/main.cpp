@@ -4,9 +4,9 @@
 // error in the constant definitions for MPI. I wonder if its because
 // nested_sphere_cvt.h accidentally overrides one of the defines for MPI
 #include "ncar_poisson1.h"
+#include "grid.h"
 #include "nested_sphere_cvt.h"
 #include "cvt.h"
-#include "grid.h"
 #include "gpu.h"
 #include "derivative.h"
 #include "exact_solution.h"
@@ -16,13 +16,21 @@
 
 using namespace std;
 
-#define NB_INNER_BND 100
-#define NB_OUTER_BND 200
-#define NB_INTERIOR 800
+#if 1
+#define NB_INNER_BND 1000
+#define NB_OUTER_BND 2000
+#define NB_INTERIOR 8000
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
-#define STENCIL_SIZE 80
-
+#define STENCIL_SIZE 60
+#else
+#define NB_INNER_BND 10
+#define NB_OUTER_BND 10
+#define NB_INTERIOR 10
+#define NB_SAMPLES 80000
+#define DIM_NUM 2
+#define STENCIL_SIZE 5
+#endif
 
 int main(int argc, char** argv) {
     
@@ -68,7 +76,7 @@ int main(int argc, char** argv) {
 
     Grid* grid = new Grid(DIM_NUM);
     // Compute stencils given a set of generators
-    grid->computeStencils(generators, stencil_size, NB_INNER_BND + NB_OUTER_BND, N_TOT);
+    grid->computeStencils(generators, stencil_size, NB_INNER_BND + NB_OUTER_BND, N_TOT, cvt->getKDTree());
     grid->avgStencilRadius();
 
     GPU* subdomain = new GPU(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());      // TODO: get these extents from the cvt class (add constructor to GPU)

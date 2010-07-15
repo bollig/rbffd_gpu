@@ -17,11 +17,11 @@ class RBF_MQ : public RBF{
 private:
 
 public:
-	RBF_MQ(double epsilon) : RBF(epsilon) {
+        RBF_MQ(double epsilon, int dim_num) : RBF(epsilon, dim_num) {
 		//eps2= eps*eps;
 	}
 
-	RBF_MQ(CMPLX epsilon) : RBF(epsilon) {
+        RBF_MQ(CMPLX epsilon, int dim_num) : RBF(epsilon, dim_num) {
 		//ceps2= ceps*ceps;
 	}
 
@@ -29,19 +29,22 @@ public:
 
 	// f = (1+eps2*r^2)^{1/2}
 	inline double eval(const Vec3& x, const Vec3& xi) {
-		double r2 = (x-xi).square();
+                double r = (x-xi).magnitude();
+                double r2 = (x-xi).square();
                 return sqrt(1.+(eps2*r2));
 	}
 	// added Aug. 15, 2009
 	inline double eval(const Vec3& x) {
-		double r2 = x.square();
+                double r = x.magnitude();
+                double r2 = x.square();
                 return sqrt(1.+(eps2*r2));
 	}
 
 	// added Sept. 11, 2009
 	inline CMPLX eval(const CVec3& x) {
 		//printf("inside eval CVec3\n");
-		CMPLX r2 = x.square();
+                CMPLX r = x.magnitude();
+                CMPLX r2 = x.square();
 		return sqrt(1.+(ceps2*r2));
 	}
 
@@ -68,8 +71,9 @@ public:
 	//     = eps2*f^{-1} * (2 - eps2*R^2*f^{-2})
 	//  where R^2 = (x-xi)^2 + (y-yi)^2
 	double xderiv(const Vec3& xvec, const Vec3& xi) {
-		double f = eval(xvec, xi);
-		return(eps2*(xvec.x()-xi.x())/f);
+            Vec3 r = (xvec-xi);
+            double f = eval(r);
+            return(eps2*(r.x())/f);
 	}
 
 	double xderiv(const Vec3& xvec) {
@@ -99,13 +103,15 @@ public:
 	}
 
 	double yderiv(const Vec3& xvec, const Vec3& xi) {
-		double f = eval(xvec, xi);
-		return(eps2*(xvec.y()-xi.y())/f);
+                Vec3 r = (xvec-xi);
+                double f = eval(r);
+                return(eps2*(r.y())/f);
 	}
 
         double zderiv(const Vec3& xvec, const Vec3& xi) {
-                double f = eval(xvec, xi);
-		return(eps2*(xvec.z()-xi.z())/f);
+            Vec3 r = (xvec-xi);
+            double f = eval(r);
+            return(eps2*(r.z())/f);
 	}
 
         double zderiv(const Vec3& zvec) {
@@ -122,9 +128,42 @@ public:
                 return(ceps2*xvec.z()/f);
         }
 
-        // xvec is the center
-        double rderiv(const Vec3& xvec, const Vec3& xi) {
-                return xvec.x() * xderiv(xvec, xi) + xvec.y() * yderiv(xvec, xi) + xvec.z() * zderiv(xvec, xi);
+        // First derivative:  d Phi(r) / dr
+        virtual double first_deriv(const Vec3& x) {
+            double r = x.magnitude();
+
+            // first derivative is: eps^2 r/sqrt(1+eps^2 r^2)
+            return (eps2 * r) / eval(x);
+        }
+
+        // First derivative:  d Phi(r) / dr
+        virtual double second_deriv(const Vec3& x) {
+            double r = x.magnitude();
+
+            // second derivative is: eps^2 / (1+eps^2 r^2)^3/2
+            double f = eval(x);
+            double ff = f*f*f;
+            return eps2 / ff;
+        }
+
+
+        // radial derivative dPhi/dr(x,y,z) = x/r * d/dx  + y/r * d/dy + z/r * d/dz
+        // xj is the center; x/r above is center.x() / center.magnitude()
+        double radialderiv(const Vec3& xvec, const Vec3& xj) {
+
+            // Allow easy swap of center in our equation below
+            const Vec3& center = xj;
+            const Vec3& node = xvec;
+
+            const Vec3& r_d = xvec - xj;
+            double r = center.magnitude();
+            double f = sqrt(1. + eps2 * r_d.square());
+
+            //double top = (center.x()*center.x() - center.x()*node.x() + center.y()*center.y() - center.y()*node.y() + center.z()*center.z() - center.z()*node.z())*eps2;
+            //double bottom = sqrt(center.x()*center.x() + center.y()*center.y() + center.z()*center.z())*sqrt(1. + eps2 * (r_d.magnitude()));
+            //return top/bottom;
+
+            return eps2*((r*r) - (center.x()*node.x() + center.y()*node.y() + center.z()*node.z())) / (r * f);
         }
 
 	double xxderiv(const Vec3& xvec, const Vec3& xi) {
@@ -143,50 +182,46 @@ public:
 	//     = eps2*f^{-1} * (2 - eps2*R^2*f^{-2})
 	//  where R^2 = (x-xi)^2 + (y-yi)^2
 	//  lapl(f) = eps2*f^{-1}*(2.-(r*eps)^2*f^{-2})
-
 	double lapl_deriv(const Vec3& xvec, const Vec3& xi) {
 		return lapl_deriv(xvec-xi);
-		/*
-		double f = eval(xvec, xi);
-		double f2 = 1./(f);
-		double f3 = 1./(f*f);
-		double r2e = (xi-xvec).square() * eps2;
-		double d = eps2*f2*(2.-r2e*f3);
-		return d;
-		*/
-	}
+        }
 
 	// added Aug. 15, 2009
 	double lapl_deriv(const Vec3& xvec) {
-		double f = eval(xvec);
-		double f2 = 1./(f);
-		double f3 = 1./(f*f);
-		double r2e = xvec.square() * eps2;
-		double d = eps2*f2*(2.-r2e*f3);
-		return d;
+            // general form: lapl = d^2 Phi /s d r^2 + ((DIM-1)/r) * dPhi / dr
+                // however, if r is 0 then we have issues with that and need the simplified equation.
+                // This is the simplified equation:
+                double r = xvec.magnitude();
+                double f = eval(xvec);
+                double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
+                return lapl;
 	}
 
 	// added Aug. 15, 2009
-	double lapl_deriv(const double x) {
-		//printf("lapl_deriv(double), x= %f\n", x);
-		double f = eval(x);
-		double f2 = 1./(f);
-		double f3 = 1./(f*f);
-		double r2e = x*x*eps2; 
-		double d = eps2*f2*(2.-r2e*f3);
-		return d;
+        double lapl_deriv(const double x) {
+            double r = x;
+            // general form: lapl = d^2 Phi /s d r^2 + ((DIM-1)/r) * dPhi / dr
+                // however, if r is 0 then we have issues with that and need the simplified equation.
+                // This is the simplified equation:
+                double f = eval(r);
+                double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
+                return lapl;
 	}
 
 	// added Aug. 16, 2009
 	CMPLX lapl_deriv(const CMPLX x) {
-		//printf("lapl_deriv: complex, x= (%f,%f)\n", real(x), imag(x));
-		CMPLX f = eval(x);
-		CMPLX f2 = 1./(f);
-		CMPLX f3 = 1./(f*f);
-		CMPLX r2e = x*x*ceps2; 
-		CMPLX d = ceps2*f2*(2.-r2e*f3);
-		return d;
-	}
+                //printf("lapl_deriv: complex, x= (%f,%f)\n", real(x), imag(x));
+
+                // general form: lapl = d^2 Phi /s d r^2 + ((DIM-1)/r) * dPhi / dr
+                    // however, if r is 0 then we have issues with that and need the simplified equation.
+                    // This is the simplified equation:
+                    CMPLX f = eval(x);
+                    CMPLX scale1(dim);
+                    CMPLX scale2(dim-1);
+                    cout << "WARNING! CMPLX LAPLACIAN MAY NOT FUNCTION CORRECTLY: " << scale1 << "\t" << scale2 << endl;
+                    CMPLX lapl = (scale1*ceps2 + scale2*ceps2*ceps2*(x*x)) / (f*f*f);
+                    return lapl;
+        }
 
 };
 

@@ -369,9 +369,12 @@ void Grid::computeStencilsKDTree(KDTree* kdtree) {
     stencil.resize(nb_rbf);
     printf("stencil size: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
 
+   // vector<double> avg_bnd;
+   // vector<double> avg_int;
+
     this->avg_distance.resize(nb_rbf);
-    avg_bnd.resize(nb_bnd);
-    avg_int.resize(nb_rbf - nb_bnd);
+   // avg_bnd.resize(nb_bnd);
+   // avg_int.resize(nb_rbf - nb_bnd);
 
     printf("nb_rbf= %d (bnd: %d)\n", nb_rbf, nb_bnd);
     //printf("nb_bnd= %d\n", nb_bnd);
@@ -383,6 +386,7 @@ void Grid::computeStencilsKDTree(KDTree* kdtree) {
         for (int j = 0; j < dim; j++) {
             center[j] = rbf_centers[i][j];
         }
+
 
         stencil[i].resize(stencil_size);
 
@@ -399,9 +403,11 @@ void Grid::computeStencilsKDTree(KDTree* kdtree) {
         }
         //printf("}\n");
         this->avg_distance[i] /= (stencil_size-1); // ignore the center node
-        printf("avg_dist[%d]= %f\n", i,  this->avg_distance[i]);
-        printf("nb points in stencil: %d\n", (int) stencil[i].size());
+       // printf("avg_dist[%d]= %f\n", i,  this->avg_distance[i]);
+       // printf("nb points in stencil: %d\n", (int) stencil[i].size());
     }
+
+    printf("DONE GENERATING STENCILS\n");
 
 #if 0
     double avgint = 0.;

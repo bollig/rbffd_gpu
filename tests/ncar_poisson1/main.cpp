@@ -17,9 +17,9 @@
 using namespace std;
 
 #if 1
-#define NB_INNER_BND 1000
-#define NB_OUTER_BND 2000
-#define NB_INTERIOR 8000
+#define NB_INNER_BND 100
+#define NB_OUTER_BND 200
+#define NB_INTERIOR 800
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
 #define STENCIL_SIZE 60
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
     Grid* grid = new Grid(DIM_NUM);
     // Compute stencils given a set of generators
     grid->computeStencils(generators, stencil_size, NB_INNER_BND + NB_OUTER_BND, N_TOT, cvt->getKDTree());
-    grid->avgStencilRadius();
+    //grid->avgStencilRadius();
 
     GPU* subdomain = new GPU(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());      // TODO: get these extents from the cvt class (add constructor to GPU)
 

@@ -439,8 +439,8 @@ void GPU::fillLocalData(vector<Vec3>& rbf_centers,
 	set_intersection(Q.begin(), Q.end(), boundary.begin(), boundary.end(),
 			inserter(global_boundary_nodes, global_boundary_nodes.end()));
 	for (int i = 0; i < global_boundary_nodes.size(); i++) {
-		cout << "Boundary Node[" << i << "] = " << global_boundary_nodes[i]
-				<< endl;
+                //cout << "Boundary Node[" << i << "] = " << global_boundary_nodes[i]
+                //		<< endl;
 		global_boundary_nodes[i] = globmap[global_boundary_nodes[i]];
 	}
 	printf("GLOBAL_BOUNDARY.size= %d\n", (int) global_boundary_nodes.size());

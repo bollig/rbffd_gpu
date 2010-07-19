@@ -14,7 +14,8 @@
 	INCLUDE (CPack)
 	INCLUDE (UseDoxygen)
 	FIND_PACKAGE (MPI)
-#	FIND_PACKAGE (CUDA)
+	FIND_PACKAGE (OpenCL)
+	FIND_PACKAGE (CUDA)
 
 
 ###############################################
@@ -28,6 +29,21 @@
 
 	# Typically installed separately. Same rules as Armadillo (local dir here; global unecessary)
 	FIND_LIBRARY(fftw fftw3 PATHS /Users/erlebach/Documents/src/fftw-3.2.2/.libs)
+
+
+
+###############################################
+# Setup GPU APIs
+###############################################
+
+IF (CUDA_FOUND) 
+	MESSAGE("FOUND CUDA, NOT ENABLED YET")
+ENDIF (CUDA_FOUND)
+
+IF (OPENCL_FOUND) 
+	MESSAGE("FOUND OPENCL, NOT ENABLED YET")
+ENDIF (OPENCL_FOUND)
+
 
 
 ###############################################

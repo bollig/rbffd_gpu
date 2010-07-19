@@ -31,12 +31,14 @@ public:
 	inline double eval(const Vec3& x, const Vec3& xi) {
                 double r = (x-xi).magnitude();
                 double r2 = (x-xi).square();
+         //       printf("eval, r= %f, eps=%f, eps2= %f, rbf= %21.14e\n", r, eps, eps2, sqrt(1.+eps2*r2));
                 return sqrt(1.+(eps2*r2));
 	}
 	// added Aug. 15, 2009
 	inline double eval(const Vec3& x) {
                 double r = x.magnitude();
                 double r2 = x.square();
+          //      printf("eval, r= %f, eps=%f, eps2= %f, rbf= %21.14e\n", r, eps, eps2, sqrt(1.+eps2*r2));
                 return sqrt(1.+(eps2*r2));
 	}
 
@@ -50,9 +52,11 @@ public:
 
 	// added Aug. 15, 2009
 	inline double eval(double x) {
-	    //printf("eval, x= %f, eps2= %f, rbf= %21.14e\n", x, eps2, sqrt(1.+eps2*x*x));
+            double r = x;
+            double r2 = r*r;
+           // printf("eval, r= %f, eps=%f, eps2= %f, rbf= %21.14e\n", r, eps, eps2, sqrt(1.+eps2*r2));
                 //cout << "ceps= " << ceps << endl;
-                return sqrt(1.+(eps2*x*x));
+            return sqrt(1.+(eps2*r2));
 	}
 
 	// added Aug. 16, 2009
@@ -152,18 +156,19 @@ public:
         double radialderiv(const Vec3& xvec, const Vec3& xj) {
 
             // Allow easy swap of center in our equation below
-            const Vec3& center = xj;
-            const Vec3& node = xvec;
+            const Vec3& center = xvec;
+            const Vec3& node = xj;
 
             const Vec3& r_d = xvec - xj;
             double r = center.magnitude();
             double f = sqrt(1. + eps2 * r_d.square());
 
-            //double top = (center.x()*center.x() - center.x()*node.x() + center.y()*center.y() - center.y()*node.y() + center.z()*center.z() - center.z()*node.z())*eps2;
-            //double bottom = sqrt(center.x()*center.x() + center.y()*center.y() + center.z()*center.z())*sqrt(1. + eps2 * (r_d.magnitude()));
+            double top = (center.x()*center.x() - center.x()*node.x() + center.y()*center.y() - center.y()*node.y() + center.z()*center.z() - center.z()*node.z())*eps2;
+            double bottom = sqrt(center.x()*center.x() + center.y()*center.y() + center.z()*center.z())*sqrt(1. + eps2 * (r_d.magnitude()));
             //return top/bottom;
 
-            return eps2*((r*r) - (center.x()*node.x() + center.y()*node.y() + center.z()*node.z())) / (r * f);
+            return eps2*(center.x()*r_d.x() + center.y()*r_d.y() + center.z()*r_d.z())/(r*f);
+            //return eps2*((r*r) - (center.x()*node.x() + center.y()*node.y() + center.z()*node.z())) / (r * f);
         }
 
 	double xxderiv(const Vec3& xvec, const Vec3& xi) {
@@ -192,8 +197,9 @@ public:
                 // however, if r is 0 then we have issues with that and need the simplified equation.
                 // This is the simplified equation:
                 double r = xvec.magnitude();
+                double r2 = xvec.square();
                 double f = eval(xvec);
-                double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
+                double lapl = (dim*eps2 + (dim-1)*(r2)*eps2*eps2) / (f*f*f);
                 return lapl;
 	}
 
@@ -218,7 +224,7 @@ public:
                     CMPLX f = eval(x);
                     CMPLX scale1(dim);
                     CMPLX scale2(dim-1);
-                    cout << "WARNING! CMPLX LAPLACIAN MAY NOT FUNCTION CORRECTLY: " << scale1 << "\t" << scale2 << endl;
+                   // cout << "WARNING! CMPLX LAPLACIAN MAY NOT FUNCTION CORRECTLY: " << scale1 << "\t" << scale2 << endl;
                     CMPLX lapl = (scale1*ceps2 + scale2*ceps2*ceps2*(x*x)) / (f*f*f);
                     return lapl;
         }

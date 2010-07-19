@@ -56,7 +56,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         double prev_err_norm = 100;
 
         double left_eps = 0.1;
-        double right_eps = 5.;
+        double right_eps = 30.;
         double new_eps = left_eps;
 
         double prev_eps = left_eps;
@@ -66,6 +66,8 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         arma::colvec exact(nn);
         arma::colvec approx_sol(nn);
         arma::colvec error(nn);
+        arma::colvec expected(nn);
+        arma::colvec diff_lapl(nn);
 
         int iter = 0;
 
@@ -120,10 +122,10 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // The derivative weights go into a matrix that is TotNumNodes x TotNumNodes
         // This is a sparse matrix though, so we're wasting memory and computation
         // TODO: replace this with a sparse solver
-        arma::mat L(nn,nn);
+        arma::mat L(nn+1,nn+1);
         L.zeros();
 
-        arma::colvec F(nn);
+        arma::colvec F(nn+1);
         F.zeros();
 
     //    cout << "WARNING! using hardcoded constants for the boundaries!" << endl;
@@ -158,6 +160,13 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             }
         }
 
+        // This loop should add 1s to the far right column and bottom row; thereby removing the constant from the
+        // possible solution and making the system nonsingular.
+        for (int i = 0; i < nn; i++) {
+            L(nn,i) = 1;
+            L(i,nn) = 1;
+        }
+
        //L.print("L = ");
 
         for (int i = 0; i < ni; i ++) {
@@ -165,11 +174,15 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             Vec3& v = subdomain->G_centers[subdomain->Q_stencils[indx][0]];
             F(subdomain->Q_stencils[indx][0]) = exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
         }
+        F(nn) = 0.;
 
-//        F.print("F = ");
+       //F.print("F = ");
 
-        approx_sol.zeros();
-        approx_sol = arma::solve(L,F);
+        arma::mat sol = arma::solve(L,F);
+
+        cout << "Measure sol(nn+1) = " << sol(nn) << endl;
+
+        approx_sol = sol.rows(0,nn-1);
 
         // Get the subset of our full solution that corresponds to the solution we need
        // arma::mat A_sol = A.rows(0,nb+ni-1);
@@ -182,6 +195,9 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
 
         // Compute our errors
         error = (approx_sol - exact);
+
+//        expected = L*exact;
+//        diff_lapl = expected - F;
 
         prev_err_norm = err_norm;
         err_norm = this->maxNorm(error);
@@ -219,12 +235,14 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         iter ++;
     }
 
-        arma::mat results(nn, 3);
+        arma::mat results(nn, 5);
 
         results.col(0) = approx_sol;
         results.col(1) = exact;
         results.col(2) = error;
-        results.print("\n\nRESULTS\n (APPROX SOLUTION; \tEXACT SOLUTION; \tAbs ERROR");
+       // results.col(3) = expected;
+       // results.col(4) = diff_lapl;
+        results.print("\n\nRESULTS\n (APPROX SOLUTION; \tEXACT SOLUTION; \tABS ERROR \tExpected Laplacian(Using L*ExactSolution)\t Diff EXPECTED & EXACT Laplacian\n");
         //A.print("Full Solution (A) = ");
         //exact.print("Exact = ");
         //error.print("Error = ");

@@ -1,0 +1,12 @@
+The subdirs 
+	cusp
+	thrust
+contain the headers from
+	cusp-v0.1.1.zip (http://cusp-library.googlecode.com/files/cusp-v0.1.1.zip)
+	thrust-v1.2.1.zip (http://thrust.googlecode.com/files/thrust-v1.2.1.zip)
+Both packages are licensed under the Apache v2 license. Details of their licenses
+are available in respective directories. 
+
+NO modifications were made to the source trees of either package. 
+
+-Evan Bollig 7/18/2010

@@ -310,10 +310,10 @@ int main(int argc, char** argv) {
 
     if (!my_rank) { // Master thread 0
 
-        int stencil_size = 7;
-        int nx = 5;
-        int ny = 5;
-        int nz = 5;
+        int stencil_size = 30;
+        int nx = 10;
+        int ny = 10;
+        int nz = 10;
 
         grid = new RegularGrid3D(nx, ny, nz, -1.,1., -1.,1., -1.,1., stencil_size);
 
@@ -411,12 +411,16 @@ int main(int argc, char** argv) {
        
         // Centers are vec<Vec3> where Vec3=(double,double,double)
         // Stencils are vec<int> where int=index into centers vec<Vec3>
+#if 0
         der.computeWeightsSVD(subdomain->G_centers,
                 subdomain->Q_stencils[irbf], irbf, "x");
         der.computeWeightsSVD(subdomain->G_centers,
                 subdomain->Q_stencils[irbf], irbf, "y");
         der.computeWeightsSVD(subdomain->G_centers,
                 subdomain->Q_stencils[irbf], irbf, "lapl");
+#endif
+        der.computeWeights(subdomain->G_centers,
+                subdomain->Q_stencils[irbf], irbf,3);
     }
     printf("after all computeWeights\n");
     // MY BUG IS INSIDE HERE:
@@ -533,7 +537,7 @@ int main(int argc, char** argv) {
             "GLOBAL BOUNDARY NODES: ");
     // Even with Cartesian, the max norm stays at one. Strange
     int iter;
-    for (iter = 0; iter < 100; iter++) {
+    for (iter = 0; iter < 1; iter++) {
         cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter
                 << ") *************" << endl;
         subdomain->printVector(subdomain->U_G, "INPUT_TO_HEAT_ADVANCE");

@@ -1,13 +1,15 @@
 PROJECT(RBF_framework)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-
-################ BEGIN OS DEPENDENT CONFIGS ###################
 	
 SET( CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_SOURCE_DIR}/common
 	${CMAKE_CURRENT_SOURCE_DIR}/common/UseDoxygen
 )
 
+# Get common build instructions used by all operating systems
+INCLUDE (COMMON_CONFIG)
+
+################ BEGIN OS DEPENDENT CONFIGS ###################
 
 ###############################################
 # 		APPLE OSX 10.6
@@ -33,10 +35,6 @@ ENDIF(WIN32)
 ################# END OS DEPENDENT CONFIGS ####################
 
 
-
-# Get common build instructions used by all operating systems
-INCLUDE (COMMON_CONFIG)
-
 # Setup any external libraries we might need
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/external)
 
@@ -49,7 +47,7 @@ SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # Its name should not change
 SET( FRAMEWORK_DEPENDENCIES
 	utilities
-        timing
+       	timing
 	#${CUDA_LIBRARIES}
 )
 
@@ -57,13 +55,17 @@ SET( FRAMEWORK_DEPENDENCIES
 # this source tree we can reference their subtree as ${<name>_SOURCE_DIR}
 # so long as CMake is told that they are subdirs (i.e., add_subdirectory) 
 SET( FRAMEWORK_DEP_INCLUDE_DIRS
-	${utilities_SOURCE_DIR}
-	${kdtree_SOURCE_DIR}
-        ${timing_SOURCE_DIR}
+	$ENV{EXTERNAL_INCLUDE_DIRS}
+	#${timing_SOURCE_DIR}
 	#${CUDA_INCLUDE_DIRS}
 )
 
 add_definitions( -DUSE_KDTREE )
+
+#INCLUDE_DIRECTORIES($ENV{EXTERNAL_INCLUDE_DIRS})
+
+#GET_DIRECTORY_PROPERTY(incdirs INCLUDE_DIRECTORIES) 
+#MESSAGE ("INCLUDE_DIRECTORIES: ${incdirs}")
 
 # Make sure we build library and tests subtrees
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/src)

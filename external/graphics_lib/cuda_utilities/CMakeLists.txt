@@ -16,7 +16,7 @@ set(graphics_libs $ENV{GRAPHIC_LIBS_HOME})
 #ADD_DEFINITIONS(-arch i386)
 #for linux
 #ADD_DEFINITIONS(-arch x86_64)
-ADD_DEFINITIONS(-m64)
+#ADD_DEFINITIONS(-m64)
 
 Include_directories( 
     . 

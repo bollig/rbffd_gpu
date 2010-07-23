@@ -157,7 +157,7 @@ public:
       t4(tm, "[kdtree_t4] Heapsort Input Points (before Partitioning)"),
       t5(tm, "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
     {
-
+        cout << "BUILDING NEW KDTREE" << endl;
         vector<Point> vector_points;
         for (int i = 0; i < nbpts; i++) {
             Point p(dim_num);

@@ -16,7 +16,7 @@
 
 using namespace std;
 
-#if 0
+#if 1
 #define NB_INNER_BND 100
 #define NB_OUTER_BND 200
 #define NB_INTERIOR 800
@@ -28,7 +28,7 @@ using namespace std;
 #define NB_OUTER_BND 10
 #define NB_INTERIOR 10
 #define NB_SAMPLES 80000
-#define DIM_NUM 2
+#define DIM_NUM 3
 #define STENCIL_SIZE 7
 #endif
 

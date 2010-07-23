@@ -51,7 +51,7 @@ public:
 
 #if USE_KDTREE
     KDTree* getKDTree() {
-        if (kdtree) {
+        if (kdtree == NULL) {
     // Construct a kdtree for range_query
             kdtree = new KDTree(generators, nb_pts, dim_num);
         }

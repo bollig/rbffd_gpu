@@ -23,5 +23,5 @@
 	FOREACH (lib ${REQUIRED_EXTERNAL_LIBS})
 		# add each subdir to a global cached variable for external include directories
 		SET (ENV{EXTERNAL_INCLUDE_DIRS} "$ENV{EXTERNAL_INCLUDE_DIRS};${${lib}_SOURCE_DIR}")
-		MESSAGE("ADDED ${lib} SOURCE TO VAR: ENV{EXTERNAL_INCLUDE_DIRS} ")
+		MESSAGE(STATUS "ADDED ${lib} SOURCE TO VAR: ENV{EXTERNAL_INCLUDE_DIRS} ")
 	ENDFOREACH(lib)

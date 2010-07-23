@@ -12,7 +12,8 @@
 		binary_cvt_io       # COMPLETE (test if reading and writing a binary CVT file functions the same as ascii data)
 		nested_spheres_ccvt # COMPLETE (nested spheres with ccvt of the boundary and cvt of interior.)
 		original            # WORKS (base case without parallel support. 2D ellipse)
-
+		cusp_version_test   # COMPLETE (verifies build with CUSP and THRUST libraries).  
+		cusp_simple_example   # COMPLETE (form sparse system and solve)
 
 		ncar_poisson1       # INCOMPLETE (poisson equation on nested spheres)
 
@@ -24,7 +25,7 @@
                 square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection is incomplete (not perfect for distribution; code projects points as they near boundary but the distance is not guesswork)).
 
 
-		cusp_version_test   # Incomplete
+
 
 	)
 

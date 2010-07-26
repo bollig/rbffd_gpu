@@ -542,15 +542,18 @@ void ArrayT<T>::printcx(const char* msg, CVec3 orig, CVec3 size)
         // size: number of elements to print
 
         //Vec3i mx = orig + size;
-        Vec3i mx = orig + size;
+        CVec3 m = orig + size;
+	Vec3i origi(real(orig[0]), real(orig[1]), real(orig[2]));
+	Vec3i mx(real(m[0]), real(m[1]), real(m[2])); 
+
         size.print("size: ");
-        orig.print("orig: ");
+        origi.print("orig: ");
         mx.print("mx: ");
     printf("\n-------------- %s ---------------\n", msg);
 
-    for (int k=orig[2]; k < mx[2]; k++) {
-    for (int j=orig[1]; j < mx[1]; j++) {
-    for (int i=orig[0]; i < mx[0]; i++) {
+    for (int k=origi[2]; k < mx[2]; k++) {
+    for (int j=origi[1]; j < mx[1]; j++) {
+    for (int i=origi[0]; i < mx[0]; i++) {
         printf("  i,j,k=  %d, %d, %d, arr= (%21.14g, %21.14g)\n", i,j,k, real(get(i,j,k)), imag(get(i,j,k)));
     }}}
     printf("----------------------------------\n");

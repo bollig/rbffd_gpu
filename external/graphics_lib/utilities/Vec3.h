@@ -65,7 +65,9 @@ class Vec3
 		float square() {
 			return (vec[0]*vec[0]+vec[1]*vec[1]+vec[2]*vec[2]);
 		}
-		const float square() const {
+
+		//const float square() const {
+		float square() const {
 			return (vec[0]*vec[0]+vec[1]*vec[1]+vec[2]*vec[2]);
 		}
         void print(const char *msg=0) const;

@@ -74,7 +74,9 @@ public:
 	int operator[](int i) {
 		return(vec[i]);
 	}
-	const int operator[](const int i) const {
+
+	//const int operator[](const int i) const {
+	int operator[](const int i) const {
 		return(vec[i]);
 	}
     friend int operator>(const Vec3i& a, const Vec3i& b) {

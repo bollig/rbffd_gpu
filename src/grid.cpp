@@ -324,8 +324,8 @@ void Grid::computeStencils() {
     double avgint = 0.;
     double avgbnd = 0.;
 
-    printf("avg_int.size() = %d\n", avg_int.size());
-    printf("avg_bnd.size() = %d\n", avg_bnd.size());
+    printf("avg_int.size() = %d\n", (int)avg_int.size());
+    printf("avg_bnd.size() = %d\n", (int)avg_bnd.size());
 
     if (nb_rbf - nb_bnd > 0) {
         for (int i = 0; i < avg_int.size(); i++) {
@@ -342,8 +342,8 @@ void Grid::computeStencils() {
     }
     avgbnd /= avg_bnd.size();
 
-    printf("mean of mean interior distances: %f (size: %d)\n", avgint, avg_int.size());
-    printf("mean of mean boundary distances: %f (size: %d)\n", avgbnd, avg_bnd.size());
+    printf("mean of mean interior distances: %f (size: %d)\n", avgint, (int)avg_int.size());
+    printf("mean of mean boundary distances: %f (size: %d)\n", avgbnd, (int)avg_bnd.size());
 #endif
 }
 //----------------------------------------------------------------------
@@ -367,7 +367,7 @@ void Grid::computeStencilsKDTree(KDTree* kdtree) {
 
     // for each node, a vector of stencil nodes (global indexing)
     stencil.resize(nb_rbf);
-    printf("stencil size: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
+    printf("stencil size: %d, nb_rbf= %d\n", (int)stencil.size(), nb_rbf);
 
    // vector<double> avg_bnd;
    // vector<double> avg_int;

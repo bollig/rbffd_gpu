@@ -3,6 +3,7 @@
 #include "ncar_poisson1.h"
 #include "exact_solution.h"
 #include <armadillo>
+#include "derivative.h"
 
 using namespace std;
 
@@ -128,19 +129,36 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         arma::colvec F(nn+1);
         F.zeros();
 
+
+#if 0
+        // This loop should add 1s to the far right column and bottom row; thereby removing the constant from the
+        // possible solution and making the system nonsingular.
+        for (int i = 0; i < nn; i++) {
+            L(nn,i) = 1;
+            L(i,nn) = 1;
+        }
+#else
+        L(nn, nn) = 1;
+#endif
+
     //    cout << "WARNING! using hardcoded constants for the boundaries!" << endl;
     //    cout << "WARNING! using x,y,z weights separately to compute d/dr!" << endl;
         // Block 1 (top left corner): d/dr weights for nb boundary points using nb+ni possible weights
         for (int i = 0; i < nb; i++) {
-            arma::mat& r_weights = der->getRWeights(subdomain->Q_stencils[i][0]);
-
-            for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = r_weights(j);        // Block 1 (weights for d/dr)
-            }
+            //arma::mat& r_weights = der->getRWeights(subdomain->Q_stencils[i][0]);
+            arma::mat& x_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
+            arma::mat& y_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
+            arma::mat& z_weights = der->getZWeights(subdomain->Q_stencils[i][0]);
 
             // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
             Vec3& center = subdomain->G_centers[subdomain->Q_stencils[i][0]];
             double r = center.magnitude();
+      //  r = 1.;
+            for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                //L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = r_weights(j);        // Block 1 (weights for d/dr)
+                L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (center.x() / r) * x_weights(j) + (center.y()/r) * y_weights(j) + (center.z()/r) * z_weights(j);        // Block 1 (weights for d/dr)
+            }
+
             if (r < 1e-8) {
                 cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
                 exit(EXIT_FAILURE);
@@ -158,13 +176,6 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
                 L(subdomain->Q_stencils[indx][0],subdomain->Q_stencils[indx][j]) = l_weights(j);        // Block 1 (weights for laplacian)
             }
-        }
-
-        // This loop should add 1s to the far right column and bottom row; thereby removing the constant from the
-        // possible solution and making the system nonsingular.
-        for (int i = 0; i < nn; i++) {
-            L(nn,i) = 1;
-            L(i,nn) = 1;
         }
 
        //L.print("L = ");
@@ -200,7 +211,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
 //        diff_lapl = expected - F;
 
         prev_err_norm = err_norm;
-        err_norm = this->maxNorm(error);
+        err_norm = this->maxNorm(error.memptr(), error.n_rows, error.n_cols);
         cout << "INF NORM (ERROR) : " << err_norm << endl;
 
 
@@ -443,7 +454,7 @@ void NCARPoisson1::solve_OLD(Communicator* comm_unit) {
 
         error.print("Error = ");
 
-        double err_norm = this->maxNorm(error);
+        double err_norm = this->maxNorm(error.memptr(), error.n_rows, error.n_cols);
         cout << "INF NORM (ERROR) : " << err_norm << endl;
 	
 	cout.flush(); 
@@ -562,11 +573,11 @@ double NCARPoisson1::maxNorm(vector<double> sol) {
 }
 //----------------------------------------------------------------------
 
-double NCARPoisson1::maxNorm(arma::mat sol) {
+double NCARPoisson1::maxNorm(double* sol, int nrows, int ncols) {
     double nrm = 0.;
-    for (int i = 0; i < sol.n_rows; i++) {
-        for (int j = 0; j < sol.n_cols; j++) {
-        double s = abs(sol(i,j));
+    for (int i = 0; i < nrows; i++) {
+        for (int j = 0; j < ncols; j++) {
+        double s = abs(sol[i*ncols + j]);
         if (s > nrm)
             nrm = s;
         }

@@ -5,12 +5,15 @@
 #include <ArrayT.h>
 #include "gpu.h"
 #include "exact_solution.h"
-#include "derivative.h"
+//#include "derivative.h"
 #include "communicator.h"
+//#include <armadillo>
+
+class Derivative;
 
 class NCARPoisson1
 {
-private:
+protected:
         std::vector<double> sol[2];
 
 	std::vector<Vec3>* rbf_centers;
@@ -50,7 +53,7 @@ public:
 	~NCARPoisson1();
 
         // Solve the Poisson problem
-	void solve(Communicator* comm_unit);
+        virtual void solve(Communicator* comm_unit);
         void solve_OLD(Communicator* comm_unit);
 
 	// Only update the updated_solution vector if it is non-null (i.e. we actually pass something to the routine)
@@ -58,8 +61,8 @@ public:
 
         double maxNorm();
 	double maxNorm(std::vector<double> sol);
-        double maxNorm(arma::mat sol);
-
+        //double maxNorm(arma::mat sol);
+        double maxNorm(double* sol, int nrows, int ncols);
         double boundaryValues(Vec3& v);
 
 };

@@ -28,11 +28,22 @@
 		exact_regulargrid.cpp
 	)
 
+        SET( REQUIRED_CU_SOURCE_FILES
+                ncar_poisson1_cusp.cu
+	)
+
 
 ###############################################
 # Project Binaries
 ###############################################
-	# BUILD A FRAMEWORK LIBRARY
+
+        # This is a good feature: name your library with "project( <name> )" and CMake will
+        # define the variable "${<name>_SOURCE_DIR}" so you can easily access the path
+        INCLUDE_DIRECTORIES(
+                ${FRAMEWORK_DEP_INCLUDE_DIRS}
+        )
+
+	# BUILD A CPU ONLY FRAMEWORK LIBRARY
 	ADD_LIBRARY (${FRAMEWORK_LIBRARY} ${REQUIRED_SOURCE_FILES})
 	ADD_DEPENDENCIES (${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
 
@@ -47,15 +58,34 @@
 		${fftw}
 		${ADDITIONAL_REQUIRED_LIBRARIES} 	# From OS specific CMakeLists.txt
 	)
-
-	# This is a good feature: name your library with "project( <name> )" and CMake will 
-	# define the variable "${<name>_SOURCE_DIR}" so you can easily access the path
-	INCLUDE_DIRECTORIES(
-		${FRAMEWORK_DEP_INCLUDE_DIRS}
-	)
 	
+IF(CUDA_FOUND)
+        SET(FRAMEWORK_CUDA_LIBRARY
+                ${FRAMEWORK_LIBRARY}_cuda
+        )
+        MESSAGE(STATUS "ADDING ${FRAMEWORK_CUDA_LIBRARY} TO BUILD PROCESS")
+
+        # BUILD A CUDA ALTERNATIVES LIBRARY
+        #CUDA_INCLUDE_DIRECTORIES(${FRAMEWORK_DEP_INCLUDE_DIRS})
+        CUDA_ADD_LIBRARY( ${FRAMEWORK_CUDA_LIBRARY} ${REQUIRED_CU_SOURCE_FILES})
+        ADD_DEPENDENCIES( ${FRAMEWORK_CUDA_LIBRARY} ${FRAMEWORK_DEPENDENCIES} ${FRAMEWORK_LIBRARY})
+        #TARGET_LINK_LIBRARIES( ${FRAMEWORK_CUDA_LIBRARY}
+        #        ${FRAMEWORK_DEPENDENCIES}
+        #        ${amira}
+        #        ${armadillo}
+        #        ${clapack}
+        #        ${fftw}
+        #        ${ADDITIONAL_REQUIRED_LIBRARIES} 	# From OS specific CMakeLists.txt
+        #)
+ENDIF(CUDA_FOUND)
+
 	IF (MPI_FOUND AND USE_MPI)
 		TARGET_LINK_LIBRARIES (${FRAMEWORK_LIBRARY}
 			${MPI_LIBRARIES}
 		)
+            IF (CUDA_FOUND)
+                TARGET_LINK_LIBRARIES (${FRAMEWORK_CUDA_LIBRARY}
+                    ${MPI_LIBRARIES}
+                )
+            ENDIF (CUDA_FOUND)
 	ENDIF (MPI_FOUND AND USE_MPI)

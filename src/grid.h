@@ -33,7 +33,7 @@ protected:
 	int nb_z;
 	double maxint;
 	int stencil_size;
-	std::vector<double> avg_distance;;		// Computed in avgStencilRadius(..); computeStencils has a locally scoped copy.
+	std::vector<double> avg_distance;		// Computed in avgStencilRadius(..); computeStencils has a locally scoped copy.
 
 	int nb_bnd; // number o fpoints on the domain boundary
 	//double major, minor;

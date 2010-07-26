@@ -100,7 +100,7 @@ public:
 
     double minimum(std::vector<double>& vec);
 
-    double setEpsilon(double epsilon_) { epsilon = epsilon_; }
+    void setEpsilon(double epsilon_) { epsilon = epsilon_; }
 };
 
 #endif

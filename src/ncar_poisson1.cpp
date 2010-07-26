@@ -146,9 +146,9 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // Block 1 (top left corner): d/dr weights for nb boundary points using nb+ni possible weights
         for (int i = 0; i < nb; i++) {
             //arma::mat& r_weights = der->getRWeights(subdomain->Q_stencils[i][0]);
-            arma::mat& x_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
-            arma::mat& y_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
-            arma::mat& z_weights = der->getZWeights(subdomain->Q_stencils[i][0]);
+            double* x_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
+            double* y_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
+            double* z_weights = der->getZWeights(subdomain->Q_stencils[i][0]);
 
             // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
             Vec3& center = subdomain->G_centers[subdomain->Q_stencils[i][0]];
@@ -156,7 +156,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
       //  r = 1.;
             for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
                 //L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = r_weights(j);        // Block 1 (weights for d/dr)
-                L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (center.x() / r) * x_weights(j) + (center.y()/r) * y_weights(j) + (center.z()/r) * z_weights(j);        // Block 1 (weights for d/dr)
+                L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j];        // Block 1 (weights for d/dr)
             }
 
             if (r < 1e-8) {
@@ -172,9 +172,9 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // Block 2 (bottom left corner): laplacian weights for ni interior points using nb+ni possible weights
         for (int i = 0; i < ni; i++) {
             int indx = i + nb; // offset into Q_stencils to get the interior stencils only
-            arma::mat& l_weights = der->getLaplWeights(subdomain->Q_stencils[indx][0]);
+            double* l_weights = der->getLaplWeights(subdomain->Q_stencils[indx][0]);
             for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
-                L(subdomain->Q_stencils[indx][0],subdomain->Q_stencils[indx][j]) = l_weights(j);        // Block 1 (weights for laplacian)
+                L(subdomain->Q_stencils[indx][0],subdomain->Q_stencils[indx][j]) = l_weights[j];        // Block 1 (weights for laplacian)
             }
         }
 
@@ -355,9 +355,9 @@ void NCARPoisson1::solve_OLD(Communicator* comm_unit) {
         // Block 1 (top left corner): laplacian weights for ni interior points using nb+ni possible weights
         for (int i = 0; i < ni; i++) {
             int indx = i + nb; // offset into Q_stencils to get the interior stencils only
-            arma::mat& l_weights = der->getLaplWeights(indx);
+            double* l_weights = der->getLaplWeights(indx);
             for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
-                L(i,subdomain->Q_stencils[indx][j]) = l_weights(j);        // Block 1 (weights for laplacian)
+                L(i,subdomain->Q_stencils[indx][j]) = l_weights[j];        // Block 1 (weights for laplacian)
             }
         }
 
@@ -367,9 +367,9 @@ void NCARPoisson1::solve_OLD(Communicator* comm_unit) {
         for (int i = 0; i < nb; i++) {
             int bindx = ni+i;   // Offset to start of block row
             int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
-            arma::mat& x_weights = der->getXWeights(indx);
+            double* x_weights = der->getXWeights(indx);
             for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
-                L(bindx,subdomain->Q_stencils[indx][j]) = x_weights(j);        // Block 2 (weights for d/dx)
+                L(bindx,subdomain->Q_stencils[indx][j]) = x_weights[j];        // Block 2 (weights for d/dx)
             }
             // Stencil always contains center at element 0
             // Offset by nb+ni to shift into the matrix.
@@ -381,9 +381,9 @@ void NCARPoisson1::solve_OLD(Communicator* comm_unit) {
         for (int i = 0; i < nb; i++) {
             int bindx = (ni+nb)+i;   // Offset to start of block row
             int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
-            arma::mat& y_weights = der->getYWeights(indx);
+            double* y_weights = der->getYWeights(indx);
             for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
-                L(bindx,subdomain->Q_stencils[indx][j]) = y_weights(j);        // Block 3 (weights for d/dy)
+                L(bindx,subdomain->Q_stencils[indx][j]) = y_weights[j];        // Block 3 (weights for d/dy)
             }
             // Stencil always contains center at element 0
             // Offset by nb+ni+nb to shift into the block 13
@@ -396,9 +396,9 @@ void NCARPoisson1::solve_OLD(Communicator* comm_unit) {
         for (int i = 0; i < nb; i++) {
             int bindx = (ni+nb+nb)+i;   // Offset to start of block row
             int indx = i; // dont offset into Q_stencils to get the boundary stencils (they're at the front)
-            arma::mat& z_weights = der->getZWeights(indx);
+            double* z_weights = der->getZWeights(indx);
             for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
-                L(bindx,subdomain->Q_stencils[indx][j]) = z_weights(j);        // Block 4 (weights for d/dz)
+                L(bindx,subdomain->Q_stencils[indx][j]) = z_weights[j];        // Block 4 (weights for d/dz)
             }
             // Stencil always contains center at element 0
             // Offset by nb+ni to shift into the block 19.

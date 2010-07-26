@@ -20,9 +20,7 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil
 {
     this->nb_bnd = nb_bnd_;
     this->nb_rbfs = rbf_centers.size();
-    Up = new mat();
-    Vp = new mat();
-    sp = new colvec();
+
     x_weights.resize(nb_rbfs);
     y_weights.resize(nb_rbfs);
     z_weights.resize(nb_rbfs);
@@ -42,6 +40,31 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil
 //----------------------------------------------------------------------
 Derivative::~Derivative()
 {
+    for (int i = 0; i < x_weights.size(); i++) {
+        if (x_weights[i] != NULL) {
+            delete [] x_weights[i];
+        }
+    }
+    for (int i = 0; i < y_weights.size(); i++) {
+        if (y_weights[i] != NULL) {
+            delete [] y_weights[i];
+        }
+    }
+    for (int i = 0; i < z_weights.size(); i++) {
+        if (z_weights[i] != NULL) {
+            delete [] z_weights[i];
+        }
+    }
+    for (int i = 0; i < lapl_weights.size(); i++) {
+        if (lapl_weights[i] != NULL) {
+            delete [] lapl_weights[i];
+        }
+    }
+    for (int i = 0; i < r_weights.size(); i++) {
+        if (r_weights[i] != NULL) {
+            delete [] r_weights[i];
+        }
+    }
 }
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------
@@ -207,6 +230,8 @@ double Derivative::rowDot(AF& a, int row_a, AF& b, int row_b, int ix)
 
     return dot;
 }
+
+#if 0
 //----------------------------------------------------------------------
 // Generate a distance matrix and compute the SVD of it.
 int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stencil,int irbf, int nb_eig)
@@ -215,7 +240,7 @@ int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stenci
     int n = stencil.size();
     arma::mat ar(n+4, n+4);
     ar.zeros(n+4,n+4);
-    this->distanceMatrix(rbf_centers, stencil, irbf, &ar, 3);
+    this->distanceMatrix(rbf_centers, stencil, irbf, ar.memptr(), 3);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -246,9 +271,10 @@ int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stenci
     n = n + 1; // deriv(constant) = 0
     n = n + 3; // deriv(linear function) = constant
 
-    mat& U = *Up;
-    mat& V = *Vp;
-    colvec& s = *sp;
+    // mat NewMat(memspace, rowdim, coldim, reuseMemSpace?)
+    mat U;
+    mat V;
+    mat s;
 
     // Will there be memory leak? If I use svd multiple times with different size arrays,
     // how is memory allocated or reallocated or released?
@@ -278,9 +304,10 @@ int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stenci
 
     return st_center;
 }
+#endif
 
 //----------------------------------------------------------------------
-void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,int irbf, arma::mat* distance_matrix, int dim_num)
+void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num)
 {
     Vec3& c = rbf_centers[irbf];
     int n = stencil.size();
@@ -289,7 +316,10 @@ void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
     //printf("stencil size(%d): n= %d\n", irbf, n);
     //printf("n= %d\n", n);
 
-    arma::mat &ar = *distance_matrix;
+    //arma::mat &ar = *distance_matrix;
+    // mat NewMat(memspace, rowdim, coldim, reuseMemSpace?)
+    arma::mat ar(distance_matrix,nrows,ncols,false);
+
 
     IRBF rbf(epsilon, dim_num);
 
@@ -325,6 +355,7 @@ void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
             Vec3& xjv = rbf_centers[stencil[j]];
             ar(i,j) = rbf(xiv, xjv);
         }}
+ //   ar.print("INSIDE DMATRIX");
 }
 
 //----------------------------------------------------------------------
@@ -403,14 +434,38 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
     //printf("choice= %s\n", choice);
 
     if (strcmp(choice, "lapl") == 0) {
-        lapl_weights[irbf] = fd_coeffs;
+        if (lapl_weights[irbf] == NULL) {
+            lapl_weights[irbf] = new double[stencil.size()];
+        }
+        for (int j = 0; j < stencil.size(); j++) {
+            lapl_weights[irbf][j] = fd_coeffs(j);
+        }
+        //lapl_weights[irbf] = fd_coeffs;
     } else if (strcmp(choice, "x") == 0) {
         //printf("irbf= %d\n", irbf);
-        x_weights[irbf] = fd_coeffs;
+        //x_weights[irbf] = fd_coeffs;
+        if (x_weights[irbf] == NULL) {
+            x_weights[irbf] = new double[stencil.size()];
+        }
+        for (int j = 0; j < stencil.size(); j++) {
+            x_weights[irbf][j] = fd_coeffs(j);
+        }
     } else if (strcmp(choice, "y") == 0) {
-        y_weights[irbf] = fd_coeffs;
+        //y_weights[irbf] = fd_coeffs;
+        if (y_weights[irbf] == NULL) {
+            y_weights[irbf] = new double[stencil.size()];
+        }
+        for (int j = 0; j < stencil.size(); j++) {
+            y_weights[irbf][j] = fd_coeffs(j);
+        }
     } else if (strcmp(choice, "z") == 0) {
-        z_weights[irbf] = fd_coeffs;
+        //z_weights[irbf] = fd_coeffs;
+        if (z_weights[irbf] == NULL) {
+            z_weights[irbf] = new double[stencil.size()];
+        }
+        for (int j = 0; j < stencil.size(); j++) {
+            z_weights[irbf][j] = fd_coeffs(j);
+        }
     } else {
         printf("not covered\n");
     }
@@ -424,6 +479,9 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
     int np = 1;//+dim_num; // +3 for the x,y,z monomials
 
     // +4 to get the monomial parts
+
+    arma::rowvec bx, by, bz, blapl, br;
+
     bx.zeros(n+np); // extra lines to enforce d/dx(constant)=0, d/dx(linear fct) is constant
     by.zeros(n+np);
     bz.zeros(n+np);
@@ -497,7 +555,7 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
     // n+4 = 1 + dim(3) for x,y,z
     arma::mat d_matrix(n+np, n+np);
     d_matrix.zeros(n+np,n+np);
-    this->distanceMatrix(rbf_centers, stencil, irbf, &d_matrix, dim_num);
+    this->distanceMatrix(rbf_centers, stencil, irbf, d_matrix.memptr(), d_matrix.n_rows, d_matrix.n_cols, dim_num);
 
    // d_matrix.print("DISTANCE MATRIX: ");
 
@@ -521,17 +579,52 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
         }
     }
 
-   //d_matrix.print("DISTANCE MATRIX: ");
+  //d_matrix.print("DISTANCE MATRIX: ");
 
     // TODO: find a backslash "/" equivalent to matlab's which allow us to avoid
     // computing and storing the full inverse matrix.
     arma::mat Ainv = inv(d_matrix);
 
+#if 0
     this->x_weights[irbf] = bx * Ainv;
     this->y_weights[irbf] = by * Ainv;
     this->z_weights[irbf] = bz * Ainv;
     this->r_weights[irbf] = br * Ainv;
     this->lapl_weights[irbf] = blapl * Ainv;
+#else
+
+    arma::mat weights_x = bx*Ainv;
+    if (this->x_weights[irbf] == NULL) {
+        this->x_weights[irbf] = new double[stencil.size()];
+    }
+    for (int j = 0; j < stencil.size(); j++) {
+        this->x_weights[irbf][j] = weights_x[j];
+    }
+
+    arma::mat weights_y = by*Ainv;
+    if (this->y_weights[irbf] == NULL) {
+        this->y_weights[irbf] = new double[stencil.size()];
+    }
+    for (int j = 0; j < stencil.size(); j++) {
+        this->y_weights[irbf][j] = weights_y[j];
+    }
+
+    arma::mat weights_z = bz*Ainv;
+    if (this->z_weights[irbf] == NULL) {
+        this->z_weights[irbf] = new double[stencil.size()];
+    }
+    for (int j = 0; j < stencil.size(); j++) {
+        this->z_weights[irbf][j] = weights_z[j];
+    }
+
+    arma::mat weights_lapl = bz*Ainv;
+    if (this->lapl_weights[irbf] == NULL) {
+        this->lapl_weights[irbf] = new double[stencil.size()];
+    }
+    for (int j = 0; j < stencil.size(); j++) {
+        this->lapl_weights[irbf][j] = weights_lapl[j];
+    }
+#endif
 
 #if 0
     double sum_r = 0.;
@@ -578,6 +671,8 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>
     int nb_eig = stencil.size();
     IRBF rbf(epsilon, 3);
     int n = stencil.size();
+
+    arma::rowvec bx, by, bz, blapl, br;
 
     bx.zeros(n+4); // extra lines to enforce d/dx(constant)=0, d/dx(linear fct) is constant
     by.zeros(n+4);
@@ -627,10 +722,71 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>
 
     // Generate a distance matrix and find the SVD of it.
 
-    n = n + 1; // deriv of constant is zero
-    n = n + 3; // deriv of linear function is exact
+  //  n = n + 1; // deriv of constant is zero
+  //  n = n + 3; // deriv of linear function is exact
 
-    distanceMatrixSVD(rbf_centers, stencil, irbf, nb_eig);
+    arma::mat ar(n+4, n+4);
+    ar.zeros(n+4,n+4);
+    this->distanceMatrix(rbf_centers, stencil, irbf, ar.memptr(), ar.n_rows, ar.n_cols, 3);
+
+    // Fill the polynomial part
+    for (int i=0; i < n; i++) {
+        ar(n, i) = 1.0;
+        ar(n+1, i) = rbf_centers[stencil[i]].x();
+        ar(n+2, i) = rbf_centers[stencil[i]].y();
+        ar(n+3, i) = rbf_centers[stencil[i]].z();
+        ar(i, n) = 1.0;
+        ar(i, n+1) = rbf_centers[stencil[i]].x();
+        ar(i, n+2) = rbf_centers[stencil[i]].y();
+        ar(i, n+3) = rbf_centers[stencil[i]].z();
+    }
+
+    int st_center = -1;
+
+    // which stencil point is irbf
+    for (int i=0; i < n; i++) {
+        if (irbf == stencil[i]) {
+            st_center = i;
+            break;
+        }
+    }
+    if (st_center == -1) {
+        printf("inconsistency with global rbf map (stencil should contain center: %d)\n", irbf);
+        exit(0);
+    }
+
+    n = n + 1; // deriv(constant) = 0
+    n = n + 3; // deriv(linear function) = constant
+
+    arma::mat U;
+    arma::mat V;
+    arma::colvec s;
+
+    // Will there be memory leak? If I use svd multiple times with different size arrays,
+    // how is memory allocated or reallocated or released?
+
+    svd(U,s,V,ar);
+
+    printf("cond number(%d): %g\n", irbf, s(0)/s(n-1));
+
+    double s1 = s(0);
+    nb_eig=0;
+    double svd_tol = 1.e-7;
+
+    for (int i=0; i < n; i++) {
+        //printf("s(i)= %21.14f\n", s(i));
+        if ((s(i) / s1) < svd_tol) {
+            break;
+        }
+        nb_eig++;
+    }
+
+    // construct pseudo matrix (\sum_i u_i s v_i^{T})
+    //printf("nb_eig= %d, n= %d\n", nb_eig, n);
+
+    for (int i=nb_eig; i < n; i++) {
+        s(i) = 0.0;
+    }
 
     colvec wwx(n);
     colvec wwy(n);
@@ -642,10 +798,6 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>
     wwz.zeros();
     wwlapl.zeros();
 
-    mat& U = *Up;
-    mat& V = *Vp;
-    mat& s = *sp;
-
     // TEMP WAY TO COMPUTE WEIGHTS
     for (int i=0; i < nb_eig; i++) {
         wwx = wwx +       dot(trans(U.col(i)),bx   )*V.col(i) / s(i);
@@ -653,10 +805,41 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>
         wwz = wwz +       dot(trans(U.col(i)),bz   )*V.col(i) / s(i);
         wwlapl = wwlapl + dot(trans(U.col(i)),blapl)*V.col(i) / s(i);
     }
+
+#if 0
     x_weights[irbf]    = wwx;
     y_weights[irbf]    = wwy;
     z_weights[irbf]	   = wwz;
     lapl_weights[irbf] = wwlapl;
+#else
+    if (this->x_weights[irbf] == NULL) {
+        this->x_weights[irbf] = new double[stencil.size()];
+    }
+    for (int j = 0; j < stencil.size(); j++) {
+        this->x_weights[irbf][j] = wwx[j];
+    }
+
+    if (this->y_weights[irbf] == NULL) {
+        this->y_weights[irbf] = new double[stencil.size()];
+    }
+    for (int j = 0; j < stencil.size(); j++) {
+        this->y_weights[irbf][j] = wwy[j];
+    }
+
+    if (this->z_weights[irbf] == NULL) {
+        this->z_weights[irbf] = new double[stencil.size()];
+    }
+    for (int j = 0; j < stencil.size(); j++) {
+        this->z_weights[irbf][j] = wwz[j];
+    }
+
+    if (this->lapl_weights[irbf] == NULL) {
+        this->lapl_weights[irbf] = new double[stencil.size()];
+    }
+    for (int j = 0; j < stencil.size(); j++) {
+        this->lapl_weights[irbf][j] = wwlapl[j];
+    }
+#endif
 
 #if 0
     double wx_sum = 0.;
@@ -672,11 +855,6 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>
     printf("sum(weights, xy)= %f, %f\n", wx_sum, wy_sum);
     printf("sum(w*x, w*y)= %f, %f\n", wxx_sum, wxy_sum);
 #endif
-
-
-    U.reset();
-    V.reset();
-    s.reset();
 
     bx.reset();
     by.reset();
@@ -780,7 +958,7 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
 {
 
     cout << "COMPUTING DERIVATIVE: ";
-    vector<mat>* weights_p;
+    vector<double*>* weights_p;
 
     switch(which) {
     case X:
@@ -813,7 +991,7 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
         exit(EXIT_FAILURE);
     }
 
-    vector<mat>& weights = *weights_p;
+    vector<double*>& weights = *weights_p;
 
     double der;
 #if 0
@@ -831,7 +1009,7 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
     printf("Weights size: %d\n", (int)weights.size());
     printf("Stencils size: %d\n", (int)stencil.size());
     for (int i=0; i < stencil.size(); i++) {
-        mat& w = weights[i];
+        double* w = weights[i];
         vector<int>& st = stencil[i];
         //printf("nb el in weight[%d]: %d, in stencil[%d]: %d\n", i, w.n_elem, i, st.size());
         //printf("i=%d, w[0] = %f\n", i, w[0]);
@@ -850,9 +1028,9 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
 //----------------------------------------------------------------------
 double Derivative::computeEig()
 {
-    vector<mat>* weights_p;
+    vector<double*>* weights_p;
     weights_p = &lapl_weights;  // <<<< lapl_weights
-    vector<mat>& weights = *weights_p;
+    vector<double*>& weights = *weights_p;
 
 #if 1
     // compute eigenvalues of derivative operator
@@ -864,7 +1042,7 @@ double Derivative::computeEig()
     eigmat.zeros();
 
     for (int i=nb_bnd; i < sz; i++) {
-        mat& w = weights[i];
+        double* w = weights[i];
         vector<int>& st = stencil[i];
         for (int j=0; j < st.size(); j++) {
             eigmat(i,st[j])  = w[j];

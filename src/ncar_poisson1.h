@@ -5,11 +5,8 @@
 #include <ArrayT.h>
 #include "gpu.h"
 #include "exact_solution.h"
-//#include "derivative.h"
 #include "communicator.h"
-//#include <armadillo>
-
-class Derivative;
+#include "derivative.h"
 
 class NCARPoisson1
 {
@@ -19,9 +16,9 @@ protected:
 	std::vector<Vec3>* rbf_centers;
 	std::vector<int>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
 	
+        GPU* subdomain;
+        Derivative* der;
 
-	GPU* subdomain;
-	Derivative* der;
 	std::vector<double> lapl_deriv;
 	std::vector<double> x_deriv;
 	std::vector<double> y_deriv;

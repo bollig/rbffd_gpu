@@ -1,14 +1,13 @@
 #ifndef _NCAR_POISSON_1_CUSP_H_
 #define _NCAR_POISSON_1_CUSP_H_
 
-#include <vector>
-#include <ArrayT.h>
+//#include <vector>
+//#include <ArrayT.h>
 #include "gpu.h"
 #include "exact_solution.h"
 #include "communicator.h"
+#include "derivative.h"
 #include "ncar_poisson1.h"
-
-class Derivative;
 
 class NCARPoisson1_CUSP : public NCARPoisson1
 {

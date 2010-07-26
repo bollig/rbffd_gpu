@@ -4,8 +4,7 @@
 #include <vector>
 #include "ArrayT.h"
 #include "Vec3.h"
-#include <armadillo>
-
+//#include <armadillo>
 
 class Derivative
 {
@@ -17,6 +16,7 @@ private:
     //AF arr;
     int nb_rbfs;
     double maxint;
+#if 0
     arma::mat* weights_p; // pointer (_p)
     arma::rowvec bx, by, bz, br;
     arma::rowvec bxx, bxy, bxz;
@@ -30,6 +30,15 @@ private:
     std::vector<arma::mat> z_weights;
     std::vector<arma::mat> r_weights;
     std::vector<arma::mat> lapl_weights;
+#else
+    double* weights_p;
+    // Make sure these are deleted inside the destructor
+    std::vector<double*> x_weights;
+    std::vector<double*> y_weights;
+    std::vector<double*> z_weights;
+    std::vector<double*> r_weights;
+    std::vector<double*> lapl_weights;
+#endif
 
     std::vector<Vec3>& rbf_centers;
     std::vector<std::vector<int> >& stencil;
@@ -59,8 +68,13 @@ public:
     void computeWeightsSVD(std::vector<Vec3>& rbf_centers, std::vector<int>&
                            stencil, int irbf, const char* choice);
 
-    int distanceMatrixSVD(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf, int nb_eig);
+   //int distanceMatrixSVD(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf, int nb_eig);
+#if 0
     void distanceMatrix(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil,int irbf, arma::mat* distance_matrix, int dim_num);
+#else
+    void distanceMatrix(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num);
+#endif
+
     AF& solve(AF& l, AF& b);
     AF& matmul(AF& arr, AF& x);
 
@@ -70,6 +84,7 @@ public:
     void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv);
     void computeDeriv(DerType which, double* u, double* deriv, int npts);
 
+#if 0
     std::vector<arma::mat>& getXWeights() { return x_weights; }
     std::vector<arma::mat>& getYWeights() { return y_weights; }
     std::vector<arma::mat>& getZWeights() { return z_weights; }
@@ -81,6 +96,19 @@ public:
     arma::mat& getZWeights(int indx) { return z_weights[indx]; }
     arma::mat& getRWeights(int indx) { return r_weights[indx]; }
     arma::mat& getLaplWeights(int indx) { return lapl_weights[indx]; }
+#else
+    std::vector<double*>& getXWeights() { return x_weights; }
+    std::vector<double*>& getYWeights() { return y_weights; }
+    std::vector<double*>& getZWeights() { return z_weights; }
+    std::vector<double*>& getRWeights() { return r_weights; }
+    std::vector<double*>& getLaplWeights() { return lapl_weights; }
+
+    double* getXWeights(int indx) { return x_weights[indx]; }
+    double* getYWeights(int indx) { return y_weights[indx]; }
+    double* getZWeights(int indx) { return z_weights[indx]; }
+    double* getRWeights(int indx) { return r_weights[indx]; }
+    double* getLaplWeights(int indx) { return lapl_weights[indx]; }
+#endif
 
     double computeEig();
 
@@ -100,7 +128,7 @@ public:
 
     double minimum(std::vector<double>& vec);
 
-    void setEpsilon(double epsilon_) { epsilon = epsilon_; }
+    double setEpsilon(double eps) { this->epsilon = eps; return this->epsilon;}
 };
 
 #endif

@@ -23,13 +23,13 @@ using namespace std;
 #define NB_INTERIOR 800
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
-#define STENCIL_SIZE 50
+#define STENCIL_SIZE 150
 #else
 #define NB_INNER_BND 10
 #define NB_OUTER_BND 10
 #define NB_INTERIOR 10
 #define NB_SAMPLES 80000
-#define DIM_NUM 3
+#define DIM_NUM 2
 #define STENCIL_SIZE 5
 #endif
 

@@ -5,6 +5,7 @@
 #include "exact_solution.h"
 
 #include <cusp/hyb_matrix.h>
+#include <cusp/coo_matrix.h>
 #include <cusp/blas.h>
 #include <cusp/print.h>
 #include <cusp/krylov/bicgstab.h>
@@ -106,7 +107,7 @@ new_eps = 1.;
             cout << "USING EPSILON: " << new_eps << endl;
 
             int numNonZeros = 0;
-#if 0
+#if 1
             for (int i = 0; i < nb + ni; i++) {
                 //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
                 // Compute all derivatives for our centers and return the number of
@@ -116,13 +117,14 @@ new_eps = 1.;
 #else
             for (int i = 0; i < nb; i++) {
                 // 1 nonzero per row for boundary (dirichlet has I since we know values and dont need weights)
+                //der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
                 numNonZeros += 1;
             }
             for (int i = nb; i < nb + ni; i++) {
                 //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
                 // Compute all derivatives for our centers and return the number of
                 // weights that will be available
-                numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim_num);
+                numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
             }
 #endif
             cusp::coo_matrix<int, float, cusp::host_memory> L_host(nn, nn, numNonZeros);
@@ -160,7 +162,21 @@ new_eps = 1.;
                         indx++;
                  }
 #else
-                // DIRICHLET CONDITION
+#if 1
+                // DIRICHLET CONDITION WITH 0s:
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                        L_host.row_indices[indx] = i;
+                        L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
+                        L_host.values[indx] = 0;
+
+                        if (j == 0) {
+                            L_host.values[indx] = 1.f;
+                        }
+                        indx++;
+                 }
+
+#else
+                // DIRICHLET CONDITION WITHOUT 0s
                         L_host.row_indices[indx] = i;
                         L_host.column_indices[indx] = i;
                         if (subdomain->Q_stencils[i][0] != i) {
@@ -171,7 +187,7 @@ new_eps = 1.;
                             L_host.values[indx] = 1.f;
                         indx++;
 #endif
-
+#endif
             }
 //            cout << "INDX at end of boundary fill: " << indx << " NUM ROWS: " << nb+ni << endl;
 
@@ -182,7 +198,7 @@ new_eps = 1.;
                         L_host.row_indices[indx] = i;
                         L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
                         L_host.values[indx] = (float)lapl_weights[j];
-
+                        //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
                         indx++;
                  }
                 Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
@@ -218,20 +234,30 @@ new_eps = 1.;
             //  relative_tolerance = 1e-6
             cusp::verbose_monitor<float> monitor(F_device, 100, 1e-6);
 
+            // set preconditioner (identity)
+            cusp::identity_operator<float, cusp::device_memory> M(L_device.num_rows, L_device.num_rows);
+
             // solve the linear system A * x = b with the BiConjugate Gradient Stabilized method
-            cusp::krylov::bicgstab(L_device, x_device, F_device, monitor);
+            cusp::krylov::bicgstab(L_device, x_device, F_device, monitor, M);
 
+            // check residual norm
+            cusp::array1d<float, cusp::device_memory> residual(L_device.num_rows, 0.0f);
+            //L_device(x_device, residual);
+            cusp::blas::axpby(x_device, F_device, residual, -1.0f, 1.0f);
 
+            cout << "AXPBY RESIDUAL 2-NORM: " << cusp::blas::nrm2(residual) << endl;
+
+            //ASSERT_EQUAL(cusp::blas::nrm2(residual) < 1e-4 * cusp::blas::nrm2(F_device), true);
 
             cusp::array1d<float, cusp::host_memory> x_host = x_device;
             cusp::array1d<float, cusp::host_memory> exact_H(F_device.size(), 0.f);
 
-            cout << "F = [";
+            //cout << "F = [";
             for (int i = 0; i < nb + ni; i++) {
                 exact_H[subdomain->Q_stencils[i][0]] = (float)exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.);
-                cout << F_host[i] <<"; ";
+            //    cout << F_host[i] <<"; ";
             }
-            cout << "];" << endl;
+            //cout << "];" << endl;
             //cusp::array1d<float, cusp::device_memory> exact_D = exact_H;
 
             //cusp::array1d<float, cusp::device_memory> error_D(L_device.num_rows);
@@ -241,7 +267,7 @@ new_eps = 1.;
             cusp::array1d<float, cusp::host_memory> error_H(L_device.num_rows,0.f);
             for (int i = 0; i < L_device.num_rows; i++) {
                 error_H[i] = x_host[i] - exact_H[i];
-                cout << error_H[i] << "; ";
+                cout << error_H[i] << ";\n";
             }
             cout << "]; " << endl;
             //error = (approx_sol - exact);

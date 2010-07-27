@@ -1,7 +1,8 @@
 MESSAGE(STATUS "LINUX detected.")
 
 IF (CUDA_FOUND) 
-	SET(CUDA_NVCC_FLAGS "-arch=compute_13;-code=sm_13")
+	#	SET(CUDA_NVCC_FLAGS "-arch=compute_13;-code=sm_13")
+	SET(CUDA_NVCC_FLAGS "-arch=sm_13")
 	SET(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-Xcompiler;-D__builtin_stdarg_start=__builtin_va_start")
 	MESSAGE("CUDA NVCCFLAGS SET: ${CUDA_NVCC_FLAGS}")
 ENDIF (CUDA_FOUND)

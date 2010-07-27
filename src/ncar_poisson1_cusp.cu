@@ -14,6 +14,7 @@
 #include <cusp/transpose.h>
 using namespace std;
 
+#define FLOAT double
 
 NCARPoisson1_CUSP::NCARPoisson1_CUSP(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
@@ -56,11 +57,11 @@ void NCARPoisson1_CUSP::solve(Communicator* comm_unit) {
         bool goodDirection, wentRight;
         cout << "Allocating GPU arrays " <<endl;
 
-        //cusp::array1d<float, cusp::device_memory> exact(nn, 0);
-        //cusp::array1d<float, cusp::device_memory> approx_sol(nn, 0);
-       // cusp::array1d<float, cusp::device_memory> error(nn, 0);
-       // cusp::array1d<float, cusp::device_memory> expected(nn, 0);
-       // cusp::array1d<float, cusp::device_memory> diff_lapl(nn, 0);
+        //cusp::array1d<FLOAT, cusp::device_memory> exact(nn, 0);
+        //cusp::array1d<FLOAT, cusp::device_memory> approx_sol(nn, 0);
+       // cusp::array1d<FLOAT, cusp::device_memory> error(nn, 0);
+       // cusp::array1d<FLOAT, cusp::device_memory> expected(nn, 0);
+       // cusp::array1d<FLOAT, cusp::device_memory> diff_lapl(nn, 0);
 
         int iter = 0;
         cout << "ENTERING EPSILON SEARCH LOOP " <<endl;
@@ -127,8 +128,8 @@ new_eps = 1.;
                 numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
             }
 #endif
-            cusp::coo_matrix<int, float, cusp::host_memory> L_host(nn, nn, numNonZeros);
-            cusp::array1d<float, cusp::host_memory> F_host(nn, 0); // Initializes all elements to 0
+            cusp::coo_matrix<int, FLOAT, cusp::host_memory> L_host(nn, nn, numNonZeros);
+            cusp::array1d<FLOAT, cusp::host_memory> F_host(nn, 0); // Initializes all elements to 0
 
             int indx = 0;
 
@@ -197,12 +198,12 @@ new_eps = 1.;
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
                         L_host.row_indices[indx] = i;
                         L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
-                        L_host.values[indx] = (float)lapl_weights[j];
+                        L_host.values[indx] = (FLOAT)lapl_weights[j];
                         //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
                         indx++;
                  }
                 Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
-                F_host[i] = (float)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
+                F_host[i] = (FLOAT)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
             }
 
             if ((indx - numNonZeros) != 0) {
@@ -216,23 +217,23 @@ new_eps = 1.;
             //L_host.sort_by_row();
             cusp::io::write_matrix_market_file(L_host, "L.mtx");
 
-            cusp::csr_matrix<int, float, cusp::device_memory> L_device;
+            cusp::csr_matrix<int, FLOAT, cusp::device_memory> L_device;
             cusp::io::read_matrix_market_file(L_device, "L.mtx");
 
             cout << "READY TO SOLVE: " << endl;
 
-            //cusp::csr_matrix<int, float, cusp::device_memory> L_device  = L_host;
+            //cusp::csr_matrix<int, FLOAT, cusp::device_memory> L_device  = L_host;
             //cusp::transpose(L_host, L_device);
 
-            cusp::array1d<float, cusp::device_memory> F_device = F_host;
+            cusp::array1d<FLOAT, cusp::device_memory> F_device = F_host;
             //cusp::print_matrix(F_host);
 
-            cusp::array1d<float, cusp::device_memory> x_device(L_device.num_rows, 0.f);
+            cusp::array1d<FLOAT, cusp::device_memory> x_device(L_device.num_rows, 0.f);
 
             // set stopping criteria:
             //  iteration_limit    = 100
             //  relative_tolerance = 1e-6
-            cusp::verbose_monitor<float> monitor(F_device, 100, 1e-6);
+            cusp::verbose_monitor<FLOAT> monitor(F_device, 100, 1e-6);
 
             // set preconditioner (identity)
             cusp::identity_operator<float, cusp::device_memory> M(L_device.num_rows, L_device.num_rows);
@@ -247,24 +248,22 @@ new_eps = 1.;
 
             cout << "AXPBY RESIDUAL 2-NORM: " << cusp::blas::nrm2(residual) << endl;
 
-            //ASSERT_EQUAL(cusp::blas::nrm2(residual) < 1e-4 * cusp::blas::nrm2(F_device), true);
-
-            cusp::array1d<float, cusp::host_memory> x_host = x_device;
-            cusp::array1d<float, cusp::host_memory> exact_H(F_device.size(), 0.f);
+            cusp::array1d<FLOAT, cusp::host_memory> x_host = x_device;
+            cusp::array1d<FLOAT, cusp::host_memory> exact_H(F_device.size(), 0.f);
 
             //cout << "F = [";
             for (int i = 0; i < nb + ni; i++) {
-                exact_H[subdomain->Q_stencils[i][0]] = (float)exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.);
+                exact_H[subdomain->Q_stencils[i][0]] = (FLOAT)exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.);
             //    cout << F_host[i] <<"; ";
             }
             //cout << "];" << endl;
-            //cusp::array1d<float, cusp::device_memory> exact_D = exact_H;
+            //cusp::array1d<FLOAT, cusp::device_memory> exact_D = exact_H;
 
-            //cusp::array1d<float, cusp::device_memory> error_D(L_device.num_rows);
+            //cusp::array1d<FLOAT, cusp::device_memory> error_D(L_device.num_rows);
             // Compute our errors
 
             cout << "Error = [";
-            cusp::array1d<float, cusp::host_memory> error_H(L_device.num_rows,0.f);
+            cusp::array1d<FLOAT, cusp::host_memory> error_H(L_device.num_rows,0.f);
             for (int i = 0; i < L_device.num_rows; i++) {
                 error_H[i] = x_host[i] - exact_H[i];
                 cout << error_H[i] << ";\n";
@@ -273,7 +272,7 @@ new_eps = 1.;
             //error = (approx_sol - exact);
             //cusp::blas::axpby(exact_D, x_device, error_D, 1., -1.);
 
-            //cusp::array1d<float, cusp::host_memory> error_H = error_D;
+            //cusp::array1d<FLOAT, cusp::host_memory> error_H = error_D;
 
          //   cout << "Exact: "; cusp::print_matrix(exact_H);
          //   cout << "Sol: "; cusp::print_matrix(x_device);
@@ -318,7 +317,7 @@ new_eps = 1.;
         }
 
 #if 0
-        cusp::array1d<float, cusp::host_memory> results[5](nn);
+        cusp::array1d<FLOAT, cusp::host_memory> results[5](nn);
 
         results[0] = approx_sol;
         results[1] = exact;

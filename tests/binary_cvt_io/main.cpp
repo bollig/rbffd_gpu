@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include "nested_sphere_cvt.h"
 #include <vector>

@@ -5,7 +5,12 @@
 #include "exact_solution.h"
 
 #include <cusp/hyb_matrix.h>
+#include <cusp/blas.h>
 #include <cusp/print.h>
+#include <cusp/krylov/bicgstab.h>
+#include <cusp/array1d.h>
+#include <cusp/io/matrix_market.h>
+#include <cusp/transpose.h>
 using namespace std;
 
 
@@ -48,17 +53,17 @@ void NCARPoisson1_CUSP::solve(Communicator* comm_unit) {
         double prev_eps = left_eps;
 
         bool goodDirection, wentRight;
-cout << "Allocating GPU arrays " <<endl;
+        cout << "Allocating GPU arrays " <<endl;
 
-        cusp::array1d<float, cusp::device_memory> exact(nn, 0);
-        cusp::array1d<float, cusp::device_memory> approx_sol(nn, 0);
-        cusp::array1d<float, cusp::device_memory> error(nn, 0);
-        cusp::array1d<float, cusp::device_memory> expected(nn, 0);
-        cusp::array1d<float, cusp::device_memory> diff_lapl(nn, 0);
+        //cusp::array1d<float, cusp::device_memory> exact(nn, 0);
+        //cusp::array1d<float, cusp::device_memory> approx_sol(nn, 0);
+       // cusp::array1d<float, cusp::device_memory> error(nn, 0);
+       // cusp::array1d<float, cusp::device_memory> expected(nn, 0);
+       // cusp::array1d<float, cusp::device_memory> diff_lapl(nn, 0);
 
         int iter = 0;
-cout << "ENTERING EPSILON SEARCH LOOP " <<endl;
-        while (err_norm > 1e-4 && iter < 10)
+        cout << "ENTERING EPSILON SEARCH LOOP " <<endl;
+        while (err_norm > 1e-4 && iter < 1)
         {
             // TODO: solve this in parallel
             //     comm_unit->broadcastObjectUpdates(subdomain);
@@ -96,110 +101,165 @@ cout << "ENTERING EPSILON SEARCH LOOP " <<endl;
             // the stencil centers (Vec3) into the
 
             new_eps = left_eps + abs(right_eps - left_eps)/2.;
-
+new_eps = 1.;
             der->setEpsilon(new_eps);
             cout << "USING EPSILON: " << new_eps << endl;
 
+            int numNonZeros = 0;
+#if 0
             for (int i = 0; i < nb + ni; i++) {
                 //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
-                // Compute all derivatives for our centers
-                der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim_num);
-            }
-#if 0
-            // The derivative weights go into a matrix that is TotNumNodes x TotNumNodes
-            // This is a sparse matrix though, so we're wasting memory and computation
-            // TODO: replace this with a sparse solver
-            arma::mat L(nn+1,nn+1);
-            L.zeros();
-
-            arma::colvec F(nn+1);
-            F.zeros();
-
-#if 1
-            // This loop should add 1s to the far right column and bottom row; thereby removing the constant from the
-            // possible solution and making the system nonsingular.
-            for (int i = 0; i < nn; i++) {
-                L(nn,i) = 1;
-                L(i,nn) = 1;
+                // Compute all derivatives for our centers and return the number of
+                // weights that will be available
+                numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim_num);
             }
 #else
-            L(nn, nn) = 1;
-#endif
-
-            //    cout << "WARNING! using hardcoded constants for the boundaries!" << endl;
-            //    cout << "WARNING! using x,y,z weights separately to compute d/dr!" << endl;
-            // Block 1 (top left corner): d/dr weights for nb boundary points using nb+ni possible weights
             for (int i = 0; i < nb; i++) {
-                //arma::mat& r_weights = der->getRWeights(subdomain->Q_stencils[i][0]);
-                arma::mat& x_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
-                arma::mat& y_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
-                arma::mat& z_weights = der->getZWeights(subdomain->Q_stencils[i][0]);
+                // 1 nonzero per row for boundary (dirichlet has I since we know values and dont need weights)
+                numNonZeros += 1;
+            }
+            for (int i = nb; i < nb + ni; i++) {
+                //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
+                // Compute all derivatives for our centers and return the number of
+                // weights that will be available
+                numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim_num);
+            }
+#endif
+            cusp::coo_matrix<int, float, cusp::host_memory> L_host(nn, nn, numNonZeros);
+            cusp::array1d<float, cusp::host_memory> F_host(nn, 0); // Initializes all elements to 0
+
+            int indx = 0;
+
+            // Fill Boundary weights
+            for (int i = 0; i < nb; i++) {
+                double* x_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
+                double* y_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
+                double* z_weights = der->getZWeights(subdomain->Q_stencils[i][0]);
 
                 // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
                 Vec3& center = subdomain->G_centers[subdomain->Q_stencils[i][0]];
                 double r = center.magnitude();
-                //  r = 1.;
-                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                    //L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = r_weights(j);        // Block 1 (weights for d/dr)
-                    L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (center.x() / r) * x_weights(j) + (center.y()/r) * y_weights(j) + (center.z()/r) * z_weights(j);        // Block 1 (weights for d/dr)
-                }
 
                 if (r < 1e-8) {
                     cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
                     exit(EXIT_FAILURE);
                 }
-                // Again, make sure we use Q_stencils[i][0] so we are forming the diagonals
-                // correctly using the stencil center index (WARNING! this is not consistent for
-                // domain decomposition... how to address this? TODO in the future..)
-                L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][0]) -= 1./r;
+
+#if 0
+                // NEUMANN CONDITION:
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                        L_host.row_indices[indx] = i;
+                        L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
+                        L_host.values[indx] = (center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j];
+
+                        // Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
+                        // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
+                        if (j == 0) {
+                            L_host.values[indx] -= 1./r;
+                        }
+                        indx++;
+                 }
+#else
+                // DIRICHLET CONDITION
+                        L_host.row_indices[indx] = i;
+                        L_host.column_indices[indx] = i;
+                        if (subdomain->Q_stencils[i][0] != i) {
+                            cout << "WARNING!! i <> j" <<endl;
+                            exit(EXIT_FAILURE);
+                        }
+
+                            L_host.values[indx] = 1.f;
+                        indx++;
+#endif
+
+            }
+//            cout << "INDX at end of boundary fill: " << indx << " NUM ROWS: " << nb+ni << endl;
+
+            // Fill Interior weights
+            for (int i = nb; i < nb+ni; i++) {
+                double* lapl_weights = der->getLaplWeights(subdomain->Q_stencils[i][0]);
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                        L_host.row_indices[indx] = i;
+                        L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
+                        L_host.values[indx] = (float)lapl_weights[j];
+
+                        indx++;
+                 }
+                Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                F_host[i] = (float)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
             }
 
-            // Block 2 (bottom left corner): laplacian weights for ni interior points using nb+ni possible weights
-            for (int i = 0; i < ni; i++) {
-                int indx = i + nb; // offset into Q_stencils to get the interior stencils only
-                arma::mat& l_weights = der->getLaplWeights(subdomain->Q_stencils[indx][0]);
-                for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
-                    L(subdomain->Q_stencils[indx][0],subdomain->Q_stencils[indx][j]) = l_weights(j);        // Block 1 (weights for laplacian)
-                }
+            if ((indx - numNonZeros) != 0) {
+                cerr << "WARNING! HOST MATRIX WAS NOT FILLED CORRECTLY. DISCREPANCY OF " << (indx - numNonZeros) << " NONZERO ELEMENTS!" << endl;
+                exit(EXIT_FAILURE);
             }
 
-            //L.print("L = ");
+           // cusp::print_matrix(F_host);
 
-            for (int i = 0; i < ni; i ++) {
-                int indx = i + nb;
-                Vec3& v = subdomain->G_centers[subdomain->Q_stencils[indx][0]];
-                F(subdomain->Q_stencils[indx][0]) = exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
-            }
-            F(nn) = 0.;
+            // The way we fill the matrix is sorted by row so calling this has no effect
+            //L_host.sort_by_row();
+            cusp::io::write_matrix_market_file(L_host, "L.mtx");
 
-            //F.print("F = ");
+            cusp::csr_matrix<int, float, cusp::device_memory> L_device;
+            cusp::io::read_matrix_market_file(L_device, "L.mtx");
 
-            arma::mat sol = arma::solve(L,F);
+            cout << "READY TO SOLVE: " << endl;
 
-            cout << "Measure sol(nn+1) = " << sol(nn) << endl;
+            //cusp::csr_matrix<int, float, cusp::device_memory> L_device  = L_host;
+            //cusp::transpose(L_host, L_device);
 
-            approx_sol = sol.rows(0,nn-1);
+            cusp::array1d<float, cusp::device_memory> F_device = F_host;
+            //cusp::print_matrix(F_host);
 
-            // Get the subset of our full solution that corresponds to the solution we need
-            // arma::mat A_sol = A.rows(0,nb+ni-1);
+            cusp::array1d<float, cusp::device_memory> x_device(L_device.num_rows, 0.f);
 
-            // Fill our exact solution
-            exact.zeros();
+            // set stopping criteria:
+            //  iteration_limit    = 100
+            //  relative_tolerance = 1e-6
+            cusp::verbose_monitor<float> monitor(F_device, 100, 1e-6);
+
+            // solve the linear system A * x = b with the BiConjugate Gradient Stabilized method
+            cusp::krylov::bicgstab(L_device, x_device, F_device, monitor);
+
+
+
+            cusp::array1d<float, cusp::host_memory> x_host = x_device;
+            cusp::array1d<float, cusp::host_memory> exact_H(F_device.size(), 0.f);
+
+            cout << "F = [";
             for (int i = 0; i < nb + ni; i++) {
-                exact(subdomain->Q_stencils[i][0]) = exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.);
+                exact_H[subdomain->Q_stencils[i][0]] = (float)exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.);
+                cout << F_host[i] <<"; ";
             }
+            cout << "];" << endl;
+            //cusp::array1d<float, cusp::device_memory> exact_D = exact_H;
 
+            //cusp::array1d<float, cusp::device_memory> error_D(L_device.num_rows);
             // Compute our errors
-            error = (approx_sol - exact);
 
+            cout << "Error = [";
+            cusp::array1d<float, cusp::host_memory> error_H(L_device.num_rows,0.f);
+            for (int i = 0; i < L_device.num_rows; i++) {
+                error_H[i] = x_host[i] - exact_H[i];
+                cout << error_H[i] << "; ";
+            }
+            cout << "]; " << endl;
+            //error = (approx_sol - exact);
+            //cusp::blas::axpby(exact_D, x_device, error_D, 1., -1.);
+
+            //cusp::array1d<float, cusp::host_memory> error_H = error_D;
+
+         //   cout << "Exact: "; cusp::print_matrix(exact_H);
+         //   cout << "Sol: "; cusp::print_matrix(x_device);
+         //   cout << "Error: "; cusp::print_matrix(error_H);
             //        expected = L*exact;
             //        diff_lapl = expected - F;
 
             prev_err_norm = err_norm;
-            err_norm = this->maxNorm(error);
-            cout << "INF NORM (ERROR) : " << err_norm << endl;
+            err_norm = cusp::blas::nrm2(error_H);
 
-#endif
+            cout << "2 Norm: " << err_norm << endl;
+
             if (prev_err_norm > err_norm) {
                 goodDirection = true;
             } else {
@@ -237,12 +297,12 @@ cout << "ENTERING EPSILON SEARCH LOOP " <<endl;
         results[0] = approx_sol;
         results[1] = exact;
         results[2] = error;
-         results.print("\n\nRESULTS\n (APPROX SOLUTION; \tEXACT SOLUTION; \tABS ERROR \tExpected Laplacian(Using L*ExactSolution)\t Diff EXPECTED & EXACT Laplacian\n");
-#endif
+        results.print("\n\nRESULTS\n (APPROX SOLUTION; \tEXACT SOLUTION; \tABS ERROR \tExpected Laplacian(Using L*ExactSolution)\t Diff EXPECTED & EXACT Laplacian\n");
+
         // results.col(3) = expected;
         // results.col(4) = diff_lapl;
         cusp::print_matrix(approx_sol);
-
+#endif
         //A.print("Full Solution (A) = ");
         //exact.print("Exact = ");
         //error.print("Error = ");

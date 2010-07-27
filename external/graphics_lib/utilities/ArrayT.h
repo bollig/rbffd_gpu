@@ -443,7 +443,7 @@ void ArrayT<T>::resize(Vec3i& arraySize, Vec3i& origin) // max nb points in 3 di
         return;
     }
 
-	T* saveData = data;
+	//T* saveData = data;
 
     init(0, arraySize[0], arraySize[1], arraySize[2], origin[0], origin[1], origin[2]);
 
@@ -649,7 +649,7 @@ T ArrayT<T>::minval(const Vec3i& min, const Vec3i& max)
 {
 // could be made more efficient
 
-	int i, j, k;
+	//int i, j, k;
 	T mn = get(min[0], min[1], min[2]);
 	for (int k=min[0]; k <= max[0]; k++) {
 	for (int j=min[1]; j <= max[1]; j++) {

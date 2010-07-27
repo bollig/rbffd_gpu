@@ -472,7 +472,7 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
     //printf("-----------------\n");
 }
 //----------------------------------------------------------------------
-void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf, int dim_num)
+int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf, int dim_num)
 {
     IRBF rbf(epsilon, dim_num);
     int n = stencil.size();
@@ -663,6 +663,8 @@ void Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil,
     bz.reset();
     br.reset();
     blapl.reset();
+
+    return stencil.size();
     //printf("DONE COMPUTING WEIGHTS: %d\n", irbf);
 }
 //----------------------------------------------------------------------

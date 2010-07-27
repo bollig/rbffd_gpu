@@ -316,9 +316,9 @@ void GPU::fillCenterSets(vector<Vec3>& rbf_centers, vector<int> boundary,
 	for (int i = 0; i < rbf_centers.size(); i++) {
 		Vec3& pt = rbf_centers[i];
 		if (this->isInsideSubdomain(pt))
-			continue; // Do not add to Q or D
-		// If we dont continue then it is a center in Q.
-		Q.insert(i);
+                        continue; // Do not add to Q or D
+                // If we dont continue then it is a center in Q.
+                Q.insert(i);
 
 		// Now, if the center is in Q but it depends on nodes in R then we need to distinguish
 		bool depR = false;
@@ -402,10 +402,10 @@ void GPU::fillLocalData(vector<Vec3>& rbf_centers,
 	// The local map elements map G[i] back to global domain indices
 
 	// We want these maps in order: (Q\B B R) 
-	// to make it more convenient when we work on memory management
+        // to make it more convenient when we work on memory management
 	for (qit = QmB.begin(); qit != QmB.end(); qit++, i++) {
 		loc_to_glob.push_back(*qit);
-		G_centers.push_back(rbf_centers[*qit]); // In order to compute we need the physical locations of all function values
+                G_centers.push_back(rbf_centers[*qit]); // In order to compute we need the physical locations of all function values
 		Q_stencils.push_back(stencil[*qit]); // We also need to push the connectivity to evaluate stencils
 		Q_avg_dists.push_back(avg_dist[*qit]);
 	}

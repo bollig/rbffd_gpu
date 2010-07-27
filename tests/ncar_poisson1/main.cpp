@@ -4,6 +4,7 @@
 // error in the constant definitions for MPI. I wonder if its because
 // nested_sphere_cvt.h accidentally overrides one of the defines for MPI
 #include "ncar_poisson1.h"
+#include "ncar_poisson1_cusp.h"
 #include "grid.h"
 #include "nested_sphere_cvt.h"
 #include "cvt.h"
@@ -22,14 +23,14 @@ using namespace std;
 #define NB_INTERIOR 800
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
-#define STENCIL_SIZE 60
+#define STENCIL_SIZE 50
 #else
 #define NB_INNER_BND 10
 #define NB_OUTER_BND 10
 #define NB_INTERIOR 10
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
-#define STENCIL_SIZE 7
+#define STENCIL_SIZE 5
 #endif
 
 int main(int argc, char** argv) {
@@ -93,8 +94,13 @@ int main(int argc, char** argv) {
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
+    cout << "SET EPSILON1" << endl;
+    der->setEpsilon(1.0);
 
-    NCARPoisson1* poisson = new NCARPoisson1(exact_poisson, subdomain, der, 0, DIM_NUM);
+    NCARPoisson1* poisson = new NCARPoisson1_CUSP(exact_poisson, subdomain, der, 0, DIM_NUM);
+
+    cout << "SET EPSILON2" << endl;
+    der->setEpsilon(2.0);
 
     poisson->initialConditions();
     poisson->solve(comm_unit);

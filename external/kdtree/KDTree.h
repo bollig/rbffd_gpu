@@ -135,7 +135,7 @@ public:
             }
             idx[parent] = t;
         } // end of for loop
-        return 0;
+        //return 0;
     } // end of heapsort
 
 

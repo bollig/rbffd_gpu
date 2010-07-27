@@ -61,7 +61,7 @@ public:
     void computeWeightsSVD_Direct(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf);
 
     // Use a direct solver on teh distance matrix.
-    void computeWeights(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf, int dim_num);
+    int computeWeights(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf, int dim_num);
 
     // Use Grady's contourSVD (my c++) version to compute the weights
     // choice: compute either "lapl", "x" or "y" derivative stencils

@@ -42,6 +42,7 @@ ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/external)
 # These must come AFTER the external subdir so we have 
 # access to CMake variables for each dependency
 SET (FRAMEWORK_LIBRARY RBF)	# Name of the framework lib (i.e., lib<name>.dylib)
+SET(FRAMEWORK_CUDA_LIBRARY ${FRAMEWORK_LIBRARY}_cuda)
 SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # This is an external dependency

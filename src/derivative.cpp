@@ -476,7 +476,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
 {
     IRBF rbf(epsilon, dim_num);
     int n = stencil.size();
-    int np = 1;//+dim_num; // +3 for the x,y,z monomials
+    int np = 1+dim_num; // +3 for the x,y,z monomials
 
     // +4 to get the monomial parts
 
@@ -659,13 +659,13 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     cout << "R WEIGHT SUM: " << sum_r << endl;
 
 #endif
-#endif
 
     bx.reset();
     by.reset();
     bz.reset();
     br.reset();
     blapl.reset();
+#endif
 
     return stencil.size();
     //printf("DONE COMPUTING WEIGHTS: %d\n", irbf);

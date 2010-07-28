@@ -1,0 +1,7 @@
+The subdirs 
+	ViennaCL-1.0.4 
+is from the ViennaCL homepage: viennacl.sourceforge.net
+no changes were made to it, and it is licensed appropriately to include
+with our source distribution. 
+
+-Evan 7/27/10

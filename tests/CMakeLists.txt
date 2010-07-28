@@ -26,6 +26,7 @@
 
 
 
+		viennacl_simple_example
 
 	)
 

@@ -14,16 +14,24 @@
 #include "exact_ncar_poisson1.h"
 #include "communicator.h"
 #include "parse_command_line.h"
-
 using namespace std;
 
+
+#if 1
+#define NB_INNER_BND 1000
+#define NB_OUTER_BND 2000
+#define NB_INTERIOR 8000
+#define NB_SAMPLES 8000000
+#define DIM_NUM 3
+#define STENCIL_SIZE 50
+#else 
 #if 1
 #define NB_INNER_BND 100
 #define NB_OUTER_BND 200
 #define NB_INTERIOR 800
 #define NB_SAMPLES 80000
 #define DIM_NUM 3
-#define STENCIL_SIZE 150
+#define STENCIL_SIZE 50
 #else
 #define NB_INNER_BND 10
 #define NB_OUTER_BND 10
@@ -32,6 +40,7 @@ using namespace std;
 #define DIM_NUM 2
 #define STENCIL_SIZE 5
 #endif
+#endif 
 
 int main(int argc, char** argv) {
     

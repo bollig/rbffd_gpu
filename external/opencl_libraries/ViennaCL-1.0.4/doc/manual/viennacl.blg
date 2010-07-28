@@ -1,0 +1,64 @@
+This is BibTeX, Version 0.99c (TeX Live 2009/Debian)
+The top-level auxiliary file: viennacl.aux
+A level-1 auxiliary file: viennacl_cover.aux
+A level-1 auxiliary file: viennacl_contributors.aux
+A level-1 auxiliary file: viennacl_introduction.aux
+A level-1 auxiliary file: viennacl_installation.aux
+A level-1 auxiliary file: viennacl_types.aux
+A level-1 auxiliary file: viennacl_operations.aux
+A level-1 auxiliary file: viennacl_algorithms.aux
+A level-1 auxiliary file: viennacl_custom.aux
+A level-1 auxiliary file: viennacl_benchmarks.aux
+A level-1 auxiliary file: viennacl_design.aux
+A level-1 auxiliary file: viennacl_versioning.aux
+A level-1 auxiliary file: viennacl_changelogs.aux
+A level-1 auxiliary file: viennacl_license.aux
+The style file: IEEEtran_v1.13.bst
+Reallocated wiz_functions (elt_size=4) to 6000 items from 140733193391032.
+Database file #1: viennacl.bib
+-- IEEEtran.bst version 1.13 (2008/09/30) by Michael Shell.
+-- http://www.michaelshell.org/tex/ieeetran/bibtex/
+-- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
+
+Done.
+You've used 12 entries,
+            4039 wiz_defined-function locations,
+            862 strings with 8406 characters,
+and the built_in function-call counts, 3440 in all, are:
+= -- 198
+> -- 15
+< -- 0
++ -- 13
+- -- 1
+* -- 129
+:= -- 572
+add.period$ -- 24
+call.type$ -- 12
+change.case$ -- 11
+chr.to.int$ -- 0
+cite$ -- 12
+duplicate$ -- 326
+empty$ -- 411
+format.name$ -- 1
+if$ -- 720
+int.to.chr$ -- 0
+int.to.str$ -- 12
+missing$ -- 72
+newline$ -- 81
+num.names$ -- 1
+pop$ -- 283
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 2
+skip$ -- 247
+stack$ -- 0
+substring$ -- 11
+swap$ -- 136
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 5
+type$ -- 12
+warning$ -- 0
+while$ -- 1
+width$ -- 14
+write$ -- 117

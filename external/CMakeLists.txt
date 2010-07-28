@@ -6,6 +6,7 @@
 		graphics_lib
 		kdtree
 		cuda_libraries
+		opencl_libraries
 	)
 
 	# These libraries are provided by subdirectories and are 

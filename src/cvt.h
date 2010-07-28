@@ -19,9 +19,7 @@ protected:
     int DEBUG;
     Timings tm;
     Timer t1, t2, t3, t4, t5, t6, t7;
-#if USE_KDTREE
     KDTree* kdtree;
-#endif
 
     double PI;
 
@@ -49,7 +47,6 @@ public:
         tm.dumpTimings();
     }
 
-#if USE_KDTREE
     KDTree* getKDTree() {
         if (kdtree == NULL) {
     // Construct a kdtree for range_query
@@ -57,7 +54,6 @@ public:
         }
         return kdtree;
     }
-#endif
 
     char ch_cap(char c);
     bool ch_eqi(char c1, char c2);

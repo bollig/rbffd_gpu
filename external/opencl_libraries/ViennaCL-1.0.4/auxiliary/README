@@ -1,0 +1,21 @@
+******************************************
+* Naming convention for kernel functions *
+******************************************
+
+The generic format is:
+[alignment]_[kernelname]( args )
+
+where 
+[type]       ... the ViennaCL class the kernel is defined for (see VCLKernels.h)
+[kernelname] ... name of the kernel as defined in (see VCLKernels.h)
+
+Example:
+The addition kernel for two vectors is called
+float_vector_add
+
+Note that kernels for double precision are generated automatically by a string replace of "float" -> "double"
+
+The converter program generates the static strings from the cl-files in the header files
+
+Compiler call under Linux:
+g++ converter.cpp -o converter -lboost_filesystem-mt

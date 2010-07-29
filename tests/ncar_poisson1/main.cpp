@@ -5,6 +5,7 @@
 // nested_sphere_cvt.h accidentally overrides one of the defines for MPI
 #include "ncar_poisson1.h"
 #include "ncar_poisson1_cusp.h"
+#include "ncar_poisson1_cl.h"
 #include "grid.h"
 #include "nested_sphere_cvt.h"
 #include "cvt.h"
@@ -17,15 +18,24 @@
 using namespace std;
 
 
-#if 1
+#if 0
 #define NB_INNER_BND 1000
 #define NB_OUTER_BND 2000
 #define NB_INTERIOR 8000
 #define NB_SAMPLES 8000000
 #define DIM_NUM 3
 #define STENCIL_SIZE 50
-#else 
+#else
 #if 1
+// 3K nodes
+#define NB_INNER_BND 200
+#define NB_OUTER_BND 400
+#define NB_INTERIOR 2400
+#define NB_SAMPLES 80000
+#define DIM_NUM 3
+#define STENCIL_SIZE 50
+#else
+#if 0
 #define NB_INNER_BND 100
 #define NB_OUTER_BND 200
 #define NB_INTERIOR 800
@@ -41,6 +51,7 @@ using namespace std;
 #define STENCIL_SIZE 5
 #endif
 #endif 
+#endif
 
 int main(int argc, char** argv) {
     
@@ -106,7 +117,7 @@ int main(int argc, char** argv) {
     cout << "SET EPSILON1" << endl;
     der->setEpsilon(1.0);
 
-    NCARPoisson1* poisson = new NCARPoisson1_CUSP(exact_poisson, subdomain, der, 0, DIM_NUM);
+    NCARPoisson1* poisson = new NCARPoisson1_CL(exact_poisson, subdomain, der, 0, DIM_NUM);
 
     cout << "SET EPSILON2" << endl;
     der->setEpsilon(2.0);

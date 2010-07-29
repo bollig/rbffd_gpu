@@ -557,8 +557,6 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     d_matrix.zeros(n+np,n+np);
     this->distanceMatrix(rbf_centers, stencil, irbf, d_matrix.memptr(), d_matrix.n_rows, d_matrix.n_cols, dim_num);
 
-   // d_matrix.print("DISTANCE MATRIX: ");
-
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
         d_matrix(n, i) = 1.0;
@@ -579,8 +577,9 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         }
     }
 
+   //  d_matrix.print("DISTANCE MATRIX: ");
   // d_matrix.print("DISTANCE MATRIX: ");
- // blapl.print("BLAPL: ");
+   // blapl.print("BLAPL: ");
     // TODO: find a backslash "/" equivalent to matlab's which allow us to avoid
     // computing and storing the full inverse matrix.
     arma::mat Ainv = inv(d_matrix);
@@ -592,8 +591,14 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     this->r_weights[irbf] = br * Ainv;
     this->lapl_weights[irbf] = blapl * Ainv;
 #else
-
     arma::mat weights_x = bx*Ainv;
+    arma::mat weights_y = by*Ainv;
+    arma::mat weights_z = bz*Ainv;
+    arma::mat weights_lapl = blapl*Ainv;
+
+
+
+//X
     if (this->x_weights[irbf] == NULL) {
         this->x_weights[irbf] = new double[stencil.size()];
     }
@@ -601,7 +606,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         this->x_weights[irbf][j] = weights_x[j];
     }
 
-    arma::mat weights_y = by*Ainv;
+// Y
     if (this->y_weights[irbf] == NULL) {
         this->y_weights[irbf] = new double[stencil.size()];
     }
@@ -609,7 +614,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         this->y_weights[irbf][j] = weights_y[j];
     }
 
-    arma::mat weights_z = bz*Ainv;
+// Z
     if (this->z_weights[irbf] == NULL) {
         this->z_weights[irbf] = new double[stencil.size()];
     }
@@ -617,16 +622,16 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         this->z_weights[irbf][j] = weights_z[j];
     }
 
-    arma::mat weights_lapl = blapl*Ainv;
+    // Laplacian
     if (this->lapl_weights[irbf] == NULL) {
         this->lapl_weights[irbf] = new double[stencil.size()];
     }
-    //cout << "lapl_weights[" << irbf << "] = ";
+    double sum_tot = 0.;
     for (int j = 0; j < stencil.size(); j++) {
         this->lapl_weights[irbf][j] = weights_lapl[j];
-      //  cout << weights_lapl[j] << "\t";
+    //    sum_tot += weights_lapl[j];
     }
-   // cout << endl;
+  //  weights_lapl.print("lapl_weights"); cout << "SUM: " << sum_tot << endl;
 #endif
 
 #if 0

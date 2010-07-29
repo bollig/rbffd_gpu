@@ -1,0 +1,325 @@
+#define VIENNACL_HAVE_UBLAS 1
+#include <math.h>
+
+#include "grid.h"
+#include "ncar_poisson1_cl.h"
+#include "exact_solution.h"
+
+// The GPU/OpenCL side sparse arrays come from ViennaCL
+#include "viennacl/scalar.hpp"
+#include "viennacl/vector.hpp"
+#include "viennacl/coordinate_matrix.hpp"
+#include "viennacl/compressed_matrix.hpp"
+#include "viennacl/linalg/prod.hpp"
+#include "viennacl/linalg/norm_2.hpp"
+#include "viennacl/linalg/gmres.hpp"
+#include "viennacl/linalg/bicgstab.hpp"
+
+#include <iostream>
+#include <vector>
+
+// The CPU Side sparse arrays come from Boost uBlas.
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/operation_sparse.hpp>
+#include <boost/numeric/ublas/io.hpp>
+using namespace std;
+
+// Set single or double precision here.
+typedef double FLOAT;
+
+NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+        NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
+{}
+
+//----------------------------------------------------------------------
+
+NCARPoisson1_CL::~NCARPoisson1_CL() {
+}
+//----------------------------------------------------------------------
+// Solve the poisson system.
+// NOTE: this routine is old and uses a possibly incorrect method for solving with the
+// neumann boundary conditions. I am starting an alternate routine to solve the system
+// in the same fashion that Joe solved the system.
+void NCARPoisson1_CL::solve(Communicator* comm_unit) {
+
+    if (subdomain == NULL) {
+        cerr
+                << "In " << __FILE__
+                << " No GPU class passed to Constructor. Cannot perform intermediate communication/updates in solver."
+                << endl;
+        exit(EXIT_FAILURE);
+    } else {
+
+        int nb = subdomain->global_boundary_nodes.size();
+        // All interior and boundary nodes are included in the stencils.
+        // The first nb Q_stencils should be the global boundary nodes
+        int ni = subdomain->Q_stencils.size() - nb;
+
+        int nn = (nb + ni) ;
+        double err_norm = 100;
+        double prev_err_norm = 100;
+
+        double left_eps = 0.1;
+        double right_eps = 30.;
+        double new_eps = left_eps;
+
+        double prev_eps = left_eps;
+
+        bool goodDirection, wentRight;
+
+        int iter = 0;
+        cout << "ENTERING EPSILON SEARCH LOOP " <<endl;
+        while (err_norm > 1e-4 && iter < 1)
+        {
+            // TODO: solve this in parallel
+            //     comm_unit->broadcastObjectUpdates(subdomain);
+
+            // Do NOT use GPU as buffer for computation
+            // Only go up to the number of stencils since we solve for a subset of the values in U_G
+            // Since U_G in R is at end of U_G vector we can ignore those.
+            //for (int i = 0; i < s.size(); i++) {
+            //    s[i] = subdomain->U_G[i];
+            //}
+
+            //for (int i = 0; i < lapl_deriv.size(); i++) {
+            //  Vec3& v = (*rbf_centers)[i];
+            //    printf("(local: %d), lapl(%f,%f,%f)= %f\t%f\n", i, v.x(), v.y(), v.z(),
+            //            lapl_deriv[i], s[i]);
+            //}
+
+            // Evan TODO:
+            //
+            // 1) Build a sparse matrix representation for all the interior derivative weights LA
+            // 2) Build a full vector F = laplacian(u)
+            // 3)
+
+            // We are forming:
+            //
+            //  [ w_ddr -1/r*I  ]  [ A_boundary ]     [ 0  ]
+            //  [ w_lapl    ]  [ A_interior ]  =  [ f_interior ]
+            //
+            // where w_lapl are the laplacian RBFFD weights for interior nodes (ni x nb + ni)
+            // w_dr are the d/dr RBFFD weights (that is, the operator xd/dx +
+            //
+
+            // The w_lapl, weights for the laplacian, require (d^2 Phi / dx^2 + d^2 Phi / dy^2 + d^2 Phi / dz^2).
+            // For w_ddr, weights for dA/dr, require (x*dPhi/dx + y*dPhi/dy + z*dPhi/dz). That means we will need to get
+            // the stencil centers (Vec3) into the
+
+            new_eps = left_eps + abs(right_eps - left_eps)/2.;
+new_eps = 4.;
+            der->setEpsilon(new_eps);
+            cout << "USING EPSILON: " << new_eps << endl;
+
+            int numNonZeros = 0;
+#if 1
+            for (int i = 0; i < nb + ni; i++) {
+                //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
+                // Compute all derivatives for our centers and return the number of
+                // weights that will be available
+                numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim_num);
+            }
+#else
+            for (int i = 0; i < nb; i++) {
+                // 1 nonzero per row for boundary (dirichlet has I since we know values and dont need weights)
+                //der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
+                numNonZeros += 1;
+            }
+            for (int i = nb; i < nb + ni; i++) {
+                //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
+                // Compute all derivatives for our centers and return the number of
+                // weights that will be available
+                numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
+            }
+#endif
+            //CL::coo_matrix<int, float, CL::host_memory> L_host(nn, nn, numNonZeros);
+
+
+            // 1) Fill the ublas matrix on the CPU
+            boost::numeric::ublas::compressed_matrix<FLOAT> L_host(nn, nn);
+            boost::numeric::ublas::vector<FLOAT> F_host(nn);
+
+            int indx = 0;
+
+            // Fill Boundary weights
+            for (int i = 0; i < nb; i++) {
+                double* x_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
+                double* y_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
+                double* z_weights = der->getZWeights(subdomain->Q_stencils[i][0]);
+
+                // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
+                Vec3& center = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                double r = center.magnitude();
+
+                if (r < 1e-8) {
+                    cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
+                    exit(EXIT_FAILURE);
+                }
+
+#if 0
+                // NEUMANN CONDITION:
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                        //L_host.row_indices[indx] = i;
+                        //L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
+                        //L_host.values[indx] = (center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j];
+                        FLOAT value = (FLOAT)((center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j]);
+                        // Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
+                        // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
+                        if (j == 0) {
+                            //L_host.values[indx] -= 1./r;
+                            value -= (FLOAT)(1./r);
+                        }
+                        L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
+
+                        indx++;
+                 }
+#else
+                // DIRICHLET CONDITION WITH 0s:
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                    if (j == 0) {
+                        //L_host.values[indx] = 1.f;
+                         L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (FLOAT)1.;
+                       // L_host.insert_element(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j], (FLOAT)1.);
+                    } else {
+                        //   L_host.row_indices[indx] = i;
+                        //   L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
+                        //   L_host.values[indx] = 0;
+                        L_host.insert_element(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j], (FLOAT)0.);
+                    }
+                        indx++;
+                 }
+#endif
+                F_host(i) = (FLOAT)0.;
+            }
+            // Fill Interior weights
+            for (int i = nb; i < nb+ni; i++) {
+                double* lapl_weights = der->getLaplWeights(subdomain->Q_stencils[i][0]);
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                       // L_host.row_indices[indx] = i;
+                       // L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
+                       // L_host.values[indx] = (float)lapl_weights[j];
+                     L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (FLOAT) lapl_weights[j];
+                        //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
+                        indx++;
+                 }
+                Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                F_host[i] = (FLOAT)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
+            }
+
+            if ((indx - numNonZeros) != 0) {
+                cerr << "WARNING! HOST MATRIX WAS NOT FILLED CORRECTLY. DISCREPANCY OF " << (indx - numNonZeros) << " NONZERO ELEMENTS!" << endl;
+                exit(EXIT_FAILURE);
+            }
+
+            // cout << "L_HOST: " << L_host.size1() << "\t" << L_host.size2() << "\t" << L_host.filled1() << "\t" << L_host.filled2() << endl;
+            // cout << L_host << endl;
+            // cout << "F: " << F_host << endl;
+
+
+            // 2) Convert to OpenCL space:
+#if 0
+            viennacl::compressed_matrix<FLOAT, 1 /*Alignment(e.g.: 1,4,8)*/ > L_device;
+            viennacl::vector<FLOAT> F_device(F_host.size());
+            viennacl::vector<FLOAT> x_device(F_host.size());
+#endif
+            boost::numeric::ublas::vector<FLOAT> x_host(F_host.size());
+
+#if 0
+            // copy to GPU
+            copy(L_host, L_device);
+            copy(F_host, F_device);
+
+            //x_device = viennacl::linalg::prod(L_device, F_device);
+           // x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::gmres_tag());
+            x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
+            viennacl::ocl::finish();
+#endif
+
+           // copy(x_device, x_host);
+
+            boost::numeric::ublas::vector<FLOAT> exact_host(F_host.size());
+            boost::numeric::ublas::vector<FLOAT> error_host(F_host.size());
+            for (int i = 0; i < nb; i++) {
+                exact_host(i) = (FLOAT) 0.;
+            }
+            for (int i = nb; i < nb + ni; i++) {
+                exact_host(subdomain->Q_stencils[i][0]) = (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
+            }
+
+            error_host = exact_host - x_host;
+           // std::cout << " A*x_exact  " << prod(L_host, exact_host) << std::endl;
+           // std::cout << " F " << F_host << endl;
+            cout << "L_host: " << L_host << endl << endl;
+            cout << "F_host: " << F_host << endl << endl;
+            cout << "x_host: " << x_host << endl << endl;
+            cout << "Exact_host: " << exact_host << endl << endl;
+            std::cout << "  A*x_exact  " << prod(L_host, exact_host) << std::endl;
+            std::cout << "Residual  A*x_exact - F  " << prod(L_host, exact_host) - F_host << std::endl;
+           // std::cout << "Relative residual || A*x_exact - F || / || F || " << norm_2(prod(L_host, exact_host) - F_host) / norm_2(F_host) << std::endl;
+           // std::cout << "Relative residual || A*x_approx - F || / || F || " << norm_2(prod(L_host, x_host) - F_host) / norm_2(F_host) << std::endl;
+
+
+            //cout << "Solution: " << x_host << endl;
+           // cout << "Error: " << error_host << endl;
+
+
+            prev_err_norm = err_norm;
+            //err_norm = CL::blas::nrm2(error_H);
+
+            //cout << "2 Norm: " << err_norm << endl;
+
+
+            if (prev_err_norm > err_norm) {
+                goodDirection = true;
+            } else {
+                goodDirection = false;
+            }
+
+            if (goodDirection) {
+                if (wentRight) {
+                    prev_eps = left_eps;
+                    left_eps = new_eps;
+                    wentRight = true;
+                } else {
+                    prev_eps = right_eps;
+                    right_eps = new_eps;
+                    wentRight = false;
+                }
+            } else {
+                if (wentRight) {
+                    left_eps = prev_eps;
+                    right_eps = new_eps;
+                    wentRight = false;
+                } else {
+                    right_eps = prev_eps;
+                    left_eps = new_eps;
+                    wentRight = true;
+                }
+            }
+
+            iter ++;
+        }
+
+#if 0
+        CL::array1d<float, CL::host_memory> results[5](nn);
+
+        results[0] = approx_sol;
+        results[1] = exact;
+        results[2] = error;
+        results.print("\n\nRESULTS\n (APPROX SOLUTION; \tEXACT SOLUTION; \tABS ERROR \tExpected Laplacian(Using L*ExactSolution)\t Diff EXPECTED & EXACT Laplacian\n");
+
+        // results.col(3) = expected;
+        // results.col(4) = diff_lapl;
+        CL::print_matrix(approx_sol);
+#endif
+        //A.print("Full Solution (A) = ");
+        //exact.print("Exact = ");
+        //error.print("Error = ");
+
+
+        cout.flush();
+    }
+    return;
+}
+
+//----------------------------------------------------------------------

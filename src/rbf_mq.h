@@ -30,14 +30,16 @@ public:
 	// f = (1+eps2*r^2)^{1/2}
 	inline double eval(const Vec3& x, const Vec3& xi) {
                 double r = (x-xi).magnitude();
-                double r2 = (x-xi).square();
+                //double r2 = (x-xi).square();
+                double r2 = r*r;
          //       printf("eval, r= %f, eps=%f, eps2= %f, rbf= %21.14e\n", r, eps, eps2, sqrt(1.+eps2*r2));
                 return sqrt(1.+(eps2*r2));
 	}
 	// added Aug. 15, 2009
 	inline double eval(const Vec3& x) {
                 double r = x.magnitude();
-                double r2 = x.square();
+                //double r2 = x.square();
+                double r2 = r*r;
           //      printf("eval, r= %f, eps=%f, eps2= %f, rbf= %21.14e\n", r, eps, eps2, sqrt(1.+eps2*r2));
                 return sqrt(1.+(eps2*r2));
 	}
@@ -193,18 +195,20 @@ public:
 
 	// added Aug. 15, 2009
 	double lapl_deriv(const Vec3& xvec) {
-            // general form: lapl = d^2 Phi /s d r^2 + ((DIM-1)/r) * dPhi / dr
+            //printf("lapl_deriv: x= %f %f %f %f %d\n", xvec.x(), xvec.y(), xvec.z(), eps2, dim);
+                // general form: lapl = d^2 Phi / d r^2 + ((DIM-1)/r) * dPhi / dr
                 // however, if r is 0 then we have issues with that and need the simplified equation.
                 // This is the simplified equation:
                 double r = xvec.magnitude();
                 double r2 = xvec.square();
                 double f = eval(xvec);
-                double lapl = (dim*eps2 + (dim-1)*(r2)*eps2*eps2) / (f*f*f);
+                double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
                 return lapl;
 	}
 
 	// added Aug. 15, 2009
         double lapl_deriv(const double x) {
+            //printf("lapl_deriv: x= %f\n", x);
             double r = x;
             // general form: lapl = d^2 Phi /s d r^2 + ((DIM-1)/r) * dPhi / dr
                 // however, if r is 0 then we have issues with that and need the simplified equation.

@@ -24,27 +24,6 @@ double ExactNCARPoisson1::operator()(double Xx, double Yy, double Zz, double t)
 //----------------------------------------------------------------------
 double ExactNCARPoisson1::laplacian(double Xx, double Yy, double Zz, double t)
 {
-#if 0
-    double simpLapl = (-3.*(3.*Power(Xx,4) + 3.*Power(Yy,4) - 24.*Power(Yy,2)*Power(Zz,2) + 8.*Power(Zz,4) + 6.*Power(Xx,2)*(Power(Yy,2) - 4.*Power(Zz,2)))*
-         (-4.*(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))*(-3. - 48.*Power(Zz,2) + 24.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) +
-              28.*Power(Zz,2)*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 4.*Power(Xx,2)*(-12. + 7.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) +
-              4.*Power(Yy,2)*(-12. + 7.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))))*
-            Cos(0.5 + Power(Xx,2) + Power(Yy,2) + Power(Zz,2) - (3.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))/2.) +
-           (-216.*Power(Zz,2) - 51.*Power(Zz,4) - 96.*Power(Zz,6) + 80.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) +
-              121.*Power(Zz,2)*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 106.*Power(Zz,4)*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) +
-              32.*Power(Zz,6)*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 32.*Power(Xx,6)*(-3. + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) +
-              32.*Power(Yy,6)*(-3. + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) +
-              Power(Yy,4)*(-51. + 106.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 96.*Power(Zz,2)*(-3. + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))) +
-              Power(Xx,4)*(-51. + 106.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 96.*Power(Yy,2)*(-3. + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) +
-                 96.*Power(Zz,2)*(-3, + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))) +
-              Power(Yy,2)*(-216, + 121,*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 96.*Power(Zz,4)*(-3. + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) +
-                 2*Power(Zz,2)*(-51. + 106.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))) +
-              Power(Xx,2)*(-216. + 121.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 96.*Power(Yy,4)*(-3. + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) +
-                 96.*Power(Zz,4)*(-3. + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) + 2.*Power(Zz,2)*(-51. + 106.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) +
-                 2.*Power(Yy,2)*(-51. + 106.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 96.*Power(Zz,2)*(-3. + Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))))))*
-            Sin(0.5 + Power(Xx,2) + Power(Yy,2) + Power(Zz,2) - (3.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))/2.)))/
-       (128.*Sqrt(Pi)*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),3.5));
-#endif
     double LA = (-15.*(3.*Power(Xx,4) + 3.*Power(Yy,4) - 24.*Power(Yy,2)*Power(Zz,2) + 8.*Power(Zz,4) + 6.*Power(Xx,2)*(Power(Yy,2) - 4.*Power(Zz,2)))*
          (-4.*(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))*(-3. - 48.*Power(Zz,2) + 24.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) +
               28.*Power(Zz,2)*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)) + 4.*Power(Xx,2)*(-12. + 7.*Sqrt(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))) +

@@ -50,7 +50,7 @@ SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # Its name should not change
 SET( FRAMEWORK_DEPENDENCIES
 	utilities
-       	timing
+   	timing
 	#${CUDA_LIBRARIES}
 )
 

@@ -1,3 +1,6 @@
+message("opencl top")
+
+
 # FROM: http://forums.nvidia.com/index.php?showtopic=97795
 # Written by theMarix
 # Modified by Ian Johnson, Gordon Erlebacher and Evan Bollig Summer 2010
@@ -35,12 +38,15 @@ ELSE (WIN32)
     #SET(inc  $ENV{CUDA_LOCAL}/../OpenCL/common/inc /usr/include)
     FIND_PATH(OPENCL_INCLUDE_DIR CL/cl.h PATHS
 				"/Developer/GPU Computing/OpenCL/common/inc/" 
+				"/Developer/GPU_Computing/OpenCL/common/inc/" 
 	 	 		~/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/ 
 				/usr/include 
 	)
 
     FIND_LIBRARY(OPENCL_LIBRARIES OpenCL ENV LD_LIBRARY_PATH)
 
+	message("***** OPENCL_INCLUDE_DIR:  ${OPENCL_INCLUDE_DIR}****")
+	message("***** OPENCL_LIBRARIES:  ${OPENCL_LIBRARIES}****")
 	#message(***** OPENCL ENV: "$ENV{GPU_SDK}" ********)
 
 #~/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/ 

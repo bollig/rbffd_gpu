@@ -107,7 +107,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             // the stencil centers (Vec3) into the
 
             new_eps = left_eps + abs(right_eps - left_eps)/2.;
-new_eps = 4.;
+new_eps = 8.;
             der->setEpsilon(new_eps);
             cout << "USING EPSILON: " << new_eps << endl;
 

@@ -582,19 +582,19 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
    // blapl.print("BLAPL: ");
     // TODO: find a backslash "/" equivalent to matlab's which allow us to avoid
     // computing and storing the full inverse matrix.
-    arma::mat Ainv = inv(d_matrix);
+    //arma::mat Ainv = inv(d_matrix);
 
 #if 0
-    this->x_weights[irbf] = bx * Ainv;
-    this->y_weights[irbf] = by * Ainv;
-    this->z_weights[irbf] = bz * Ainv;
-    this->r_weights[irbf] = br * Ainv;
-    this->lapl_weights[irbf] = blapl * Ainv;
+    this->x_weights[irbf] = solve(d_matrix, trans(bx)); //bx * Ainv;
+    this->y_weights[irbf] = solve(d_matrix, trans(by)); ////by * Ainv;
+    this->z_weights[irbf] = solve(d_matrix, trans(bz)); //bz * Ainv;
+    this->r_weights[irbf] = solve(d_matrix, trans(br)); //br * Ainv;
+    this->lapl_weights[irbf] = solve(d_matrix, trans(blapl)); //blapl * Ainv;
 #else
-    arma::mat weights_x = bx*Ainv;
-    arma::mat weights_y = by*Ainv;
-    arma::mat weights_z = bz*Ainv;
-    arma::mat weights_lapl = blapl*Ainv;
+    arma::mat weights_x = arma::solve(d_matrix, trans(bx)); //bx*Ainv;
+    arma::mat weights_y = arma::solve(d_matrix, trans(by)); //by*Ainv;
+    arma::mat weights_z = arma::solve(d_matrix, trans(bz)); //bz*Ainv;
+    arma::mat weights_lapl = arma::solve(d_matrix, trans(blapl)); //blapl*Ainv;
 
 
 

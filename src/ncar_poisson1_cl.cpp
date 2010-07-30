@@ -1,4 +1,4 @@
-#define VIENNACL_HAVE_UBLAS 1
+//#define VIENNACL_HAVE_UBLAS 1
 #include <math.h>
 
 #include "grid.h"
@@ -25,7 +25,7 @@
 using namespace std;
 
 // Set single or double precision here.
-typedef double FLOAT;
+typedef float FLOAT;
 
 NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
@@ -113,6 +113,7 @@ new_eps = 8.;
 
             int numNonZeros = 0;
 #if 1
+            // Compute all weights including those for the boundary nodes
             for (int i = 0; i < nb + ni; i++) {
                 //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
                 // Compute all derivatives for our centers and return the number of
@@ -120,6 +121,7 @@ new_eps = 8.;
                 numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim_num);
             }
 #else
+            // Compute only interior weights
             for (int i = 0; i < nb; i++) {
                 // 1 nonzero per row for boundary (dirichlet has I since we know values and dont need weights)
                 //der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
@@ -132,8 +134,8 @@ new_eps = 8.;
                 numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
             }
 #endif
-            //CL::coo_matrix<int, float, CL::host_memory> L_host(nn, nn, numNonZeros);
 
+            cout << "Weights computed" << endl;
 
             // 1) Fill the ublas matrix on the CPU
             boost::numeric::ublas::compressed_matrix<FLOAT> L_host(nn, nn);
@@ -211,31 +213,38 @@ new_eps = 8.;
                 exit(EXIT_FAILURE);
             }
 
+
+            cout << "Implicit system assembled" << endl;
             // cout << "L_HOST: " << L_host.size1() << "\t" << L_host.size2() << "\t" << L_host.filled1() << "\t" << L_host.filled2() << endl;
             // cout << L_host << endl;
             // cout << "F: " << F_host << endl;
 
 
             // 2) Convert to OpenCL space:
-#if 0
-            viennacl::compressed_matrix<FLOAT, 1 /*Alignment(e.g.: 1,4,8)*/ > L_device;
+
+            viennacl::compressed_matrix<FLOAT, 1 /*Alignment(e.g.: 1,4,8)*/ > L_device(nn, nn);
             viennacl::vector<FLOAT> F_device(F_host.size());
             viennacl::vector<FLOAT> x_device(F_host.size());
-#endif
+
             boost::numeric::ublas::vector<FLOAT> x_host(F_host.size());
 
-#if 0
+            cout << "Before copy to GPU" << endl;
             // copy to GPU
             copy(L_host, L_device);
             copy(F_host, F_device);
 
             //x_device = viennacl::linalg::prod(L_device, F_device);
-           // x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::gmres_tag());
-            x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
+            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag());
+           // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
+           // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
             viennacl::ocl::finish();
-#endif
 
-           // copy(x_device, x_host);
+            cout << "Done with solve" << endl;
+
+            // Copy solution to host
+            copy(x_device, x_host);
+
+            cout << "Results copied to host" << endl;
 
             boost::numeric::ublas::vector<FLOAT> exact_host(F_host.size());
             boost::numeric::ublas::vector<FLOAT> error_host(F_host.size());
@@ -247,16 +256,31 @@ new_eps = 8.;
             }
 
             error_host = exact_host - x_host;
-           // std::cout << " A*x_exact  " << prod(L_host, exact_host) << std::endl;
-           // std::cout << " F " << F_host << endl;
-            cout << "L_host: " << L_host << endl << endl;
-            cout << "F_host: " << F_host << endl << endl;
-            cout << "x_host: " << x_host << endl << endl;
-            cout << "Exact_host: " << exact_host << endl << endl;
-            std::cout << "  A*x_exact  " << prod(L_host, exact_host) << std::endl;
-            std::cout << "Residual  A*x_exact - F  " << prod(L_host, exact_host) - F_host << std::endl;
-           // std::cout << "Relative residual || A*x_exact - F || / || F || " << norm_2(prod(L_host, exact_host) - F_host) / norm_2(F_host) << std::endl;
-           // std::cout << "Relative residual || A*x_approx - F || / || F || " << norm_2(prod(L_host, x_host) - F_host) / norm_2(F_host) << std::endl;
+
+            cout << "Writing results to disk" << endl;
+
+            ofstream fout;
+            fout.open("L.mtx");
+            fout << L_host << endl;
+            fout.close();
+            fout.open("F.mtx");
+            fout << F_host << endl;
+            fout.close();
+            fout.open("X_exact.mtx");
+            fout << exact_host << endl;
+            fout.close();
+            fout.open("X_approx.mtx");
+            fout << x_host << endl;
+            fout.close();
+            fout.open("R.mtx");
+            fout << prod(L_host, exact_host) - F_host << endl;
+            fout.close();
+            fout.open("E_absolute.mtx");
+            fout << error_host << endl;
+
+            std::cout << "Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = " << norm_2(exact_host - x_host) / norm_2(exact_host) << std::endl;
+            std::cout << "Relative residual || A*x_exact - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, exact_host) - F_host) / norm_2(F_host) << std::endl;
+            std::cout << "Relative residual || A*x_approx - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, x_host) - F_host) / norm_2(F_host) << std::endl;
 
 
             //cout << "Solution: " << x_host << endl;

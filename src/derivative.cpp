@@ -591,12 +591,13 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     this->r_weights[irbf] = solve(d_matrix, trans(br)); //br * Ainv;
     this->lapl_weights[irbf] = solve(d_matrix, trans(blapl)); //blapl * Ainv;
 #else
+    // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
+    // because A is symmetric. Rather than compute full inverse we leverage
+    // the solver for increased efficiency
     arma::mat weights_x = arma::solve(d_matrix, trans(bx)); //bx*Ainv;
     arma::mat weights_y = arma::solve(d_matrix, trans(by)); //by*Ainv;
     arma::mat weights_z = arma::solve(d_matrix, trans(bz)); //bz*Ainv;
     arma::mat weights_lapl = arma::solve(d_matrix, trans(blapl)); //blapl*Ainv;
-
-
 
 //X
     if (this->x_weights[irbf] == NULL) {

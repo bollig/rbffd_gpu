@@ -12,7 +12,7 @@ protected:
 
 public:
 
-	ExactSolution() : Pi(acos(-1.)) {}; 
+        ExactSolution() : Pi(acos(-1.)) {};
 //	~ExactSolution() {}; 
  
 	virtual double operator()(double x, double y, double z, double t) = 0;

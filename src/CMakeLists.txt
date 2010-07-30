@@ -6,7 +6,10 @@
 		parametric_patch.cpp
 		exact_ellipsoid.cpp
 		exact_ellipse.cpp
+
 		exact_ncar_poisson1.cpp
+		exact_ncar_poisson2.cpp
+
 		communicator.cpp
 		mpisendable.cpp
 		contour_svd.cpp 
@@ -20,7 +23,6 @@
 		grid.cpp 
 		heat.cpp 
 		ncar_poisson1.cpp
-		ncar_poisson1_explicit.cpp
 		rbf.cpp 
 		stencils.cpp 
 		regulargrid3d.cpp

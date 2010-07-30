@@ -13,12 +13,17 @@
 #include "derivative.h"
 #include "exact_solution.h"
 #include "exact_ncar_poisson1.h"
+#include "exact_ncar_poisson2.h"
 #include "communicator.h"
 #include "parse_command_line.h"
 using namespace std;
 
 
 #if 0
+// The ultimate benchmark. Proves that KDTree
+// is good for acceleration in CVT so long as
+// we have enough samples to amortize the cost
+// of reconstructing the tree each iteration.
 #define NB_INNER_BND 1000
 #define NB_OUTER_BND 2000
 #define NB_INTERIOR 8000
@@ -26,23 +31,34 @@ using namespace std;
 #define DIM_NUM 3
 #define STENCIL_SIZE 50
 #else
-#if 1
-// 3K nodes
-#define NB_INNER_BND 200
-#define NB_OUTER_BND 400
-#define NB_INTERIOR 2400
+#if 0
+// 6K nodes (Match roughly with Joe's nodeset)
+#define NB_INNER_BND 120
+#define NB_OUTER_BND 240
+#define NB_INTERIOR 5640
 #define NB_SAMPLES 80000
-#define DIM_NUM 3
+#define DIM_NUM 2
 #define STENCIL_SIZE 50
 #else
+#if 1
+// 3K nodes (Match roughly with Joe's nodeset)
+#define NB_INNER_BND 94
+#define NB_OUTER_BND 181
+#define NB_INTERIOR 2725
+#define NB_SAMPLES 80000
+#define DIM_NUM 2
+#define STENCIL_SIZE 60
+#else
 #if 0
+// Simple test case to show some convergence
 #define NB_INNER_BND 100
 #define NB_OUTER_BND 200
 #define NB_INTERIOR 800
 #define NB_SAMPLES 80000
-#define DIM_NUM 3
+#define DIM_NUM 2
 #define STENCIL_SIZE 50
 #else
+// Basic case to prove code runs
 #define NB_INNER_BND 10
 #define NB_OUTER_BND 10
 #define NB_INTERIOR 10
@@ -51,6 +67,7 @@ using namespace std;
 #define STENCIL_SIZE 5
 #endif
 #endif 
+#endif
 #endif
 
 int main(int argc, char** argv) {
@@ -110,7 +127,7 @@ int main(int argc, char** argv) {
     // Verbosely print the memberships of all nodes within the subdomain
     //subdomain->printCenterMemberships(subdomain->G, "G");
 
-    ExactSolution* exact_poisson = new ExactNCARPoisson1();
+    ExactSolution* exact_poisson = new ExactNCARPoisson2();
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());

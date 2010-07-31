@@ -1,12 +1,13 @@
 #include "exact_ncar_poisson2.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <cmath>
 #include <iostream>
 using namespace std;
 
 //----------------------------------------------------------------------
-ExactNCARPoisson2::ExactNCARPoisson2() : ExactSolution(), SCALE(10000.)
+ExactNCARPoisson2::ExactNCARPoisson2() : ExactSolution(), SCALE(100000.)
 {
 
 }

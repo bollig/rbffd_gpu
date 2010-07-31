@@ -1,6 +1,6 @@
 #ifndef _EXACT_NCAR_POISSON2_H_
 #define _EXACT_NCAR_POISSON2_H_
-
+#include <stdlib.h>
 #include "exact_solution.h"
 
 class ExactNCARPoisson2 : public ExactSolution

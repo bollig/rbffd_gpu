@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <math.h>
 #include "grid.h"
 #include "ncar_poisson1.h"

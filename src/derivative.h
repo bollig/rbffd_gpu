@@ -1,6 +1,7 @@
 #ifndef _DERIVATIVE_H_
 #define _DERIVATIVE_H_
 
+#include <stdlib.h>
 #include <vector>
 #include "ArrayT.h"
 #include "Vec3.h"

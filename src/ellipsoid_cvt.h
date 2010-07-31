@@ -1,6 +1,7 @@
 #ifndef _ELLIPSOID_CVT_H_
 #define _ELLIPSOID_CVT_H_
 
+#include <stdlib.h>
 #include <vector>
 #include "Vec3.h"
 #include "parametric_patch.h"

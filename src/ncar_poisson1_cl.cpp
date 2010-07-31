@@ -1,4 +1,5 @@
 //#define VIENNACL_HAVE_UBLAS 1
+#include <stdlib.h>
 #include <math.h>
 
 #include "grid.h"
@@ -138,8 +139,10 @@ new_eps = 8.;
             cout << "Weights computed" << endl;
 
             // 1) Fill the ublas matrix on the CPU
-            boost::numeric::ublas::compressed_matrix<FLOAT> L_host(nn, nn);
-            boost::numeric::ublas::vector<FLOAT> F_host(nn);
+            boost::numeric::ublas::compressed_matrix<FLOAT> L_host(nn+1, nn+1);
+            boost::numeric::ublas::vector<FLOAT> F_host(nn+1);
+
+            F_host(nn) = 0.;
 
             int indx = 0;
 
@@ -158,7 +161,7 @@ new_eps = 8.;
                     exit(EXIT_FAILURE);
                 }
 
-#if 0
+#if 1
                 // NEUMANN CONDITION:
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
                         //L_host.row_indices[indx] = i;
@@ -172,9 +175,13 @@ new_eps = 8.;
                             value -= (FLOAT)(1./r);
                         }
                         L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
-
                         indx++;
                  }
+
+                // Constrain the solution to the correct Z
+                L_host(subdomain->Q_stencils[i][0],nn) = 1;
+                L_host(nn,subdomain->Q_stencils[i][0]) = 1;
+
 #else
                 // DIRICHLET CONDITION WITH 0s:
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
@@ -192,7 +199,14 @@ new_eps = 8.;
                  }
 #endif
                 F_host(i) = (FLOAT)0.;
+                // Final constraint to make the Neumann boundary condition complete
+                F_host(nn) += (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
             }
+
+
+
+
+
             // Fill Interior weights
             for (int i = nb; i < nb+ni; i++) {
                 double* lapl_weights = der->getLaplWeights(subdomain->Q_stencils[i][0]);
@@ -222,7 +236,7 @@ new_eps = 8.;
 
             // 2) Convert to OpenCL space:
 
-            viennacl::compressed_matrix<FLOAT, 1 /*Alignment(e.g.: 1,4,8)*/ > L_device(nn, nn);
+            viennacl::compressed_matrix<FLOAT, 1 /*Alignment(e.g.: 1,4,8)*/ > L_device(L_host.size1(), L_host.size2());
             viennacl::vector<FLOAT> F_device(F_host.size());
             viennacl::vector<FLOAT> x_device(F_host.size());
 
@@ -248,10 +262,8 @@ new_eps = 8.;
 
             boost::numeric::ublas::vector<FLOAT> exact_host(F_host.size());
             boost::numeric::ublas::vector<FLOAT> error_host(F_host.size());
-            for (int i = 0; i < nb; i++) {
-                exact_host(i) = (FLOAT) 0.;
-            }
-            for (int i = nb; i < nb + ni; i++) {
+
+            for (int i = 0; i < nb + ni; i++) {
                 exact_host(subdomain->Q_stencils[i][0]) = (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
             }
 
@@ -323,23 +335,6 @@ new_eps = 8.;
 
             iter ++;
         }
-
-#if 0
-        CL::array1d<float, CL::host_memory> results[5](nn);
-
-        results[0] = approx_sol;
-        results[1] = exact;
-        results[2] = error;
-        results.print("\n\nRESULTS\n (APPROX SOLUTION; \tEXACT SOLUTION; \tABS ERROR \tExpected Laplacian(Using L*ExactSolution)\t Diff EXPECTED & EXACT Laplacian\n");
-
-        // results.col(3) = expected;
-        // results.col(4) = diff_lapl;
-        CL::print_matrix(approx_sol);
-#endif
-        //A.print("Full Solution (A) = ");
-        //exact.print("Exact = ");
-        //error.print("Error = ");
-
 
         cout.flush();
     }

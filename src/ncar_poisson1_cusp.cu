@@ -1,5 +1,6 @@
 #include <math.h>
 
+#include <stdlib.h>
 #include "grid.h"
 #include "ncar_poisson1_cusp.h"
 #include "exact_solution.h"

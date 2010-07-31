@@ -3,6 +3,7 @@
 
 //----------------------------------------------------------------------
 //#include <sys/stat.h>
+#include <stdlib.h>
 #include <getopt.h>		// for getopt
 
 void closeLogFile(void) {

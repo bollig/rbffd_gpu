@@ -167,13 +167,15 @@ new_eps = 8.;
                         //L_host.row_indices[indx] = i;
                         //L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
                         //L_host.values[indx] = (center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j];
-                        FLOAT value = (FLOAT)((center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j]);
+                        FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j]));// + (center.z()/r) * z_weights[j]);
                         // Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
                         // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
+#if 0
                         if (j == 0) {
                             //L_host.values[indx] -= 1./r;
                             value -= (FLOAT)(1./r);
                         }
+#endif
                         L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
                         indx++;
                  }

@@ -17,6 +17,9 @@
 #ifndef _VIENNACL_BICGSTAB_HPP_
 #define _VIENNACL_BICGSTAB_HPP_
 
+//GE
+#include <stdio.h>
+
 #include <vector>
 #include <cmath>
 #include "viennacl/forwards.h"
@@ -99,6 +102,12 @@ namespace viennacl
         ip_rr0star = new_ip_rr0star;
 
         p = residual + beta * (p - omega*tmp0);
+
+		//GE  compute norm of residual
+		if (i % 5 == 0) {
+			double res_norm = norm_1(residual);
+			printf("res_norm= %f\n", res_norm);
+		}
       }
       
       return result;
@@ -151,6 +160,7 @@ namespace viennacl
         
         result += alpha * p + omega * s;
         residual = s - omega*tmp1;
+
         
         new_ip_rr0star = viennacl::linalg::inner_prod(residual,r0star);
         if (std::fabs(new_ip_rr0star / norm_rhs) < tag.tolerance() )

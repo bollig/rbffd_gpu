@@ -14,7 +14,7 @@
 	INCLUDE (CPack)
 	INCLUDE (UseDoxygen)
 	FIND_PACKAGE (MPI)
-	FIND_PACKAGE (OpenCL)
+	FIND_PACKAGE (OPENCL)
 	FIND_PACKAGE (CUDA)
 
 
@@ -25,7 +25,9 @@
 
 	# Download and install Armadillo separately. 
 	# Specify local installation dir here. If installed globally the dir is unnecessary.
-	FIND_LIBRARY (armadillo armadillo PATHS /Users/erlebach/Documents/src/armadillo-0.6.12 /usr/local/lib64 ~/local/lib)
+	FIND_LIBRARY (armadillo armadillo PATHS
+	# efb06: bollig account
+	/Users/erlebach/Documents/src/armadillo-0.6.12 /usr/local/lib64 ~efb06/local/lib)
 
 	# Typically installed separately. Same rules as Armadillo (local dir here; global unecessary)
 	FIND_LIBRARY(fftw fftw3 PATHS /Users/erlebach/Documents/src/fftw-3.2.2/.libs)
@@ -56,7 +58,7 @@ ENDIF (OPENCL_FOUND)
 		/Users/erlebach/Documents/src/fftw-3.2.2/include
 		/Users/erlebach/Documents/src/armadillo-0.6.12/include
 		/opt/local/include   # for boost
-                ~/local/include
+                ~efb06/local/include
 	)
 		
 	INCLUDE_DIRECTORIES ( ${RBF_INCLUDE_DIRS} )

@@ -42,9 +42,12 @@ using namespace std;
 #else
 #if 1
 // 3K nodes (Match roughly with Joe's nodeset)
-#define NB_INNER_BND 94
-#define NB_OUTER_BND 181
-#define NB_INTERIOR 2725
+#define NB_INNER_BND 25
+#define NB_OUTER_BND 45
+#define NB_INTERIOR 700
+//#define NB_INNER_BND 94
+//#define NB_OUTER_BND 181
+//#define NB_INTERIOR 2725
 #define NB_SAMPLES 80000
 #define DIM_NUM 2
 #define STENCIL_SIZE 60

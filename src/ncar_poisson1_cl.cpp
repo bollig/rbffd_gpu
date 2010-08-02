@@ -26,7 +26,7 @@
 using namespace std;
 
 // Set single or double precision here.
-typedef float FLOAT;
+typedef double FLOAT;
 
 NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
@@ -161,6 +161,8 @@ new_eps = 8.;
                     exit(EXIT_FAILURE);
                 }
 
+// if 0 : Dirichlet boundary condition
+// if 1 : Neuman boundary condition
 #if 1
                 // NEUMANN CONDITION:
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
@@ -250,7 +252,7 @@ new_eps = 8.;
             copy(F_host, F_device);
 
             //x_device = viennacl::linalg::prod(L_device, F_device);
-            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag());
+            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-10, 600));
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
             viennacl::ocl::finish();

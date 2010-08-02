@@ -1017,8 +1017,13 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
     }
     //exit(0);
 #endif
+
+
+// DEBUGGING STATEMENTS
+#if 0
     printf("Weights size: %d\n", (int)weights.size());
     printf("Stencils size: %d\n", (int)stencil.size());
+#endif
     for (int i=0; i < stencil.size(); i++) {
         double* w = weights[i];
         vector<int>& st = stencil[i];
@@ -1026,11 +1031,15 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
         //printf("i=%d, w[0] = %f\n", i, w[0]);
         der = 0.0;
         int n = st.size();
-     //   cout << "STENCIL " << i << "(" << n << "): " << endl;
+#if 0
+        cout << "STENCIL " << i << "(" << n << "): " << endl;
+#endif
         //printf("(%d) stencil size: %d\n", i, n);
         for (int s=0; s < n; s++) {
-        //    printf("\tw[%d]= %f * ", s, w[s]);
-       //     printf("st[%d]= %d\t\t%f  * %f\n", s, st[s], w[s], u[st[s]]);
+#if 0
+            printf("\tw[%d]= %f * ", s, w[s]);
+            printf("st[%d]= %d\t\t%f  * %f\n", s, st[s], w[s], u[st[s]]);
+#endif
             der += w[s] * u[st[s]]; // SOMETHING WRONG!
         }
         deriv[i] = der;

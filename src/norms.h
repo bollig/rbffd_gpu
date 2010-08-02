@@ -43,7 +43,8 @@ double l1norm(std::vector<double>& v1, std::vector<double>& v2, std::vector<doub
 		norm += elemt * abs(err);
 	}
 
-	return norm / (n2-n1);
+	//return norm / (n2-n1);
+	return norm; 
 }
 //-------
 double l1norm(std::vector<double>& v1, std::vector<double>& avgDist, int n1, int n2)
@@ -57,7 +58,8 @@ double l1norm(std::vector<double>& v1, std::vector<double>& avgDist, int n1, int
 		norm += elemt * abs(v1[i]);
 	}
 
-	return norm / (n2-n1);
+	//return norm / (n2-n1);
+	return norm;
 }
 //----------------------------------------------------------------------
 
@@ -73,7 +75,8 @@ double l2norm(std::vector<double>& v1, std::vector<double>& v2, std::vector<doub
 		norm += elemt * err * err;
 	}
 
-	return sqrt(norm / (n2-n1));
+	//return sqrt(norm / (n2-n1));
+	return sqrt(norm);
 }
 //----------------------------------------------------------------------
 double l2norm(std::vector<double>& v1, std::vector<double>& avgDist, int n1, int n2)
@@ -86,7 +89,8 @@ double l2norm(std::vector<double>& v1, std::vector<double>& avgDist, int n1, int
 		norm += elemt * v1[i] * v1[i];
 	}
 
-	return sqrt(norm / (n2-n1));
+	//return sqrt(norm / (n2-n1));
+	return sqrt(norm);
 }
 //----------------------------------------------------------------------
 

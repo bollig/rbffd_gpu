@@ -16,6 +16,7 @@
 		cusp_simple_example   # COMPLETE (form sparse system and solve)
 
 		ncar_poisson1       # INCOMPLETE (poisson equation on nested spheres)
+		ncar_poisson2       # INCOMPLETE (poisson equation on nested spheres)
 
 
 		3D_test             # INCOMPLETE (3D ellipsoid test which fails to generate points correctly resulting in singular systems)

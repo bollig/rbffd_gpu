@@ -26,10 +26,10 @@
 using namespace std;
 
 // Set single or double precision here.
-typedef float FLOAT;
+typedef double FLOAT;
 
 NCARPoisson2_CL::NCARPoisson2_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
-        NCARPoisson2(_solution, subdomain_, der_, rank, dim_num_)
+        NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
 {}
 
 //----------------------------------------------------------------------
@@ -161,75 +161,171 @@ new_eps = 8.;
                     exit(EXIT_FAILURE);
                 }
 
-#if 1
-                // NEUMANN CONDITION:
+#define DIRICHLET 0
+#define NEUMAN 1
+#define ROBIN 2
+
+#define BC   NEUMAN
+
+//--------------------
+#if BC  ==  NEUMAN
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                        //L_host.row_indices[indx] = i;
-                        //L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
-                        //L_host.values[indx] = (center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j];
-                        FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j]));// + (center.z()/r) * z_weights[j]);
-                        // Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
-                        // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
-#if 0
-                        if (j == 0) {
-                            //L_host.values[indx] -= 1./r;
-                            value -= (FLOAT)(1./r);
-                        }
-#endif
-                        L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
-                        indx++;
+					FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j]));
+					// Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
+					// When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
+					L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
+					indx++;
                  }
+#endif
 
-                // Constrain the solution to the correct Z
-                L_host(subdomain->Q_stencils[i][0],nn) = 1.;
-                L_host(nn,subdomain->Q_stencils[i][0]) = 1.;
+//--------------------
+#if BC  ==  ROBIN
+		printf("ROBIN DOES NOT APPLY\n"); 
+		exit(1);
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+					FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j]));
+                    if (j == 0) {
+						value -= (FLOAT) (1./r);
+					}
+					// Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
+					// When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
+					L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
+					indx++;
+				}
+#endif
 
-#else
-                // DIRICHLET CONDITION WITH 0s:
+//--------------------
+#if BC == DIRICHLET
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
                     if (j == 0) {
-                        //L_host.values[indx] = 1.f;
                          L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (FLOAT)1.;
-                       // L_host.insert_element(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j], (FLOAT)1.);
                     } else {
-                        //   L_host.row_indices[indx] = i;
-                        //   L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
-                        //   L_host.values[indx] = 0;
                         L_host.insert_element(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j], (FLOAT)0.);
                     }
-                        indx++;
-                 }
+                    indx++;
+                }
 #endif
+
+//--------------------
+#define SOL_CONSTRAINT
+#undef SOL_CONSTRAINT
+
+#define DISCRETE_RHS
+//#undef DISCRETE_BC_RHS
+
+// Treatment of RHS (discrete BC)
+			#if (BC == NEUMAN) || (BC == ROBIN)
+				// Discrete Neuman
                 F_host(i) = (FLOAT)0.;
+                Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                    FLOAT value = (FLOAT)((vj.x() * x_weights[j] + vj.y() * y_weights[j]));// + (vj.z()/r) * z_weights[j]);
+                    Vec3& vjj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
+                    F_host[i] += (FLOAT)(value * exactSolution->at(vjj,0));  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+                }
+			  #if BC == ROBIN
+                r = vj.magnitude();
+                F_host[i] -= (FLOAT) (exactSolution->at(vj,0) / r);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+			  #endif
+			#endif
+            }  // End of boundary loop
+//--------------------
+
+#ifndef SOL_CONSTRAINT
+// no constraint on solution
+            F_host(nn) = 0.0;
+            for (int i = 0; i < nb+ni; i++) {
+				// last row
+               	L_host(nn,subdomain->Q_stencils[i][0]) = 0;
+				// last column
+                L_host(subdomain->Q_stencils[i][0],nn) = 0;
                 // Final constraint to make the Neumann boundary condition complete
-                F_host(nn) += (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
+				// constraint (right hand side)
+                F_host(nn) = 0.0;
             }
+			// last element of last row and last column
+			L_host(nn,nn) = 1;
+#endif
+
+#ifdef SOL_CONSTRAINT
+// constraint on solution
+            F_host(nn) = 0.0;
+            for (int i = 0; i < nb+ni; i++) {
+				// last row
+               	L_host(nn,subdomain->Q_stencils[i][0]) = 1;
+				// last column
+                L_host(subdomain->Q_stencils[i][0],nn) = 1;
+                // Final constraint to make the Neumann boundary condition complete
+
+				// update of RHS
+                Vec3& vcenter = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+				r = vcenter.magnitude();
+				F_host(nn) += exactSolution->at(vcenter,0) / r;
+            }
+			// last element of last row and last column: sum of exact solutions at all points
+			L_host(nn,nn) = 0.0;
+			// no constraint (last element, RHS)
+#endif
 
 
-
-
-
-            // Fill Interior weights
+//--------------------------------------------------
+            // Fill Interior weights (LHS)
             for (int i = nb; i < nb+ni; i++) {
                 double* lapl_weights = der->getLaplWeights(subdomain->Q_stencils[i][0]);
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                       // L_host.row_indices[indx] = i;
-                       // L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
-                       // L_host.values[indx] = (float)lapl_weights[j];
-                     L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (FLOAT) lapl_weights[j];
-                        //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
-                        indx++;
-                 }
+					// L_host.row_indices[indx] = i;
+                    // L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
+                    // L_host.values[indx] = (float)lapl_weights[j];
+				    int row = subdomain->Q_stencils[i][0];
+				    int col = subdomain->Q_stencils[i][j];
+                    L_host(row,col) = (FLOAT) lapl_weights[j];
+
+                    Vec3& vcenter = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                	FLOAT r = vcenter.magnitude();
+                	double* x_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
+                	double* y_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
+                	//double* z_weights = der->getZWeights(subdomain->Q_stencils[i][0]);
+                    FLOAT value = (FLOAT)((vcenter.x() * x_weights[j] + vcenter.y() * y_weights[j]))/ (r*r); // ADD 3D
+                    L_host(row,col) += 2. * value;
+
+                    //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
+                    indx++;
+                }
+			}
+
+			// Fill RHS
+			for (int i = nb; i < nb+ni; i++) {
                 Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                double* lapl_weights = der->getLaplWeights(subdomain->Q_stencils[i][0]);
+				double* xder_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
+				double* yder_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
+                // 0: RHS is discrete laplacian; 1: RHS exact laplacian
+#if 0
+// exact laplacian
                 F_host[i] = (FLOAT)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
-                F_host(nn) += (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
+#else
+// discrete laplacian
+				// right hand side
+                F_host[i] = (FLOAT)0.;
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                    Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
+                    F_host[i] += (FLOAT)(lapl_weights[j] * exactSolution->at(vj,0));  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+                }
+				// No correction needed
+                //Vec3& vcenter = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+				//r = vcenter.magnitude();
+				//FLOAT value = (FLOAT)((vcenter.x() * x_weights[j] + vcenter.y() * y_weights[j]))/ (r*r); // ADD 3D
+				//F_host[i] += 2. * value;
+
+                cout << "EXACT_LAPLACIAN: " << exactSolution->laplacian(v.x(), v.y(), v.z(), 0.)
+                     << "\t APPROX_LAPLACIAN: " << F_host[i] << endl;
+#endif
             }
 
             if ((indx - numNonZeros) != 0) {
                 cerr << "WARNING! HOST MATRIX WAS NOT FILLED CORRECTLY. DISCREPANCY OF " << (indx - numNonZeros) << " NONZERO ELEMENTS!" << endl;
                 exit(EXIT_FAILURE);
             }
-
 
             cout << "Implicit system assembled" << endl;
             // cout << "L_HOST: " << L_host.size1() << "\t" << L_host.size2() << "\t" << L_host.filled1() << "\t" << L_host.filled2() << endl;
@@ -251,7 +347,7 @@ new_eps = 8.;
             copy(F_host, F_device);
 
             //x_device = viennacl::linalg::prod(L_device, F_device);
-            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag());
+            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-30, 3000));
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
             viennacl::ocl::finish();

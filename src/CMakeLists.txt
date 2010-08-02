@@ -38,7 +38,7 @@
 
         SET( REQUIRED_CL_SOURCE_FILES
                 ncar_poisson1_cl.cpp
-#		ncar_poisson2_cl.cpp 	# Uses Gordon's change of variable
+		ncar_poisson2_cl.cpp 	# Uses Gordon's change of variable
 	)
 
 ###############################################

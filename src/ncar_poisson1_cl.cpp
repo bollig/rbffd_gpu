@@ -164,7 +164,7 @@ new_eps = 8.;
 // if 0 : Dirichlet boundary condition
 // if 1 : Neuman boundary condition
 #if 1
-                // NEUMANN CONDITION:
+                // NEUMANN CONDITION (LHS)
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
                         //L_host.row_indices[indx] = i;
                         //L_host.column_indices[indx] = subdomain->Q_stencils[i][j];
@@ -172,10 +172,11 @@ new_eps = 8.;
                         FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j]));// + (center.z()/r) * z_weights[j]);
                         // Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
                         // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
-#if 0
+#if 1
+// Robin component to BC
                         if (j == 0) {
                             //L_host.values[indx] -= 1./r;
-                            value -= (FLOAT)(1./r);
+                            value -= (FLOAT) (1./r);
                         }
 #endif
                         L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
@@ -200,12 +201,17 @@ new_eps = 8.;
 #endif
                 F_host(i) = (FLOAT)0.;
 				// set to discrete Neuman
+				#if 1
+				// Discrete Neuman
+                Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][0]];
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                    Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][0]];
                     FLOAT value = (FLOAT)((vj.x() * x_weights[j] + vj.y() * y_weights[j]));// + (vj.z()/r) * z_weights[j]);
                     Vec3& vjj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
                     F_host[i] += (FLOAT)(value * exactSolution->at(vjj,0));  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
                 }
+                r = vj.magnitude();
+                F_host[i] -= (FLOAT) (exactSolution->at(vj,0) / r);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+				#endif
             }
 
             for (int i = 0; i < nb+ni; i++) {

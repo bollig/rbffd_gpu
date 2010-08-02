@@ -1026,11 +1026,11 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
         //printf("i=%d, w[0] = %f\n", i, w[0]);
         der = 0.0;
         int n = st.size();
-        cout << "STENCIL " << i << "(" << n << "): " << endl;
+     //   cout << "STENCIL " << i << "(" << n << "): " << endl;
         //printf("(%d) stencil size: %d\n", i, n);
         for (int s=0; s < n; s++) {
-            printf("\tw[%d]= %f * ", s, w[s]);
-            printf("st[%d]= %d\t\t%f  * %f\n", s, st[s], w[s], u[st[s]]);
+        //    printf("\tw[%d]= %f * ", s, w[s]);
+       //     printf("st[%d]= %d\t\t%f  * %f\n", s, st[s], w[s], u[st[s]]);
             der += w[s] * u[st[s]]; // SOMETHING WRONG!
         }
         deriv[i] = der;

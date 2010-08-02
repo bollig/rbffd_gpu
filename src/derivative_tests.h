@@ -9,7 +9,7 @@ class DerivativeTests {
 public:
     enum TESTFUN  {C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3};
 public:
-    DerivativeTests() {};
+    DerivativeTests() { weightsComputed = false; };
     ~DerivativeTests() { /*noop*/ }
     void checkDerivatives(Derivative& der, Grid& grid);
     void checkXDerivatives(Derivative& der, Grid& grid);
@@ -17,13 +17,13 @@ public:
     void testFunction(DerivativeTests::TESTFUN which, Grid& grid, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex, vector<double>& dulapl_ex);
     void testEigen(Grid& grid, int stencil_size, int nb_bnd, int tot_nb_pts);
     void testAllFunctions(Derivative& der, Grid& grid);
-private:
     void computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils, int dimension);
 
-	protected: 
-            Derivative* der;
-            Grid* grid;
+protected:
+    bool weightsComputed;
+    Derivative* der;
+    Grid* grid;
 
-        };
+};
 
 #endif

@@ -104,9 +104,14 @@ namespace viennacl
         p = residual + beta * (p - omega*tmp0);
 
 		//GE  compute norm of residual
-		if (i % 5 == 0) {
+		if (i % 1 == 0) {
 			double res_norm = norm_1(residual);
-			printf("res_norm= %f\n", res_norm);
+			double ratio = fabs(new_ip_rr0star / norm_rhs);
+			printf("res_norm= %f, tol= %g\n", res_norm, tag.tolerance());
+			double nrm = (double) norm_rhs;
+			double num = (double) new_ip_rr0star;
+			printf("new_ip_rr0star= %g, norm_rhs= %g\n", num, nrm);
+			printf("ratio= %g\n", ratio);
 		}
       }
       

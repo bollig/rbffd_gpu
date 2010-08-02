@@ -26,7 +26,7 @@
 using namespace std;
 
 // Set single or double precision here.
-typedef float FLOAT;
+typedef double FLOAT;
 
 NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
@@ -196,18 +196,24 @@ new_eps = 8.;
                         L_host.insert_element(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j], (FLOAT)0.);
                     }
                         indx++;
-                 }
+                }
 #endif
                 F_host(i) = (FLOAT)0.;
+				// set to discrete Neuman
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                    Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                    FLOAT value = (FLOAT)((vj.x() * x_weights[j] + vj.y() * y_weights[j]));// + (vj.z()/r) * z_weights[j]);
+                    Vec3& vjj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
+                    F_host[i] += (FLOAT)(value * exactSolution->at(vjj,0));  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+                }
             }
-
 
             for (int i = 0; i < nb+ni; i++) {
                 // Constrain the solution to the correct Z
                 L_host(subdomain->Q_stencils[i][0],nn) = 1;
                 L_host(nn,subdomain->Q_stencils[i][0]) = 1;
                 // Final constraint to make the Neumann boundary condition complete
-                F_host(nn) += (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
+                F_host(nn) += (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0));
             }
 
             // Fill Interior weights
@@ -227,10 +233,11 @@ new_eps = 8.;
 #if 0
                 F_host[i] = (FLOAT)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
 #else
+				// right hand side
                 F_host[i] = (FLOAT)0.;
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
                     Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
-                    F_host[i] += (FLOAT)(lapl_weights[j] * exactSolution->laplacian(vj.x(), vj.y(), vj.z(), 0.));
+                    F_host[i] += (FLOAT)(lapl_weights[j] * exactSolution->at(vj,0));  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
                 }
                 Vec3& v2 = subdomain->G_centers[subdomain->Q_stencils[i][0]];
                 cout << "EXACT_LAPLACIAN: " << exactSolution->laplacian(v.x(), v.y(), v.z(), 0.)
@@ -264,7 +271,7 @@ new_eps = 8.;
             copy(F_host, F_device);
 
             //x_device = viennacl::linalg::prod(L_device, F_device);
-            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-10, 600));
+            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-30, 3000));
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
             viennacl::ocl::finish();

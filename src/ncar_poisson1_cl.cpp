@@ -221,8 +221,21 @@ new_eps = 8.;
                         //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
                         indx++;
                  }
+
                 Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                // 0: RHS is discrete laplacian; 1: RHS exact laplacian
+#if 0
                 F_host[i] = (FLOAT)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
+#else
+                F_host[i] = (FLOAT)0.;
+                for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
+                    Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
+                    F_host[i] += (FLOAT)(lapl_weights[j] * exactSolution->laplacian(vj.x(), vj.y(), vj.z(), 0.));
+                }
+                Vec3& v2 = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+                cout << "EXACT_LAPLACIAN: " << exactSolution->laplacian(v.x(), v.y(), v.z(), 0.)
+                     << "\t APPROX_LAPLACIAN: " << F_host[i] << endl;
+#endif
             }
 
             if ((indx - numNonZeros) != 0) {

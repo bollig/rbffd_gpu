@@ -14,6 +14,9 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 	vector<double> yderiv(rbf_centers.size());
 	vector<double> lapl_deriv(rbf_centers.size());
 
+        // Warning! assume DIM = 2
+        this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf, 2);
+
 	printf("deriv size: %d\n", (int) rbf_centers.size());
 	printf("xderiv size: %d\n", (int) xderiv.size());
 
@@ -51,9 +54,6 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 		//du_ex.push_back(6.*v.x());
 
 		u.push_back(s);
-
-                // WARNING! assume dimension 2 for these tests
-                der.computeWeights(rbf_centers, stencil[i], i, 2);
 	}
 
 	printf("main, u[0]= %f\n", u[0]);
@@ -128,6 +128,8 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
 	vector<double> duy_ex; // exact derivative
 
 	vector<vector<int> >& stencil = grid.getStencil();
+
+        this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf, 2);
 
 	#if 0
 	for (int i=0; i < 1600; i++) {
@@ -262,7 +264,7 @@ void DerivativeTests::testEigen(Grid& grid, int stencil_size, int nb_bnd, int to
         vector<Vec3> rbf_centers = grid.getRbfCenters();
 	int nb_rbf = rbf_centers.size();
 
-	Derivative der(rbf_centers, stencil, grid.getNbBnd());
+        Derivative der(rbf_centers, stencil, grid.getNbBnd());
 	der.setAvgStencilRadius(avg_stencil_radius);
 
 // Set things up for variable epsilon
@@ -567,9 +569,21 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 }
 //----------------------------------------------------------------------
 void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils, int dimension) {
+#define USE_CONTOURSVD 1
+//#undef USE_CONTOURSVD
+
+#if USE_CONTOURSVD
+    // Laplacian weights with zero grid perturbation
+    for (int irbf=0; irbf < rbf_centers.size(); irbf++) {
+        der.computeWeightsSVD(rbf_centers, stencils[irbf], irbf, "x");
+        der.computeWeightsSVD(rbf_centers, stencils[irbf], irbf, "y");
+        der.computeWeightsSVD(rbf_centers, stencils[irbf], irbf, "lapl");
+    }
+#else
     for (int i = 0; i < nb_stencils; i++) {
         der.computeWeights(rbf_centers, stencils[i], i, dimension);
     }
+#endif
 }
 //----------------------------------------------------------------------
 void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {

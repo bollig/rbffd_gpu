@@ -26,7 +26,7 @@
 using namespace std;
 
 // Set single or double precision here.
-typedef float FLOAT;
+typedef double FLOAT;
 
 NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
@@ -206,7 +206,7 @@ new_eps = 8.;
 
 //--------------------
 #define SOL_CONSTRAINT
-//#undef SOL_CONSTRAINT
+#undef SOL_CONSTRAINT
 
 #define DISCRETE_RHS
 //#undef DISCRETE_BC_RHS

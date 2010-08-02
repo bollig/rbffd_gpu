@@ -19,6 +19,7 @@
                 ellipse_cvt.cpp
                 ellipsoid_cvt.cpp
 		derivative.cpp
+		derivative_tests.cpp
 		gpu.cpp 
 		grid.cpp 
 		heat.cpp 

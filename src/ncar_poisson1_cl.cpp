@@ -235,7 +235,8 @@ new_eps = 8.;
                  }
 
                 Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
-                // 0: RHS is discrete laplacian; 1: RHS exact laplacian
+
+// 0: RHS is discrete laplacian; 1: RHS exact laplacian
 #if 0
                 F_host[i] = (FLOAT)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
 #else

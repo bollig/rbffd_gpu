@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "grid.h"
-#include "ncar_poisson1_cl.h"
+#include "ncar_poisson2_cl.h"
 #include "exact_solution.h"
 
 // The GPU/OpenCL side sparse arrays come from ViennaCL
@@ -28,20 +28,20 @@ using namespace std;
 // Set single or double precision here.
 typedef float FLOAT;
 
-NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
-        NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
+NCARPoisson2_CL::NCARPoisson2_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+        NCARPoisson2(_solution, subdomain_, der_, rank, dim_num_)
 {}
 
 //----------------------------------------------------------------------
 
-NCARPoisson1_CL::~NCARPoisson1_CL() {
+NCARPoisson2_CL::~NCARPoisson2_CL() {
 }
 //----------------------------------------------------------------------
 // Solve the poisson system.
 // NOTE: this routine is old and uses a possibly incorrect method for solving with the
 // neumann boundary conditions. I am starting an alternate routine to solve the system
 // in the same fashion that Joe solved the system.
-void NCARPoisson1_CL::solve(Communicator* comm_unit) {
+void NCARPoisson2_CL::solve(Communicator* comm_unit) {
 
     if (subdomain == NULL) {
         cerr
@@ -161,8 +161,6 @@ new_eps = 8.;
                     exit(EXIT_FAILURE);
                 }
 
-// if 0 : Dirichlet boundary condition
-// if 1 : Neuman boundary condition
 #if 1
                 // NEUMANN CONDITION:
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
@@ -182,6 +180,10 @@ new_eps = 8.;
                         indx++;
                  }
 
+                // Constrain the solution to the correct Z
+                L_host(subdomain->Q_stencils[i][0],nn) = 1.;
+                L_host(nn,subdomain->Q_stencils[i][0]) = 1.;
+
 #else
                 // DIRICHLET CONDITION WITH 0s:
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
@@ -199,16 +201,13 @@ new_eps = 8.;
                  }
 #endif
                 F_host(i) = (FLOAT)0.;
-            }
-
-
-            for (int i = 0; i < nb+ni; i++) {
-                // Constrain the solution to the correct Z
-                L_host(subdomain->Q_stencils[i][0],nn) = 1;
-                L_host(nn,subdomain->Q_stencils[i][0]) = 1;
                 // Final constraint to make the Neumann boundary condition complete
                 F_host(nn) += (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
             }
+
+
+
+
 
             // Fill Interior weights
             for (int i = nb; i < nb+ni; i++) {
@@ -223,6 +222,7 @@ new_eps = 8.;
                  }
                 Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
                 F_host[i] = (FLOAT)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
+                F_host(nn) += (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
             }
 
             if ((indx - numNonZeros) != 0) {
@@ -251,7 +251,7 @@ new_eps = 8.;
             copy(F_host, F_device);
 
             //x_device = viennacl::linalg::prod(L_device, F_device);
-            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-10, 600));
+            x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag());
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
             viennacl::ocl::finish();

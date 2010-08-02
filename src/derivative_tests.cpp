@@ -1,5 +1,5 @@
 #include "derivative_tests.h"
-
+#include "norms.h"
 #include <vector>
 using namespace std;
 
@@ -51,6 +51,9 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 		//du_ex.push_back(6.*v.x());
 
 		u.push_back(s);
+
+                // WARNING! assume dimension 2 for these tests
+                der.computeWeights(rbf_centers, stencil[i], i, 2);
 	}
 
 	printf("main, u[0]= %f\n", u[0]);
@@ -319,7 +322,7 @@ void DerivativeTests::testEigen(Grid& grid, int stencil_size, int nb_bnd, int to
 	}
 }
 //----------------------------------------------------------------------
-void DerivativeTests::testFunction(TESTFUN which, Grid& grid, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
+void DerivativeTests::testFunction(DerivativeTests::TESTFUN which, Grid& grid, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
 			vector<double>& dulapl_ex)
 {
 	u.resize(0);
@@ -427,7 +430,7 @@ void DerivativeTests::testFunction(TESTFUN which, Grid& grid, vector<double>& u,
 }
 		
 //----------------------------------------------------------------------
-void DerivativeTests::testDeriv(TESTFUN choice, Derivative& der, Grid& grid, std::vector<double> avgDist)
+void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der, Grid& grid, std::vector<double> avgDist)
 {
 	printf("================\n");
 	printf("testderiv: choice= %d\n", choice);
@@ -445,6 +448,9 @@ void DerivativeTests::testDeriv(TESTFUN choice, Derivative& der, Grid& grid, std
 	vector<double> xderiv(nb_rbf);
 	vector<double> yderiv(nb_rbf);
 	vector<double> lapl_deriv(nb_rbf);
+
+        int dim_num = 2; // WARNING! ASSUMES dimension 2
+        this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf, dim_num);
 
         testFunction(choice, grid, u, dux_ex, duy_ex, dulapl_ex);
 
@@ -519,10 +525,12 @@ void DerivativeTests::testDeriv(TESTFUN choice, Derivative& der, Grid& grid, std
 
 
 
-	printf("--------\n");
+        printf("----- RESULTS: testDeriv( %d ) ---\n", choice);
+        printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3}\n");
 	printf("norm[x/y/lapl][L1,L2,LINF][interior/bndry]\n");
 	for (int k=0; k < 2; k++) {
 	for (int i=0; i < 3; i++) {
+                // If our L2 absolute norm is > 1e-9 we show relative.
 		if (abs(normder[i][1][k]) < 1.e-9) {
 			printf("(abs err): norm[%d][][%d]= %10.3e, %10.3e, %10.3e\n", i, k, norm[i][0][k], norm[i][1][k], norm[i][2][k]);
 		} else {
@@ -558,3 +566,24 @@ void DerivativeTests::testDeriv(TESTFUN choice, Derivative& der, Grid& grid, std
 	printf("avg l2_interior_error= %14.7e\n", sqrt(inter_error));
 }
 //----------------------------------------------------------------------
+void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils, int dimension) {
+    for (int i = 0; i < nb_stencils; i++) {
+        der.computeWeights(rbf_centers, stencils[i], i, dimension);
+    }
+}
+//----------------------------------------------------------------------
+void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
+    this->computeAllWeights(der, grid.getRbfCenters(), grid.getStencil(), grid.getStencil().size(), 2);
+
+    // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3
+    this->testDeriv(DerivativeTests::C, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::X, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::Y, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::X2, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::XY, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::Y2, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::X3, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::X2Y, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::XY2, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::Y3, der, grid, grid.getAvgDist());
+}

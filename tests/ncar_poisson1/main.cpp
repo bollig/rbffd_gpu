@@ -11,6 +11,7 @@
 #include "cvt.h"
 #include "gpu.h"
 #include "derivative.h"
+#include "derivative_tests.h"
 #include "exact_solution.h"
 #include "exact_ncar_poisson1.h"
 #include "exact_ncar_poisson2.h"
@@ -40,14 +41,20 @@ using namespace std;
 #define DIM_NUM 2
 #define STENCIL_SIZE 50
 #else
-#if 1
-// 3K nodes (Match roughly with Joe's nodeset)
+#if 0
+// Gordon's tests
 #define NB_INNER_BND 25
 #define NB_OUTER_BND 45
 #define NB_INTERIOR 700
-//#define NB_INNER_BND 94
-//#define NB_OUTER_BND 181
-//#define NB_INTERIOR 2725
+#define NB_SAMPLES 80000
+#define DIM_NUM 2
+#define STENCIL_SIZE 60
+#else
+#if 1
+// 3K nodes (Match roughly with Joe's nodeset)
+#define NB_INNER_BND 94
+#define NB_OUTER_BND 181
+#define NB_INTERIOR 2725
 #define NB_SAMPLES 80000
 #define DIM_NUM 2
 #define STENCIL_SIZE 60
@@ -70,6 +77,7 @@ using namespace std;
 #define STENCIL_SIZE 5
 #endif
 #endif 
+#endif
 #endif
 #endif
 
@@ -134,13 +142,13 @@ int main(int argc, char** argv) {
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
-    cout << "SET EPSILON1" << endl;
-    der->setEpsilon(1.0);
+    cout << "SET EPSILON = 8" << endl;
+    der->setEpsilon(8.0);
+
+    DerivativeTests* der_test = new DerivativeTests();
+    der_test->testAllFunctions(*der, *grid);
 
     NCARPoisson1* poisson = new NCARPoisson1_CL(exact_poisson, subdomain, der, 0, DIM_NUM);
-
-    cout << "SET EPSILON2" << endl;
-    der->setEpsilon(2.0);
 
     poisson->initialConditions();
     poisson->solve(comm_unit);

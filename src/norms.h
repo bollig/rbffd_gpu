@@ -5,7 +5,7 @@
 
 #include <vector>
 
-enum TESTFUN  {C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3};
+
 
 //----------------------------------------------------------------------
 double random(double a, double b)

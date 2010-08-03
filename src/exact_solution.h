@@ -15,16 +15,16 @@ public:
         ExactSolution() : Pi(acos(-1.)) {};
 //	~ExactSolution() {}; 
  
-	virtual double operator()(double x, double y, double z, double t) = 0;
-	virtual double operator()(Vec3& r, double t) {
+        virtual double operator()(double x, double y, double z, double t=0.) = 0;
+        virtual double operator()(Vec3& r, double t=0.) {
 		return (*this)(r.x(), r.y(), r.z(), t);
 	}
 	
-	virtual double at(Vec3& r, double t) {
+        virtual double at(Vec3& r, double t = 0.) {
 		return (*this)(r, t);
 	}
 
-	virtual double laplacian(Vec3& v, double t) {
+        virtual double laplacian(Vec3& v, double t=0.) {
 		return this->laplacian(v.x(), v.y(), v.z(), t); 
 	}
 
@@ -34,26 +34,26 @@ public:
 	// instead of just:
 	// 			lapl(f)
 	// To get the original behavior, substitute: this->tderiv() - this->laplacian()
-	virtual double laplacian(double x, double y, double z, double t) = 0; // if scalar function
+        virtual double laplacian(double x, double y, double z, double t=0.) = 0; // if scalar function
 
-	virtual double xderiv(double x, double y, double z, double t) = 0; // if scalar function
-	virtual double yderiv(double x, double y, double z, double t) = 0; // if scalar function
-	virtual double zderiv(double x, double y, double z, double t) = 0; // if scalar function
-	virtual double tderiv(double x, double y, double z, double t) = 0; // if scalar function
+        virtual double xderiv(double x, double y, double z, double t=0.) = 0; // if scalar function
+        virtual double yderiv(double x, double y, double z, double t=0.) = 0; // if scalar function
+        virtual double zderiv(double x, double y, double z, double t=0.) = 0; // if scalar function
+        virtual double tderiv(double x, double y, double z, double t=0.) = 0; // if scalar function
 
-	double xderiv(Vec3& r, double t) {
+        double xderiv(Vec3& r, double t=0.) {
 		return xderiv(r.x(), r.y(), r.z(), t);
 	}
 
-	double yderiv(Vec3& r, double t) {
+        double yderiv(Vec3& r, double t=0.) {
 		return yderiv(r.x(), r.y(), r.z(), t);
 	}
 
-	double zderiv(Vec3& r, double t) {
+        double zderiv(Vec3& r, double t=0.) {
 		return zderiv(r.x(), r.y(), r.z(), t);
 	}
 
-	double tderiv(Vec3& r, double t) {
+        double tderiv(Vec3& r, double t=0.) {
 		return tderiv(r.x(), r.y(), r.z(), t);
 	}
 

@@ -26,7 +26,7 @@
 using namespace std;
 
 // Set single or double precision here.
-typedef double FLOAT;
+typedef float FLOAT;
 
 NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)

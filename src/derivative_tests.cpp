@@ -1,6 +1,8 @@
 #include "derivative_tests.h"
 #include "norms.h"
 #include <vector>
+
+#include "exact_ncar_poisson2.h"
 using namespace std;
 
 //----------------------------------------------------------------------
@@ -428,6 +430,16 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN which, Grid& grid, v
 				dulapl_ex.push_back(6.*v.y());
 			}
 			break;
+               case CUSTOM:
+                   for (int i=0; i < nb_rbf; i++) {
+                           Vec3& v = rbf_centers[i];
+                           ExactSolution* exact = new ExactNCARPoisson2();
+                           u.push_back(exact->at(v));
+                           dux_ex.push_back(exact->xderiv(v));
+                           duy_ex.push_back(exact->yderiv(v));
+                           dulapl_ex.push_back(exact->laplacian(v));
+                   }
+                   break;
 	}
 }
 		
@@ -528,7 +540,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 
 
         printf("----- RESULTS: testDeriv( %d ) ---\n", choice);
-        printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3}\n");
+        printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM=10}\n");
 	printf("norm[x/y/lapl][L1,L2,LINF][interior/bndry]\n");
 	for (int k=0; k < 2; k++) {
 	for (int i=0; i < 3; i++) {
@@ -589,7 +601,8 @@ void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_c
 void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     this->computeAllWeights(der, grid.getRbfCenters(), grid.getStencil(), grid.getStencil().size(), 2);
 
-    // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3
+    // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
+#if 1
     this->testDeriv(DerivativeTests::C, der, grid, grid.getAvgDist());
     this->testDeriv(DerivativeTests::X, der, grid, grid.getAvgDist());
     this->testDeriv(DerivativeTests::Y, der, grid, grid.getAvgDist());
@@ -599,5 +612,8 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     this->testDeriv(DerivativeTests::X3, der, grid, grid.getAvgDist());
     this->testDeriv(DerivativeTests::X2Y, der, grid, grid.getAvgDist());
     this->testDeriv(DerivativeTests::XY2, der, grid, grid.getAvgDist());
+    #endif
     this->testDeriv(DerivativeTests::Y3, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::CUSTOM, der, grid, grid.getAvgDist());
+//    exit(EXIT_FAILURE);
 }

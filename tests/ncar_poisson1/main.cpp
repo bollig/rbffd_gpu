@@ -41,7 +41,7 @@ using namespace std;
 #define DIM_NUM 2
 #define STENCIL_SIZE 50
 #else
-#if 0
+#if 1
 // Gordon's tests
 #define NB_INNER_BND 25
 #define NB_OUTER_BND 45

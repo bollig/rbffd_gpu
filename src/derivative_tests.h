@@ -7,7 +7,7 @@
 
 class DerivativeTests {
 public:
-    enum TESTFUN  {C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3};
+    enum TESTFUN  {C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM};
 public:
     DerivativeTests() { weightsComputed = false; };
     ~DerivativeTests() { /*noop*/ }

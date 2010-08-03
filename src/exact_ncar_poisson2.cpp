@@ -73,19 +73,55 @@ double ExactNCARPoisson2::laplacian(double Xx, double Yy, double Zz, double t)
 //----------------------------------------------------------------------
 double ExactNCARPoisson2::xderiv(double Xx, double Yy, double Zz, double t)
 {
-    double dardx = 0.;
-    cerr << "xderiv NOT IMPLEMENTED" <<endl;
-    exit(EXIT_FAILURE);
+    double h = 0.001;
+
+    double xi = (*this)(Xx, Yy, Zz, t);
+    double xip1 = (*this)(Xx+h, Yy, Zz, t);
+    double xip2 = (*this)(Xx+2.*h, Yy, Zz, t);
+    double xim1 = (*this)(Xx-h, Yy, Zz, t);
+    double xim2 = (*this)(Xx-2.*h, Yy, Zz, t);
+
+    // First derivative weights from: http://en.wikipedia.org/wiki/Five-point_stencil
+    double firstDeriv = ( -xip2 + 8.*xip1 - 8.*xim1 + xim2 ) / (12.*h);
+
+    double firstDerivExact =  (SCALE) * ((Xx*(-1 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)) +
+                             (Xx*(-0.5 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)) -
+                             ((Xx*(-1 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)) +
+                                (Xx*(-0.5 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)))*
+                              Cos((-1 + Sqrt(Power(Xx,2) + Power(Yy,2)))*(-0.5 + Sqrt(Power(Xx,2) + Power(Yy,2)))));
+
+    double relerror = abs(firstDerivExact - firstDeriv) / abs(firstDerivExact);
+
+   //cerr << "xderiv Approx: " << firstDeriv << "   \tExact: " << firstDerivExact << "   \tRelative Error (|exact - approx|/|exact|): " << relerror <<endl;
+    //exit(EXIT_FAILURE);
+    double dardx = firstDerivExact;
     return dardx;
 }
 
 //----------------------------------------------------------------------
 double ExactNCARPoisson2::yderiv(double Xx, double Yy, double Zz, double t)
 {
-    double dardy = 0.;
-    cerr << "yderiv NOT IMPLEMENTED" <<endl;
-    exit(EXIT_FAILURE);
+    double h = 1.e-4;
 
+    double xi = (*this)(Xx, Yy, Zz, t);
+    double xip1 = (*this)(Xx, Yy+h, Zz, t);
+    double xip2 = (*this)(Xx, Yy+2.*h, Zz, t);
+    double xim1 = (*this)(Xx, Yy-h, Zz, t);
+    double xim2 = (*this)(Xx, Yy-2.*h, Zz, t);
+
+    // First derivative weights from: http://en.wikipedia.org/wiki/Five-point_stencil
+    double firstDeriv = ( -xip2 + 8.*xip1 - 8.*xim1 + xim2 ) / (12.*h);
+
+    double firstDerivExact = (SCALE) * ( (Yy*(-1 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)) +
+                             (Yy*(-0.5 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)) -
+                             ((Yy*(-1 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)) +
+                                (Yy*(-0.5 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)))*
+                              Cos((-1 + Sqrt(Power(Xx,2) + Power(Yy,2)))*(-0.5 + Sqrt(Power(Xx,2) + Power(Yy,2)))));
+
+    double relerror = abs(firstDerivExact - firstDeriv) / abs(firstDerivExact);
+    double dardy = firstDerivExact;
+
+    //cerr << "yderiv Approx: " << firstDeriv << "\t Exact: " << firstDerivExact << "\t Relative Error (|exact - approx|/|exact|): " << relerror <<endl;
     return dardy;
 }
 

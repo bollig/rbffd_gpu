@@ -211,7 +211,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 
 //--------------------
 #define SOL_CONSTRAINT
-//#undef SOL_CONSTRAINT
+#undef SOL_CONSTRAINT
 
 #define DISCRETE_RHS
 //#undef DISCRETE_BC_RHS

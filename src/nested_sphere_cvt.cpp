@@ -7,10 +7,10 @@ using namespace std;
 #include "nested_sphere_cvt.h"
 
 NestedSphereCVT::NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int sample_num_, int it_max_bndry, int it_max_inter, int dimension, double inner_radius, double outer_radius, int DEBUG_)
-: CVT(nb_inner_bnd + nb_outer_bnd + nb_interior, dimension, file_name, 3 /*USER INIT*/, 3 /*USER SAMPLE*/, sample_num_),
-inner_r(inner_radius), outer_r(outer_radius),
-nb_inner(nb_inner_bnd), nb_outer(nb_outer_bnd), nb_int(nb_interior),
-it_max_interior(it_max_inter), it_max_boundary(it_max_bndry)
+    : CVT(nb_inner_bnd + nb_outer_bnd + nb_interior, dimension, file_name, 3 /*USER INIT*/, 3 /*USER SAMPLE*/, sample_num_),
+    inner_r(inner_radius), outer_r(outer_radius),
+    nb_inner(nb_inner_bnd), nb_outer(nb_outer_bnd), nb_int(nb_interior),
+    it_max_interior(it_max_inter), it_max_boundary(it_max_bndry)
 {
     DEBUG = DEBUG_;
     nb_bnd = 0;
@@ -41,8 +41,8 @@ it_max_interior(it_max_inter), it_max_boundary(it_max_bndry)
 // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot]
 void NestedSphereCVT::cvt(int *it_num, double *it_diff, double *energy) {
 
-//void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior, double *it_diff, double *energy,
-  //      int it_max_boundary, int it_max_interior, int sample_num) {
+    //void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior, double *it_diff, double *energy,
+    //      int it_max_boundary, int it_max_interior, int sample_num) {
     t1.start();
     int i;
     bool initialize;
@@ -152,13 +152,13 @@ void NestedSphereCVT::cvt(int *it_num, double *it_diff, double *energy) {
     //cout << "--> Writing intermediate files\n";
     sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter", nb_inner, nb_outer, 0);
     cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
-            it_max_boundary, it_fixed, it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
-            intermediate_file, false);
+              it_max_boundary, it_fixed, it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
+              intermediate_file, false);
     
     sprintf(intermediate_file, "interior_nodes_%.5d_interior_%.5d_iter", nb_int, 0);
     cvt_write(dim_num, nb_int, batch, seed_init, seed, "none",
-            it_max_interior, it_fixed, it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer) * dim_num],
-            intermediate_file, false);
+              it_max_interior, it_fixed, it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer) * dim_num],
+              intermediate_file, false);
 
     cvt_checkpoint(-2);
 
@@ -172,88 +172,121 @@ void NestedSphereCVT::cvt(int *it_num, double *it_diff, double *energy) {
     // so we must ensure that they are included here.
     this->nb_bnd = 0;
 
-    while (it_num_boundary < it_max_boundary) {
-        //
-        //  If it's time to update the seed, save its current value
-        //  as the starting value for all iterations in this cycle.
-        //  If it's not time to update the seed, restore it to its initial
-        //  value for this cycle.
-        //
-        if (((it_num_boundary) % it_fixed) == 0) {
-            seed_base = seed;
-        } else {
-            seed = seed_base;
+    if (dim_num == 2) {
+        // Fill circles based on arclength subdivision (exact) rather than CVT (saves iteraitons).
+        double inner_arc_seg = (2.*this->PI) / nb_inner;
+        double outer_arc_seg = (2.*this->PI) / nb_outer;
+
+        cout << "inner_r = " << inner_r << " nb_inner = " << nb_inner << " inner_arc_seg = " << inner_arc_seg << endl;
+        for (int i = 0; i < nb_inner; i++) {
+            // r = 0.5
+            double theta = inner_arc_seg*i;
+            // Convert to (x,y,z) = (r cos(theta), r sin(theta), 0.)
+            r[(i * dim_num) + 0] = inner_r * cos(theta);
+            r[(i * dim_num) + 1] = inner_r * sin(theta);
+            // r[i * dim_num + 2] = 0.;
+        }
+        for (int i = 0; i < nb_outer; i++) {
+            // r = 1.0
+            // add 0.001*PI to slightly shift the outer boundary in an attempt to avoid
+            // alignment with the inner boundary.
+            double theta = outer_arc_seg*i + (this->PI / 3.);// + 0.001 * this->PI;
+            // offset i by nb_inner because we already filled those.
+            r[(nb_inner+i) * dim_num + 0] = outer_r * cos(theta);
+            r[(nb_inner+i) * dim_num + 1] = outer_r * sin(theta);
+            //r[(nb_inner+i) * dim_num + 2] = 0.;
         }
 
-        it_num_boundary++;
-        (*it_num)++;
-        seed_init = seed;
+        char intermediate_file[80];
+        sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter", nb_inner, nb_outer, it_num_boundary);
+        //cout << "--> Writing intermediate file:\n";
+        cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
+                  it_max_boundary, it_fixed, it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
+                  intermediate_file, false);
+    } else {
 
-        // Iterate for only the first generators on the boundary (NOTE: The energy returned here is junk because it
-        // considers only the boundary and no the energy of the whole system with the interior points)
-        cvt_iterate(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r, it_diff, &energyBefore);
+        while (it_num_boundary < it_max_boundary) {
+            //
+            //  If it's time to update the seed, save its current value
+            //  as the starting value for all iterations in this cycle.
+            //  If it's not time to update the seed, restore it to its initial
+            //  value for this cycle.
+            //
+            if (((it_num_boundary) % it_fixed) == 0) {
+                seed_base = seed;
+            } else {
+                seed = seed_base;
+            }
 
-        // Inner is [0] -> [nb_inner-1]
-        project_to_sphere(&r[0], nb_inner, dim_num, inner_r);
+            it_num_boundary++;
+            (*it_num)++;
+            seed_init = seed;
 
-        // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
-        project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
+            // Iterate for only the first generators on the boundary (NOTE: The energy returned here is junk because it
+            // considers only the boundary and no the energy of the whole system with the interior points)
+            cvt_iterate(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r, it_diff, &energyBefore);
+
+            // Inner is [0] -> [nb_inner-1]
+            project_to_sphere(&r[0], nb_inner, dim_num, inner_r);
+
+            // Outer generators are r[nb_inner] -> r[nb_inner+nb_outer-1]
+            project_to_sphere(&r[nb_inner * dim_num], nb_outer, dim_num, outer_r);
 
 #if USE_KDTREE
 #if 0
-        t5.start();
-        delete(kdtree);
-        kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
-        //kdtree->linear_tree_print();
-        //cout << "NOW AN UPDATE: \n\n";
-        t5.end();
+            t5.start();
+            delete(kdtree);
+            kdtree = new KDTree(r, nb_inner + nb_outer, dim_num);
+            //kdtree->linear_tree_print();
+            //cout << "NOW AN UPDATE: \n\n";
+            t5.end();
 #else
 
-        t6.start();
-        kdtree->updateTree(r, nb_inner + nb_outer, dim_num);
-        //kdtree->linear_tree_print();
-        t6.end();
-#endif 
+            t6.start();
+            kdtree->updateTree(r, nb_inner + nb_outer, dim_num);
+            //kdtree->linear_tree_print();
+            t6.end();
+#endif
 #endif
 
 
-        // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
-        energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
+            // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot] and require no projection
+            energyAfter = cvt_energy(dim_num, nb_inner + nb_outer, batch, sample, initialize, sample_num, &seed, r);
 
-        *energy = energyAfter;
+            *energy = energyAfter;
 
-        initialize = false;
+            initialize = false;
 
-        if (DEBUG) {
-            cout << "  "
-                    << setw(4) << it_num_boundary << "  "
-                    << setw(12) << seed_init << "  "
-                    << setw(14) << *it_diff << "  "
-                    << setw(14) << energyBefore << "  "
-                    << setw(14) << energyAfter << "\n";
-        }
+            if (DEBUG) {
+                cout << "  "
+                        << setw(4) << it_num_boundary << "  "
+                        << setw(12) << seed_init << "  "
+                        << setw(14) << *it_diff << "  "
+                        << setw(14) << energyBefore << "  "
+                        << setw(14) << energyAfter << "\n";
+            }
 
-        // BOLLIG:
-        // TODO: only do this if a boolean is set for intermediate writes
-        // 	not the same as DEBUG
-        if ((it_num_boundary) % 20 == 0) {
-            char intermediate_file[80];
+            // BOLLIG:
+            // TODO: only do this if a boolean is set for intermediate writes
+            // 	not the same as DEBUG
+            if ((it_num_boundary) % 20 == 0) {
+                char intermediate_file[80];
 
-            cout << "  "
-                    << setw(4) << it_num_boundary << "  "
-                    << setw(12) << seed_init << "  "
-                    << setw(14) << *it_diff << "  "
-                    << setw(14) << energyBefore << "  "
-                    << setw(14) << energyAfter << "\n";
+                cout << "  "
+                        << setw(4) << it_num_boundary << "  "
+                        << setw(12) << seed_init << "  "
+                        << setw(14) << *it_diff << "  "
+                        << setw(14) << energyBefore << "  "
+                        << setw(14) << energyAfter << "\n";
 
-            sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter", nb_inner, nb_outer, it_num_boundary);
-            //cout << "--> Writing intermediate file:\n";
-            cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
-                    it_max_boundary, it_fixed, it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
-                    intermediate_file, false);
+                sprintf(intermediate_file, "boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter", nb_inner, nb_outer, it_num_boundary);
+                //cout << "--> Writing intermediate file:\n";
+                cvt_write(dim_num, nb_inner + nb_outer, batch, seed_init, seed, "none",
+                          it_max_boundary, it_fixed, it_num_boundary, *it_diff, *energy, "none", sample_num, &r[0],
+                          intermediate_file, false);
+            }
         }
     }
-
     cout << "--> FINISHED BOUNDARY DISTRIBUTION\n";
     // 
     // Now that the boundary is locked, we form the interior CVT using the boundary
@@ -316,10 +349,10 @@ void NestedSphereCVT::cvt(int *it_num, double *it_diff, double *energy) {
                     << setw(14) << *energy << "\n";
 
             sprintf(intermediate_file, "interior_nodes_%.5d_interior_%.5d_iter", nb_int, it_num_interior);
-           //cout << "--> Writing intermediate file:\n";
+            //cout << "--> Writing intermediate file:\n";
             cvt_write(dim_num, nb_int, batch, seed_init, seed, "none",
-                    it_max_interior, it_fixed, it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer) * dim_num],
-                    intermediate_file, false);
+                      it_max_interior, it_fixed, it_num_interior, *it_diff, *energy, "none", sample_num, &r[(nb_inner + nb_outer) * dim_num],
+                      intermediate_file, false);
         }
     }
 

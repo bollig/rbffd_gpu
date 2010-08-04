@@ -1,3 +1,39 @@
+BOLLIG: 
+
+
+Inside Nested_sphere_cvt.cpp I added a conditional for 2D. In that case we divvy up the circumference and distribute nodes uniformly (we assume uniform density). I did a few tests generating nodes within the interior when the outer and inner boundary nodes are slightly shifted off alignment with one another. Here are some of the tentative results. Note, these results correspond to computing the poisson problem Laplacian(U) = F with Dirichlet boundary conditions on the 2D annulus. 
+
+
+            // NOTE: with 0.001 * this->PI:
+            //Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = 0.698245
+            //Relative residual || A*x_exact - F ||_2 / || F ||_2  = 0.0027767
+            //Relative residual || A*x_approx - F ||_2 / || F ||_2  = 7.16682e-05
+
+            // No shift on the outer boundary
+            //Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = 116.028
+            //Relative residual || A*x_exact - F ||_2 / || F ||_2  = 0.00277449
+            //Relative residual || A*x_approx - F ||_2 / || F ||_2  = 1.1243
+
+            // shift by PI/8
+            // Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = 73191
+            // Relative residual || A*x_exact - F ||_2 / || F ||_2  = 0.00277902
+            // Relative residual || A*x_approx - F ||_2 / || F ||_2  = 695.877
+
+            // shift by PI/3
+            //  Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = 0.699778
+            //  Relative residual || A*x_exact - F ||_2 / || F ||_2  = 0.00277976
+            //  Relative residual || A*x_approx - F ||_2 / || F ||_2  = 2.37899e-05
+
+Interesting! When the nodes are aligned from one boundary to the next, we get a crap result. 
+Slightly shifting these nodes results in a drastic improvement. Unfortunately, when I shift
+the boundaries the interior nodes are regenerated. Also, we're using rejection sampling to 
+distribute those nodes and Im only using 80K samples, but its significant enough that our whole
+grid is different and we cant make a one to one comparison. Still, this is interesting. 
+
+In my old method I definitely had both boundaries offset to satisfy CVT, but they were clustered 
+close together. I got similarly good results as the shift by PI/3
+END BOLLIG
+=========================
 CVT for ellipsoid: 
 
 1) Create CCVT for a regions larger than the ellipsoid

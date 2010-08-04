@@ -27,7 +27,7 @@
 using namespace std;
 
 // Set single or double precision here.
-typedef float FLOAT;
+typedef double FLOAT;
 
 
 
@@ -301,8 +301,11 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
                     F_host[i] += (FLOAT)(lapl_weights[j] * exactSolution->at(vj,0));  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
                 }
                 Vec3& v2 = subdomain->G_centers[subdomain->Q_stencils[i][0]];
-                cout << "EXACT_LAPLACIAN: " << exactSolution->laplacian(v.x(), v.y(), v.z(), 0.)
-                     << "\t APPROX_LAPLACIAN: " << F_host[i] << endl;
+                FLOAT diff = fabs(exactSolution->laplacian(v) - F_host[i]); 
+		if (diff > 1e-9) {
+			cout << "RHS[" << i << "] : Discrete laplacian differs by " << diff << endl;
+		} else {
+			cout << "RHS[" << i << "] : Good." << endl; 
 #endif
             }
 

@@ -195,7 +195,7 @@ public:
 
 	// added Aug. 15, 2009
 	double lapl_deriv(const Vec3& xvec) {
-#if 0
+#if 1
             //printf("lapl_deriv: x= %f %f %f %f %d\n", xvec.x(), xvec.y(), xvec.z(), eps2, dim);
             // general form: lapl = d^2 Phi / d r^2 + ((DIM-1)/r) * dPhi / dr
             // however, if r is 0 then we have issues with that and need the simplified equation.
@@ -217,7 +217,7 @@ public:
 
 	// added Aug. 15, 2009
         double lapl_deriv(const double x) {
-#if 0
+#if 1
             //printf("lapl_deriv: x= %f\n", x);
             double r = x;
             // general form: lapl = d^2 Phi /s d r^2 + ((DIM-1)/r) * dPhi / dr

@@ -10,7 +10,12 @@ using namespace std;
 
 NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->G_centers),
-        boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_)
+        boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_),
+        t1(tm, "[ncar_poisson_t1] Total"),
+        t2(tm, "[ncar_poisson_t2] Compute Weights"),
+        t3(tm, "[ncar_poisson_t3] Implicit Assemble"),
+        t4(tm, "[ncar_poisson_t4] Solve"),
+        t5(tm, "[ncar_poisson_t5] Solve w/o memcpy")
 {
     nb_stencils = subdomain->Q_stencils.size();
     nb_rbf = subdomain->G_centers.size();
@@ -32,6 +37,7 @@ NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative
 //----------------------------------------------------------------------
 
 NCARPoisson1::~NCARPoisson1() {
+    this->tm.dumpTimings();
 }
 //----------------------------------------------------------------------
 // Solve the poisson system.

@@ -1,6 +1,7 @@
 #ifndef _NCAR_POISSON_1_H_
 #define _NCAR_POISSON_1_H_
 
+#include "timingGE.h"
 #include <vector>
 #include <ArrayT.h>
 #include "gpu.h"
@@ -45,9 +46,12 @@ protected:
 
         int dim_num;
 
+        Timings tm;
+        Timer t1, t2, t3, t4, t5;
+
 public:
         NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
-	~NCARPoisson1();
+        ~NCARPoisson1();
 
         // Solve the Poisson problem
         virtual void solve(Communicator* comm_unit);

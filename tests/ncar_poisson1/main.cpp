@@ -41,7 +41,7 @@ using namespace std;
 #define DIM_NUM 2
 #define STENCIL_SIZE 50
 #else
-#if 1
+#if 0
 // Gordon's tests
 #define NB_INNER_BND 25
 #define NB_OUTER_BND 45
@@ -68,6 +68,15 @@ using namespace std;
 #define DIM_NUM 2
 #define STENCIL_SIZE 50
 #else
+#if 1
+// Simple 3D test case
+#define NB_INNER_BND 200
+#define NB_OUTER_BND 400
+#define NB_INTERIOR 2400
+#define NB_SAMPLES 80000
+#define DIM_NUM 3
+#define STENCIL_SIZE 50
+#else
 // Basic case to prove code runs
 #define NB_INNER_BND 10
 #define NB_OUTER_BND 10
@@ -75,6 +84,7 @@ using namespace std;
 #define NB_SAMPLES 80000
 #define DIM_NUM 2
 #define STENCIL_SIZE 5
+#endif
 #endif
 #endif 
 #endif
@@ -138,7 +148,12 @@ int main(int argc, char** argv) {
     // Verbosely print the memberships of all nodes within the subdomain
     //subdomain->printCenterMemberships(subdomain->G, "G");
 
+    // 0: 2D problem; 1: 3D problem
+#if DIM_NUM == 3
+    ExactSolution* exact_poisson = new ExactNCARPoisson1();
+#else
     ExactSolution* exact_poisson = new ExactNCARPoisson2();
+#endif
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
@@ -146,7 +161,7 @@ int main(int argc, char** argv) {
     der->setEpsilon(8.0);
 
     DerivativeTests* der_test = new DerivativeTests();
-    der_test->testAllFunctions(*der, *grid);
+    //der_test->testAllFunctions(*der, *grid);
 
     NCARPoisson1* poisson = new NCARPoisson1_CL(exact_poisson, subdomain, der, 0, DIM_NUM);
 
@@ -154,7 +169,7 @@ int main(int argc, char** argv) {
     poisson->solve(comm_unit);
 
 	
-
+    delete(poisson);
     delete(subdomain);
     delete(grid);
     delete(cvt);

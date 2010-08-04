@@ -5,6 +5,7 @@
 #include "grid.h"
 #include "ncar_poisson1_cl.h"
 #include "exact_solution.h"
+#include "timingGE.h"
 
 // The GPU/OpenCL side sparse arrays come from ViennaCL
 #include "viennacl/scalar.hpp"
@@ -28,6 +29,8 @@ using namespace std;
 // Set single or double precision here.
 typedef float FLOAT;
 
+
+
 NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
 {}
@@ -42,7 +45,7 @@ NCARPoisson1_CL::~NCARPoisson1_CL() {
 // neumann boundary conditions. I am starting an alternate routine to solve the system
 // in the same fashion that Joe solved the system.
 void NCARPoisson1_CL::solve(Communicator* comm_unit) {
-
+    t1.start();
     if (subdomain == NULL) {
         cerr
                 << "In " << __FILE__
@@ -108,10 +111,11 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             // the stencil centers (Vec3) into the
 
             new_eps = left_eps + abs(right_eps - left_eps)/2.;
-new_eps = 8.;
+
             der->setEpsilon(new_eps);
             cout << "USING EPSILON: " << new_eps << endl;
 
+            t2.start();
             int numNonZeros = 0;
 #if 1
             // Compute all weights including those for the boundary nodes
@@ -135,9 +139,10 @@ new_eps = 8.;
                 numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
             }
 #endif
-
+            t2.end();
             cout << "Weights computed" << endl;
 
+            t3.start();
             // 1) Fill the ublas matrix on the CPU
             boost::numeric::ublas::compressed_matrix<FLOAT> L_host(nn+1, nn+1);
             boost::numeric::ublas::vector<FLOAT> F_host(nn+1);
@@ -165,12 +170,12 @@ new_eps = 8.;
 #define NEUMAN 1
 #define ROBIN 2
 
-#define BC   ROBIN
+#define BC   DIRICHLET
 
 //--------------------
 #if BC  ==  NEUMAN
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-					FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j]));
+                                        FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j] + center.z() * z_weights[j]));
 					// Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
 					// When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
 					L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
@@ -181,7 +186,7 @@ new_eps = 8.;
 //--------------------
 #if BC  ==  ROBIN
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-					FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j]));
+                                        FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j] + center.z() * z_weights[j])));
                     if (j == 0) {
 						value -= (FLOAT) (1./r);
 					}
@@ -206,7 +211,7 @@ new_eps = 8.;
 
 //--------------------
 #define SOL_CONSTRAINT
-#undef SOL_CONSTRAINT
+//#undef SOL_CONSTRAINT
 
 #define DISCRETE_RHS
 //#undef DISCRETE_BC_RHS
@@ -305,7 +310,7 @@ new_eps = 8.;
                 cerr << "WARNING! HOST MATRIX WAS NOT FILLED CORRECTLY. DISCREPANCY OF " << (indx - numNonZeros) << " NONZERO ELEMENTS!" << endl;
                 exit(EXIT_FAILURE);
             }
-
+            t3.end();
             cout << "Implicit system assembled" << endl;
             // cout << "L_HOST: " << L_host.size1() << "\t" << L_host.size2() << "\t" << L_host.filled1() << "\t" << L_host.filled2() << endl;
             // cout << L_host << endl;
@@ -320,21 +325,26 @@ new_eps = 8.;
 
             boost::numeric::ublas::vector<FLOAT> x_host(F_host.size());
 
+            t4.start();
             cout << "Before copy to GPU" << endl;
             // copy to GPU
             copy(L_host, L_device);
             copy(F_host, F_device);
 
+            t5.start();
             //x_device = viennacl::linalg::prod(L_device, F_device);
             x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-30, 3000));
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
            // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
             viennacl::ocl::finish();
+            t5.end();
 
             cout << "Done with solve" << endl;
 
             // Copy solution to host
             copy(x_device, x_host);
+
+            t4.end();
 
             cout << "Results copied to host" << endl;
 
@@ -416,6 +426,9 @@ new_eps = 8.;
 
         cout.flush();
     }
+
+    t1.end();
+
     return;
 }
 

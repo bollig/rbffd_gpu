@@ -288,11 +288,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 			cout << "RHS[" << i << "] : Discrete laplacian differs by " << diff << endl;
 		} else {
 			cout << "RHS[" << i << "] : Good." << endl; 
-#endif
-            }
-            Vec3& v2 = subdomain->G_centers[subdomain->Q_stencils[i][0]];
-            cout << "EXACT_LAPLACIAN: " << exactSolution->laplacian(v.x(), v.y(), v.z(), 0.)
-                    << "\t APPROX_LAPLACIAN: " << F_host[i] << endl;
+                }
 #endif
         }
 
@@ -375,6 +371,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 
         cout.flush();
     }
+
 
     t1.end();
 

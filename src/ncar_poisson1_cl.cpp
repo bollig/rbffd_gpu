@@ -347,7 +347,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 
         ofstream fout;
         fout.open("L.mtx");
-        fout << L_host << endl;
+        //fout << L_host << endl;
         fout.close();
         fout.open("F.mtx");
         fout << F_host << endl;

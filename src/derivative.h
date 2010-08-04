@@ -2,6 +2,7 @@
 #define _DERIVATIVE_H_
 
 #include <stdlib.h>
+#include <iostream>
 #include <vector>
 #include "ArrayT.h"
 #include "Vec3.h"
@@ -129,7 +130,11 @@ public:
 
     double minimum(std::vector<double>& vec);
 
-    double setEpsilon(double eps) { this->epsilon = eps; return this->epsilon;}
+    double setEpsilon(double eps) { 
+
+    		std::cout << "DERIVATIVE:: SET EPSILON = " << eps << std::endl;
+	    this->epsilon = eps; return this->epsilon;
+    }
 };
 
 #endif

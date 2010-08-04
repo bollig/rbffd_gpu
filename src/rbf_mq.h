@@ -195,19 +195,29 @@ public:
 
 	// added Aug. 15, 2009
 	double lapl_deriv(const Vec3& xvec) {
+#if 0
             //printf("lapl_deriv: x= %f %f %f %f %d\n", xvec.x(), xvec.y(), xvec.z(), eps2, dim);
-                // general form: lapl = d^2 Phi / d r^2 + ((DIM-1)/r) * dPhi / dr
-                // however, if r is 0 then we have issues with that and need the simplified equation.
-                // This is the simplified equation:
-                double r = xvec.magnitude();
-                double r2 = xvec.square();
-                double f = eval(xvec);
-                double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
-                return lapl;
+            // general form: lapl = d^2 Phi / d r^2 + ((DIM-1)/r) * dPhi / dr
+            // however, if r is 0 then we have issues with that and need the simplified equation.
+            // This is the simplified equation:
+            double r = xvec.magnitude();
+            double r2 = xvec.square();
+            double f = eval(xvec);
+            double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
+            return lapl;
+#else
+            double f = eval(xvec);
+            double f2 = 1./(f);
+            double f3 = 1./(f*f);
+            double r2e = xvec.square() * eps2;
+            double d = eps2*f2*(2.-r2e*f3);
+            return d;
+#endif
 	}
 
 	// added Aug. 15, 2009
         double lapl_deriv(const double x) {
+#if 0
             //printf("lapl_deriv: x= %f\n", x);
             double r = x;
             // general form: lapl = d^2 Phi /s d r^2 + ((DIM-1)/r) * dPhi / dr
@@ -216,6 +226,15 @@ public:
                 double f = eval(r);
                 double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
                 return lapl;
+#else
+                //printf("lapl_deriv(double), x= %f\n", x);
+                double f = eval(x);
+                double f2 = 1./(f);
+                double f3 = 1./(f*f);
+                double r2e = x*x*eps2;
+                double d = eps2*f2*(2.-r2e*f3);
+                return d;
+#endif
 	}
 
 	// added Aug. 16, 2009

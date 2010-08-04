@@ -190,6 +190,7 @@ void NestedSphereCVT::cvt(int *it_num, double *it_diff, double *energy) {
             // r = 1.0
             // add 0.001*PI to slightly shift the outer boundary in an attempt to avoid
             // alignment with the inner boundary.
+            // HERE: See top of NOTES for an idea of why we shift by PI/3
             double theta = outer_arc_seg*i + (this->PI / 3.);// + 0.001 * this->PI;
             // offset i by nb_inner because we already filled those.
             r[(nb_inner+i) * dim_num + 0] = outer_r * cos(theta);

@@ -284,7 +284,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
                 double discrete_lapl = 0.;
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
                    Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
-                   discrete_lapl = lapl_weights[j] * exactSolution->at(vj,0);
+                   discrete_lapl += lapl_weights[j] * exactSolution->at(vj);
                 }
                 F_host[i] = (FLOAT) discrete_lapl;
                 Vec3& v2 = subdomain->G_centers[subdomain->Q_stencils[i][0]];

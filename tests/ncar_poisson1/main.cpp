@@ -57,7 +57,7 @@ using namespace std;
 #define NB_INTERIOR 2725
 #define NB_SAMPLES 80000
 #define DIM_NUM 2
-#define STENCIL_SIZE 20
+#define STENCIL_SIZE 60
 #else
 #if 0
 // Simple test case to show some convergence

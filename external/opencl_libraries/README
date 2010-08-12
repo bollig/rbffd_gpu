@@ -1,7 +1,9 @@
-The subdirs 
-	ViennaCL-1.0.4 
-is from the ViennaCL homepage: viennacl.sourceforge.net
-no changes were made to it, and it is licensed appropriately to include
-with our source distribution. 
+The subdir
+	viennacl
+is from the ViennaCL-1.0.5 distribution avialable on the
+ViennaCL homepage: viennacl.sourceforge.net
+I had to add code to increment the row and column indexes by 1
+for the matrix market I/O in order to support the mmread.m and mmwrite.m
+scripts for matlab. 
 
--Evan 7/27/10
+-Evan 8/12/10

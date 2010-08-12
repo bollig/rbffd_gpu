@@ -28,7 +28,7 @@
 using namespace std;
 
 // Set single or double precision here.
-#if 1
+#if 0
 typedef double FLOAT;
 #else 
 typedef float FLOAT;
@@ -161,10 +161,10 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             //--------------------
 #if BC  ==  NEUMAN
             for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j] + center.z() * z_weights[j]));
+                double value = (center.x() * x_weights[j] + center.y() * y_weights[j] + center.z() * z_weights[j]);
                 // Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
                 // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
-                L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
+                L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (FLOAT)value;
                 indx++;
             }
 #endif
@@ -172,13 +172,13 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             //--------------------
 #if BC  ==  ROBIN
             for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                FLOAT value = (FLOAT)((center.x() * x_weights[j] + center.y() * y_weights[j] + center.z() * z_weights[j])));
+                double value = (center.x() * x_weights[j] + center.y() * y_weights[j] + center.z() * z_weights[j]);
                 if (j == 0) {
-                    value -= (FLOAT) (1./r);
+                    value -= (1./r);
                 }
                 // Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
                 // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
-                L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = value;
+                L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (FLOAT)value;
                 indx++;
             }
 #endif
@@ -189,7 +189,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
                 if (j == 0) {
                     L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (FLOAT)1.;
                 } else {
-                    L_host.insert_element(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j], (FLOAT)0.);
+                    L_host(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (FLOAT)0.;
                 }
                 indx++;
             }
@@ -279,7 +279,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             // 0: RHS is discrete laplacian; 1: RHS exact laplacian
 #if 0
             // exact laplacian
-            F_host[i] = (FLOAT)exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
+            F_host[i] = (FLOAT)exactSolution->laplacian(v);
 #else
 
 // discrete laplacian
@@ -292,7 +292,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
                 }
                 F_host[i] = (FLOAT) discrete_lapl;
                 Vec3& v2 = subdomain->G_centers[subdomain->Q_stencils[i][0]];
-                FLOAT diff = fabs(exactSolution->laplacian(v) - F_host[i]); 
+                double diff = fabs(exactSolution->laplacian(v) - F_host[i]);
 		if (diff > 1e-9) {
 			cout << "RHS[" << i << "] : Discrete laplacian differs by " << diff << endl;
 		} else {
@@ -307,6 +307,8 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         }
         t3.end();
         cout << "Implicit system assembled" << endl;
+        viennacl::io::write_matrix_market_file(L_host, "L_host.mtx");
+
         // cout << "L_HOST: " << L_host.size1() << "\t" << L_host.size2() << "\t" << L_host.filled1() << "\t" << L_host.filled2() << endl;
         // cout << L_host << endl;
         // cout << "F: " << F_host << endl;
@@ -323,7 +325,6 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         t4.start();
         cout << "Before copy to GPU" << endl;
         // copy to GPU
-        viennacl::io::write_matrix_market_file(L_host, "L_host.mtx");
         copy(L_host, L_device);
         copy(F_host, F_device);
 

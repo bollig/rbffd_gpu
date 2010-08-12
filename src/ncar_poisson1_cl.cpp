@@ -16,6 +16,7 @@
 #include "viennacl/linalg/norm_2.hpp"
 #include "viennacl/linalg/gmres.hpp"
 #include "viennacl/linalg/bicgstab.hpp"
+#include "viennacl/io/matrix_market.hpp"
 
 #include <iostream>
 #include <vector>
@@ -318,9 +319,11 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         t4.start();
         cout << "Before copy to GPU" << endl;
         // copy to GPU
+        viennacl::io::write_matrix_market_file(L_host, "L_host.mtx");
         copy(L_host, L_device);
         copy(F_host, F_device);
 
+        cout << "Solving system" <<endl;
         t5.start();
         //x_device = viennacl::linalg::prod(L_device, F_device);
         x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-30, 3000));
@@ -350,9 +353,10 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         cout << "Writing results to disk" << endl;
 
         ofstream fout;
-        fout.open("L.mtx");
+        //fout.open("L.mtx");
         //fout << L_host << endl;
-        fout.close();
+        //fout.close();
+        viennacl::io::write_matrix_market_file(L_host, "L.mtx");
         fout.open("F.mtx");
         fout << F_host << endl;
         fout.close();

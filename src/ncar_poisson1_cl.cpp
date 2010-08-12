@@ -28,7 +28,11 @@
 using namespace std;
 
 // Set single or double precision here.
+#if 1
+typedef double FLOAT;
+#else 
 typedef float FLOAT;
+#endif
 
 
 

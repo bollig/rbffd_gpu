@@ -39,18 +39,18 @@ using namespace std;
 #define NB_INTERIOR 5640
 #define NB_SAMPLES 80000
 #define DIM_NUM 2
-#define STENCIL_SIZE 60
+#define STENCIL_SIZE 50
 #else
-#if 1
-// Evan test 12K
-#define NB_INNER_BND 340
-#define NB_OUTER_BND 480
-#define NB_INTERIOR 11180
+#if 0
+// Gordon's tests
+#define NB_INNER_BND 25
+#define NB_OUTER_BND 45
+#define NB_INTERIOR 700
 #define NB_SAMPLES 80000
 #define DIM_NUM 2
 #define STENCIL_SIZE 60
 #else
-#if 0
+#if 1
 // 3K nodes (Match roughly with Joe's nodeset)
 #define NB_INNER_BND 94
 #define NB_OUTER_BND 181
@@ -157,8 +157,8 @@ int main(int argc, char** argv) {
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
-    
-    der->setEpsilon(16.0);
+    cout << "SET EPSILON = 8" << endl;
+    der->setEpsilon(8.0);
 
     DerivativeTests* der_test = new DerivativeTests();
     //der_test->testAllFunctions(*der, *grid);

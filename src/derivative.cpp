@@ -518,7 +518,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         }
 
         by(n)   = 0.0;
-        by(n+1) = 0.; // 1.0;
+        by(n+1) = 0.;
         by(n+2) = 1.0;
         if(np == 4) {
             by(n+3) = 0.0;

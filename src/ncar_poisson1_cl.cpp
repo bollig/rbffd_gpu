@@ -27,7 +27,7 @@
 using namespace std;
 
 // Set single or double precision here.
-typedef double FLOAT;
+typedef float FLOAT;
 
 
 
@@ -200,17 +200,19 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             // Treatment of RHS (discrete BC)
 #if (BC == NEUMAN) || (BC == ROBIN)
             // Discrete Neuman
-            F_host(i) = (FLOAT)0.;
+            //F_host(i) = (FLOAT)0.;
+            double discrete_condition = 0.;
             Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][0]];
             for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                FLOAT value = (FLOAT)((vj.x() * x_weights[j] + vj.y() * y_weights[j]));// + (vj.z()/r) * z_weights[j]);
+                double weight = (vj.x() * x_weights[j] + vj.y() * y_weights[j]);// + (vj.z()/r) * z_weights[j]);
                 Vec3& vjj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
-                F_host[i] += (FLOAT)(value * exactSolution->at(vjj,0));  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+                discrete_condition += weight * exactSolution->at(vjj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
             }
 #if BC == ROBIN
             r = vj.magnitude();
-            F_host[i] -= (FLOAT) (exactSolution->at(vj,0) / r);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+            discrete_condition -= exactSolution->at(vj,0) / r;
 #endif
+            F_host[i] = (FLOAT) discrete_condition;
 #endif
         }  // End of boundary loop
         //--------------------
@@ -277,11 +279,13 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 
 // discrete laplacian
 				// right hand side
-                F_host[i] = (FLOAT)0.;
+                //F_host[i] = (FLOAT)0.;
+                double discrete_lapl = 0.;
                 for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                    Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
-                    F_host[i] += (FLOAT)(lapl_weights[j] * exactSolution->at(vj,0));  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+                   Vec3& vj = subdomain->G_centers[subdomain->Q_stencils[i][j]];
+                   discrete_lapl = lapl_weights[j] * exactSolution->at(vj,0);
                 }
+                F_host[i] = (FLOAT) discrete_lapl;
                 Vec3& v2 = subdomain->G_centers[subdomain->Q_stencils[i][0]];
                 FLOAT diff = fabs(exactSolution->laplacian(v) - F_host[i]); 
 		if (diff > 1e-9) {

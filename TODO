@@ -5,7 +5,7 @@ TODO:
 - (DONE) Properly handle PDE boundary nodes
 - (DONE) Solve Heat equation
 - Add PARALLEL diagnostics for eigenvalue analysis, RMS, etc
-- Mercurial repository
+- (DONE) GIT (no longer Mercurial) repository
 - Add command line options for CVT size, CVT input file, # of stencils, etc.
 - Submission scripts for ACM
 - 3D heat equation

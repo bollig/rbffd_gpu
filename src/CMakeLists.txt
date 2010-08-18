@@ -2,6 +2,8 @@
 # Project sources
 ###############################################
 	SET(REQUIRED_SOURCE_FILES 
+                projectsettings.cpp
+
 		octree.cpp
 		parametric_patch.cpp
 		exact_ellipsoid.cpp

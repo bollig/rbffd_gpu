@@ -23,24 +23,24 @@ protected:
 
 public:
     // Read the file and add settings to the settings map
-    ProjectSettings(std::string filename);
+    ProjectSettings(const std::string filename);
 
     // Read the file and add/update settings in the settings map
     // WARNING: will override the settings if their key already exists in map
-    void ParseFile(std::string filename);
+    void ParseFile(const std::string filename);
 
     // Return the value associate with KEY as the specified template parameter type
     // e.g.,
     //  int i = ProjectSettings.GetSettingAs<int>("key");
     //  double d = ProjectSettings.GetSettingAs<double>("key2");
-    //  string d = ProjectSettings.GetSettingAs<string>("key3");
+    //  string s = ProjectSettings.GetSettingAs<string>("key3");
     template <typename RT>
-            double GetSettingAs(std::string key) { return ss_typecast<RT>(settings[key]); }
+    RT GetSettingAs(std::string key) { return ss_typecast<RT>(settings[key]); }
 
     // Check if KEY = VALUE pair was found in config file
     bool Exists(std::string key) { if(settings.find(key) == settings.end()) { return false; } else { return true; } }
 
-private:
+protected:
     // This routine is adapted from post on GameDev:
     // http://www.gamedev.net/community/forums/topic.asp?topic_id=190991
     // Should be safer to use this than atoi. Performs worse, but our
@@ -53,6 +53,8 @@ private:
         temp_ss >> num;
         return num;
     }
+
+    void trim( std::string& str );
 };
 
 #endif // PROJECTSETTINGS_H

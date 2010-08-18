@@ -3,6 +3,7 @@
 # Project Testing
 ###############################################
 	SET (TEST_COLLECTION
+		projectSettings	    # WORKS (demonstrates using ProjectSettings class)
 		template            # WORKS (empty test)
 		surface_integral    # WORKS (compute a simple surf integral on parametric geometry)
 		surface_projection  # WORKS (compute a simple projection on parametric geometry)

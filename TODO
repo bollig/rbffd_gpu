@@ -1,3 +1,30 @@
+TODO (8/19/2010) 
+==================
+
+- Add class to run diagnostics on a matrix (use Lapack backend)
+	- compute Eigenvalues
+	- compute Condition Number
+	- compute || (A - A') ./ 2 ||_2 (measure symmetry)
+ 
+- Improve PDE classes (i.e., NCARPoisson1)
+	- Base PDE class
+	- Explicit PDE inherit BasePDE
+		- Timestep (compute x' = x + dt*f(x)) {calls solve}
+		- Solve (compute f(x)) {override} 
+	- Implicit PDE inherit BasePDE
+		- Assemble (specify boundary conditions)
+		- Solve	{calls Assemble} 
+		- Timestep {calls solve}
+
+- Undirected Stencil Graph
+	- A -> B and B -> A
+	- How does this improve conditioning
+	- How does this influence eigenvalues
+	- What measure of Symmetry? 
+
+
+
+
 Note: I broke away from Gordons code because I want to reorganize everything. I figure its easier to organize in my own repository because his will be a reference. 
 
 TODO: 
@@ -8,11 +35,11 @@ TODO:
 - (DONE) GIT repository!
 - Add command line options for CVT size, CVT input file, # of stencils, etc.
 - Submission scripts for ACM
-- 3D heat equation
+- (Done) 3D heat equation
 - Nonlinear diffusion
 - Improve and Compress Communication (non-blocking and asynchronous)
 - Visualize RBFs in 3D stereo (OpenGL/Avizo) 
-- Add Timers for benchmarking (Look at GPTL) 
+- (DONE) NOTE: used gordon's timers. Add Timers for benchmarking (Look at GPTL) 
 - OpenCL/Cuda implementations
 
 

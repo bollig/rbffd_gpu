@@ -1,6 +1,6 @@
 TODO (8/19/2010) 
 ==================
-
+- (DONE: NCARPoisson1_CL::write_to_file) Add uBLAS writer for matlab formatted output
 - Add class to run diagnostics on a matrix (use Lapack backend)
 	- compute Eigenvalues
 	- compute Condition Number

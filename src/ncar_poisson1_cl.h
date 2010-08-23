@@ -8,6 +8,7 @@
 #include "communicator.h"
 #include "derivative.h"
 #include "ncar_poisson1.h"
+#include <boost/numeric/ublas/vector.hpp>
 
 class NCARPoisson1_CL : public NCARPoisson1
 {
@@ -17,6 +18,9 @@ public:
 
         // Solve the Poisson problem
         virtual void solve(Communicator* comm_unit);
+
+        template<typename T>
+        void write_to_file(boost::numeric::ublas::vector<T> vec, std::string filename);
 };
 
 #endif

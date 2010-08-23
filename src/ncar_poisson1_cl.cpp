@@ -19,6 +19,7 @@
 #include "viennacl/io/matrix_market.hpp"
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 // The CPU Side sparse arrays come from Boost uBlas.
@@ -28,7 +29,7 @@
 using namespace std;
 
 // Set single or double precision here.
-#if 1
+#if 0
 typedef double FLOAT;
 #else 
 typedef float FLOAT;
@@ -293,8 +294,10 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
                 F_host[i] = (FLOAT) discrete_lapl;
                 Vec3& v2 = subdomain->G_centers[subdomain->Q_stencils[i][0]];
                 double diff = fabs(exactSolution->laplacian(v) - F_host[i]);
+                double rel_diff = diff / fabs(exactSolution->laplacian(v));
 		if (diff > 1e-9) {
-			cout << "RHS[" << i << "] : Discrete laplacian differs by " << diff << endl;
+                    cout.precision(3);
+                    cout << "RHS[" << i << "] : Discrete laplacian differs by " << std::scientific << diff << " (rel: " << rel_diff << ")" << endl;
 		} else {
 			cout << "RHS[" << i << "] : Good." << endl; 
                 }
@@ -352,8 +355,13 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         for (int i = 0; i < nb + ni; i++) {
             exact_host(subdomain->Q_stencils[i][0]) = (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
         }
+        for (int i = nb+ni; i < exact_host.size(); i++) {
+            exact_host(i) = 0.;
+        }
 
         error_host = exact_host - x_host;
+
+        boost::numeric::ublas::vector<FLOAT> residual = prod(L_host, exact_host) - F_host;
 
         cout << "Writing results to disk" << endl;
 
@@ -362,20 +370,12 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         //fout << L_host << endl;
         //fout.close();
         viennacl::io::write_matrix_market_file(L_host, "L.mtx");
-        fout.open("F.mtx");
-        fout << F_host << endl;
-        fout.close();
-        fout.open("X_exact.mtx");
-        fout << exact_host << endl;
-        fout.close();
-        fout.open("X_approx.mtx");
-        fout << x_host << endl;
-        fout.close();
-        fout.open("R.mtx");
-        fout << prod(L_host, exact_host) - F_host << endl;
-        fout.close();
-        fout.open("E_absolute.mtx");
-        fout << error_host << endl;
+
+        this->write_to_file(F_host, "F.mtx");
+        this->write_to_file(exact_host, "X_exact.mtx");
+        this->write_to_file(x_host, "X_approx.mtx");
+        this->write_to_file(residual, "R.mtx");
+        this->write_to_file(error_host, "E_absolute.mtx");
 
         std::cout << "Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = " << norm_2(exact_host - x_host) / norm_2(exact_host) << std::endl;
         std::cout << "Relative residual || A*x_exact - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, exact_host) - F_host) / norm_2(F_host) << std::endl;
@@ -390,5 +390,20 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 
     return;
 }
+
+
+template<typename T>
+void NCARPoisson1_CL::write_to_file(boost::numeric::ublas::vector<T> vec, std::string filename)
+{
+    std::ofstream fout;
+    fout.open(filename.c_str());
+
+    for (int i = 0; i < vec.size(); i++) {
+        fout << std::scientific << vec[i] << std::endl;
+    }
+    fout.close();
+}
+
+
 
 //----------------------------------------------------------------------

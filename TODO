@@ -1,11 +1,14 @@
 TODO (8/19/2010) 
 ==================
 - (DONE: NCARPoisson1_CL::write_to_file) Add uBLAS writer for matlab formatted output
-- Add class to run diagnostics on a matrix (use Lapack backend)
+- (DONE: added matlab scripts) Add class to run diagnostics on a matrix (use Lapack backend)
 	- compute Eigenvalues
 	- compute Condition Number
 	- compute || (A - A') ./ 2 ||_2 (measure symmetry)
- 
+NOTE: to use the scripts, run ./ncar_poisson1.x  test and then run:
+    %> octave --path ~/RBF.framework/scripts --eval "postRunDiagnostics('L.mtx')" --persist
+
+
 - Improve PDE classes (i.e., NCARPoisson1)
 	- Base PDE class
 	- Explicit PDE inherit BasePDE

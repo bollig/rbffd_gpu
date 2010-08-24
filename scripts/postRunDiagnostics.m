@@ -7,8 +7,7 @@ function [] = postRunDiagnostics(MatrixMarketFilename)
 
 checkSymmetry(A); 
 
-
-checkEigenvalues(A);
+checkEigenvalues(A, MatrixMarketFilename);
 
 fprintf(1, 'end\n');
 end

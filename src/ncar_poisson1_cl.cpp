@@ -157,7 +157,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 #define NEUMAN 1
 #define ROBIN 2
 
-#define BC   DIRICHLET
+#define BC   NEUMAN
 
             //--------------------
 #if BC  ==  NEUMAN
@@ -198,7 +198,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 
             //--------------------
 #define SOL_CONSTRAINT
-#undef SOL_CONSTRAINT
+//#undef SOL_CONSTRAINT
 
 #define DISCRETE_RHS
             //#undef DISCRETE_BC_RHS

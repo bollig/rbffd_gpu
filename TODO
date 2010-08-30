@@ -24,8 +24,8 @@ NOTE: to use the scripts, run ./ncar_poisson1.x  test and then run:
 		- Dirichlet: L(numbound:(end-1), numbound:(end-1))
 		- Neuman:    L(1:(end-1), 1:(end-1))
 		- Does RCM improve convergence iterations in solver? 
-	- 
-
+		- Where are the largest weights? (Diagonally dominant?)
+		- Is there a Cuthill-McKee algorithm for C++? GPU? 
 
 - Improve PDE classes (i.e., NCARPoisson1)
 	- Base PDE class

@@ -50,7 +50,7 @@ using namespace std;
 #define DIM_NUM 2
 #define STENCIL_SIZE 60
 #else
-#if 1
+#if 0
 // 3K nodes (Match roughly with Joe's nodeset)
 #define NB_INNER_BND 94
 #define NB_OUTER_BND 181
@@ -68,7 +68,7 @@ using namespace std;
 #define DIM_NUM 2
 #define STENCIL_SIZE 50
 #else
-#if 1
+#if 0
 // Simple 3D test case
 #define NB_INNER_BND 200
 #define NB_OUTER_BND 400
@@ -78,12 +78,12 @@ using namespace std;
 #define STENCIL_SIZE 50
 #else
 // Basic case to prove code runs
-#define NB_INNER_BND 10
-#define NB_OUTER_BND 10
-#define NB_INTERIOR 10
+#define NB_INNER_BND 20
+#define NB_OUTER_BND 40
+#define NB_INTERIOR 240
 #define NB_SAMPLES 80000
 #define DIM_NUM 2
-#define STENCIL_SIZE 5
+#define STENCIL_SIZE 15
 #endif
 #endif
 #endif 

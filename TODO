@@ -8,6 +8,24 @@ TODO (8/19/2010)
 NOTE: to use the scripts, run ./ncar_poisson1.x  test and then run:
     %> octave --path ~/RBF.framework/scripts --eval "postRunDiagnostics('L.mtx')" --persist
 
+- Undirected Stencil Graph
+        - A -> B and B -> A
+        - How does this improve conditioning
+        - How does this influence eigenvalues
+	- How many zero eigenvalues?
+	- How many eigenvalues within 1e-6 of 0?
+        - What measure of Symmetry?
+	- What is effect of random perturbations in the nodes
+	- (DONE) Save evals and evecs to file
+	- Specify boundary type: 
+		- Dirichlet: Trim off boundary nodes and sol_constraint
+		- Neumann + Robin: Include all elements
+	- Plot Reverse Cuthill-McKee results (p=symrcm(B); R = B(p,p))
+		- Dirichlet: L(numbound:(end-1), numbound:(end-1))
+		- Neuman:    L(1:(end-1), 1:(end-1))
+		- Does RCM improve convergence iterations in solver? 
+	- 
+
 
 - Improve PDE classes (i.e., NCARPoisson1)
 	- Base PDE class
@@ -19,13 +37,31 @@ NOTE: to use the scripts, run ./ncar_poisson1.x  test and then run:
 		- Solve	{calls Assemble} 
 		- Timestep {calls solve}
 
-- Undirected Stencil Graph
-	- A -> B and B -> A
-	- How does this improve conditioning
-	- How does this influence eigenvalues
-	- What measure of Symmetry? 
+- Swap out RBF for SPH weight function. 
+	- Assume SPH nodes are fixed
+	- How does solution differ
+	- Which benchmark is faster
+	- Convergence plots?
 
 
+
+
+
+
+
+
+
+
+
+
+NOTE: if a stencil set contains a node whose respective stencil set does not contain the first's stencil center
+then it is not symmetric. If we identify all edges which are not symmetric (i.e., those that are uni-directional)
+then we can add or subtract nodes. The question is: do we add the first stencil center to the second set or do we
+subtract the second from the first set? With a locked espilon support for the basis functions,
+adding nodes can induce more ill-conditioning; removing nodes reduces ill-conditioning.
+However, if we remove too many nodes then the support might be insufficient to connect nodes.
+Lets write the code both ways: one routine to add, one to subtract. Then we can write a third hybrid method
+which
 
 
 Note: I broke away from Gordons code because I want to reorganize everything. I figure its easier to organize in my own repository because his will be a reference. 

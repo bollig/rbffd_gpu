@@ -5,7 +5,7 @@ function [] = postRunDiagnostics(MatrixMarketFilename)
 % It is assumed mmread is on the path (available in RBF.framework/trunk/scripts)
 [A, rows, cols, entries] = mmread(MatrixMarketFilename);
 
-checkSymmetry(A); 
+checkSymmetry(A, MatrixMarketFilename); 
 
 checkEigenvalues(A, MatrixMarketFilename);
 

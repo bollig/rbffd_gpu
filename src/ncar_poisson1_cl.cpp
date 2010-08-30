@@ -157,7 +157,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 #define NEUMAN 1
 #define ROBIN 2
 
-#define BC   NEUMAN
+#define BC   DIRICHLET
 
             //--------------------
 #if BC  ==  NEUMAN
@@ -197,8 +197,11 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 #endif
 
             //--------------------
+#if BC == NEUMAN
 #define SOL_CONSTRAINT
-//#undef SOL_CONSTRAINT
+#else
+#undef SOL_CONSTRAINT
+#endif
 
 #define DISCRETE_RHS
             //#undef DISCRETE_BC_RHS
@@ -297,7 +300,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
                 double rel_diff = diff / fabs(exactSolution->laplacian(v));
 		if (diff > 1e-9) {
                     cout.precision(3);
-                    cout << "RHS[" << i << "] : Discrete laplacian differs by " << std::scientific << diff << " (rel: " << rel_diff << ")" << endl;
+                    cout << "RHS[" << i << "] : Discrete laplacian differs by " << std::scientific << diff << " (rel: " << rel_diff << ", st.size: " << subdomain->Q_stencils[i].size() << ")" << endl;
 		} else {
 			cout << "RHS[" << i << "] : Good." << endl; 
                 }
@@ -351,6 +354,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 
         boost::numeric::ublas::vector<FLOAT> exact_host(F_host.size());
         boost::numeric::ublas::vector<FLOAT> error_host(F_host.size());
+        boost::numeric::ublas::vector<FLOAT> rel_error_host(F_host.size());
 
         for (int i = 0; i < nb + ni; i++) {
             exact_host(subdomain->Q_stencils[i][0]) = (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
@@ -360,6 +364,12 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         }
 
         error_host = exact_host - x_host;
+        for (int i = 0; i < nb+ni; i++) {
+            rel_error_host[i] = fabs(error_host[i]) / fabs(exact_host[i]);
+        }
+        for (int i = nb+ni; i < error_host.size(); i++) {
+            rel_error_host[i] = 0.;
+        }
 
         boost::numeric::ublas::vector<FLOAT> residual = prod(L_host, exact_host) - F_host;
 
@@ -376,6 +386,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         this->write_to_file(x_host, "X_approx.mtx");
         this->write_to_file(residual, "R.mtx");
         this->write_to_file(error_host, "E_absolute.mtx");
+        this->write_to_file(error_host, "E_relative.mtx");
 
         std::cout << "Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = " << norm_2(exact_host - x_host) / norm_2(exact_host) << std::endl;
         std::cout << "Relative residual || A*x_exact - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, exact_host) - F_host) / norm_2(F_host) << std::endl;

@@ -210,10 +210,14 @@ void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, in
     for (int i = 0; i < nb_boundary_nodes; i++) {
         boundary[i] = i;
     }
-
+#define FORCE_SYMMETRIC_STENCILS 1
+#if FORCE_SYMMETRIC_STENCILS
+    this->computeSymmetricStencilsKDTree(kdtree);
+#else
     this->computeStencilsKDTree(kdtree);
-}
+#endif
 
+}
 
 //----------------------------------------------------------------------
 void Grid::computeStencils() {
@@ -347,6 +351,121 @@ void Grid::computeStencils() {
 #endif
 }
 //----------------------------------------------------------------------
+// Compute stencils using a KDTree, but add the extra constraint that
+// stencil centers must be in the stencil set of any nodes used for its
+// stencil set.
+//----------------------------------------------------------------------
+void Grid::computeSymmetricStencilsKDTree(KDTree* kdtree) {
+
+    if (nb_bnd == 0) {
+        printf("**** WARNING! nb_bnd == 0; Did generateGrid() update this value properly?! ******\n");
+        printf("**** Resetting nb_bnd and nb_rbf ****\n");
+        this->nb_bnd = boundary.size();
+        this->nb_rbf = rbf_centers.size();
+    }
+
+    if (stencil_size > nb_rbf) {
+        int new_stencil_size = (int) (0.5 * nb_rbf);
+        new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
+        printf("\n!!!!!!!!!!!!!!!!!!!\nWARNING! Not enough centers to reach specified stencil_size (size: %d for %d RBFs)! Using new stencil size: %d\n!!!!!!!!!!!!!!!!!!!\n\n", stencil_size, nb_rbf, new_stencil_size);
+        stencil_size = new_stencil_size;
+    }
+
+    std::vector< std::vector<int> > unsym_stencil;
+    vector< vector<int> > nearest_ids;
+    vector< vector<double> > nearest_dists;
+
+    // for each node, a vector of stencil nodes (global indexing)
+    stencil.resize(nb_rbf);
+    unsym_stencil.resize(nb_rbf);
+    nearest_ids.resize(nb_rbf);
+    nearest_dists.resize(nb_rbf);
+
+    printf("stencil size: %d, nb_rbf= %d\n", (int)stencil.size(), nb_rbf);
+
+    this->avg_distance.resize(nb_rbf);
+
+    printf("nb_rbf= %d (bnd: %d)\n", nb_rbf, nb_bnd);
+    int node_count =0;
+
+    for (int i = 0; i < nb_rbf; i++) {
+        vector<double> center(dim, 0);
+        for (int j = 0; j < dim; j++) {
+            center[j] = rbf_centers[i][j];
+        }
+
+        unsym_stencil[i].resize(stencil_size);
+
+        kdtree->k_closest_points(center, stencil_size, nearest_ids[i], nearest_dists[i]);
+
+       // printf("Stencil[%d] = {", i);
+        for (int j=0; j < stencil_size; j++) {
+            int rev_indx = (stencil_size-1)-j;
+            unsym_stencil[i][j] = nearest_ids[i][rev_indx];
+         //   printf(" %d(%f) ", stencil[i][j], nearest_dists[rev_indx]);
+            node_count ++;
+        }
+    }
+    cout << "Added " << node_count << " nodes" << endl;
+
+    int trim_count = 0;
+     // TODO: TRIM STENCIL EDGES WHICH ARE NOT SYMMETRIC
+    for (int i = 0; i < unsym_stencil.size(); i++) {
+        int adjustedStencilSize = unsym_stencil[i].size();
+        int orig_stencil_size = unsym_stencil[i].size();
+        // Search each stencil to make sure edges are symmetric
+        // (Brute force! sould be more intelligent if this consumes a lot of time!)
+        for (int j=0; j < orig_stencil_size; j++) {
+            int indxA = unsym_stencil[i][0];
+            int indxB = unsym_stencil[i][j];
+            if (unsym_stencil[indxB][0] != indxB) {
+                cout << "WARNING! STENCIL " << indxB << " is not in the correct location" << endl;
+                exit(EXIT_FAILURE);
+            }
+            if ( !isIndxInStencil(indxA, unsym_stencil[indxB]) ) {
+                unsym_stencil[i][j] = -1;
+                trim_count ++;
+                adjustedStencilSize --;
+            }
+        }
+
+        // Copy trimmed stencils back into our public stencil list
+        stencil[i].resize(adjustedStencilSize);
+        int k = 0;
+        for (int j = 0; j < orig_stencil_size; j++) {
+            if (unsym_stencil[i][j] != -1) {
+                stencil[i][k] = unsym_stencil[i][j];
+
+                int rev_indx = (stencil_size-1)-j;
+                this->avg_distance[i] += nearest_dists[i][rev_indx];
+
+                k++;
+            }
+        }
+        if (k != adjustedStencilSize) {
+            cout << "DID NOT TRIM PROPERLY. Off by: " << k - adjustedStencilSize << endl;
+            exit(EXIT_FAILURE);
+        }
+        this->avg_distance[i] /= (adjustedStencilSize-1);
+    }
+    cout << "Trimmed " << trim_count << " nodes" << endl;
+
+    cout << "Percentage cut: " << ((double)trim_count / (double)node_count ) * 100. << "%" << endl;
+
+    printf("DONE GENERATING STENCILS\n");
+}
+//----------------------------------------------------------------------
+
+// An edge is symmetric if A exists in stencilB and B exists in stencilA
+// Of course we form stencilA and then test each member to see if
+// A exists in stencilB
+bool Grid::isIndxInStencil(int indxA, std::vector<int> stencilB) {
+    for (int i = 0; i < stencilB.size(); i++) {
+        if (stencilB[i] == indxA)
+            return true;
+    }
+    return false;
+}
 
 //----------------------------------------------------------------------
 void Grid::computeStencilsKDTree(KDTree* kdtree) {

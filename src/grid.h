@@ -146,6 +146,14 @@ public:
         // compute stencil that contains the "n" nearest nodes for the grid generated nodes
         void computeStencilsKDTree(KDTree* kdtree);
 
+        // Compute stencils using a KDTree, but add the extra constraint that
+        // stencil centers must be in the stencil set of any nodes used for its
+        // stencil set.
+        void computeSymmetricStencilsKDTree(KDTree* kdtree);
+
+        // Determine if indxA exists in stencilB
+        bool isIndxInStencil(int indxA, std::vector<int> stencilB);
+
 //----------------------------------------------------------------------
 };
 

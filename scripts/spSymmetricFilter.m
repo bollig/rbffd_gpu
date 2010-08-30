@@ -13,4 +13,11 @@ filteredMat = (C - C');
 ind = find( filteredMat < 0 );
 filteredMat(ind) = 0; 
 
+filename='FilteredMat.mtx'; 
+[err] = mmwrite(filename,filteredMat, 'Indicates non-symmetric edges. Row=StencilID, Col=Stencils which do not contain StencilID');
+fprintf(1,'Wrote %s with err=%d\n', filename, err); 
+
+fprintf(1, 'Symmetry Measure of Filtered Matrix ||f(A) - f(A)||_2 = %e\n', norm(filteredMat, 1));
+fflush(1); 
+
 end

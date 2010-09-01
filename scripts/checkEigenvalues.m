@@ -6,7 +6,7 @@ function [] = checkEigenvalues(SparseMatA, filename)
 fprintf(1,'Condition Number (condest(A) [for 1-norm estimate]): %e\n', condest(SparseMatA));
 
 % Force OCTAVE to flush output. Matlab calls this by default
-fflush(1);
+flush_io(1);
 
 % Compute all Eigenvalues (LAMBDA) and Vectors (V)
 [V, LAMBDA] = eig(full(SparseMatA)); 

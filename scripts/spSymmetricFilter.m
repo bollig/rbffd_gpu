@@ -18,6 +18,6 @@ filename='FilteredMat.mtx';
 fprintf(1,'Wrote %s with err=%d\n', filename, err); 
 
 fprintf(1, 'Symmetry Measure of Filtered Matrix ||f(A) - f(A)||_2 = %e\n', norm(filteredMat, 1));
-fflush(1); 
+flush_io(1); 
 
 end

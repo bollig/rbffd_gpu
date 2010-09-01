@@ -12,7 +12,7 @@ fprintf(1, 'Symmetry Measure ||(A + A^T)/2||_2 = %e \n', measureOfSymmetry);
 fprintf(1, 'NOTE: low Symmetry Measure implies antisymmetric matrix\n')
 
 % Force OCTAVE to flush output. Matlab calls this by default
-fflush(1);
+flush_io(1);
 
 % We can also count the number of stencil edges which are not symmetric
 end

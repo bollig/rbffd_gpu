@@ -55,7 +55,7 @@ if ( mmfile == -1 )
  error('Cannot open file for output');
 end;
 
-
+err = 0; 
 [M,N] = size(A);
 
 %%%%%%%%%%%%%       This part for sparse matrices     %%%%%%%%%%%%%%%%

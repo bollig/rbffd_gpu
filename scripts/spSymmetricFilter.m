@@ -3,7 +3,8 @@
 function [filteredMat] = spSymmetricFilter(SparseMatA) 
 
 % Set all non-zero elements of A to 1
-C = spfun(@spmask, SparseMatA);
+%C = spfun(@spmask, SparseMatA);
+C = spones(SparseMatA);
 
 % Find elements in the matrix which are not mirrored on transpose
 filteredMat = (C - C');

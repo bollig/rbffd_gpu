@@ -16,6 +16,7 @@ figure(4);
 hold off; % clear plot if anything is already there
 eigenvalues = diag(LAMBDA); 
 plot(eigenvalues, 'ko'); 
+axis('square');
 label2 = sprintf('Complex Plane Eigenvalue Plot for %s (Num Eigenvalues = %d)', filename, m); 
 title(label2); 
 xlabel('Real'); 

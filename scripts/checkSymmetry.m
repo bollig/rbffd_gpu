@@ -4,7 +4,7 @@ function [] = checkSymmetry(SparseMatA, filename)
 % Get a matrix with only the non-symmetric 
 F = spSymmetricFilter(SparseMatA); 
 
-figure(1); 
+figure; 
 hold off; 
 spy(F, 5); 
 axis('square');
@@ -15,7 +15,7 @@ print('nonSymEdges.png', '-dpng', '-r300');
 
 
 % 1 = size of marker
-figure(2); 
+figure; 
 hold off; 
 spy(SparseMatA, 5); 
 label1 = sprintf('Sparsity pattern of %s (Dimensions: %d x %d)', filename, m, n);
@@ -26,7 +26,7 @@ ylabel('row');
 print('fullMatSpy.png', '-dpng', '-r300');
 
 
-figure(3)
+figure;
 hold off; 
 image(full(SparseMatA)); 
 axis('square');

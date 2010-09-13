@@ -12,7 +12,7 @@ flush_io(1);
 [V, LAMBDA] = eig(full(SparseMatA)); 
 
 
-figure(4); 
+figure; 
 hold off; % clear plot if anything is already there
 eigenvalues = diag(LAMBDA); 
 plot(eigenvalues, 'ko'); 

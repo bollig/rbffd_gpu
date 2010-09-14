@@ -40,7 +40,13 @@ public:
     //  double d = ProjectSettings.GetSettingAs<double>("key2");
     //  string s = ProjectSettings.GetSettingAs<string>("key3");
     template <typename RT>
-    RT GetSettingAs(std::string key) { return ss_typecast<RT>(settings[key]); }
+    RT GetSettingAs(std::string key) {
+        if (settings.find(key) == settings.end()) {
+            std::cout << "ERROR! Request for unknown configuration setting: " << key << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        return ss_typecast<RT>(settings[key]);
+    }
 
     // Check if KEY = VALUE pair was found in config file
     bool Exists(std::string key) { if(settings.find(key) == settings.end()) { return false; } else { return true; } }

@@ -79,6 +79,7 @@ void ProjectSettings::ParseFile(const std::string filename)
         std::cout << "\n[ERROR] Config file: \"" << filename << "\" was not found. Be sure"
                 << " to specify the full/relative path to access the file from"
                 << " the directory you are currently executing in.\n" << std::endl;
+        exit(EXIT_FAILURE);
     }
 }
 

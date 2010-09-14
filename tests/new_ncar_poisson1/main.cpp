@@ -33,6 +33,10 @@ int main(int argc, char** argv) {
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
 
+    int a = settings->GetSettingAs<int>("NB_INTERIOR");
+
+    printf("A = %d\n", a);
+
     int N_TOT = NB_INNER_BND + NB_OUTER_BND + NB_INTERIOR;
 
     // Discrete energy divided by number of sample pts

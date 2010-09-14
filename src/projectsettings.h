@@ -6,6 +6,8 @@
 //#include <iostream>
 //#include <fstream>
 #include <sstream>
+#include "communicator.h"
+
 
 /**
   * PARSE A CONFIGURATION FILE FORMATTED AS:
@@ -20,9 +22,12 @@ class ProjectSettings
 protected:
     // The map of KEY = VALUE settings
     std::map<std::string, std::string> settings;
+    std::string cli_filename;
 
 public:
     // Read the file and add settings to the settings map
+    ProjectSettings(int argc, char** argv);
+    ProjectSettings(int argc, char** argv, Communicator* comm_unit);
     ProjectSettings(const std::string filename);
 
     // Read the file and add/update settings in the settings map
@@ -40,6 +45,8 @@ public:
     // Check if KEY = VALUE pair was found in config file
     bool Exists(std::string key) { if(settings.find(key) == settings.end()) { return false; } else { return true; } }
 
+    int parseCommandLineArgs(int argc, char** argv, int my_rank);
+
 protected:
     // This routine is adapted from post on GameDev:
     // http://www.gamedev.net/community/forums/topic.asp?topic_id=190991
@@ -56,5 +63,6 @@ protected:
 
     void trim( std::string& str );
 };
+
 
 #endif // PROJECTSETTINGS_H

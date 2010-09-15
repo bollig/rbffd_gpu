@@ -8,6 +8,7 @@
 #include "exact_solution.h"
 #include "communicator.h"
 #include "derivative.h"
+#include "projectsettings.h"
 
 class NCARPoisson1
 {
@@ -49,8 +50,12 @@ protected:
         Timings tm;
         Timer t1, t2, t3, t4, t5;
 
+        // FLAGS
+        bool check_L_p_Lt;  // Check the results when weights are L+L^T
+
 public:
         NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NCARPoisson1(ProjectSettings* _settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
         ~NCARPoisson1();
 
         // Solve the Poisson problem

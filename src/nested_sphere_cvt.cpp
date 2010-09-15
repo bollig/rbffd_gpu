@@ -34,6 +34,33 @@ NestedSphereCVT::NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb
 #endif
 }
 
+
+NestedSphereCVT::NestedSphereCVT(ProjectSettings* settings) :
+        CVT(settings->GetSettingAs<int>("NB_INTERIOR") + settings->GetSettingAs<int>("NB_BOUNDARY"),
+            settings->GetSettingAs<int>("DIMENSION"), "nested_spheres", 3 /*USER INIT*/, 3 /*USER SAMPLE*/,
+            settings->GetSettingAs<int>("NB_SAMPLES"))
+{
+    inner_r = settings->GetSettingAs<double>("INNER_RADIUS");
+    outer_r = settings->GetSettingAs<double>("OUTER_RADIUS");
+    nb_inner = settings->GetSettingAs<int>("NB_INNER_BND");
+    nb_outer = settings->GetSettingAs<int>("NB_OUTER_BND");
+    nb_int = settings->GetSettingAs<int>("NB_INTERIOR");
+    it_max_interior = settings->GetSettingAs<int>("IT_MAX_INTERIOR");
+    it_max_boundary = settings->GetSettingAs<int>("IT_MAX_BOUNDARY");
+
+    DEBUG = settings->GetSettingAs<int>("DEBUG_MODE");
+    nb_bnd = 0;
+
+    // Create bounding volume: [-1,1]^3
+    geom_extents = new double[2 * dim_num];
+    for (int i = 0; i < dim_num; i++) {
+        geom_extents[0 + i * 2] = -1;
+        geom_extents[1 + i * 2] = 1;
+    }
+
+}
+
+
 //****************************************************************************80
 
 // Inner generators are r[0] -> r[nb_inner-1]

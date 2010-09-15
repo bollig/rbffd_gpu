@@ -5,6 +5,7 @@
 #include <Vec3.h>
 #include <ArrayT.h>
 #include "KDTree.h"
+#include "projectsettings.h"
 
 class Grid {
 
@@ -67,8 +68,10 @@ protected:
 	int ny; // = 10;
 	int nz; // = 1;
 	int count; // = 0;
+        bool forceSymmetricStencils;
 
 public:
+        Grid(ProjectSettings* settings); // maximum stencil size
         Grid(int dim_num, int stencil_size=9); // maximum stencil size
 
 	Grid(int n_x, int n_y, int stencil_size=9); // maximum stencil size
@@ -88,6 +91,8 @@ public:
         // Compute stencils for the provided nodes using the specified stencil size and
         // specified number of boundary nodes.
         void computeStencils(double* nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes);
+        void computeStencils(double* nodes, int nb_tot_nodes);
+        void computeStencils(double* nodes, KDTree* kdtree);
 
         // Use a kdtree when computing stencils
         void computeStencils(double* nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes, KDTree* kdtree);

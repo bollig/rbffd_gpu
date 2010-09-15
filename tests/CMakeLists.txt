@@ -16,7 +16,9 @@
 		cusp_version_test   # COMPLETE (verifies build with CUSP and THRUST libraries).  
 		cusp_simple_example   # COMPLETE (form sparse system and solve)
 
+
 		ncar_poisson1       # INCOMPLETE (poisson equation on nested spheres)
+		new_ncar_poisson1       # INCOMPLETE (poisson equation on nested spheres)
 		ncar_poisson2       # INCOMPLETE (poisson equation on nested spheres)
 
 

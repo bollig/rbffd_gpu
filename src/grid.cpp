@@ -4,6 +4,40 @@
 
 using namespace std;
 
+Grid::Grid(ProjectSettings* settings) {
+    // BEGIN JUNK: everything up to END JUNK should
+    // be considered for removal to put into a subclass
+    // for 2D regular grid.
+
+    // grid size
+    nb_x = 1;
+    nb_y = 1;
+    nb_z = 1;
+
+    laplacian.resize(nb_x * nb_y * nb_z);
+
+    // subgrid size
+    nx = nb_x / 2;
+    ny = nb_y / 2;
+    nz = 1;
+    subgrid_index_list = new ArrayT<vector<int> >(nx, ny);
+
+    // END JUNK
+
+    // BEGIN NECESSARY:
+
+    this->stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE");
+    this->dim = settings->GetSettingAs<int>("DIMENSION");
+    this->forceSymmetricStencils = settings->GetSettingAs<int>("FORCE_SYMMETRIC_STENCILS");
+
+    this->nb_bnd = settings->GetSettingAs<int>("NB_BOUNDARY");
+    this->nb_rbf = settings->GetSettingAs<int>("NB_INTERIOR") + settings->GetSettingAs<int>("NB_BOUNDARY");
+
+    cout << "FORCE SYMMETRIC " << forceSymmetricStencils << "\t" << settings->GetSettingAs<bool>("FORCE_SYMMETRIC_STENCILS") <<  endl;
+    cout << "NB_BND = " << nb_bnd << endl;
+    cout << "NB_RBF = " << nb_rbf << endl;
+}
+
 // Default constructor
 //  Specify the size of the stencil we wish to generate
 //  and handle
@@ -32,6 +66,7 @@ Grid::Grid(int dim_num, int stencil_size) {
 
     this->stencil_size = stencil_size;
     this->dim = dim_num;
+    this->forceSymmetricStencils = true;
 
     // END NECESSARY
 }
@@ -55,6 +90,7 @@ Grid::Grid(int n_x, int n_y, int stencil_size) {
     subgrid_index_list = new ArrayT<vector<int> >(nx, ny);
 
     this->stencil_size = stencil_size;
+    this->forceSymmetricStencils = true;
 }
 //----------------------------------------------------------------------
 
@@ -196,26 +232,31 @@ void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, in
 
 void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes, KDTree* kdtree) {
     this->stencil_size = st_size;
-    this->rbf_centers.resize(nb_tot_nodes);
-    for (int i = 0; i < nb_tot_nodes; i++) {
+    this->nb_bnd = nb_boundary_nodes;
+    this->nb_rbf = nb_tot_nodes;
+    this->computeStencils(nodes, kdtree);
+}
+
+void Grid::computeStencils(double* nodes, KDTree* kdtree) {
+    this->rbf_centers.resize(nb_rbf);
+    for (int i = 0; i < nb_rbf; i++) {
         Vec3 v;
         for (int j = 0; j < this->dim; j++) {
             v[j] = nodes[i*dim + j];
         }
         this->rbf_centers[i] = v;
     }
-    this->nb_rbf = nb_tot_nodes;
-    this->nb_bnd = nb_boundary_nodes;
-    boundary.resize(nb_boundary_nodes);
-    for (int i = 0; i < nb_boundary_nodes; i++) {
+    boundary.resize(nb_bnd);
+    for (int i = 0; i < nb_bnd; i++) {
         boundary[i] = i;
     }
-#define FORCE_SYMMETRIC_STENCILS 1
-#if FORCE_SYMMETRIC_STENCILS
-    this->computeSymmetricStencilsKDTree(kdtree);
-#else
-    this->computeStencilsKDTree(kdtree);
-#endif
+
+    // This boolean is from the settings config file (Key: "FORCE_SYMMETRIC_STENCILS")
+    if (this->forceSymmetricStencils) {
+        this->computeSymmetricStencilsKDTree(kdtree);
+    } else {
+        this->computeStencilsKDTree(kdtree);
+    }
 
 }
 
@@ -238,7 +279,7 @@ void Grid::computeStencils() {
 
     // for each node, a vector of stencil nodes (global indexing)
     stencil.resize(nb_rbf);
-    //printf("stencil size: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
+    //printf("stencil vec length: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
 
     ltvec ltvec_inst;
     //vector<double> avg_distance;
@@ -381,7 +422,7 @@ void Grid::computeSymmetricStencilsKDTree(KDTree* kdtree) {
     nearest_ids.resize(nb_rbf);
     nearest_dists.resize(nb_rbf);
 
-    printf("stencil size: %d, nb_rbf= %d\n", (int)stencil.size(), nb_rbf);
+    printf("stencil vec length: %d, nb_rbf= %d\n", (int)stencil.size(), nb_rbf);
 
     this->avg_distance.resize(nb_rbf);
 
@@ -419,7 +460,7 @@ void Grid::computeSymmetricStencilsKDTree(KDTree* kdtree) {
             int indxA = unsym_stencil[i][0];
             int indxB = unsym_stencil[i][j];
             if (unsym_stencil[indxB][0] != indxB) {
-                cout << "WARNING! STENCIL " << indxB << " is not in the correct location" << endl;
+                cout << "WARNING! STENCIL " << indxB << " is not in the correct location. Row contains stecil: " << unsym_stencil[indxB][0] << endl;
                 exit(EXIT_FAILURE);
             }
             if ( !isIndxInStencil(indxA, unsym_stencil[indxB]) ) {
@@ -486,7 +527,7 @@ void Grid::computeStencilsKDTree(KDTree* kdtree) {
 
     // for each node, a vector of stencil nodes (global indexing)
     stencil.resize(nb_rbf);
-    printf("stencil size: %d, nb_rbf= %d\n", (int)stencil.size(), nb_rbf);
+    printf("stencil vec length: %d, nb_rbf= %d\n", (int)stencil.size(), nb_rbf);
 
    // vector<double> avg_bnd;
    // vector<double> avg_int;
@@ -568,7 +609,7 @@ void Grid::computeStencilsRegular() {
     // USE ALL POINTS based on a subgrid structure
 #if 0
     stencil.resize(nb_rbf);
-    //printf("stencil size: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
+    //printf("stencil vec length: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
     //exit(0);
 
     for (int i = 0; i < nb_rbf; i++) {

@@ -32,6 +32,37 @@ NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative
     y_deriv.resize(nb_stencils);
     xx_deriv.resize(nb_stencils);
     yy_deriv.resize(nb_stencils);
+
+    // Do not run the L + L^T test
+    check_L_p_Lt = 0;
+}
+
+NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+        dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->G_centers),
+        boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_),
+        t1(tm, "[ncar_poisson_t1] Total"),
+        t2(tm, "[ncar_poisson_t2] Compute Weights"),
+        t3(tm, "[ncar_poisson_t3] Implicit Assemble"),
+        t4(tm, "[ncar_poisson_t4] Solve"),
+        t5(tm, "[ncar_poisson_t5] Solve w/o memcpy")
+{
+    nb_stencils = subdomain->Q_stencils.size();
+    nb_rbf = subdomain->G_centers.size();
+
+    time = 0.0; // physical time
+
+    // solution + temporary array (for time advancement)
+    sol[0].resize(nb_rbf);
+    sol[1].resize(nb_rbf);
+    lapl_deriv.resize(nb_stencils);
+
+    // could resize inside the advancement function
+    x_deriv.resize(nb_stencils);
+    y_deriv.resize(nb_stencils);
+    xx_deriv.resize(nb_stencils);
+    yy_deriv.resize(nb_stencils);
+
+    check_L_p_Lt = settings->GetSettingAs<int>("CHECK_L_PLUS_L_TRANSPOSE", ProjectSettings::optional);
 }
 
 //----------------------------------------------------------------------

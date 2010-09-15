@@ -41,6 +41,10 @@ NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Deri
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
 {}
 
+NCARPoisson1_CL::NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+        NCARPoisson1(_settings, _solution, subdomain_, der_, rank, dim_num_)
+{}
+
 //----------------------------------------------------------------------
 
 NCARPoisson1_CL::~NCARPoisson1_CL() {
@@ -319,6 +323,10 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         // cout << L_host << endl;
         // cout << "F: " << F_host << endl;
 
+        if (check_L_p_Lt) {
+           // viennacl::transposed_matrix_proxy<FLOAT, 1, > L_transp_host(L_host);
+            L_host = L_host + trans(L_host);
+        }
 
         // 2) Convert to OpenCL space:
 
@@ -338,6 +346,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         t5.start();
         //x_device = viennacl::linalg::prod(L_device, F_device);
         x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-30, 3000));
+
         // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
         // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
         viennacl::ocl::finish();

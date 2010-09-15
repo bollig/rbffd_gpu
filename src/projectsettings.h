@@ -19,6 +19,12 @@
 class ProjectSettings
 {
 
+public:
+    // If a settings is specified as required and it does not exist in teh config file it will cause
+    // the code to terminate. If the setting is optional then when it doesnt exist the typecast value of
+    // "0" will be returned by GetSettingAs
+    enum settings_priority_t {required = 0, optional};
+
 protected:
     // The map of KEY = VALUE settings
     std::map<std::string, std::string> settings;
@@ -40,10 +46,17 @@ public:
     //  double d = ProjectSettings.GetSettingAs<double>("key2");
     //  string s = ProjectSettings.GetSettingAs<string>("key3");
     template <typename RT>
-    RT GetSettingAs(std::string key) {
+    RT GetSettingAs(std::string key, settings_priority_t priority = required) {
         if (settings.find(key) == settings.end()) {
-            std::cout << "ERROR! Request for unknown configuration setting: " << key << std::endl;
-            exit(EXIT_FAILURE);
+            if (priority == this->required) {
+                std::cout << "ERROR! Request for unknown REQUIRED configuration setting: " << key << std::endl;
+                exit(EXIT_FAILURE);
+            } else {
+                RT ret = ss_typecast<RT>(std::string("0"));
+                std::cout << "WARNING! Request for unknown OPTIONAL configuration setting: " << key
+                          << "; Returning " << ret << std::endl;
+                return ret;
+            }
         }
         return ss_typecast<RT>(settings[key]);
     }

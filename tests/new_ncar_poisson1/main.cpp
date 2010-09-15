@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
         der_test->testAllFunctions(*der, *grid);
     }
 
-    NCARPoisson1* poisson = new NCARPoisson1_CL(exact_poisson, subdomain, der, 0, dim);
+    NCARPoisson1* poisson = new NCARPoisson1_CL(settings, exact_poisson, subdomain, der, 0, dim);
 
     poisson->initialConditions();
     poisson->solve(comm_unit);

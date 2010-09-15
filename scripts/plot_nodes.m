@@ -1,4 +1,4 @@
-function [] = plot_nodes(nb_inner_bnd, nb_outer_bnd, nb_interior, iter_max_bnd, iter_max_int, iter_step)
+function [] = plot_nodes(nb_inner_bnd, nb_outer_bnd, nb_interior, iter_max_bnd, iter_max_int, iter_step, dim)
 
     if (nargin < 4)
         iter_max_bnd = 100;
@@ -9,34 +9,40 @@ function [] = plot_nodes(nb_inner_bnd, nb_outer_bnd, nb_interior, iter_max_bnd, 
     if (nargin < 6)
         iter_step = 20;
     end
-
-    for iter = 0:iter_step:iter_max_bnd
-
-        figure(1);
-        filename = sprintf('boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter.txt', nb_inner_bnd, nb_outer_bnd, iter);
-
-        boundary_nodes = load(filename);
-
-        fprintf('Loaded %d boundary nodes\n', length(boundary_nodes));
-
-        %plotBoundary(boundary_nodes(1:nb_inner_bnd,:));
-        %plotBoundary(boundary_nodes((boundary_nodes(:,1) > 0 & boundary_nodes(:,2) > 0), :));
-        plotBoundarySurface(boundary_nodes);
-        title(filename);
-        axis square;
-        %axis([-1 1 -1 1 -1 1]);
-        pbaspect([1 1 1]);
-        axis vis3d;
-        drawnow
-        pause
+    if (nargin < 7)
+        dim = 2;
     end
 
+% 
+%     for iter = 0:iter_step:iter_max_bnd
+% 
+%         figure(1);
+%         filename = sprintf('boundary_nodes_%.5d_inner_%.5d_outer_%.5d_iter_%dD.ascii', nb_inner_bnd, nb_outer_bnd, iter, dim);
+% 
+%         boundary_nodes = load(filename);
+% 
+%         fprintf('Loaded %d boundary nodes\n', length(boundary_nodes));
+% 
+%         %plotBoundary(boundary_nodes(1:nb_inner_bnd,:));
+%         %plotBoundary(boundary_nodes((boundary_nodes(:,1) > 0 & boundary_nodes(:,2) > 0), :));
+%         plotBoundarySurface(boundary_nodes);
+%         title(filename);
+%         axis square;
+%         %axis([-1 1 -1 1 -1 1]);
+%         pbaspect([1 1 1]);
+%         axis vis3d;
+%         drawnow
+%         pause
+%     end
+
+    boundary_nodes = []; 
 
 
     for iter = 0:iter_step:iter_max_int
 
         figure(2);
-        filename = sprintf('interior_nodes_%.5d_interior_%.5d_iter.txt', nb_interior, iter);
+        filename = sprintf('interior_nodes_%.5d_interior_%.5d_iter_%dD.ascii', nb_interior, iter, dim);
+        %filename = sprintf('interior_nodes_%.5d_interior_%.5d_iter_%dD.ascii', nb_interior, iter, dim);
 
         interior_nodes = load(filename);
 

@@ -32,45 +32,23 @@ int main(int argc, char** argv) {
     // L2 norm of difference between iteration output
     double it_diff;
 
-    // maximum number of iterations
-    int it_max_bnd = 60;    // Boundary
-    int it_max_int = 100;   // Interior
-    int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE");;
-
     // number of iterations taken (output by cvt3d, input to cvt_write)
-    int it_num_boundary = 0;
-    int it_num_interior = 0;
     int it_num =0;      // Total number of iterations taken.
 
-    int nb_inner_bnd = settings->GetSettingAs<int>("NB_INNER_BND");
-    int nb_outer_bnd = settings->GetSettingAs<int>("NB_OUTER_BND");
-    int nb_interior  = settings->GetSettingAs<int>("NB_INTERIOR");
-    int nb_tot       = nb_inner_bnd + nb_outer_bnd + nb_interior;
-    int sample_num   = settings->GetSettingAs<int>("NB_SAMPLES");
-
     int dim = settings->GetSettingAs<int>("DIMENSION");
-    // generator points
-    //double r[DIM_NUM * N_TOT];
 
-    //"nested_spheres", NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, sample_num, it_max_bnd, it_max_int, DIM_NUM);
+    // Generate the CVT if the file doesnt already exist
     CVT* cvt = new NestedSphereCVT(settings);
-
-    //    cvt->SetDensity(rho);
-    // Generate the CVT
     int load_errors = cvt->cvt_load(-1);
     if (load_errors) { // File does not exist
-        //cvt->cvt(N, batch, init, sample, sample_num, it_max, it_fixed, &seed, r, &it_num, &it_diff, &energy);
-        //cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
         cvt->cvt(&it_num, &it_diff, &energy);
     }
-    double* generators = cvt->getGenerators();
 
     // TODO: run this in parallel:
-
-    Grid* grid = new Grid(dim);
+    double* generators = cvt->getGenerators();
+    Grid* grid = new Grid(settings);
     // Compute stencils given a set of generators
-    grid->computeStencils(generators, stencil_size, nb_inner_bnd + nb_outer_bnd, nb_tot, cvt->getKDTree());
-    //grid->avgStencilRadius();
+    grid->computeStencils(generators, cvt->getKDTree());
 
     GPU* subdomain = new GPU(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());      // TODO: get these extents from the cvt class (add constructor to GPU)
 
@@ -83,35 +61,37 @@ int main(int argc, char** argv) {
     //subdomain->printCenterMemberships(subdomain->G, "G");
 
     // 0: 2D problem; 1: 3D problem
-#if DIM_NUM == 3
-    ExactSolution* exact_poisson = new ExactNCARPoisson1();
-#else
-    ExactSolution* exact_poisson = new ExactNCARPoisson2();
-#endif
+    ExactSolution* exact_poisson;
+    if (dim == 3) {
+        exact_poisson = new ExactNCARPoisson1();
+    } else {
+        exact_poisson = new ExactNCARPoisson2();
+    }
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
-    der->setEpsilon(8.0);
+    double epsilon = settings->GetSettingAs<double>("EPSILON");
+    der->setEpsilon(epsilon);
 
-    DerivativeTests* der_test = new DerivativeTests();
-    //der_test->testAllFunctions(*der, *grid);
+    if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
+        DerivativeTests* der_test = new DerivativeTests();
+        der_test->testAllFunctions(*der, *grid);
+    }
 
     NCARPoisson1* poisson = new NCARPoisson1_CL(exact_poisson, subdomain, der, 0, dim);
 
     poisson->initialConditions();
     poisson->solve(comm_unit);
 
-	
+
     delete(poisson);
     delete(subdomain);
     delete(grid);
     delete(cvt);
- 
+    delete(settings);
+
     cout.flush();
- 
+
     exit(EXIT_SUCCESS);
-    //    cvt->cvt_write(DIM_NUM, N_TOT, batch, seed_init, seed, init_string,
-    //          it_max, it_fixed, it_num, it_diff, energy, sample_string, sample_num, r,
-    //        file_out_name, comment);
 }
 //----------------------------------------------------------------------

@@ -5,6 +5,7 @@
 #include "Vec3.h"
 #include "density.h"
 #include "cvt.h"
+#include "projectsettings.h"
 
 // Create a constrained CVT
 // in the volume created by two nested spheres.
@@ -21,6 +22,8 @@ protected:
 
 public:
     NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int sample_num_, int it_max_bndry=60, int it_max_inter = 240, int dimension = 3, double inner_radius = 0.5, double outer_radius = 1.0, int DEBUG_ = 0);
+    NestedSphereCVT(ProjectSettings* settings);
+
 
     // Generate the boundary nodes first as an independent CVT
     // Then using the boundary nodes locked into position, generate the interior

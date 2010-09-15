@@ -19,25 +19,12 @@
 #include "projectsettings.h"
 
 using namespace std;
-// Basic case to prove code runs
-#define NB_INNER_BND 20
-#define NB_OUTER_BND 40
-#define NB_INTERIOR 240
-#define NB_SAMPLES 80000
-#define DIM_NUM 2
-#define STENCIL_SIZE 15
 
 int main(int argc, char** argv) {
 
     Communicator* comm_unit = new Communicator(argc, argv);
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
-
-    int a = settings->GetSettingAs<int>("NB_INTERIOR");
-
-    printf("A = %d\n", a);
-
-    int N_TOT = NB_INNER_BND + NB_OUTER_BND + NB_INTERIOR;
 
     // Discrete energy divided by number of sample pts
     double energy;
@@ -48,19 +35,26 @@ int main(int argc, char** argv) {
     // maximum number of iterations
     int it_max_bnd = 60;    // Boundary
     int it_max_int = 100;   // Interior
-    int stencil_size = STENCIL_SIZE;
+    int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE");;
 
     // number of iterations taken (output by cvt3d, input to cvt_write)
     int it_num_boundary = 0;
     int it_num_interior = 0;
     int it_num =0;      // Total number of iterations taken.
 
-    int sample_num = NB_SAMPLES;
+    int nb_inner_bnd = settings->GetSettingAs<int>("NB_INNER_BND");
+    int nb_outer_bnd = settings->GetSettingAs<int>("NB_OUTER_BND");
+    int nb_interior  = settings->GetSettingAs<int>("NB_INTERIOR");
+    int nb_tot       = nb_inner_bnd + nb_outer_bnd + nb_interior;
+    int sample_num   = settings->GetSettingAs<int>("NB_SAMPLES");
 
+    int dim = settings->GetSettingAs<int>("DIMENSION");
     // generator points
     //double r[DIM_NUM * N_TOT];
 
-    CVT* cvt = new NestedSphereCVT("nested_spheres", NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, sample_num, it_max_bnd, it_max_int, DIM_NUM);
+    //"nested_spheres", NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, sample_num, it_max_bnd, it_max_int, DIM_NUM);
+    CVT* cvt = new NestedSphereCVT(settings);
+
     //    cvt->SetDensity(rho);
     // Generate the CVT
     int load_errors = cvt->cvt_load(-1);
@@ -73,9 +67,9 @@ int main(int argc, char** argv) {
 
     // TODO: run this in parallel:
 
-    Grid* grid = new Grid(DIM_NUM);
+    Grid* grid = new Grid(dim);
     // Compute stencils given a set of generators
-    grid->computeStencils(generators, stencil_size, NB_INNER_BND + NB_OUTER_BND, N_TOT, cvt->getKDTree());
+    grid->computeStencils(generators, stencil_size, nb_inner_bnd + nb_outer_bnd, nb_tot, cvt->getKDTree());
     //grid->avgStencilRadius();
 
     GPU* subdomain = new GPU(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());      // TODO: get these extents from the cvt class (add constructor to GPU)
@@ -102,7 +96,7 @@ int main(int argc, char** argv) {
     DerivativeTests* der_test = new DerivativeTests();
     //der_test->testAllFunctions(*der, *grid);
 
-    NCARPoisson1* poisson = new NCARPoisson1_CL(exact_poisson, subdomain, der, 0, DIM_NUM);
+    NCARPoisson1* poisson = new NCARPoisson1_CL(exact_poisson, subdomain, der, 0, dim);
 
     poisson->initialConditions();
     poisson->solve(comm_unit);

@@ -31,6 +31,7 @@
 
 
 		viennacl_simple_example
+		nonuniform_heat2D
 
 	)
 

@@ -4,7 +4,6 @@ PROJECT (projectSettings)
 # COPY ANY CONFIG FILES REQUIRED BY THE TEST
 FILE(COPY config.example DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-
 SET (TEST_NAME ${PROJECT_NAME}.x)
 
 # 2) Change the number of processors for execution

@@ -161,7 +161,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 #define NEUMAN 1
 #define ROBIN 2
 
-#define BC   DIRICHLET
+#define BC   NEUMAN
 
             //--------------------
 #if BC  ==  NEUMAN
@@ -201,7 +201,8 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
 #endif
 
             //--------------------
-#if BC == NEUMAN
+#if (BC == NEUMAN) || (BC == ROBIN)
+//#if BC == NEUMAN
 #define SOL_CONSTRAINT
 #else
 #undef SOL_CONSTRAINT
@@ -285,7 +286,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             Vec3& v = subdomain->G_centers[subdomain->Q_stencils[i][0]];
             double* lapl_weights = der->getLaplWeights(subdomain->Q_stencils[i][0]);
             // 0: RHS is discrete laplacian; 1: RHS exact laplacian
-#if 0
+#ifndef DISCRETE_RHS
             // exact laplacian
             F_host[i] = (FLOAT)exactSolution->laplacian(v);
 #else
@@ -347,8 +348,6 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         //x_device = viennacl::linalg::prod(L_device, F_device);
         x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-30, 3000));
 
-        // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
-        // x_host = viennacl::linalg::solve(L_host, F_host, viennacl::linalg::gmres_tag());
         viennacl::ocl::finish();
         t5.end();
 

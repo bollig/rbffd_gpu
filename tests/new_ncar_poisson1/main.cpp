@@ -3,9 +3,10 @@
 // INTERESTING: the poisson include must come first. Otherwise I get an
 // error in the constant definitions for MPI. I wonder if its because
 // nested_sphere_cvt.h accidentally overrides one of the defines for MPI
-#include "ncar_poisson1.h"
-#include "ncar_poisson1_cusp.h"
-#include "ncar_poisson1_cl.h"
+//#include "ncar_poisson1.h"
+//#include "ncar_poisson1_cusp.h"
+//#include "ncar_poisson1_cl.h"
+#include "nonuniform_poisson1_cl.h"
 #include "grid.h"
 #include "nested_sphere_cvt.h"
 #include "cvt.h"
@@ -78,7 +79,7 @@ int main(int argc, char** argv) {
         der_test->testAllFunctions(*der, *grid);
     }
 
-    NCARPoisson1* poisson = new NCARPoisson1_CL(settings, exact_poisson, subdomain, der, 0, dim);
+    NCARPoisson1* poisson = new NonUniformPoisson1_CL(settings, exact_poisson, subdomain, der, 0, dim);
 
     poisson->initialConditions();
     poisson->solve(comm_unit);

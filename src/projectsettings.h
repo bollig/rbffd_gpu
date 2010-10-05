@@ -1,5 +1,6 @@
 #ifndef PROJECTSETTINGS_H
 #define PROJECTSETTINGS_H
+#include <stdlib.h>
 #include <string>
 #include <map>
 //#include <stdlib.h>

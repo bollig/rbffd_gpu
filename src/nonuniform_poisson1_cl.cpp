@@ -385,6 +385,9 @@ int NonUniformPoisson1_CL::fillBoundaryDirichlet(MatType& L, VecType& F, Stencil
         }
         indx++;
     }
+
+    F[stencil[0]] = (FLOAT) 0.;
+
     return indx;
 }
 

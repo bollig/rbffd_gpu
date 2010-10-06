@@ -12,6 +12,7 @@ public:
         virtual double operator()(double x, double y, double z, double t);
         virtual double laplacian(double x, double y, double z, double t);
         virtual double tderiv(double x, double y, double z, double t);
+
 	//virtual double divergence() = 0; // if vector function (not used)
 };
 //----------------------------------------------------------------------

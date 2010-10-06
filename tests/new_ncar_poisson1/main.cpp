@@ -64,9 +64,9 @@ int main(int argc, char** argv) {
     // 0: 2D problem; 1: 3D problem
     ExactSolution* exact_poisson;
     if (dim == 3) {
-        exact_poisson = new ExactNCARPoisson1();
+        exact_poisson = new ExactNCARPoisson1();        // 3D problem is not verified yet
     } else {
-        exact_poisson = new ExactNCARPoisson2();
+        exact_poisson = new ExactNCARPoisson2();        // 2D problem works with uniform diffusion
     }
 
     // Clean this up. Have the Poisson class construct Derivative internally.

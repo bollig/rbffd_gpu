@@ -120,3 +120,4 @@ double ExactNCARPoisson1::tderiv(double x, double y, double z, double t)
     // From mathematica time derivative of exact solution
     return 0.;
 }
+

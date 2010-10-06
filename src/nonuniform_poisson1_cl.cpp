@@ -127,7 +127,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         t3.start();
 
         int nm = nb + ni;
-        if (!disable_sol_constraint) {
+        if ((boundary_condition != DIRICHLET) && (!disable_sol_constraint)) {
             nm = nm+1;
         }
 
@@ -176,7 +176,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         //--------------------------------------------------
         // Fill Additional Constraint weights (LHS + RHS)
-        if (!disable_sol_constraint) {
+        if ((boundary_condition != DIRICHLET) && (!disable_sol_constraint)) {
             // I forget: is this required for BOTH neumann and robin?
             this->fillSolutionConstraint(L_host, F_host, subdomain->Q_stencils, subdomain->G_centers, nb, ni);
             cout << "DONE ADDING CONSTRAINT" << endl;
@@ -358,6 +358,7 @@ int NonUniformPoisson1_CL::fillBoundaryRobin(MatType& L, VecType& F, StencilType
     double discrete_condition = 0.;
     Vec3& vj = centers[stencil[0]];
     for (int j = 0; j < stencil.size(); j++) {
+        // (x*d/dx + y*d/dy + z*d/dz)*(\Phi)
         double weight = (vj.x() * x_weights[j] + vj.y() * y_weights[j] + vj.z() * z_weights[j]);
         Vec3& vjj = centers[stencil[j]];
         discrete_condition += weight * exactSolution->at(vjj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
@@ -442,15 +443,41 @@ int NonUniformPoisson1_CL::fillInterior(MatType& L, VecType& F, StencilType& ste
 int NonUniformPoisson1_CL::fillInteriorLHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
 {
     int indx = 0;
+    Vec3 st_center = centers[stencil[0]];
+    // Do I want the gradK at each stencil node or only the center?
+    double diffusivity = exactSolution->diffuseCoefficient(st_center);
+    Vec3* gradK = exactSolution->diffuseGradient(st_center);
+
     //--------------------------------------------------
     // Fill Interior weights (LHS)
-    double* lapl_weights = der->getLaplWeights(stencil[0]);
-    for (int j = 0; j < stencil.size(); j++) {
-        L(stencil[0],stencil[j]) = (FLOAT) lapl_weights[j];
-        //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
-        indx++;
-    }
+    if (use_uniform_diffusivity) {
+        double* lapl_weights = der->getLaplWeights(stencil[0]);
+        for (int j = 0; j < stencil.size(); j++) {
+            L(stencil[0],stencil[j]) = (FLOAT) lapl_weights[j];
+            //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
+            indx++;
+        }
+    } else {
+        double* x_weights = der->getXWeights(stencil[0]);
+        double* y_weights = der->getYWeights(stencil[0]);
+        double* z_weights = der->getZWeights(stencil[0]);
+        double* lapl_weights = der->getLaplWeights(stencil[0]);
 
+        for (int j = 0; j < stencil.size(); j++) {
+
+            double grad_k_grad_phi_weight = gradK->x()*x_weights[j] + gradK->y()*y_weights[j] + gradK->z()*z_weights[j];
+            double k_lapl_phi_weight = diffusivity*lapl_weights[j];
+
+            // Our non-uniform diffusivity: grad(K) * grad(Phi) + K * lapl(Phi) = div(K*grad(Phi))
+            // As K flattens (grad_k goes to 0) leaving only the scaled laplacian weights
+            double weight = grad_k_grad_phi_weight + k_lapl_phi_weight;
+
+            L(stencil[0],stencil[j]) = (FLOAT) weight;
+
+            indx++;
+        }
+    }
+    delete(gradK);
     return indx;
 }
 
@@ -458,26 +485,69 @@ int NonUniformPoisson1_CL::fillInteriorLHS(MatType& L, VecType& F, StencilType& 
 void NonUniformPoisson1_CL::fillInteriorRHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
 {
     Vec3& v = centers[stencil[0]];
+    double* x_weights = der->getXWeights(stencil[0]);
+    double* y_weights = der->getYWeights(stencil[0]);
+    double* z_weights = der->getZWeights(stencil[0]);
     double* lapl_weights = der->getLaplWeights(stencil[0]);
     int i = stencil[0];
 
+    // Do I want the diffusivity (and its gradient) at all nodes or just the center?
+    double diffusivity = exactSolution->diffuseCoefficient(v);
+    Vec3* gradK = exactSolution->diffuseGradient(v);
+
     // Enable/disable this in the constructor/config file
     if (!use_discrete_rhs) {
+
         // exact laplacian
-        F[i] = (FLOAT)exactSolution->laplacian(v);
-    } else {
-        double discrete_lapl = 0.;
-        for (int j = 0; j < stencil.size(); j++) {
-           Vec3& vj = centers[stencil[j]];
-           discrete_lapl += lapl_weights[j] * exactSolution->at(vj);
+        if (use_uniform_diffusivity) {
+            F[i] = (FLOAT)(exactSolution->laplacian(v));
+        } else {
+            double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)*gradK->z();
+            double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
+            F[i] = (FLOAT)(grad_k_grad_phi + k_lapl_phi);
+            delete(gradK);
         }
-        // discrete laplacian
-        F[i] = (FLOAT) discrete_lapl;
+    } else {
+        double exact = 0.;
+        if (use_uniform_diffusivity) {
+            double discrete_rhs = 0.;
+            for (int j = 0; j < stencil.size(); j++) {
+                Vec3& vj = centers[stencil[j]];
+                discrete_rhs += lapl_weights[j] * exactSolution->at(vj);
+            }
+            // discrete laplacian
+            F[i] = (FLOAT) (discrete_rhs);
+
+            exact = exactSolution->laplacian(v);
+        } else {
+            double discrete_rhs = 0.;
+            for (int j = 0; j < stencil.size(); j++) {
+                Vec3& vj = centers[stencil[j]];
+                double xderiv_approx = x_weights[j] * exactSolution->at(vj);
+                double yderiv_approx = y_weights[j] * exactSolution->at(vj);
+                double zderiv_approx = z_weights[j] * exactSolution->at(vj);
+                double lapl_approx = lapl_weights[j] * exactSolution->at(vj);
+
+                double grad_k_grad_phi_j = xderiv_approx*gradK->x() + yderiv_approx*gradK->y() + zderiv_approx*gradK->z();
+                double k_lapl_phi_j = lapl_approx * diffusivity;
+
+                discrete_rhs += grad_k_grad_phi_j + k_lapl_phi_j;
+            }
+            // discrete laplacian
+            F[i] = (FLOAT) discrete_rhs;
+
+            double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)*gradK->z();
+            double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
+            // Previously: double exact = exactSolution->laplacian(v);
+            exact = grad_k_grad_phi + k_lapl_phi;
+        }
+
 
         // Print error in discrete laplacian approximation:
         Vec3& v2 = centers[stencil[0]];
-        double diff = fabs(exactSolution->laplacian(v) - F[i]);
-        double rel_diff = diff / fabs(exactSolution->laplacian(v));
+
+        double diff = fabs(exact - F[i]);
+        double rel_diff = diff / fabs(exact);
         if (diff > 1e-9) {
             cout.precision(3);
             cout << "RHS[" << i << "] : Discrete laplacian differs by " << std::scientific << diff << " (rel: " << rel_diff << ", st.size: " << stencil.size() << ")" << endl;
@@ -485,6 +555,7 @@ void NonUniformPoisson1_CL::fillInteriorRHS(MatType& L, VecType& F, StencilType&
             cout << "RHS[" << i << "] : Good." << endl;
         }
     }
+    delete(gradK);
 }
 
 

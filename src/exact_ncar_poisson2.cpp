@@ -129,8 +129,10 @@ double ExactNCARPoisson2::yderiv(double Xx, double Yy, double Zz, double t)
 double ExactNCARPoisson2::zderiv(double Xx, double Yy, double Zz, double t)
 {
     double dardz = 0.;
+#if 0
     cerr << "zderiv NOT IMPLEMENTED" <<endl;
     exit(EXIT_FAILURE);
+#endif
 
     return dardz;
 }
@@ -140,3 +142,16 @@ double ExactNCARPoisson2::tderiv(double x, double y, double z, double t)
     // From mathematica time derivative of exact solution
     return 0.;
 }
+//----------------------------------------------------------------------
+Vec3* ExactNCARPoisson2::diffuseGradient(Vec3& v, double t) {
+        double diffuseDDX = v.y()*Cos(v.x())*Cos(2.*v.y());
+        double diffuseDDY = Cos(2.*v.y())*Sin(v.x()) - 2. * v.y()*Sin(v.x())*Sin(2.*v.y());
+        double diffuseDDZ = 0.;
+        return new Vec3(diffuseDDX,diffuseDDY,diffuseDDZ);
+}
+//----------------------------------------------------------------------
+double ExactNCARPoisson2::diffuseCoefficient(Vec3& v, double t) {
+        double diffuse = v.y() * Sin(v.x()) * Cos(2.*v.y());
+        return diffuse;
+}
+//----------------------------------------------------------------------

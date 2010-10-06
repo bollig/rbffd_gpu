@@ -57,6 +57,17 @@ public:
 		return tderiv(r.x(), r.y(), r.z(), t);
 	}
 
+        // Return the diffusivity at node v (K=1 by default)
+        virtual double diffuseCoefficient(Vec3& v, double t=0.){
+            return 1.;
+        }
+
+        // Return the gradient of the diffusivity at node v
+        virtual Vec3* diffuseGradient(Vec3& v, double t=0.){
+            return new Vec3(0.,0.,0.);
+        }
+
+
 protected:
 	inline double Power(double a, double b) { return pow(a, b); }
 	inline double Sqrt(double a) { return sqrt(a); }

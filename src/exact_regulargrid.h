@@ -31,7 +31,6 @@ public:
 	double zderiv(double x, double y, double z, double t);
 
 	double tderiv(double x, double y, double z, double t); 
-	
 };
 //----------------------------------------------------------------------
 

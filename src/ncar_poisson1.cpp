@@ -37,6 +37,8 @@ NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative
     check_L_p_Lt = false;
     boundary_condition = 0; // DIRICHLET
     disable_sol_constraint = false;
+    use_discrete_rhs = true;
+    use_uniform_diffusivity = false;
 }
 
 NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
@@ -68,6 +70,7 @@ NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, 
     boundary_condition = settings->GetSettingAs<int>("BOUNDARY_CONDITION", ProjectSettings::required);
     disable_sol_constraint = settings->GetSettingAs<int>("DISABLE_SOL_CONSTRAINT", ProjectSettings::optional);
     use_discrete_rhs = settings->GetSettingAs<int>("USE_DISCRETE_RHS", ProjectSettings::required);
+    use_uniform_diffusivity = settings->GetSettingAs<int>("USE_UNIFORM_DIFFUSIVITY", ProjectSettings::required);
 }
 
 //----------------------------------------------------------------------

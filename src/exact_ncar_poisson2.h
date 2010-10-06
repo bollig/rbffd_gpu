@@ -11,14 +11,18 @@ public:
     ExactNCARPoisson2();
     ~ExactNCARPoisson2();
 
-    double operator()(double Xx, double Yy, double Zz, double t);
-    double laplacian(double Xx, double Yy, double Zz, double t);
+    virtual double operator()(double Xx, double Yy, double Zz, double t);
+    virtual double laplacian(double Xx, double Yy, double Zz, double t);
 
-    double xderiv(double Xx, double Yy, double Zz, double t);
-    double yderiv(double Xx, double Yy, double Zz, double t);
-    double zderiv(double Xx, double Yy, double Zz, double t);
+    virtual double xderiv(double Xx, double Yy, double Zz, double t);
+    virtual double yderiv(double Xx, double Yy, double Zz, double t);
+    virtual double zderiv(double Xx, double Yy, double Zz, double t);
 
-    double tderiv(double Xx, double Yy, double Zz, double t);
+    virtual double tderiv(double Xx, double Yy, double Zz, double t);
+
+    virtual double diffuseCoefficient(Vec3& v, double t);
+    virtual Vec3* diffuseGradient(Vec3& v, double t);
+
 private:
     // Scale the problem (scalar for A and LA)
     double SCALE;

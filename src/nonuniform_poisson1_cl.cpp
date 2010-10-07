@@ -267,7 +267,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         this->write_to_file(x_host, "X_approx.mtx");
         this->write_to_file(residual, "R.mtx");
         this->write_to_file(error_host, "E_absolute.mtx");
-        this->write_to_file(error_host, "E_relative.mtx");
+        this->write_to_file(rel_error_host, "E_relative.mtx");
 
         std::cout << "Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = " << norm_2(exact_host - x_host) / norm_2(exact_host) << std::endl;
         std::cout << "Relative residual || A*x_exact - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, exact_host) - F_host) / norm_2(F_host) << std::endl;
@@ -303,8 +303,23 @@ int NonUniformPoisson1_CL::fillBoundaryNeumann(MatType& L, VecType& F, StencilTy
     }
 
     //--------- SETUP LHS SYSTEM BASED ON BOUNDARY CONDITIONS -----------
+
+    // Neumann condition says:  dPhi(x)/dn = f(x)
+    //      dPhi/dn = Grad(Phi(x)) .dot. n(x)
+    // where n(x) is the UNIT normal vector n (NORMALIZED!!!)
+    //
+
+    Vec3 normal = center;
+    normal.normalize();
+
+    if (r < 0.6) {
+        cout << "STENCIL " << stencil[0] << " IS INNER BOUNDARY: switching normal sign" << endl;
+        normal *= -1;
+    }
+
     for (int j = 0; j < stencil.size(); j++) {
-        double value = (center.x() * x_weights[j] + center.y() * y_weights[j] + center.z() * z_weights[j]);
+
+        double value = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
         // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
         L(stencil[0],stencil[j]) = (FLOAT)value;
         indx++;
@@ -313,11 +328,11 @@ int NonUniformPoisson1_CL::fillBoundaryNeumann(MatType& L, VecType& F, StencilTy
     // Discrete Neuman
     //F_host(i) = (FLOAT)0.;
     double discrete_condition = 0.;
-    Vec3& vj = centers[stencil[0]];
+
     for (int j = 0; j < stencil.size(); j++) {
-        double weight = (vj.x() * x_weights[j] + vj.y() * y_weights[j] + vj.z() * z_weights[j]);
-        Vec3& vjj = centers[stencil[j]];
-        discrete_condition += weight * exactSolution->at(vjj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+        double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
+        Vec3& vj = centers[stencil[j]];
+        discrete_condition += weight * exactSolution->at(vj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
     }
 
     F[stencil[0]] = (FLOAT) discrete_condition;
@@ -342,30 +357,43 @@ int NonUniformPoisson1_CL::fillBoundaryRobin(MatType& L, VecType& F, StencilType
         exit(EXIT_FAILURE);
     }
 
+    Vec3 normal = center;
+    normal.normalize();
+
+    if (r < 0.6) {
+        cout << "STENCIL " << stencil[0] << " IS INNER BOUNDARY: switching normal sign" << endl;
+        normal *= -1;
+    }
+
     for (int j = 0; j < stencil.size(); j++) {
-        double value = (center.x() * x_weights[j] + center.y() * y_weights[j] + center.z() * z_weights[j]);
-        // Remember to remove 1/r for the boundary condition: r d/dr(a/r) = 0
+
+        // The Robin boundary condition says:
+        //      n .dot. d(Phi/r)/dr = f
+        // where n is the UNIT normal
+        // Use the quotient rule to reduce this to:
+        //  ( n .dot. d(Phi)/dr ) * (1/r) - Phi/(r^2) = f
+        // Then we approximate the (n .dot. d(Phi/dr)) with:
+        double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]) / r;
+
+        // Remember to remove 1/r^2 for the boundary condition: n d/dr(a/r) = 0
         if (j == 0) {
-            value -= (1./r);
+            weight -= (1./(r*r));
         }
         // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
-        L(stencil[0],stencil[j]) = (FLOAT)value;
+        L(stencil[0],stencil[j]) = (FLOAT)weight;
         indx++;
     }
 
-    // Discrete Neuman
-    //F_host(i) = (FLOAT)0.;
+    // Discrete Robin
     double discrete_condition = 0.;
-    Vec3& vj = centers[stencil[0]];
     for (int j = 0; j < stencil.size(); j++) {
-        // (x*d/dx + y*d/dy + z*d/dz)*(\Phi)
-        double weight = (vj.x() * x_weights[j] + vj.y() * y_weights[j] + vj.z() * z_weights[j]);
-        Vec3& vjj = centers[stencil[j]];
-        discrete_condition += weight * exactSolution->at(vjj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+        // [(x*d/dx + y*d/dy + z*d/dz)(1/r) - (1/r^2)]*(\Phi) {Handle the 1/r^2 below}
+        double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]) / r;
+        Vec3& vj = centers[stencil[j]];
+        discrete_condition += weight * exactSolution->at(vj,0);
     }
-
-    r = vj.magnitude();
-    discrete_condition -= exactSolution->at(vj,0) / r;
+    // Handle the (1/r^2) here
+    discrete_condition -= exactSolution->at(center,0) / (r*r);
 
     F[stencil[0]] = (FLOAT) discrete_condition;
 

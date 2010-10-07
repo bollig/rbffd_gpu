@@ -80,26 +80,4 @@ for i = 1:length(D)
 end
 end
 
-function [] = plotSurf(x, y, z)
-% Based on surf_from_scatter.m from Matlab fileexchange:
-% http://www.mathworks.com/matlabcentral/fileexchange/5105
-map = colormap; 
 
-tri = delaunay(x,y);
-plot(x,y,'.')
-
-[r,c] = size(tri);
-%disp(r);
-
-h = trisurf(tri, x, y, z);
-axis([-1 1 -1 1 -0.1 0.1]);
-%axis vis3d
-
-%axis off
-l = light('Position',[-1 -1 0]);
-%set(gca,'CameraPosition',[208 -50 7687])
-lighting phong
-shading interp
-colorbar EastOutside
-
-end

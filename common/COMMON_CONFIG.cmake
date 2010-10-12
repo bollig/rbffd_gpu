@@ -27,7 +27,10 @@
 	# Specify local installation dir here. If installed globally the dir is unnecessary.
 	FIND_LIBRARY (armadillo armadillo PATHS
 	# efb06: bollig account
-	/Users/erlebach/Documents/src/armadillo-0.6.12 /usr/local/lib64 ~efb06/local/lib)
+	/Users/erlebach/Documents/src/armadillo-0.6.12 
+	/usr/local/lib64 
+	~/local/lib 
+	~/local/lib64)
 
 	# Typically installed separately. Same rules as Armadillo (local dir here; global unecessary)
 	FIND_LIBRARY(fftw fftw3 PATHS /Users/erlebach/Documents/src/fftw-3.2.2/.libs)

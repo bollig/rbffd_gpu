@@ -1,0 +1,28 @@
+300 Neumann (St=15)
+Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = 0.731135
+Relative residual || A*x_exact - F ||_2 / || F ||_2  = 0.117644
+Relative residual || A*x_approx - F ||_2 / || F ||_2  = 8.20748e-14
+
+3K Neumann (St=15)
+Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = 0.041944
+Relative residual || A*x_exact - F ||_2 / || F ||_2  = 0.0149406
+Relative residual || A*x_approx - F ||_2 / || F ||_2  = 8.84814e-08
+
+30K Neumann (St=15)
+Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = 1.1952
+Relative residual || A*x_exact - F ||_2 / || F ||_2  = 2.05914
+Relative residual || A*x_approx - F ||_2 / || F ||_2  = 43.5078
+
+---> Need to adjust the support parameter since the nodes are too close together. 
+
+	---++ Weekend project: plot stencils with corresponding coeffient plane to see when support is too little/much
+	---++ interactive sliders to manually search for ideal support.
+	---++ Plot nodes; interpolant sheets (1 or many); color sheets by error; search params for the most optimal config
+	---++ Need a way to adjust supports individually
+	---++ Analyze the "optimal" selection by user. Save information. Learn from it? Maybe it can give us improved
+		rule of thumb for support criteria
+
+30K Dirichlet (St=15)
+Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = 0.868684
+Relative residual || A*x_exact - F ||_2 / || F ||_2  = 3.23642
+Relative residual || A*x_approx - F ||_2 / || F ||_2  = 104.407

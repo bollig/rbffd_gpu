@@ -6,14 +6,15 @@ if (nargin < 4)
    titlestr = ''; 
 end
 
-figure;
+fig1 = figure;
+hold on; 
 tri = delaunay(x,y);
-plot(x,y,'.')
-title(titlestr); 
+plot3(x,y,z,'.m')
+%title(titlestr); 
 [r,c] = size(tri);
 %disp(r);
 
-figure;
+%figure;
 h = trisurf(tri, x, y, z);
 title(titlestr);
 axis([-1 1 -1 1 min(z) max(z)]);
@@ -26,5 +27,7 @@ lighting phong
 shading interp
 
 colorbar EastOutside
+hold off; 
+
 
 end

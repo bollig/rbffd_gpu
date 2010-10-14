@@ -244,9 +244,19 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             exact_host(i) = 0.;
         }
 
+#define CATCH_ZERO_RELATIVE_ERROR 1
         error_host = exact_host - x_host;
         for (int i = 0; i < nb+ni; i++) {
-            rel_error_host[i] = fabs(error_host[i]) / fabs(exact_host[i]);
+#if CATCH_ZERO_RELATIVE_ERROR
+            if ((exact_host[i] < 1e-10) && (error_host[i] < 1e-10)) {
+                rel_error_host[i] = 0.;
+            } else {
+                rel_error_host[i] = fabs(error_host[i]) / fabs(exact_host[i]);
+            }
+#else
+           rel_error_host[i] = fabs(error_host[i]) / fabs(exact_host[i]);
+#endif
+
         }
         for (int i = nb+ni; i < error_host.size(); i++) {
             rel_error_host[i] = 0.;
@@ -536,7 +546,6 @@ void NonUniformPoisson1_CL::fillInteriorRHS(MatType& L, VecType& F, StencilType&
             double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)*gradK->z();
             double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
             F[i] = (FLOAT)(grad_k_grad_phi + k_lapl_phi);
-            delete(gradK);
         }
     } else {
         double exact = 0.;

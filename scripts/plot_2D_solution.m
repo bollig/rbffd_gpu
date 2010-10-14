@@ -1,38 +1,77 @@
-function [] = plot_2D_solution()
+function [] = plot_2D_solution(nodefile, testCaseName, isTimeDep)
 
-nodes = load('nested_spheres_00020_inner_00040_outer_00240_interior_final_2D.ascii')
-
-h = figure; 
-scatter(nodes(:,1), nodes(:,2), '.');
-axis square; 
-title('Node distribution'); 
-
-timestep = 0.01;
-
-mfig = figure;
-winsize = get(mfig,'Position'); 
-winsize(1:2) = [0 0]; 
-numframes = 1/timestep; 
-
-A = moviein(numframes, mfig, winsize); 
-set(mfig, 'NextPlot', 'replacechildren');
-
-j = 0; 
-for time_t = 0:timestep:1
-    time_t
-    j = j + 1;
-    exact = exactSolution(nodes, time_t);
-    %scatter3(nodes(:,1), nodes(:,2), exact(:));
-    plotSurf(nodes(:,1), nodes(:,2), exact(:));
-    
-    A(:, j) = getframe(mfig, winsize); 
-    %pause(1);
+    if (nargin < 3) 
+       plot_2D_steady_solution(nodefile, testCaseName); 
+    else 
+        plot_2D_timedep_solution(nodefile, testCaseName);
+    end
 end
 
-% Play movie
-%movie(mfig, A, 30, 3, winsize); 
-%mpgwrite(A,jet,'movie.mpg'); 
-movie2avi(A,'movie.avi');
+function plot_2D_steady_solution(nodefile, testCaseName)
+
+    % Get the number of figures before our efforts
+    existingfigs = findobj('Type', 'figure');
+    nefigs = length(existingfigs);
+
+    % Do all our work
+    plotNodes(nodefile); 
+    plotHeightfield(nodefile, 'F.mtx', 'Implicit System RHS', testCaseName); 
+    plotHeightfield(nodefile, 'X_exact.mtx','Exact Solution', testCaseName);
+    plotHeightfield(nodefile, 'X_approx.mtx', 'Approximate Solution', testCaseName);
+    plotHeightfield(nodefile, 'E_absolute.mtx', 'Absolute Error', testCaseName); 
+    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName); 
+    postRunDiagnostics('L_host.mtx', testCaseName);
+
+    
+    % Get the number of figures after our efforts
+    allfigs = findobj('Type', 'figure'); 
+    nfigs = length(allfigs);
+    
+    % Only sort the figures we created (presumably no other scripts were
+    % run which created windows during this execution)
+    tilefigs(nefigs+1:nfigs);
+    
+    % Now that we are displaying all figures on screen, we save them to
+    % file
+    savefigs(nefigs+1:nfigs);
+end
+
+
+function plot_2D_timedep_solution()
+
+    nodes = load('nested_spheres_00020_inner_00040_outer_00240_interior_final_2D.ascii')
+
+    h = figure; 
+    scatter(nodes(:,1), nodes(:,2), '.');
+    axis square; 
+    title('Node distribution'); 
+
+    timestep = 0.01;
+
+    mfig = figure;
+    winsize = get(mfig,'Position'); 
+    winsize(1:2) = [0 0]; 
+    numframes = 1/timestep; 
+
+    A = moviein(numframes, mfig, winsize); 
+    set(mfig, 'NextPlot', 'replacechildren');
+
+    j = 0; 
+    for time_t = 0:timestep:1
+        time_t
+        j = j + 1;
+        exact = exactSolution(nodes, time_t);
+        %scatter3(nodes(:,1), nodes(:,2), exact(:));
+        plotSurf(nodes(:,1), nodes(:,2), exact(:));
+
+        A(:, j) = getframe(mfig, winsize); 
+        %pause(1);
+    end
+
+    % Play movie
+    %movie(mfig, A, 30, 3, winsize); 
+    %mpgwrite(A,jet,'movie.mpg'); 
+    movie2avi(A,'movie.avi');
 
 end
 

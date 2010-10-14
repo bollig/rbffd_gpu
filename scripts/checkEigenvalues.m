@@ -1,4 +1,4 @@
-function [] = checkEigenvalues(SparseMatA, filename)
+function [] = checkEigenvalues(SparseMatA, filename, testCaseName)
 
 [m n] = size(SparseMatA);
 
@@ -17,11 +17,15 @@ hold off; % clear plot if anything is already there
 eigenvalues = diag(LAMBDA); 
 plot(eigenvalues, 'ko'); 
 axis('square');
-label2 = sprintf('Complex Plane Eigenvalue Plot for %s (Num Eigenvalues = %d)', filename, m); 
+if (nargin < 3) 
+   label2 = sprintf('Complex Plane Eigenvalue Plot for %s (Num Eigenvalues = %d)', filename, m);  
+else 
+    label2 = sprintf('[%s] Complex Plane Eigenvalue Plot for %s (Num Eigenvalues = %d)', testCaseName, filename, m); 
+end
 title(label2); 
 xlabel('Real'); 
 ylabel('Imaginary'); 
-print('fullMatEigenvalues.png', '-dpng', '-r300');
+%print('fullMatEigenvalues.png', '-dpng', '-r300');
 
 
 save('EigenVectors_realpart.mtx', 'V', '-ascii');

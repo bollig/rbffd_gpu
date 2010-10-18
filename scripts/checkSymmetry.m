@@ -35,7 +35,6 @@ else
     title({label1, label2}); 
 end
 axis('square');
-title(label1); 
 xlabel('column');
 ylabel('row'); 
 %print('fullMatSpy.png', '-dpng', '-r300');
@@ -45,12 +44,14 @@ figure;
 hold off; 
 image(full(SparseMatA)); 
 axis('square');
-if (nargin < 3)
-    titlestr2 = 'Stencil weight distribution of full system'; 
+if (nargin < 3) 
+    label1 = 'Stencil weight distribution of full system';
+    title(label1); 
 else 
-    titlestr2 = sprintf('[%s] Stencil weight distribution of full system', testCaseName); 
+    label1 = sprintf('[%s] ', testCaseName);
+    label2 = sprintf('Stencil weight distribution %s (Dimensions: %d x %d)', filename, m, n);
+    title({label1, label2}); 
 end
-title(titlestr2);
 %print('fullMatWeights.png', '-dpng', '-r300');
 
 spMeasureSymmetry(SparseMatA);

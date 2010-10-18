@@ -1,13 +1,15 @@
-function [] = plot_2D_solution(nodefile, testCaseName, isTimeDep)
+function [] = plot_2D_solution(nbinner, nbouter, nbinterior, testCaseName, isTimeDep)
 
-    if (nargin < 3) 
-       plot_2D_steady_solution(nodefile, testCaseName); 
+    nodefile = sprintf('nested_spheres_%0.5d_inner_%0.5d_outer_%0.5d_interior_final_2D.ascii', nbinner, nbouter, nbinterior);
+
+    if (nargin < 5) 
+       plot_2D_steady_solution(nodefile, testCaseName, nbinner+nbouter, nbinterior); 
     else 
         plot_2D_timedep_solution(nodefile, testCaseName);
     end
 end
 
-function plot_2D_steady_solution(nodefile, testCaseName)
+function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior)
 
     % Get the number of figures before our efforts
     existingfigs = findobj('Type', 'figure');
@@ -19,9 +21,23 @@ function plot_2D_steady_solution(nodefile, testCaseName)
     plotHeightfield(nodefile, 'X_exact.mtx','Exact Solution', testCaseName);
     plotHeightfield(nodefile, 'X_approx.mtx', 'Approximate Solution', testCaseName);
     plotHeightfield(nodefile, 'E_absolute.mtx', 'Absolute Error', testCaseName); 
-    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName); 
+    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName);
+    % Plot heightfield, but specify that the boundary nodes should be
+    % excluded
+    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Interior Nodes Only)', testCaseName, nbboundary); 
+    % Plot heightfield, but specify that the boundary nodes should be
+    % zeroed
+    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Boundary Equals 0)', testCaseName, nbboundary, 0); 
     postRunDiagnostics('L_host.mtx', testCaseName);
 
+    solverResidual = load('BICGSTAB_RESIDUAL.mtx');
+    % Plot (ri / r0) and see if it improves
+    R = solverResidual ./ solverResidual(1); 
+    semilogy(R,'-')
+    xlabel('iteration number')
+    ylabel('relative residual in solver (log(r_i/r_0))')
+    label1 = sprintf('[%s] ', testCaseName); 
+    title({label1, 'BICGSTAB Residual Ratio'});
     
     % Get the number of figures after our efforts
     allfigs = findobj('Type', 'figure'); 

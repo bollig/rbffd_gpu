@@ -219,7 +219,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         cout << "Solving system" <<endl;
         t5.start();
         //x_device = viennacl::linalg::prod(L_device, F_device);
-        x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-30, 3000));
+        x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
 
         viennacl::ocl::finish();
         t5.end();
@@ -243,21 +243,24 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         for (int i = nb+ni; i < exact_host.size(); i++) {
             exact_host(i) = 0.;
         }
-
-#define CATCH_ZERO_RELATIVE_ERROR 1
-        error_host = exact_host - x_host;
+#if 1
+#define CATCH_ZERO_RELATIVE_ERROR 0
+        //error_host = x_host - exact_host;
         for (int i = 0; i < nb+ni; i++) {
+            error_host[i] = fabs(x_host[i] - exact_host[i]);
 #if CATCH_ZERO_RELATIVE_ERROR
             if ((exact_host[i] < 1e-10) && (error_host[i] < 1e-10)) {
                 rel_error_host[i] = 0.;
             } else {
-                rel_error_host[i] = fabs(error_host[i]) / fabs(exact_host[i]);
+                rel_error_host[i] = error_host[i] / fabs(exact_host[i]);
             }
 #else
-           rel_error_host[i] = fabs(error_host[i]) / fabs(exact_host[i]);
+           rel_error_host[i] = error_host[i] / fabs(exact_host[i]);
 #endif
 
         }
+#endif
+
         for (int i = nb+ni; i < error_host.size(); i++) {
             rel_error_host[i] = 0.;
         }

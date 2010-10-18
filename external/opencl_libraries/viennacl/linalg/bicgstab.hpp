@@ -116,7 +116,10 @@ namespace viennacl
         // performance
         errs[i] = std::fabs(new_ip_rr0star / norm_rhs);
 
-        if (std::fabs(new_ip_rr0star / norm_rhs) < tag.tolerance() * tag.tolerance())
+        // Evan Bollig
+        // Why is this less than tolerance squared? Shouldnt it be less than or equal to tolerance?
+        // See: http://www.mathworks.com/help/techdoc/ref/bicgstab.html
+        if (std::fabs(new_ip_rr0star / norm_rhs) <= tag.tolerance()/* * tag.tolerance()*/)
           break;
         
         beta = new_ip_rr0star / ip_rr0star * alpha/omega;
@@ -126,7 +129,9 @@ namespace viennacl
       }
       
       std::ofstream fout("BICGSTAB_RESIDUAL.mtx");
-      fout << errs << endl;
+      for (unsigned int i = 0; i < tag.iters(); i++) {
+          fout << errs[i] << endl;
+      }
       fout.close();
 
       //store last error estimate:

@@ -51,6 +51,8 @@ nfigs = length(figs);
        titlestr = strrep(titlestr,'[','');
        titlestr = strrep(titlestr,'-','');
        titlestr = strrep(titlestr,']','_');
+       titlestr = strrep(titlestr,'(','_');
+       titlestr = strrep(titlestr,')','_');
        titlestr = strrep(titlestr,':','__');
        % Trim any file extensions in labels
        titlestr = regexprep(titlestr,'\.(\w*)','');

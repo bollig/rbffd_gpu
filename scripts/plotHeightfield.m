@@ -1,8 +1,23 @@
-function [] = plotHeightfield(nodefilename, zfilename, titleprefix, testCaseName)
+function [] = plotHeightfield(nodefilename, zfilename, titleprefix, testCaseName, nbignore, ignoredNodeVal)
 N = load(nodefilename); 
 Z = load(zfilename); 
 
-plotSurf(N(:,1), N(:,2), Z(1:length(N(:,1)),1));
+if (nargin > 4) 
+    %N = [zeros(nbignore,1);N(nbignore+1:end,:)]; 
+    if(nargin > 5)
+        Z(1:nbignore,1) = ignoredNodeVal;
+        Z = Z(1:length(N(:,1)));
+        
+    else 
+        Z = Z(nbignore+1:length(N(:,1)),1);
+        length(Z)
+    end
+else 
+     Z = Z(1:length(N(:,1)));
+end
+length(N)
+length(Z)
+plotSurf(N(:,1), N(:,2), Z(:,1));
 set(0,'defaulttextinterpreter','none'); % DISABLE LATEX SUPPORT IN TITLE
 
 if (nargin < 4)

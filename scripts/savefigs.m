@@ -42,6 +42,10 @@ nfigs = length(figs);
        % Get the axes element from the figure; get the title object from
        % the axes; get the string from the title
        titlestr = get(get(get(figs(i), 'CurrentAxes'), 'Title'), 'String');
+       if iscell(titlestr)
+           titlestr = strcat(titlestr{1:end});
+       end
+       
        titlestr = strrep(titlestr,', ','_');
        titlestr = strrep(titlestr,' ','');
        titlestr = strrep(titlestr,'[','');

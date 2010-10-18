@@ -84,6 +84,10 @@ namespace viennacl
       VectorType tmp1(rhs.size());
       VectorType s(rhs.size());
 
+      // Evan Bollig
+      // Verbose printing of the iterative solver residual by iteration
+      VectorType errs(tag.iterations());
+
       ScalarType ip_rr0star = viennacl::linalg::inner_prod(rhs,r0star);
       ScalarType alpha;
       ScalarType omega;
@@ -106,6 +110,12 @@ namespace viennacl
         residual = s - omega*tmp1;
         
         new_ip_rr0star = viennacl::linalg::inner_prod(residual,r0star);
+
+        // Evan Bollig
+        // This is all host side (CPU) so we can print out with minimal impact on our
+        // performance
+        errs[i] = std::fabs(new_ip_rr0star / norm_rhs);
+
         if (std::fabs(new_ip_rr0star / norm_rhs) < tag.tolerance() * tag.tolerance())
           break;
         
@@ -115,6 +125,10 @@ namespace viennacl
         p = residual + beta * (p - omega*tmp0);
       }
       
+      std::ofstream fout("BICGSTAB_RESIDUAL.mtx");
+      fout << errs << endl;
+      fout.close();
+
       //store last error estimate:
       tag.error(std::sqrt(std::fabs(new_ip_rr0star / norm_rhs)));
       

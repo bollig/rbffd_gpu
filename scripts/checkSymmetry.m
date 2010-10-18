@@ -10,10 +10,13 @@ spy(F, 5);
 axis('square');
 if (nargin < 3)
     titlestr1 = 'Non-symmetric Stencil Edges'; 
+    title(titlestr1);
 else 
-    titlestr1 = sprintf('[%s] Non-symmetric Stencil Edges', testCaseName); 
+    titlestr1 = sprintf('[%s] ', testCaseName); 
+    titlestr2 = sprintf('Non-symmetric Stencil Edges'); 
+    title({titlestr1, titlestr2});
 end
-title(titlestr1);
+
 ylabel('Stencil ID (S)'); 
 xlabel('IDs of stencils which do not contain S in the stencil set');
 %print('nonSymEdges.png', '-dpng', '-r300');
@@ -25,8 +28,11 @@ hold off;
 spy(SparseMatA, 5); 
 if (nargin < 3) 
     label1 = sprintf('Sparsity pattern of %s (Dimensions: %d x %d)', filename, m, n);
+    title(label1); 
 else 
-    label1 = sprintf('[%s] Sparsity pattern of %s (Dimensions: %d x %d)', testCaseName, filename, m, n);
+    label1 = sprintf('[%s] ', testCaseName);
+    label2 = sprintf('Sparsity pattern of %s (Dimensions: %d x %d)', filename, m, n);
+    title({label1, label2}); 
 end
 axis('square');
 title(label1); 

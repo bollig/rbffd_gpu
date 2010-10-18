@@ -17,12 +17,15 @@ hold off; % clear plot if anything is already there
 eigenvalues = diag(LAMBDA); 
 plot(eigenvalues, 'ko'); 
 axis('square');
-if (nargin < 3) 
-   label2 = sprintf('Complex Plane Eigenvalue Plot for %s (Num Eigenvalues = %d)', filename, m);  
+
+if (nargin < 3)
+    titlestr=sprintf('Complex Plane Eigenvalue Plot for %s (Num Eigenvalues = %d)', filename, m);  
+    title(titlestr);
 else 
-    label2 = sprintf('[%s] Complex Plane Eigenvalue Plot for %s (Num Eigenvalues = %d)', testCaseName, filename, m); 
+    titlestr1=sprintf('[%s] ', testCaseName);
+    titlestr2=sprintf('Complex Plane Eigenvalue Plot for %s (Num Eigenvalues = %d)', filename, m); 
+    title({titlestr1,titlestr2});
 end
-title(label2); 
 xlabel('Real'); 
 ylabel('Imaginary'); 
 %print('fullMatEigenvalues.png', '-dpng', '-r300');

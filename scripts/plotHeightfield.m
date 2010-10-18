@@ -7,10 +7,12 @@ set(0,'defaulttextinterpreter','none'); % DISABLE LATEX SUPPORT IN TITLE
 
 if (nargin < 4)
     titlestr=sprintf('%s: %s', titleprefix, zfilename); 
+    title(titlestr);
 else 
-    titlestr=sprintf('[%s] %s: %s', testCaseName, titleprefix, zfilename);
+    titlestr1=sprintf('[%s] ', testCaseName);
+    titlestr2=sprintf('%s: %s', titleprefix, zfilename);
+    title({titlestr1,titlestr2});
 end
-title(titlestr);
 pbaspect([1 1 1]); % Square the plot box aspect ratio
 
 end

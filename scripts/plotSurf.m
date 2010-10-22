@@ -21,7 +21,11 @@ z(1:nbignore,1) = max(Z);
 
 tri = delaunay(X,Y);
 
-plot3(x,y,z,'.m')
+% Too Many nodes will wash out our surface
+if length(x) < 2000
+    plot3(x,y,z,'.m')
+end
+
 %title(titlestr); 
 [r,c] = size(tri);
 %disp(r);

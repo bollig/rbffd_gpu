@@ -20,16 +20,18 @@ function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior)
     plotHeightfield(nodefile, 'F.mtx', 'Implicit System RHS', testCaseName); 
     plotHeightfield(nodefile, 'X_exact.mtx','Exact Solution', testCaseName);
     plotHeightfield(nodefile, 'X_approx.mtx', 'Approximate Solution', testCaseName);
-    plotHeightfield(nodefile, 'E_absolute.mtx', 'Absolute Error', testCaseName); 
+    plotHeightfield(nodefile, 'E_absolute.mtx', 'Absolute Error', testCaseName);
+    % Plot heightfield, but specify that the boundary nodes should be
+    % zeroed
+    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Boundary Equals 0)', testCaseName, nbboundary, 0); 
+if 0
     plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName);
     % Plot heightfield, but specify that the boundary nodes should be
     % excluded
     plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Interior Nodes Only)', testCaseName, nbboundary); 
-    % Plot heightfield, but specify that the boundary nodes should be
-    % zeroed
-    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Boundary Equals 0)', testCaseName, nbboundary, 0); 
     postRunDiagnostics('L_host.mtx', testCaseName);
 
+    figure; 
     solverResidual = load('BICGSTAB_RESIDUAL.mtx');
     % Plot (ri / r0) and see if it improves
     R = solverResidual ./ solverResidual(1); 
@@ -38,6 +40,7 @@ function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior)
     ylabel('relative residual in solver (log(r_i/r_0))')
     label1 = sprintf('[%s] ', testCaseName); 
     title({label1, 'BICGSTAB Residual Ratio'});
+end
     
     % Get the number of figures after our efforts
     allfigs = findobj('Type', 'figure'); 

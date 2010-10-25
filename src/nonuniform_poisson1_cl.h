@@ -39,7 +39,6 @@ public:
         int fillBoundaryNeumann(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers);
         int fillBoundaryRobin(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers);
 
-
         void fillSolutionConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni);
         void fillSolutionNoConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni);
 
@@ -48,6 +47,11 @@ public:
 protected:
         int fillInteriorLHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers);
         void fillInteriorRHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers);
+        void fillBoundaryDiscreteNeumannRHS(VecType& F, StencilType& stencil, CenterListType& centers);
+        void fillBoundaryContinuousNeumannRHS(VecType& F, StencilType& stencil, CenterListType& centers);
+
+        void fillBoundaryNeumannRHS(VecType& F, StencilType& stencil, CenterListType& centers);
+        void fillBoundaryRobinRHS(VecType& F, StencilType& stencil, CenterListType& centers);
 
 
 

@@ -319,7 +319,7 @@ int NonUniformPoisson1_CL::fillBoundaryNeumann(MatType& L, VecType& F, StencilTy
 
     // Neumann condition says:  dPhi(x)/dn = f(x)
     //      dPhi/dn = Grad(Phi(x)) .dot. n(x)
-    // where n(x) is the UNIT normal vector n (NORMALIZED!!!)
+    // where n(x) is the UNIT normal vector n (NORMALIZED!!! WITH PROPER SIGN!!!!)
     //
 
     Vec3 normal = center;
@@ -338,18 +338,40 @@ int NonUniformPoisson1_CL::fillBoundaryNeumann(MatType& L, VecType& F, StencilTy
         indx++;
     }
 
-    // Discrete Neuman
-    //F_host(i) = (FLOAT)0.;
-    double discrete_condition = 0.;
+    this->fillBoundaryNeumannRHS(F, stencil, centers);
 
-    for (int j = 0; j < stencil.size(); j++) {
-        double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
-        Vec3& vj = centers[stencil[j]];
-        discrete_condition += weight * exactSolution->at(vj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+    return indx;
+}
+
+void NonUniformPoisson1_CL::fillBoundaryNeumannRHS(VecType& F, StencilType& stencil, CenterListType& centers)
+{
+    double rhs_val;
+    double* x_weights = der->getXWeights(stencil[0]);
+    double* y_weights = der->getYWeights(stencil[0]);
+    double* z_weights = der->getZWeights(stencil[0]);
+    Vec3& center = centers[stencil[0]];
+    Vec3 normal = center;
+    normal.normalize();
+
+    if (this->use_discrete_rhs) {
+
+        // Discrete Neuman
+        //F_host(i) = (FLOAT)0.;
+        double discrete_condition = 0.;
+
+        for (int j = 0; j < stencil.size(); j++) {
+            double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
+            Vec3& vj = centers[stencil[j]];
+            discrete_condition += weight * exactSolution->at(vj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+        }
+        rhs_val = discrete_condition;
+    } else {
+
+        // Continuous: n * (d/dx + d/dy + d/dz) = ?   (value determined by exact solution's analytic derivatives)
+        rhs_val = (normal.x() *exactSolution->xderiv(center,0.) + normal.y() *exactSolution->yderiv(center,0.) + normal.z() *exactSolution->zderiv(center,0.));
     }
 
-    F[stencil[0]] = (FLOAT) discrete_condition;
-    return indx;
+    F[stencil[0]] = (FLOAT) rhs_val;
 }
 
 
@@ -397,21 +419,52 @@ int NonUniformPoisson1_CL::fillBoundaryRobin(MatType& L, VecType& F, StencilType
         indx++;
     }
 
-    // Discrete Robin
-    double discrete_condition = 0.;
-    for (int j = 0; j < stencil.size(); j++) {
-        // [(x*d/dx + y*d/dy + z*d/dz)(1/r) - (1/r^2)]*(\Phi) {Handle the 1/r^2 below}
-        double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]) / r;
-        Vec3& vj = centers[stencil[j]];
-        discrete_condition += weight * exactSolution->at(vj,0);
-    }
-    // Handle the (1/r^2) here
-    discrete_condition -= exactSolution->at(center,0) / (r*r);
-
-    F[stencil[0]] = (FLOAT) discrete_condition;
+    this->fillBoundaryRobinRHS(F, stencil, centers);
 
     return indx;
 }
+
+
+void NonUniformPoisson1_CL::fillBoundaryRobinRHS(VecType& F, StencilType& stencil, CenterListType& centers)
+{
+    double rhs_val;
+    double* x_weights = der->getXWeights(stencil[0]);
+    double* y_weights = der->getYWeights(stencil[0]);
+    double* z_weights = der->getZWeights(stencil[0]);
+    Vec3& center = centers[stencil[0]];
+    double r = center.magnitude();
+    Vec3 normal = center;
+    normal.normalize();
+
+    if (this->use_discrete_rhs) {
+
+        // Discrete Robin
+        double discrete_condition = 0.;
+        for (int j = 0; j < stencil.size(); j++) {
+            // [(x*d/dx + y*d/dy + z*d/dz)(1/r) - (1/r^2)]*(\Phi) {Handle the 1/r^2 below}
+            //
+            // Use quotient rule:
+            // n .dot. d/dr(A/r) = (n .dot. dA/dr)*(1/r) - A/(r*r)
+            // = (n.x * dA/dx + n.y + dA/dy + n.z * dA/dz) * (1/r) - A/(r*r)
+            // NOTE: handle all to left of minus sign here:
+            double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]) / r;
+            Vec3& vj = centers[stencil[j]];
+            discrete_condition += weight * exactSolution->at(vj,0);
+        }
+        // Handle the (-A/(r*r)) here
+        discrete_condition -= exactSolution->at(center,0) / (r*r);
+
+        rhs_val = discrete_condition;
+    } else {
+
+        // Continuous: (n.x * dA/dx + n.y + dA/dy + n.z * dA/dz) * (1/r) - A/(r*r) = ?   (value determined by exact solution's analytic derivatives)
+        double n_dot_dadr = (normal.x() *exactSolution->xderiv(center,0.) + normal.y() *exactSolution->yderiv(center,0.) + normal.z() *exactSolution->zderiv(center,0.));
+        rhs_val = (n_dot_dadr / r) - exactSolution->at(center,0.) / (r*r);
+    }
+
+    F[stencil[0]] = (FLOAT) rhs_val;
+}
+
 
 int NonUniformPoisson1_CL::fillBoundaryDirichlet(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
 {

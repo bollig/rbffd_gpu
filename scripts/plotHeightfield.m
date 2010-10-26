@@ -15,8 +15,7 @@ if (nargin > 4)
 else 
      Z = Z(1:length(N(:,1)));
 end
-length(N)
-length(Z)
+
 plotSurf(N(:,1), N(:,2), Z(:,1));
 set(0,'defaulttextinterpreter','none'); % DISABLE LATEX SUPPORT IN TITLE
 

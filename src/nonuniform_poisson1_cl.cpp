@@ -128,7 +128,8 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         int nm = nb + ni;
         if ((boundary_condition != DIRICHLET) && (!disable_sol_constraint)) {
-            nm = nm+1;
+		nm = nm+1;
+           // nm = nm+3;
         }
 
         // 1) Fill the ublas matrix on the CPU
@@ -143,33 +144,59 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         //--------------------------------------------------
         // Fill Boundary weights (LHS + RHS)
-        for (int i = 0; i < nb; i++) {
-            switch (boundary_condition) {
+        if (test_dirichlet_lockdown) {
+            // Test the case when we specify one Dirichlet point on each boundary. Does this help us tie down the solution?
+            indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[0], subdomain->G_centers);
+            for (int i = 1; i < nb-1; i++) {
+                switch (boundary_condition) {
 
-            case DIRICHLET:
-                indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
-                break;
+                case DIRICHLET:
+                    indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    break;
 
-            case NEUMANN:
-                indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
-                break;
+                case NEUMANN:
+                    indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    break;
 
-            case ROBIN:
-                indx += this->fillBoundaryRobin(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
-                break;
+                case ROBIN:
+                    indx += this->fillBoundaryRobin(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    break;
 
-            default:
-                cout << "ERROR! boundary_condition has invalid value: " << boundary_condition << endl;
-                exit(EXIT_FAILURE);
+                default:
+                    cout << "ERROR! boundary_condition has invalid value: " << boundary_condition << endl;
+                    exit(EXIT_FAILURE);
+                }
+            }
+            indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[nb-1], subdomain->G_centers);
+        } else {
+            // Normal fill with homogenous boundary conditions. The solutions are not tied down very well.
+            for (int i = 0; i < nb; i++) {
+                switch (boundary_condition) {
+
+                case DIRICHLET:
+                    indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    break;
+
+                case NEUMANN:
+                    indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    break;
+
+                case ROBIN:
+                    indx += this->fillBoundaryRobin(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    break;
+
+                default:
+                    cout << "ERROR! boundary_condition has invalid value: " << boundary_condition << endl;
+                    exit(EXIT_FAILURE);
+                }
             }
         }
-
         cout << "DONE FILLING BOUNDARY" << endl;
 
         //--------------------------------------------------
         // Fill Interior weights (LHS + RHS)
         for (int i = nb; i < nb+ni; i++) {
-           indx += this->fillInterior(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+            indx += this->fillInterior(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
         }
 
         cout << "DONE FILLING INTERIOR" << endl;
@@ -187,7 +214,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         if ((indx - numNonZeros) != 0) {
             cerr << "WARNING! HOST MATRIX WAS NOT FILLED CORRECTLY. DISCREPANCY OF " << (indx - numNonZeros) << " NONZERO ELEMENTS!" << endl;
-       //     exit(EXIT_FAILURE);
+            //     exit(EXIT_FAILURE);
         }
         t3.end();
         cout << "Implicit system assembled" << endl;
@@ -198,7 +225,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         // cout << "F: " << F_host << endl;
 
         if (check_L_p_Lt) {
-           // viennacl::transposed_matrix_proxy<FLOAT, 1, > L_transp_host(L_host);
+            // viennacl::transposed_matrix_proxy<FLOAT, 1, > L_transp_host(L_host);
             L_host = L_host + trans(L_host);
         }
 
@@ -255,7 +282,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
                 rel_error_host[i] = error_host[i] / fabs(exact_host[i]);
             }
 #else
-           rel_error_host[i] = error_host[i] / fabs(exact_host[i]);
+            rel_error_host[i] = error_host[i] / fabs(exact_host[i]);
 #endif
 
         }
@@ -489,22 +516,23 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
 {
     int nn = nb + ni;
     // constraint on solution
+
     F(nn) = 0.0;
-    for (int i = 0; i < nb+ni; i++) {
-        // last row
-        L(nn, stencils[i][0]) = 1;
-        // last column
-        L(stencils[i][0], nn) = 1;
-        // Final constraint to make the Neumann boundary condition complete
+        for (int i = 0; i < nb+ni; i++) {
+            // last row
+            L(nn, stencils[i][0]) = 1;
+            // last column
+            L(stencils[i][0], nn) = 1;
+            // Final constraint to make the Neumann boundary condition complete
 
-        // update of RHS
-        Vec3& v = centers[stencils[i][0]];
+            // update of RHS
+            Vec3& v = centers[stencils[i][0]];
 
-        // last element of last row and last column: sum of exact solutions at all points
-        F(nn) += exactSolution->at(v,0);
-    }
-    // No constraint on bottom right corner
-    L(nn,nn) = 0.0;
+            // last element of last row and last column: sum of exact solutions at all points
+            F(nn) += exactSolution->at(v,0);
+        }
+        // No constraint on bottom right corner
+        L(nn,nn) = 0.0;
 }
 
 
@@ -531,7 +559,7 @@ int NonUniformPoisson1_CL::fillInterior(MatType& L, VecType& F, StencilType& ste
     int indx = 0;
     // Count only the interior fill
     indx += this->fillInteriorLHS(L, F, stencil, centers);
-            this->fillInteriorRHS(L, F, stencil, centers);
+    this->fillInteriorRHS(L, F, stencil, centers);
 
     return indx;
 }
@@ -600,25 +628,24 @@ void NonUniformPoisson1_CL::fillInteriorRHS(MatType& L, VecType& F, StencilType&
             F[i] = (FLOAT)(exactSolution->laplacian(v));
         } else {
             double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)*gradK->z();
-            double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
-            F[i] = (FLOAT)(grad_k_grad_phi + k_lapl_phi);
-        }
+         double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
+        F[i] = (FLOAT)(grad_k_grad_phi + k_lapl_phi);
+     }
     } else {
-        double exact = 0.;
-        if (use_uniform_diffusivity) {
-            double discrete_rhs = 0.;
-            for (int j = 0; j < stencil.size(); j++) {
+       double exact = 0.;
+       if (use_uniform_diffusivity) {
+           double discrete_rhs = 0.;
+          for (int j = 0; j < stencil.size(); j++) {
                 Vec3& vj = centers[stencil[j]];
-                discrete_rhs += lapl_weights[j] * exactSolution->at(vj);
-            }
-            // discrete laplacian
-            F[i] = (FLOAT) (discrete_rhs);
-
-            exact = exactSolution->laplacian(v);
-        } else {
-            double discrete_rhs = 0.;
-            for (int j = 0; j < stencil.size(); j++) {
-                Vec3& vj = centers[stencil[j]];
+               discrete_rhs += lapl_weights[j] * exactSolution->at(vj);
+           }
+           // discrete laplacian
+           F[i] = (FLOAT) (discrete_rhs);
+           exact = exactSolution->laplacian(v);
+       } else {
+           double discrete_rhs = 0.;
+           for (int j = 0; j < stencil.size(); j++) {
+               Vec3& vj = centers[stencil[j]];
                 double xderiv_approx = x_weights[j] * exactSolution->at(vj);
                 double yderiv_approx = y_weights[j] * exactSolution->at(vj);
                 double zderiv_approx = z_weights[j] * exactSolution->at(vj);
@@ -632,25 +659,24 @@ void NonUniformPoisson1_CL::fillInteriorRHS(MatType& L, VecType& F, StencilType&
             // discrete laplacian
             F[i] = (FLOAT) discrete_rhs;
 
-            double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)*gradK->z();
+            double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)
+			*gradK->z();
             double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
             // Previously: double exact = exactSolution->laplacian(v);
             exact = grad_k_grad_phi + k_lapl_phi;
         }
 
-
         // Print error in discrete laplacian approximation:
         Vec3& v2 = centers[stencil[0]];
-
         double diff = fabs(exact - F[i]);
-        double rel_diff = diff / fabs(exact);
-        if (diff > 1e-9) {
+       double rel_diff = diff / fabs(exact);
+       if (diff > 1e-9) {
             cout.precision(3);
             cout << "RHS[" << i << "] : Discrete laplacian differs by " << std::scientific << diff << " (rel: " << rel_diff << ", st.size: " << stencil.size() << ")" << endl;
-        } else {
-            cout << "RHS[" << i << "] : Good." << endl;
-        }
-    }
+       } else {
+           cout << "RHS[" << i << "] : Good." << endl;
+       }
+   }
     delete(gradK);
 }
 
@@ -660,11 +686,11 @@ void NonUniformPoisson1_CL::fillInteriorRHS(MatType& L, VecType& F, StencilType&
 template<typename T>
 void NonUniformPoisson1_CL::write_to_file(boost::numeric::ublas::vector<T> vec, std::string filename)
 {
-    std::ofstream fout;
-    fout.open(filename.c_str());
-
-    for (int i = 0; i < vec.size(); i++) {
+   std::ofstream fout;
+   fout.open(filename.c_str());
+   for (int i = 0; i < vec.size(); i++) {
         fout << std::scientific << vec[i] << std::endl;
     }
     fout.close();
 }
+				

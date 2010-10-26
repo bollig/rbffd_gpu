@@ -1,15 +1,19 @@
-function [] = plot_2D_solution(nbinner, nbouter, nbinterior, testCaseName, isTimeDep)
+function [] = plot_2D_solution(nbinner, nbouter, nbinterior, testCaseName, saveFigs, isTimeDep)
 
     nodefile = sprintf('nested_spheres_%0.5d_inner_%0.5d_outer_%0.5d_interior_final_2D.ascii', nbinner, nbouter, nbinterior);
 
     if (nargin < 5) 
-       plot_2D_steady_solution(nodefile, testCaseName, nbinner+nbouter, nbinterior); 
+        saveFigs = 1;
+    end
+    
+    if (nargin < 6) 
+       plot_2D_steady_solution(nodefile, testCaseName, nbinner+nbouter, nbinterior, saveFigs); 
     else 
         plot_2D_timedep_solution(nodefile, testCaseName);
     end
 end
 
-function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior)
+function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior, saveFigs)
 
     % Get the number of figures before our efforts
     existingfigs = findobj('Type', 'figure');
@@ -24,7 +28,7 @@ function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior)
     % Plot heightfield, but specify that the boundary nodes should be
     % zeroed
     plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Boundary Equals 0)', testCaseName, nbboundary, 0); 
-if 0
+if 1
     plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName);
     % Plot heightfield, but specify that the boundary nodes should be
     % excluded
@@ -52,7 +56,9 @@ end
     
     % Now that we are displaying all figures on screen, we save them to
     % file
-    savefigs(nefigs+1:nfigs);
+    if (saveFigs)
+        savefigs(nefigs+1:nfigs);
+    end
 end
 
 

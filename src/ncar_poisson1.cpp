@@ -39,6 +39,7 @@ NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative
     disable_sol_constraint = false;
     use_discrete_rhs = true;
     use_uniform_diffusivity = false;
+    test_dirichlet_lockdown = false;
 }
 
 NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
@@ -71,6 +72,7 @@ NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, 
     disable_sol_constraint = settings->GetSettingAs<int>("DISABLE_SOL_CONSTRAINT", ProjectSettings::optional);
     use_discrete_rhs = settings->GetSettingAs<int>("USE_DISCRETE_RHS", ProjectSettings::required);
     use_uniform_diffusivity = settings->GetSettingAs<int>("USE_UNIFORM_DIFFUSIVITY", ProjectSettings::required);
+    test_dirichlet_lockdown = settings->GetSettingAs<int>("TEST_DIRICHLET_LOCKDOWN", ProjectSettings::optional);
 }
 
 //----------------------------------------------------------------------
@@ -630,12 +632,10 @@ double NCARPoisson1::maxNorm(double* sol, int nrows, int ncols) {
     }
 
     //printf("max norm: %f\n", nrm);
-
     return nrm;
 }
 //----------------------------------------------------------------------
 
 double NCARPoisson1::boundaryValues(Vec3& v) {
-    return 0.;
+   return 0.;
 }
-

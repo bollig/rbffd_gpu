@@ -56,7 +56,7 @@ protected:
         int  boundary_condition;     // Choose boundary condition type (0 = Dirichlet; 1 = Neumann; 2 = Robin)
         bool use_discrete_rhs;       //  Compute a discrete approximation for RHS values for the Discrete Compat. Condition
         bool use_uniform_diffusivity;// Disable non-uniform diffusion coefficients provided by exact solutions
-
+        bool test_dirichlet_lockdown;// Lockdown the boundaries by specifying one node for each boundary with its dirichlet condition?
         enum boundary_condition_type {DIRICHLET=0, NEUMANN=1, ROBIN=2};
 
 public:

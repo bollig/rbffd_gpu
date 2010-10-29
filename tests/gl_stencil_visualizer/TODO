@@ -1,0 +1,10 @@
+- Load test.conf and check RUN_GL_VISUALIZER
+- Load L_host.mtx
+- Plot all stencil nodes
+- plot all stencil sheets
+- color sheets by error
+- option panel/ui for selecting color option, epsilon, etc.
+- dynamic update of stencil sheets given new epsilon and st_size
+- export modified weights to file
+- modify weights for independent stencils (not the whole domain)
+- 

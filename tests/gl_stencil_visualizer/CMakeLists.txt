@@ -6,6 +6,10 @@ SET (TEST_NAME ${PROJECT_NAME}.x)
 # 2) Change the number of processors for execution
 SET (NUM_PROCS 4)
 
+# COPY ANY CONFIG FILES REQUIRED BY THE TEST
+FILE(COPY test.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+FILE(COPY L_host.mtx DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 # 3) Source files to compile
 ADD_EXECUTABLE (${TEST_NAME} 
 	main.cpp

@@ -145,11 +145,13 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         //--------------------------------------------------
         // Fill Boundary weights (LHS + RHS)
         if (test_dirichlet_lockdown) {
+            cout << "TESTING DIRICHLET LOCKDOWN MODE 3" << endl;
             // Test the case when we specify one Dirichlet point on each boundary. Does this help us tie down the solution? No.
             // What about when we specify 3 points on the boundaries (i.e. a triangle to give us an orientation)?
             indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[0], subdomain->G_centers);
-          //  indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[1], subdomain->G_centers);
-          //  indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[2], subdomain->G_centers);
+            //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[1], subdomain->G_centers);
+            //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[2], subdomain->G_centers);
+            //for (int i = 3; i < nb-3; i++) {
             for (int i = 1; i < nb-2; i++) {
                 switch (boundary_condition) {
 
@@ -174,6 +176,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[nb-2], subdomain->G_centers);
             indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[nb-1], subdomain->G_centers);
         } else {
+            cout << "NOT USING DIRICHLET LOCKDOWN MODE" << endl;
             // Normal fill with homogenous boundary conditions. The solutions are not tied down very well.
             for (int i = 0; i < nb; i++) {
                 switch (boundary_condition) {

@@ -59,7 +59,7 @@ nfigs = length(figs);
        
        filename = sprintf('%s', titlestr);
        %print(figs(i), '-zbuffer','-dpdf','-r600', filename);
-       exportfig(figs(i),filename,'Format','png','Color','rgb','Renderer','zbuffer','Resolution',600,'bounds','tight');
+       exportfig(figs(i),filename,'Format','png','Color','rgb','Renderer','zbuffer','Resolution',600,'bounds','loose');
        % Export a figure with separate text so text is visible at printer 
        % resolution. 
        % exportfig(gcf,'test.eps','separatetext',1);

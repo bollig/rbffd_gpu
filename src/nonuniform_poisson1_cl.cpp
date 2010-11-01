@@ -530,7 +530,7 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
     F(nn+2) = 0.0;  // Y-coeff value
     F(nn+3) = 0.0;  // FOR SOL_CONSTRAINT
 
-
+// Constrain solution constraint only the boundary
     for (int i = 0; i < nb; i++) {
         // last columns
         L(stencils[i][0], nn) = 1;  // Constrain constant
@@ -549,6 +549,7 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
         F(nn+3) += exactSolution->at(v,0);
     }
 
+// Ignore solution constraint on the interior
     for (int i = nb; i < nb+ni; i++) {
         // last columns
         L(stencils[i][0], nn) = 1;  // Constrain constant
@@ -584,7 +585,7 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
     L(nn+3,nn+3) = 0.0;     // FOR SOL_CONSTRAINT
 
     L(nn+2,nn+3) = 1.0;     // FOR SOL_CONSTRAINT because we have one whole colum of zeros, so we fill in with a 1 to say that
-    F(nn+2) = F(nn+3);      // The sum of SOL_CONSTRAINT and the the
+    F(nn+2) = F(nn+3);      // The sum of SOL_CONSTRAINT and the coeff of this entry are equal to the sum of the sol constraint (redundant I know)
 }
 
 #if 0

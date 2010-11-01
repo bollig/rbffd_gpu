@@ -530,7 +530,8 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
     F(nn+2) = 0.0;  // Y-coeff value
     F(nn+3) = 0.0;  // FOR SOL_CONSTRAINT
 
-    for (int i = 0; i < nb+ni; i++) {
+
+    for (int i = 0; i < nb; i++) {
         // last columns
         L(stencils[i][0], nn) = 1;  // Constrain constant
         L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
@@ -548,11 +549,42 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
         F(nn+3) += exactSolution->at(v,0);
     }
 
+    for (int i = nb; i < nb+ni; i++) {
+        // last columns
+        L(stencils[i][0], nn) = 1;  // Constrain constant
+        L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
+        L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
+    }
+
+#if 0
+    for (int i = 0; i < nb+ni; i++) {
+        // last columns
+        L(stencils[i][0], nn) = 1;  // Constrain constant
+        L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
+        L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
+
+        // SOL_CONSTRAINT: solution constraint to make the Neumann boundary condition complete
+        // last row
+        L(nn+3, stencils[i][0]) = 1;
+
+
+        // update of RHS
+        Vec3& v = centers[stencils[i][0]];
+
+        // FOR SOL_CONSTRAINT last element of last row and last column: sum of exact solutions at all points
+        F(nn+3) += exactSolution->at(v,0);
+    }
+#endif
+
     // Constrain by specifying exactly what the value of the aX + bY + c = f coeffs are
     L(nn,nn) = 1.0;
     L(nn+1,nn+1) = 1.0;
     L(nn+2,nn+2) = 1.0;
+
     L(nn+3,nn+3) = 0.0;     // FOR SOL_CONSTRAINT
+
+    L(nn+2,nn+3) = 1.0;     // FOR SOL_CONSTRAINT because we have one whole colum of zeros, so we fill in with a 1 to say that
+    F(nn+2) = F(nn+3);      // The sum of SOL_CONSTRAINT and the the
 }
 
 #if 0

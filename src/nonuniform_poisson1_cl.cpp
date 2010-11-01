@@ -128,8 +128,8 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         int nm = nb + ni;
         if ((boundary_condition != DIRICHLET) && (!disable_sol_constraint)) {
-            nm = nm+1;
-            // nm = nm+3;
+            //nm = nm+1; // Constrain constant on far right of the implicit system
+             nm = nm+3; // Constrain constant, plus X and Y on far right of implicit system
         }
 
         // 1) Fill the ublas matrix on the CPU
@@ -525,12 +525,44 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
     int nn = nb + ni;
     // constraint on solution
 
+    F(nn) = 0.0;    // Constant value
+    F(nn+1) = 0.0;    // X-coeff value
+    F(nn+2) = 0.0;    // Y-coeff value
+
+    for (int i = 0; i < nb+ni; i++) {
+        // last row
+        //L(nn, stencils[i][0]) = 1;
+        // last column
+        L(stencils[i][0], nn) = 1;  // Constrain constant
+        L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
+        L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
+        // Final constraint to make the Neumann boundary condition complete
+
+        // update of RHS
+        Vec3& v = centers[stencils[i][0]];
+
+        // last element of last row and last column: sum of exact solutions at all points
+        //F(nn) += exactSolution->at(v,0);
+    }
+
+    // No constraint on bottom right corner
+    L(nn,nn) = 1.0;
+    L(nn+1,nn+1) = 1.0;
+    L(nn+2,nn+2) = 1.0;
+}
+
+#if 0
+void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni)
+{
+    int nn = nb + ni;
+    // constraint on solution
+
     F(nn) = 0.0;
     for (int i = 0; i < nb+ni; i++) {
         // last row
         L(nn, stencils[i][0]) = 1;
         // last column
-        L(stencils[i][0], nn) = 1;
+        L(stencils[i][0], nn) = 1;  // Constrain constant
         // Final constraint to make the Neumann boundary condition complete
 
         // update of RHS
@@ -542,8 +574,7 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
     // No constraint on bottom right corner
     L(nn,nn) = 0.0;
 }
-
-
+#endif
 
 
 void NonUniformPoisson1_CL::fillSolutionNoConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni)

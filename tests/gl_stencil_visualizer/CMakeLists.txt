@@ -13,6 +13,7 @@ FILE(COPY L_host.mtx DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 # 3) Source files to compile
 ADD_EXECUTABLE (${TEST_NAME} 
 	main.cpp
+	stencil_visualizer.cpp
 )
 
 # 4) Runtime arguments for executable (argv[0] .. argv[N]; individual arguments in quotes ("")) 

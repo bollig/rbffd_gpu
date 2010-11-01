@@ -1,3 +1,7 @@
+- Separate class for the visualizer
+- Extend class to override interpolation points (from cartesian to disk) and rendering (quad strip to triangle strip)
+- Add trackball
+
 - Load test.conf and check RUN_GL_VISUALIZER
 - Load L_host.mtx
 - Plot all stencil nodes

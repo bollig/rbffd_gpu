@@ -511,7 +511,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         // monomial terms. To get these, apply the operator to [ 1  x   y  z ]
         // d/dx = [ 0 1 0 0 ]
         bx(n)   = 0.0;
-        bx(n+1) = 1.;//1.0; (if =1, then sum x(i) w(i) = 1 (DO NOT KNOW WHY)
+        bx(n+1) = 1.; // (if =1, then sum x(i) w(i) = 1 (DO NOT KNOW WHY)
         bx(n+2) = 0.0;
         if(dim_num == 3) {
             bx(n+3) = 0.0;
@@ -520,15 +520,15 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         by(n)   = 0.0;
         by(n+1) = 0.;
         by(n+2) = 1.0;
-        if(np == 4) {
+        if(dim_num == 3) {
             by(n+3) = 0.0;
         }
 
         bz(n)   = 0.0;
         bz(n+1) = 0.0;
         bz(n+2) = 0.0;
-        if(np == 4) {
-            bx(n+3) = 1.0;
+        if(dim_num == 3) {
+            bz(n+3) = 1.0;
         }
 
         // laplacian of constant and linear functions is zero
@@ -630,28 +630,30 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     double sum_tot = 0.;
     for (int j = 0; j < stencil.size(); j++) {
         this->lapl_weights[irbf][j] = weights_lapl[j];
-    //    sum_tot += weights_lapl[j];
+        sum_tot += weights_lapl[j];
     }
-  //  weights_lapl.print("lapl_weights"); cout << "SUM: " << sum_tot << endl;
+    weights_lapl.print("lapl_weights");
+    cout << "SUM: " << sum_tot << endl;
 #endif
 
-#if 0
+#if 1
     double sum_r = 0.;
     double sum_l = 0.;
     for (int is = 0; is < n; is++) {
         sum_r += this->r_weights[irbf][is];
         sum_l += this->lapl_weights[irbf][is];
     }
-
+#if 0
     if (sum_r > 1e-7) {
         cout << "WARNING! SUM OF WEIGHTS FOR R IS NOT ZERO: " << sum_r << endl;
         exit(EXIT_FAILURE);
     }
+#endif
     if (sum_l > 1e-7) {
         cout << "WARNING! SUM OF WEIGHTS FOR LAPL IS NOT ZERO: " << sum_l << endl;
         exit(EXIT_FAILURE);
     }
-#if 1
+#if 0
     //br.print("br = ");
    // d_matrix.print("Distance Matrix =");
 

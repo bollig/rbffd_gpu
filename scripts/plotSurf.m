@@ -33,6 +33,8 @@ end
 %figure;
 h = trisurf(tri, X, Y, Z);
 title(titlestr);
+minz = min(z) 
+maxz = max(z)
 axis([-1 1 -1 1 min(z) max(z)]);
 %axis vis3d
 

@@ -129,7 +129,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         int nm = nb + ni;
         if ((boundary_condition != DIRICHLET) && (!disable_sol_constraint)) {
             //nm = nm+1; // Constrain constant on far right of the implicit system
-             nm = nm+3; // Constrain constant, plus X and Y on far right of implicit system
+             nm = nm+4; // Constrain constant, plus X and Y on far right of implicit system
         }
 
         // 1) Fill the ublas matrix on the CPU
@@ -526,17 +526,20 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
     // constraint on solution
 
     F(nn) = 0.0;    // Constant value
-    F(nn+1) = 0.0;    // X-coeff value
-    F(nn+2) = 0.0;    // Y-coeff value
+    F(nn+1) = 0.0;  // X-coeff value
+    F(nn+2) = 0.0;  // Y-coeff value
+    F(nn+3) = 0.0;  // FOR SOL_CONSTRAINT
 
     for (int i = 0; i < nb+ni; i++) {
-        // last row
-        //L(nn, stencils[i][0]) = 1;
-        // last column
+        // last columns
         L(stencils[i][0], nn) = 1;  // Constrain constant
         L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
         L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
-        // Final constraint to make the Neumann boundary condition complete
+
+        // SOL_CONSTRAINT: solution constraint to make the Neumann boundary condition complete
+        // last row
+        L(nn+3, stencils[i][0]) = 1;
+
 
         // update of RHS
         Vec3& v = centers[stencils[i][0]];
@@ -545,10 +548,11 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
         //F(nn) += exactSolution->at(v,0);
     }
 
-    // No constraint on bottom right corner
+    // Constrain by specifying exactly what the value of the aX + bY + c = f coeffs are
     L(nn,nn) = 1.0;
     L(nn+1,nn+1) = 1.0;
     L(nn+2,nn+2) = 1.0;
+    L(nn+3,nn+3) = 0.0;     // For SOL_CONSTRAINT
 }
 
 #if 0

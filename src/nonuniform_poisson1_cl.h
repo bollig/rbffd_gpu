@@ -12,7 +12,7 @@
 #include <boost/numeric/ublas/vector.hpp>
 
 // Set single or double precision here.
-#if 0
+#if 1
 typedef double FLOAT;
 #else
 typedef float FLOAT;

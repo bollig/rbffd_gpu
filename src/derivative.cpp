@@ -634,9 +634,14 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     }
     weights_lapl.print("lapl_weights");
     cout << "SUM: " << sum_tot << endl;
+    if (sum_tot > 1e-7) {
+        cout << "WARNING! SUM OF WEIGHTS FOR LAPL IS NOT ZERO: " << sum_tot << endl;
+        exit(EXIT_FAILURE);
+    }
+
 #endif
 
-#if 1
+#if 0
     double sum_r = 0.;
     double sum_l = 0.;
     for (int is = 0; is < n; is++) {

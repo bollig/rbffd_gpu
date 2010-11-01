@@ -544,15 +544,15 @@ void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, Stenc
         // update of RHS
         Vec3& v = centers[stencils[i][0]];
 
-        // last element of last row and last column: sum of exact solutions at all points
-        //F(nn) += exactSolution->at(v,0);
+        // FOR SOL_CONSTRAINT last element of last row and last column: sum of exact solutions at all points
+        F(nn+3) += exactSolution->at(v,0);
     }
 
     // Constrain by specifying exactly what the value of the aX + bY + c = f coeffs are
     L(nn,nn) = 1.0;
     L(nn+1,nn+1) = 1.0;
     L(nn+2,nn+2) = 1.0;
-    L(nn+3,nn+3) = 0.0;     // For SOL_CONSTRAINT
+    L(nn+3,nn+3) = 0.0;     // FOR SOL_CONSTRAINT
 }
 
 #if 0

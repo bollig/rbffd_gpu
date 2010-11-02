@@ -482,18 +482,22 @@ static void idlefunc()
         glutPostRedisplay();
 }
 
-// Startup
-int main( int argc, char *argv[] )
-{
+
+void initializeWindow(int argc, char** argv) {
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH );
     glutInitWindowSize( winW, winH );
     glutInitWindowPosition( 0, 0 );
-    if ( !glutCreateWindow( "tpldemo" ) )
+    if ( !glutCreateWindow( "Stencil Visualizer ALPHA" ) )
     {
         printf( "Couldn't open window.\n" );
         return 1;
     }
+
+    glutSetCursor( GLUT_CURSOR_CROSSHAIR );
+}
+
+void setupCallbacks() {
     glutDisplayFunc( display );
     glutIdleFunc( idlefunc );
     glutMouseFunc( mouse );
@@ -502,8 +506,9 @@ int main( int argc, char *argv[] )
     glutKeyboardFunc( keyboard );
     glutSpecialFunc( keyboard_special );
     glutReshapeFunc( reshape );
-    glutSetCursor( GLUT_CURSOR_CROSSHAIR );
+}
 
+void setupLights() {
     glEnable(GL_LIGHTING);
     GLfloat lightAmbient[] = {0.5f, 0.5f, 0.5f, 1.0f} ;
     glLightModelfv(GL_LIGHT_MODEL_TWO_SIDE, lightAmbient);
@@ -527,11 +532,26 @@ int main( int argc, char *argv[] )
     glLightfv(GL_LIGHT1, GL_AMBIENT,light1Ambient) ;
     glLightfv(GL_LIGHT1, GL_DIFFUSE,light1Diffuse) ;
     glLightfv(GL_LIGHT1, GL_SPECULAR,light1Specular) ;
+}
 
+// Startup
+int main( int argc, char *argv[] )
+{
+
+    initializeWindow(argc, argv);
     glCheckErrors();
-    clear_grid();
+
+    setupCallbacks();
+    glCheckErrors();
+
+    setupLights();
+    glCheckErrors();
 
     create_menu() ;
+    glCheckErrors();
+
+    clear_grid();
+
     glutMainLoop();
 
     return 0;

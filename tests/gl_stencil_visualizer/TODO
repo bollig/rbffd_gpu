@@ -12,3 +12,4 @@
 - export modified weights to file
 - modify weights for independent stencils (not the whole domain)
 - 
+SEE /Developer/Examples/Qt/Demos/boxes for a great demo of how interactive I would like this

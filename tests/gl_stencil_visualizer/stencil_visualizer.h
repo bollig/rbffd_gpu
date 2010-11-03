@@ -2,6 +2,11 @@
 #define __STENCIL_VISUALIZER_CALLBACKS_H__
 
 #include <vector>
+#include <QtOpenGL/qgl.h>
+#include <QtGui/QKeyEvent>
+#include <QtGui/QMouseEvent>
+#include <QtGui/QWheelEvent>
+#include "trackball.h"
 
 #include "Vec3.h"
 #include "rbf.h"
@@ -21,20 +26,19 @@ typedef std::vector<std::vector< Vec3 > > NodeListType;
 typedef std::vector<std::vector< double > > WeightListType;
 typedef std::vector<std::vector< RBF > > BasesListType;
 
-#include <QtOpenGL/qgl.h>
+
 
 class StencilVisualizer : public QGLWidget
 {
 public:
-    StencilVisualizer( QWidget *parent=0, const char *name=0 ) :
-        QGLWidget(parent), shoulder(0), elbow(0) {};
+    StencilVisualizer( QWidget *parent=0, const char *name=0 );
 
 /**
   * Routines related to custom behavior
   */
 protected:
     void wireCube(float);
-
+    void drawAxes(void);
 
 private:
     int shoulder, elbow;
@@ -46,12 +50,26 @@ private:
   * GLUT.
   */
 protected:
-    void initializeGL(void);        // Init window
-    void resizeGL( int w, int h );  // Resize window
-    void paintGL();                 // DisplayFunc
-    void keyPressEvent( QKeyEvent *e);
+    virtual void initializeGL(void);        // Init window
+    virtual void resizeGL( int w, int h );  // Resize window
+    virtual void paintGL();                 // DisplayFunc
+    virtual void keyPressEvent( QKeyEvent *e);
+    virtual void mousePressEvent(QMouseEvent *event);
+    virtual void mouseReleaseEvent(QMouseEvent *event);
+    virtual void mouseMoveEvent(QMouseEvent *event);
+    virtual void wheelEvent(QWheelEvent * event);
 
  /*****  END REQUIRED ******/
+
+private:
+    // From boxes demo in Qt4
+    QPointF pixelPosToViewPos(const QPointF& p);
+
+/** Begin ATTRIBUTES **/
+private:
+    TrackBall trackball;    // Control rotation
+    int m_distExp;          // Control zoom/scale
+    QTimer *m_timer;        // Timer to control window refresh
 };
 
 #if 0

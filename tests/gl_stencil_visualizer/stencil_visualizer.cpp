@@ -1,11 +1,38 @@
 #include <QtOpenGL/qgl.h>
 #include <QtGui/QKeyEvent>
+#include <QtGui/QMouseEvent>
+#include <QtGui/QWheelEvent>
+#include <QtGui/qmatrix4x4.h>
+#include <QtGui/qvector3d.h>
 
 #include "stencil_visualizer.h"
 #include "visual_stencil.h"
+#include "trackball.h"
 
-#include <GLUT/glut.h>
 
+static void multMatrix(const QMatrix4x4& m)
+{
+    // static to prevent glMultMatrixf to fail on certain drivers
+    static GLfloat mat[16];
+    const qreal *data = m.constData();
+    for (int index = 0; index < 16; ++index)
+        mat[index] = data[index];
+    glMultMatrixf(mat);
+}
+
+
+StencilVisualizer::StencilVisualizer( QWidget *parent, const char *name ) :
+        QGLWidget(parent), shoulder(0), elbow(0)
+{
+    // Create a trackball sphere for our viewer
+    trackball = TrackBall(TrackBall::Sphere);
+
+    // Setup a timer to autorefresh the window
+    m_timer = new QTimer(this);
+    m_timer->setInterval(20);
+    connect(m_timer, SIGNAL(timeout()), this, SLOT(update()));
+    m_timer->start();
+};
 
 
 // Initialize function adapted from existing code
@@ -55,26 +82,40 @@ void StencilVisualizer::paintGL(void)
 {
     float len =3;
     glClear (GL_COLOR_BUFFER_BIT);
+
+     // Setup the camera orbit
     glPushMatrix();
-    glTranslatef (-1.0, 0.0, 0.0);
-    glRotatef ((GLfloat) shoulder, 0.0, 0.0, 1.0);
-    glTranslatef (1.0, 0.0, 0.0);
-    glPushMatrix();
-    glScalef (2.0, 0.4, 1.0);
-    wireCube(1.0);
+    QMatrix4x4 m;
+    m.rotate(trackball.rotation());
+    multMatrix(m);
+
+
+    glTranslatef(-1.f, -1.0f, 0.f);
+    drawAxes();
 
     glPopMatrix();
+}
 
-    glTranslatef (1.0, 0.0, 0.0);
-    glRotatef ((GLfloat) elbow, 0.0, 0.0, 1.0);
-    glTranslatef (1.0, 0.0, 0.0);
+void StencilVisualizer::drawAxes()
+{
+    // Axes: (x,y,z)=(r,g,b)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glPushMatrix();
-    glScalef (2.0, 0.4, 1.0);
-    wireCube(1.0);
+    glRotatef(90.0, 0.0, 1.0, 0.0);
+    glColor3ub( 255, 0, 0 );
+    GLUquadric* quad = gluNewQuadric();
+    gluCylinder(quad, 0.02, 0.02, 1, 5, 1);
     glPopMatrix();
-
+    glPushMatrix();
+    glRotatef(-90.0, 1.0, 0.0, 0.0);
+    glColor3ub( 0, 255,  0 );
+    gluCylinder(quad, 0.02, 0.02, 1, 5, 1);
     glPopMatrix();
-    //swapBuffers();
+    glPushMatrix();
+    glRotatef(0.0, 1.0, 0.0, 0.0);
+    glColor3ub( 0, 0, 255 );
+    gluCylinder(quad, 0.02, 0.02, 1, 5, 1);
+    glPopMatrix();
 }
 
 // Resize function adapted from reshape function
@@ -126,6 +167,117 @@ void StencilVisualizer::keyPressEvent(QKeyEvent *e)
         break;
     }
 }
+
+/** Trackball details borrowed from the boxes demo froom Qt4 */
+
+QPointF StencilVisualizer::pixelPosToViewPos(const QPointF& p)
+{
+    return QPointF(2.0 * float(p.x()) / width() - 1.0,
+                   1.0 - 2.0 * float(p.y()) / height());
+}
+
+void StencilVisualizer::mouseMoveEvent(QMouseEvent *event)
+{
+    QGLWidget::mouseMoveEvent(event);
+    if (event->isAccepted())
+        return;
+
+    if (event->buttons() & Qt::LeftButton) {
+        trackball.move(pixelPosToViewPos(event->pos()), trackball.rotation().conjugate());
+        event->accept();
+    } else {
+        trackball.release(pixelPosToViewPos(event->pos()), trackball.rotation().conjugate());
+    }
+
+    // No need to support different buttons right now
+#if 0
+    if (event->buttons() & Qt::RightButton) {
+        trackball.move(pixelPosToViewPos(event->pos()), trackball.rotation().conjugate());
+        event->accept();
+    } else {
+        trackball.release(pixelPosToViewPos(event->pos()), trackball.rotation().conjugate());
+    }
+
+    if (event->buttons() & Qt::MidButton) {
+        trackball.move(pixelPosToViewPos(event->pos()), QQuaternion());
+        event->accept();
+    } else {
+        trackball.release(pixelPosToViewPos(event->pos()), QQuaternion());
+    }
+#endif
+    // No need to call this because we use an QTimer to auto update the window
+    // updateGL();
+}
+
+void StencilVisualizer::mousePressEvent(QMouseEvent *event)
+{
+    QGLWidget::mousePressEvent(event);
+    if (event->isAccepted())
+        return;
+
+    if (event->buttons() & Qt::LeftButton) {
+        trackball.push(pixelPosToViewPos(event->pos()), trackball.rotation().conjugate());
+        event->accept();
+    }
+
+    // No need to support different buttons right now.
+#if 0
+    if (event->buttons() & Qt::RightButton) {
+        trackball.push(pixelPosToViewPos(event->pos()), trackball.rotation().conjugate());
+        event->accept();
+    }
+
+    if (event->buttons() & Qt::MidButton) {
+        trackball.push(pixelPosToViewPos(event->pos()), QQuaternion());
+        event->accept();
+    }
+#endif
+    // No need to call this because we use an QTimer to auto update the window
+    // updateGL();
+}
+
+void StencilVisualizer::mouseReleaseEvent(QMouseEvent *event)
+{
+    QGLWidget::mouseReleaseEvent(event);
+    if (event->isAccepted())
+        return;
+
+    if (event->button() == Qt::LeftButton) {
+        trackball.release(pixelPosToViewPos(event->pos()), trackball.rotation().conjugate());
+        event->accept();
+    }
+
+    // No need to support different buttons right now
+#if 0
+    if (event->button() == Qt::RightButton) {
+        trackball.release(pixelPosToViewPos(event->pos()), trackball.rotation().conjugate());
+        event->accept();
+    }
+
+    if (event->button() == Qt::MidButton) {
+        trackball.release(pixelPosToViewPos(event->pos()), QQuaternion());
+        event->accept();
+    }
+#endif
+    // No need to call this because we use an QTimer to auto update the window
+    // updateGL();
+}
+
+void StencilVisualizer::wheelEvent(QWheelEvent * event)
+{
+    QGLWidget::wheelEvent(event);
+    if (!event->isAccepted()) {
+        m_distExp += event->delta();
+        if (m_distExp < -8 * 120)
+            m_distExp = -8 * 120;
+        if (m_distExp > 10 * 120)
+            m_distExp = 10 * 120;
+        event->accept();
+    }
+    // No need to call this because we use an QTimer to auto update the window
+    // updateGL();
+}
+
 
 #if 0
 

@@ -13,6 +13,7 @@ FILE(COPY L_host.mtx DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 # 3) Source files to compile
 ADD_EXECUTABLE (${TEST_NAME} 
 	main.cpp
+	trackball.cpp
 	visual_stencil.cpp
 	stencil_visualizer.cpp
 )

@@ -27,7 +27,7 @@
 	# Specify local installation dir here. If installed globally the dir is unnecessary.
 	FIND_LIBRARY (armadillo armadillo PATHS
 	# efb06: bollig account
-	/Users/erlebach/Documents/src/armadillo-0.6.12 
+	/Users/erlebach/Documents/src/armadillo-0.9.52 
 	/usr/local/lib64 
 	~/local/lib 
 	~/local/lib64)
@@ -59,7 +59,7 @@ ENDIF (OPENCL_FOUND)
 	SET (RBF_INCLUDE_DIRS 
 		.
 		/Users/erlebach/Documents/src/fftw-3.2.2/include
-		/Users/erlebach/Documents/src/armadillo-0.6.12/include
+		/Users/erlebach/Documents/src/armadillo-0.9.52/include
 		/opt/local/include   # for boost
                 ~efb06/local/include
 	)

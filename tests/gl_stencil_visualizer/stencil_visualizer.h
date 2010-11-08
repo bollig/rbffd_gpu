@@ -30,8 +30,9 @@ typedef std::vector<std::vector< RBF > > BasesListType;
 
 class StencilVisualizer : public QGLWidget
 {
+
 public:
-    StencilVisualizer( QWidget *parent=0, const char *name=0 );
+    StencilVisualizer( QWidget *parent=0, QGLWidget *shareWidget=0);
 
 /**
   * Routines related to custom behavior
@@ -58,6 +59,10 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent *event);
     virtual void mouseMoveEvent(QMouseEvent *event);
     virtual void wheelEvent(QWheelEvent * event);
+    QSize sizeHint() const;
+    QSize minimumSizeHint() const;
+    void setClearColor(const QColor &color);
+
 
  /*****  END REQUIRED ******/
 
@@ -70,6 +75,7 @@ private:
     TrackBall trackball;    // Control rotation
     int m_distExp;          // Control zoom/scale
     QTimer *m_timer;        // Timer to control window refresh
+    QColor clearColor;
 };
 
 #if 0

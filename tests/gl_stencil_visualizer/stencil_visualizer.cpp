@@ -4,6 +4,7 @@
 #include <QtGui/QWheelEvent>
 #include <QtGui/qmatrix4x4.h>
 #include <QtGui/qvector3d.h>
+#include <cmath>
 
 #include "stencil_visualizer.h"
 #include "visual_stencil.h"
@@ -21,9 +22,11 @@ static void multMatrix(const QMatrix4x4& m)
 }
 
 
-StencilVisualizer::StencilVisualizer( QWidget *parent, const char *name ) :
-        QGLWidget(parent), shoulder(0), elbow(0)
+StencilVisualizer::StencilVisualizer( QWidget *parent,  QGLWidget *shareWidget) :
+        QGLWidget(parent, shareWidget)
 {
+    clearColor = Qt::red;
+
     // Create a trackball sphere for our viewer
     trackball = TrackBall(TrackBall::Sphere);
 
@@ -33,6 +36,22 @@ StencilVisualizer::StencilVisualizer( QWidget *parent, const char *name ) :
     connect(m_timer, SIGNAL(timeout()), this, SLOT(update()));
     m_timer->start();
 };
+
+
+QSize StencilVisualizer::minimumSizeHint() const
+{
+    return QSize(50, 50);
+}
+
+QSize StencilVisualizer::sizeHint() const
+{
+    // We want the hint to be an odd size so when we resize
+    // the window to be something straightforward like 800x600
+    // the window shape will change and a call to resizeGL will
+    // execute.
+    return QSize(801, 600);
+}
+
 
 
 // Initialize function adapted from existing code
@@ -76,28 +95,38 @@ void StencilVisualizer::wireCube(float length)
     glEnd();
 }
 
+void StencilVisualizer::setClearColor(const QColor &color)
+{
+    clearColor = color;
+    updateGL();
+}
+
 // paint function adapted from original display function
 
 void StencilVisualizer::paintGL(void)
 {
-    float len =3;
-    glClear (GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
 
-     // Setup the camera orbit
+
+    // Draw in Center of screen
+
+
+    // Draw in Bottom corner
     glPushMatrix();
-    QMatrix4x4 m;
-    m.rotate(trackball.rotation());
-    multMatrix(m);
-
-
-    glTranslatef(-1.f, -1.0f, 0.f);
+    glTranslatef(-4.0f, -4.0f, 0.0f);
     drawAxes();
-
     glPopMatrix();
 }
 
 void StencilVisualizer::drawAxes()
 {
+    // Setup the rotation of the axis to match the camera orbit
+    glPushMatrix();
+    QMatrix4x4 m;
+    m.rotate(trackball.rotation());
+    multMatrix(m);
+
     // Axes: (x,y,z)=(r,g,b)
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glPushMatrix();
@@ -116,20 +145,27 @@ void StencilVisualizer::drawAxes()
     glColor3ub( 0, 0, 255 );
     gluCylinder(quad, 0.02, 0.02, 1, 5, 1);
     glPopMatrix();
+
+    glPopMatrix();
 }
 
 // Resize function adapted from reshape function
-
-void StencilVisualizer::resizeGL(int w, int h)
+void StencilVisualizer::resizeGL(int width, int height)
 {
-    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
-    glMatrixMode (GL_PROJECTION);
-    glLoadIdentity ();
-    gluPerspective(65.0, (GLfloat) w/(GLfloat) h, 1.0, 20.0);
-    glMatrixMode(GL_MODELVIEW);
+    int side = qMin(width, height);
+
+    // Clip window so we have a square viewing area
+    //glViewport((width - side) / 2, (height - side) / 2, side, side);
+
+    // 1:1 Proportional view that fills the window
+    glViewport(0, 0, side, side);
+
+    glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glTranslatef (0.0, 0.0, -5.0);
+    glOrtho(-5, +5, -5, +5, -4.0, 100.0);
+    glMatrixMode(GL_MODELVIEW);
 }
+
 
 // Key press event function to replace keyboard function.  This
 // function is modified to only take one argument (the keyboard input)

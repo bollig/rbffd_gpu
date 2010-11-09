@@ -109,8 +109,11 @@ void StencilVisualizer::paintGL(void)
     glLoadIdentity();
 
 
-    // Draw in Center of screen
-
+    // Draw in data and hints in the center of screen
+    glPushMatrix();
+    drawStencils();
+    drawHints();
+    glPopMatrix();
 
     // Draw in Bottom corner
     glPushMatrix();

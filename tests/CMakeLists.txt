@@ -29,6 +29,7 @@
                 square_and_cube_ccvt # INCOMPLETE (square and cube cvt with points projected to boundary. NOTE: boundary projection is incomplete (not perfect for distribution; code projects points as they near boundary but the distance is not guesswork)).
 
 		gl_stencil_visualizer
+		vtk_stencil_visualizer
 
 		viennacl_simple_example
 

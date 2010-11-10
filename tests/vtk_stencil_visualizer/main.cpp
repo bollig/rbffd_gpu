@@ -131,10 +131,12 @@ int main(int argc, char ** argv)
             Vec3 interp_point = center + disp_point;    // Interpolation sample points
             z_val[i*M+j] = 0.;
             // Calculate interpolated value of surface
+            cout << "StencilWeights:"
             for (int k = 0; k < stencil.size(); k++) {
                 // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
                 phi[k]->setEpsilon(1.5);
-                z_val[i*M +j] += l_weights[k] * phi[k]->eval(center, interp_point);
+                z_val[i*M +j] += l_weights[k] * phi[0]->eval(center, interp_point);
+                cout << l_weights[k] << endl;
             }
             z_val[i*M +j] += l_weights[stencil.size()+0] * 1.;
             z_val[i*M +j] += l_weights[stencil.size()+1] * interp_point.x();
@@ -219,7 +221,7 @@ int main(int argc, char ** argv)
     vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     interactor->SetRenderWindow( renderWindow );
 
-    renderer->AddViewProp( stencil_actor );
+    renderer->AddActor( stencil_actor );
     renderWindow->Render();
 
     interactor->Start();

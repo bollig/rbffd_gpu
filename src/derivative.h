@@ -64,12 +64,7 @@ public:
     void computeWeightsSVD(std::vector<Vec3>& rbf_centers, std::vector<int>&
                            stencil, int irbf, const char* choice);
 
-   //int distanceMatrixSVD(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf, int nb_eig);
-#if 0
-    void distanceMatrix(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil,int irbf, arma::mat* distance_matrix, int dim_num);
-#else
     void distanceMatrix(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num);
-#endif
 
     AF& solve(AF& l, AF& b);
     AF& matmul(AF& arr, AF& x);

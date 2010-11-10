@@ -593,13 +593,6 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     // computing and storing the full inverse matrix.
     //arma::mat Ainv = inv(d_matrix);
 
-#if 0
-    this->x_weights[irbf] = solve(d_matrix, trans(bx)); //bx * Ainv;
-    this->y_weights[irbf] = solve(d_matrix, trans(by)); ////by * Ainv;
-    this->z_weights[irbf] = solve(d_matrix, trans(bz)); //bz * Ainv;
-    this->r_weights[irbf] = solve(d_matrix, trans(br)); //br * Ainv;
-    this->lapl_weights[irbf] = solve(d_matrix, trans(blapl)); //blapl * Ainv;
-#else
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
@@ -610,45 +603,51 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
 
 //X
     if (this->x_weights[irbf] == NULL) {
-        this->x_weights[irbf] = new double[stencil.size()];
+        this->x_weights[irbf] = new double[n+np];
     }
-    for (int j = 0; j < stencil.size(); j++) {
+    for (int j = 0; j < n+np; j++) {
         this->x_weights[irbf][j] = weights_x[j];
     }
 
 // Y
     if (this->y_weights[irbf] == NULL) {
-        this->y_weights[irbf] = new double[stencil.size()];
+        this->y_weights[irbf] = new double[n+np];
     }
-    for (int j = 0; j < stencil.size(); j++) {
+    for (int j = 0; j < n+np; j++) {
         this->y_weights[irbf][j] = weights_y[j];
     }
 
 // Z
     if (this->z_weights[irbf] == NULL) {
-        this->z_weights[irbf] = new double[stencil.size()];
+        this->z_weights[irbf] = new double[n+np];
     }
-    for (int j = 0; j < stencil.size(); j++) {
+    for (int j = 0; j < n+np; j++) {
         this->z_weights[irbf][j] = weights_z[j];
     }
 
     // Laplacian
     if (this->lapl_weights[irbf] == NULL) {
-        this->lapl_weights[irbf] = new double[stencil.size()];
+        this->lapl_weights[irbf] = new double[n+np];
     }
-    double sum_tot = 0.;
-    for (int j = 0; j < stencil.size(); j++) {
+    double sum_nodes_only = 0.;
+    double sum_nodes_and_monomials = 0.;
+    for (int j = 0; j < n; j++) {
         this->lapl_weights[irbf][j] = weights_lapl[j];
-        sum_tot += weights_lapl[j];
+        sum_nodes_only += weights_lapl[j];
+    }
+    sum_nodes_and_monomials = sum_nodes_only;
+    for (int j = n; j < n+np; j++) {
+        this->lapl_weights[irbf][j] = weights_lapl[j];
+        sum_nodes_and_monomials += weights_lapl[j];
     }
     weights_lapl.print("lapl_weights");
-    cout << "SUM: " << sum_tot << endl;
-    if (sum_tot > 1e-7) {
-        cout << "WARNING! SUM OF WEIGHTS FOR LAPL IS NOT ZERO: " << sum_tot << endl;
+    cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
+    cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
+    if (sum_nodes_only > 1e-7) {
+        cout << "WARNING! SUM OF WEIGHTS FOR LAPL NODES IS NOT ZERO: " << sum_nodes_only << endl;
         exit(EXIT_FAILURE);
     }
 
-#endif
 
 #if 0
     double sum_r = 0.;

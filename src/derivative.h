@@ -7,6 +7,14 @@
 #include "ArrayT.h"
 #include "Vec3.h"
 //#include <armadillo>
+#include "rbf_gaussian.h"
+#include "rbf_mq.h"
+
+//typedef RBF_Gaussian IRBF;
+typedef RBF_MQ IRBF;
+
+typedef std::vector<IRBF*> BasesType;
+typedef std::vector< BasesType > BasesListType;
 
 class Derivative
 {
@@ -18,21 +26,8 @@ private:
     //AF arr;
     int nb_rbfs;
     double maxint;
-#if 0
-    arma::mat* weights_p; // pointer (_p)
-    arma::rowvec bx, by, bz, br;
-    arma::rowvec bxx, bxy, bxz;
-    arma::rowvec byy, byz, bzz;
-    arma::rowvec blapl;
-    arma::mat* Up;
-    arma::mat* Vp;
-    arma::colvec* sp;
-    std::vector<arma::mat> x_weights;
-    std::vector<arma::mat> y_weights;
-    std::vector<arma::mat> z_weights;
-    std::vector<arma::mat> r_weights;
-    std::vector<arma::mat> lapl_weights;
-#else
+
+    BasesListType rbfs;
     double* weights_p;
     // Make sure these are deleted inside the destructor
     std::vector<double*> x_weights;
@@ -40,7 +35,6 @@ private:
     std::vector<double*> z_weights;
     std::vector<double*> r_weights;
     std::vector<double*> lapl_weights;
-#endif
 
     std::vector<Vec3>& rbf_centers;
     std::vector<std::vector<int> >& stencil;
@@ -86,19 +80,7 @@ public:
     void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv);
     void computeDeriv(DerType which, double* u, double* deriv, int npts);
 
-#if 0
-    std::vector<arma::mat>& getXWeights() { return x_weights; }
-    std::vector<arma::mat>& getYWeights() { return y_weights; }
-    std::vector<arma::mat>& getZWeights() { return z_weights; }
-    std::vector<arma::mat>& getRWeights() { return r_weights; }
-    std::vector<arma::mat>& getLaplWeights() { return lapl_weights; }
 
-    arma::mat& getXWeights(int indx) { return x_weights[indx]; }
-    arma::mat& getYWeights(int indx) { return y_weights[indx]; }
-    arma::mat& getZWeights(int indx) { return z_weights[indx]; }
-    arma::mat& getRWeights(int indx) { return r_weights[indx]; }
-    arma::mat& getLaplWeights(int indx) { return lapl_weights[indx]; }
-#else
     std::vector<double*>& getXWeights() { return x_weights; }
     std::vector<double*>& getYWeights() { return y_weights; }
     std::vector<double*>& getZWeights() { return z_weights; }
@@ -110,7 +92,9 @@ public:
     double* getZWeights(int indx) { return z_weights[indx]; }
     double* getRWeights(int indx) { return r_weights[indx]; }
     double* getLaplWeights(int indx) { return lapl_weights[indx]; }
-#endif
+
+    BasesType& getRBFList(int stencil_indx) { return rbfs[stencil_indx]; }
+    BasesListType& getRBFList() { return rbfs; }
 
     double computeEig();
 

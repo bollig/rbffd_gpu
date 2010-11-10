@@ -1,17 +1,12 @@
 #include <stdlib.h>
 #include <math.h>
 #include "derivative.h"
-#include "rbf_gaussian.h"
-#include "rbf_mq.h"
 #include "contour_svd.h"
 #include <armadillo>
 #include "stencils.h"
 
 using namespace std;
 using namespace arma;
-
-//typedef RBF_Gaussian IRBF;
-typedef RBF_MQ IRBF;
 
 //----------------------------------------------------------------------
 //Derivative::Derivative(int nb_rbfs) : arr(1,1,1), maxint(maxint = (1 << 31) - 1)
@@ -26,6 +21,7 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil
     z_weights.resize(nb_rbfs);
     r_weights.resize(nb_rbfs);
     lapl_weights.resize(nb_rbfs);
+    rbfs.resize(nb_rbfs);
 
     // derivative depends strongly on epsilon!
     // there must be a range of epsilon for which the derivative is approx. constant!
@@ -63,6 +59,13 @@ Derivative::~Derivative()
     for (int i = 0; i < r_weights.size(); i++) {
         if (r_weights[i] != NULL) {
             delete [] r_weights[i];
+        }
+    }
+    for (int i = 0; i < rbfs.size(); i++) {
+        for (int j = 0; j < rbfs[i].size(); j++) {
+            if (rbfs[i][j] != NULL) {
+                delete [] rbfs[i][j];
+            }
         }
     }
 }
@@ -474,7 +477,7 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
 //----------------------------------------------------------------------
 int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf, int dim_num)
 {
-    IRBF rbf(epsilon, dim_num);
+    //IRBF rbf(epsilon, dim_num);
     int n = stencil.size();
     int np = 1+dim_num; // +3 for the x,y,z monomials
 
@@ -494,15 +497,21 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     Vec3& x0v = rbf_centers[stencil[0]];
     //printf("CenterSize:%d\tStencilSize: %d\n", rbf_centers.size(), stencil.size());
    // x0v.print("x0v = ");
+
+    rbfs[irbf].resize(n);
     for (int j=0; j < n; j++) {
+
+        rbfs[irbf][j] = new IRBF(epsilon, dim_num);
+        IRBF* rbf = rbfs[irbf][j];
+
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3& xjv = rbf_centers[stencil[j]];
         //xjv.print("xjv = ");
-        bx(j) = rbf.xderiv(x0v, xjv);
-        by(j) = rbf.yderiv(x0v, xjv);
-        bz(j) = rbf.zderiv(x0v, xjv);
-        br(j) = rbf.radialderiv(x0v, xjv);
-        blapl(j) = rbf.lapl_deriv(x0v, xjv);
+        bx(j) = rbf->xderiv(x0v, xjv);
+        by(j) = rbf->yderiv(x0v, xjv);
+        bz(j) = rbf->zderiv(x0v, xjv);
+        br(j) = rbf->radialderiv(x0v, xjv);
+        blapl(j) = rbf->lapl_deriv(x0v, xjv);
        // printf("blapl(%d)= %f [lapl(%f, %f)]\n", j, blapl(j), (x0v-xjv).magnitude(), epsilon);
        // (x0v-xjv).print("lapl(x)");
     }

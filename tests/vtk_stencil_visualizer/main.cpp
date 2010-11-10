@@ -17,6 +17,7 @@
 #include <vtkDelaunay2D.h>
 #include <vtkElevationFilter.h>
 #include <vtkDataSetMapper.h>
+#include <vtkLookupTable.h>
 
 // INTERESTING: the poisson include must come first. Otherwise I get an
 // error in the constant definitions for MPI. I wonder if its because
@@ -89,7 +90,7 @@ int main(int argc, char ** argv)
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
     double epsilon = settings->GetSettingAs<double>("EPSILON");
-    der->setEpsilon(epsilon);
+    der->setEpsilon(0.95);
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
         DerivativeTests* der_test = new DerivativeTests();
@@ -108,10 +109,47 @@ int main(int argc, char ** argv)
     // to a regular grid.
 
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-    StencilType& stencil = subdomain->Q_stencils[0];
-    double* x_weights = der->getXWeights(0);
-    for (int j = 0; j < stencil.size(); j++) {
-        points->InsertNextPoint(subdomain->G_centers[stencil[j]].x()*25, subdomain->G_centers[stencil[j]].y()*25, x_weights[j]);
+    int sindx = 299;
+    StencilType& stencil = subdomain->Q_stencils[sindx];
+    double* l_weights = der->getXWeights(sindx);
+    BasesType& phi = der->getRBFList(sindx);
+
+    int M = 20;
+    int N = 20;
+    double x0 = -0.25;
+    double x1 = 0.25;
+    double y0 = -0.25;
+    double y1 = 0.25;
+    double dx = (x1 - x0)/(M-1);
+    double dy = (y1 - y0)/(N-1);
+    double *z_val = new double[M*N];
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+
+            Vec3& center = subdomain->G_centers[stencil[0]];    // stencil center
+            Vec3 disp_point(x0 + i*dx, y0 + j*dy, 0.);            // Displacement from center
+            Vec3 interp_point = center + disp_point;    // Interpolation sample points
+            z_val[i*M+j] = 0.;
+            // Calculate interpolated value of surface
+            for (int k = 0; k < stencil.size(); k++) {
+                // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
+                phi[k]->setEpsilon(1.5);
+                z_val[i*M +j] += l_weights[k] * phi[k]->eval(center, interp_point);
+            }
+            z_val[i*M +j] += l_weights[stencil.size()+0] * 1.;
+            z_val[i*M +j] += l_weights[stencil.size()+1] * interp_point.x();
+            z_val[i*M +j] += l_weights[stencil.size()+2] * interp_point.y();
+
+
+            //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
+            //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
+           points->InsertNextPoint(interp_point.x(), interp_point.y(), z_val[i*M+j]);
+        }
+    }
+
+    for (int i = 0; i < stencil.size(); i++) {
+        Vec3& stencil_pt = subdomain->G_centers[stencil[i]];
+//      /  points->InsertNextPoint(stencil_pt.x(), stencil_pt.y(), l_weights[i]);
     }
 
     // Store grid and polys as poly data
@@ -126,23 +164,36 @@ int main(int argc, char ** argv)
 
     vtkSmartPointer<vtkDelaunay2D> stencil_delaunay = vtkSmartPointer<vtkDelaunay2D>::New();
     stencil_delaunay->SetInput(polydata);
-    stencil_delaunay->SetTolerance(0.001);
-    stencil_delaunay->SetAlpha(18.0);
+    //stencil_delaunay->SetTolerance(0.001);
+    //stencil_delaunay->SetAlpha(18.0);
     stencil_delaunay->Update();
+
+    vtkSmartPointer<vtkPolyData> outputPolyData = stencil_delaunay->GetOutput();
+
+    double bounds[6];
+    outputPolyData->GetBounds(bounds);
+
+    // Find min and max z
+    double minz = bounds[4];
+    double maxz = bounds[5];
+
+    std::cout << "minz: " << minz << std::endl;
+    std::cout << "maxz: " << maxz << std::endl;
 
 #if 1
     vtkSmartPointer<vtkElevationFilter> elevation_filter = vtkSmartPointer<vtkElevationFilter>::New();
     elevation_filter->SetInput(stencil_delaunay->GetOutput());
-    elevation_filter->SetLowPoint(0., 0., -6.);
-    elevation_filter->SetHighPoint(0,0,13.);
+    elevation_filter->SetLowPoint(0., 0., minz);
+    elevation_filter->SetHighPoint(0,0, maxz);
 #endif
     vtkSmartPointer<vtkDataSetMapper> stencil_mapper3D = vtkSmartPointer<vtkDataSetMapper>::New();
     stencil_mapper3D->SetInput(elevation_filter->GetOutput());
+    //stencil_mapper3D->SetInput(outputPolyData->GetOutput());
 
     vtkSmartPointer<vtkActor> stencil_actor = vtkSmartPointer<vtkActor>::New();
     stencil_actor->SetMapper(stencil_mapper3D);
-
-
+    stencil_actor->GetProperty()->SetRepresentationToWireframe();
+    stencil_actor->GetProperty()->ShadingOff();
 
 
     // Compute interpolated value as Z component

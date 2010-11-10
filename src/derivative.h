@@ -6,7 +6,16 @@
 #include <vector>
 #include "ArrayT.h"
 #include "Vec3.h"
+#include "rbf_gaussian.h"
+#include "rbf_mq.h"
 //#include <armadillo>
+
+
+//typedef RBF_Gaussian IRBF;
+typedef RBF_MQ IRBF;
+
+typedef std::vector<IRBF*> BasesType;
+typedef std::vector< BasesType > BasesListType;
 
 class Derivative
 {
@@ -18,6 +27,7 @@ private:
     //AF arr;
     int nb_rbfs;
     double maxint;
+    BasesListType rbfs;
 #if 0
     arma::mat* weights_p; // pointer (_p)
     arma::rowvec bx, by, bz, br;
@@ -111,6 +121,8 @@ public:
     double* getRWeights(int indx) { return r_weights[indx]; }
     double* getLaplWeights(int indx) { return lapl_weights[indx]; }
 #endif
+    BasesType& getRBFList(int stencil_indx) { return rbfs[stencil_indx]; }
+    BasesListType& getRBFList() { return rbfs; }
 
     double computeEig();
 
@@ -121,20 +133,4 @@ public:
         for (int i=0; i < var_eps.size(); i++) {
             var_eps[i] = 1. / avg_stencil_radius[i];
             //printf("avg rad(%d) = %f\n", i, avg_stencil_radius[i]);
-        }
-    }
-
-    void setVariableEpsilon(std::vector<double>& var_eps_) {
-        this->var_eps = var_eps_;
-    }
-
-    double minimum(std::vector<double>& vec);
-
-    double setEpsilon(double eps) { 
-
-    		std::cout << "DERIVATIVE:: SET EPSILON = " << eps << std::endl;
-	    this->epsilon = eps; return this->epsilon;
-    }
-};
-
-#endif
+      

@@ -131,7 +131,7 @@ int main(int argc, char ** argv)
             Vec3 interp_point = center + disp_point;    // Interpolation sample points
             z_val[i*M+j] = 0.;
             // Calculate interpolated value of surface
-            cout << "StencilWeights:"
+            cout << "StencilWeights: " << endl;
             for (int k = 0; k < stencil.size(); k++) {
                 // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
                 phi[k]->setEpsilon(1.5);

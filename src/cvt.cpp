@@ -33,7 +33,8 @@ t5(tm, "[cvt_t5] Delete + Reconstruct KDTree"),
 t6(tm, "[cvt_t6] Update KDTree"),
 t7(tm, "[cvt_t7] FIND CLOSEST") {
 
-    generators = new double[nb_pts * dim_num];
+    kdtree = NULL;
+    generators = new double[num_generators * dim_num];
     
     nb_bnd = 0;
     PI = acos(-1.);

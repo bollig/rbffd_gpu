@@ -116,9 +116,10 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
             for (int k = 0; k < stencil.size(); k++) {
                 Vec3& center = subdomain->G_centers[stencil[k]];
                 // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
-                z_val += l_weights[k] * phi[k]->eval(center, interp_point);
+                z_val += l_weights[k] * phi[k]->lapl_deriv(center, interp_point);
             }
 #if 0
+            // These are disabled because the laplacian of monomials are 0
             z_val += l_weights[stencil.size()+0] * 1.;
             z_val += l_weights[stencil.size()+1] * interp_point.x();
             z_val += l_weights[stencil.size()+2] * interp_point.y();
@@ -139,10 +140,11 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
         for (int k = 0; k < stencil.size(); k++) {
             Vec3& center = subdomain->G_centers[stencil[k]];
             // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
-            z_val += l_weights[k] * phi[k]->eval(center, interp_point);
+            z_val += l_weights[k] * phi[k]->lapl_deriv(center, interp_point);
             //   cout << l_weights[k] << endl;
         }
 #if 0
+        // These are disabled because the laplacian of monomials are 0
         z_val += l_weights[stencil.size()+0] * 1.;
         z_val += l_weights[stencil.size()+1] * interp_point.x();
         z_val += l_weights[stencil.size()+2] * interp_point.y();
@@ -312,12 +314,16 @@ int main(int argc, char ** argv)
 
     double minZ;
     double maxZ;
+#if 1
     for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
+#else
+        for (int i = 0; i < subdomain->Q_stencils.size(); i+=100) {
+#endif
         AddWeightVisualizer(i, subdomain, der, renderer, &minZ, &maxZ);
     }
     renderer->GetActiveCamera()->SetFocalPoint(0.,0.,(maxZ + minZ) / 2.);
     renderer->GetActiveCamera()->SetPosition(0.,0.,maxZ+2);
-
+    renderer->GetActiveCamera()->SetParallelProjection(1);
 
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
     renderWindow->SetSize( 800, 800 );

@@ -48,78 +48,15 @@
 #include "projectsettings.h"
 
 
-int main(int argc, char ** argv)
-{
-    Communicator* comm_unit = new Communicator(argc, argv);
-
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
-
-    // Discrete energy divided by number of sample pts
-    double energy;
-
-    // L2 norm of difference between iteration output
-    double it_diff;
-
-    // number of iterations taken (output by cvt3d, input to cvt_write)
-    int it_num =0;      // Total number of iterations taken.
-
-    int dim = settings->GetSettingAs<int>("DIMENSION");
-
-    // Generate the CVT if the file doesnt already exist
-    CVT* cvt = new NestedSphereCVT(settings);
-    int load_errors = cvt->cvt_load(-1);
-    if (load_errors) { // File does not exist
-        cvt->cvt(&it_num, &it_diff, &energy);
-    }
-
-    // TODO: run this in parallel:
-    double* generators = cvt->getGenerators();
-    Grid* grid = new Grid(settings);
-    // Compute stencils given a set of generators
-    grid->computeStencils(generators, cvt->getKDTree());
-
-    GPU* subdomain = new GPU(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());      // TODO: get these extents from the cvt class (add constructor to GPU)
-
-    // Clean this up. Have GPU class fill data on constructor. Pass Grid class to constructor.
-    // Remove need for extents in constructor.
-    subdomain->fillLocalData(grid->getRbfCenters(), grid->getStencil(), grid->getBoundary(), grid->getAvgDist()); // Forms sets (Q,O,R) and l2g/g2l maps
-    subdomain->fillVarData(grid->getRbfCenters()); // Sets function values in U
-
-    // Verbosely print the memberships of all nodes within the subdomain
-    //subdomain->printCenterMemberships(subdomain->G, "G");
-
-    // 0: 2D problem; 1: 3D problem
-    ExactSolution* exact_poisson;
-    if (dim == 3) {
-        exact_poisson = new ExactNCARPoisson1();        // 3D problem is not verified yet
-    } else {
-        exact_poisson = new ExactNCARPoisson2();        // 2D problem works with uniform diffusion
-    }
-
-    // Clean this up. Have the Poisson class construct Derivative internally.
-    Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
-    double epsilon = settings->GetSettingAs<double>("EPSILON");
-    der->setEpsilon(2.5);
-
-    if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
-        DerivativeTests* der_test = new DerivativeTests();
-        der_test->testAllFunctions(*der, *grid);
-    }
-
-    for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
-        //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
-        // Compute all derivatives for our centers and return the number of
-        // weights that will be available
-        der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim);
-    }
-
+// Add a visualizer for the sindx'th stencil to the renderer
+void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer* renderer) {
     // Generate a grid of samples for the interpolant
     // This would be equivalent to converting an unstructured grid
     // to a regular grid.
 
     vtkSmartPointer<vtkPoints> ipoints = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
     vtkSmartPointer<vtkPoints> cpoints = vtkSmartPointer<vtkPoints>::New(); // Collocation points
-    int sindx = 299;
+    //int sindx = 299;        // NOTE: 299 is interior with 10 neighbors. 0 is boundary with 6 neighbors (due to symmetry forcing)
     StencilType& stencil = subdomain->Q_stencils[sindx];
 #if 1
     double* l_weights = der->getLaplWeights(sindx);
@@ -162,7 +99,6 @@ int main(int argc, char ** argv)
     double y1 = 0.25;
     double dx = (x1 - x0)/(M-1);
     double dy = (y1 - y0)/(N-1);
-    double *z_val = new double[M*N];
 
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
@@ -170,47 +106,47 @@ int main(int argc, char ** argv)
             Vec3& st_center = subdomain->G_centers[stencil[0]];    // stencil center
             Vec3 disp_point((double)(x0 + i*dx), (double)(y0 + j*dy), 0.);            // Displacement from center
             Vec3 interp_point = st_center + disp_point;    // Interpolation sample points
-            z_val[indx] = 0.;
+            double z_val = 0.;
             // Calculate interpolated value of surface
             for (int k = 0; k < stencil.size(); k++) {
                 Vec3& center = subdomain->G_centers[stencil[k]];
                 // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
-                z_val[indx] += l_weights[k] * phi[k]->eval(center, interp_point);
+                z_val += l_weights[k] * phi[k]->eval(center, interp_point);
             }
-            z_val[indx] += l_weights[stencil.size()+0] * 1.;
-            z_val[indx] += l_weights[stencil.size()+1] * interp_point.x();
-            z_val[indx] += l_weights[stencil.size()+2] * interp_point.y();
+            z_val += l_weights[stencil.size()+0] * 1.;
+            z_val += l_weights[stencil.size()+1] * interp_point.x();
+            z_val += l_weights[stencil.size()+2] * interp_point.y();
 
             //            cout << "Z_VAL = " << z_val[indx] << endl;
             //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
             //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
-            ipoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val[indx]*scale);
+            ipoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val*scale);
         }
     }
 
     cout << "Interpolant for Stencil nodes"<<endl;
     for (int i = 0; i < stencil.size(); i++) {
         Vec3& interp_point = subdomain->G_centers[stencil[i]];  // interpolate to known stencil nodes
-        double z_val2 = 0.;
+        double z_val = 0.;
         // Calculate interpolated value of surface
-        cout << "StencilWeights: " << endl;
+        //cout << "StencilWeights: " << endl;
         for (int k = 0; k < stencil.size(); k++) {
             Vec3& center = subdomain->G_centers[stencil[k]];
             // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
-            z_val2 += l_weights[k] * phi[k]->eval(center, interp_point);
-            cout << l_weights[k] << endl;
+            z_val += l_weights[k] * phi[k]->eval(center, interp_point);
+         //   cout << l_weights[k] << endl;
         }
-        z_val2 += l_weights[stencil.size()+0] * 1.;
-        cout << l_weights[stencil.size()+0] << endl;
-        z_val2 += l_weights[stencil.size()+1] * interp_point.x();
-        cout << l_weights[stencil.size()+1] << endl;
-        z_val2 += l_weights[stencil.size()+2] * interp_point.y();
-        cout << l_weights[stencil.size()+2] << endl;
+        z_val += l_weights[stencil.size()+0] * 1.;
+       // cout << l_weights[stencil.size()+0] << endl;
+        z_val += l_weights[stencil.size()+1] * interp_point.x();
+       // cout << l_weights[stencil.size()+1] << endl;
+        z_val += l_weights[stencil.size()+2] * interp_point.y();
+     //   cout << l_weights[stencil.size()+2] << endl;
 
-        cout << "Z_VAL = " << z_val2*scale; interp_point.print("\tNode: ");
+    //    cout << "Z_VAL = " << z_val*scale; interp_point.print("\tNode: ");
         //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
         //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
-        cpoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val2*scale);
+        cpoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val*scale);
     }
 
     // Store grid and polys as poly data
@@ -278,11 +214,11 @@ int main(int argc, char ** argv)
     //stencil_actor->GetProperty()->SetRepresentationToPoints();
     stencil_actor->GetProperty()->BackfaceCullingOff();
     stencil_actor->GetProperty()->LightingOff();
-    //stencil_actor->GetProperty()->ShadingOff();
+    stencil_actor->GetProperty()->ShadingOn();
 
 
     vtkSmartPointer<vtkSphereSource> balls = vtkSmartPointer<vtkSphereSource>::New();
-    balls->SetRadius(0.02);
+    balls->SetRadius(0.01);
     balls->SetPhiResolution(10);
     balls->SetThetaResolution(10);
 
@@ -298,7 +234,84 @@ int main(int argc, char ** argv)
     cpoint_actor->GetProperty()->SetColor(1., 0., 1.);
     cpoint_actor->GetProperty()->LightingOn();
 
+    renderer->AddViewProp( stencil_actor );
+    renderer->AddViewProp( cpoint_actor );
+}
+
+
+int main(int argc, char ** argv)
+{
+    Communicator* comm_unit = new Communicator(argc, argv);
+
+    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
+
+    // Discrete energy divided by number of sample pts
+    double energy;
+
+    // L2 norm of difference between iteration output
+    double it_diff;
+
+    // number of iterations taken (output by cvt3d, input to cvt_write)
+    int it_num =0;      // Total number of iterations taken.
+
+    int dim = settings->GetSettingAs<int>("DIMENSION");
+
+    // Generate the CVT if the file doesnt already exist
+    CVT* cvt = new NestedSphereCVT(settings);
+    int load_errors = cvt->cvt_load(-1);
+    if (load_errors) { // File does not exist
+        cvt->cvt(&it_num, &it_diff, &energy);
+    }
+
+    // TODO: run this in parallel:
+    double* generators = cvt->getGenerators();
+    Grid* grid = new Grid(settings);
+    // Compute stencils given a set of generators
+    grid->computeStencils(generators, cvt->getKDTree());
+
+    GPU* subdomain = new GPU(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());      // TODO: get these extents from the cvt class (add constructor to GPU)
+
+    // Clean this up. Have GPU class fill data on constructor. Pass Grid class to constructor.
+    // Remove need for extents in constructor.
+    subdomain->fillLocalData(grid->getRbfCenters(), grid->getStencil(), grid->getBoundary(), grid->getAvgDist()); // Forms sets (Q,O,R) and l2g/g2l maps
+    subdomain->fillVarData(grid->getRbfCenters()); // Sets function values in U
+
+    // Verbosely print the memberships of all nodes within the subdomain
+    //subdomain->printCenterMemberships(subdomain->G, "G");
+
+    // 0: 2D problem; 1: 3D problem
+    ExactSolution* exact_poisson;
+    if (dim == 3) {
+        exact_poisson = new ExactNCARPoisson1();        // 3D problem is not verified yet
+    } else {
+        exact_poisson = new ExactNCARPoisson2();        // 2D problem works with uniform diffusion
+    }
+
+    // Clean this up. Have the Poisson class construct Derivative internally.
+    Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
+    double epsilon = settings->GetSettingAs<double>("EPSILON");
+    der->setEpsilon(1.1);
+
+    if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
+        DerivativeTests* der_test = new DerivativeTests();
+        der_test->testAllFunctions(*der, *grid);
+    }
+
+    for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
+        //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
+        // Compute all derivatives for our centers and return the number of
+        // weights that will be available
+        der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim);
+    }
+
+
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+
+
+    for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
+        AddWeightVisualizer(i, subdomain, der, renderer);
+    }
+
 
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
     renderWindow->SetSize( 800, 400 );
@@ -328,8 +341,7 @@ int main(int argc, char ** argv)
     widget->SetEnabled(1);
     widget->SetInteractive(0);
 
-    renderer->AddViewProp( stencil_actor );
-    renderer->AddViewProp( cpoint_actor );
+
     renderer->AddViewProp( assemble );
 
     renderWindow->Render();

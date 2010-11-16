@@ -18,6 +18,10 @@
 #include <vtkElevationFilter.h>
 #include <vtkDataSetMapper.h>
 #include <vtkLookupTable.h>
+#include <vtkAxesActor.h>
+#include <vtkOrientationMarkerWidget.h>
+#include <vtkAnnotatedCubeActor.h>
+#include <vtkAssembly.h>
 
 // INTERESTING: the poisson include must come first. Otherwise I get an
 // error in the constant definitions for MPI. I wonder if its because
@@ -111,11 +115,33 @@ int main(int argc, char ** argv)
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     int sindx = 299;
     StencilType& stencil = subdomain->Q_stencils[sindx];
+#if 1
     double* l_weights = der->getXWeights(sindx);
+#else
+    double *l_weights;
+    l_weights = new double[13];
+    l_weights[0] = 1.;
+    for (int i = 1; i < 13; i++) {
+        l_weights[i] = (double)0;
+    }
+#endif
     BasesType& phi = der->getRBFList(sindx);
 
     int M = 20;
     int N = 20;
+    double scale = 1.;
+    double min_weight = 100000.;
+    double max_weight = 0.;
+
+    for (int k = 0; k < stencil.size()+3; k++) {
+        if (min_weight > fabs(l_weights[k])) { min_weight = fabs(l_weights[k]); }
+        if (max_weight < fabs(l_weights[k])) { max_weight = fabs(l_weights[k]); }
+    }
+    cout << "Min Weight: " << min_weight << endl;
+    cout << "Max weight: " << max_weight << endl;
+    scale = (max_weight / min_weight) * 0.1;
+    cout << "Scale: " << scale << endl;
+
     double x0 = -0.25;
     double x1 = 0.25;
     double y0 = -0.25;
@@ -123,35 +149,53 @@ int main(int argc, char ** argv)
     double dx = (x1 - x0)/(M-1);
     double dy = (y1 - y0)/(N-1);
     double *z_val = new double[M*N];
+
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
-
+            int indx = i*N + j;
             Vec3& center = subdomain->G_centers[stencil[0]];    // stencil center
-            Vec3 disp_point(x0 + i*dx, y0 + j*dy, 0.);            // Displacement from center
+            Vec3 disp_point((double)(x0 + i*dx), (double)(y0 + j*dy), 0.);            // Displacement from center
             Vec3 interp_point = center + disp_point;    // Interpolation sample points
-            z_val[i*M+j] = 0.;
+            z_val[indx] = 0.;
             // Calculate interpolated value of surface
-            cout << "StencilWeights: " << endl;
             for (int k = 0; k < stencil.size(); k++) {
                 // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
-                phi[k]->setEpsilon(1.5);
-                z_val[i*M +j] += l_weights[k] * phi[0]->eval(center, interp_point);
-                cout << l_weights[k] << endl;
+                z_val[indx] += l_weights[k] * phi[k]->eval(disp_point);
             }
-            z_val[i*M +j] += l_weights[stencil.size()+0] * 1.;
-            z_val[i*M +j] += l_weights[stencil.size()+1] * interp_point.x();
-            z_val[i*M +j] += l_weights[stencil.size()+2] * interp_point.y();
+            z_val[indx] += l_weights[stencil.size()+0] * 1.;
+            z_val[indx] += l_weights[stencil.size()+1] * interp_point.x();
+            z_val[indx] += l_weights[stencil.size()+2] * interp_point.y();
 
-
+            //            cout << "Z_VAL = " << z_val[indx] << endl;
             //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
             //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
-           points->InsertNextPoint(interp_point.x(), interp_point.y(), z_val[i*M+j]);
+            points->InsertNextPoint(interp_point.x(), interp_point.y(), z_val[indx]*scale);
         }
     }
 
+    cout << "Interpolant for Stencil nodes"<<endl;
     for (int i = 0; i < stencil.size(); i++) {
-        Vec3& stencil_pt = subdomain->G_centers[stencil[i]];
-//      /  points->InsertNextPoint(stencil_pt.x(), stencil_pt.y(), l_weights[i]);
+        Vec3& center = subdomain->G_centers[stencil[0]];        // stencil center
+        Vec3& interp_point = subdomain->G_centers[stencil[i]];  // interpolate to known stencil nodes
+        double z_val2 = 0.;
+        // Calculate interpolated value of surface
+        cout << "StencilWeights: " << endl;
+        for (int k = 0; k < stencil.size(); k++) {
+            // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
+            z_val2 += l_weights[k] * phi[k]->eval(center, interp_point);
+            cout << l_weights[k] << endl;
+        }
+        z_val2 += l_weights[stencil.size()+0] * 1.;
+        cout << l_weights[stencil.size()+0] << endl;
+        z_val2 += l_weights[stencil.size()+1] * interp_point.x();
+        cout << l_weights[stencil.size()+1] << endl;
+        z_val2 += l_weights[stencil.size()+2] * interp_point.y();
+        cout << l_weights[stencil.size()+2] << endl;
+
+        cout << "Z_VAL = " << z_val2*scale; interp_point.print("\tNode: ");
+        //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
+        //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
+        points->InsertNextPoint(interp_point.x(), interp_point.y(), z_val2*scale);
     }
 
     // Store grid and polys as poly data
@@ -194,23 +238,9 @@ int main(int argc, char ** argv)
 
     vtkSmartPointer<vtkActor> stencil_actor = vtkSmartPointer<vtkActor>::New();
     stencil_actor->SetMapper(stencil_mapper3D);
-    stencil_actor->GetProperty()->SetRepresentationToWireframe();
+    // stencil_actor->GetProperty()->SetRepresentationToWireframe();
     stencil_actor->GetProperty()->ShadingOff();
 
-
-    // Compute interpolated value as Z component
-#if 0
-
-    vtkSmartPointer<vtkPolyDataMapper> surfaceMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    surfaceMapper->SetInputConnection( poly->GetOutputPort() );
-    surfaceMapper->ScalarVisibilityOff();
-    surfaceMapper->ImmediateModeRenderingOn();
-
-    vtkSmartPointer<vtkActor> surfaceActor = vtkSmartPointer<vtkActor>::New();
-    surfaceActor->SetMapper( surfaceMapper );
-    surfaceActor->GetProperty()->SetRepresentationToWireframe();
-    surfaceActor->GetProperty()->ShadingOff();
-#endif
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
 
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
@@ -221,7 +251,31 @@ int main(int argc, char ** argv)
     vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     interactor->SetRenderWindow( renderWindow );
 
-    renderer->AddActor( stencil_actor );
+    vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+    vtkOrientationMarkerWidget widget  = vtkOrientationMarkerWidget::New();
+    vtkAnnotatedCubeActor* cube = vtkAnnotatedCubeActor::New();
+    cube->SetFaceTextScale(0.5);
+    vtkAssembly* assemble = vtkAssembly::New();
+    assemble->AddPart(cube);
+    assemble->AddPart(axes);
+    widget->SetOrientationMarker(assemble);
+    widget->SetCurrentRenderer(renderer);
+    widget->SetInteractor(interactor);
+    widget->SetEnabled(1);
+    widget->SetInteractive(0);
+    //widget->SetViewport(0., 0., 0.4, 0.4);
+#if 0
+    vtkSmartPointer<vtkOrientationMarkerWidget> widget = vtkSmartPointer<vtkOrientationMarkerWidget>::New();
+    widget->SetOrientationMarker(axes);
+    widget->SetInteractor(interactor);
+    widget->SetEnabled(1);
+    widget->InteractiveOff();
+    widget->SetCurrentRenderer(renderer);
+    //widget->SetViewport(xmaxs[4]-0.2, ymins[4], xmaxs[4], ymins[4]+0.2);
+#endif
+
+    renderer->AddViewProp( stencil_actor );
+
     renderWindow->Render();
 
     interactor->Start();

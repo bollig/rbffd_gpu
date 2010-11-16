@@ -640,6 +640,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         this->lapl_weights[irbf][j] = weights_lapl[j];
         sum_nodes_and_monomials += weights_lapl[j];
     }
+    cout << "(" << irbf << ") ";
     weights_lapl.print("lapl_weights");
     cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
     cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;

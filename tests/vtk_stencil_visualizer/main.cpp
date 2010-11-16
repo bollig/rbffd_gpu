@@ -27,6 +27,11 @@
 #include <vtkUnstructuredGrid.h>
 #include <vtkSphereSource.h>
 #include <vtkGlyph3D.h>
+#include <vtkCamera.h>
+#include <vtkLightCollection.h>
+#include <vtkLight.h>
+#include <vtkLightActor.h>
+#include <vtkLightKit.h>
 
 // INTERESTING: the poisson include must come first. Otherwise I get an
 // error in the constant definitions for MPI. I wonder if its because
@@ -49,7 +54,7 @@
 
 
 // Add a visualizer for the sindx'th stencil to the renderer
-void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer* renderer) {
+void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer* renderer, double* minZ, double* maxZ) {
     // Generate a grid of samples for the interpolant
     // This would be equivalent to converting an unstructured grid
     // to a regular grid.
@@ -113,10 +118,11 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
                 // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
                 z_val += l_weights[k] * phi[k]->eval(center, interp_point);
             }
+#if 0
             z_val += l_weights[stencil.size()+0] * 1.;
             z_val += l_weights[stencil.size()+1] * interp_point.x();
             z_val += l_weights[stencil.size()+2] * interp_point.y();
-
+#endif
             //            cout << "Z_VAL = " << z_val[indx] << endl;
             //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
             //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
@@ -134,16 +140,17 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
             Vec3& center = subdomain->G_centers[stencil[k]];
             // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
             z_val += l_weights[k] * phi[k]->eval(center, interp_point);
-         //   cout << l_weights[k] << endl;
+            //   cout << l_weights[k] << endl;
         }
+#if 0
         z_val += l_weights[stencil.size()+0] * 1.;
-       // cout << l_weights[stencil.size()+0] << endl;
         z_val += l_weights[stencil.size()+1] * interp_point.x();
-       // cout << l_weights[stencil.size()+1] << endl;
         z_val += l_weights[stencil.size()+2] * interp_point.y();
-     //   cout << l_weights[stencil.size()+2] << endl;
-
-    //    cout << "Z_VAL = " << z_val*scale; interp_point.print("\tNode: ");
+        // cout << l_weights[stencil.size()+0] << endl;
+        // cout << l_weights[stencil.size()+1] << endl;
+        //   cout << l_weights[stencil.size()+2] << endl;
+#endif
+        //    cout << "Z_VAL = " << z_val*scale; interp_point.print("\tNode: ");
         //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
         //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
         cpoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val*scale);
@@ -156,14 +163,6 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
     vtkSmartPointer<vtkPolyData> cpolydata = vtkSmartPointer<vtkPolyData>::New();
     cpolydata->SetPoints(cpoints);
 
-#if 0
-    vtkSmartPointer<vtkAppendFilter> appender = vtkSmartPointer<vtkAppendFilter>::New();
-    appender->AddInput(cpolydata);
-    appender->AddInput(ipolydata);
-
-    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-    polydata->SetPoints(appender->GetOutput()->GetPoints());
-#else
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
     points->DeepCopy(ipoints);
     for (int i = 0; i < stencil.size(); i++) {
@@ -171,7 +170,6 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
     }
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints(points);
-#endif
 
 
     vtkSmartPointer<vtkPolyDataWriter> writer = vtkSmartPointer<vtkPolyDataWriter>::New();
@@ -213,9 +211,8 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
     stencil_actor->GetProperty()->SetRepresentationToSurface();
     //stencil_actor->GetProperty()->SetRepresentationToPoints();
     stencil_actor->GetProperty()->BackfaceCullingOff();
-    stencil_actor->GetProperty()->LightingOff();
+    // stencil_actor->GetProperty()->LightingOff();
     stencil_actor->GetProperty()->ShadingOn();
-
 
     vtkSmartPointer<vtkSphereSource> balls = vtkSmartPointer<vtkSphereSource>::New();
     balls->SetRadius(0.01);
@@ -236,6 +233,9 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
 
     renderer->AddViewProp( stencil_actor );
     renderer->AddViewProp( cpoint_actor );
+
+    *minZ = minz;
+    *maxZ = maxz;
 }
 
 
@@ -289,8 +289,12 @@ int main(int argc, char ** argv)
 
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
+#if 1
     double epsilon = settings->GetSettingAs<double>("EPSILON");
-    der->setEpsilon(1.1);
+#else
+    double epsilon = 1.85;
+#endif
+    der->setEpsilon(epsilon);
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
         DerivativeTests* der_test = new DerivativeTests();
@@ -304,17 +308,19 @@ int main(int argc, char ** argv)
         der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim);
     }
 
-
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
 
-
+    double minZ;
+    double maxZ;
     for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
-        AddWeightVisualizer(i, subdomain, der, renderer);
+        AddWeightVisualizer(i, subdomain, der, renderer, &minZ, &maxZ);
     }
+    renderer->GetActiveCamera()->SetFocalPoint(0.,0.,(maxZ + minZ) / 2.);
+    renderer->GetActiveCamera()->SetPosition(0.,0.,maxZ+2);
 
 
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-    renderWindow->SetSize( 800, 400 );
+    renderWindow->SetSize( 800, 800 );
 
     renderWindow->AddRenderer( renderer );
 
@@ -324,14 +330,102 @@ int main(int argc, char ** argv)
 
     vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     interactor->SetRenderWindow( renderWindow );
-    interactor->LightFollowCameraOn();
     interactor->SetInteractorStyle(interStyle);
+#if 0
+    renderer->AutomaticLightCreationOff();
+
+    // lighting the box.
+    vtkSmartPointer<vtkLight> l1 = vtkSmartPointer<vtkLight>::New();
+    l1->SetPosition(0.0,0.0,-minZ*2.);
+    l1->SetFocalPoint(0., 0., 0.);
+    l1->SetColor(1.0,1.0,1.0);
+    l1->SetPositional(1);
+    renderer->AddLight(l1);
+    l1->SetSwitch(1);
+#endif
+
+#if 0
+    // lighting the box.
+    vtkSmartPointer<vtkLight> l2 = vtkSmartPointer<vtkLight>::New();
+    l2->SetPosition(0.0,0.0,maxZ*2.);
+    l2->SetFocalPoint(0., 0., 0.);
+    l2->SetColor(1.0,1.0,1.0);
+    l2->SetPositional(1);
+    renderer->AddLight(l2);
+    l2->SetSwitch(1);
+#endif
+
+#if 0
+    vtkSmartPointer<vtkLightCollection> lights = renderer->GetLights();
+    lights->InitTraversal();
+    vtkSmartPointer<vtkLight> l = lights->GetNextItem( );
+    while(l!=0)
+    {
+        double angle=l->GetConeAngle();
+        if(l->LightTypeIsSceneLight() && l->GetPositional()
+            && angle<180.0) // spotlight
+            {
+            vtkLightActor *la=vtkLightActor::New();
+            la->SetLight(l);
+            renderer->AddViewProp(la);
+            la->Delete();
+        }
+        l->SetIntensity(l->GetIntensity()*2.);
+        l=lights->GetNextItem();
+    }
+#endif
+
+    vtkSmartPointer<vtkLightKit> lightKit = vtkSmartPointer<vtkLightKit>::New();
+    lightKit->AddLightsToRenderer(renderer);
 
     vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+    vtkSmartPointer<vtkProperty> property = axes->GetXAxisTipProperty();
+    property->SetRepresentationToSurface();
+    property->SetDiffuse(0);
+    property->SetAmbient(1);
+    property->SetColor( 1, 0, 0 );
+
+    property = axes->GetYAxisTipProperty();
+    property->SetRepresentationToSurface();
+    property->SetDiffuse(0);
+    property->SetAmbient(1);
+    property->SetColor(0 , 1, 0 );
+
+    property = axes->GetZAxisTipProperty();
+    property->SetRepresentationToSurface();
+    property->SetDiffuse(0);
+    property->SetAmbient(1);
+    property->SetColor( 0, 0, 1 );
 
     vtkSmartPointer<vtkOrientationMarkerWidget> widget  = vtkSmartPointer<vtkOrientationMarkerWidget>::New();
     vtkSmartPointer<vtkAnnotatedCubeActor> cube = vtkSmartPointer<vtkAnnotatedCubeActor>::New();
     cube->SetFaceTextScale(0.5);
+    property = cube->GetCubeProperty();
+    property->SetColor( 0.5, 1, 1 );
+    property = cube->GetTextEdgesProperty();
+    property->SetLineWidth( 1 );
+    property->SetDiffuse( 0 );
+    property->SetAmbient( 1 );
+    property->SetColor( 0.1800, 0.2800, 0.2300 );
+    property = cube->GetXPlusFaceProperty();
+    property->SetColor(0, 0, 1);
+    property->SetInterpolationToFlat();
+    property = cube->GetXMinusFaceProperty();
+    property->SetColor(0, 0, 1);
+    property->SetInterpolationToFlat();
+    property = cube->GetYPlusFaceProperty();
+    property->SetColor(0, 1, 0);
+    property->SetInterpolationToFlat();
+    property = cube->GetYMinusFaceProperty();
+    property->SetColor(0, 1, 0);
+    property->SetInterpolationToFlat();
+    property = cube->GetZPlusFaceProperty();
+    property->SetColor(1, 0, 0);
+    property->SetInterpolationToFlat();
+    property = cube->GetZMinusFaceProperty();
+    property->SetColor(1, 0, 0);
+    property->SetInterpolationToFlat();
+
     vtkSmartPointer<vtkAssembly> assemble = vtkSmartPointer<vtkAssembly>::New();
     assemble->AddPart(cube);
     assemble->AddPart(axes);
@@ -339,10 +433,9 @@ int main(int argc, char ** argv)
     widget->SetCurrentRenderer(renderer);
     widget->SetInteractor(interactor);
     widget->SetEnabled(1);
-    widget->SetInteractive(0);
+    widget->SetInteractive(1);
 
-
-    renderer->AddViewProp( assemble );
+    //renderer->AddViewProp( assemble );
 
     renderWindow->Render();
 

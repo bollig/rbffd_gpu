@@ -53,14 +53,254 @@
 #include "projectsettings.h"
 
 
-// Add a visualizer for the sindx'th stencil to the renderer
-void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer* renderer, double* minZ, double* maxZ) {
+#include <vtkActor.h>
+#include <vtkAppendPolyData.h>
+#include <vtkCellArray.h>
+#include <vtkMath.h>
+#include <vtkPolyData.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkRectilinearGridSource.h>
+#include <vtkProperty.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkSmartPointer.h>
+#include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
+#include <vtkVoxelContoursToSurfaceFilter.h>
+#include <vtkPolyDataWriter.h>
+#include <vtkDelaunay2D.h>
+#include <vtkElevationFilter.h>
+#include <vtkDataSetMapper.h>
+#include <vtkLookupTable.h>
+#include <vtkAxesActor.h>
+#include <vtkOrientationMarkerWidget.h>
+#include <vtkAnnotatedCubeActor.h>
+#include <vtkAssembly.h>
+#include <vtkInteractorStyleSwitch.h>
+#include <vtkAppendFilter.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkSphereSource.h>
+#include <vtkGlyph3D.h>
+#include <vtkCamera.h>
+#include <vtkLightCollection.h>
+#include <vtkLight.h>
+#include <vtkLightActor.h>
+#include <vtkLightKit.h>
+
+// INTERESTING: the poisson include must come first. Otherwise I get an
+// error in the constant definitions for MPI. I wonder if its because
+// nested_sphere_cvt.h accidentally overrides one of the defines for MPI
+//#include "ncar_poisson1.h"
+//#include "ncar_poisson1_cusp.h"
+//#include "ncar_poisson1_cl.h"
+#include "nonuniform_poisson1_cl.h"
+#include "grid.h"
+#include "nested_sphere_cvt.h"
+#include "cvt.h"
+#include "gpu.h"
+#include "derivative.h"
+#include "derivative_tests.h"
+#include "exact_solution.h"
+#include "exact_ncar_poisson1.h"
+#include "exact_ncar_poisson2.h"
+#include "communicator.h"
+#include "projectsettings.h"
+
+void GetYData(int sindx, GPU* subdomain, Derivative* der, vtkPoints* cpoints, vtkPoints* points) {
     // Generate a grid of samples for the interpolant
     // This would be equivalent to converting an unstructured grid
     // to a regular grid.
 
     vtkSmartPointer<vtkPoints> ipoints = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
-    vtkSmartPointer<vtkPoints> cpoints = vtkSmartPointer<vtkPoints>::New(); // Collocation points
+   // vtkSmartPointer<vtkPoints> cpoints = vtkSmartPointer<vtkPoints>::New(); // Collocation points
+    //int sindx = 299;        // NOTE: 299 is interior with 10 neighbors. 0 is boundary with 6 neighbors (due to symmetry forcing)
+    StencilType& stencil = subdomain->Q_stencils[sindx];
+#if 1
+    double* y_weights = der->getYWeights(sindx);
+#else
+    double *y_weights;
+    y_weights = new double[13];
+    int iindx = 2;
+    y_weights[iindx] = 1.;
+    for (int i = 0; i < iindx; i++) {
+        y_weights[i] = (double)0;
+    }
+    for (int i = iindx+1; i < 13; i++) {
+        y_weights[i] = (double)0;
+    }
+#endif
+    BasesType& phi = der->getRBFList(sindx);
+
+    int M = 20;
+    int N = 20;
+
+    double x0 = -0.25;
+    double x1 = 0.25;
+    double y0 = -0.25;
+    double y1 = 0.25;
+    double dx = (x1 - x0)/(M-1);
+    double dy = (y1 - y0)/(N-1);
+
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            int indx = i*N + j;
+            Vec3& st_center = subdomain->G_centers[stencil[0]];    // stencil center
+            Vec3 disp_point((double)(x0 + i*dx), (double)(y0 + j*dy), 0.);            // Displacement from center
+            Vec3 interp_point = st_center + disp_point;    // Interpolation sample points
+            double z_val = 0.;
+            // Calculate interpolated value of surface
+            for (int k = 0; k < stencil.size(); k++) {
+                Vec3& center = subdomain->G_centers[stencil[k]];
+                // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
+                z_val += y_weights[k] * phi[k]->yderiv(center, interp_point);
+            }
+#if 1
+            // Analytic derivatives of monomials
+            z_val += y_weights[stencil.size()+0] * 0.;
+            z_val += y_weights[stencil.size()+1] * 0.;
+            z_val += y_weights[stencil.size()+2] * 1.;
+#endif
+            ipoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val);
+        }
+    }
+
+    for (int i = 0; i < stencil.size(); i++) {
+        Vec3& interp_point = subdomain->G_centers[stencil[i]];  // interpolate to known stencil nodes
+        double z_val = 0.;
+        // Calculate interpolated value of surface
+        for (int k = 0; k < stencil.size(); k++) {
+            Vec3& center = subdomain->G_centers[stencil[k]];
+            // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
+            z_val += y_weights[k] * phi[k]->yderiv(center, interp_point);
+        }
+#if 1
+            // Analytic derivatives of monomials
+            z_val += y_weights[stencil.size()+0] * 0.;
+            z_val += y_weights[stencil.size()+1] * 0.;
+            z_val += y_weights[stencil.size()+2] * 1.;
+#endif
+        cpoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val);
+    }
+
+    //vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
+    points->DeepCopy(ipoints);
+    for (int i = 0; i < stencil.size(); i++) {
+        points->InsertNextPoint(cpoints->GetPoint(i));
+    }
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->SetPoints(points);
+
+    vtkSmartPointer<vtkPolyDataWriter> writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+    char filename[80];
+    sprintf(filename, "interpolant_yderiv_%d.vtk", sindx);
+    writer->SetFileName(filename);
+    writer->SetInput(polydata);
+    writer->Write();
+
+}
+
+void GetXData(int sindx, GPU* subdomain, Derivative* der, vtkPoints* cpoints, vtkPoints* points) {
+    // Generate a grid of samples for the interpolant
+    // This would be equivalent to converting an unstructured grid
+    // to a regular grid.
+
+    vtkSmartPointer<vtkPoints> ipoints = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
+   // vtkSmartPointer<vtkPoints> cpoints = vtkSmartPointer<vtkPoints>::New(); // Collocation points
+    //int sindx = 299;        // NOTE: 299 is interior with 10 neighbors. 0 is boundary with 6 neighbors (due to symmetry forcing)
+    StencilType& stencil = subdomain->Q_stencils[sindx];
+#if 1
+    double* x_weights = der->getXWeights(sindx);
+#else
+    double *x_weights;
+    x_weights = new double[13];
+    int iindx = 2;
+    x_weights[iindx] = 1.;
+    for (int i = 0; i < iindx; i++) {
+        x_weights[i] = (double)0;
+    }
+    for (int i = iindx+1; i < 13; i++) {
+        x_weights[i] = (double)0;
+    }
+#endif
+    BasesType& phi = der->getRBFList(sindx);
+
+    int M = 20;
+    int N = 20;
+
+    double x0 = -0.25;
+    double x1 = 0.25;
+    double y0 = -0.25;
+    double y1 = 0.25;
+    double dx = (x1 - x0)/(M-1);
+    double dy = (y1 - y0)/(N-1);
+
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            int indx = i*N + j;
+            Vec3& st_center = subdomain->G_centers[stencil[0]];    // stencil center
+            Vec3 disp_point((double)(x0 + i*dx), (double)(y0 + j*dy), 0.);            // Displacement from center
+            Vec3 interp_point = st_center + disp_point;    // Interpolation sample points
+            double z_val = 0.;
+            // Calculate interpolated value of surface
+            for (int k = 0; k < stencil.size(); k++) {
+                Vec3& center = subdomain->G_centers[stencil[k]];
+                // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
+                z_val += x_weights[k] * phi[k]->xderiv(center, interp_point);
+            }
+#if 1
+            // Analytic derivatives of monomials
+            z_val += x_weights[stencil.size()+0] * 0.;
+            z_val += x_weights[stencil.size()+1] * 1.;
+            z_val += x_weights[stencil.size()+2] * 0.;
+#endif
+            ipoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val);
+        }
+    }
+
+    for (int i = 0; i < stencil.size(); i++) {
+        Vec3& interp_point = subdomain->G_centers[stencil[i]];  // interpolate to known stencil nodes
+        double z_val = 0.;
+        // Calculate interpolated value of surface
+        for (int k = 0; k < stencil.size(); k++) {
+            Vec3& center = subdomain->G_centers[stencil[k]];
+            // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
+            z_val += x_weights[k] * phi[k]->xderiv(center, interp_point);
+        }
+#if 1
+     // Analytic derivatives of monomials
+        z_val += x_weights[stencil.size()+0] * 0.;
+        z_val += x_weights[stencil.size()+1] * 1.;
+        z_val += x_weights[stencil.size()+2] * 0.;
+#endif
+        cpoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val);
+    }
+
+    //vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
+    points->DeepCopy(ipoints);
+    for (int i = 0; i < stencil.size(); i++) {
+        points->InsertNextPoint(cpoints->GetPoint(i));
+    }
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->SetPoints(points);
+
+    vtkSmartPointer<vtkPolyDataWriter> writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+    char filename[80];
+    sprintf(filename, "interpolant_x_%d.vtk", sindx);
+    writer->SetFileName(filename);
+    writer->SetInput(polydata);
+    writer->Write();
+
+}
+
+
+void GetLaplData(int sindx, GPU* subdomain, Derivative* der, vtkPoints* cpoints, vtkPoints* points) {
+    // Generate a grid of samples for the interpolant
+    // This would be equivalent to converting an unstructured grid
+    // to a regular grid.
+
+    vtkSmartPointer<vtkPoints> ipoints = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
+   // vtkSmartPointer<vtkPoints> cpoints = vtkSmartPointer<vtkPoints>::New(); // Collocation points
     //int sindx = 299;        // NOTE: 299 is interior with 10 neighbors. 0 is boundary with 6 neighbors (due to symmetry forcing)
     StencilType& stencil = subdomain->Q_stencils[sindx];
 #if 1
@@ -81,22 +321,6 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
 
     int M = 20;
     int N = 20;
-    double scale = 1.;
-    double min_weight = 100000.;
-    double max_weight = 0.;
-
-    for (int k = 0; k < stencil.size()+3; k++) {
-        if (min_weight > fabs(l_weights[k])) { min_weight = fabs(l_weights[k]); }
-        if (max_weight < fabs(l_weights[k])) { max_weight = fabs(l_weights[k]); }
-    }
-    cout << "Min Weight: " << min_weight << endl;
-    cout << "Max weight: " << max_weight << endl;
-#if 0
-    if (min_weight > 0) {
-        scale = (max_weight / min_weight) * 0.1;
-    }
-#endif
-    cout << "Scale: " << scale << endl;
 
     double x0 = -0.25;
     double x1 = 0.25;
@@ -124,48 +348,29 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
             z_val += l_weights[stencil.size()+1] * interp_point.x();
             z_val += l_weights[stencil.size()+2] * interp_point.y();
 #endif
-            //            cout << "Z_VAL = " << z_val[indx] << endl;
-            //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
-            //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
-            ipoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val*scale);
+            ipoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val);
         }
     }
 
-    cout << "Interpolant for Stencil nodes"<<endl;
     for (int i = 0; i < stencil.size(); i++) {
         Vec3& interp_point = subdomain->G_centers[stencil[i]];  // interpolate to known stencil nodes
         double z_val = 0.;
         // Calculate interpolated value of surface
-        //cout << "StencilWeights: " << endl;
         for (int k = 0; k < stencil.size(); k++) {
             Vec3& center = subdomain->G_centers[stencil[k]];
             // z_val = Sum_{k=0}^{n} phi_k(x,y) * w(k)
             z_val += l_weights[k] * phi[k]->lapl_deriv(center, interp_point);
-            //   cout << l_weights[k] << endl;
         }
 #if 0
         // These are disabled because the laplacian of monomials are 0
         z_val += l_weights[stencil.size()+0] * 1.;
         z_val += l_weights[stencil.size()+1] * interp_point.x();
         z_val += l_weights[stencil.size()+2] * interp_point.y();
-        // cout << l_weights[stencil.size()+0] << endl;
-        // cout << l_weights[stencil.size()+1] << endl;
-        //   cout << l_weights[stencil.size()+2] << endl;
 #endif
-        //    cout << "Z_VAL = " << z_val*scale; interp_point.print("\tNode: ");
-        //points->InsertNextPoint(interp_point.x(), interp_point.y(), phi[0]->lapl_deriv(center, interp_point));
-        //points->InsertNextPoint(interp_point.x(), interp_point.y(), (center-interp_point).magnitude())   ;
-        cpoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val*scale);
+        cpoints->InsertNextPoint(interp_point.x(), interp_point.y(), z_val);
     }
 
-    // Store grid and polys as poly data
-    vtkSmartPointer<vtkPolyData> ipolydata = vtkSmartPointer<vtkPolyData>::New();
-    ipolydata->SetPoints(ipoints);
-
-    vtkSmartPointer<vtkPolyData> cpolydata = vtkSmartPointer<vtkPolyData>::New();
-    cpolydata->SetPoints(cpoints);
-
-    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
+    //vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
     points->DeepCopy(ipoints);
     for (int i = 0; i < stencil.size(); i++) {
         points->InsertNextPoint(cpoints->GetPoint(i));
@@ -173,11 +378,39 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints(points);
 
-
     vtkSmartPointer<vtkPolyDataWriter> writer = vtkSmartPointer<vtkPolyDataWriter>::New();
-    writer->SetFileName("stencil_points_x.vtk");
+    char filename[80];
+    sprintf(filename, "interpolant_lapl_%d.vtk", sindx);
+    writer->SetFileName(filename);
     writer->SetInput(polydata);
     writer->Write();
+
+}
+
+// Add a visualizer for the sindx'th stencil to the renderer
+void AddWeightVisualizer(int sindx, int type, GPU* subdomain, Derivative* der, vtkRenderer* renderer, double* minZ, double* maxZ) {
+    vtkSmartPointer<vtkPoints> cpoints = vtkSmartPointer<vtkPoints>::New(); // Collocation points
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
+
+    // Get the laplacian interpolant
+    switch (type) {
+    case 0:
+        GetXData(sindx, subdomain, der, cpoints, points);
+        break;
+    case 1:
+        GetYData(sindx, subdomain, der, cpoints, points);
+        break;
+    default:
+        GetLaplData(sindx, subdomain, der, cpoints, points);
+        break;
+    }
+
+    // Now draw it:
+    vtkSmartPointer<vtkPolyData> cpolydata = vtkSmartPointer<vtkPolyData>::New();
+    cpolydata->SetPoints(cpoints);
+
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->SetPoints(points);
 
     vtkSmartPointer<vtkDelaunay2D> stencil_delaunay = vtkSmartPointer<vtkDelaunay2D>::New();
     stencil_delaunay->SetInput(polydata);
@@ -194,8 +427,8 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
     double minz = bounds[4];
     double maxz = bounds[5];
 
-    std::cout << "minz: " << minz << std::endl;
-    std::cout << "maxz: " << maxz << std::endl;
+    //std::cout << "minz: " << minz << std::endl;
+    //std::cout << "maxz: " << maxz << std::endl;
 
 #if 1
     vtkSmartPointer<vtkElevationFilter> elevation_filter = vtkSmartPointer<vtkElevationFilter>::New();
@@ -239,6 +472,8 @@ void AddWeightVisualizer(int sindx, GPU* subdomain, Derivative* der, vtkRenderer
     *minZ = minz;
     *maxZ = maxz;
 }
+
+
 
 
 int main(int argc, char ** argv)
@@ -314,139 +549,139 @@ int main(int argc, char ** argv)
 
     double minZ;
     double maxZ;
-#if 1
+#if 0
     for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
 #else
         for (int i = 0; i < subdomain->Q_stencils.size(); i+=100) {
 #endif
-        AddWeightVisualizer(i, subdomain, der, renderer, &minZ, &maxZ);
-    }
-    renderer->GetActiveCamera()->SetFocalPoint(0.,0.,(maxZ + minZ) / 2.);
-    renderer->GetActiveCamera()->SetPosition(0.,0.,maxZ+2);
-    renderer->GetActiveCamera()->SetParallelProjection(1);
-
-    vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-    renderWindow->SetSize( 800, 800 );
-
-    renderWindow->AddRenderer( renderer );
-
-    vtkSmartPointer<vtkInteractorStyleSwitch> interStyle = vtkSmartPointer<vtkInteractorStyleSwitch>::New();
-    interStyle->SetCurrentStyleToTrackballCamera();
-    //interStyle->SetCurrentStyleToTrackballActor();
-
-    vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
-    interactor->SetRenderWindow( renderWindow );
-    interactor->SetInteractorStyle(interStyle);
-#if 0
-    renderer->AutomaticLightCreationOff();
-
-    // lighting the box.
-    vtkSmartPointer<vtkLight> l1 = vtkSmartPointer<vtkLight>::New();
-    l1->SetPosition(0.0,0.0,-minZ*2.);
-    l1->SetFocalPoint(0., 0., 0.);
-    l1->SetColor(1.0,1.0,1.0);
-    l1->SetPositional(1);
-    renderer->AddLight(l1);
-    l1->SetSwitch(1);
-#endif
-
-#if 0
-    // lighting the box.
-    vtkSmartPointer<vtkLight> l2 = vtkSmartPointer<vtkLight>::New();
-    l2->SetPosition(0.0,0.0,maxZ*2.);
-    l2->SetFocalPoint(0., 0., 0.);
-    l2->SetColor(1.0,1.0,1.0);
-    l2->SetPositional(1);
-    renderer->AddLight(l2);
-    l2->SetSwitch(1);
-#endif
-
-#if 0
-    vtkSmartPointer<vtkLightCollection> lights = renderer->GetLights();
-    lights->InitTraversal();
-    vtkSmartPointer<vtkLight> l = lights->GetNextItem( );
-    while(l!=0)
-    {
-        double angle=l->GetConeAngle();
-        if(l->LightTypeIsSceneLight() && l->GetPositional()
-            && angle<180.0) // spotlight
-            {
-            vtkLightActor *la=vtkLightActor::New();
-            la->SetLight(l);
-            renderer->AddViewProp(la);
-            la->Delete();
+            AddWeightVisualizer(i, 2, subdomain, der, renderer, &minZ, &maxZ);
         }
-        l->SetIntensity(l->GetIntensity()*2.);
-        l=lights->GetNextItem();
-    }
+        renderer->GetActiveCamera()->SetFocalPoint(0.,0.,(maxZ + minZ) / 2.);
+        renderer->GetActiveCamera()->SetPosition(0.,0.,maxZ+2);
+        renderer->GetActiveCamera()->SetParallelProjection(1);
+
+        vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+        renderWindow->SetSize( 800, 800 );
+
+        renderWindow->AddRenderer( renderer );
+
+        vtkSmartPointer<vtkInteractorStyleSwitch> interStyle = vtkSmartPointer<vtkInteractorStyleSwitch>::New();
+        interStyle->SetCurrentStyleToTrackballCamera();
+        //interStyle->SetCurrentStyleToTrackballActor();
+
+        vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+        interactor->SetRenderWindow( renderWindow );
+        interactor->SetInteractorStyle(interStyle);
+#if 0
+        renderer->AutomaticLightCreationOff();
+
+        // lighting the box.
+        vtkSmartPointer<vtkLight> l1 = vtkSmartPointer<vtkLight>::New();
+        l1->SetPosition(0.0,0.0,-minZ*2.);
+        l1->SetFocalPoint(0., 0., 0.);
+        l1->SetColor(1.0,1.0,1.0);
+        l1->SetPositional(1);
+        renderer->AddLight(l1);
+        l1->SetSwitch(1);
 #endif
 
-    vtkSmartPointer<vtkLightKit> lightKit = vtkSmartPointer<vtkLightKit>::New();
-    lightKit->AddLightsToRenderer(renderer);
+#if 0
+        // lighting the box.
+        vtkSmartPointer<vtkLight> l2 = vtkSmartPointer<vtkLight>::New();
+        l2->SetPosition(0.0,0.0,maxZ*2.);
+        l2->SetFocalPoint(0., 0., 0.);
+        l2->SetColor(1.0,1.0,1.0);
+        l2->SetPositional(1);
+        renderer->AddLight(l2);
+        l2->SetSwitch(1);
+#endif
 
-    vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
-    vtkSmartPointer<vtkProperty> property = axes->GetXAxisTipProperty();
-    property->SetRepresentationToSurface();
-    property->SetDiffuse(0);
-    property->SetAmbient(1);
-    property->SetColor( 1, 0, 0 );
+#if 0
+        vtkSmartPointer<vtkLightCollection> lights = renderer->GetLights();
+        lights->InitTraversal();
+        vtkSmartPointer<vtkLight> l = lights->GetNextItem( );
+        while(l!=0)
+        {
+            double angle=l->GetConeAngle();
+            if(l->LightTypeIsSceneLight() && l->GetPositional()
+                && angle<180.0) // spotlight
+                {
+                vtkLightActor *la=vtkLightActor::New();
+                la->SetLight(l);
+                renderer->AddViewProp(la);
+                la->Delete();
+            }
+            l->SetIntensity(l->GetIntensity()*2.);
+            l=lights->GetNextItem();
+        }
+#endif
 
-    property = axes->GetYAxisTipProperty();
-    property->SetRepresentationToSurface();
-    property->SetDiffuse(0);
-    property->SetAmbient(1);
-    property->SetColor(0 , 1, 0 );
+        vtkSmartPointer<vtkLightKit> lightKit = vtkSmartPointer<vtkLightKit>::New();
+        lightKit->AddLightsToRenderer(renderer);
 
-    property = axes->GetZAxisTipProperty();
-    property->SetRepresentationToSurface();
-    property->SetDiffuse(0);
-    property->SetAmbient(1);
-    property->SetColor( 0, 0, 1 );
+        vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+        vtkSmartPointer<vtkProperty> property = axes->GetXAxisTipProperty();
+        property->SetRepresentationToSurface();
+        property->SetDiffuse(0);
+        property->SetAmbient(1);
+        property->SetColor( 1, 0, 0 );
 
-    vtkSmartPointer<vtkOrientationMarkerWidget> widget  = vtkSmartPointer<vtkOrientationMarkerWidget>::New();
-    vtkSmartPointer<vtkAnnotatedCubeActor> cube = vtkSmartPointer<vtkAnnotatedCubeActor>::New();
-    cube->SetFaceTextScale(0.5);
-    property = cube->GetCubeProperty();
-    property->SetColor( 0.5, 1, 1 );
-    property = cube->GetTextEdgesProperty();
-    property->SetLineWidth( 1 );
-    property->SetDiffuse( 0 );
-    property->SetAmbient( 1 );
-    property->SetColor( 0.1800, 0.2800, 0.2300 );
-    property = cube->GetXPlusFaceProperty();
-    property->SetColor(0, 0, 1);
-    property->SetInterpolationToFlat();
-    property = cube->GetXMinusFaceProperty();
-    property->SetColor(0, 0, 1);
-    property->SetInterpolationToFlat();
-    property = cube->GetYPlusFaceProperty();
-    property->SetColor(0, 1, 0);
-    property->SetInterpolationToFlat();
-    property = cube->GetYMinusFaceProperty();
-    property->SetColor(0, 1, 0);
-    property->SetInterpolationToFlat();
-    property = cube->GetZPlusFaceProperty();
-    property->SetColor(1, 0, 0);
-    property->SetInterpolationToFlat();
-    property = cube->GetZMinusFaceProperty();
-    property->SetColor(1, 0, 0);
-    property->SetInterpolationToFlat();
+        property = axes->GetYAxisTipProperty();
+        property->SetRepresentationToSurface();
+        property->SetDiffuse(0);
+        property->SetAmbient(1);
+        property->SetColor(0 , 1, 0 );
 
-    vtkSmartPointer<vtkAssembly> assemble = vtkSmartPointer<vtkAssembly>::New();
-    assemble->AddPart(cube);
-    assemble->AddPart(axes);
-    widget->SetOrientationMarker(assemble);
-    widget->SetCurrentRenderer(renderer);
-    widget->SetInteractor(interactor);
-    widget->SetEnabled(1);
-    widget->SetInteractive(1);
+        property = axes->GetZAxisTipProperty();
+        property->SetRepresentationToSurface();
+        property->SetDiffuse(0);
+        property->SetAmbient(1);
+        property->SetColor( 0, 0, 1 );
 
-    //renderer->AddViewProp( assemble );
+        vtkSmartPointer<vtkOrientationMarkerWidget> widget  = vtkSmartPointer<vtkOrientationMarkerWidget>::New();
+        vtkSmartPointer<vtkAnnotatedCubeActor> cube = vtkSmartPointer<vtkAnnotatedCubeActor>::New();
+        cube->SetFaceTextScale(0.5);
+        property = cube->GetCubeProperty();
+        property->SetColor( 0.5, 1, 1 );
+        property = cube->GetTextEdgesProperty();
+        property->SetLineWidth( 1 );
+        property->SetDiffuse( 0 );
+        property->SetAmbient( 1 );
+        property->SetColor( 0.1800, 0.2800, 0.2300 );
+        property = cube->GetXPlusFaceProperty();
+        property->SetColor(0, 0, 1);
+        property->SetInterpolationToFlat();
+        property = cube->GetXMinusFaceProperty();
+        property->SetColor(0, 0, 1);
+        property->SetInterpolationToFlat();
+        property = cube->GetYPlusFaceProperty();
+        property->SetColor(0, 1, 0);
+        property->SetInterpolationToFlat();
+        property = cube->GetYMinusFaceProperty();
+        property->SetColor(0, 1, 0);
+        property->SetInterpolationToFlat();
+        property = cube->GetZPlusFaceProperty();
+        property->SetColor(1, 0, 0);
+        property->SetInterpolationToFlat();
+        property = cube->GetZMinusFaceProperty();
+        property->SetColor(1, 0, 0);
+        property->SetInterpolationToFlat();
 
-    renderWindow->Render();
+        vtkSmartPointer<vtkAssembly> assemble = vtkSmartPointer<vtkAssembly>::New();
+        assemble->AddPart(cube);
+        assemble->AddPart(axes);
+        widget->SetOrientationMarker(assemble);
+        widget->SetCurrentRenderer(renderer);
+        widget->SetInteractor(interactor);
+        widget->SetEnabled(1);
+        widget->SetInteractive(1);
 
-    interactor->Initialize();
-    interactor->Start();
+        //renderer->AddViewProp( assemble );
 
-    return EXIT_SUCCESS;
-}
+        renderWindow->Render();
+
+        interactor->Initialize();
+        interactor->Start();
+
+        return EXIT_SUCCESS;
+    }

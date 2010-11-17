@@ -32,6 +32,7 @@
 #include <vtkLight.h>
 #include <vtkLightActor.h>
 #include <vtkLightKit.h>
+#include <vtkPointData.h>
 
 // INTERESTING: the poisson include must come first. Otherwise I get an
 // error in the constant definitions for MPI. I wonder if its because
@@ -405,9 +406,15 @@ void AddWeightVisualizer(int sindx, int type, GPU* subdomain, Derivative* der, v
         break;
     }
 
+    vtkSmartPointer<vtkIntArray> scalars = vtkSmartPointer<vtkIntArray>::New();
+    for (int i =0; i < cpoints->GetNumberOfPoints(); i++) {
+        scalars->InsertNextTuple1(i);
+    }
+
     // Now draw it:
     vtkSmartPointer<vtkPolyData> cpolydata = vtkSmartPointer<vtkPolyData>::New();
     cpolydata->SetPoints(cpoints);
+    cpolydata->GetPointData()->SetScalars(scalars);
 
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints(points);
@@ -457,13 +464,31 @@ void AddWeightVisualizer(int sindx, int type, GPU* subdomain, Derivative* der, v
     vtkSmartPointer<vtkGlyph3D> glyphPoints = vtkSmartPointer<vtkGlyph3D>::New();
     glyphPoints->SetInput(cpolydata);
     glyphPoints->SetSource(balls->GetOutput());
+    glyphPoints->SetColorModeToColorByScalar();
+    glyphPoints->SetScaleModeToDataScalingOff();
+
+    vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
+    lut->SetTableValue(0, 1., 1., 1., 1);
+    lut->SetTableValue(1, 0., 1., 1., 1);
+    lut->SetTableValue(2, 1., 1., 0., 1);
+    lut->SetTableValue(3, 1., 0., 0., 1);
+    lut->SetTableValue(4, 0., 1., 0., 1);
+    lut->SetTableValue(5, 0., 0., 1., 1);
+    lut->SetTableValue(6, 0., 0., 0., 1);
+    for (int i = 7; i < cpoints->GetNumberOfPoints(); i++) {
+        lut->SetTableValue(i, 1., 0., 1., 1);
+    }
+    lut->SetNumberOfTableValues(cpoints->GetNumberOfPoints());
 
     vtkSmartPointer<vtkPolyDataMapper> glyphMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     glyphMapper->SetInputConnection(glyphPoints->GetOutputPort());
+    glyphMapper->SetInput(glyphPoints->GetOutput());
+    glyphMapper->SetLookupTable(lut);
+    glyphMapper->SetScalarRange(0,cpoints->GetNumberOfPoints()-1);
 
     vtkSmartPointer<vtkActor> cpoint_actor = vtkSmartPointer<vtkActor>::New();
     cpoint_actor->SetMapper(glyphMapper);
-    cpoint_actor->GetProperty()->SetColor(1., 0., 1.);
+    //cpoint_actor->GetProperty()->SetColor(1., 0., 1.);
     cpoint_actor->GetProperty()->LightingOn();
 
     renderer->AddViewProp( stencil_actor );

@@ -1,3 +1,4 @@
+#include <vtkScalarBarActor.h>
 #include <vtkActor.h>
 #include <vtkAppendPolyData.h>
 #include <vtkCellArray.h>
@@ -309,14 +310,17 @@ void GetLaplData(int sindx, GPU* subdomain, Derivative* der, vtkPoints* cpoints,
 #else
     double *l_weights;
     l_weights = new double[13];
-    int iindx = 2;
-    l_weights[iindx] = 1.;
+    int iindx = 1;
+    l_weights[iindx] = -1.;
     for (int i = 0; i < iindx; i++) {
-        l_weights[i] = (double)0;
+        l_weights[i] = (double)1;
     }
-    for (int i = iindx+1; i < 13; i++) {
-        l_weights[i] = (double)0;
+    for (int i = iindx+1; i < 7; i++) {
+        l_weights[i] = (double)1;
     }
+    for (int i = 8; i < 13; i++) {
+    l_weights[i] = (double)-4;
+}
 #endif
     BasesType& phi = der->getRBFList(sindx);
 
@@ -389,7 +393,7 @@ void GetLaplData(int sindx, GPU* subdomain, Derivative* der, vtkPoints* cpoints,
 }
 
 // Add a visualizer for the sindx'th stencil to the renderer
-void AddWeightVisualizer(int sindx, int type, GPU* subdomain, Derivative* der, vtkRenderer* renderer, double* minZ, double* maxZ) {
+void AddWeightVisualizer(int sindx, int type, GPU* subdomain, Derivative* der, vtkRenderer* renderer, vtkLookupTable* lut, double* minZ, double* maxZ) {
     vtkSmartPointer<vtkPoints> cpoints = vtkSmartPointer<vtkPoints>::New(); // Collocation points
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New(); // Interpolation points
 
@@ -406,15 +410,17 @@ void AddWeightVisualizer(int sindx, int type, GPU* subdomain, Derivative* der, v
         break;
     }
 
-    vtkSmartPointer<vtkIntArray> scalars = vtkSmartPointer<vtkIntArray>::New();
-    for (int i =0; i < cpoints->GetNumberOfPoints(); i++) {
-        scalars->InsertNextTuple1(i);
+    vtkSmartPointer<vtkIntArray> nodeColors = vtkSmartPointer<vtkIntArray>::New();
+    nodeColors->SetNumberOfComponents(1);
+    nodeColors->SetName("NodeColor");
+    for (int i = 0; i < cpoints->GetNumberOfPoints(); i++) {
+        nodeColors->InsertNextValue(i);
     }
 
     // Now draw it:
     vtkSmartPointer<vtkPolyData> cpolydata = vtkSmartPointer<vtkPolyData>::New();
     cpolydata->SetPoints(cpoints);
-    cpolydata->GetPointData()->SetScalars(scalars);
+    cpolydata->GetPointData()->SetScalars(nodeColors);
 
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints(points);
@@ -467,24 +473,11 @@ void AddWeightVisualizer(int sindx, int type, GPU* subdomain, Derivative* der, v
     glyphPoints->SetColorModeToColorByScalar();
     glyphPoints->SetScaleModeToDataScalingOff();
 
-    vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
-    lut->SetTableValue(0, 1., 1., 1., 1);
-    lut->SetTableValue(1, 0., 1., 1., 1);
-    lut->SetTableValue(2, 1., 1., 0., 1);
-    lut->SetTableValue(3, 1., 0., 0., 1);
-    lut->SetTableValue(4, 0., 1., 0., 1);
-    lut->SetTableValue(5, 0., 0., 1., 1);
-    lut->SetTableValue(6, 0., 0., 0., 1);
-    for (int i = 7; i < cpoints->GetNumberOfPoints(); i++) {
-        lut->SetTableValue(i, 1., 0., 1., 1);
-    }
-    lut->SetNumberOfTableValues(cpoints->GetNumberOfPoints());
-
     vtkSmartPointer<vtkPolyDataMapper> glyphMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     glyphMapper->SetInputConnection(glyphPoints->GetOutputPort());
     glyphMapper->SetInput(glyphPoints->GetOutput());
     glyphMapper->SetLookupTable(lut);
-    glyphMapper->SetScalarRange(0,cpoints->GetNumberOfPoints()-1);
+    glyphMapper->SetScalarRange(nodeColors->GetRange());
 
     vtkSmartPointer<vtkActor> cpoint_actor = vtkSmartPointer<vtkActor>::New();
     cpoint_actor->SetMapper(glyphMapper);
@@ -572,6 +565,29 @@ int main(int argc, char ** argv)
 
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
 
+    int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required);
+    vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
+    lut->SetNumberOfTableValues(stencil_size);
+    lut->SetTableValue(0, 1., 1., 1., 1);   // Specially color first 5 nodes
+    lut->SetTableValue(1, 0., 0., 0., 1);
+    lut->SetTableValue(2, 1., 0., 0., 1);
+    lut->SetTableValue(3, 0., 1., 0., 1);
+    lut->SetTableValue(4, 0., 0., 1., 1);
+    for (int i = 5; i < stencil_size; i++) {
+        lut->SetTableValue(i, 1., 0., 1., 1);   // All remaining nodes are generic color
+    }
+    lut->Build();
+
+    vtkSmartPointer<vtkScalarBarActor> colorbar = vtkSmartPointer<vtkScalarBarActor>::New();
+    colorbar->SetLookupTable(lut);
+    colorbar->SetWidth(0.05);
+    colorbar->SetPosition(0.95, 0.1);
+    colorbar->SetLabelFormat("%.2g");
+    colorbar->SetNumberOfLabels(stencil_size);
+    colorbar->PickableOff();
+    colorbar->VisibilityOn();
+    renderer->AddViewProp(colorbar);
+
     double minZ;
     double maxZ;
 #if 0
@@ -579,7 +595,7 @@ int main(int argc, char ** argv)
 #else
         for (int i = 0; i < subdomain->Q_stencils.size(); i+=100) {
 #endif
-            AddWeightVisualizer(i, 2, subdomain, der, renderer, &minZ, &maxZ);
+            AddWeightVisualizer(i, 2, subdomain, der, renderer, lut, &minZ, &maxZ);
         }
         renderer->GetActiveCamera()->SetFocalPoint(0.,0.,(maxZ + minZ) / 2.);
         renderer->GetActiveCamera()->SetPosition(0.,0.,maxZ+2);

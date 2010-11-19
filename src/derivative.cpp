@@ -502,16 +502,22 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     for (int j=0; j < n; j++) {
 
         rbfs[irbf][j] = new IRBF(epsilon, dim_num);
+
+        // We want to evaluate every basis function. Each stencil node xjv has
+        // its own basis function and we evaluate them with the distance to the
+        // stencil center node x0v. This is B_j(||x0v - xjv||)
+        // NOTE: when all basis functions are the same (eqn and support) then
+        // B_c(||x0v - xjv||) = B_j(||x0v - xjv||).
         IRBF* rbf = rbfs[irbf][j];
 
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3& xjv = rbf_centers[stencil[j]];
         //xjv.print("xjv = ");
-        bx(j) = rbf->xderiv(x0v, xjv);
-        by(j) = rbf->yderiv(x0v, xjv);
-        bz(j) = rbf->zderiv(x0v, xjv);
-        br(j) = rbf->radialderiv(x0v, xjv);
-        blapl(j) = rbf->lapl_deriv(x0v, xjv);
+        bx(j) = rbf->xderiv(xjv, x0v);
+        by(j) = rbf->yderiv(xjv, x0v);
+        bz(j) = rbf->zderiv(xjv, x0v);
+        br(j) = rbf->radialderiv(xjv, x0v);
+        blapl(j) = rbf->lapl_deriv(xjv, x0v);
        // printf("blapl(%d)= %f [lapl(%f, %f)]\n", j, blapl(j), (x0v-xjv).magnitude(), epsilon);
        // (x0v-xjv).print("lapl(x)");
     }

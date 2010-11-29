@@ -15,7 +15,7 @@
 #include <cusp/transpose.h>
 using namespace std;
 
-#define FLOAT double
+#define FLOAT float
 
 NCARPoisson1_CUSP::NCARPoisson1_CUSP(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)

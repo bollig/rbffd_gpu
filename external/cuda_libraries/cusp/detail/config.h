@@ -21,4 +21,9 @@
 #pragma once
 
 #include <thrust/detail/config.h>
+#include <thrust/version.h>
+
+#if THRUST_VERSION < 100300
+#error "This version of Cusp requires Thrust v1.3.0 or newer"
+#endif 
 

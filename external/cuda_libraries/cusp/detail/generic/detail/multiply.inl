@@ -21,12 +21,16 @@
 
 #include <thrust/gather.h>
 #include <thrust/scan.h>
-#include <thrust/segmented_scan.h>
 #include <thrust/scatter.h>
 #include <thrust/sort.h>
 #include <thrust/transform.h>
 #include <thrust/reduce.h>
 #include <thrust/iterator/permutation_iterator.h>
+
+#if (THRUST_VERSION < 100300)
+// TODO remove this when Thrust v1.2.x is unsupported
+#include <thrust/segmented_scan.h>
+#endif
 
 namespace cusp
 {
@@ -60,9 +64,16 @@ void multiply(const cusp::coo_matrix<IndexType,ValueType,MemorySpace>& A,
 
     // for each element A(i,j) compute the number of nonzero elements in B(j,:)
     cusp::array1d<IndexType,MemorySpace> segment_lengths(A.num_entries);
-    thrust::next::gather(A.column_indices.begin(), A.column_indices.end(),
+#if (THRUST_VERSION >= 100300)
+    thrust::gather(A.column_indices.begin(), A.column_indices.end(),
                    B_row_lengths.begin(),
                    segment_lengths.begin());
+#else
+    // TODO remove this when Thrust v1.2.x is unsupported
+    thrust::next::gather(A.column_indices.begin(), A.column_indices.end(),
+                         B_row_lengths.begin(),
+                         segment_lengths.begin());
+#endif
     
     // output pointer
     cusp::array1d<IndexType,MemorySpace> output_ptr(A.num_entries + 1);
@@ -89,22 +100,39 @@ void multiply(const cusp::coo_matrix<IndexType,ValueType,MemorySpace>& A,
                        output_ptr.begin(),
                        segment_lengths.begin(),
                        gather_locations.begin());
+#if THRUST_VERSION >= 100300
+    thrust::inclusive_scan_by_key(segments.begin(), segments.end(),
+                                  gather_locations.begin(),
+                                  gather_locations.begin());
+
+#else
+    // TODO remove this when Thrust v1.2.x is unsupported
     thrust::experimental::inclusive_segmented_scan(gather_locations.begin(), gather_locations.end(),
                                                    segments.begin(),
                                                    gather_locations.begin());
+#endif
     
     // compute column entries and values of intermediate format
     cusp::array1d<IndexType,MemorySpace> I(coo_num_nonzeros);
     cusp::array1d<IndexType,MemorySpace> J(coo_num_nonzeros);
     cusp::array1d<ValueType,MemorySpace> V(coo_num_nonzeros);
     
+#if THRUST_VERSION >= 100300
+    thrust::gather(segments.begin(), segments.end(),
+                   A.row_indices.begin(),
+                   I.begin());
+    thrust::gather(gather_locations.begin(), gather_locations.end(),
+                   B.column_indices.begin(),
+                   J.begin());
+#else
+    // TODO remove this when Thrust v1.2.x is unsupported
     thrust::next::gather(segments.begin(), segments.end(),
                          A.row_indices.begin(),
                          I.begin());
-
     thrust::next::gather(gather_locations.begin(), gather_locations.end(),
                          B.column_indices.begin(),
                          J.begin());
+#endif    
 
     thrust::transform(thrust::make_permutation_iterator(A.values.begin(), segments.begin()),
                       thrust::make_permutation_iterator(A.values.begin(), segments.begin()) + coo_num_nonzeros,

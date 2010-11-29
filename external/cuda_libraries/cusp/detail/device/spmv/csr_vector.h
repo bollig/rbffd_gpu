@@ -19,11 +19,10 @@
 
 #include <cusp/csr_matrix.h>
 
+#include <cusp/detail/device/arch.h>
 #include <cusp/detail/device/common.h>
 #include <cusp/detail/device/utils.h>
 #include <cusp/detail/device/texture.h>
-
-#include <thrust/experimental/arch.h>
 
 namespace cusp
 {
@@ -133,7 +132,7 @@ void __spmv_csr_vector(const csr_matrix<IndexType,ValueType,cusp::device_memory>
     const unsigned int THREADS_PER_BLOCK  = 128;
     const unsigned int VECTORS_PER_BLOCK  = THREADS_PER_BLOCK / THREADS_PER_VECTOR;
 
-    const unsigned int MAX_BLOCKS = thrust::experimental::arch::max_active_blocks(spmv_csr_vector_kernel<IndexType, ValueType, VECTORS_PER_BLOCK, THREADS_PER_VECTOR, UseCache>, THREADS_PER_BLOCK, (size_t) 0);
+    const unsigned int MAX_BLOCKS = cusp::detail::device::arch::max_active_blocks(spmv_csr_vector_kernel<IndexType, ValueType, VECTORS_PER_BLOCK, THREADS_PER_VECTOR, UseCache>, THREADS_PER_BLOCK, (size_t) 0);
     const unsigned int NUM_BLOCKS = std::min(MAX_BLOCKS, DIVIDE_INTO(csr.num_rows, VECTORS_PER_BLOCK));
     
     if (UseCache)

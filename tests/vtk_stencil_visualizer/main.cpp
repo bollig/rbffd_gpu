@@ -31,7 +31,6 @@
 #include <vtkCamera.h>
 #include <vtkLightCollection.h>
 #include <vtkLight.h>
-#include <vtkLightActor.h>
 #include <vtkLightKit.h>
 #include <vtkPointData.h>
 
@@ -87,7 +86,7 @@
 #include <vtkCamera.h>
 #include <vtkLightCollection.h>
 #include <vtkLight.h>
-#include <vtkLightActor.h>
+//#include <vtkLightActor.h>
 #include <vtkLightKit.h>
 
 // INTERESTING: the poisson include must come first. Otherwise I get an
@@ -482,7 +481,7 @@ void AddWeightVisualizer(int sindx, int type, GPU* subdomain, Derivative* der, v
     vtkSmartPointer<vtkActor> cpoint_actor = vtkSmartPointer<vtkActor>::New();
     cpoint_actor->SetMapper(glyphMapper);
     //cpoint_actor->GetProperty()->SetColor(1., 0., 1.);
-    cpoint_actor->GetProperty()->LightingOn();
+//    cpoint_actor->GetProperty()->LightingOn();
 
     renderer->AddViewProp( stencil_actor );
     renderer->AddViewProp( cpoint_actor );

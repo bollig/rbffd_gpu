@@ -35,7 +35,7 @@
 
 
         SET( REQUIRED_CU_SOURCE_FILES
-                ncar_poisson1_cusp.cu
+		#                ncar_poisson1_cusp.cu
 	)
 
         SET( REQUIRED_CL_SOURCE_FILES

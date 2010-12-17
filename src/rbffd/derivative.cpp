@@ -443,7 +443,7 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
     //double eps = 1.5 * var_eps[irbf]; // variable epsilon (for 1000 pts)
 
     //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
-    cout << "CHOICE: " << choice << endl;
+    //cout << "CHOICE: " << choice << endl;
 
     IRBF rbf(eps, 2);
     Stencils sten(&rbf, rad, eps, &xd, choice);
@@ -598,9 +598,6 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     arma::mat d_matrix(n+np, n+np);
     d_matrix.zeros(n+np,n+np);
     this->distanceMatrix(rbf_centers, stencil, irbf, d_matrix.memptr(), d_matrix.n_rows, d_matrix.n_cols, dim_num);
-
-    cout << d_matrix << endl;
-    exit(EXIT_FAILURE);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {

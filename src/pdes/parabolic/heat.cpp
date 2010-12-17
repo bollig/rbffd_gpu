@@ -331,7 +331,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 #if 1
 	for (int i = 0; i < lapl_deriv.size(); i++) {
 		Vec3& v = (*rbf_centers)[i];
-		printf("(local: %d), lapl(%f,%f,%f)= %f\t%f\n", i, v.x(), v.y(), v.z(), 
+                printf("(local: %d), lapl(%f,%f,%f)= %f\t UpdatedSol = %f\n", i, v.x(), v.y(), v.z(),
 				lapl_deriv[i], s[i]);
 	}
 	//exit(0);
@@ -350,14 +350,14 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 		Vec3& v = (*rbf_centers)[i];
 		//printf("dt= %f, time= %f\n", dt, time);
 		double f = force(v, time);
-		printf("force (local: %d) = %f\n", i, f);
-                printf("Before %f,", s[i]);
+                //printf("force (local: %d) = %f\n", i, f);
+                //printf("Before %f,", s[i]);
 #ifdef SECOND
 		s1[i] = s[i] + 0.5 * dt * (lapl_deriv[i] + f);
 #else
 		s[i] = s[i] + dt* ( lapl_deriv[i] + f);
 #endif
-                printf("After %f\n", s[i]);
+                //printf("After %f\n", s[i]);
 	}
 
 	time = time + dt;
@@ -448,11 +448,11 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	fclose(fdsol);
 
 	double nrm_ex = maxNorm(sol_ex);
-        printf("(time: %f) exact max norm: %f\n", time, nrm_ex);
+        printf("(final simulation time: %f) max norm of exact solution: %f\n", time, nrm_ex);
 	double nrm_sol0 = maxNorm(s);
-        printf("(time: %f) max norm(s[0]): %f\n", time, nrm_sol0);
+        printf("(final simulation time: %f) max norm of computed solution: %f\n", time, nrm_sol0);
 	double nrm_error = maxNorm(sol_error);
-        printf("(time: %f) nrm_error= %f\n", time, nrm_error);
+        printf("(final simulationtime: %f) max nrm of error= %f\n", time, nrm_error);
 
 	if (updated_solution != NULL) {
 		for (int i = 0; i < s.size(); i++) {

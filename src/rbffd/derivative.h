@@ -9,6 +9,7 @@
 //#include <armadillo>
 #include "rbffd/rbfs/rbf_gaussian.h"
 #include "rbffd/rbfs/rbf_mq.h"
+#include "utils/conf/projectsettings.h"
 
 //typedef RBF_Gaussian IRBF;
 typedef RBF_MQ IRBF;
@@ -44,9 +45,13 @@ private:
     double epsilon;  // RBF scaling
     int nb_bnd; // number of points on the boundary (EB: is this the boundary of subdomain or PDE?)
 
+    // Configurable option from projectSettings
+    int debug_mode;
+
 public:
     //Derivative(int nb_rbfs);
     Derivative(std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts);
+    Derivative(ProjectSettings* settings, std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts);
     ~Derivative();
 
     AF& cholesky_cpu(AF& arr);

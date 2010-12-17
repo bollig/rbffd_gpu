@@ -1,4 +1,4 @@
-PROJECT (new_ncar_poisson1)
+PROJECT (ncar_poisson1_nonuniform_diffusivity)
 
 SET (TEST_NAME ${PROJECT_NAME}.x)
 

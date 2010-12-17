@@ -11,6 +11,30 @@ using namespace arma;
 //----------------------------------------------------------------------
 //Derivative::Derivative(int nb_rbfs) : arr(1,1,1), maxint(maxint = (1 << 31) - 1)
 Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_) :
+        rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.), debug_mode(0)
+{
+    this->nb_bnd = nb_bnd_;
+    this->nb_rbfs = rbf_centers.size();
+
+    x_weights.resize(nb_rbfs);
+    y_weights.resize(nb_rbfs);
+    z_weights.resize(nb_rbfs);
+    r_weights.resize(nb_rbfs);
+    lapl_weights.resize(nb_rbfs);
+    rbfs.resize(nb_rbfs);
+
+    // derivative depends strongly on epsilon!
+    // there must be a range of epsilon for which the derivative is approx. constant!
+    epsilon = 0.1; // laplacian returns zero (related to SVD perhaps)
+    //epsilon = 3.; // Pretty accurate
+    epsilon = 2.; // Pretty accurate
+    //epsilon = 1.;
+    //epsilon = 0.5; // Pretty accurate
+
+    printf("nb_rbfs= %d\n", nb_rbfs); // ok
+}
+//----------------------------------------------------------------------
+Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_) :
         rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.)
 {
     this->nb_bnd = nb_bnd_;
@@ -32,6 +56,8 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil
     //epsilon = 0.5; // Pretty accurate
 
     printf("nb_rbfs= %d\n", nb_rbfs); // ok
+
+    debug_mode = settings->GetSettingAs<int>("DEBUG_MODE");
 }
 //----------------------------------------------------------------------
 Derivative::~Derivative()
@@ -646,13 +672,15 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         this->lapl_weights[irbf][j] = weights_lapl[j];
         sum_nodes_and_monomials += weights_lapl[j];
     }
-    cout << "(" << irbf << ") ";
-    weights_lapl.print("lapl_weights");
-    cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
-    cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
-    if (sum_nodes_only > 1e-7) {
-        cout << "WARNING! SUM OF WEIGHTS FOR LAPL NODES IS NOT ZERO: " << sum_nodes_only << endl;
-        exit(EXIT_FAILURE);
+    if (this->debug_mode) {
+        cout << "(" << irbf << ") ";
+        weights_lapl.print("lapl_weights");
+        cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
+        cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
+        if (sum_nodes_only > 1e-7) {
+            cout << "WARNING! SUM OF WEIGHTS FOR LAPL NODES IS NOT ZERO: " << sum_nodes_only << endl;
+            exit(EXIT_FAILURE);
+        }
     }
 
 

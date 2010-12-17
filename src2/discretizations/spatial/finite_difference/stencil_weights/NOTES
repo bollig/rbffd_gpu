@@ -1,3 +1,0 @@
-Rename derivative.*
-to RBFFD.*
-because it provides FD stencil weights for discretization using RBFFD

@@ -1,6 +1,0 @@
-spatial_implicit
-and 
-spatial_explicit
-provide a set of rules for computing derivative terms over a grid
-
-Implicit implies that we use stencil weights in an implicit linear system and solve 

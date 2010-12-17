@@ -7,8 +7,8 @@
 #include "ArrayT.h"
 #include "Vec3.h"
 //#include <armadillo>
-#include "rbf_gaussian.h"
-#include "rbf_mq.h"
+#include "rbffd/rbfs/rbf_gaussian.h"
+#include "rbffd/rbfs/rbf_mq.h"
 
 //typedef RBF_Gaussian IRBF;
 typedef RBF_MQ IRBF;

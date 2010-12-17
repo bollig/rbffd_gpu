@@ -3,12 +3,12 @@
 
 //#include <vector>
 //#include <ArrayT.h>
-#include "gpu.h"
-#include "exact_solution.h"
-#include "communicator.h"
-#include "derivative.h"
+#include "grids/domain_decomposition/gpu.h"
+#include "exact_solutions/exact_solution.h"
+#include "utils/comm/communicator.h"
+#include "rbffd/derivative.h"
 #include "ncar_poisson1.h"
-#include "projectsettings.h"
+#include "utils/conf/projectsettings.h"
 #include <boost/numeric/ublas/vector.hpp>
 
 // Set single or double precision here.

@@ -1,8 +1,8 @@
 #ifndef __DERIVATIVE_TESTS_H__
 #define __DERIVATIVE_TESTS_H__
 
-#include "derivative.h"
-#include "grid.h"
+#include "rbffd/derivative.h"
+#include "grids/grid.h"
 #include "Vec3.h"
 
 class DerivativeTests {

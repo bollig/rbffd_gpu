@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <vector> 
 #include "Vec3.h"
-#include "gpu.h"
+#include "utils/comm/mpisendable.h"
 
 class StencilMessage {
 public:

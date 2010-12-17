@@ -1,9 +1,9 @@
 #include <math.h>
 
 #include <stdlib.h>
-#include "grid.h"
+#include "grids/grid.h"
 #include "ncar_poisson1_cusp.h"
-#include "exact_solution.h"
+#include "exact_solutions/exact_solution.h"
 
 #include <cusp/hyb_matrix.h>
 #include <cusp/coo_matrix.h>

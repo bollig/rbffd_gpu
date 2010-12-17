@@ -1,8 +1,8 @@
 #include <math.h>
-#include "grid.h"
-#include "derivative.h"
+#include "grids/grid.h"
+#include "rbffd/derivative.h"
 #include "heat.h"
-#include "exact_solution.h"
+#include "exact_solutions/exact_solution.h"
 
 using namespace std;
 

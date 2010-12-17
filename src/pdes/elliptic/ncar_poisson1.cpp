@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <math.h>
-#include "grid.h"
+#include "grids/grid.h"
 #include "ncar_poisson1.h"
-#include "exact_solution.h"
+#include "exact_solutions/exact_solution.h"
 #include <armadillo>
-#include "derivative.h"
+#include "rbffd/derivative.h"
 
 using namespace std;
 

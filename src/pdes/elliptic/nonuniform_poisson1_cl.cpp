@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "grid.h"
+#include "grids/grid.h"
 #include "nonuniform_poisson1_cl.h"
-#include "exact_solution.h"
+#include "exact_solutions/exact_solution.h"
 #include "timingGE.h"
 
 // The GPU/OpenCL side sparse arrays come from ViennaCL

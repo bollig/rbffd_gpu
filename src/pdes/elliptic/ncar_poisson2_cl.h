@@ -3,10 +3,10 @@
 
 //#include <vector>
 //#include <ArrayT.h>
-#include "gpu.h"
-#include "exact_solution.h"
-#include "communicator.h"
-#include "derivative.h"
+#include "grids/domain_decomposition/gpu.h"
+#include "exact_solutions/exact_solution.h"
+#include "utils/comm/communicator.h"
+#include "rbffd/derivative.h"
 #include "ncar_poisson1.h"
 
 class NCARPoisson2_CL : public NCARPoisson1

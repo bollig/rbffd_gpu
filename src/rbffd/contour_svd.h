@@ -5,8 +5,8 @@
 #include <CVec3.h>
 #include <armadillo>
 #include <string>
-#include "rbf.h"
-#include "rbf_mq.h"
+#include "rbffd/rbfs/rbf.h"
+#include "rbffd/rbfs/rbf_mq.h"
 
 class ContourSVD
 {

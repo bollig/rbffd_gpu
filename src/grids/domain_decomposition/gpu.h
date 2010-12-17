@@ -6,7 +6,7 @@
 #include <Vec3.h>
 
 //#include <boost/hash.hpp> // full library
-#include "mpisendable.h"
+#include "utils/comm/mpisendable.h"
 
 
 // This class should really be called "DomainDecomposition" or "SubDomain" etc.

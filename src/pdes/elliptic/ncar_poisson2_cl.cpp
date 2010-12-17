@@ -1,10 +1,10 @@
-//#define VIENNACL_HAVE_UBLAS 1
+///#define VIENNACL_HAVE_UBLAS 1
 #include <stdlib.h>
 #include <math.h>
 
-#include "grid.h"
+#include "grids/grid.h"
 #include "ncar_poisson2_cl.h"
-#include "exact_solution.h"
+#include "exact_solutions/exact_solution.h"
 
 // The GPU/OpenCL side sparse arrays come from ViennaCL
 #include "viennacl/scalar.hpp"

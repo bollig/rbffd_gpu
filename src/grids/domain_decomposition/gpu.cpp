@@ -5,7 +5,7 @@
 #include "gpu.h"
 
 //#include <set>
-#include "communicator.h"
+#include "utils/comm/communicator.h"
 
 using namespace std;
 //using namespace boost;

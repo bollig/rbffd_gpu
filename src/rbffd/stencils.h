@@ -5,7 +5,7 @@
 #include <armadillo>
 #include <math.h>
 #include <Vec3.h>
-#include "rbf.h"
+#include "rbffd/rbfs/rbf.h"
 #include "contour_svd.h"
 
 

@@ -1,8 +1,8 @@
 #include "derivative_tests.h"
-#include "norms.h"
+#include "utils/norms.h"
 #include <vector>
 
-#include "exact_ncar_poisson2.h"
+#include "exact_solutions/exact_ncar_poisson2.h"
 using namespace std;
 
 //----------------------------------------------------------------------

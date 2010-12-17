@@ -1,7 +1,7 @@
 #include <complex>
 #include <vector>
 #include "contour_svd.h"
-#include "rbf.h"
+#include "rbffd/rbfs/rbf.h"
 
 #include <fftw3.h>
 

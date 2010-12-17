@@ -5,7 +5,7 @@
 #include "Vec3.h"
 #include "density.h"
 #include "cvt.h"
-#include "projectsettings.h"
+#include "utils/conf/projectsettings.h"
 
 // Create a constrained CVT
 // in the volume created by two nested spheres.

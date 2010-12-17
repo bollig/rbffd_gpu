@@ -4,11 +4,11 @@
 #include "timingGE.h"
 #include <vector>
 #include <ArrayT.h>
-#include "gpu.h"
-#include "exact_solution.h"
-#include "communicator.h"
-#include "derivative.h"
-#include "projectsettings.h"
+#include "grids/domain_decomposition/gpu.h"
+#include "exact_solutions/exact_solution.h"
+#include "utils/comm/communicator.h"
+#include "rbffd/derivative.h"
+#include "utils/conf/projectsettings.h"
 
 class NCARPoisson1
 {

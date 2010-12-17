@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "Vec3.h"
-#include "parametric_patch.h"
+#include "utils/geom/parametric_patch.h"
 #include "density.h"
 #include "cvt.h"
 

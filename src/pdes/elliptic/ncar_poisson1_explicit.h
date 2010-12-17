@@ -3,10 +3,10 @@
 
 #include <vector>
 #include <ArrayT.h>
-#include "gpu.h"
-#include "exact_solution.h"
-#include "derivative.h"
-#include "communicator.h"
+#include "grids/domain_decomposition/gpu.h"
+#include "exact_solutions/exact_solution.h"
+#include "rbffd/derivative.h"
+#include "utils/comm/communicator.h"
 
 class NCARPoisson1Explicit
 {

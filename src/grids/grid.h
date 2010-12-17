@@ -5,7 +5,7 @@
 #include <Vec3.h>
 #include <ArrayT.h>
 #include "KDTree.h"
-#include "projectsettings.h"
+#include "utils/conf/projectsettings.h"
 
 class Grid {
 

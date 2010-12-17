@@ -539,11 +539,11 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3& xjv = rbf_centers[stencil[j]];
         //xjv.print("xjv = ");
-        bx(j) = rbf->xderiv(xjv, x0v);
-        by(j) = rbf->yderiv(xjv, x0v);
-        bz(j) = rbf->zderiv(xjv, x0v);
-        br(j) = rbf->radialderiv(xjv, x0v);
-        blapl(j) = rbf->lapl_deriv(xjv, x0v);
+        bx(j) = rbf->xderiv(x0v, xjv);
+        by(j) = rbf->yderiv(x0v, xjv);
+        bz(j) = rbf->zderiv(x0v, xjv);
+        br(j) = rbf->radialderiv(x0v, xjv);
+        blapl(j) = rbf->lapl_deriv(x0v, xjv);
        // printf("blapl(%d)= %f [lapl(%f, %f)]\n", j, blapl(j), (x0v-xjv).magnitude(), epsilon);
        // (x0v-xjv).print("lapl(x)");
     }

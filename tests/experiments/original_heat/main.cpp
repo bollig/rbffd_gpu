@@ -1119,7 +1119,7 @@ int main()
 	// create or read from file
 	bool create_cvt;
 	create_cvt = true;
-	create_cvt = false;
+        create_cvt = false;
 
 	if (create_cvt) {
                 cvt = new EllipseCVT();

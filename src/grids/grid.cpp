@@ -66,7 +66,7 @@ Grid::Grid(int dim_num, int stencil_size) {
 
     this->stencil_size = stencil_size;
     this->dim = dim_num;
-    this->forceSymmetricStencils = true;
+    this->forceSymmetricStencils = false;
 
     // END NECESSARY
 }
@@ -90,7 +90,7 @@ Grid::Grid(int n_x, int n_y, int stencil_size) {
     subgrid_index_list = new ArrayT<vector<int> >(nx, ny);
 
     this->stencil_size = stencil_size;
-    this->forceSymmetricStencils = true;
+    this->forceSymmetricStencils = false;
 }
 //----------------------------------------------------------------------
 

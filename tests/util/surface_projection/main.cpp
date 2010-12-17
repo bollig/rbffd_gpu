@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <Vec3.h>
-#include <parametric_patch.h>
-#include <ellipsoid_patch.h>
+#include "utils/geom/parametric_patch.h"
+#include "utils/geom/ellipsoid_patch.h"
 
 //----------------------------------------------------------------------
 int main(int argc, char** argv)

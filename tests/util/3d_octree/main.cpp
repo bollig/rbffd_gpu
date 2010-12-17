@@ -1,9 +1,9 @@
 #include <math.h>
 #include <stdlib.h>
 #include <vector>
-#include <ellipsoid_patch.h>
-#include <parametric_patch.h>
-#include <octree.h>
+#include "utils/geom/ellipsoid_patch.h"
+#include "utils/geom/parametric_patch.h"
+#include "utils/geom/octree.h"
 
 using namespace std;
 

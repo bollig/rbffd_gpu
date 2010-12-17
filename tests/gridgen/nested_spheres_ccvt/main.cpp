@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "nested_sphere_cvt.h"
+#include "grids/cvt/nested_sphere_cvt.h"
 
 using namespace std;
 

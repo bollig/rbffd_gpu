@@ -1,5 +1,5 @@
 # 1) Change template_name to your test name
-PROJECT (original)
+PROJECT (original_heat)
 
 SET (TEST_NAME ${PROJECT_NAME}.x)
 

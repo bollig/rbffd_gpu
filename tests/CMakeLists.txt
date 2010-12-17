@@ -3,6 +3,29 @@
 # Project Testing
 ###############################################
 	SET (TEST_COLLECTION
+		# find * |grep -v "\." | grep -v "incomplete\/" | grep -v "cut\/"| grep "\/" | grep -v "NOTES" |grep -v "TODO"
+
+		experiment/ncar_poisson1
+		experiment/ncar_poisson2
+		experiment/ncar_poisson1_nonuniform_diffusivity
+		experiment/original_heat
+		experiment/regular_square2D_heat
+		experiment/regulargrid3D_heat
+
+		gridgen/nested_spheres_ccvt
+		
+		util/3d_octree
+		util/binary_cvt_io
+		util/cusp_simple_example
+		util/cusp_version_test
+		util/projectSettings
+		util/surface_integral
+		util/surface_projection
+		util/viennacl_simple_example
+		util/vtk_stencil_visualizer
+
+
+
 		#		projectSettings	    # WORKS (demonstrates using ProjectSettings class)
 		#		template            # WORKS (empty test)
 		#		surface_integral    # WORKS (compute a simple surf integral on parametric geometry)

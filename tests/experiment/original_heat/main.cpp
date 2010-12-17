@@ -14,16 +14,16 @@
 //#include <write_psi.h>
 
 #include <armadillo>
-#include "gpu.h"
-#include "rbf_mq.h"
+#include "grids/domain_decomposition/gpu.h"
+#include "rbffd/rbfs/rbf_mq.h"
 //#include "rbf_gaussian.h"
-#include "derivative.h"
-#include "grid.h"
-#include "heat.h"
-#include "density.h"
-#include "cvt.h"
-#include "ellipse_cvt.h"
-#include "exact_ellipse.h"
+#include "rbffd/derivative.h"
+#include "grids/grid.h"
+#include "pdes/parabolic/heat.h"
+#include "density.h"	// DENSITY from CWD
+#include "grids/cvt/cvt.h"
+#include "grids/cvt/ellipse_cvt.h"
+#include "exact_solutions/exact_ellipse.h"
 // used go generate random seed that changes between runs
 #include <time.h> 
 

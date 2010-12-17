@@ -40,73 +40,19 @@
 //#include "ncar_poisson1.h"
 //#include "ncar_poisson1_cusp.h"
 //#include "ncar_poisson1_cl.h"
-#include "nonuniform_poisson1_cl.h"
-#include "grid.h"
-#include "nested_sphere_cvt.h"
-#include "cvt.h"
-#include "gpu.h"
-#include "derivative.h"
-#include "derivative_tests.h"
-#include "exact_solution.h"
-#include "exact_ncar_poisson1.h"
-#include "exact_ncar_poisson2.h"
-#include "communicator.h"
-#include "projectsettings.h"
+#include "pdes/elliptic/nonuniform_poisson1_cl.h"
+#include "grids/grid.h"
+#include "grids/cvt/nested_sphere_cvt.h"
+#include "grids/cvt/cvt.h"
+#include "grids/domain_decomposition/gpu.h"
+#include "rbffd/derivative.h"
+#include "rbffd/derivative_tests.h"
+#include "exact_solutions/exact_solution.h"
+#include "exact_solutions/exact_ncar_poisson1.h"
+#include "exact_solutions/exact_ncar_poisson2.h"
+#include "utils/comm/communicator.h"
+#include "utils/conf/projectsettings.h"
 
-
-#include <vtkActor.h>
-#include <vtkAppendPolyData.h>
-#include <vtkCellArray.h>
-#include <vtkMath.h>
-#include <vtkPolyData.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkRectilinearGridSource.h>
-#include <vtkProperty.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkSmartPointer.h>
-#include <vtkTransform.h>
-#include <vtkTransformPolyDataFilter.h>
-#include <vtkVoxelContoursToSurfaceFilter.h>
-#include <vtkPolyDataWriter.h>
-#include <vtkDelaunay2D.h>
-#include <vtkElevationFilter.h>
-#include <vtkDataSetMapper.h>
-#include <vtkLookupTable.h>
-#include <vtkAxesActor.h>
-#include <vtkOrientationMarkerWidget.h>
-#include <vtkAnnotatedCubeActor.h>
-#include <vtkAssembly.h>
-#include <vtkInteractorStyleSwitch.h>
-#include <vtkAppendFilter.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkSphereSource.h>
-#include <vtkGlyph3D.h>
-#include <vtkCamera.h>
-#include <vtkLightCollection.h>
-#include <vtkLight.h>
-//#include <vtkLightActor.h>
-#include <vtkLightKit.h>
-
-// INTERESTING: the poisson include must come first. Otherwise I get an
-// error in the constant definitions for MPI. I wonder if its because
-// nested_sphere_cvt.h accidentally overrides one of the defines for MPI
-//#include "ncar_poisson1.h"
-//#include "ncar_poisson1_cusp.h"
-//#include "ncar_poisson1_cl.h"
-#include "nonuniform_poisson1_cl.h"
-#include "grid.h"
-#include "nested_sphere_cvt.h"
-#include "cvt.h"
-#include "gpu.h"
-#include "derivative.h"
-#include "derivative_tests.h"
-#include "exact_solution.h"
-#include "exact_ncar_poisson1.h"
-#include "exact_ncar_poisson2.h"
-#include "communicator.h"
-#include "projectsettings.h"
 
 void GetYData(int sindx, GPU* subdomain, Derivative* der, vtkPoints* cpoints, vtkPoints* points) {
     // Generate a grid of samples for the interpolant

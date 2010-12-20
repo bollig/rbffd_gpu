@@ -345,7 +345,7 @@ numColsComputeDenom = length(columnsToComputeDenom);
         end
 #endif
 
-		if (rnk == (N/2-1)) {
+        if (rnk == (N/2-1)) {
             printf("Rational part of expansion, most likely not calculated correctly\n");
         }
 

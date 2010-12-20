@@ -202,13 +202,13 @@ public:
             double r2 = xvec.square();
             double f = eval(xvec);
             double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
-
+#if 0
 	    double lapl2 = ((dim * eps2) / f) - ((eps2 * eps2 * r2) / (f*f*f));
 		if (lapl != lapl2) {
 			std::cout << "ERROR: " << lapl << " != " << lapl2 << std::endl;
 			exit(EXIT_FAILURE);
 		}
-
+#endif
             return lapl;
 #else
             double f = eval(xvec);
@@ -231,13 +231,13 @@ public:
                 // This is the simplified equation:
                 double f = eval(r);
                 double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
-	    
+#if 0
 		double lapl2 = ((dim * eps2) / f) - ((eps2 * eps2 * r2) / (f*f*f));
 		if (lapl != lapl2) {
 			std::cout << "ERROR: " << lapl << " != " << lapl2 << std::endl;
 			exit(EXIT_FAILURE);
 		}
-                
+#endif
 		return lapl;
 #else
                 //printf("lapl_deriv(double), x= %f\n", x);

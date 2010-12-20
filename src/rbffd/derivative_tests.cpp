@@ -614,5 +614,6 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     #endif
     this->testDeriv(DerivativeTests::Y3, der, grid, grid.getAvgDist());
     this->testDeriv(DerivativeTests::CUSTOM, der, grid, grid.getAvgDist());
+    this->testEigen(grid, der, grid.getStencil().size(), grid.getNbBnd(), grid.getRbfCenters().size());
 //    exit(EXIT_FAILURE);
 }

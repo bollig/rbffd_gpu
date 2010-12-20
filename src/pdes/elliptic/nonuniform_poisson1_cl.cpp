@@ -106,9 +106,11 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             // Compute all derivatives for our centers and return the number of
             // weights that will be available
             numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i);
+#if USE_CONTOURSVD
             der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "x");
             der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "y");
             der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "lapl");
+#endif
         }
 #else
         // Compute only interior weights

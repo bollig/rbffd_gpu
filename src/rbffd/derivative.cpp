@@ -442,7 +442,8 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
     var_eps[irbf] *= .07; // TEMP Does not work
 #endif
     double rad = 1.1;              // rad should also be proportional to (1/avg_stencil_radius)
-    double eps = 1.1; // * var_eps[irbf]; // variable epsilon (for 300 pts)
+    double eps = 1.0; // * var_eps[irbf]; // variable epsilon (for 300 pts)
+    //double eps = 1.1; // * var_eps[irbf]; // variable epsilon (for 300 pts)
     //double eps = 1.5 * var_eps[irbf]; // variable epsilon (for 1000 pts)
 
     //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
@@ -1153,8 +1154,6 @@ double Derivative::computeEig()
     double max_neg_eig = abs(real(eigval(0)));
     double min_neg_eig = abs(real(eigval(0)));
 
-    printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
-    printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);
     printf("sz= %d, nb_bnd= %d\n", sz, nb_bnd);
 
     // Compute number of unstable modes

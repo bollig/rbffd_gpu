@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+
 PROJECT (ncar_poisson1_nonuniform_diffusivity)
 
 SET (TEST_NAME ${PROJECT_NAME}.x)

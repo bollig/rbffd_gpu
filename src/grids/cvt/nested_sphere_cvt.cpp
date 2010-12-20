@@ -36,7 +36,7 @@ NestedSphereCVT::NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb
 
 
 NestedSphereCVT::NestedSphereCVT(ProjectSettings* settings) :
-        CVT(settings->GetSettingAs<int>("NB_INTERIOR") + settings->GetSettingAs<int>("NB_BOUNDARY"),
+        CVT(settings->GetSettingAs<int>("NB_INTERIOR") + settings->GetSettingAs<int>("NB_INNER_BND") + settings->GetSettingAs<int>("NB_OUTER_BND"),
             settings->GetSettingAs<int>("DIMENSION"), "nested_spheres", 3 /*USER INIT*/, 3 /*USER SAMPLE*/,
             settings->GetSettingAs<int>("NB_SAMPLES"))
 {

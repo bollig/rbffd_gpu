@@ -16,8 +16,9 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 	vector<double> yderiv(rbf_centers.size());
 	vector<double> lapl_deriv(rbf_centers.size());
 
-        // Warning! assume DIM = 2
-        this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf);
+
+    // Warning! assume DIM = 2
+    this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf);
 
 	printf("deriv size: %d\n", (int) rbf_centers.size());
 	printf("xderiv size: %d\n", (int) xderiv.size());
@@ -237,7 +238,7 @@ void DerivativeTests::testEigen(Grid& grid, Derivative& der, int stencil_size, i
 // read input file
 // compute stencils (do this only 
 
-	double pert = 0.05;
+	//double pert = 0.05;
 	vector<double> u(tot_nb_pts);
 	vector<double> lapl_deriv(tot_nb_pts);
 
@@ -278,7 +279,7 @@ void DerivativeTests::testEigen(Grid& grid, Derivative& der, int stencil_size, i
 	vector<Vec3> rbf_centers_orig;
 	rbf_centers_orig.assign(rbf_centers.begin(), rbf_centers.end());
 
-	double percent = 0.05; // in [0,1]
+	double percent = 0.00; // in [0,1]
 	printf("percent distortion of original grid= %f\n", percent);
 
 	// set a random seed
@@ -522,7 +523,8 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 
 
         printf("----- RESULTS: testDeriv( %d ) ---\n", choice);
-        printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM=10}\n");
+        //printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM=10}\n");
+		printf(" function **** %s ****\n", TESTFUNSTR[(int)choice].c_str());
 	printf("norm[x/y/lapl][L1,L2,LINF][interior/bndry]\n");
 	for (int k=0; k < 2; k++) {
 	for (int i=0; i < 3; i++) {

@@ -10,8 +10,8 @@ using namespace std;
 
 class DerivativeTests {
 public:
-    enum TESTFUN  {C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM};
-    std::string TESTFUNSTR[11];
+    enum TESTFUN  {C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3};
+    std::string TESTFUNSTR[10];
 public:
     DerivativeTests() { 
 		weightsComputed = false; 
@@ -25,7 +25,6 @@ public:
 		TESTFUNSTR[7] = "X2Y";
 		TESTFUNSTR[8] = "XY2";
 		TESTFUNSTR[9] = "Y3";
-		TESTFUNSTR[10] = "CUSTOM";
 	};
     ~DerivativeTests() { /*noop*/ }
     void checkDerivatives(Derivative& der, Grid& grid);

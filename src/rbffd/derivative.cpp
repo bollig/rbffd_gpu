@@ -1127,9 +1127,12 @@ double Derivative::computeEig()
 #if 1
     // compute eigenvalues of derivative operator
     int sz = weights.size();
+
     printf("sz= %d\n", sz);
     printf("weights.size= %d\n", (int) weights.size());
 
+
+    printf("Generating matrix of laplacian weights for interior nodes\n");
     mat eigmat(sz, sz);
     eigmat.zeros();
 
@@ -1147,6 +1150,7 @@ double Derivative::computeEig()
 
     cx_colvec eigval;
     cx_mat eigvec;
+    printf("Computing Eigenvalues of Laplacian Operator on Interior Nodes\n");
     eig_gen(eigval, eigvec, eigmat);
     //eigval.print("eigval");
 

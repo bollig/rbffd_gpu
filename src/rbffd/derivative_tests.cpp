@@ -279,7 +279,7 @@ void DerivativeTests::testEigen(Grid& grid, Derivative& der, int stencil_size, i
 	vector<Vec3> rbf_centers_orig;
 	rbf_centers_orig.assign(rbf_centers.begin(), rbf_centers.end());
 
-	double percent = 0.00; // in [0,1]
+        double percent = 0.05; // in [0,1]
 	printf("percent distortion of original grid= %f\n", percent);
 
 	// set a random seed
@@ -414,6 +414,10 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN which, Grid& grid, v
 				dulapl_ex.push_back(6.*v.y());
 			}
 			break;
+#if 0
+                // This test case would tell us how good our approximation
+                // would be in the ideal case for the ExactNCARPoisson2 solution
+                // If this
                case CUSTOM:
                    for (int i=0; i < nb_rbf; i++) {
                            Vec3& v = rbf_centers[i];
@@ -424,6 +428,7 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN which, Grid& grid, v
                            dulapl_ex.push_back(exact->laplacian(v));
                    }
                    break;
+#endif
 	}
 }
 		
@@ -453,14 +458,14 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 
 
 	avgDist = grid.getAvgDist();
-
+#if 1
 	for (int n=0; n < 1; n++) {
 		// perhaps I'll need different (rad,eps) for each. To be determined. 
 		der.computeDeriv(Derivative::X, u, xderiv);
 		der.computeDeriv(Derivative::Y, u, yderiv);
 		der.computeDeriv(Derivative::LAPL, u, lapl_deriv);
 	}
-
+#endif
 	vector<int>& boundary = grid.getBoundary();
 	int nb_bnd = boundary.size();
 
@@ -559,9 +564,16 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 		//printf("bnd error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
 	}
 	bnd_error /= boundary.size();
-
-	printf("avg l2_bnd_error= %14.7e\n", sqrt(bnd_error));
-	printf("avg l2_interior_error= %14.7e\n", sqrt(inter_error));
+#if 1
+        double l2_bnd = sqrt(bnd_error);
+        printf("avg l2_bnd_error= %14.7e\n", l2_bnd);
+        double l2_int = sqrt(inter_error);
+        printf("avg l2_interior_error= %14.7e\n", l2_int);
+        if ((l2_int > 1.e0) || (l2_bnd > 1.e0)) {
+            printf ("WARNING! l2 error is too high to continue\n");
+            exit(EXIT_FAILURE);
+        }
+#endif
 }
 //----------------------------------------------------------------------
 void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils) {
@@ -598,8 +610,7 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     this->testDeriv(DerivativeTests::XY2, der, grid, grid.getAvgDist());
     #endif
     this->testDeriv(DerivativeTests::Y3, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::CUSTOM, der, grid, grid.getAvgDist());
     der.computeEig();
-    this->testEigen(grid, der, grid.getStencil().size(), grid.getNbBnd(), grid.getRbfCenters().size());
+   // this->testEigen(grid, der, grid.getStencil().size(), grid.getNbBnd(), grid.getRbfCenters().size());
 //    exit(EXIT_FAILURE);
 }

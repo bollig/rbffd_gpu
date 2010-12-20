@@ -445,6 +445,8 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
     //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
     //cout << "CHOICE: " << choice << endl;
 
+    // NOTE: this was 3 and caused the original heat problem to fail. WHY? 
+    // Answer: 
     IRBF rbf(eps, 2);
     Stencils sten(&rbf, rad, eps, &xd, choice);
     //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);
@@ -731,6 +733,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
 void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf)
 {
     int nb_eig = stencil.size();
+    // NOTE: this was 3 but caused problems in the original heat test. WHY?
     IRBF rbf(epsilon, 2);
     int n = stencil.size();
 

@@ -18,11 +18,9 @@ private:
 
 public:
         RBF_MQ(double epsilon, int dim_num) : RBF(epsilon, dim_num) {
-		//eps2= eps*eps;
 	}
 
         RBF_MQ(CMPLX epsilon, int dim_num) : RBF(epsilon, dim_num) {
-		//ceps2= ceps*ceps;
 	}
 
 	~RBF_MQ() {};
@@ -204,6 +202,13 @@ public:
             double r2 = xvec.square();
             double f = eval(xvec);
             double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
+
+	    double lapl2 = (dim * eps2 / f) - ((eps2 * eps2 * r2) / (f*f*f));
+		if (lapl != lapl2) {
+			std::cout << "ERROR: " << lapl << " != " << lapl2 << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
             return lapl;
 #else
             double f = eval(xvec);
@@ -220,12 +225,20 @@ public:
 #if 1
             //printf("lapl_deriv: x= %f\n", x);
             double r = x;
+	    double r2 = r*r;
             // general form: lapl = d^2 Phi /s d r^2 + ((DIM-1)/r) * dPhi / dr
                 // however, if r is 0 then we have issues with that and need the simplified equation.
                 // This is the simplified equation:
                 double f = eval(r);
                 double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
-                return lapl;
+	    
+		double lapl2 = (dim * eps2 / f) - ((eps2 * eps2 * r2) / (f*f*f));
+		if (lapl != lapl2) {
+			std::cout << "ERROR: " << lapl << " != " << lapl2 << std::endl;
+			exit(EXIT_FAILURE);
+		}
+                
+		return lapl;
 #else
                 //printf("lapl_deriv(double), x= %f\n", x);
                 double f = eval(x);
@@ -249,6 +262,13 @@ public:
                     CMPLX scale2(dim-1);
                    // cout << "WARNING! CMPLX LAPLACIAN MAY NOT FUNCTION CORRECTLY: " << scale1 << "\t" << scale2 << endl;
                     CMPLX lapl = (scale1*ceps2 + scale2*ceps2*ceps2*(x*x)) / (f*f*f);
+	    
+		    CMPLX lapl2 = (eps2 / f) - ((eps2 * eps2 * x*x) / (f*f*f));
+		    if (lapl != lapl2) {
+			std::cout << "ERROR: " << lapl << " != " << lapl2 << " x=" << x << " eps2=" << eps2 << " ceps2=" << ceps2 << std::endl;
+			exit(EXIT_FAILURE);
+		    }
+
                     return lapl;
         }
 

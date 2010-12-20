@@ -3,6 +3,9 @@ PROJECT (original_heat)
 
 SET (TEST_NAME ${PROJECT_NAME}.x)
 
+# COPY ANY CONFIG FILES REQUIRED BY THE TEST
+FILE(COPY cvt_circle.txt DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 # 2) Change the number of processors for execution
 SET (NUM_PROCS 4)
 

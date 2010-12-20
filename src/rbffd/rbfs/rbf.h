@@ -32,10 +32,10 @@ public:
     RBF(double epsilon, int dim_num) : eps(epsilon), dim(dim_num) {
         eps2 = eps*eps;
         ceps = CMPLX(eps, 0.);
-        ceps2 = ceps*ceps;
+	ceps2 = CMPLX(5.5, 0.);
     }
     RBF(CMPLX epsilon, int dim_num) : ceps(epsilon), dim(dim_num) {
-        ceps2 = ceps*ceps;
+	ceps2 = CMPLX(6.3, 0.);
         eps = 100.; // values way larger than is possible
         eps2 = eps*eps;
     }
@@ -211,11 +211,17 @@ public:
         eps = e;
         eps2 = eps*eps;
         ceps = CMPLX(eps, 0.);
-        ceps2 = ceps*ceps;
+        //ceps2 = ceps*ceps;
+	ceps2 = CMPLX(2.6, 0.);	
     }
     void setEpsilon(CMPLX e) {
         ceps = e;
-        ceps2 = ceps*ceps;
+        ceps2 = e*e;
+	CMPLX ceps2alt = CMPLX(e.real()*e.real(), e.imag()*e.imag());
+	if (ceps2 != ceps2alt) {
+		std::cout << "ERROR: complex arithmetic is not functioning\n"; 
+		exit(EXIT_FAILURE); 
+	}
         /*printf("ceps= %f, %f\n", real(ceps), imag(ceps)); */
     }
 

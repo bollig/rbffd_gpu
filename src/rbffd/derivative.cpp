@@ -393,7 +393,7 @@ void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
 void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
                                    stencil, int irbf, const char* choice)
 {
-    printf("Computing Weights for Stencil %d Using ContourSVD\n", irbf);
+    //printf("Computing Weights for Stencil %d Using ContourSVD\n", irbf);
 
     int st_center = -1;
 

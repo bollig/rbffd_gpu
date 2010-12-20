@@ -227,12 +227,14 @@ public:
 	    eps2 = e.real()*e.real(); 
         ceps = e;
         ceps2 = e*e;
-	CMPLX ceps2alt = CMPLX(e.real()*e.real() - e.imag()*e.imag(), e.imag()*e.real() + e.imag()*e.real());
+#if 0
+        CMPLX ceps2alt = CMPLX(e.real()*e.real() - e.imag()*e.imag(), e.imag()*e.real() + e.imag()*e.real());
 	if (ceps2 != ceps2alt) {
 		std::cout << "ERROR: complex arithmetic is not functioning\n"; 
 		std::cout << "CEPS: " << ceps << "  CEPS2: " << ceps2 << "  CEPS2ALT: " << ceps2alt << std::endl;
 		exit(EXIT_FAILURE); 
 	}
+#endif
         /*printf("ceps= %f, %f\n", real(ceps), imag(ceps)); */
     }
 

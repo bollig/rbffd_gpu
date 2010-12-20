@@ -1108,6 +1108,14 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
     }
 }
 //----------------------------------------------------------------------
+/**
+  * Fills a large matrix with the weights for interior nodes as we would for an implicit system
+  * and puts 1's on the diagonal for boundary nodes.
+  * Then computes the eigenvalue decomposition using Armadillo
+  * Then computes the maximum and minimum abs(eigenvalue.real())
+  * Then counts the number of eigenvalues > 0 and stops the computation
+  * because any eigenvalues > 0 indicate an unstable laplace operator
+  */
 double Derivative::computeEig()
 {
     vector<double*>* weights_p;

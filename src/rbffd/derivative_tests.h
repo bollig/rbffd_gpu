@@ -5,11 +5,28 @@
 #include "grids/grid.h"
 #include "Vec3.h"
 
+#include <string>
+using namespace std;
+
 class DerivativeTests {
 public:
     enum TESTFUN  {C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM};
+    std::string TESTFUNSTR[11];
 public:
-    DerivativeTests() { weightsComputed = false; };
+    DerivativeTests() { 
+		weightsComputed = false; 
+		TESTFUNSTR[0] = "0";
+		TESTFUNSTR[1] = "X";
+		TESTFUNSTR[2] = "Y";
+		TESTFUNSTR[3] = "X2";
+		TESTFUNSTR[4] = "XY";
+		TESTFUNSTR[5] = "Y2";
+		TESTFUNSTR[6] = "X3";
+		TESTFUNSTR[7] = "X2Y";
+		TESTFUNSTR[8] = "XY2";
+		TESTFUNSTR[9] = "Y3";
+		TESTFUNSTR[10] = "CUSTOM";
+	};
     ~DerivativeTests() { /*noop*/ }
     void checkDerivatives(Derivative& der, Grid& grid);
     void checkXDerivatives(Derivative& der, Grid& grid);

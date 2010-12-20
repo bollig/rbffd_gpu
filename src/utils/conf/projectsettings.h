@@ -5,6 +5,8 @@
 #include <map>
 //#include <stdlib.h>
 //#include <iostream>
+#include <stdio.h>
+#include <sstream>
 //#include <fstream>
 #include <sstream>
 #include "utils/comm/communicator.h"
@@ -46,6 +48,15 @@ public:
     //  int i = ProjectSettings.GetSettingAs<int>("key");
     //  double d = ProjectSettings.GetSettingAs<double>("key2");
     //  string s = ProjectSettings.GetSettingAs<string>("key3");
+
+    template <typename RT>
+    void SetSetting(std::string key, RT value) {
+		char strg[80];
+		sprintf(strg, "%f", (float*) &value);
+		settings[key] = std::string(strg);
+		//settings[key] = ss_typecast<std::string> value;
+	}
+
     template <typename RT>
     RT GetSettingAs(std::string key, settings_priority_t priority = required) {
         if (settings.find(key) == settings.end()) {

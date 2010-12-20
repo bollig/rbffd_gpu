@@ -16,8 +16,9 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 	vector<double> yderiv(rbf_centers.size());
 	vector<double> lapl_deriv(rbf_centers.size());
 
-        // Warning! assume DIM = 2
-        this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf);
+
+    // Warning! assume DIM = 2
+    this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf);
 
 	printf("deriv size: %d\n", (int) rbf_centers.size());
 	printf("xderiv size: %d\n", (int) xderiv.size());
@@ -539,7 +540,8 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 
 
         printf("----- RESULTS: testDeriv( %d ) ---\n", choice);
-        printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM=10}\n");
+        //printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM=10}\n");
+		printf(" function **** %s ****\n", TESTFUNSTR[(int)choice].c_str());
 	printf("norm[x/y/lapl][L1,L2,LINF][interior/bndry]\n");
 	for (int k=0; k < 2; k++) {
 	for (int i=0; i < 3; i++) {

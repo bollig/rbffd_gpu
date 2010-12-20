@@ -39,7 +39,8 @@ SET(REQUIRED_SOURCE_FILES
 
 SET( REQUIRED_CU_SOURCE_FILES
 	# find * -name "*.cu"
-	#	pdes/elliptic/ncar_poisson1_cusp.cu
+	#pdes/elliptic/ncar_poisson1_cusp.cu
+	pdes/elliptic/xxx.cu   # empty file
 )
 
 SET( REQUIRED_CL_SOURCE_FILES

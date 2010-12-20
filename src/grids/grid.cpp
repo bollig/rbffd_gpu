@@ -30,8 +30,10 @@ Grid::Grid(ProjectSettings* settings) {
     this->dim = settings->GetSettingAs<int>("DIMENSION");
     this->forceSymmetricStencils = settings->GetSettingAs<int>("FORCE_SYMMETRIC_STENCILS");
 
-    this->nb_bnd = settings->GetSettingAs<int>("NB_BOUNDARY");
-    this->nb_rbf = settings->GetSettingAs<int>("NB_INTERIOR") + settings->GetSettingAs<int>("NB_BOUNDARY");
+    int nb_inner_bound = settings->GetSettingAs<int>("NB_INNER_BND");
+    int nb_outer_bound = settings->GetSettingAs<int>("NB_OUTER_BND");
+    this->nb_bnd = nb_inner_bound + nb_outer_bound;
+	this->nb_rbf = settings->GetSettingAs<int>("NB_INTERIOR") + this->nb_bnd;
 
     cout << "FORCE SYMMETRIC " << forceSymmetricStencils << "\t" << settings->GetSettingAs<bool>("FORCE_SYMMETRIC_STENCILS") <<  endl;
     cout << "NB_BND = " << nb_bnd << endl;

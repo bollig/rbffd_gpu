@@ -237,7 +237,7 @@ void DerivativeTests::testEigen(Grid& grid, Derivative& der, int stencil_size, i
 // read input file
 // compute stencils (do this only 
 
-	double pert = 0.05;
+	//double pert = 0.05;
 	vector<double> u(tot_nb_pts);
 	vector<double> lapl_deriv(tot_nb_pts);
 
@@ -295,7 +295,7 @@ void DerivativeTests::testEigen(Grid& grid, Derivative& der, int stencil_size, i
 	vector<Vec3> rbf_centers_orig;
 	rbf_centers_orig.assign(rbf_centers.begin(), rbf_centers.end());
 
-	double percent = 0.05; // in [0,1]
+	double percent = 0.00; // in [0,1]
 	printf("percent distortion of original grid= %f\n", percent);
 
 	// set a random seed
@@ -614,6 +614,8 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     #endif
     this->testDeriv(DerivativeTests::Y3, der, grid, grid.getAvgDist());
     this->testDeriv(DerivativeTests::CUSTOM, der, grid, grid.getAvgDist());
+
+	// Compute eigenvalues
     this->testEigen(grid, der, grid.getStencil().size(), grid.getNbBnd(), grid.getRbfCenters().size());
 //    exit(EXIT_FAILURE);
 }

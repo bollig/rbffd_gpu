@@ -581,7 +581,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 //----------------------------------------------------------------------
 void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils) {
 //#define USE_CONTOURSVD 1
-#undef USE_CONTOURSVD
+//#undef USE_CONTOURSVD
 
 #if USE_CONTOURSVD
     // Laplacian weights with zero grid perturbation

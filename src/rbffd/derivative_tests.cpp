@@ -241,23 +241,6 @@ void DerivativeTests::testEigen(Grid& grid, Derivative& der, int stencil_size, i
 	vector<double> u(tot_nb_pts);
 	vector<double> lapl_deriv(tot_nb_pts);
 
-	int nx = 20;
-	int ny = 20;
-#if 0
-	// need another constructor for ellipses
-	Grid grid(nx, ny, stencil_size);
-
-//	grid.setMajor(major);
-//	grid.setMinor(minor);
-        grid.setPrincipalAxes(major, minor, 0.);
-	grid.setNbBnd(nb_bnd);
-
-	// 2nd argument: known number of boundary points (stored ahead of interior points) 
-	grid.generateGrid("cvt_circle.txt", nb_bnd, tot_nb_pts);
-
-	grid.computeStencils();   // nearest nb_points
-	grid.avgStencilRadius(); 
-#endif
 	vector<double> avg_stencil_radius = grid.getAvgDist(); // get average stencil radius for each point
 
 	vector<vector<int> >& stencil = grid.getStencil();
@@ -614,6 +597,7 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     #endif
     this->testDeriv(DerivativeTests::Y3, der, grid, grid.getAvgDist());
     this->testDeriv(DerivativeTests::CUSTOM, der, grid, grid.getAvgDist());
+    der.computeEig();
     this->testEigen(grid, der, grid.getStencil().size(), grid.getNbBnd(), grid.getRbfCenters().size());
 //    exit(EXIT_FAILURE);
 }

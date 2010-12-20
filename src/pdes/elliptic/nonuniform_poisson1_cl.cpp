@@ -150,7 +150,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         //--------------------------------------------------
         // Fill Boundary weights (LHS + RHS)
         if (test_dirichlet_lockdown) {
-            cout << "TESTING DIRICHLET LOCKDOWN MODE 3" << endl;
+            cout << "WARNING! TESTING DIRICHLET LOCKDOWN MODE 3" << endl;
             // Test the case when we specify one Dirichlet point on each boundary. Does this help us tie down the solution? No.
             // What about when we specify 3 points on the boundaries (i.e. a triangle to give us an orientation)?
             indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[0], subdomain->G_centers);

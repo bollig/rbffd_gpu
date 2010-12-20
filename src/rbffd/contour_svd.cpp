@@ -331,7 +331,7 @@ numColsComputeDenom = length(columnsToComputeDenom);
         end
 #endif
 
-   		while (rnk < (N/2-1)) {
+        while (rnk < (N/2-1)) {
             colvec s = svd(Htilde.submat(0,0,rnk-1,rnk-1)) / mx2;
             if (s(rnk-1) < 1.e-5) {
                 break;

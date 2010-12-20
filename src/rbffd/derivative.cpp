@@ -57,6 +57,7 @@ Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, ve
 
     printf("nb_rbfs= %d\n", nb_rbfs); // ok
 
+    epsilon = settings->GetSettingAs<int>("EPSILON", ProjectSettings::required);
 
     debug_mode = settings->GetSettingAs<int>("DEBUG_MODE", ProjectSettings::optional);
     dim_num = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required);
@@ -1172,6 +1173,7 @@ double Derivative::computeEig()
             }
         }
     }
+    printf("epsilon: %g\n", epsilon);
     printf("nb unstable eigenvalues: %d\n", count);
     printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
     printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);

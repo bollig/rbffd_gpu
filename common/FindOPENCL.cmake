@@ -40,6 +40,8 @@ ELSE (WIN32)
 				"/Developer/GPU Computing/OpenCL/common/inc/" 
 				"/Developer/GPU_Computing/OpenCL/common/inc/" 
 	 	 		~/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/ 
+				$ENV{ATISTREAMSDKROOT}/include
+				$ENV{CUDA_INSTALL_PATH}/include
 				/usr/include 
 	)
 

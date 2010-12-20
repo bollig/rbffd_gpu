@@ -1,4 +1,4 @@
-# 1) Change template_name to your test name
+# 1) Change the PROJECT (<NAME>) to your test name
 PROJECT (template)
 
 SET (TEST_NAME ${PROJECT_NAME}.x)

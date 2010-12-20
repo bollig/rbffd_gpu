@@ -610,7 +610,7 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     this->testDeriv(DerivativeTests::XY2, der, grid, grid.getAvgDist());
     #endif
     this->testDeriv(DerivativeTests::Y3, der, grid, grid.getAvgDist());
-    der.computeEig();
+    //der.computeEig();
    // this->testEigen(grid, der, grid.getStencil().size(), grid.getNbBnd(), grid.getRbfCenters().size());
 //    exit(EXIT_FAILURE);
 }

@@ -25,9 +25,10 @@ function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior,
     plotHeightfield(nodefile, 'X_exact.mtx','Exact Solution', testCaseName);
     plotHeightfield(nodefile, 'X_approx.mtx', 'Approximate Solution', testCaseName);
     plotHeightfield(nodefile, 'E_absolute.mtx', 'Absolute Error', testCaseName);
+    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName);
     % Plot heightfield, but specify that the boundary nodes should be
     % zeroed
-    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Boundary Equals 0)', testCaseName, nbboundary, 0); 
+    %plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Boundary Equals 0)', testCaseName, nbboundary, 0); 
 if 0
     plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName);
     % Plot heightfield, but specify that the boundary nodes should be

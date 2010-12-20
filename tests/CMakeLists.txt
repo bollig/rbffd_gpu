@@ -22,6 +22,7 @@
 		util/surface_projection
 		util/viennacl_simple_example
 		util/vtk_stencil_visualizer
+		util/test_complex
 	)
 
 	FOREACH (test ${TEST_COLLECTION})

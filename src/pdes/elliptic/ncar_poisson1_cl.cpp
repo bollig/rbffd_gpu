@@ -114,7 +114,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
             // Compute all derivatives for our centers and return the number of
             // weights that will be available
-            numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim_num);
+            numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i);
         }
 #else
         // Compute only interior weights
@@ -127,7 +127,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
             //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
             // Compute all derivatives for our centers and return the number of
             // weights that will be available
-            numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
+            numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0]);
         }
 #endif
         t2.end();

@@ -10,8 +10,8 @@ using namespace arma;
 
 //----------------------------------------------------------------------
 //Derivative::Derivative(int nb_rbfs) : arr(1,1,1), maxint(maxint = (1 << 31) - 1)
-Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_) :
-        rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.), debug_mode(0)
+Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_, int dimensions) :
+        rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.), debug_mode(0), dim_num(dimensions)
 {
     this->nb_bnd = nb_bnd_;
     this->nb_rbfs = rbf_centers.size();
@@ -57,7 +57,9 @@ Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, ve
 
     printf("nb_rbfs= %d\n", nb_rbfs); // ok
 
-    debug_mode = settings->GetSettingAs<int>("DEBUG_MODE");
+
+    debug_mode = settings->GetSettingAs<int>("DEBUG_MODE", ProjectSettings::optional);
+    dim_num = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required);
 }
 //----------------------------------------------------------------------
 Derivative::~Derivative()
@@ -446,8 +448,8 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
     //cout << "CHOICE: " << choice << endl;
 
     // NOTE: this was 3 and caused the original heat problem to fail. WHY? 
-    // Answer: 
-    IRBF rbf(eps, 2);
+    // Answer: the laplacian is not dimensionless. It increases as the dimension changes. 
+    IRBF rbf(eps, dim_num);
     Stencils sten(&rbf, rad, eps, &xd, choice);
     //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);
 
@@ -504,7 +506,7 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
     //printf("-----------------\n");
 }
 //----------------------------------------------------------------------
-int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf, int dim_num)
+int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf)
 {
     //IRBF rbf(epsilon, dim_num);
     int n = stencil.size();
@@ -734,7 +736,13 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>
 {
     int nb_eig = stencil.size();
     // NOTE: this was 3 but caused problems in the original heat test. WHY?
-    IRBF rbf(epsilon, 2);
+    // Answer: the laplacian of the MQ rbf scales directly with the dimension number. 
+    // This introduces unstable eigenvalues in our system and prevents the solution of the heat equation.
+    // Perhaps because we are not consistently using dimension 3 for all computation--> No, i just overrode all
+    // uses of DIM in the rbf classes and forced dimension 3. In this case we still had 2 unstable eigenvalues. 
+    // perhaps its because the contoursvd is not N dimensional? Natasha did mention that as we increase the dim
+    // the window for safely picking epsilon to avoid instability is narrowed. 
+    IRBF rbf(epsilon, dim_num);
     int n = stencil.size();
 
     arma::rowvec bx, by, bz, blapl, br;

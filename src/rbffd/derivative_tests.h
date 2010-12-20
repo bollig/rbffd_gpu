@@ -15,9 +15,9 @@ public:
     void checkXDerivatives(Derivative& der, Grid& grid);
     void testDeriv(DerivativeTests::TESTFUN choice, Derivative& der, Grid& grid, std::vector<double> avgDist);
     void testFunction(DerivativeTests::TESTFUN which, Grid& grid, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex, vector<double>& dulapl_ex);
-    void testEigen(Grid& grid, int stencil_size, int nb_bnd, int tot_nb_pts);
+    void testEigen(Grid& grid, Derivative& der, int stencil_size, int nb_bnd, int tot_nb_pts);
     void testAllFunctions(Derivative& der, Grid& grid);
-    void computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils, int dimension);
+    void computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils);
 
 protected:
     bool weightsComputed;

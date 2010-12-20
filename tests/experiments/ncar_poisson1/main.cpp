@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
 #endif
 
     // Clean this up. Have the Poisson class construct Derivative internally.
-    Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
+    Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), DIM_NUM);
     der->setEpsilon(8.0);
 
     DerivativeTests* der_test = new DerivativeTests();

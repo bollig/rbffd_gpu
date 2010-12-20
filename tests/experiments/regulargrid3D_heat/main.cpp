@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
 
     // EB NEED ALL STENCILS TO BE LOCAL INDEX BY THIS POINT
     Derivative der(subdomain->G_centers, subdomain->Q_stencils,
-            subdomain->global_boundary_nodes.size());
+            subdomain->global_boundary_nodes.size(), 3);
     der.setAvgStencilRadius(subdomain->Q_avg_dists);
 
     // Set things up for variable epsilon
@@ -421,7 +421,7 @@ int main(int argc, char** argv) {
                 subdomain->Q_stencils[irbf], irbf, "lapl");
 #endif
         der.computeWeights(subdomain->G_centers,
-                subdomain->Q_stencils[irbf], irbf,3);
+                subdomain->Q_stencils[irbf], irbf);
     }
     printf("after all computeWeights\n");
     // MY BUG IS INSIDE HERE:

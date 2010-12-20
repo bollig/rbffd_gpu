@@ -315,7 +315,8 @@ int main(int argc, char** argv) {
         int ny = 10;
         int nz = 10;
 
-        grid = new RegularGrid2D(nx, ny, -1.,1., -1.,1., stencil_size);
+        grid = new RegularGrid2D(nx, ny, -1., 1., -1., 1., stencil_size);
+
 
         // 2nd argument: known number of boundary points (stored ahead of interior points)
         //grid->generateGrid("cvt_circle.txt", nb_bnd, tot_nb_pts);
@@ -364,7 +365,7 @@ int main(int argc, char** argv) {
 
     // EB NEED ALL STENCILS TO BE LOCAL INDEX BY THIS POINT
     Derivative der(subdomain->G_centers, subdomain->Q_stencils,
-            subdomain->global_boundary_nodes.size());
+            subdomain->global_boundary_nodes.size(),3);
     der.setAvgStencilRadius(subdomain->Q_avg_dists);
 
     // Set things up for variable epsilon

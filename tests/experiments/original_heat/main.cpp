@@ -188,7 +188,7 @@ void testEigen(int stencil_size, int nb_bnd, int tot_nb_pts)
 	rbf_centers = grid.getRbfCenters();
 	int nb_rbf = rbf_centers.size();
 
-	Derivative der(rbf_centers, stencil, grid.getNbBnd());
+        Derivative der(rbf_centers, stencil, grid.getNbBnd(),2);
 	der.setAvgStencilRadius(avg_stencil_radius);
 
 // Set things up for variable epsilon
@@ -1162,7 +1162,7 @@ int main()
 	//vector<Vec3>& rbf_centers = grid.getRbfCenters();
 	int nb_rbf = rbf_centers.size(); //grid.getRbfCenters().size();
 
-	Derivative der(rbf_centers, stencil, grid.getNbBnd());
+        Derivative der(rbf_centers, stencil, grid.getNbBnd(), 2);
 	der.setAvgStencilRadius(avg_dist);
 
 	#if 0

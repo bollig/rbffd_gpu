@@ -46,11 +46,12 @@ private:
     int nb_bnd; // number of points on the boundary (EB: is this the boundary of subdomain or PDE?)
 
     // Configurable option from projectSettings
-    int debug_mode;
+    int debug_mode;		// optional
+    int dim_num; 		// required
 
 public:
     //Derivative(int nb_rbfs);
-    Derivative(std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts);
+    Derivative(std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts, int dim_num);
     Derivative(ProjectSettings* settings, std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts);
     ~Derivative();
 
@@ -62,7 +63,7 @@ public:
     void computeWeightsSVD_Direct(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf);
 
     // Use a direct solver on teh distance matrix.
-    int computeWeights(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf, int dim_num);
+    int computeWeights(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf);
 
     // Use Grady's contourSVD (my c++) version to compute the weights
     // choice: compute either "lapl", "x" or "y" derivative stencils

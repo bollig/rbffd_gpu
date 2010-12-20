@@ -91,19 +91,19 @@ public:
                 //cout << xvec.x() << "\t" << xvec.y() << "\t" << xvec.z() << endl;
                 CMPLX f = eval(xvec);
                 //cout << real(f) << "+" << imag(f) << "i" << endl;
-		return(ceps2*xvec.x()/f);
+		return((ceps2*xvec.x())/f);
 	}
 
 	double yderiv(const Vec3& xvec) {
 		double f = eval(xvec);
-		return(eps2*xvec.y()/f);
+		return((eps2*xvec.y())/f);
 	}
 
 	CMPLX yderiv(const CVec3& xvec) {
             //cout << xvec.x() << "\t" << xvec.y() << "\t" << xvec.z() << endl;
             CMPLX f = eval(xvec);
             //cout << real(f) << "+" << imag(f) << "i" << endl;
-		return(ceps2*xvec.y()/f);
+		return((ceps2*xvec.y())/f);
 	}
 
 	double yderiv(const Vec3& xvec, const Vec3& xi) {
@@ -129,7 +129,7 @@ public:
             //cout << xvec.x() << "\t" << xvec.y() << "\t" << xvec.z() << endl;
             CMPLX f = eval(xvec);
             //cout << real(f) << "+" << imag(f) << "i" << endl;
-                return(ceps2*xvec.z()/f);
+                return((ceps2*xvec.z())/f);
         }
 
         // First derivative:  d Phi(r) / dr
@@ -203,7 +203,7 @@ public:
             double f = eval(xvec);
             double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
 
-	    double lapl2 = (dim * eps2 / f) - ((eps2 * eps2 * r2) / (f*f*f));
+	    double lapl2 = ((dim * eps2) / f) - ((eps2 * eps2 * r2) / (f*f*f));
 		if (lapl != lapl2) {
 			std::cout << "ERROR: " << lapl << " != " << lapl2 << std::endl;
 			exit(EXIT_FAILURE);
@@ -232,7 +232,7 @@ public:
                 double f = eval(r);
                 double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
 	    
-		double lapl2 = (dim * eps2 / f) - ((eps2 * eps2 * r2) / (f*f*f));
+		double lapl2 = ((dim * eps2) / f) - ((eps2 * eps2 * r2) / (f*f*f));
 		if (lapl != lapl2) {
 			std::cout << "ERROR: " << lapl << " != " << lapl2 << std::endl;
 			exit(EXIT_FAILURE);
@@ -258,17 +258,20 @@ public:
                     // however, if r is 0 then we have issues with that and need the simplified equation.
                     // This is the simplified equation:
                     CMPLX f = eval(x);
-                    CMPLX scale1(dim);
-                    CMPLX scale2(dim-1);
+                   double scale1 = dim;
+		   double scale2 = dim-1;
                    // cout << "WARNING! CMPLX LAPLACIAN MAY NOT FUNCTION CORRECTLY: " << scale1 << "\t" << scale2 << endl;
-                    CMPLX lapl = (scale1*ceps2 + scale2*ceps2*ceps2*(x*x)) / (f*f*f);
-	    
-		    CMPLX lapl2 = (eps2 / f) - ((eps2 * eps2 * x*x) / (f*f*f));
-		    if (lapl != lapl2) {
-			std::cout << "ERROR: " << lapl << " != " << lapl2 << " x=" << x << " eps2=" << eps2 << " ceps2=" << ceps2 << std::endl;
+                    CMPLX lapl = (scale1*ceps2 + scale2*(ceps2*ceps2)*(x*x)) / (f*f*f);
+#if 0	    
+		    CMPLX lapl2 = ((scale1*ceps2) / f) - ((ceps2 * ceps2 * x*x) / (f*f*f));
+		    if ( > 1e-15) {
+			    std::cout << eps << " != " << ceps << endl;
+			    std::cout << scale1*ceps2 << " + " << scale2*(ceps2*ceps2) << " * " << (x*x) << " / " << (f*f*f) << std::endl; 
+			    std::cout << (ceps2/f) << " - " << (ceps2*ceps2) << " * " << x*x << "  / " << f*f*f << std::endl; 
+			std::cout << "ERROR: lapl:" << lapl << " != lapl2:" << lapl2 << " diff=" << lapl-lapl2 << "  f=" << f << "  x=" << x << " eps=" << eps << "  eps2=" << eps2 << " ceps=" << ceps << "  ceps2=" << ceps2 << std::endl;
 			exit(EXIT_FAILURE);
 		    }
-
+#endif 
                     return lapl;
         }
 

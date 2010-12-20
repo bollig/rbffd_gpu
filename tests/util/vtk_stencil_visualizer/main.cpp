@@ -488,7 +488,7 @@ int main(int argc, char ** argv)
     }
 
     // Clean this up. Have the Poisson class construct Derivative internally.
-    Derivative* der = new Derivative(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
+    Derivative* der = new Derivative(settings, subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size());
 #if 1
     double epsilon = settings->GetSettingAs<double>("EPSILON");
 #else
@@ -505,7 +505,7 @@ int main(int argc, char ** argv)
         //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
         // Compute all derivatives for our centers and return the number of
         // weights that will be available
-        der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim);
+        der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i);
     }
 
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();

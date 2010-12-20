@@ -165,7 +165,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         for (int i = 0; i < nb + ni; i++) {
             //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
             // Compute all derivatives for our centers
-            der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i, dim_num);
+            der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i);
         }
 
         // The derivative weights go into a matrix that is TotNumNodes x TotNumNodes

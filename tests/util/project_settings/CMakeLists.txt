@@ -1,5 +1,5 @@
 # 1) Change template_name to your test name
-PROJECT (projectSettings)
+PROJECT (project_settings)
 
 # COPY ANY CONFIG FILES REQUIRED BY THE TEST
 FILE(COPY config.example DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

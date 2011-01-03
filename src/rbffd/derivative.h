@@ -78,6 +78,7 @@ public:
     // u : take derivative of this scalar variable (already allocated)
     // deriv : resulting derivative (already allocated)
     // which : which derivative (X, Y, LAPL)
+    // NOTE: these are on the CPU. we need GPU equivalents to perform update
     void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv);
     void computeDeriv(DerType which, double* u, double* deriv, int npts);
 

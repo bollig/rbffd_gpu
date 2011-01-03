@@ -6,7 +6,9 @@
 
 using namespace std;
 
-Heat::Heat(ExactSolution* _solution, std::vector<Vec3>* rbf_centers_, int stencil_size, std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank) :	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),	id(rank), subdomain(NULL), exactSolution(_solution) {
+Heat::Heat(ExactSolution* _solution, std::vector<Vec3>* rbf_centers_, int stencil_size, std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank) 
+:	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),	id(rank), subdomain(NULL), exactSolution(_solution) 
+{
 	nb_stencils = stencil_size;
 	nb_rbf = rbf_centers->size();
 
@@ -34,7 +36,9 @@ Heat::Heat(ExactSolution* _solution, std::vector<Vec3>* rbf_centers_, int stenci
 	//grid.laplace();
 }
 
-Heat::Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank) : exactSolution(_solution), rbf_centers(&subdomain_->G_centers), boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank),subdomain(subdomain_) {
+Heat::Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank) 
+: 	exactSolution(_solution), rbf_centers(&subdomain_->G_centers), boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank),subdomain(subdomain_) 
+{
 	nb_stencils = subdomain->Q_stencils.size();
 	nb_rbf = subdomain->G_centers.size();
 
@@ -62,7 +66,9 @@ Heat::Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank
 	//grid.laplace();
 }
 
-Heat::Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_) : exactSolution(_solution), rbf_centers(&(grid_.getRbfCenters())),boundary_set(&(grid_.getBoundary())), der(&der_), id(0), subdomain(NULL) {
+Heat::Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_) 
+: 	exactSolution(_solution), rbf_centers(&(grid_.getRbfCenters())),boundary_set(&(grid_.getBoundary())), der(&der_), id(0), subdomain(NULL) 
+{
 
     //printf("WARNING!!!!  (BAD CODE DESIGN) DEFAULTING TO EXACT_REGULARGRID.H SOLUTION. YOU SHOULD USE A DIFFERENT CONSTRUCTOR FOR HEAT\n");
     //exactSolution = new ExactRegularGrid(acos(-1.) / 2., 1.);
@@ -143,7 +149,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 			s[i] = subdomain->U_G[i];
 		}
 
-		//der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
+		// This is on the CPU; we need to call a GPU derivative 
 		der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
 
 		// Use 5 point Cartesian formula for the Laplacian
@@ -236,7 +242,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		}
 #endif
 
-		// solution analysis
+		// solution analysis (Put all in a separate routine) 
 
 		vector<double> sol_ex;
 		vector<double> sol_error;
@@ -250,6 +256,9 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 			sol_ex[i] = exactSolution->at(v, time);
 			sol_error[i] = sol_ex[i] - s[i];
 		}
+
+	// Put all this I/O in a separate routine
+
 
 		// print error to a file
 		//	printf("nb_rbf= %d\n", nb_rbf);

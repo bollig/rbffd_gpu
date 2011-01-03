@@ -75,6 +75,7 @@ public:
 
 	// Advance the equation one time step using the GPU class to perform communication
 	// Depends on Constructor #2 to be used so that a GPU class exists within this class.
+	// This is on the CPU. We need to reimplement this routine on the GPU 
 	void advanceOneStepWithComm(Communicator* comm_unit);
 
 	// Only update the updated_solution vector if it is non-null (i.e. we actually pass something to the routine)

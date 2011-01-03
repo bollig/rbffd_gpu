@@ -17,12 +17,15 @@
 		util/binary_cvt_io
 		util/cusp_simple_example
 		util/cusp_version_test
-		util/projectSettings
+		util/project_settings
 		util/surface_integral
 		util/surface_projection
 		util/viennacl_simple_example
 		util/vtk_stencil_visualizer
 		util/test_complex
+		util/test_template_macros
+
+		template
 	)
 
 	FOREACH (test ${TEST_COLLECTION})

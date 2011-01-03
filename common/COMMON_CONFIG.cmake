@@ -15,7 +15,13 @@
 	INCLUDE (UseDoxygen)
 	FIND_PACKAGE (MPI)
 	FIND_PACKAGE (OPENCL)
+
+	unset(CUDA_CUDA_LIBRARY CACHE)
 	FIND_PACKAGE (CUDA)
+	IF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
+		MESSAGE (WARNING "\nWARNING! Dep: libcuda was NOT FOUND. Disabling cuda support for framework. Please install NVidia proprietary driver and verify you have an NVidia GPU if you want it enabled.\n")
+		set(CUDA_FOUND false)
+	ENDIF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
 
 
 ###############################################
@@ -41,13 +47,7 @@
 # Setup GPU APIs
 ###############################################
 
-IF (CUDA_FOUND) 
-	MESSAGE(STATUS "FOUND CUDA, NOT ENABLED YET")
-ENDIF (CUDA_FOUND)
 
-IF (OPENCL_FOUND) 
-	MESSAGE(STATUS "FOUND OPENCL, NOT ENABLED YET")
-ENDIF (OPENCL_FOUND)
 
 
 

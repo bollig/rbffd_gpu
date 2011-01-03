@@ -1,6 +1,3 @@
-message("opencl top")
-
-
 # FROM: http://forums.nvidia.com/index.php?showtopic=97795
 # Written by theMarix
 # Modified by Ian Johnson, Gordon Erlebacher and Evan Bollig Summer 2010
@@ -13,6 +10,11 @@ message("opencl top")
 #  OPENCL_LIBRARIES    - link these to use OpenCL
 #
 # WIN32 should work, but is untested
+
+# Drop the vars from cache or the NVIDIA libs on kirk
+# will not be available on troi and vice versa.
+unset(OPENCL_INCLUDE_DIR CACHE)
+unset(OPENCL_LIBRARIES CACHE)
 
 IF (WIN32)
 
@@ -47,8 +49,8 @@ ELSE (WIN32)
 
     FIND_LIBRARY(OPENCL_LIBRARIES OpenCL ENV LD_LIBRARY_PATH)
 
-	message("***** OPENCL_INCLUDE_DIR:  ${OPENCL_INCLUDE_DIR}****")
-	message("***** OPENCL_LIBRARIES:  ${OPENCL_LIBRARIES}****")
+	message(STATUS "OPENCL_INCLUDE_DIR:  ${OPENCL_INCLUDE_DIR}")
+	message(STATUS "OPENCL_LIBRARIES:  ${OPENCL_LIBRARIES}")
 	#message(***** OPENCL ENV: "$ENV{GPU_SDK}" ********)
 
 #~/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/ 

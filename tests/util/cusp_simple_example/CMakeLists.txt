@@ -45,6 +45,6 @@ IF (CUDA_FOUND)
 
         ADD_TEST (${TEST_NAME}_test1 "${TEST_NAME}" ${ARGV})
 ELSE(CUDA_FOUND) 
-	MESSAGE (WARNING "WARNING! Test: ${TEST_NAME} will not be built because CUDA was not found. Please install CUDA v3.1 on your system!")
+	MESSAGE (WARNING "\nWARNING! Test: ${TEST_NAME} requires CUDA and will be disabled.\n")
 ENDIF(CUDA_FOUND) 
 

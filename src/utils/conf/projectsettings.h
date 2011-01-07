@@ -1,5 +1,5 @@
-#ifndef PROJECTSETTINGS_H
-#define PROJECTSETTINGS_H
+#ifndef __PROJECTSETTINGS_H__
+#define __PROJECTSETTINGS_H__
 #include <stdlib.h>
 #include <string>
 #include <map>
@@ -62,17 +62,19 @@ public:
     //  string s = ProjectSettings.GetSettingAs<string>("key3");
     template <typename RT>
     RT GetSettingAs(std::string key, settings_priority_t priority = ProjectSettings::required, std::string defaultval = "0") {
+	std::cout << "[Project Settings] \t"; 
         if (settings.find(key) == settings.end()) {
             if (priority == this->required) {
                 std::cout << "ERROR! Request for unknown REQUIRED configuration setting: " << key << std::endl;
                 exit(EXIT_FAILURE);
             } else {
-                RT ret = ss_typecast<RT>(std::string("0"));
-                std::cout << "WARNING! Request for unknown OPTIONAL configuration setting: " << key
-                          << "; Returning " << ret << std::endl;
+                RT ret = ss_typecast<RT>(defaultval);
+		std::cout << key << " = " << ret;
+		std::cout << "\t<-- OPTIONAL setting was not specified; using default value." << std::endl;
                 return ret;
             }
         }
+	std::cout << key << " = " << settings[key] << std::endl;
         return ss_typecast<RT>(settings[key]);
     }
 

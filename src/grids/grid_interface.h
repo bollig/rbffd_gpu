@@ -35,7 +35,7 @@ class Grid
 		Grid(unsigned int num_nodes) : pert(0), nb_nodes(num_nodes) {}
 		Grid(std::vector<Node>& nodes) : pert(0), nb_nodes(nodes.size()), node_list(nodes) {} 
 
-		virtual void generateGrid() =0; 
+		virtual void generateGrid(); 
 
 		// I/O of grid to/from file labeling the file with the specified iter number 
 		virtual void writeToFile(std::string filename); 

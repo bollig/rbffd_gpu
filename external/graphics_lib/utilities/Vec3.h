@@ -10,7 +10,7 @@
 
 //class ostream;
 #include <iosfwd>
-
+#include <iostream> 
 // sizeof(Vec3) = 24
 
 class Vec3
@@ -226,11 +226,37 @@ class Vec3
 		}
 	}
 
+	// Allow output to C++ streams
+	friend std::ostream& operator<< (std::ostream& os, const Vec3& p) {
+		//    os << '(' << p.x()  << ',' << p.y() << ',' << p.z() << ')';
+		os << p.x() << ' ' << p.y() << ' ' << p.z();
+		if (os.fail())
+		      std::cout << "operator<<(ostream&,Vec3&) failed" << std::endl;
+		return os;
+	}
+	friend std::istream& operator>> (std::istream& is, Vec3& p) {
+		//is >> p.x() >> p.y() >> p.z();
+		float x,y,z; 
+		
+		is >> x >> y >> z; 
+
+		p[0] = x; 
+		p[1] = y; 
+		p[2] = z;
+
+	//	if (is.eof())
+	//		std::cout << "operator>>(istream&, Vec3&) reached EOF" << std::endl;
+	//	if (is.fail())
+	//		std::cout << "operator>>(istream&,Vec3&) failed" << std::endl;
+		return is;
+	}
 //----------------------------------------------------------------------
 
     public:
         float vec[3];
 };
+
+
 
 #if 0
 Vec3 operator-(const Vec3& a, const Vec3& b) {

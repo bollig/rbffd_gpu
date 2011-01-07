@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
 #include "regulargrid.h"
 
 using namespace std;
@@ -10,9 +11,6 @@ RegularGrid::RegularGrid(int n_x, double minX, double maxX)
 	: Grid(n_x), nx(n_x), ny(1), nz(1), 
 	  xmin(minX), xmax(maxX), ymin(0.), ymax(0.), zmin(0.), zmax(0.)
 {
-    this->node_list.clear();
-    this->boundary_indices.clear();
-    this->boundary_normals.clear();
 }
 
 /*----------------------------------------------------------------------*/
@@ -20,9 +18,6 @@ RegularGrid::RegularGrid(int n_x, int n_y, double minX, double maxX, double minY
 	: Grid(n_x * n_y ), nx(n_x), ny(n_y), nz(1), 
 	  xmin(minX), xmax(maxX), ymin(minY), ymax(maxY), zmin(0.), zmax(0.)
 {
-    this->node_list.clear();
-    this->boundary_indices.clear();
-    this->boundary_normals.clear();
 }
 
 /*----------------------------------------------------------------------*/
@@ -30,9 +25,7 @@ RegularGrid::RegularGrid(int n_x, int n_y, int n_z, double minX, double maxX, do
 	: Grid(n_x * n_y * n_z), nx(n_x), ny(n_y), nz(n_z), 
 	  xmin(minX), xmax(maxX), ymin(minY), ymax(maxY), zmin(minZ), zmax(maxZ)
 {
-    this->node_list.clear();
-    this->boundary_indices.clear();
-    this->boundary_normals.clear();
+
 }
 
 /*----------------------------------------------------------------------*/
@@ -52,12 +45,10 @@ void RegularGrid::generateGrid() {
 
 	// Should be set inside Grid:: already, but just in case something has changed...
     nb_nodes = nx * ny * nz;
-
-    if (nb_nodes != node_list.size()) {
-	    node_list.resize(nb_nodes); 
-	    boundary_indices.resize(nb_nodes); 
-	    boundary_normals.resize(nb_nodes); 
-    }
+    
+    this->node_list.clear();
+    this->boundary_indices.clear();
+    this->boundary_normals.clear();
 
     unsigned int count = 0;
 
@@ -109,7 +100,7 @@ void RegularGrid::generateGrid() {
         }
     }
 
-    //TODO: Sorting nodes could be disabled when we know our setup is correct
+    //TODO: Sorting nodes could be done more intelligently than just putting the boundary nodes at the front of the list
     this->sortNodes();
 }
 

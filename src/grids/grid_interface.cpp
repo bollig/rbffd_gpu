@@ -6,6 +6,15 @@
 #include "grid_interface.h"
 #include "utils/random.h"
 
+void Grid::generateGrid() {
+	node_list.clear(); 
+	boundary_indices.clear(); 
+	boundary_normals.clear(); 
+
+	node_list.resize(nb_nodes); 
+}
+
+
 void Grid::loadFromFile(std::string filename) {
 	std::ifstream fin(filename.c_str());
        		
@@ -14,16 +23,22 @@ void Grid::loadFromFile(std::string filename) {
 	boundary_normals.clear();
 
 	if (fin.is_open()) {
-		for (unsigned int i = 0; i < node_list.size(); i++) {
+		while (fin.good()) {
 			Node node; 
 			fin >> node; 
-			node_list.push_back(node); 
+			if (!fin.eof()) {
+				node_list.push_back(node); 
+			}
 		}
 	} else {
 		perror ("Error opening file to write"); 
+		exit(EXIT_FAILURE);
 	}
 
 	fin.close(); 
+	nb_nodes = node_list.size(); 
+
+	std::cout << "[Grid] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
 }
 
 
@@ -35,8 +50,10 @@ void Grid::writeToFile(std::string filename) {
 		}
 	} else {
 		perror ("Error opening file to write"); 
+		exit(EXIT_FAILURE); 
 	}
 	fout.close();
+	std::cout << "[Grid] \tWrote " << node_list.size() << " nodes to \t" << filename << std::endl;
 }
 
 

@@ -160,17 +160,30 @@ void Vec3::print(const char *msg) const
 	}
     //theMsg->printf("%s: %g, %g, %g\n", msg, vec[0], vec[1], vec[2]);
 }
+#if 0
 //----------------------------------------------------------------------
 std::ostream&
 operator<< (std::ostream&  os,
             const Vec3& p)
 {
-    os << '(' << p.x()  << ',' << p.y() << ',' << p.z() << ')';
+//    os << '(' << p.x()  << ',' << p.y() << ',' << p.z() << ')';
+    os << p.x() << ' ' << p.y() << ' ' << p.z(); 
     if (os.fail())
-        cout << "operator<<(ostream&,IntVect&) failed" << endl;
+        cout << "operator<<(ostream&,Vec3&) failed" << endl;
     return os;
 }
 
+//----------------------------------------------------------------------
+std::istream&
+operator>> (std::istream&  os,
+            Vec3& p)
+{
+    os >> p.x() >> p.y() >> p.z(); 
+    if (os.fail())
+        cout << "operator>>(istream&,Vec3&) failed" << endl;
+    return os;
+}
+#endif 
 //----------------------------------------------------------------------
 #ifdef STANDALONE
 

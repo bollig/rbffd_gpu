@@ -43,22 +43,25 @@ public:
     // WARNING: will override the settings if their key already exists in map
     void ParseFile(const std::string filename);
 
-    // Return the value associate with KEY as the specified template parameter type
-    // e.g.,
-    //  int i = ProjectSettings.GetSettingAs<int>("key");
-    //  double d = ProjectSettings.GetSettingAs<double>("key2");
-    //  string s = ProjectSettings.GetSettingAs<string>("key3");
 
     template <typename RT>
     void SetSetting(std::string key, RT value) {
+	    // TODO: change to stringstream for any type of input that is cast as string
 		char strg[80];
 		sprintf(strg, "%f", (float*) &value);
 		settings[key] = std::string(strg);
 		//settings[key] = ss_typecast<std::string> value;
 	}
 
+
+
+    // Return the value associate with KEY as the specified template parameter type
+    // e.g.,
+    //  int i = ProjectSettings.GetSettingAs<int>("key");
+    //  double d = ProjectSettings.GetSettingAs<double>("key2");
+    //  string s = ProjectSettings.GetSettingAs<string>("key3");
     template <typename RT>
-    RT GetSettingAs(std::string key, settings_priority_t priority = required) {
+    RT GetSettingAs(std::string key, settings_priority_t priority = ProjectSettings::required, std::string defaultval = "0") {
         if (settings.find(key) == settings.end()) {
             if (priority == this->required) {
                 std::cout << "ERROR! Request for unknown REQUIRED configuration setting: " << key << std::endl;

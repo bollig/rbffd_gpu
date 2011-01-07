@@ -14,6 +14,8 @@ SET(REQUIRED_SOURCE_FILES
 	grids/cvt/ellipse_cvt.cpp
 	grids/cvt/ellipsoid_cvt.cpp
 	grids/cvt/nested_sphere_cvt.cpp
+	grids/regulargrid.cpp
+	grids/grid_interface.cpp
 	grids/regulargrid2d.cpp
 	grids/regulargrid3d.cpp
 	grids/grid.cpp

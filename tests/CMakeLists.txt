@@ -10,8 +10,10 @@
 		experiments/original_heat
 		experiments/regular_square2D_heat
 		experiments/regulargrid3D_heat
+		experiments/heat_regulargrid_2d
 
 		gridgen/nested_spheres_ccvt
+		gridgen/regular_grid
 		
 		util/3d_octree
 		util/binary_cvt_io

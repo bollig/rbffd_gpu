@@ -9,11 +9,11 @@ DerivativeCL::DerivativeCL(vector<Vec3>& rbf_centers_, vector<vector<int> >& ste
 : Derivative(rbf_centers_, stencil_, nb_bnd_, dimensions), CLBaseClass()	
 {
 	cout << "Inside DerivativeCL constructor" << endl;
-
+			
 	#include "cl_kernels/derivative_kernels.cl"
-	loadProgram(kernel_source);
+	this->loadProgram(kernel_source);
 
-    // NOW WE HAVE A KERNEL PREPPED AND READY TO BE CALLED
+    // NOW WE HAVE A KERNEL PREPPED AND READY TO BE CALLED WE NEED TO WORRY ABOUT MEMORY
 
 	cout << "Allocating GPU memory for " << stencil_.size() << " stencil weights" << endl;
 

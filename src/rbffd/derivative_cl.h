@@ -10,6 +10,14 @@
 
 class DerivativeCL : public Derivative, public CLBaseClass
 {
+	// These are pointers to gpu memory. We will need to allocate in the constructor and 
+	// copy to/from the memory in computeDeriv
+	cl::Buffer gpu_stencils; 
+	cl::Buffer gpu_solution;
+	cl::Buffer gpu_x_deriv; 
+	cl::Buffer gpu_y_deriv; 
+	cl::Buffer gpu_z_deriv;
+	cl::Buffer gpu_lapl_deriv;
 
 public:
     DerivativeCL(std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts, int dim_num);

@@ -20,19 +20,49 @@ DerivativeCL::DerivativeCL(vector<Vec3>& rbf_centers_, vector<vector<int> >& ste
 		 printf("ERROR: %s(%d)\n", er.what(), er.err());
 	 }
 
+	cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
 
 
-    // NOW WE HAVE A KERNEL PREPPED AND READY TO BE CALLED WE NEED TO WORRY ABOUT MEMORY
+	unsigned int total_num_stencil_elements = 0; 
+	for (int i = 0; i < stencil_.size(); i++) {
+		total_num_stencil_elements += stencil_[i].size(); 
+	}
 
-	cout << "Allocating GPU memory for " << stencil_.size() << " stencil weights" << endl;
+	unsigned int stencil_mem_size = total_num_stencil_elements * sizeof(int); 
+	unsigned int solution_mem_size = rbf_centers_.size() * sizeof(double); 
+	unsigned int weights_mem_size = total_num_stencil_elements * sizeof(double); 
+	unsigned int deriv_mem_size = rbf_centers_.size() * sizeof(double); 
 
-	int solution_size = rbf_centers_.size();
-	cout << "Allocating GPU memory for " << solution_size << " solution values" << endl;
+
+	// Two input arrays: 
+	// 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
+	gpu_stencils = cl::Buffer(context, CL_MEM_READ_ONLY, stencil_mem_size, NULL, &err);
+	//	This one is updated each iteration with the new solution for the previous timestep
+	gpu_solution = cl::Buffer(context, CL_MEM_READ_ONLY, solution_mem_size, NULL, &err);
+
+	gpu_x_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
+	gpu_y_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
+	gpu_z_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err);
+	gpu_laplacian_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err);
+
+	// One output array: 
+	// 	This is our derivative used to update the solution for the current timestep
+	gpu_derivative_out = cl::Buffer(context, CL_MEM_WRITE_ONLY, deriv_mem_size, NULL, &err);
+
+	// Copy our knowns into GPU memory: stencil indices, stencil weights
+	err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_size, &stencil_[0], NULL, &event);
+#if 0
+	// How to enqueue a vector<double*> (i.e. vector<vector<double> >) 
+	err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, x_weights, NULL, &event);
+	err = queue.enqueueWriteBuffer(gpu_y_deriv_weights, CL_TRUE, 0, array_size, a, NULL, &event);
+	err = queue.enqueueWriteBuffer(gpu_z_deriv_weights, CL_TRUE, 0, array_size, a, NULL, &event);
+	err = queue.enqueueWriteBuffer(gpu_laplacian_weights, CL_TRUE, 0, array_size, a, NULL, &event);
+#endif 
+
 }
 
 DerivativeCL::~DerivativeCL() {
-	cout << "Freeing OpenCL memory for solution" << endl;
-	cout << "Freeing OpenCL memory for stencil weights" << endl;
+	// No need to free buffers because theyre not pointers. They get freed automatically
 }
 
 //----------------------------------------------------------------------

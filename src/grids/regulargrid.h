@@ -25,6 +25,7 @@ public:
 
 	// Overrides Grid::generateGrid()
         virtual void generateGrid();
+	virtual std::string getFullName(std::string filename, int iter=0); 
 };
 
 

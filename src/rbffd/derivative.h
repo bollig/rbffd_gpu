@@ -22,7 +22,7 @@ class Derivative
 public:
     enum DerType {X, Y, Z, LAPL};
 
-private:
+protected:
     typedef ArrayT<double> AF;
     //AF arr;
     int nb_rbfs;
@@ -79,8 +79,8 @@ public:
     // deriv : resulting derivative (already allocated)
     // which : which derivative (X, Y, LAPL)
     // NOTE: these are on the CPU. we need GPU equivalents to perform update
-    void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv);
-    void computeDeriv(DerType which, double* u, double* deriv, int npts);
+    virtual void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv);
+    virtual void computeDeriv(DerType which, double* u, double* deriv, int npts);
 
 
     std::vector<double*>& getXWeights() { return x_weights; }

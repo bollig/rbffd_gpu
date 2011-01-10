@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <sstream>
+
 #include "regulargrid.h"
 
 using namespace std;
@@ -102,6 +104,20 @@ void RegularGrid::generateGrid() {
 
     //TODO: Sorting nodes could be done more intelligently than just putting the boundary nodes at the front of the list
     this->sortNodes();
+}
+
+
+std::string RegularGrid::getFullName(std::string base_filename, int iter) {
+	std::stringstream ss(std::stringstream::out);
+	if (iter < 0) {
+		ss << base_filename << "_" << nx << "x_" << ny << "y_" << nz << "z_final.ascii";  
+	} else if (iter == 0) {
+		ss << base_filename << "_" << nx << "x_" << ny << "y_" << nz << "z_initial.ascii";  
+	} else {
+		ss << base_filename << "_" << nx << "x_" << ny << "y_" << nz << "z_" << iter << "iters.ascii";  
+	}
+	std::string filename = ss.str();
+	return filename;
 }
 
 

@@ -5,7 +5,7 @@
 using namespace std;
 
 /*----------------------------------------------------------------------*/
-RegularGrid2D::RegularGrid2D(int n_x, int n_y, double minX, double maxX, double minY, double maxY, int stencil_size) : Grid(n_x, n_y, stencil_size) {
+RegularGrid2D::RegularGrid2D(int n_x, int n_y, double minX, double maxX, double minY, double maxY, int stencil_size) : OriginalGrid(n_x, n_y, stencil_size) {
 
     // grid size
     nb_x = nx = n_x;

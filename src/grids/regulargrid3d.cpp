@@ -5,7 +5,7 @@
 using namespace std;
 
 /*----------------------------------------------------------------------*/
-RegularGrid3D::RegularGrid3D(int n_x, int n_y, int n_z, double minX, double maxX, double minY, double maxY, double minZ, double maxZ, int stencil_size) : Grid(n_x, n_y, stencil_size) {
+RegularGrid3D::RegularGrid3D(int n_x, int n_y, int n_z, double minX, double maxX, double minY, double maxY, double minZ, double maxZ, int stencil_size) : OriginalGrid(n_x, n_y, stencil_size) {
 
     // grid size
     nb_x = nx = n_x;

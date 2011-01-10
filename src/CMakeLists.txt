@@ -9,7 +9,7 @@ SET(REQUIRED_SOURCE_FILES
 	exact_solutions/exact_ncar_poisson2.cpp
 	exact_solutions/exact_regulargrid.cpp
 
-	#	grids/cvt/constrained_cvt.cpp
+	grids/cvt/constrained_cvt.cpp
 	grids/cvt/cvt.cpp
 	grids/cvt/ellipse_cvt.cpp
 	grids/cvt/ellipsoid_cvt.cpp
@@ -17,9 +17,8 @@ SET(REQUIRED_SOURCE_FILES
 	grids/original_grid.cpp
 	grids/regulargrid.cpp
 	grids/grid_interface.cpp
-	#	grids/regulargrid2d.cpp
-	#	grids/regulargrid3d.cpp
-	#	grids/grid.cpp
+	grids/regulargrid2d.cpp
+	grids/regulargrid3d.cpp
 	grids/domain_decomposition/gpu.cpp # Should extend Grid and rename subdomain
 
 	pdes/elliptic/ncar_poisson1.cpp
@@ -28,6 +27,7 @@ SET(REQUIRED_SOURCE_FILES
 	rbffd/contour_svd.cpp
 	rbffd/derivative.cpp
 	rbffd/derivative_tests.cpp
+	#P2	rbffd/new_derivative_tests.cpp
 	rbffd/stencils.cpp
 	rbffd/rbfs/rbf.cpp
 
@@ -49,6 +49,8 @@ SET( REQUIRED_CL_SOURCE_FILES
 	pdes/elliptic/ncar_poisson1_cl.cpp
 	#P1 pdes/elliptic/ncar_poisson2_cl.cpp
 	pdes/elliptic/nonuniform_poisson1_cl.cpp
+
+	rbffd/derivative_cl.cpp
 )
 
 ###############################################

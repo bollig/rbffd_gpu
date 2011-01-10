@@ -11,7 +11,7 @@
 		#P1		experiments/ncar_poisson1_regular_grid
 		#P2		experiments/regular_square2D_heat
 		#P2		experiments/regulargrid3D_heat
-		#P2		experiments/heat_regulargrid_2d
+		experiments/heat_regulargrid_2d
 
 		gridgen/nested_spheres_ccvt
 		gridgen/regular_grid

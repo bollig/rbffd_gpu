@@ -5,7 +5,7 @@
 #include <string>
 #include "Vec3.h"
 
-typedef Vec3 Node; 
+typedef Vec3 NodeType; 
 
 class Grid 
 {
@@ -21,7 +21,7 @@ class Grid
 		// A list of nodes that are N-dimensional and have no connectivity
 		// NOTE: the Node type can determine its own coordinate system but
 		// all of the nodes must share the same coordinate system. 
-		std::vector<Node> node_list; 
+		std::vector<NodeType> node_list; 
 
 		// True/False for every node: are you on the boundary?  
 		std::vector<unsigned int> boundary_indices; 
@@ -33,7 +33,7 @@ class Grid
 	public:
 		Grid() : pert(0.), nb_nodes(0) {}
 		Grid(unsigned int num_nodes) : pert(0), nb_nodes(num_nodes) {}
-		Grid(std::vector<Node>& nodes) : pert(0), nb_nodes(nodes.size()), node_list(nodes) {} 
+		Grid(std::vector<NodeType>& nodes) : pert(0), nb_nodes(nodes.size()), node_list(nodes) {} 
 
 		virtual void generateGrid(); 
 

@@ -85,6 +85,10 @@ public:
 
 	virtual void generateSubGrid();
 
+
+        // compute stencil that contains the "n" nearest nodes for the grid generated nodes
+	void computeStencils(int stencil_size) { this->stencil_size = stencil_size; this->computeStencils(); }
+
         // compute stencil that contains the "n" nearest nodes for the grid generated nodes
 	void computeStencils();
 

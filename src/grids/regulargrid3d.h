@@ -4,9 +4,9 @@
 #include <vector>
 #include <Vec3.h>
 #include <ArrayT.h>
-#include "grid.h"
+#include "original_grid.h"
 
-class RegularGrid3D : public Grid {
+class RegularGrid3D : public OriginalGrid {
 
 public:
         RegularGrid3D(int n_x, int n_y, int n_z, double minX=0., double maxX=1., double minY=0., double maxY=1., double minZ=0., double maxZ=1., int stencil_size=9);

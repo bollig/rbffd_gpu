@@ -24,7 +24,7 @@ void Grid::loadFromFile(std::string filename) {
 
 	if (fin.is_open()) {
 		while (fin.good()) {
-			Node node; 
+			NodeType node; 
 			fin >> node; 
 			if (!fin.eof()) {
 				node_list.push_back(node); 
@@ -65,7 +65,7 @@ void Grid::sortNodes() {
         // Run through all boundary nodes. If the node is in the boundary set (which should be ordered),
         if (boundary_indices[i] != i) {
             // backup interior
-            Node interior_node = node_list[i];
+            NodeType interior_node = node_list[i];
 	    node_list[i] = node_list[boundary_indices[i]];
 	    node_list[boundary_indices[i]] = interior_node;
             
@@ -82,8 +82,13 @@ void Grid::sortNodes() {
 
 std::string Grid::getFullName(std::string base_filename, int iter) {
 	std::stringstream ss(std::stringstream::out);
-	// Setup filename for NetCDF file
-	ss << base_filename << "_" << nb_nodes << "nodes_" << iter << "iters.ascii";  
+	if (iter < 0) {
+		ss << base_filename << "_" << nb_nodes << "nodes_final.ascii";  
+	} else if (iter == 0) {
+		ss << base_filename << "_" << nb_nodes << "nodes_initial.ascii";  
+	} else {
+		ss << base_filename << "_" << nb_nodes << "nodes_" << iter << "iters.ascii";  
+	}
 	std::string filename = ss.str();
 	return filename;
 }

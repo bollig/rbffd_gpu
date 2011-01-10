@@ -1,3 +1,10 @@
+
+# ITS NOT CLEAR WHY CMAKE SUDDENLY REQUIRES THIS CRAP.
+#cmake_policy(PUSH)
+#cmake_minimum_required(VERSION 2.6.3)
+#cmake_policy(POP)
+#CMAKE_POLICY(SET CMP0012 OLD) 
+
 #SET ( TEST_COUNT 0 ) 
 
 ############################################
@@ -79,7 +86,7 @@ MACRO ( ADD_SERIAL_FRAMEWORK_TEST _execname _sourcelist _argv)
 	MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
 	ADD_TEST (${_full_test_name} "${_execname}" ${ARGV})
 	increment(TEST_COUNT_${_execname})
-ENDMACRO ( ADD_SERIAL_FRAMEWORK_TEST )
+ENDMACRO ( ADD_SERIAL_FRAMEWORK_TEST _execname _sourcelist _argv)
 
 
 MACRO ( ADD_PARALLEL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs )
@@ -121,52 +128,52 @@ ENDMACRO ( ADD_PARALLEL_FRAMEWORK_TEST _execname _argv _numprocs )
 
 MACRO ( ADD_SERIAL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv)
 	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
- 	IF (${OPENCL_FOUND} )
-		ADD_SERIAL_FRAMEWORK_TEST( ${_execname} ${_sourcelist} ${_argv})
+ 	IF (OPENCL_FOUND)
+		ADD_SERIAL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}")
 		ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
 		TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
-	ELSE (${OPENCL_FOUND})
+	ELSE (OPENCL_FOUND)
 		MESSAGE (WARNING "\nWARNING! ${_full_test_name} is disabled because OpenCL was not found.")
-	ENDIF (${OPENCL_FOUND})
+	ENDIF (OPENCL_FOUND)
 ENDMACRO ( ADD_SERIAL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv)
 
 
 
 MACRO ( ADD_PARALLEL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)
 	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
- 	IF (${OPENCL_FOUND} ) 
-		ADD_PARALLEL_FRAMEWORK_TEST( ${_execname} ${_sourcelist} ${_argv} ${_numprocs})
+ 	IF (OPENCL_FOUND ) 
+		ADD_PARALLEL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}" "${_numprocs}")
 		ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
 		TARGET_LINK_LIBRARIES ( ${_execname} 
 			${FRAMEWORK_OPENCL_LIBRARY} 
 		)
-	ELSE (${OPENCL_FOUND})
+	ELSE (OPENCL_FOUND)
 		MESSAGE (WARNING "\nWARNING! ${_full_test_name} is disabled because OpenCL was not found.")
-	ENDIF (${OPENCL_FOUND})
+	ENDIF (OPENCL_FOUND)
 ENDMACRO (ADD_PARALLEL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)
 
 MACRO ( ADD_SERIAL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv)
 	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
- 	IF (${CUDA_FOUND} )
-		ADD_SERIAL_FRAMEWORK_TEST( ${_execname} ${_sourcelist} ${_argv})
+ 	IF (CUDA_FOUND )
+		ADD_SERIAL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}")
 		ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
 		TARGET_LINK_LIBRARIES ( ${_execname} 
 			${FRAMEWORK_CUDA_LIBRARY} 
 		)
-	ELSE (${CUDA_FOUND})
+	ELSE (CUDA_FOUND)
 		MESSAGE (WARNING "\nWARNING! ${_full_test_name} is disabled because CUDA was not found.")
-	ENDIF (${CUDA_FOUND})
+	ENDIF (CUDA_FOUND)
 ENDMACRO (ADD_SERIAL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv)
 
 MACRO ( ADD_PARALLEL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)
 	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
- 	IF (${CUDA_FOUND})
-		ADD_PARALLEL_FRAMEWORK_TEST( ${_execname} ${_sourcelist} ${_argv} ${_numprocs})
+ 	IF (CUDA_FOUND)
+		ADD_PARALLEL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}" "${_numprocs}")
 		ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
 		TARGET_LINK_LIBRARIES ( ${_execname} 
 			${FRAMEWORK_CUDA_LIBRARY} 
 		)
-	ELSE (${CUDA_FOUND})
+	ELSE (CUDA_FOUND)
 		MESSAGE (WARNING "\nWARNING! ${_full_test_name} is disabled because CUDA was not found.")
-	ENDIF (${CUDA_FOUND})
+	ENDIF (CUDA_FOUND)
 ENDMACRO (ADD_PARALLEL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)

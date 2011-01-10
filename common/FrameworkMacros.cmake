@@ -7,9 +7,6 @@
 # NOTE: two options here allow us to use a 
 # default config name or to specify one 
 ############################################
-#MACRO ( REQUIRE_CONFIG )
-#	require_config("test.conf")
-#ENDMACRO( REQUIRE_CONFIG )
 MACRO ( REQUIRE_CONFIG )
 	if ( ${ARGC} LESS 1 )
 		set (_configfilename ${CMAKE_CURRENT_SOURCE_DIR}/test.conf)
@@ -22,8 +19,11 @@ MACRO ( REQUIRE_CONFIG )
 	else (EXISTS ${_configfilename})
 		MESSAGE(SEND_ERROR "\nERROR! File: ${_configfilename} required for testing does not exist.")
 	endif ( EXISTS ${_configfilename} )
-ENDMACRO(REQUIRE_CONFIG _configfilename _status)
+ENDMACRO(REQUIRE_CONFIG)
 
+MACRO ( REQUIRE_FILE _filename)
+	require_config(${_filename})
+ENDMACRO( REQUIRE_FILE )
 
 
 
@@ -109,6 +109,8 @@ MACRO ( ADD_PARALLEL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs )
 			MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
 			ADD_TEST (${_full_test_name} ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${_numprocs} ${MPIEXEC_PREFLAGS} "${_execname}" ${_argv} ${MPIEXEC_POSTFLAGS})
 			increment(TEST_COUNT_${_execname})
+		ELSE ( USE_MPI )
+			MESSAGE (WARNING "\nWARNING! Test ${_full_test_name} is disabled because USE_MPI=FALSE.")
 		ENDIF ( USE_MPI )
 	ELSE (MPI_FOUND) 
 		MESSAGE (WARNING "\nWARNING! Could not add parallel test ${_full_test_name} because MPI was not found.") 

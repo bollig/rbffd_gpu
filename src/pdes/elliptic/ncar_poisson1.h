@@ -66,7 +66,6 @@ public:
 
         // Solve the Poisson problem
         virtual void solve(Communicator* comm_unit);
-        void solve_OLD(Communicator* comm_unit);
 
 	// Only update the updated_solution vector if it is non-null (i.e. we actually pass something to the routine)
 	void initialConditions(std::vector<double>* solution = NULL);

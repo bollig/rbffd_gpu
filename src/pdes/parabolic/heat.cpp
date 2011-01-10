@@ -1,5 +1,5 @@
 #include <math.h>
-#include "grids/grid.h"
+#include "grids/original_grid.h"
 #include "rbffd/derivative.h"
 #include "heat.h"
 #include "exact_solutions/exact_solution.h"
@@ -66,7 +66,7 @@ Heat::Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank
 	//grid.laplace();
 }
 
-Heat::Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_) 
+Heat::Heat(ExactSolution* _solution, OriginalGrid& grid_, Derivative& der_) 
 : 	exactSolution(_solution), rbf_centers(&(grid_.getRbfCenters())),boundary_set(&(grid_.getBoundary())), der(&der_), id(0), subdomain(NULL) 
 {
 

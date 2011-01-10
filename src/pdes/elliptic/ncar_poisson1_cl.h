@@ -18,7 +18,7 @@ public:
         NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
         ~NCARPoisson1_CL();
 
-        // Solve the Poisson problem
+        // Solve the Poisson problem (Overrides NCARPoisson1::solve())
         virtual void solve(Communicator* comm_unit);
 
         template<typename T>

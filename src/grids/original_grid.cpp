@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include "set"
-#include "grid.h"
+#include "original_grid.h"
 
 using namespace std;
 
-Grid::Grid(ProjectSettings* settings) {
+OriginalGrid::OriginalGrid(ProjectSettings* settings) {
     // BEGIN JUNK: everything up to END JUNK should
     // be considered for removal to put into a subclass
     // for 2D regular grid.
@@ -43,7 +43,7 @@ Grid::Grid(ProjectSettings* settings) {
 // Default constructor
 //  Specify the size of the stencil we wish to generate
 //  and handle
-Grid::Grid(int dim_num, int stencil_size) {
+OriginalGrid::OriginalGrid(int dim_num, int stencil_size) {
 
     // BEGIN JUNK: everything up to END JUNK should
     // be considered for removal to put into a subclass
@@ -77,7 +77,7 @@ Grid::Grid(int dim_num, int stencil_size) {
 // regular grid constructor, allows us to specify the number of nodes to
 // generate in 2D.
 // This should be in a subclass of grid.(TODO)
-Grid::Grid(int n_x, int n_y, int stencil_size) {
+OriginalGrid::OriginalGrid(int n_x, int n_y, int stencil_size) {
     // grid size
     nb_x = n_x;
     nb_y = n_y;
@@ -96,7 +96,7 @@ Grid::Grid(int n_x, int n_y, int stencil_size) {
 }
 //----------------------------------------------------------------------
 
-Grid::~Grid() {
+OriginalGrid::~OriginalGrid() {
 }
 //----------------------------------------------------------------------
 #if 1
@@ -129,7 +129,7 @@ vector<Vec3>* ltvec::rbf_centers;
 
 //----------------------------------------------------------------------
 
-void Grid::avgStencilRadius() {
+void OriginalGrid::avgStencilRadius() {
     // assume that the nodes are the seeds of a non-uniform CVT
     // compute the average radius of each stencil, without changing the actual stencil size.
     // Thus, a stencil might have 15 points, but the average distance is computed only based
@@ -212,7 +212,7 @@ void Grid::avgStencilRadius() {
 }
 //----------------------------------------------------------------------
 
-void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes) {
+void OriginalGrid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes) {
     this->stencil_size = st_size;
     this->rbf_centers.resize(nb_tot_nodes);
     for (int i = 0; i < nb_tot_nodes; i++) {
@@ -232,14 +232,14 @@ void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, in
     this->computeStencils();
 }
 
-void Grid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes, KDTree* kdtree) {
+void OriginalGrid::computeStencils(double *nodes, int st_size, int nb_boundary_nodes, int nb_tot_nodes, KDTree* kdtree) {
     this->stencil_size = st_size;
     this->nb_bnd = nb_boundary_nodes;
     this->nb_rbf = nb_tot_nodes;
     this->computeStencils(nodes, kdtree);
 }
 
-void Grid::computeStencils(double* nodes, KDTree* kdtree) {
+void OriginalGrid::computeStencils(double* nodes, KDTree* kdtree) {
     this->rbf_centers.resize(nb_rbf);
     for (int i = 0; i < nb_rbf; i++) {
         Vec3 v;
@@ -263,7 +263,7 @@ void Grid::computeStencils(double* nodes, KDTree* kdtree) {
 }
 
 //----------------------------------------------------------------------
-void Grid::computeStencils() {
+void OriginalGrid::computeStencils() {
 
     if (nb_bnd == 0) {
         printf("**** WARNING! nb_bnd == 0; Did generateGrid() update this value properly?! ******\n");
@@ -398,7 +398,7 @@ void Grid::computeStencils() {
 // stencil centers must be in the stencil set of any nodes used for its
 // stencil set.
 //----------------------------------------------------------------------
-void Grid::computeSymmetricStencilsKDTree(KDTree* kdtree) {
+void OriginalGrid::computeSymmetricStencilsKDTree(KDTree* kdtree) {
 
     if (nb_bnd == 0) {
         printf("**** WARNING! nb_bnd == 0; Did generateGrid() update this value properly?! ******\n");
@@ -502,7 +502,7 @@ void Grid::computeSymmetricStencilsKDTree(KDTree* kdtree) {
 // An edge is symmetric if A exists in stencilB and B exists in stencilA
 // Of course we form stencilA and then test each member to see if
 // A exists in stencilB
-bool Grid::isIndxInStencil(int indxA, std::vector<int> stencilB) {
+bool OriginalGrid::isIndxInStencil(int indxA, std::vector<int> stencilB) {
     for (int i = 0; i < stencilB.size(); i++) {
         if (stencilB[i] == indxA)
             return true;
@@ -511,7 +511,7 @@ bool Grid::isIndxInStencil(int indxA, std::vector<int> stencilB) {
 }
 
 //----------------------------------------------------------------------
-void Grid::computeStencilsKDTree(KDTree* kdtree) {
+void OriginalGrid::computeStencilsKDTree(KDTree* kdtree) {
 
     if (nb_bnd == 0) {
         printf("**** WARNING! nb_bnd == 0; Did generateGrid() update this value properly?! ******\n");
@@ -599,7 +599,7 @@ void Grid::computeStencilsKDTree(KDTree* kdtree) {
 }
 //----------------------------------------------------------------------
 
-void Grid::computeStencilsRegular() {
+void OriginalGrid::computeStencilsRegular() {
 
     if (stencil_size != 4) {
         printf("computeStencilsRegular requires a 4-point stencil (stencil_size)\n");
@@ -671,7 +671,7 @@ void Grid::computeStencilsRegular() {
 }
 //----------------------------------------------------------------------
 
-void Grid::generateGrid(const char* file, int nb_bnd, int npts)
+void OriginalGrid::generateGrid(const char* file, int nb_bnd, int npts)
 // npts: total number of points
 {
     FILE* fd = fopen(file, "r");
@@ -708,7 +708,7 @@ void Grid::generateGrid(const char* file, int nb_bnd, int npts)
 }
 //----------------------------------------------------------------------
 
-void Grid::generateGrid() {
+void OriginalGrid::generateGrid() {
 
     // Create a regular perturbed grid
     rmax = 1.;
@@ -763,7 +763,7 @@ void Grid::generateGrid() {
 }
 //----------------------------------------------------------------------
 
-void Grid::generateSubGrid() {
+void OriginalGrid::generateSubGrid() {
     // subgrid size
     count = 0;
 
@@ -825,13 +825,13 @@ void Grid::generateSubGrid() {
 }
 //----------------------------------------------------------------------
 
-int Grid::randi(int i1, int i2) {
+int OriginalGrid::randi(int i1, int i2) {
     double r = (double) (random() / maxint);
     return (i1 + r * (i2 - i1));
 }
 //----------------------------------------------------------------------
 
-double Grid::randf(double f1, double f2) {
+double OriginalGrid::randf(double f1, double f2) {
     return f1 + (f2 - f1)*(random() / maxint);
 }
 //----------------------------------------------------------------------
@@ -839,7 +839,7 @@ double Grid::randf(double f1, double f2) {
 // use a stencil that is [-1 2 -1] in x and [-1 2 -1] in y
 // nothing along the boundaries since Dirichlet (use zero)
 
-void Grid::laplace() {
+void OriginalGrid::laplace() {
     // specialized to Cartesian only
 
     int nb_rbf = rbf_centers.size();
@@ -886,7 +886,7 @@ void Grid::laplace() {
 //----------------------------------------------------------------------
 // computes lapl(scal) and stores in laplace[]
 
-vector<double>& Grid::computeCartLaplacian(vector<double>& scalar) {
+vector<double>& OriginalGrid::computeCartLaplacian(vector<double>& scalar) {
     double der;
 
     for (int i = 0; i < cart_weights.size(); i++) {
@@ -905,7 +905,7 @@ vector<double>& Grid::computeCartLaplacian(vector<double>& scalar) {
 }
 //----------------------------------------------------------------------
 
-double Grid::minimum(vector<double>& vec) {
+double OriginalGrid::minimum(vector<double>& vec) {
     double min = 1.e10;
 
     for (int i = 0; i < vec.size(); i++) {
@@ -919,7 +919,7 @@ double Grid::minimum(vector<double>& vec) {
 //----------------------------------------------------------------------
 #if 0
 
-vector< vector< int > > Grid::decomposeDomain(int num_cpus) {
+vector< vector< int > > OriginalGrid::decomposeDomain(int num_cpus) {
     for (int i = 0; i < num_cpus; i++) {
         decomposed_domain.pushback(stencil);
     }
@@ -929,7 +929,7 @@ vector< vector< int > > Grid::decomposeDomain(int num_cpus) {
 #endif
 //----------------------------------------------------------------------
 
-void Grid::sortNodes() {
+void OriginalGrid::sortNodes() {
     ArrayT<double>& coordr = *coord;
     for (int i = 0; i < this->boundary.size(); i++) {
         // We only need to roughly sort the nodes so the boundary is first and the

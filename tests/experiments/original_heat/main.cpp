@@ -18,7 +18,7 @@
 #include "rbffd/rbfs/rbf_mq.h"
 //#include "rbf_gaussian.h"
 #include "rbffd/derivative.h"
-#include "grids/grid.h"
+#include "grids/original_grid.h"
 #include "pdes/parabolic/heat.h"
 #include "density.h"	// DENSITY from CWD
 #include "grids/cvt/cvt.h"
@@ -26,6 +26,10 @@
 #include "exact_solutions/exact_ellipse.h"
 // used go generate random seed that changes between runs
 #include <time.h> 
+
+// NOTE: This is for backwards compatibility. we should get another test case 
+// derived from this one but cleaned up considerably and using the new Grid
+typedef OriginalGrid Grid; 
 
 using namespace std;
 using namespace arma;

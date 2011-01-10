@@ -1,5 +1,5 @@
-#ifndef _GRID_H_
-#define _GRID_H_
+#ifndef _ORIGINAL_GRID_H_
+#define _ORIGINAL_GRID_H_
 
 #include <vector>
 #include <Vec3.h>
@@ -7,7 +7,7 @@
 #include "KDTree.h"
 #include "utils/conf/projectsettings.h"
 
-class Grid {
+class OriginalGrid {
 
 public:
         double xmin; // = -rmax;
@@ -71,11 +71,11 @@ protected:
         bool forceSymmetricStencils;
 
 public:
-        Grid(ProjectSettings* settings); // maximum stencil size
-        Grid(int dim_num, int stencil_size=9); // maximum stencil size
+        OriginalGrid(ProjectSettings* settings); // maximum stencil size
+        OriginalGrid(int dim_num, int stencil_size=9); // maximum stencil size
 
-	Grid(int n_x, int n_y, int stencil_size=9); // maximum stencil size
-	~Grid();
+	OriginalGrid(int n_x, int n_y, int stencil_size=9); // maximum stencil size
+	~OriginalGrid();
 	virtual void generateGrid();
 
 	// file: input file with grid points 1 per row

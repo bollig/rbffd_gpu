@@ -6,8 +6,12 @@
 #include "utils/comm/communicator.h"
 #include "grids/domain_decomposition/gpu.h"
 #include "exact_solutions/exact_solution.h" 
+#include "grids/original_grid.h"
 
-class Grid;
+
+// NOTE: This is for backwards compatibility.  
+typedef OriginalGrid Grid; 
+//class Grid;
 class Derivative;
 
 

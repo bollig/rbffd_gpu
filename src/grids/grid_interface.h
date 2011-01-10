@@ -51,6 +51,9 @@ class Grid
 		// limited history of node perturbation
 		virtual void perturbNodes(double perturb_amount);
 
+
+		// NOTE: this grid does not have details of node connectivity. We could add this
+		// in a subclass if we wanted like a TriangularGrid or RectilinearGrid. 
 }; 
 
 #endif //__GRID_H__

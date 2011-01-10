@@ -1,46 +1,29 @@
-cmake_minimum_required(VERSION 2.8)
-
+# 1) Change the PROJECT (<NAME>) to your test name
 PROJECT (ncar_poisson1_nonuniform_diffusivity)
 
-SET (TEST_NAME ${PROJECT_NAME}.x)
+# Provided in RBF.framework/common directory 
+include(FrameworkMacros)
 
-# COPY ANY CONFIG FILES REQUIRED BY THE TEST
-FILE(COPY test.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+SET (EXEC_NAME ${PROJECT_NAME}.x)
 
-ADD_EXECUTABLE (${TEST_NAME} 
+# 2) Change the number of processors for execution
+SET (NUM_PROCS 4)
+
+# 3) Source files to compile
+SET ( EXEC_SOURCE_FILES
 	main.cpp
 )
 
-INCLUDE_DIRECTORIES(${FRAMEWORK_INCLUDE_DIR})
+# 4) Runtime arguments for executable (argv[0] .. argv[N]; individual arguments in quotes ("")) 
+SET (ARGV
+#	"--verbose"
+# 	"--file=out.txt"
+)
 
+require_config("test.conf")	
+require_config("test3k_works.conf")
 
-# Make sure the RBF.framework library is built and linked to this test
-INCLUDE_DIRECTORIES(${FRAMEWORK_INCLUDE_DIR} ${FRAMEWORK_DEP_INCLUDE_DIRS})
-ADD_DEPENDENCIES (${TEST_NAME} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
-
-TARGET_LINK_LIBRARIES (${TEST_NAME} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
-
-IF(CUDA_FOUND) 
-	ADD_DEPENDENCIES(${TEST_NAME} ${FRAMEWORK_CUDA_LIBRARY})
-	TARGET_LINK_LIBRARIES (${TEST_NAME} ${FRAMEWORK_CUDA_LIBRARY} ) 
-ENDIF(CUDA_FOUND) 
-
-IF(OPENCL_FOUND) 
-	ADD_DEPENDENCIES(${TEST_NAME} ${FRAMEWORK_OPENCL_LIBRARY})
-	TARGET_LINK_LIBRARIES (${TEST_NAME} ${FRAMEWORK_OPENCL_LIBRARY} ) 
-ENDIF(OPENCL_FOUND)
-
-IF (MPI_FOUND AND USE_MPI)
-	TARGET_LINK_LIBRARIES (${TEST_NAME}
-		${MPI_LIBRARIES}
-	)
-
-	ADD_TEST (${TEST_NAME}_test1 ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_PREFLAGS} "${TEST_NAME}" ${MPIEXEC_POSTFLAGS})
-ELSE () 
-	ADD_TEST (${TEST_NAME}_test1 "${TEST_NAME}")
-ENDIF (MPI_FOUND AND USE_MPI)
-
-
-
-
-
+# Add one or more serial or parallel tests with arg list
+# [executableName] [sourceList] [argvForTest] 
+add_serial_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
+add_parallel_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}"  ${NUM_PROCS})

@@ -1,5 +1,5 @@
-#ifndef _NonUniform_POISSON_1_CL_H_
-#define _NonUniform_POISSON_1_CL_H_
+#ifndef __NonUniform_POISSON_1_CL_H__
+#define __NonUniform_POISSON_1_CL_H__
 
 //#include <vector>
 //#include <ArrayT.h>

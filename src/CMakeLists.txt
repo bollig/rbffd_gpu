@@ -5,9 +5,9 @@ SET(REQUIRED_SOURCE_FILES
 	# find * -name "*.c*" |grep -v "\.cu" |grep -v "cl\.c"
 	exact_solutions/exact_ellipse.cpp
 	exact_solutions/exact_ellipsoid.cpp
-	#	exact_solutions/exact_ncar_poisson1.cpp
-	#	exact_solutions/exact_ncar_poisson2.cpp
-	#	exact_solutions/exact_regulargrid.cpp
+	exact_solutions/exact_ncar_poisson1.cpp
+	exact_solutions/exact_ncar_poisson2.cpp
+	exact_solutions/exact_regulargrid.cpp
 
 	#	grids/cvt/constrained_cvt.cpp
 	grids/cvt/cvt.cpp
@@ -20,14 +20,14 @@ SET(REQUIRED_SOURCE_FILES
 	#	grids/regulargrid2d.cpp
 	#	grids/regulargrid3d.cpp
 	#	grids/grid.cpp
-	#	grids/domain_decomposition/gpu.cpp
+	grids/domain_decomposition/gpu.cpp # Should extend Grid and rename subdomain
 
-	#	pdes/elliptic/ncar_poisson1.cpp
+	pdes/elliptic/ncar_poisson1.cpp
 	pdes/parabolic/heat.cpp
 
 	rbffd/contour_svd.cpp
 	rbffd/derivative.cpp
-	#	rbffd/derivative_tests.cpp
+	rbffd/derivative_tests.cpp
 	rbffd/stencils.cpp
 	rbffd/rbfs/rbf.cpp
 
@@ -46,9 +46,9 @@ SET( REQUIRED_CU_SOURCE_FILES
 
 SET( REQUIRED_CL_SOURCE_FILES
 	# find * -name "*cl.c*"
-	#P1 pdes/elliptic/ncar_poisson1_cl.cpp
+	pdes/elliptic/ncar_poisson1_cl.cpp
 	#P1 pdes/elliptic/ncar_poisson2_cl.cpp
-	#P1 pdes/elliptic/nonuniform_poisson1_cl.cpp
+	pdes/elliptic/nonuniform_poisson1_cl.cpp
 )
 
 ###############################################

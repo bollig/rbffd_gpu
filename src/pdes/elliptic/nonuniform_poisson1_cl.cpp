@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "grids/grid.h"
 #include "nonuniform_poisson1_cl.h"
 #include "exact_solutions/exact_solution.h"
 #include "timingGE.h"

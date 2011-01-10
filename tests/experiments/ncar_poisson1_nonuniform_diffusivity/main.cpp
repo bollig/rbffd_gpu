@@ -4,7 +4,7 @@
 // error in the constant definitions for MPI. I wonder if its because
 // nested_sphere_cvt.h accidentally overrides one of the defines for MPI
 #include "pdes/elliptic/nonuniform_poisson1_cl.h"
-#include "grids/grid.h"
+#include "grids/original_grid.h"
 #include "grids/cvt/nested_sphere_cvt.h"
 #include "grids/cvt/cvt.h"
 #include "grids/domain_decomposition/gpu.h"
@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
 
     // TODO: run this in parallel:
     double* generators = cvt->getGenerators();
-    Grid* grid = new Grid(settings);
+    OriginalGrid* grid = new OriginalGrid(settings);
     // Compute stencils given a set of generators
     grid->computeStencils(generators, cvt->getKDTree());
 

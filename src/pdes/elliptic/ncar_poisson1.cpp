@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <math.h>
-#include "grids/grid.h"
 #include "ncar_poisson1.h"
 #include "exact_solutions/exact_solution.h"
 #include <armadillo>

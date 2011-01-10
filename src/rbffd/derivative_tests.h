@@ -2,11 +2,13 @@
 #define __DERIVATIVE_TESTS_H__
 
 #include "rbffd/derivative.h"
-#include "grids/grid.h"
+#include "grids/original_grid.h"
 #include "Vec3.h"
 
 #include <string>
 using namespace std;
+
+typedef OriginalGrid Grid;
 
 class DerivativeTests {
 public:

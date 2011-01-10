@@ -13,6 +13,15 @@ DerivativeCL::DerivativeCL(vector<Vec3>& rbf_centers_, vector<vector<int> >& ste
 	#include "cl_kernels/derivative_kernels.cl"
 	this->loadProgram(kernel_source);
 
+	 try{
+	 	 kernel = cl::Kernel(program, "computeDerivKernel", &err);
+	 }
+     	 catch (cl::Error er) {
+		 printf("ERROR: %s(%d)\n", er.what(), er.err());
+	 }
+
+
+
     // NOW WE HAVE A KERNEL PREPPED AND READY TO BE CALLED WE NEED TO WORRY ABOUT MEMORY
 
 	cout << "Allocating GPU memory for " << stencil_.size() << " stencil weights" << endl;
@@ -72,6 +81,7 @@ void DerivativeCL::computeDeriv(DerType which, double* u, double* deriv, int npt
 
 	cout << "Sending " << rbf_centers.size() << " solution updates to GPU" << endl;
 
+#if 0
 
     double der;
 
@@ -85,7 +95,7 @@ void DerivativeCL::computeDeriv(DerType which, double* u, double* deriv, int npt
         }
         deriv[i] = der;
     }
-
+#endif 
 
 
         std::cout<<"Running CL program\n";
@@ -96,14 +106,16 @@ void DerivativeCL::computeDeriv(DerType which, double* u, double* deriv, int npt
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
             " failed (" << err << ")\n";
+	std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
        exit(EXIT_FAILURE);
     }
 
     err = queue.finish();
     if (err != CL_SUCCESS) {
         std::cerr << "Event::wait() failed (" << err << ")\n";
+	std::cout << "Failed to finish queue" << std::endl;
+    } else {
+	    std::cout << "CL program finished!" << std::endl;
     }
-
-
 }
 //----------------------------------------------------------------------

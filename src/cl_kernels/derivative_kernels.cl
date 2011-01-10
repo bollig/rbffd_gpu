@@ -3,10 +3,11 @@
 std::string kernel_source = STRINGIFY(
 				  
 __kernel void
-hello()
+computeDerivKernel()
 {
 	/*
-	Just a stub kernel. 
+	* Perform an inner product of input stencil weights and solution values
+	* to get an output derivative value. 
 	*/
 	
     size_t i =  get_global_id(0);

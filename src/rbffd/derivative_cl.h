@@ -5,12 +5,13 @@
 #include <iostream>
 #include <vector>
 #include "derivative.h"
+#include <CL/cl.hpp>
 
 class DerivativeCL : public Derivative
 {
 
 public:
-    DerivativeCL(std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts, int dim_num);
+    DerivativeCL(cl::Context context, std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts, int dim_num);
     ~DerivativeCL(); 
 
     // u : take derivative of this scalar variable (already allocated)

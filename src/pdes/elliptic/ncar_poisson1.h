@@ -51,7 +51,6 @@ protected:
         Timer t1, t2, t3, t4, t5;
 
         // FLAGS
-        bool check_L_p_Lt;           // Check the results when weights are L+L^T
         bool disable_sol_constraint; // Disable the solution constraint for Neumann and Robin boundary conditions
         int  boundary_condition;     // Choose boundary condition type (0 = Dirichlet; 1 = Neumann; 2 = Robin)
         bool use_discrete_rhs;       //  Compute a discrete approximation for RHS values for the Discrete Compat. Condition

@@ -232,14 +232,11 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         cout << "Implicit system assembled" << endl;
         viennacl::io::write_matrix_market_file(L_host, "L_host.mtx");
 
+        cout << "L_host.mtx written" << endl;
         // cout << "L_HOST: " << L_host.size1() << "\t" << L_host.size2() << "\t" << L_host.filled1() << "\t" << L_host.filled2() << endl;
         // cout << L_host << endl;
         // cout << "F: " << F_host << endl;
 
-        if (check_L_p_Lt) {
-            // viennacl::transposed_matrix_proxy<FLOAT, 1, > L_transp_host(L_host);
-            L_host = L_host + trans(L_host);
-        }
 
         // 2) Convert to OpenCL space:
 
@@ -250,6 +247,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         boost::numeric::ublas::vector<FLOAT> x_host(F_host.size());
 
         t4.start();
+
         cout << "Before copy to GPU" << endl;
         // copy to GPU
         copy(L_host, L_device);

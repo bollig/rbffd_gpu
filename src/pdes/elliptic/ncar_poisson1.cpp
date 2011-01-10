@@ -33,7 +33,6 @@ NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative
     yy_deriv.resize(nb_stencils);
 
     // Do not run the L + L^T test
-    check_L_p_Lt = false;
     boundary_condition = 0; // DIRICHLET
     disable_sol_constraint = false;
     use_discrete_rhs = true;
@@ -66,7 +65,6 @@ NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, 
     xx_deriv.resize(nb_stencils);
     yy_deriv.resize(nb_stencils);
 
-    check_L_p_Lt = settings->GetSettingAs<int>("CHECK_L_PLUS_L_TRANSPOSE", ProjectSettings::optional);
     boundary_condition = settings->GetSettingAs<int>("BOUNDARY_CONDITION", ProjectSettings::required);
     disable_sol_constraint = settings->GetSettingAs<int>("DISABLE_SOL_CONSTRAINT", ProjectSettings::optional);
     use_discrete_rhs = settings->GetSettingAs<int>("USE_DISCRETE_RHS", ProjectSettings::required);

@@ -323,11 +323,6 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         // cout << L_host << endl;
         // cout << "F: " << F_host << endl;
 
-        if (check_L_p_Lt) {
-           // viennacl::transposed_matrix_proxy<FLOAT, 1, > L_transp_host(L_host);
-            L_host = L_host + trans(L_host);
-        }
-
         // 2) Convert to OpenCL space:
 
         viennacl::compressed_matrix<FLOAT, 1 /*Alignment(e.g.: 1,4,8)*/ > L_device(L_host.size1(), L_host.size2());

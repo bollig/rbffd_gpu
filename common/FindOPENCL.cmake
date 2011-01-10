@@ -39,6 +39,7 @@ ELSE (WIN32)
 	# does not work. WHY? 
     #SET(inc  $ENV{CUDA_LOCAL}/../OpenCL/common/inc /usr/include)
     FIND_PATH(OPENCL_INCLUDE_DIR CL/cl.h PATHS
+		  	        $ENV{EXTERNAL_INCLUDE_DIRS}
 				"/Developer/GPU Computing/OpenCL/common/inc/" 
 				"/Developer/GPU_Computing/OpenCL/common/inc/" 
 	 	 		~/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/ 

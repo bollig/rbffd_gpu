@@ -5,60 +5,13 @@
 using namespace std;
 
 //----------------------------------------------------------------------
-DerivativeCL::DerivativeCL(cl::Context context, vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_, int dimensions)
-: Derivative(rbf_centers_, stencil_, nb_bnd_, dimensions)	
+DerivativeCL::DerivativeCL(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_, int dimensions)
+: Derivative(rbf_centers_, stencil_, nb_bnd_, dimensions), CLBaseClass()	
 {
 	cout << "Inside DerivativeCL constructor" << endl;
 
-    std::cout<<"Loading and compiling OpenCL source for DerivativeCL\n";
-
-
-	streamsdk::SDKFile file;
-    if (!file.open("HelloCL_Kernels.cl")) {
-         std::cerr << "We couldn't load CL source code\n";
-         return SDK_FAILURE;
-    }
-	cl::Program::Sources sources(1, std::make_pair(file.source().data(), file.source().size()));
-
-	cl::Program program = cl::Program(context, sources, &err);
-	if (err != CL_SUCCESS) {
-        std::cerr << "Program::Program() failed (" << err << ")\n";
-        return SDK_FAILURE;
-    }
-
-    err = program.build(devices);
-    if (err != CL_SUCCESS) {
-
-		if(err == CL_BUILD_PROGRAM_FAILURE)
-        {
-            cl::string str = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
-
-            std::cout << " \n\t\t\tBUILD LOG\n";
-            std::cout << " ************************************************\n";
-			std::cout << str.c_str() << std::endl;
-            std::cout << " ************************************************\n";
-        }
-
-        std::cerr << "Program::build() failed (" << err << ")\n";
-        return SDK_FAILURE;
-    }
-
- cl::Kernel kernel(program, "hello", &err);
-    if (err != CL_SUCCESS) {
-        std::cerr << "Kernel::Kernel() failed (" << err << ")\n";
-        return SDK_FAILURE;
-    }
-    if (err != CL_SUCCESS) {
-        std::cerr << "Kernel::setArg() failed (" << err << ")\n";
-        return SDK_FAILURE;
-    }
-
-        cl::CommandQueue queue(context, devices[0], 0, &err);
-    if (err != CL_SUCCESS) {
-        std::cerr << "CommandQueue::CommandQueue() failed (" << err << ")\n";
-    }
-
-
+	#include "cl_kernels/derivative_kernels.cl"
+	loadProgram(kernel_source);
 
     // NOW WE HAVE A KERNEL PREPPED AND READY TO BE CALLED
 
@@ -143,7 +96,7 @@ void DerivativeCL::computeDeriv(DerType which, double* u, double* deriv, int npt
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
             " failed (" << err << ")\n";
-       return SDK_FAILURE;
+       exit(EXIT_FAILURE);
     }
 
     err = queue.finish();

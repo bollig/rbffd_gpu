@@ -5,13 +5,14 @@
 #include <iostream>
 #include <vector>
 #include "derivative.h"
+#include "utils/opencl/cl_base_class.h"
 #include <CL/cl.hpp>
 
-class DerivativeCL : public Derivative
+class DerivativeCL : public Derivative, public CLBaseClass
 {
 
 public:
-    DerivativeCL(cl::Context context, std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts, int dim_num);
+    DerivativeCL(std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts, int dim_num);
     ~DerivativeCL(); 
 
     // u : take derivative of this scalar variable (already allocated)
@@ -19,6 +20,7 @@ public:
     // which : which derivative (X, Y, LAPL)
     // This overrides the CPU equivalents to provide a GPU accelerated routine (using OpenCL)
     virtual void computeDeriv(DerType which, double* u, double* deriv, int npts);
+
 };
 
 #endif

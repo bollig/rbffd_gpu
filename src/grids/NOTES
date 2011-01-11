@@ -1,0 +1,1 @@
+note: original_grid.cpp is the original Grid class provided in Gordons code. I am tired of fighting it so I have a simplified Grid interface which i am switching to. I renamed the class to distinguish its use in cases like original_heat and so its obvious which tests I need to concentrate on updating.

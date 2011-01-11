@@ -1,0 +1,3 @@
+opencl10 and opencl11 are the opencl headers from khronos.org 
+
+we are supposed to provide our own headers while the vendor drivers provide the matching libraries 

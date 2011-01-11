@@ -1,0 +1,18 @@
+P1 = priority 1
+=================
+	ncar_poisson1_nonuniform_diffusivity	--> update to show nonuniform diffusion works. Improve norms and error checking. Convergence Test. 
+	original_heat				--> change grid to original_grid. 
+	ncar_poisson1_regular_grid		--> Get ncar_poisson1 working on a regular grid instead of an annulus. 
+	
+P2 = priority 2
+===============
+	ncar_poisson1 			--> fix so we solve same problem as nonuniform_ncar_poisson1 on the CPU
+	ncar_poisson2			--> ditto
+	regular_square2D_heat		--> update to use grid_interface
+	regulargrid3D_heat		--> get 
+
+P3
+===============
+update cmakelists.txt in 
+	util/*
+	gridgen/*

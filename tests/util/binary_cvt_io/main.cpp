@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
 
     double tol = 1e-6;
     int comment = 1; // 1=output comments in cvt files; 0=only BINARY/ASCII + data
-    int VERBOSE = 0;
+    int VERBOSE = 1;
     int N_TOT = NB_INNER_BND + NB_OUTER_BND + NB_INTERIOR;
 
     // Discrete energy divided by number of sample pts
@@ -45,7 +45,12 @@ int main(int argc, char** argv) {
 
     //Density* rho = new Density();
 
+
+	printf("Constructing CVT Class\n");
+
     NestedSphereCVT* cvt = new NestedSphereCVT("binary_io_test", NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, DIM_NUM);
+
+	printf("Generating CVT\n");
 
     //    cvt->SetDensity(rho);
 
@@ -55,6 +60,7 @@ int main(int argc, char** argv) {
     // Simplified CVT call
     cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
 
+	printf("CVT generated. Writing to disk\n");
 
     cvt->cvt_write(DIM_NUM, N_TOT, 0, 0, 0, "RANDOM",
             it_max_bnd, 1, it_num_boundary, it_diff, energy, "RANDOM", sample_num, &r[0],

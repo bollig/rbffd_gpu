@@ -84,13 +84,13 @@ MACRO ( ADD_SERIAL_FRAMEWORK_TEST _execname _sourcelist _argv)
 	TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
 	# Number tests according 
 	MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
-	ADD_TEST (${_full_test_name} "${_execname}" ${ARGV})
+	ADD_TEST (NAME ${_full_test_name} COMMAND "${_execname}" ${_argv})
 	increment(TEST_COUNT_${_execname})
 ENDMACRO ( ADD_SERIAL_FRAMEWORK_TEST _execname _sourcelist _argv)
 
 
 MACRO ( ADD_PARALLEL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs )
-	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
+	SET (_full_test_name "${_execname}_parallel_test") 
 	IF (MPI_FOUND)
 		IF ( USE_MPI)
 			# Make sure the RBF.framework library is built and linked to this test
@@ -114,7 +114,7 @@ MACRO ( ADD_PARALLEL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs )
 			# Add a Parallel Test
 			# Format: ADD_TEST( [TestName] [MPIExecutable] [MPINumProcFlag] [#ofProcs] [MPIOptions] [Executable] [Arg1] [Arg2] ... [ArgN])
 			MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
-			ADD_TEST (${_full_test_name} ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${_numprocs} ${MPIEXEC_PREFLAGS} "${_execname}" ${_argv} ${MPIEXEC_POSTFLAGS})
+			ADD_TEST (NAME ${_full_test_name} COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${_numprocs} ${MPIEXEC_PREFLAGS} "${_execname}" ${_argv} ${MPIEXEC_POSTFLAGS})
 			increment(TEST_COUNT_${_execname})
 		ELSE ( USE_MPI )
 			MESSAGE (WARNING "\nWARNING! Test ${_full_test_name} is disabled because USE_MPI=FALSE.")
@@ -127,7 +127,7 @@ ENDMACRO ( ADD_PARALLEL_FRAMEWORK_TEST _execname _argv _numprocs )
 
 
 MACRO ( ADD_SERIAL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv)
-	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
+	SET (_full_test_name "${_execname}_serial_opencl_test${TEST_COUNT}") 
  	IF (OPENCL_FOUND)
 		ADD_SERIAL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}")
 		ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
@@ -140,7 +140,7 @@ ENDMACRO ( ADD_SERIAL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv)
 
 
 MACRO ( ADD_PARALLEL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)
-	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
+	SET (_full_test_name "${_execname}_parallel_opencl_test${TEST_COUNT}") 
  	IF (OPENCL_FOUND ) 
 		ADD_PARALLEL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}" "${_numprocs}")
 		ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
@@ -153,13 +153,30 @@ MACRO ( ADD_PARALLEL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs
 ENDMACRO (ADD_PARALLEL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)
 
 MACRO ( ADD_SERIAL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv)
-	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
+	SET (_full_test_name "${_execname}_serial_cuda_test${TEST_COUNT}") 
  	IF (CUDA_FOUND )
-		ADD_SERIAL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}")
+		# Make sure the RBF.framework library is built and linked to this test
+		INCLUDE_DIRECTORIES(${FRAMEWORK_INCLUDE_DIR} ${FRAMEWORK_DEP_INCLUDE_DIRS})
+       		CUDA_INCLUDE_DIRECTORIES(${FRAMEWORK_INCLUDE_DIR} ${FRAMEWORK_DEP_INCLUDE_DIRS})
+		IF (NOT DEFINED ${TEST_COUNT_${_execname}})
+			SET(TEST_COUNT_${_execname} 0 CACHE TYPE INTERNAL)
+			MARK_AS_ADVANCED(TEST_COUNT_${_execname})
+		ENDIF (NOT DEFINED ${TEST_COUNT_${_execname}})
+
+		IF (${TEST_COUNT_${_execname}} MATCHES 0) 
+       			CUDA_ADD_EXECUTABLE (${_execname} ${_sourcelist} )
+		ENDIF (${TEST_COUNT_${_execname}} MATCHES 0) 
+			
+		SET (_full_test_name "${_execname}_serial_test${TEST_COUNT_${_execname}}") 
+	
+		ADD_DEPENDENCIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
 		ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
-		TARGET_LINK_LIBRARIES ( ${_execname} 
-			${FRAMEWORK_CUDA_LIBRARY} 
-		)
+		TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
+		TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
+		# Number tests according 
+		MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
+		ADD_TEST (NAME ${_full_test_name} COMMAND "${_execname}" ${_argv})
+		increment(TEST_COUNT_${_execname})
 	ELSE (CUDA_FOUND)
 		MESSAGE (WARNING "\nWARNING! ${_full_test_name} is disabled because CUDA was not found.")
 	ENDIF (CUDA_FOUND)
@@ -168,11 +185,42 @@ ENDMACRO (ADD_SERIAL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv)
 MACRO ( ADD_PARALLEL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)
 	SET (_full_test_name "${_execname}_test${TEST_COUNT}") 
  	IF (CUDA_FOUND)
-		ADD_PARALLEL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}" "${_numprocs}")
-		ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
-		TARGET_LINK_LIBRARIES ( ${_execname} 
-			${FRAMEWORK_CUDA_LIBRARY} 
-		)
+		IF (MPI_FOUND)
+			IF ( USE_MPI)
+				# Make sure the RBF.framework library is built and linked to this test
+				INCLUDE_DIRECTORIES(${FRAMEWORK_INCLUDE_DIR} ${FRAMEWORK_DEP_INCLUDE_DIRS})
+				IF (NOT DEFINED ${TEST_COUNT_${_execname}})
+					SET(TEST_COUNT_${_execname} 0 CACHE TYPE INTERNAL)
+					MARK_AS_ADVANCED(TEST_COUNT_${_execname})
+				ENDIF (NOT DEFINED ${TEST_COUNT_${_execname}})
+
+				IF (${TEST_COUNT_${_execname}} MATCHES 0) 
+       					CUDA_ADD_EXECUTABLE (${_execname} ${_sourcelist} )
+				ENDIF (${TEST_COUNT_${_execname}} MATCHES 0) 
+				
+				SET (_full_test_name "${_execname}_parallel_test${TEST_COUNT_${_execname}}") 
+			
+				ADD_DEPENDENCIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
+				ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
+				TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
+				TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
+
+				# Make doubly sure the mpi libs are linked into the executable
+				TARGET_LINK_LIBRARIES (${_execname}
+					${MPI_LIBRARIES}
+				)
+
+				# Add a Parallel Test
+				# Format: ADD_TEST( [TestName] [MPIExecutable] [MPINumProcFlag] [#ofProcs] [MPIOptions] [Executable] [Arg1] [Arg2] ... [ArgN])
+				MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
+				ADD_TEST (NAME ${_full_test_name} COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${_numprocs} ${MPIEXEC_PREFLAGS} "${_execname}" ${_argv} ${MPIEXEC_POSTFLAGS})
+				increment(TEST_COUNT_${_execname})
+			ELSE ( USE_MPI )
+				MESSAGE (WARNING "\nWARNING! Test ${_full_test_name} is disabled because USE_MPI=FALSE.")
+			ENDIF ( USE_MPI )
+		ELSE (MPI_FOUND) 
+			MESSAGE (WARNING "\nWARNING! Could not add parallel test ${_full_test_name} because MPI was not found.") 
+		ENDIF (MPI_FOUND)
 	ELSE (CUDA_FOUND)
 		MESSAGE (WARNING "\nWARNING! ${_full_test_name} is disabled because CUDA was not found.")
 	ENDIF (CUDA_FOUND)

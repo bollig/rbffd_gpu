@@ -20,8 +20,8 @@ SET (ARGV
 # 	"--file=out.txt"
 )
 
-add_serial_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "--file=runlog.txt" )
-add_serial_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "--verbose" )
+add_serial_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "" )
+add_serial_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "" )
 add_parallel_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${argv}" ${NUM_PROCS})
 
 # TODO

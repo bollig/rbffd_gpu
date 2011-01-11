@@ -16,8 +16,6 @@ SET ( EXEC_SOURCE_FILES
 
 # 4) Runtime arguments for executable (argv[0] .. argv[N]; individual arguments in quotes ("")) 
 SET (ARGV
-#	"--verbose"
-# 	"--file=out.txt"
 )
 
 require_config()   # Default is to require test.conf

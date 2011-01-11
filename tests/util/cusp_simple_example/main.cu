@@ -14,26 +14,29 @@ using namespace std;
 int main(void)
 {
 
-    int nb_stencils = 5;
+    int nb_stencils = 10;
     int stencil_size = 4;
 
     // Only in using the 2D memory block can we access elements directly for assignment
     // This is a limitation of CUSP at the moment.
-    cusp::array2d<float, cusp::host_memory> A(10,10);
+    cusp::array2d<float, cusp::host_memory> A(nb_stencils, nb_stencils);
 
     for (int i = 0; i < A.num_rows; i++) {
-        A(i,i) = -2.5;  // Test values
+        A(i,i) = stencil_size;  // Test values
     }
 
     for (int i = 0; i < A.num_cols; i++) {
-        int j = rand() % A.num_cols;
-        cout << "RAND: " << j  << endl;
-        A(i,j) = -1;
+	for (int j = 0; j < stencil_size; j++) {
+	        int k = rand() % A.num_cols;
+        	cout << "RAND: " << k  << endl;
+        	A(i,k) = -1;
+	}
     }
 
+	cusp::print_matrix(A); 
+
     // Convert the 2D memory block to a sparse representation
-    //cusp::coo_matrix<int, float, cusp::device_memory> B(A);
-    cusp::coo_matrix<int, float, cusp::device_memory> B(nb_stencils, stencil_size, 0);
+    cusp::coo_matrix<int, float, cusp::device_memory> B(A);
 
     // allocate storage for solution (x) and right hand side (b)
     cusp::array1d<float, cusp::device_memory> x(A.num_rows, 0);
@@ -53,6 +56,6 @@ int main(void)
     cusp::print_matrix(B);
 
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 

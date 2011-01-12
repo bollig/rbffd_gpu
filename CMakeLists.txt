@@ -10,7 +10,7 @@ SET( CMAKE_MODULE_PATH
 # Setup any external libraries we might need
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/external)
 
-MESSAGE("ENV{EXTERNAL_INCLUDE_DIRS}= $ENV{EXTERNAL_INCLUDE_DIRS}")
+#MESSAGE("ENV{EXTERNAL_INCLUDE_DIRS}= $ENV{EXTERNAL_INCLUDE_DIRS}")
 
 # Get common build instructions used by all operating systems
 INCLUDE (COMMON_CONFIG)

@@ -28,9 +28,17 @@ protected:
        // iter > 0 => iter # 
 	int cvt_iter; 
 
+	// Current seed for cvt_sample
+	int rand_seed; 
+
+
 	// The number of nodes (from the beginning of the list) which are locked in place. 
 	// These nodes are typically boundary nodes whos position should be updated by another algorithm
 	unsigned int nb_locked_nodes; 
+
+	// Different type of sampling for our domain
+	enum sample_type {RANDOM, UNIFORM, HALTON, GRID, USER};
+
 
 public:
         // Construct a CVT given the total number of nodes in the domain and 
@@ -42,6 +50,10 @@ public:
 
 	~CVT(); 
 
+
+/*******************
+ * OVERRIDE GRID::
+ *******************/
 	// Overrides Grid::generate()
 	virtual void generate(); 
 	
@@ -52,8 +64,25 @@ public:
 
 	virtual void writeToFile() { Grid::writeToFile(this->getFilename(cvt_iter)); }
 
-private: 
+
+/***********************
+ * OVERRIDABLE ROUTINES
+ ***********************/
+	// Customized initial sampling of domain could be redirected to the user_sample
+	// so both node initialization and cvt sampling are the same
+	virtual void user_init(int indx_start, int n_now, bool init_rand); 
+
+
+/***********************
+ * HIDDEN ROUTINES
+ ***********************/
+protected: 
+	void cvt_init(int indx_start, int n_now, int sample_type, bool init_rand);
+
+	unsigned long random_initialize(int seed); 
+	void tuple_next_fast(int m, int n, int rank, int x[]);
 	void initTimers();
+	int get_seed(void);
 	
 #if 0	
 

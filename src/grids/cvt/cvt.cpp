@@ -60,9 +60,9 @@ void CVT::generate() {
 		node_list.resize(nb_nodes);
 	}
 
-	//this->cvt_init(0, nb_nodes, CVT::RANDOM, true); 
+	this->cvt_init(0, nb_nodes, CVT::RANDOM, true); 
 	//this->cvt_init(0, nb_nodes, CVT::GRID, true); 
-	this->cvt_init(0, nb_nodes, CVT::USER, true); 
+	//this->cvt_init(0, nb_nodes, CVT::USER, true); 
 
 	this->writeToFile();
 	std::cout << "CVT GENERATE NOT IMPLEMENTED" << std::endl;

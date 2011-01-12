@@ -1,0 +1,35 @@
+So nonuniform_poisson1_cl works for uniform diffusion and solves the dirichlet problem correctly. 
+
+It has the right API form which allows us to customize how LHS and RHS matrices are filled for an implicit system
+
+all need to be updated
+======================
+ncar_poisson1_cl
+ncar_poisson1_cusp
+ncar_poisson1
+ncar_poisson2
+
+Basic elliptic_pde: 
+===================
+nonvirtual: 
+	maxNorm
+virtual: 
+	constructor
+	destructor
+	solve 
+	initialConditions
+	boundaryValues
+	write_to_file
+pure virtual: 
+	fillBoundary
+		- fillBoundary[Dirichlet|Neumann|Robin]
+		#- fillBoundary[Discrete|Continuous]NeumannRHS
+		#- fillBoundary[Neumann|Robin]RHS
+	fillInterior
+		- fillInterior[LHS|RHS]
+
+need: 
+	absoluteError
+	relativeError
+	residual
+	etc. (separate routines for post processing)

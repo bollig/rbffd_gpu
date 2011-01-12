@@ -9,11 +9,11 @@ SET(REQUIRED_SOURCE_FILES
 	exact_solutions/exact_ncar_poisson2.cpp
 	exact_solutions/exact_regulargrid.cpp
 
-	grids/cvt/constrained_cvt.cpp
 	grids/cvt/cvt.cpp
-	grids/cvt/ellipse_cvt.cpp
-	grids/cvt/ellipsoid_cvt.cpp
-	grids/cvt/nested_sphere_cvt.cpp
+	#grids/cvt/constrained_cvt.cpp
+	#grids/cvt/ellipse_cvt.cpp
+	#grids/cvt/ellipsoid_cvt.cpp
+	#grids/cvt/nested_sphere_cvt.cpp
 	grids/original_grid.cpp
 	grids/regulargrid.cpp
 	grids/grid_interface.cpp
@@ -36,6 +36,7 @@ SET(REQUIRED_SOURCE_FILES
 	utils/conf/projectsettings.cpp
 	utils/geom/parametric_patch.cpp
 	utils/geom/octree.cpp	
+	utils/random.cpp
 )
 
 

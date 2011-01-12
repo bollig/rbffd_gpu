@@ -35,16 +35,43 @@ class Grid
 		Grid(unsigned int num_nodes) : pert(0), nb_nodes(num_nodes) {}
 		Grid(std::vector<NodeType>& nodes) : pert(0), nb_nodes(nodes.size()), node_list(nodes) {} 
 
-		virtual void generateGrid(); 
+		virtual ~Grid(){ }
 
-		// I/O of grid to/from file labeling the file with the specified iter number 
+		virtual void generate(); 
+
+		// Write data to disk generating the filename appropriately for the class (calls to writeToFile(std::string)) 
+		virtual	void writeToFile(); 
 		virtual void writeToFile(std::string filename); 
+
+		// Load data from disk using the class generated filename and specified iter
+			void loadFromFile(int iter); 
 		virtual void loadFromFile(std::string filename); 
 
 		// Sort the nodes so boundary nodes are first in the lists
 		virtual void sortNodes(); 
 
-		std::string getFullName(std::string base_filename, int iter=0);
+
+		std::vector<NodeType>& 	   getNodeList() { return node_list; }
+		std::vector<unsigned int>& getBoundaryIndices() { return boundary_indices; } 
+		std::vector<Vec3>& 	   getBoundaryNormals() { return boundary_normals; }
+
+
+		// Convert a basic filename like "output_file" to something more descriptive
+		// and appropriate to the grid like "output_file_120nodes_final.ascii"
+		// or "output_file_356_nodes_final.bin"
+			std::string getFilename(std::string base_filename, int iter=0);
+
+		// Get a filename appropriate for output from this class
+		// same as getFilename(std::string, int) however it uses 
+		// the class's internal name instead of a user specified string. 
+			std::string getFilename(int iter=0); 
+
+		// Get a string that gives some detail about the grid (used by expandFilename(...))
+		// NOTE: replace spaces with '_'
+		virtual std::string getFileDetailString(); 
+
+		virtual std::string className() { return "grid"; }
+
 
 		// Select a random number [randf(-pert, pert)] for each node dimension and add
 		// to randomly perturb nodes in space; store perturb_percent in pert to maintain

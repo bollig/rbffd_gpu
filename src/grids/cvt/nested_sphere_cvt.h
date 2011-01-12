@@ -33,6 +33,7 @@ public:
     // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot]
     virtual void cvt(int *it_num, double *it_diff, double *energy);
 
+#if 0
     // Redirect custom call to the default CVT generation routine
     virtual void cvt(double r[], int *it_num_boundary_, int *it_num_interior_, double *it_diff, double *energy, int it_max_boundary_, int it_max_interior_, int sample_num) {
         int it_num;
@@ -44,6 +45,7 @@ public:
         *it_num_boundary_ = it_num_boundary;
         *it_num_interior_ = it_num_interior;
     }
+#endif 
 
     // Override the filename generation 
     virtual void cvt_get_file_prefix(char* filename_buffer);

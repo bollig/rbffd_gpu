@@ -52,8 +52,7 @@ SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # This is an external dependency
 # Its name should not change
 SET( FRAMEWORK_DEPENDENCIES
-	utilities
-   	timing
+	$ENV{EXTERNAL_LIB_DEPENDENCIES}
 	#${CUDA_LIBRARIES}
 )
 

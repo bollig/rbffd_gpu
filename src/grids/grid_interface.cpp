@@ -6,13 +6,37 @@
 #include "grid_interface.h"
 #include "utils/random.h"
 
-void Grid::generateGrid() {
+void Grid::generate() {
 	node_list.clear(); 
 	boundary_indices.clear(); 
 	boundary_normals.clear(); 
 
 	node_list.resize(nb_nodes); 
 }
+void Grid::writeToFile() {
+	this->writeToFile(this->getFilename());
+}
+
+void Grid::writeToFile(std::string filename) {
+	std::ofstream fout(filename.c_str()); 
+	if (fout.is_open()) {
+		for (unsigned int i = 0; i < node_list.size(); i++) {
+			fout << node_list[i] << std::endl; 
+		}
+	} else {
+		perror ("Error opening file to write"); 
+		exit(EXIT_FAILURE); 
+	}
+	fout.close();
+	std::cout << "[Grid] \tWrote " << node_list.size() << " nodes to \t" << filename << std::endl;
+}
+
+
+
+void Grid::loadFromFile(int iter) {
+	this->loadFromFile(this->getFilename(iter)); 
+}
+
 
 
 void Grid::loadFromFile(std::string filename) {
@@ -42,21 +66,6 @@ void Grid::loadFromFile(std::string filename) {
 }
 
 
-void Grid::writeToFile(std::string filename) {
-	std::ofstream fout(filename.c_str()); 
-	if (fout.is_open()) {
-		for (unsigned int i = 0; i < node_list.size(); i++) {
-			fout << node_list[i] << std::endl; 
-		}
-	} else {
-		perror ("Error opening file to write"); 
-		exit(EXIT_FAILURE); 
-	}
-	fout.close();
-	std::cout << "[Grid] \tWrote " << node_list.size() << " nodes to \t" << filename << std::endl;
-}
-
-
 void Grid::sortNodes() {
     for (int i = 0; i < this->boundary_indices.size(); i++) {
         // We only need to roughly sort the nodes so the boundary is first and the
@@ -79,18 +88,27 @@ void Grid::sortNodes() {
 }
 
 
+std::string Grid::getFileDetailString() {
+	std::stringstream ss(std::stringstream::out); 
+	ss << nb_nodes << "nodes"; 
+	return ss.str();
+}
 
-std::string Grid::getFullName(std::string base_filename, int iter) {
+std::string Grid::getFilename(std::string base_filename, int iter) {
 	std::stringstream ss(std::stringstream::out);
 	if (iter < 0) {
-		ss << base_filename << "_" << nb_nodes << "nodes_final.ascii";  
+		ss << base_filename << "_" << this->getFileDetailString() << "_final.ascii";  
 	} else if (iter == 0) {
-		ss << base_filename << "_" << nb_nodes << "nodes_initial.ascii";  
+		ss << base_filename << "_" << this->getFileDetailString() << "_initial.ascii";  
 	} else {
-		ss << base_filename << "_" << nb_nodes << "nodes_" << iter << "iters.ascii";  
+		ss << base_filename << "_" << this->getFileDetailString() << "_" << iter << "iters.ascii";  
 	}
 	std::string filename = ss.str();
 	return filename;
+}
+
+std::string Grid::getFilename(int iter) {
+	return this->getFilename(this->className(), iter); 
 }
 
 

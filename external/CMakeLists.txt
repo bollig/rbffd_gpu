@@ -4,6 +4,7 @@
 ###############################################
 	SET (EXTERNAL_LIBS
 		graphics_lib
+		timers
 		kdtree
 		cuda_libraries
 		opencl_libraries
@@ -13,7 +14,7 @@
 	# required in the project. 
 	SET (REQUIRED_EXTERNAL_LIBS 
 		utilities	#graphics_lib/utilities
-		timing		#grahpics_lib/timing
+		timers		#grahpics_lib/timing
 		kdtree		#kdtree/.
 	)
 
@@ -24,5 +25,6 @@
 	FOREACH (lib ${REQUIRED_EXTERNAL_LIBS})
 		# add each subdir to a global cached variable for external include directories
 		SET (ENV{EXTERNAL_INCLUDE_DIRS} "$ENV{EXTERNAL_INCLUDE_DIRS};${${lib}_SOURCE_DIR}")
+		SET (ENV{EXTERNAL_LIB_DEPENDENCIES} "$ENV{EXTERNAL_LIB_DEPENDENCIES};${lib}")
 		MESSAGE(STATUS "ADDED ${lib} SOURCE TO VAR: ENV{EXTERNAL_INCLUDE_DIRS} ")
 	ENDFOREACH(lib)

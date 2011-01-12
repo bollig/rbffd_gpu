@@ -5,15 +5,68 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <string.h>
+#include <string>
+
+#include <sstream>
 
 #include <math.h>
 #include <vector>
 
 #include "cvt.h"
 
+#include "grids/regulargrid.h"
+#include "utils/random.h" 
+
 using namespace std;
 
+CVT::CVT(unsigned int nb_generators, unsigned int dimension) 
+	: Grid(nb_generators), 
+	  dim_num(dimension), nb_locked_nodes(0), kdtree(NULL), cvt_iter(10)
+{
+	initTimers(); 
+}
+
+CVT::CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked)
+	: Grid(nodes), 
+	dim_num(dimension), nb_locked_nodes(nb_locked), kdtree(NULL), cvt_iter(0)
+{
+	initTimers();
+}
+
+void CVT::initTimers() {
+	timers["total"] = new Timer("Total time in CVT::generate()");
+	timers["iter"] = new Timer("perform one iteraton of Lloyd's");
+	timers["sample"] = new Timer("generate set of probabilistic samples");
+	timers["energy"] = new Timer("compute system energy");
+	timers["kbuild"] = new Timer("construct new KDTree");
+	timers["kupdate"] = new Timer("update KDTree");
+	timers["neighbor"] = new Timer("nearest neighbor search");
+}
+
+CVT::~CVT() {
+	// dump timers (in case they havent been dumped prior to this
+	timers.begin()->second->printAll(); 
+	// erase all timers
+	std::map<std::string, Timer*>::iterator iter = timers.begin(); 
+	while(iter != timers.end()) {
+		delete(iter->second);
+		iter++;
+	}
+}
+
+void CVT::generate() {
+	std::cout << "CVT GENERATE NOT IMPLEMENTED" << std::endl;
+	exit(EXIT_FAILURE); 
+}
+
+std::string CVT::getFileDetailString() {
+	std::stringstream ss(std::stringstream::out); 
+	ss << nb_nodes << "generators"; 
+	return ss.str();	
+}
+
+
+#if 0
 //****************************************************************************80
 
 CVT::CVT(int num_generators, int dimension_, const char* filename, int init_, int sample_, int sample_num_, int seed_, int batch_, int it_max_, int it_fixed_, int DEBUG_)
@@ -3788,3 +3841,5 @@ void CVT::cvt_get_filename(int iter, char *filename_buffer) {
         sprintf(filename_buffer, "%s_%.5d", prefix, iter);
     }
 }
+
+#endif 

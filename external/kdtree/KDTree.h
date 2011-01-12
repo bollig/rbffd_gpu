@@ -10,7 +10,9 @@
 #include <math.h>    // fabs operation
 #include "MyHeaps.h" // priority queues
 #include "float.h"   // max floating point number
-#include "timingGE.h" 
+#include "timer_eb.h" 
+
+using namespace EB;
 
 using namespace std;
 
@@ -47,7 +49,6 @@ public:
 
 class KDTree {
 private:
-    Timings tm;
     Timer t1, t2, t3, t4, t5;
 
     // Core data contained in the tree
@@ -82,7 +83,7 @@ public:
     ~KDTree() {
         for (unsigned int i = 0; i < nodesPtrs.size(); i++)
             delete nodesPtrs[i];
-       // tm.dumpTimings();
+	t1.printAll();
     }
 
     /// Heapsort algorithm used by fast KDtree construction
@@ -151,11 +152,11 @@ public:
 public:
 
     KDTree(const double dpoints[], int nbpts, int dim_num) 
-    : t1(tm, "[kdtree_t1] Update Recursively"),
-      t2(tm, "[kdtree_t2] Build Recursively"),
-      t3(tm, "[kdtree_t3] Init_common"),
-      t4(tm, "[kdtree_t4] Heapsort Input Points (before Partitioning)"),
-      t5(tm, "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
+    : t1("[kdtree_t1] Update Recursively"),
+      t2("[kdtree_t2] Build Recursively"),
+      t3("[kdtree_t3] Init_common"),
+      t4("[kdtree_t4] Heapsort Input Points (before Partitioning)"),
+      t5("[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
     {
         cout << "BUILDING NEW KDTREE" << endl;
         vector<Point> vector_points;
@@ -187,11 +188,11 @@ public:
 public:
 
     KDTree(const vector<Point>& points)
-    : t1(tm, "[kdtree_t1] Update Recursively"),
-      t2(tm, "[kdtree_t2] Build Recursively"),
-      t3(tm, "[kdtree_t3] Init_common"),
-      t4(tm, "[kdtree_t4] Heapsort Input Points (before Partitioning)"),
-      t5(tm, "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
+    : t1("[kdtree_t1] Update Recursively"),
+      t2("[kdtree_t2] Build Recursively"),
+      t3( "[kdtree_t3] Init_common"),
+      t4( "[kdtree_t4] Heapsort Input Points (before Partitioning)"),
+      t5( "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
     {
         // initialize data
         this -> npoints = points.size();

@@ -36,7 +36,7 @@ RegularGrid::~RegularGrid() {
 }
 
 /*----------------------------------------------------------------------*/
-void RegularGrid::generateGrid() {
+void RegularGrid::generate() {
     dx = (nx > 1) ? (xmax - xmin) / (nx - 1.) : 0.;
     dy = (ny > 1) ? (ymax - ymin) / (ny - 1.) : 0.;
     dz = (nz > 1) ? (zmax - zmin) / (nz - 1.) : 0.;
@@ -107,17 +107,10 @@ void RegularGrid::generateGrid() {
 }
 
 
-std::string RegularGrid::getFullName(std::string base_filename, int iter) {
+std::string RegularGrid::getFileDetailString() {
 	std::stringstream ss(std::stringstream::out);
-	if (iter < 0) {
-		ss << base_filename << "_" << nx << "x_" << ny << "y_" << nz << "z_final.ascii";  
-	} else if (iter == 0) {
-		ss << base_filename << "_" << nx << "x_" << ny << "y_" << nz << "z_initial.ascii";  
-	} else {
-		ss << base_filename << "_" << nx << "x_" << ny << "y_" << nz << "z_" << iter << "iters.ascii";  
-	}
-	std::string filename = ss.str();
-	return filename;
+	ss << nx << "x_" << ny << "y_" << nz << "z";  
+	return ss.str();
 }
 
 

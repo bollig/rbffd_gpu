@@ -1,32 +1,62 @@
-#ifndef _BURKARDT_CVT_H_
-#define _BURKARDT_CVT_H_
+#ifndef _BOLLIG_CVT_H_
+#define _BOLLIG_CVT_H_
 
 #include <vector>
+#include <map> 
 #include "Vec3.h"
 #include "density.h"
-#include "timingGE.h"
+#include "timer_eb.h"
 #include "KDTree.h"
+#include "grids/grid_interface.h"
 
-class CVT {
+class CVT : public Grid
+{
 protected:
-    std::vector<double> rd;
-    int nb_bnd; // number of seeds on the boundary
-    int nb_pts; // total number of seeds
-    Density* rho;
-    std::vector<Vec3> bndry_pts;
+	Density* rho;
 
-    // 0 = Debug output off; 1 = Verbose output and write intermediate files
-    int DEBUG;
-    Timings tm;
-    Timer t1, t2, t3, t4, t5, t6, t7;
-    KDTree* kdtree;
+    	// 0 = Debug output off; 1 = Verbose output and write intermediate files
+    	int DEBUG;
 
-    double PI;
+	std::map<std::string, Timer*> timers;
+	KDTree* kdtree;
 
-    double *generators;
-    
-    int dim_num;
-    
+    	unsigned int dim_num;
+  
+       // Signed int iteration: 
+       // iter < 0 => final
+       // iter = 0 => initial
+       // iter > 0 => iter # 
+	int cvt_iter; 
+
+	// The number of nodes (from the beginning of the list) which are locked in place. 
+	// These nodes are typically boundary nodes whos position should be updated by another algorithm
+	unsigned int nb_locked_nodes; 
+
+public:
+        // Construct a CVT given the total number of nodes in the domain and 
+	// the number of dimensions for the CVT. Dimension allows us to generate
+	// a CVT in lower dimensions than the nodes (e.g., 3D node cloud with a
+	// cvt on each xy plane) 
+	CVT (unsigned int nb_nodes, unsigned int dimension); 
+	CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked=0); 	
+
+	~CVT(); 
+
+	// Overrides Grid::generate()
+	virtual void generate(); 
+	
+	// Overrides Grid::getFileDetailString()
+	virtual std::string getFileDetailString(); 
+
+	virtual std::string className() {return "cvt";}
+
+	virtual void writeToFile() { Grid::writeToFile(this->getFilename(cvt_iter)); }
+
+private: 
+	void initTimers();
+	
+#if 0	
+
     // These correspond to John Burkardts CVT implementation parameters
     int seed, batch, it_fixed;
     // NOTE: we dont have support for changing "init","sample" and their corresponding strings.
@@ -38,6 +68,7 @@ protected:
 public:
     
     CVT(int num_generators = 10, int dimension_=2, const char* filename = "cvt", int init=-1, int sample=-1, int sample_num_=100, int seed=123456789, int batch=1000, int it_max_=100, int it_fixed=1, int DEBUG_ = 0);
+
 
     ~CVT() {
 #if USE_KDTREE
@@ -122,11 +153,13 @@ public:
     virtual void cvt(int *it_num, double *it_diff, double *energy);
 
     // generate cvt using provided memory array r;
+#if 0
     void cvt(int *it_num, double *it_diff, double *energy, double r[]) {
         delete [] generators;
         generators = &r[0];
         this->cvt(it_num, it_diff, energy);
     }
+
     virtual void cvt(int dim_num_, int n, int batch_, int init_, int sample_, int sample_num_, int it_max_, int it_fixed_, int *seed_, double r[], int *it_num, double *it_diff, double *energy) {
         dim_num = dim_num_;
         nb_pts = n;
@@ -140,6 +173,7 @@ public:
         
         this->cvt(it_num, it_diff, energy, r);
     }
+#endif 
 
     // Override this to customize the sampling within the domain (e.g., if you
     // want to sample uniformly in the SPHERE and not the CUBE.
@@ -198,6 +232,7 @@ public:
     double* getGenerators() {
         return this->generators;
     }
+#endif 
 };
 
 #endif

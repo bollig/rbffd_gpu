@@ -2,7 +2,7 @@
 
 #include "utils/conf/projectsettings.h"
 
-#include "grids/regulargrid.h"
+#include "grids/cvt/cvt.h"
 
 #include "utils/comm/communicator.h"
 
@@ -37,31 +37,19 @@ int main(int argc, char** argv) {
     double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
     double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
-    Grid* grid; 
-
-    if (dim == 1) {
-	    grid = new RegularGrid(nx, minX, maxX); 
-    } else if (dim == 2) {
-	    grid = new RegularGrid(nx, ny, minX, maxX, minY, maxY); 
-    } else if (dim == 3) {
-	    grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
-    } else {
-	    cout << "ERROR! Dim > 3 Not Supported!" << endl;
-    }
-
+    Grid* grid = new CVT(nx * ny * nz, dim); 
     grid->generate(); 
-
-    grid->writeToFile("initial_grid.ascii"); 
+    grid->writeToFile(); 
     
     delete(grid);
     delete(settings);
-
+#if 0
     Grid* grid2 = new Grid(); 
     grid2->loadFromFile("initial_grid.ascii"); 
     grid2->writeToFile("final_grid.ascii");
    
     cout.flush();
-
+#endif 
     exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------

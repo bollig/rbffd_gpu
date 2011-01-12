@@ -23,9 +23,13 @@ public:
         RegularGrid(int n_x, int n_y, int n_z, double minX=0., double maxX=1., double minY=0., double maxY=1., double minZ=0., double maxZ=1.);
 	~RegularGrid();
 
-	// Overrides Grid::generateGrid()
-        virtual void generateGrid();
-	virtual std::string getFullName(std::string filename, int iter=0); 
+	// Overrides Grid::generate()
+        virtual void generate();
+
+	// Overrides Grid::	
+	virtual std::string getFileDetailString(); 
+
+	virtual std::string className() {return "regulargrid";}
 };
 
 

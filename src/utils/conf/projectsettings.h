@@ -70,7 +70,7 @@ public:
             } else {
                 RT ret = ss_typecast<RT>(defaultval);
 		std::cout << key << " = " << ret;
-		std::cout << "\t<-- OPTIONAL setting was not specified; using default value." << std::endl;
+		std::cout << "\t<-- default value." << std::endl;
                 return ret;
             }
         }

@@ -26,7 +26,11 @@ protected:
        // iter < 0 => final
        // iter = 0 => initial
        // iter > 0 => iter # 
-	int cvt_iter; 
+	unsigned int cvt_iter;
+	unsigned int it_max;
+        unsigned int write_freq; 	
+	unsigned int nb_samples; 
+        unsigned int sample_batch_size;	
 
 	// Current seed for cvt_sample
 	int rand_seed; 
@@ -36,17 +40,19 @@ protected:
 	// These nodes are typically boundary nodes whos position should be updated by another algorithm
 	unsigned int nb_locked_nodes; 
 
-	// Different type of sampling for our domain
-	enum sample_type {RANDOM, UNIFORM, HALTON, GRID, USER};
+	// Can we assume the generators were initialized already or should we call cvt_init?
+	bool generatorsInitialized; 
 
+	// Different type of sampling for our domain
+	enum sample_type {RANDOM, GRID, USER_SAMPLE, USER_INIT};
 
 public:
         // Construct a CVT given the total number of nodes in the domain and 
 	// the number of dimensions for the CVT. Dimension allows us to generate
 	// a CVT in lower dimensions than the nodes (e.g., 3D node cloud with a
 	// cvt on each xy plane) 
-	CVT (unsigned int nb_nodes, unsigned int dimension); 
-	CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked=0); 	
+	CVT (unsigned int nb_nodes, unsigned int dimension, unsigned int nb_locked=0, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_frequency=5, unsigned int sample_batch_size=8000); 
+	CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked=0, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_frequency=5, unsigned int sample_batch_size=8000); 
 
 	~CVT(); 
 
@@ -70,14 +76,19 @@ public:
  ***********************/
 	// Customized initial sampling of domain could be redirected to the user_sample
 	// so both node initialization and cvt sampling are the same
-	virtual void user_init(int indx_start, int n_now, bool init_rand); 
+	//
+	// For CVT:: this samples randomly in unit circle
+	virtual void user_sample(std::vector<NodeType>& user_node_list, int n_now, bool init_rand); 
+
+	// For CVT:: this samples randomly in unit circle
+	virtual void user_init(std::vector<NodeType>& user_node_list, int n_now, bool init_rand); 
 
 
 /***********************
  * HIDDEN ROUTINES
  ***********************/
 protected: 
-	void cvt_init(int indx_start, int n_now, int sample_type, bool init_rand);
+	std::vector<NodeType>& cvt_sample(int n_now, int sample_type, bool init_rand);
 
 	unsigned long random_initialize(int seed); 
 	void tuple_next_fast(int m, int n, int rank, int x[]);

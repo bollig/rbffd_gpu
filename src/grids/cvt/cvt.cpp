@@ -65,11 +65,11 @@ void CVT::generate() {
 	if (!generatorsInitialized || (nb_nodes != node_list.size())) {
 		this->node_list.resize(nb_nodes); 
 		// Random in unit square
-	//	this->cvt_sample(this->node_list, 0, nb_nodes, CVT::RANDOM, true); 
+		this->cvt_sample(this->node_list, 0, nb_nodes, CVT::RANDOM, true); 
 		// Regular sampling in (0,1) (NOTE: excludes 0 and 1) 
 	//	this->cvt_sample(this->node_list, 0, nb_nodes, CVT::GRID, true); 
 		// Random sampling in unit CIRCLE 
-		this->cvt_sample(this->node_list, 0, nb_nodes, CVT::USER_INIT, true); 
+	//	this->cvt_sample(this->node_list, 0, nb_nodes, CVT::USER_INIT, true); 
 
 		generatorsInitialized = true;
 	}

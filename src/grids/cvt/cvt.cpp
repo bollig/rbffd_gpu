@@ -62,17 +62,15 @@ CVT::~CVT() {
 }
 
 void CVT::generate() {
-/*	if (nb_nodes != node_list.size()) {
-		this->node_list.resize(nb_nodes);
-	}
-*/
-	if (!generatorsInitialized) {
+	if (!generatorsInitialized || (nb_nodes != node_list.size())) {
+		this->node_list.resize(nb_nodes); 
 		// Random in unit square
-		this->node_list = this->cvt_sample(nb_nodes, CVT::RANDOM, true); 
+	//	this->cvt_sample(this->node_list, 0, nb_nodes, CVT::RANDOM, true); 
 		// Regular sampling in (0,1) (NOTE: excludes 0 and 1) 
-		//this->cvt_sample(0, nb_nodes, CVT::GRID, true); 
+	//	this->cvt_sample(this->node_list, 0, nb_nodes, CVT::GRID, true); 
 		// Random sampling in unit CIRCLE 
-		//this->cvt_sample(0, nb_nodes, CVT::USER, true); 
+		this->cvt_sample(this->node_list, 0, nb_nodes, CVT::USER_INIT, true); 
+
 		generatorsInitialized = true;
 	}
 		
@@ -105,7 +103,7 @@ std::string CVT::getFileDetailString() {
 
 //****************************************************************************80
 
-void CVT::user_init(std::vector<NodeType>& user_node_list, int n_now, bool init_rand)
+void CVT::user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand)
 
 // Originally "user(...)" 
 //****************************************************************************80
@@ -151,13 +149,11 @@ void CVT::user_init(std::vector<NodeType>& user_node_list, int n_now, bool init_
 //
 //    Output, a list of nodes
 {
-    user_node_list.resize(n_now); 
-
     double angle;
     int j;
     double radius;
 
-    for (j = 0; j < n_now; j++) {
+    for (j = indx_start; j < indx_start+n_now; j++) {
         angle = 2.0 * M_PI * randf(0., 1.);
         radius = sqrt(randf(0., 1.));
         user_node_list[j][0] = radius * cos(angle);
@@ -170,7 +166,7 @@ void CVT::user_init(std::vector<NodeType>& user_node_list, int n_now, bool init_
 
 //****************************************************************************80
 
-void CVT::user_sample(std::vector<NodeType>& user_node_list, int n_now, bool init_rand)
+void CVT::user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand)
 
 // Originally "user(...)" 
 //****************************************************************************80
@@ -216,13 +212,11 @@ void CVT::user_sample(std::vector<NodeType>& user_node_list, int n_now, bool ini
 //
 //    Output, a list of nodes
 {
-    user_node_list.resize(n_now); 
-
     double angle;
     int j;
     double radius;
 
-    for (j = 0; j < n_now; j++) {
+    for (j = indx_start; j < indx_start+n_now; j++) {
         angle = 2.0 * M_PI * randf(0., 1.);
         radius = sqrt(randf(0., 1.));
         user_node_list[j][0] = radius * cos(angle);
@@ -238,12 +232,12 @@ void CVT::user_sample(std::vector<NodeType>& user_node_list, int n_now, bool ini
 
 
 //****************************************************************************80
-std::vector<NodeType>& CVT::cvt_sample(int n_now, int sample, bool init_rand) 
+void CVT::cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, int n_now, int sample, bool init_rand) 
 //****************************************************************************80
 //
 //  Purpose:
 //
-//    CVT_INIT returns sample points.
+//    CVT_SAMPLE returns sample points.
 //
 //  Discussion:
 //
@@ -292,10 +286,6 @@ std::vector<NodeType>& CVT::cvt_sample(int n_now, int sample, bool init_rand)
 //    Output: NONE. Modifies sample_node_list directly. 
 //
 {
-    std::vector<NodeType>* node_list_ptr = new std::vector<NodeType>(); 
-    std::vector<NodeType>& sample_node_list = *node_list_ptr;
-    sample_node_list.resize(n_now); 
-
     double exponent;
     static int *halton_base = NULL;
     static int *halton_leap = NULL;
@@ -312,7 +302,7 @@ std::vector<NodeType>& CVT::cvt_sample(int n_now, int sample, bool init_rand)
     if (n_now < 1) {
         cout << "\n";
         cout << "CVT_SAMPLE - Called, but nothing to do!\n";
-	return sample_node_list;
+	return;
     }
 
     if (sample == CVT::RANDOM) {
@@ -320,7 +310,7 @@ std::vector<NodeType>& CVT::cvt_sample(int n_now, int sample, bool init_rand)
             random_initialize(this->rand_seed);
         }
 
-        for (j = 0; j < n_now; j++) {
+        for (j = indx_start; j < indx_start+n_now; j++) {
             for (i = 0; i < dim_num; i++) {
                 // This is Gordon Erlebacher's random(,) routine (defined below)
                 sample_node_list[j][i] = randf(0, 1);
@@ -351,7 +341,7 @@ std::vector<NodeType>& CVT::cvt_sample(int n_now, int sample, bool init_rand)
 
         rank = (this->rand_seed) % rank_max;
 
-        for (j = 0; j < n_now; j++) {
+        for (j = indx_start; j < indx_start+n_now; j++) {
             tuple_next_fast(ngrid, dim_num, rank, tuple);
             rank = rank + 1;
             rank = rank % rank_max;
@@ -362,7 +352,7 @@ std::vector<NodeType>& CVT::cvt_sample(int n_now, int sample, bool init_rand)
         delete [] tuple;
         this->rand_seed = this->rand_seed + n_now;
     } else if (sample == CVT::USER_INIT) {
-        user_init(sample_node_list, n_now, init_rand);
+        user_init(sample_node_list, indx_start, n_now, init_rand);
     } else {
 	cout << "\n"; 
 	cout << "CVT_INIT - Unsupported sample type. Only RANDOM and USER sampling are available at this time.\n"; 
@@ -372,7 +362,7 @@ std::vector<NodeType>& CVT::cvt_sample(int n_now, int sample, bool init_rand)
     // print seeds
     if (DEBUG) {
         printf("Initial seed positions\n");
-        for (int i = 0; i < n_now; i++) {
+        for (int i = indx_start; i < indx_start+n_now; i++) {
             printf("(%d): \n", i);
             for (int j = 0; j < dim_num; j++) {
                 printf("%f ", sample_node_list[i][j]);
@@ -382,7 +372,7 @@ std::vector<NodeType>& CVT::cvt_sample(int n_now, int sample, bool init_rand)
         printf("  -  end initial seeds --------------------\n");
     }
     
-    return sample_node_list;
+    return;
 }
 
 

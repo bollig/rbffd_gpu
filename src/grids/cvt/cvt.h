@@ -78,17 +78,17 @@ public:
 	// so both node initialization and cvt sampling are the same
 	//
 	// For CVT:: this samples randomly in unit circle
-	virtual void user_sample(std::vector<NodeType>& user_node_list, int n_now, bool init_rand); 
+	virtual void user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
 
 	// For CVT:: this samples randomly in unit circle
-	virtual void user_init(std::vector<NodeType>& user_node_list, int n_now, bool init_rand); 
+	virtual void user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
 
 
 /***********************
  * HIDDEN ROUTINES
  ***********************/
 protected: 
-	std::vector<NodeType>& cvt_sample(int n_now, int sample_type, bool init_rand);
+	void cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, int n_now, int sample_type, bool init_rand);
 
 	unsigned long random_initialize(int seed); 
 	void tuple_next_fast(int m, int n, int rank, int x[]);

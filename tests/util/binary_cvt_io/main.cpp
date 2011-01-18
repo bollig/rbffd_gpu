@@ -5,10 +5,10 @@
 
 using namespace std;
 
-#define NB_INNER_BND 50000
-#define NB_OUTER_BND 50000
-#define NB_INTERIOR 10
-#define NB_SAMPLES 100
+#define NB_INNER_BND 20
+#define NB_OUTER_BND 50
+#define NB_INTERIOR 1000
+#define NB_SAMPLES 1000
 #define DIM_NUM 2
 
 int main(int argc, char** argv) {
@@ -58,8 +58,9 @@ int main(int argc, char** argv) {
     // Regular CVT call: 
     //cvt->cvt(N, batch, init, sample, sample_num, it_max, it_fixed, &seed, r, &it_num, &it_diff, &energy);
     // Simplified CVT call
-    cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
-
+    //cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
+	int it_num = 0; 
+    cvt->cvt(&it_num, &it_diff, &energy); 
 	printf("CVT generated. Writing to disk\n");
 
     cvt->cvt_write(DIM_NUM, N_TOT, 0, 0, 0, "RANDOM",

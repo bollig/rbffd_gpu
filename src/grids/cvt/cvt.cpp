@@ -11,6 +11,7 @@
 
 #include <math.h>
 #include <vector>
+#include <float.h> 
 
 #include "cvt.h"
 
@@ -40,14 +41,14 @@ CVT::CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_
 }
 
 void CVT::initTimers() {
-	timers["total"] = new Timer("Total time in CVT::generate()");
-	timers["iter"] = new Timer("perform one iteraton of Lloyd's");
-	timers["initial"] = new Timer("Initialize CVT generators"); 
-	timers["sample"] = new Timer("generate set of probabilistic samples");
-	timers["energy"] = new Timer("compute system energy");
-	timers["kbuild"] = new Timer("construct new KDTree");
-	timers["kupdate"] = new Timer("update KDTree");
-	timers["neighbor"] = new Timer("nearest neighbor search");
+	timers["total"] = new Timer("[CVT] Total time in CVT::generate()");
+	timers["iter"] = new Timer("[CVT] perform one iteraton of Lloyd's");
+	timers["initial"] = new Timer("[CVT] Initialize CVT generators"); 
+	timers["sample"] = new Timer("[CVT] generate set of probabilistic samples");
+	timers["energy"] = new Timer("[CVT] compute system energy");
+	timers["kbuild"] = new Timer("[CVT] construct new KDTree");
+	timers["kupdate"] = new Timer("[CVT] update KDTree");
+	timers["neighbor"] = new Timer("[CVT] nearest neighbor search");
 }
 
 CVT::~CVT() {
@@ -72,25 +73,20 @@ void CVT::generate() {
 	//	this->cvt_sample(this->node_list, 0, nb_nodes, CVT::USER_INIT, true); 
 
 		generatorsInitialized = true;
+		std::cout << "[CVT] Done sampling initial generators\n";
 	}
 		
 	// Should we generate a KDTree to accelerate sampling? Cost of tree generation is 
 	// high and should be amortized by VERY MANY samples. However, too many samples 
 	// argues in favor of discrete Voronoi transform
 	
-	while (cvt_iter < it_max) {
-		if (cvt_iter % write_freq == 0) {
-			this->writeToFile();
-		}
-//		cvt_iterate(sample_batch_size, nb_samples, CVT::RANDOM);
-		cvt_iter++;
-	}
+	// TODO: get CVT::GRID to generate samples in batches of subvolumes otherwise
+	// 	 batches are always the same sample sets for it. 
+	this->cvt_iterate(sample_batch_size, nb_samples, CVT::RANDOM);
 	
-	cvt_iter = -1;
 	this->writeToFile();
 
 	std::cout << "CVT GENERATE NOT IMPLEMENTED" << std::endl;
-	exit(EXIT_FAILURE); 
 }
 
 std::string CVT::getFileDetailString() {
@@ -99,6 +95,309 @@ std::string CVT::getFileDetailString() {
 	return ss.str();	
 }
 
+
+//****************************************************************************80
+
+void CVT::cvt_iterate(unsigned int sample_batch_size, unsigned int num_samples, sample_type sample_kind)
+
+//****************************************************************************80
+//
+//  Purpose:
+//
+//    CVT_ITERATE takes one step of the CVT iteration.
+//
+//  Discussion:
+//
+//    The routine is given a set of points, called "generators", which
+//    define a tessellation of the region into Voronoi cells.  Each point
+//    defines a cell.  Each cell, in turn, has a centroid, but it is
+//    unlikely that the centroid and the generator coincide.
+//
+//    Each time this CVT iteration is carried out, an attempt is made
+//    to modify the generators in such a way that they are closer and
+//    closer to being the centroids of the Voronoi cells they generate.
+//
+//    A large number of sample points are generated, and the nearest generator
+//    is determined.  A count is kept of how many points were nearest to each
+//    generator.  Once the sampling is completed, the location of all the
+//    generators is adjusted.  This step should decrease the discrepancy
+//    between the generators and the centroids.
+//
+//    The centroidal Voronoi tessellation minimizes the "energy",
+//    defined to be the integral, over the region, of the square of
+//    the distance between each point in the region and its nearest generator.
+//    The sampling technique supplies a discrete estimate of this
+//    energy.
+//
+//  Licensing:
+//
+//    This code is distributed under the GNU LGPL license. 
+//
+//  Modified:
+//
+//    20 September 2004
+//
+//  Author:
+//
+//    John Burkardt
+//
+//  Reference:
+//
+//    Qiang Du, Vance Faber, and Max Gunzburger,
+//    Centroidal Voronoi Tessellations: Applications and Algorithms,
+//    SIAM Review, Volume 41, 1999, pages 637-676.
+//
+//  Parameters:
+//
+//    Input, int DIM_NUM, the spatial dimension.
+//
+//    Input, int N, the number of Voronoi cells.
+//
+//    Input, int BATCH, sets the maximum number of sample points
+//    generated at one time.  It is inefficient to generate the sample
+//    points 1 at a time, but memory intensive to generate them all
+//    at once.  You might set BATCH to min ( SAMPLE_NUM, 10000 ), for instance.
+//    BATCH must be at least 1.
+//
+//    Input, int SAMPLE, specifies how the sampling is done.
+//    -1, 'RANDOM', using C++ RANDOM function;
+//     0, 'UNIFORM', using a simple uniform RNG;
+//     1, 'HALTON', from a Halton sequence;
+//     2, 'GRID', points from a grid;
+//     3, 'USER', call "user" routine.
+//
+//    Input, bool INITIALIZE, is TRUE if the SEED must be reset to SEED_INIT
+//    before computation.  Also, the pseudorandom process may need to be
+//    reinitialized.
+//
+//    Input, int SAMPLE_NUM, the number of sample points.
+//
+//    Input/output, int *SEED, the random number seed.
+//
+//    Input/output, double R[DIM_NUM*N], the Voronoi
+//    cell generators.  On output, these have been modified
+//
+//    Output, double *IT_DIFF, the L2 norm of the difference
+//    between the iterates.
+//
+//    Output, double *ENERGY,  the discrete "energy", divided
+//    by the number of sample points.
+//
+{
+    std::vector<NodeType>& generators = this->node_list; 
+	
+    std::cout << "[CVT] Initializing centroids" << std::endl;
+    std::vector<NodeType> centroids(generators); 	
+
+    double energy; 
+    double it_diff; 
+
+    while (this->cvt_iter < this->it_max) {
+
+    	timers["iter"]->start();
+
+	if (cvt_iter % write_freq == 0) {
+		this->writeToFile();
+	}
+
+
+	energy = 0.;
+
+    	//
+	//  Take each generator as the first sample point for its region.
+    	//  This can slightly slow the convergence, but it simplifies the
+    	//  algorithm by guaranteeing that no region is completely missed
+    	//  by the sampling. 
+    	//  Do this via assignment operator (EB)
+    	centroids = generators; 
+
+//	std::cout << "Setting up samples\n";
+    	unsigned int num_samples_remaining = num_samples;  
+   	unsigned int this_batch_size = min(num_samples_remaining, sample_batch_size); 
+
+    	// Our random samples in space	
+    	std::vector<NodeType> samples(this_batch_size); 
+	// The index of the nearest generator 
+	std::vector<unsigned int> sample_closest_indx(this_batch_size); 
+	// Since all centroids start with initial sample at old generator we have a guaranteed hit
+	// without this hit we would have to check for divide by zero below
+	std::vector<unsigned int> num_sample_hits(centroids.size(), 1); 
+	
+//	std::cout << "sample_start" << std::endl;
+	while (num_samples_remaining > 0) { 
+		if (DEBUG) {
+			std::cout << "sample " << this_batch_size << " of " << num_samples_remaining << " for iteration " << cvt_iter << std::endl;
+		} 
+
+		// Generate samples by batch
+		this->cvt_sample(samples, 0, this_batch_size, sample_kind); 
+
+ 		//
+	        //  Find the index of the nearest cell generator to each sample point in samples.
+	        //
+	        // TODO: this is brute force (It must be improved!!)
+	        find_closest(samples, generators, sample_closest_indx);
+
+	        //
+	        //  Add S to the centroid associated with generator N.
+	        //
+	        for (int i = 0; i < samples.size(); i++) {
+	            centroids[sample_closest_indx[i]] += samples[i];
+		    // Compute the cost of traversal (energy) from our new sample to the old generators
+	            NodeType diff = generators[sample_closest_indx[i]] - samples[i];
+	            energy += diff*diff; 
+	            num_sample_hits[sample_closest_indx[i]]++; 
+	        }
+
+		num_samples_remaining -= this_batch_size; 
+		this_batch_size = min(num_samples_remaining, sample_batch_size); 
+		// NOTE: this leverages std::vectors ability to reserve extra space when it 
+		// is resized so there a very infrequent need to reconstruct objects within
+		// the vector so long as our this_batch_size does not vary too wildly.
+		samples.resize(this_batch_size);	 
+	} 
+//	std::cout << "sample_end\n"; 
+	
+	// Update centroid averages 
+	//  Estimate the centroids.
+    	for (int i = 0; i < centroids.size(); i++) {
+		centroids[i] *= 1./(double)(num_sample_hits[i]); 
+    	}
+
+    	//
+    	//  Determine the sum of the distances between generators and centroids. 
+	//  This should go to 0 as we converge the generators to a CVT
+    	//
+    	it_diff = 0.;
+        for (int i = nb_locked_nodes; i < centroids.size(); i++) {
+       	 	NodeType separation = centroids[i] - generators[i];
+        	it_diff += separation.magnitude();
+    	}
+
+	// Replace the generators by the centroids
+	//  NOTE: this leaves the first nb_locked_nodes points unchanged
+	// 	since we want to manually specify them elsewhere and then generate
+   	// 	the interior points only with the CVT algorithm.
+    	// 	If nb_locked_nodes = 0, then we peform a CCVT on all points.
+    	// 	If nb_locked_nodes > 0, then we should perform a CVT without
+    	//		constraining points to the surface (so only nb_locked_nodes
+    	// 		end up exactly on the surface; all others are interior)
+	for (int i = nb_locked_nodes; i < centroids.size(); i++) {
+		generators[i] = centroids[i]; 
+	} 
+
+	// Normalize the discrete energy estimate
+	energy /= num_samples; 
+	
+	#if 0
+
+    //cout << "TESTING TREE REBUILD: \n\n";
+    // Reconstruct our kdtree for range queries using the new seeds
+
+#if USE_KDTREE
+#if 0
+    t5.start();
+    delete(kdtree);
+    kdtree = new KDTree(r, n, dim_num);
+    //kdtree->linear_tree_print();
+    //cout << "NOW AN UPDATE: \n\n";
+    t5.end();
+#else
+    t6.start();
+    kdtree->updateTree(r, n, dim_num);
+    //kdtree->linear_tree_print();
+    t6.end();
+#endif
+#endif
+
+    //cout << "DONE: \n\n";
+    //exit(0);
+#endif 
+
+		this->cvt_iter++;
+    		timers["iter"]->end();
+	} // END WHILE(cvt_iter < it_max)
+
+    return;
+}
+
+
+//****************************************************************************80
+
+void CVT::find_closest(std::vector<NodeType>& sample_node_list, std::vector<NodeType>& generator_list, std::vector<unsigned int>& closest_indx_list)
+
+//****************************************************************************80
+//
+//  Purpose:
+//
+//    FIND_CLOSEST finds the nearest R point to each S point.
+//
+//  Discussion:
+//
+//    This routine finds the closest Voronoi cell generator by checking every
+//    one.  For problems with many cells, this process can take the bulk
+//    of the CPU time.  Other approaches, which group the cell generators into
+//    bins, can run faster by a large factor.
+//
+//  Licensing:
+//
+//    This code is distributed under the GNU LGPL license. 
+//
+//  Modified:
+//
+//    21 October 2004
+//
+//  Author:
+//
+//    John Burkardt
+//
+//  Parameters:
+//
+//    Input, vector<NodeType> SAMPLE_NODE_LIST, a list of sample points generated by cvt_sample
+//
+//    Input, vector<NodeType> GENERATOR_LIST, the list of current generators
+//
+//    Output, vector<unsigned int> closest_indx_list, the (0-based) index of the nearest generator in GENERATOR_LIST to each of the samples in SAMPLE_NODE_LIST
+//    cell generator.
+//
+{
+    timers["neighbor"]->start();
+    // Original: 
+#if 0
+//#if USE_KDTREE
+    // KDTREE:
+    for (int i = 0; i < sample_node_list.size(); i++) {
+
+        nearest[i] = kdtree->closest_point(&s[i * dim_num]);
+    }
+	std::cout << "WARNING! KDTREE NO VERIFIED\n";
+	exit(EXIT_FAILURE);  
+#else
+
+#endif 
+
+    double dist_sq_min;
+    double dist_sq;
+    int i;
+    int jr;
+    int js;
+
+    for (js = 0; js < sample_node_list.size(); js++) {
+        dist_sq_min = DBL_MAX; 
+        closest_indx_list[js] = -1;
+
+        for (jr = 0; jr < generator_list.size(); jr++) {
+            dist_sq = (sample_node_list[js] - generator_list[jr]) * (sample_node_list[js] - generator_list[jr]);  
+            if (jr == 0 || dist_sq < dist_sq_min) {
+                dist_sq_min = dist_sq;
+                closest_indx_list[js] = jr;
+            }
+        }
+    }
+//#endif 
+    timers["neighbor"]->end();
+    return;
+}
 
 
 //****************************************************************************80
@@ -232,7 +531,7 @@ void CVT::user_sample(std::vector<NodeType>& user_node_list, int indx_start, int
 
 
 //****************************************************************************80
-void CVT::cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, int n_now, int sample, bool init_rand) 
+void CVT::cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, int n_now, sample_type sample, bool init_rand) 
 //****************************************************************************80
 //
 //  Purpose:
@@ -286,6 +585,7 @@ void CVT::cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, in
 //    Output: NONE. Modifies sample_node_list directly. 
 //
 {
+    timers["sample"]->start(); 
     double exponent;
     static int *halton_base = NULL;
     static int *halton_leap = NULL;
@@ -318,7 +618,6 @@ void CVT::cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, in
         }
         this->rand_seed = (this->rand_seed) + n_now * dim_num;
     } else if (sample == CVT::GRID) {
-
 	// NOTE: this is uniform sampling between (0,1)^{dim_num}
 	// in 1D it samples [0.5,0.95] for 10 nodes 
 
@@ -353,6 +652,8 @@ void CVT::cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, in
         this->rand_seed = this->rand_seed + n_now;
     } else if (sample == CVT::USER_INIT) {
         user_init(sample_node_list, indx_start, n_now, init_rand);
+    } else if (sample == CVT::USER_SAMPLE) {
+        user_sample(sample_node_list, indx_start, n_now, init_rand);
     } else {
 	cout << "\n"; 
 	cout << "CVT_INIT - Unsupported sample type. Only RANDOM and USER sampling are available at this time.\n"; 
@@ -363,7 +664,7 @@ void CVT::cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, in
     if (DEBUG) {
         printf("Initial seed positions\n");
         for (int i = indx_start; i < indx_start+n_now; i++) {
-            printf("(%d): \n", i);
+            printf("(%d): ", i);
             for (int j = 0; j < dim_num; j++) {
                 printf("%f ", sample_node_list[i][j]);
             }
@@ -371,7 +672,7 @@ void CVT::cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, in
         }
         printf("  -  end initial seeds --------------------\n");
     }
-    
+    timers["sample"]->end(); 
     return;
 }
 
@@ -520,8 +821,9 @@ void CVT::tuple_next_fast(int m, int n, int rank, int x[])
 {
     static int *base = NULL;
     int i;
-    //
-    if (rank < 0) {
+    static int initialized = 0; 
+    // If we dont call this with bool initialize == TRUE then this fails. 
+    if (rank < 0 || !initialized) {
         if (m <= 0) {
             cout << "\n";
             cout << "TUPLE_NEXT_FAST - Fatal error!\n";
@@ -549,6 +851,7 @@ void CVT::tuple_next_fast(int m, int n, int rank, int x[])
         for (i = 0; i < n; i++) {
             x[i] = -1;
         }
+	initialized = 1; 
     } else {
         for (i = 0; i < n; i++) {
             x[i] = ((rank / base[i]) % m) + 1;

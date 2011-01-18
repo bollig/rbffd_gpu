@@ -37,7 +37,12 @@ int main(int argc, char** argv) {
     double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
     double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
-    Grid* grid = new CVT(nx * ny * nz, dim); 
+    double debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
+
+	// Generate a CVT with nx*ny*nz nodes, in 1, 2 or 3D with 0 locked boundary nodes, 
+	// 20000 samples per iteration for 30 iterations
+    Grid* grid = new CVT(nx * ny * nz, dim, 0, 20000, 60); 
+    grid->setDebug(debug);
     grid->generate(); 
     grid->writeToFile(); 
     

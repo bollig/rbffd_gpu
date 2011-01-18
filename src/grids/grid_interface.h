@@ -10,6 +10,10 @@ typedef Vec3 NodeType;
 class Grid 
 {
 	protected: 
+    	
+		// 0 = Debug output off; 1 = Verbose output and write intermediate files
+    		int DEBUG;
+
 		// Number of nodes this class is configured for. If this does not 
 		// match the node_list.size() then we need to regenerate the node
 		// set.
@@ -31,9 +35,9 @@ class Grid
 		std::vector<Vec3> boundary_normals; 
 
 	public:
-		Grid() : pert(0.), nb_nodes(0) {}
-		Grid(unsigned int num_nodes) : pert(0), nb_nodes(num_nodes) {}
-		Grid(std::vector<NodeType>& nodes) : pert(0), nb_nodes(nodes.size()), node_list(nodes) {} 
+		Grid() : pert(0.), nb_nodes(0), DEBUG(0) {}
+		Grid(unsigned int num_nodes) : pert(0), nb_nodes(num_nodes), DEBUG(0) {}
+		Grid(std::vector<NodeType>& nodes) : pert(0), nb_nodes(nodes.size()), DEBUG(0), node_list(nodes) {} 
 
 		virtual ~Grid(){ }
 
@@ -78,6 +82,9 @@ class Grid
 		// limited history of node perturbation
 		virtual void perturbNodes(double perturb_amount);
 
+
+		// Set DEBUG to 0 or 1
+		void setDebug(int debug_) { DEBUG = debug_; }
 
 		// NOTE: this grid does not have details of node connectivity. We could add this
 		// in a subclass if we wanted like a TriangularGrid or RectilinearGrid. 

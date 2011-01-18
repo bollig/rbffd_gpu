@@ -14,9 +14,6 @@ class CVT : public Grid
 protected:
 	Density* rho;
 
-    	// 0 = Debug output off; 1 = Verbose output and write intermediate files
-    	int DEBUG;
-
 	std::map<std::string, Timer*> timers;
 	KDTree* kdtree;
 
@@ -30,7 +27,7 @@ protected:
 	unsigned int it_max;
         unsigned int write_freq; 	
 	unsigned int nb_samples; 
-        unsigned int sample_batch_size;	
+        unsigned int sample_batch_size;
 
 	// Current seed for cvt_sample
 	int rand_seed; 
@@ -51,14 +48,14 @@ public:
 	// the number of dimensions for the CVT. Dimension allows us to generate
 	// a CVT in lower dimensions than the nodes (e.g., 3D node cloud with a
 	// cvt on each xy plane) 
-	CVT (unsigned int nb_nodes, unsigned int dimension, unsigned int nb_locked=0, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_frequency=5, unsigned int sample_batch_size=8000); 
-	CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked=0, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_frequency=5, unsigned int sample_batch_size=8000); 
+	CVT (unsigned int nb_nodes, unsigned int dimension, unsigned int nb_locked=0, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_frequency=5, unsigned int sample_batch_size=800); 
+	CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked=0, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_frequency=5, unsigned int sample_batch_size=800); 
 
 	~CVT(); 
 
 
 /*******************
- * OVERRIDE GRID::
+ * OVERRIDES GRID::
  *******************/
 	// Overrides Grid::generate()
 	virtual void generate(); 
@@ -68,11 +65,17 @@ public:
 
 	virtual std::string className() {return "cvt";}
 
-	virtual void writeToFile() { Grid::writeToFile(this->getFilename(cvt_iter)); }
+	virtual void writeToFile() { 
+		if (cvt_iter < it_max) { 
+			Grid::writeToFile(this->getFilename(cvt_iter)); 
+		} else { 
+			Grid::writeToFile(this->getFilename(-1));
+		} 
+	}
 
 
 /***********************
- * OVERRIDABLE ROUTINES
+ * OVERRIDABLE ROUTINES:
  ***********************/
 	// Customized initial sampling of domain could be redirected to the user_sample
 	// so both node initialization and cvt sampling are the same
@@ -88,7 +91,9 @@ public:
  * HIDDEN ROUTINES
  ***********************/
 protected: 
-	void cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, int n_now, int sample_type, bool init_rand);
+	void cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, int n_now, sample_type sample_kind, bool init_rand=false);
+	void cvt_iterate(unsigned int sample_batch_size, unsigned int num_samples, sample_type sample);
+	void find_closest(std::vector<NodeType>& sample_node_list, std::vector<NodeType>& generator_list, std::vector<unsigned int>& closest_indx_list); 
 
 	unsigned long random_initialize(int seed); 
 	void tuple_next_fast(int m, int n, int rank, int x[]);
@@ -96,18 +101,6 @@ protected:
 	int get_seed(void);
 	
 #if 0	
-
-    // These correspond to John Burkardts CVT implementation parameters
-    int seed, batch, it_fixed;
-    // NOTE: we dont have support for changing "init","sample" and their corresponding strings.
-    //      ONLY random sampling is supported in this class.
-    int init, sample;
-    int sample_num, it_max; 
-    const char* cvt_file_name;
-
-public:
-    
-    CVT(int num_generators = 10, int dimension_=2, const char* filename = "cvt", int init=-1, int sample=-1, int sample_num_=100, int seed=123456789, int batch=1000, int it_max_=100, int it_fixed=1, int DEBUG_ = 0);
 
 
     ~CVT() {
@@ -126,9 +119,6 @@ public:
         return kdtree;
     }
 
-    char ch_cap(char c);
-    bool ch_eqi(char c1, char c2);
-    int ch_to_digit(char c);
     double cvt_energy(int dim_num, int n, int batch, int sample, bool initialize,
             int sample_num, int *seed, double r[]);
     void cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
@@ -140,92 +130,10 @@ public:
             double it_diff, double energy, const char *sample_string, int sample_num, double r[],
             const char *file_out_name, bool comment);
     int data_read(const char *file_in_name, int dim_num, int n, double r[]);
-    char digit_to_ch(int i);
-    void find_closest(int dim_num, int n, int sample_num, double s[], double r[],
-            int nearest[]);
-    int get_seed(void);
-    bool halham_leap_check(int dim_num, int leap[]);
-    bool halham_n_check(int n);
-    bool halham_dim_num_check(int dim_num);
-    bool halham_seed_check(int dim_num, int seed[]);
-    bool halham_step_check(int step);
-    bool halton_base_check(int dim_num, int base[]);
-    int i4_log_10(int i);
-    int i4_max(int i1, int i2);
-    int i4_min(int i1, int i2);
-    void i4_to_halton_sequence(int dim_num, int n, int step, int seed[], int leap[],
-            int base[], double r[]);
-    char *i4_to_s(int i);
-    int prime(int n);
-    double r8_epsilon(void);
-    double r8_huge(void);
-    void r8mat_transpose_print(int m, int n, double a[], const char *title);
-    void r8mat_transpose_print_some(int m, int n, double a[], int ilo, int jlo,
-            int ihi, int jhi, const char *title);
-    void r8mat_uniform_01(int m, int n, int *seed, double r[]);
-    unsigned long random_initialize(int seed);
-    void s_blank_delete(const char *s);
-    void s_cap(const char *s);
-    bool s_eqi(const char *s1, const char *s2);
-    int s_len_trim(const char* s);
-    double s_to_r8(const char *s, int *lchar, bool *error);
-    bool s_to_r8vec(const char *s, int n, double rvec[]);
     void timestamp(void);
     char *timestring(void);
-    void tuple_next_fast(int m, int n, int rank, int x[]);
-
 
     // Gordon Erlebacher and Evan Bollig:
-
-    // Override this routine for a custom sampling routine
-    // over your desired region. THIS IS FOR INITIALIZATION ONLY
-    virtual void user_init(int dim_num, int n, int *seed, double r[]) = 0;
-
-    // Override this routine for custom sampling for user defined sampling
-    // (perhaps sampling with rejection outside your domain?)
-    virtual void user_sample(int dim_num, int n, int *seed, double r[]) = 0;
-
-    // Override this routine to change initialization and execution details
-    // (e.g., if you want to project as part of the initialization)
-
-    // INPUT ONLY : sample_num, it_max
-    // OUTPUT ONLY: r, it_num, it_diff, energy
-    virtual void cvt(int *it_num, double *it_diff, double *energy);
-
-    // generate cvt using provided memory array r;
-#if 0
-    void cvt(int *it_num, double *it_diff, double *energy, double r[]) {
-        delete [] generators;
-        generators = &r[0];
-        this->cvt(it_num, it_diff, energy);
-    }
-
-    virtual void cvt(int dim_num_, int n, int batch_, int init_, int sample_, int sample_num_, int it_max_, int it_fixed_, int *seed_, double r[], int *it_num, double *it_diff, double *energy) {
-        dim_num = dim_num_;
-        nb_pts = n;
-        seed = *seed_;
-        batch = batch_;
-        it_fixed = it_fixed_;
-        init = init_;
-        sample = sample_;
-        sample_num = sample_num_;
-        it_max = it_max_;
-        
-        this->cvt(it_num, it_diff, energy, r);
-    }
-#endif 
-
-    // Override this to customize the sampling within the domain (e.g., if you
-    // want to sample uniformly in the SPHERE and not the CUBE.
-    // NOTE: this is called within cvt_iterate multiple times and once form cvt(). 
-    virtual void cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[]);
-
-    // Override this to customize the initialization 
-    virtual void cvt_init(int dim_num, int n, int n_now, int sample, bool initialize, int *seed, double r[]);
-
-    // Override this to customize what happens during each iteration
-    // of the CVT generation (e.g., if you want to perform projections
-    virtual void cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize, int sample_num, int *seed, double r[], double *it_diff, double *energy);
 
     // Load the output file for specified iteration
     //  -1 = "final"
@@ -242,8 +150,6 @@ public:
 
     // Override this to change suffix (iteration detail) format for the cvt output files
     virtual void cvt_get_filename(int iter, char *filename_buffer);
-
-    double random(double a, double b);
 
     void setNbBnd(int nb_bnd_) {
         this->nb_bnd = nb_bnd_;
@@ -269,9 +175,6 @@ public:
         this->bndry_pts = bndry_pts_;
     }
 
-    double* getGenerators() {
-        return this->generators;
-    }
 #endif 
 };
 

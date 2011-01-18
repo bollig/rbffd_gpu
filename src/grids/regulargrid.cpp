@@ -65,7 +65,12 @@ void RegularGrid::generate() {
 
                 node_list.push_back(Vec3(x, y, z));
 
-		if (i == 0 || i == (nx - 1) || j == 0 || j == (ny - 1) || k == 0 || k == (nz - 1)) {
+		// Double check to make sure the ny and nz are > 1 otherwise 
+		// a 2D plane in 3D is all boundary
+		if ((i == 0 || i == (nx - 1)) 
+		|| ((ny > 1) && ((j == 0) || (j == (ny - 1))))
+		|| ((nz > 1) && ((k == 0) || (k == (nz - 1))))
+		) {
                     boundary_indices.push_back(count); // boundary point
 
 		    double normal_x; 

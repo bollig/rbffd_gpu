@@ -54,16 +54,21 @@ int main(int argc, char** argv) {
 
     std::vector<int>& sten = stencil->getStencil(0); 
 
-    for (int i = 0; i < sten.size(); i++) {
-	// The first stenil is centered at 0 and contains: 
-	// 0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32
-	// NOT 32 because its a stencil size of 15
- 	if (((sten[i] > 3) && (sten[i] < 10)) 
- 	|| ((sten[i] > 13) && (sten[i] < 20)) 
- 	|| ((sten[i] > 23) && (sten[i] < 30)) 
-	|| (sten[i] > 32)) {
-		std::cout << "Failed to verify stencil element for stencil[0]\n"; 
-		exit(EXIT_FAILURE); 
+    if (dim == 1) {
+	// Extra test for ctest: 
+	// When we have a 1D grid, two nodes are boundary. 
+	// Recall that these nodes are sorted to the front of the
+	// list so we expect this pattern: 	
+	// B1	[0]  [9]  [2]  [3]  [4] 
+	// B2	[1]  [8]  [7]  [6]  [5] 
+	// I1 	[2]  [9]  [3]  [0]  [4] 
+	if ((sten[0] != 0)
+  	||  (sten[1] != 9)
+	||  (sten[2] != 2)
+	||  (sten[3] != 3)
+	||  (sten[4] != 4))
+	{
+	 	exit(EXIT_FAILURE); 
 	}
     }
 

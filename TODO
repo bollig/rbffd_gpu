@@ -1,3 +1,11 @@
+(1/12/2011)
+	- The RBFFD Derivative class really should be the one to genreate stencils given a grid of nodes. WHy does our grid class have to compute stencils?
+		=> If RBFFD wants N nearest neighbors it can generate stencils like that. 
+		=> A domain decomposition will need to know the stencils though for ghost nodes. 
+		=> RBFFD already consumes Stencils and the Grid nodes in the constructor. We could have a Stencil class generate stencils outside Grid and a domain decomposition apply to stencils in subextents of the domain. Luckily this kind of code was already written by me (Evan) in march and forgotten until tonight
+
+
+
 TODO (8/19/2010) 
 ==================
 - (DONE: NCARPoisson1_CL::write_to_file) Add uBLAS writer for matlab formatted output

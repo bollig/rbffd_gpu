@@ -6,14 +6,6 @@
 #include "Vec3.h"
 #include "utils/comm/mpisendable.h"
 
-class StencilMessage {
-public:
-    int node_list_size; // Number of nodes in message
-    std::vector<int> receiver_list; // Set of GPUs receiving nodes
-    std::vector<Vec3*> node_list; // List of nodes and values
-    std::vector<int> offset_list; // Offsets into reference node_list;
-};
-
 class Communicator {
 public:
     Communicator(int argc, char** argv);
@@ -24,12 +16,6 @@ public:
 
     // Return number of compute nodes registered with MPI
     int getSize();
-
-    // Send our special message format (incomplete)
-    void sendMessage(StencilMessage*);
-
-    // Receive our special message format (incomplete)
-    StencilMessage* receiveMessage();
 
     // Setup MPI_Send for CPU0
     void sendObject(MPISendable* object, int reciever_rank);

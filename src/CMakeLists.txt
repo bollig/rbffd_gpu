@@ -20,6 +20,7 @@ SET(REQUIRED_SOURCE_FILES
 	grids/regulargrid2d.cpp
 	grids/regulargrid3d.cpp
 	grids/domain_decomposition/gpu.cpp # Should extend Grid and rename subdomain
+	grids/domain_decomposition/stencil.cpp
 
 	pdes/elliptic/ncar_poisson1.cpp
 	pdes/parabolic/heat.cpp

@@ -2,8 +2,7 @@
 
 #include "pdes/parabolic/new_heat.h"
 
-#include "grids/regulargrid2d.h"
-#include "grids/regulargrid3d.h"
+#include "grids/regulargrid.h"
 
 #include "rbffd/derivative_cl.h"
 //#include "rbffd/new_derivative_tests.h"
@@ -45,19 +44,20 @@ int main(int argc, char** argv) {
 
     double stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
-    OriginalGrid* grid; 
-
+    Grid* grid; 
+ 
     if (dim == 1) {
-	    grid = new RegularGrid2D(nx, 1, minX, maxX, 0., 0., stencil_size); 
+	    grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
     } else if (dim == 2) {
-	    grid = new RegularGrid2D(nx, ny, minX, maxX, minY, maxY, stencil_size); 
+	    grid = new RegularGrid(nx, ny, minX, maxX, minY, maxY); 
     } else if (dim == 3) {
-	    grid = new RegularGrid3D(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ, stencil_size); 
+	    grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
     } else {
 	    cout << "ERROR! Dim > 3 Not Supported!" << endl;
     }
 
-    grid->generateGrid();
+    grid->generate();
+#if 0
     grid->computeStencils();   // nearest nb_points
     grid->avgStencilRadius(); 
 
@@ -113,6 +113,7 @@ int main(int argc, char** argv) {
 
 
     delete(subdomain);
+#endif 
     delete(grid);
     delete(settings);
 

@@ -16,6 +16,7 @@
 		#* 		gridgen/nested_spheres_ccvt
 		gridgen/regular_grid
 		gridgen/square_cvt
+		gridgen/stencil_gen
 		
 		util/3d_octree
 		#		util/binary_cvt_io

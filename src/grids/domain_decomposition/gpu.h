@@ -184,6 +184,8 @@ public: 	// Member Functions:
 	
 	// Print all nodes in stencils and show display_char if they are in center_set; '.' otherwise. 
 	void printStencilNodesIn(const std::vector<StencilType> stencils, const std::set<int> center_set, const char* display_char); 
+    // Dump a bit of ascii art to show the dependency graph for a GPU
+    void printVerboseDependencyGraph(); 
 	
 	// Print contents of a set
 	void printSet(const std::set<int> center_set, const char* set_label) ; 

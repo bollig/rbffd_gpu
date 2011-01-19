@@ -92,6 +92,10 @@ int GPU::receive(int my_rank, int sender_rank) {
         // cout << "EVAN YOURE WRONG HERE!" <<endl;
 	set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
 
+	cout << "RANK " << my_rank << " REPORTS: received GPU object" << endl;
+}
+
+void GPU::printVerboseDependencyGraph() {
 	// Verify we everything passed correctly.
 	cout
 			<< "********************* Stencil dependency on R *********************"
@@ -107,8 +111,6 @@ int GPU::receive(int my_rank, int sender_rank) {
 		printStencil(Q_stencils[i], "Q_STENCIL: ");
 	}
 	printCenters(G_centers, "G_CENTERS");
-
-	cout << "RANK " << my_rank << " REPORTS: received GPU object" << endl;
 }
 
 int GPU::sendUpdate(int my_rank, int receiver_rank) {

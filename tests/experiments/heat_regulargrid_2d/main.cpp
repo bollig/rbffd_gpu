@@ -195,6 +195,8 @@ int main(int argc, char** argv) {
 
     comm_unit->barrier();
 
+    subdomain->printVerboseDependencyGraph();
+
     subdomain->printCenters(subdomain->G_centers, "All Centers Needed by this CPU");
 
     printf("CHECKING STENCILS: \n");
@@ -208,7 +210,10 @@ int main(int argc, char** argv) {
         }
     }
 
+
 #if 0
+    comm_unit->broadcastObjectUpdates(subdomain);
+    comm_unit->barrier();
     Grid* sub_grid = subdomain->getGrid(); 
     // TODO: Clean this up.
 
@@ -218,8 +223,8 @@ int main(int argc, char** argv) {
     Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim, comm_unit->getRank());
 #endif 
 
-    double epsilon = settings->GetSettingAs<double>("EPSILON");
-    der->setEpsilon(epsilon);
+//    double epsilon = settings->GetSettingAs<double>("EPSILON");
+//    der->setEpsilon(epsilon);
 
 #if 0
     printf("start computing weights\n");
@@ -234,7 +239,7 @@ int main(int argc, char** argv) {
     }
     cout << "end computing weights" << endl;
 #endif 
-    vector<double>& u = subdomain->U_G;
+    vector<double> u(subdomain->G_centers.size(), 1.);
     cout << "start computing derivative (on CPU)" << endl;
 
     vector<double> xderiv_cpu(subdomain->Q_stencils.size());	
@@ -272,12 +277,11 @@ int main(int argc, char** argv) {
             std::cout << "Y: " << yderiv_gpu[i] - yderiv_cpu[i] << std:: endl; 
             std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
             std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
-           // exit(EXIT_FAILURE); 
+            exit(EXIT_FAILURE); 
         }
     }
 
     std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
-	exit(EXIT_FAILURE);
 
 
     // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
@@ -307,6 +311,7 @@ int main(int argc, char** argv) {
     heat.initialConditions(&subdomain->U_G);
 
     // Send updates according to MPISendable object.
+
     comm_unit->broadcastObjectUpdates(subdomain);
     comm_unit->barrier();
 
@@ -348,11 +353,12 @@ int main(int argc, char** argv) {
         subdomain->writeFinal(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
         // TODO print solution to file
         cout << "FINAL ITER: " << iter << endl;
+        delete(grid);
     }
 printf("REACHED THE END OF MAIN\n");
 
 //    delete(subdomain);
-delete(grid);
+
 delete(settings);
 
 cout.flush();

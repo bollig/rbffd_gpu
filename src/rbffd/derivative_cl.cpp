@@ -34,9 +34,11 @@ using namespace std;
     // TODO: queue a WriteBuffer for each stencil and pass the &vector[0] ptr. CPU should handle that
     //      better than a loop, and we dont have to allocate memory then
     int* cpu_stencils = new int[total_num_stencil_elements];  
+    int stencil_size = stencil_[0].size();
     for (int i = 0; i < stencil_.size(); i++) {
-        for (int j = 0; j < stencil_[i].size(); j++) {
-            cpu_stencils[i*stencil_[0].size()+j] = stencil_[i][j];
+        for (int j = 0; j < stencil_size; j++) {
+            int indx = i*stencil_size+j; 
+            cpu_stencils[indx] = stencil_[i][j];
             // cout << "[" << stencil_[i][j] << "] "; 
         }
         //std::cout << std::endl;
@@ -45,7 +47,7 @@ using namespace std;
     int stencil_mem_size = total_num_stencil_elements * sizeof(int); 
     int solution_mem_size = rbf_centers_.size() * sizeof(float); 
     int weights_mem_size = total_num_stencil_elements * sizeof(float); 
-    int deriv_mem_size = rbf_centers_.size() * sizeof(float); 
+    int deriv_mem_size = stencil_.size() * sizeof(float); 
 
 
     std::cout << "Allocating GPU memory\n"; 
@@ -101,12 +103,17 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
         float* cpu_z_weights = new float[total_num_stencil_elements]; 
         float* cpu_lapl_weights = new float[total_num_stencil_elements]; 
 
-        for (int i = 0; i < npts; i++) {
-            for (int j = 0; j < stencil[i].size(); j++) {
-                cpu_x_weights[i*stencil[0].size() + j] = x_weights[i][j]; 
-                cpu_y_weights[i*stencil[0].size() + j] = y_weights[i][j]; 
-                cpu_z_weights[i*stencil[0].size() + j] = z_weights[i][j]; 
-                cpu_lapl_weights[i*stencil[0].size() + j] = lapl_weights[i][j]; 
+        int stencil_size = stencil[0].size();
+        if (stencil.size() * stencil_size != total_num_stencil_elements) {
+            exit(EXIT_FAILURE);
+        }
+        for (int i = 0; i < stencil.size(); i++) {
+            for (int j = 0; j < stencil_size; j++) {
+                int indx = i*stencil_size +j; 
+                cpu_x_weights[indx] = (float)x_weights[i][j]; 
+                cpu_y_weights[indx] = (float)y_weights[i][j]; 
+                cpu_z_weights[indx] = (float)z_weights[i][j]; 
+                cpu_lapl_weights[indx] = (float)lapl_weights[i][j]; 
             }
         }
 
@@ -122,11 +129,11 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
     cout << "Sending " << rbf_centers.size() << " solution updates to GPU" << endl;
     // update the GPU's view of our solution 
-    float* cpu_u = new float[npts]; 
-    for (int i = 0; i < npts; i++) {
+    float* cpu_u = new float[rbf_centers.size()]; 
+    for (int i = 0; i < rbf_centers.size(); i++) {
         cpu_u[i] = u[i]; 
     }
-    err = queue.enqueueWriteBuffer(gpu_solution, CL_TRUE, 0, npts*sizeof(float), cpu_u, NULL, &event);
+    err = queue.enqueueWriteBuffer(gpu_solution, CL_TRUE, 0, rbf_centers.size()*sizeof(float), cpu_u, NULL, &event);
     queue.finish(); 
 
 

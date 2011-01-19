@@ -22,7 +22,7 @@ class DerivativeCL : public Derivative, public CLBaseClass
 
 	cl::Buffer gpu_derivative_out; 
 public:
-    DerivativeCL(std::vector<NodeType>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts, int dim_num);
+    DerivativeCL(std::vector<NodeType>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts, int dim_num, int rank=0);
     ~DerivativeCL(); 
 
     // u : take derivative of this scalar variable (already allocated)

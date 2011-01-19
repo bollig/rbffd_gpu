@@ -5,7 +5,7 @@
 #include "grids/regulargrid.h"
 #include "grids/stencil_generator.h"
 
-#include "grids/domain_decomposition/domain.h"
+//#include "grids/domain_decomposition/domain.h"
 #include "rbffd/derivative_cl.h"
 //#include "rbffd/new_derivative_tests.h"
 
@@ -83,10 +83,10 @@ int main(int argc, char** argv) {
 
 #if 0
     // Clean this up. Have the Poisson class construct Derivative internally.
-    Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim);
+    Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim, comm_unit->getRank());
 #endif 
 
-    Derivative* der = new DerivativeCL(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices().size(), dim); 
+    Derivative* der = new DerivativeCL(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
 
     double epsilon = settings->GetSettingAs<double>("EPSILON");
     der->setEpsilon(epsilon);

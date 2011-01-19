@@ -4,7 +4,7 @@
 #include "utils/conf/projectsettings.h"
 
 #include "grids/regulargrid.h"
-#include "grids/domain_decomposition/stencil.h"
+#include "grids/stencil_generator.h"
 
 #include "utils/comm/communicator.h"
 
@@ -39,37 +39,51 @@ int main(int argc, char** argv) {
     double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
     double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
+    int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::optional, "15"); 
+
+    int sort_nodes = settings->GetSettingAs<int>("SORT_NODES", ProjectSettings::optional, "0"); 
     double debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
 
+
+    // Regular Stencil generator uses brute force nearest neighbor search. 
+    // KDTreeStencilGenerator uses a kdtree to find the N nearest neighbors for the stencil 
+    // Other types of StencilGenerators can exist
+    StencilGenerator* stencil_generator = new StencilGenerator(stencil_size); 
+
     Grid* grid = new RegularGrid(nx, ny,  nz, minX, maxX, minY, maxY, minZ, maxZ); 
+    grid->setSortBoundaryNodes(sort_nodes); 
     grid->setDebug(debug);
-    grid->generate(); 
+    grid->generate();  
+    grid->generateStencils(stencil_generator);	// populates the stencil map stored inside the grid class 
     grid->writeToFile(); 
-   
-    Stencil* stencil = new Stencil(grid, 15, 1.0);
-    stencil->generate();  
 
-    std::cout << "All stencils:" << std::endl;
-    std::cout << *stencil << std::endl;
+    std::vector<StencilType>& stencil = grid->getStencils();    
+	StencilType& sten = grid->getStencil(0); 
 
-    std::vector<int>& sten = stencil->getStencil(0); 
+	std::cout << "ALL STENCILS: " << std::endl;	
+	for (int i = 0; i < stencil.size(); i++) {
+		for (int j = 0; j < stencil[i].size(); j++) {
+			std::cout << " [" << stencil[i][j] << "] "; 
+		}
+		std::cout << std::endl;
+	}
 
     if (dim == 1) {
-	// Extra test for ctest: 
-	// When we have a 1D grid, two nodes are boundary. 
-	// Recall that these nodes are sorted to the front of the
-	// list so we expect this pattern: 	
-	// B1	[0]  [9]  [2]  [3]  [4] 
-	// B2	[1]  [8]  [7]  [6]  [5] 
-	// I1 	[2]  [9]  [3]  [0]  [4] 
-	if ((sten[0] != 0)
-  	||  (sten[1] != 9)
-	||  (sten[2] != 2)
-	||  (sten[3] != 3)
-	||  (sten[4] != 4))
-	{
-	 	exit(EXIT_FAILURE); 
-	}
+       // Extra test for ctest: 
+       // When we have a 1D grid, two nodes are boundary. 
+       // Recall that these nodes are sorted to the front of the
+       // list so we expect this pattern:      
+       // B1   [0]  [9]  [2]  [3]  [4] 
+       // B2   [1]  [8]  [7]  [6]  [5] 
+       // I1   [2]  [9]  [3]  [0]  [4] 
+       if ((sten[0] != 0)
+       ||  (sten[1] != 1)
+       ||  (sten[2] != 2)
+       ||  (sten[3] != 3)
+       ||  (sten[4] != 4))
+       {
+               exit(EXIT_FAILURE); 
+       }
     }
 
     delete(grid);

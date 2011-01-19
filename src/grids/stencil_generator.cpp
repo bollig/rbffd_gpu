@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#include "stencil.h"
+#include "stencil_generator.h"
 
 //----------------------------------------------------------------------
 #if 1
@@ -41,55 +41,48 @@ vector<Vec3>* ltvec::rbf_centers;
 
 #endif
 
-Stencil::Stencil(Grid* grid, int st_max_size, double st_max_radius) {
-    this->grid = grid;
+StencilGenerator::StencilGenerator(int st_max_size, double st_max_radius) {
     this->st_max_size = st_max_size;
     this->st_max_radius = st_max_radius;
 }
 
-Stencil::~Stencil() {
-    printf("TODO: Stencil::DESTRUCTOR\n");
+StencilGenerator::~StencilGenerator() {
+    printf("TODO: StencilGenerator::DESTRUCTOR\n");
 }
 
-void Stencil::setSize(double st_max_size) {
+void StencilGenerator::setSize(double st_max_size) {
     this->st_max_size = st_max_size;
 }
 
-void Stencil::setRadius(double st_max_radius) {
+void StencilGenerator::setRadius(double st_max_radius) {
     this->st_max_radius = st_max_radius;
 }
 
-void Stencil::generate() {
-    this->computeStencils();
-}
 
-std::vector<std::vector<int> >& Stencil::getStencils() {
-    return this->stencil_map;
-}
-
-std::vector<double>& Stencil::getAvgDist() {
-    return this->avg_stencil_radii;
-}
-
-void Stencil::computeStencils() {
-    int nb_rbf = grid->getNodeList().size();
-    int nb_bnd = grid->getBoundaryIndices().size();
-    std::vector<NodeType>& rbf_centers = grid->getNodeList();
+void StencilGenerator::computeStencils(std::vector<NodeType>& node_list, std::vector<unsigned int>& boundary_indices, std::vector<StencilType>& stencil_map, std::vector<double>& avg_stencil_radii) {
+    int nb_rbf = node_list.size();
+    int nb_bnd = boundary_indices.size();
+    std::vector<NodeType>& rbf_centers = node_list;
 
     if (st_max_size > nb_rbf) {
         int new_stencil_size = (int) (0.5 * nb_rbf);
         new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
-        printf("\n!!!!!!!!!!!!!!!!!!!\nWARNING! Not enough centers to reach specified stencil_size (size: %d)! Using new stencil size: %d\n!!!!!!!!!!!!!!!!!!!\n\n", st_max_size, new_stencil_size);
+        std::cout << "[StencilGenerator] WARNING! Not enough nodes to reach specified stencil_size (size: " << st_max_size << ")! Using new stencil size: " << new_stencil_size << "!\n";
         st_max_size = new_stencil_size;
     }
 
     if (nb_bnd == 0) {
-        printf("[STENCIL] **** WARNING! nb_bnd == 0; Did the Grid::generate() execute properly?! ******\n");
+
+        std::cout << "[StencilGenerator] WARNING! nb_bnd == 0; Did the Grid::generate() execute properly?!\n";
 //        exit(EXIT_FAILURE);
     }
 
     // for each node, a vector of stencil nodes (global indexing)
-    this->stencil_map.resize(nb_rbf);
+	if (stencil_map.size() < nb_rbf) {
+		std::cout << "[StencilGenerator] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
+		stencil_map.resize(nb_rbf);
+    		avg_stencil_radii.resize(nb_rbf);
+	}
     //printf("stencil size: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
 
     ltvec ltvec_inst;
@@ -97,11 +90,10 @@ void Stencil::computeStencils() {
     vector<double> avg_bnd;
     vector<double> avg_int;
 
-    this->avg_stencil_radii.resize(nb_rbf);
     avg_bnd.resize(nb_bnd);
     avg_int.resize(nb_rbf - nb_bnd);
 
-    printf("nb_rbf= %d (bnd: %d)\n", nb_rbf, nb_bnd);
+    //printf("nb_rbf= %d (bnd: %d)\n", nb_rbf, nb_bnd);
     //printf("nb_bnd= %d\n", nb_bnd);
     //exit(0);
 
@@ -109,7 +101,13 @@ void Stencil::computeStencils() {
 
     for (int i = 0; i < nb_rbf; i++) {
         Vec3& v = rbf_centers[i];
-        vector<int>& st = stencil_map[i];
+        StencilType& st = stencil_map[i];
+
+	if (st.size() < st_max_size) {
+//		std::cout << "[StencilGenerator] WARNING! stencil_map[" << i << "].size() < " << st_max_size << "! Resizing this vector.\n"; 	
+		st.resize(st_max_size); 
+	}
+
         set<int, ltvec> se;
         ltvec::setRbfCenters(rbf_centers);
         ltvec::setXi(v);
@@ -129,14 +127,14 @@ void Stencil::computeStencils() {
         //printf("min distance: %f\n", min_dist);
 
 #if 1
-        this->avg_stencil_radii[i] = 0.;
+        avg_stencil_radii[i] = 0.;
         if (i < nb_bnd) {
             avg_bnd[i] = 0.;
         } else {
             avg_int[i - nb_bnd] = 0.;
         }
 #endif
-
+	
         // stencil_size = max stencil_size
         for (int k = 0; k < st_max_size; k++) {
             double d = (rbf_centers[*sei] - rbf_centers[i]).square();
@@ -146,10 +144,10 @@ void Stencil::computeStencils() {
             // Errors of solution to heat equation do not stay small
             //if ((ss / min_dist) > 1.5) break;
 
-            st.push_back(*sei);
+            st[k] = *sei;
 
 #if 1
-            this->avg_stencil_radii[i] += ss;
+            avg_stencil_radii[i] += ss;
             if (i < nb_bnd) {
                 avg_bnd[i] += ss;
             } else {
@@ -164,7 +162,7 @@ void Stencil::computeStencils() {
         }
 
 #if 1
-        this->avg_stencil_radii[i] /= (st.size() - 1.); // ignore center point
+        avg_stencil_radii[i] /= (st.size() - 1.); // ignore center point
         if (i < nb_bnd) {
             avg_bnd[i] /= (st.size() - 1.);
         } else {
@@ -180,8 +178,8 @@ void Stencil::computeStencils() {
     double avgint = 0.;
     double avgbnd = 0.;
 
-    printf("avg_int.size() = %d\n", (int) avg_int.size());
-    printf("avg_int.size() = %d\n", (int) avg_bnd.size());
+    printf("[StencilGenerator] avg_int.size() = %d\n", (int) avg_int.size());
+    printf("[StencilGenerator] avg_int.size() = %d\n", (int) avg_bnd.size());
 
     if (nb_rbf - nb_bnd > 0) {
         for (int i = 0; i < avg_int.size(); i++) {
@@ -198,8 +196,8 @@ void Stencil::computeStencils() {
     }
     avgbnd /= avg_bnd.size();
 
-    printf("mean of mean interior distances: %f (size: %d)\n", avgint, (int) avg_int.size());
-    printf("mean of mean boundary distances: %f (size: %d)\n", avgbnd, (int) avg_bnd.size());
+    printf("[StencilGenerator] mean of mean interior distances: %f (size: %d)\n", avgint, (int) avg_int.size());
+    printf("[StencilGenerator] mean of mean boundary distances: %f (size: %d)\n", avgbnd, (int) avg_bnd.size());
 #endif
 }
 //----------------------------------------------------------------------

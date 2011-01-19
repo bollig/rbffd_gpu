@@ -13,6 +13,17 @@ void Grid::generate() {
 
 	node_list.resize(nb_nodes); 
 }
+
+void Grid::generateStencils(StencilGenerator* stencil_generator) {
+	this->stencil_map.resize(node_list.size());
+	this->avg_stencil_radii.resize(node_list.size()); 
+	
+	// TODO: generate stencils for a *** SUBSET *** of nodes
+	stencil_generator->computeStencils(this->node_list, this->boundary_indices, this->stencil_map, this->avg_stencil_radii);
+}
+
+
+
 void Grid::writeToFile() {
 	this->writeToFile(this->getFilename());
 }

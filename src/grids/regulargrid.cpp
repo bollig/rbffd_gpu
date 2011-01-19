@@ -60,8 +60,8 @@ void RegularGrid::generate() {
 
 		// Pert defined in Grid::
                 double x = xmin + i * dx;
-                double y = ymin + j * dy;
-                double z = zmin + k * dz;
+                double y = (ny > 1) ? ymin + j * dy : 0.;
+                double z = (nz > 1) ? zmin + k * dz : 0.;
 
                 node_list.push_back(Vec3(x, y, z));
 
@@ -108,7 +108,9 @@ void RegularGrid::generate() {
     }
 
     //TODO: Sorting nodes could be done more intelligently than just putting the boundary nodes at the front of the list
-    this->sortNodes();
+    if (boundary_nodes_first) {
+    	this->sortNodes();
+    }
 }
 
 

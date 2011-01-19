@@ -54,7 +54,7 @@ using namespace std;
     // 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
     gpu_stencils = cl::Buffer(context, CL_MEM_READ_ONLY, stencil_mem_size, NULL, &err);
     //	This one is updated each iteration with the new solution for the previous timestep
-    gpu_solution = cl::Buffer(context, CL_MEM_READ_ONLY, solution_mem_size, NULL, &err);
+    gpu_solution = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_size, NULL, &err);
 
     gpu_x_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
 
@@ -66,7 +66,8 @@ using namespace std;
     // Copy our knowns into GPU memory: stencil indices, stencil weights (done in computeDerivatives)
     err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_size, cpu_stencils, NULL, &event);
     queue.finish(); 
-    //delete(cpu_stencils); 
+    //delete(cpu_stencils);
+    std::cout << "DONE ALLOCATING MEMORY" << std::endl;
 }
 
 DerivativeCL::~DerivativeCL() {
@@ -147,12 +148,17 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     queue.finish(); 
 
     cout << "Setting kernel arguments\n"; 
-    kernel.setArg(0, gpu_stencils); 
-    kernel.setArg(1, gpu_x_deriv_weights); 
-    kernel.setArg(2, gpu_solution);                 // COPY_IN
-    kernel.setArg(3, gpu_derivative_out);           // COPY_OUT 
-    kernel.setArg(4, stencil.size());               // const 
-    kernel.setArg(5, stencil[0].size());            // const
+    try {
+        kernel.setArg(0, gpu_stencils); 
+        kernel.setArg(1, gpu_x_deriv_weights); 
+        kernel.setArg(2, gpu_solution);                 // COPY_IN
+        kernel.setArg(3, gpu_derivative_out);           // COPY_OUT 
+        kernel.setArg(4, stencil.size());               // const 
+        kernel.setArg(5, stencil[0].size());            // const
+    } catch (cl::Error er) {
+        printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+    }
+        
 
     std::cout<<"Running CL program for " << npts << " stencils\n";
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange, 

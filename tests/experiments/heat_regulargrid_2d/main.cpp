@@ -132,7 +132,12 @@ int main(int argc, char** argv) {
         || (zderiv_gpu[i] - zderiv_cpu[i] > 1e-5) 
         || (lderiv_gpu[i] - lderiv_cpu[i] > 1e-5) )
         {
-            std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n"; 
+            std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
+	    std::cout << "Test failed on " << i << std::endl;
+	    std::cout << "X: " << xderiv_gpu[i] - xderiv_cpu[i] << std:: endl; 
+	    std::cout << "Y: " << yderiv_gpu[i] - yderiv_cpu[i] << std:: endl; 
+	    std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
+	    std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
             exit(EXIT_FAILURE); 
         }
     }

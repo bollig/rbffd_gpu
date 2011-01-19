@@ -165,8 +165,10 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
         kernel.setArg(2, gpu_solution);                 // COPY_IN
         kernel.setArg(3, gpu_derivative_out);           // COPY_OUT 
-        kernel.setArg(4, stencil.size());               // const 
-        kernel.setArg(5, stencil[0].size());            // const
+	int nb_stencils_ = stencil.size(); 
+        kernel.setArg(4, sizeof(int), &nb_stencils_);               // const 
+	int stencil_size_ = stencil[0].size(); 
+        kernel.setArg(5, sizeof(int), &stencil_size_);            // const
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }

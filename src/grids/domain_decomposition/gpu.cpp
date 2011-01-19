@@ -679,19 +679,23 @@ void GPU::printStencil(const StencilType& stencil,
 		const char* stencil_label) {
 	cout << stencil_label << " = " << "\t";
 	int i = 0;
+	int index_sum = 0; 
 	if (loc_to_glob.size() > 0) {
 		for (StencilType::const_iterator setiter = stencil.begin(); setiter
 				!= stencil.end(); setiter++, i++) {
 			// True -> stencil[i][j] is in center set
 			cout << " [" << *setiter << " (" << loc_to_glob[*setiter] << ")] ";
+			index_sum += *setiter; 
 		}
 	} else { // WE MIGHT BE IN THE ORIGINAL CODE
 		for (StencilType::const_iterator setiter = stencil.begin(); setiter
 				!= stencil.end(); setiter++, i++) {
 			// True -> stencil[i][j] is in center set
 			cout << " [" << *setiter << " (" << *setiter << ")] ";
+			index_sum += *setiter; 
 		}
 	}
+	cout << " SUM: " << index_sum;
 	cout << endl;
 }
 

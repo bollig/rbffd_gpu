@@ -111,9 +111,9 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
         }
 
         err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_x_weights, NULL, &event); 
-        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_y_weights, NULL, &event); 
-        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_z_weights, NULL, &event); 
-        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_lapl_weights, NULL, &event); 
+        err = queue.enqueueWriteBuffer(gpu_y_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_y_weights, NULL, &event); 
+        err = queue.enqueueWriteBuffer(gpu_z_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_z_weights, NULL, &event); 
+        err = queue.enqueueWriteBuffer(gpu_laplacian_weights, CL_TRUE, 0, weights_mem_size, cpu_lapl_weights, NULL, &event); 
         queue.finish(); 
 
         COMPUTED_WEIGHTS_ON_GPU = 1; 
@@ -195,8 +195,9 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
     std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
     for (int i = 0; i < npts; i++) {
-#if 0
         std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;
+#if 0
+
         float sum = 0.f;
         for (int j = 0; j < stencil[0].size(); j++) {
             sum += (float)x_weights[i][j]; 

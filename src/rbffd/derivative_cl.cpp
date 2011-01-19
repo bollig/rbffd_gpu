@@ -43,24 +43,24 @@ using namespace std;
     }
 
     int stencil_mem_size = total_num_stencil_elements * sizeof(int); 
-    int solution_mem_size = rbf_centers_.size() * sizeof(double); 
-    int weights_mem_size = total_num_stencil_elements * sizeof(double); 
-    int deriv_mem_size = rbf_centers_.size() * sizeof(double); 
+    int solution_mem_size = rbf_centers_.size() * sizeof(float); 
+    int weights_mem_size = total_num_stencil_elements * sizeof(float); 
+    int deriv_mem_size = rbf_centers_.size() * sizeof(float); 
 
 
     std::cout << "Allocating GPU memory\n"; 
 
     // Two input arrays: 
     // 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
-    gpu_stencils = cl::Buffer(context, CL_MEM_READ_ONLY, stencil_mem_size, NULL, &err);
+    gpu_stencils = cl::Buffer(context, CL_MEM_READ_WRITE, stencil_mem_size, NULL, &err);
     //	This one is updated each iteration with the new solution for the previous timestep
     gpu_solution = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_size, NULL, &err);
 
-    gpu_x_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
+    gpu_x_deriv_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
 
     // One output array: 
     // 	This is our derivative used to update the solution for the current timestep
-    gpu_derivative_out = cl::Buffer(context, CL_MEM_WRITE_ONLY, deriv_mem_size, NULL, &err);
+    gpu_derivative_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_size, NULL, &err);
 
     std::cout << "Writing to GPU memory\n"; 
     // Copy our knowns into GPU memory: stencil indices, stencil weights (done in computeDerivatives)
@@ -90,7 +90,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     static int COMPUTED_WEIGHTS_ON_GPU=0; 
 
     if (!COMPUTED_WEIGHTS_ON_GPU) {
-        int weights_mem_size = total_num_stencil_elements * sizeof(double);  
+        int weights_mem_size = total_num_stencil_elements * sizeof(float);  
         std::cout << "Writing x_weights to GPU memory\n"; 
     
         float* cpu_weights = new float[total_num_stencil_elements]; 

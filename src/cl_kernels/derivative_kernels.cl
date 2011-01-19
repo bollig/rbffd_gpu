@@ -29,7 +29,7 @@ computeDerivKernel(             \n
 
         float der = 0.0f;       \n
        // for (size_t j = 0; j < 1/*stencil_size*/; j++) {        \n
-            size_t j = 0; 
+            size_t j = 1; 
             size_t indx = i*stencil_size + j;// + (i * stencil_size); 
  //               der += stencils[stencil_size * i + j] * weight[j];    \n
 

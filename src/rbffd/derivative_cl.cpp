@@ -36,7 +36,7 @@ using namespace std;
     int* cpu_stencils = new int[total_num_stencil_elements];  
     for (int i = 0; i < stencil_.size(); i++) {
         for (int j = 0; j < stencil_[i].size(); j++) {
-            cpu_stencils[i*stencil_.size()+j] = stencil_[i][j];
+            cpu_stencils[i*stencil_[0].size()+j] = stencil_[i][j];
             cout << "[" << stencil_[i][j] << "] "; 
         }
         std::cout << std::endl;
@@ -64,7 +64,7 @@ using namespace std;
 
     std::cout << "Writing to GPU memory\n"; 
     // Copy our knowns into GPU memory: stencil indices, stencil weights (done in computeDerivatives)
-    err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_size, cpu_stencils, NULL, &event);
+    err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_size, &cpu_stencils[0], NULL, &event);
     queue.finish(); 
     //delete(cpu_stencils);
     std::cout << "DONE ALLOCATING MEMORY" << std::endl;

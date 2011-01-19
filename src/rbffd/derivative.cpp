@@ -1033,7 +1033,13 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
     this->computeDerivatives(which, u, deriv, npts);
 }
 
-void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int npts)
+void Derivative::computeDerivCPU(DerType which, vector<double>& u, vector<double>& deriv)
+{
+    // printf("computeDeriv, u= %d, deriv= %d\n", &u[0], &deriv[0]);
+    //  printf("computeDeriv, u.size= %d, deriv.size= %d\n", u.size(), deriv.size());
+    this->computeDerivativesCPU(which, &u[0], &deriv[0], deriv.size());
+}
+void Derivative::computeDerivativesCPU(DerType which, double* u, double* deriv, int npts)
 {
 
     cout << "COMPUTING DERIVATIVE (on CPU): ";
@@ -1112,6 +1118,88 @@ void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int
         }
         deriv[i] = der;
     }
+}
+
+void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int npts)
+{
+
+    cout << "COMPUTING DERIVATIVE (on CPU): ";
+    vector<double*>* weights_p;
+
+    switch(which) {
+    case X:
+        weights_p = &x_weights;
+        //printf("weights_p= %d\n", weights_p);
+        //exit(0);
+        cout << "X" << endl;
+        break;
+
+    case Y:
+        weights_p = &y_weights;
+        cout << "Y" << endl;
+        break;
+
+    case Z:
+        //vector<mat>& weights = z_weights;
+        weights_p = &z_weights;
+        cout << "Z" << endl;
+        break;
+
+    case LAPL:
+        weights_p = &lapl_weights;
+        cout << "LAPL" << endl;
+        break;
+
+    default:
+        cout << "???" << endl;
+        printf("Wrong derivative choice\n");
+        printf("Should not happen\n");
+        exit(EXIT_FAILURE);
+    }
+
+    vector<double*>& weights = *weights_p;
+
+    double der;
+#if 0
+    //for (int i=0; i < 1600; i++) {
+    for (int i=1325; i < 1330; i++) {
+        vector<int>& v = stencil[i];
+        printf("stencil[%d]\n", i);
+        for (int s=0; s < v.size(); s++) {
+            printf("%d ", v[s]);
+        }
+        printf("\n");
+    }
+    //exit(0);
+#endif
+
+
+// DEBUGGING STATEMENTS
+#if 1
+    printf("Weights size: %d\n", (int)weights.size());
+    printf("Stencils size: %d\n", (int)stencil.size());
+#endif
+    for (int i=0; i < stencil.size(); i++) {
+        double* w = weights[i];
+        StencilType& st = stencil[i];
+        //printf("nb el in weight[%d]: %d, in stencil[%d]: %d\n", i, w.n_elem, i, st.size());
+        //printf("i=%d, w[0] = %f\n", i, w[0]);
+        der = 0.0;
+        int n = st.size();
+#if 1
+        cout << "STENCIL " << i << "(" << n << "): " << endl;
+#endif
+        //printf("(%d) stencil size: %d\n", i, n);
+        for (int s=0; s < n; s++) {
+#if 0
+            printf("\tw[%d]= %f * ", s, w[s]);
+            printf("st[%d]= %d\t\t%f  * %f\n", s, st[s], w[s], u[st[s]]);
+#endif
+            der += w[s] * u[st[s]]; // SOMETHING WRONG!
+        }
+        deriv[i] = der;
+    }
+    std::cout << "HERE\n"; 
 }
 //----------------------------------------------------------------------
 /**

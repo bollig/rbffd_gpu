@@ -95,13 +95,11 @@ int main(int argc, char** argv) {
     vector<StencilType>& stencil = grid->getStencils();
     vector<NodeType>& rbf_centers = grid->getNodeList();
     for (int irbf=0; irbf < rbf_centers.size(); irbf++) {
-		der->computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "x");
-		der->computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "y");
-		der->computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "lapl");
+		der->computeWeights(rbf_centers, stencil[irbf], irbf);
 	}
     cout << "end computing weights" << endl;
 
-    vector<double> u(rbf_centers.size());
+    vector<double> u(rbf_centers.size(),1.);
     cout << "start computing derivative (on CPU)" << endl;
 	    
     // X derivative from the CPU
@@ -113,8 +111,13 @@ int main(int argc, char** argv) {
    // vector<double> lapl_deriv(rbf_centers.size());
 
     // Verify that the CPU works
-    ((Derivative)*der).computeDeriv(Derivative::X, u, xderiv_cpu);
+    der->computeDerivCPU(Derivative::X, u, xderiv_cpu);
     der->computeDeriv(Derivative::X, u, xderiv_gpu);
+
+    for (int i = 0; i < rbf_centers.size(); i++) {
+        std::cout << "Derivative output difference (CPU - GPU) = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+    }
+
    // der->computeDeriv(Derivative::Y, u, yderiv);
    // der->computeDeriv(Derivative::LAPL, u, lapl_deriv);
 

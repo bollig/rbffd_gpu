@@ -96,7 +96,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
         float* cpu_weights = new float[total_num_stencil_elements]; 
         for (int i = 0; i < npts; i++) {
             for (int j = 0; j < stencil[i].size(); j++) {
-                cpu_weights[i*stencil[0].size() + j] = x_weights[i][j]; //(j > 0) ? 0 : i * stencil[0].size() + j; //x_weights[i][j];
+                cpu_weights[i*stencil[0].size() + j] = lapl_weights[i][j]; //(j > 0) ? 0 : i * stencil[0].size() + j; //x_weights[i][j];
             }
         }
 
@@ -144,7 +144,11 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
     cout << "Sending " << rbf_centers.size() << " solution updates to GPU" << endl;
     // update the GPU's view of our solution 
-    err = queue.enqueueWriteBuffer(gpu_solution, CL_TRUE, 0, npts*sizeof(float), u, NULL, &event);
+    float* cpu_u = new float[npts]; 
+    for (int i = 0; i < npts; i++) {
+        cpu_u[i] = u[i]; 
+    }
+    err = queue.enqueueWriteBuffer(gpu_solution, CL_TRUE, 0, npts*sizeof(float), cpu_u, NULL, &event);
     queue.finish(); 
 
     cout << "Setting kernel arguments\n"; 
@@ -182,6 +186,11 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
     for (int i = 0; i < npts; i++) {
         std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;
+        double sum = 0.f;
+        for (int j = 0; j < stencil[0].size(); j++) {
+            sum += (double)lapl_weights[i][j]; 
+        }
+        std::cout << "sum should be: " << sum << "\tDifference: " << deriv_temp[i] - sum << std::endl;
         deriv[i] = deriv_temp[i]; 
     }
 

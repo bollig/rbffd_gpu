@@ -89,7 +89,10 @@ public:
     void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv);
     void computeDeriv(DerType which, double* u, double* deriv, int npts);
 
+
     virtual void computeDerivatives(DerType which, double* u, double* deriv, int npts);
+    void computeDerivCPU(DerType which, std::vector<double>& u, std::vector<double>& deriv);
+    void computeDerivativesCPU(DerType which, double* u, double* deriv, int npts);
 
 
     std::vector<double*>& getXWeights() { return x_weights; }

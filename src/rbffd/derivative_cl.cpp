@@ -10,10 +10,10 @@ using namespace std;
 {
     cout << "Inside DerivativeCL constructor" << endl;
 
-    #include "cl_kernels/derivative_kernels.cl"
+#include "cl_kernels/derivative_kernels.cl"
     this->loadProgram(kernel_source);
 
-//    std::cout << "This is my kernel source: ...\n" << kernel_source << "\n...END\n"; 
+    //    std::cout << "This is my kernel source: ...\n" << kernel_source << "\n...END\n"; 
 
     try{
         kernel = cl::Kernel(program, "computeDerivKernel", &err);
@@ -37,9 +37,9 @@ using namespace std;
     for (int i = 0; i < stencil_.size(); i++) {
         for (int j = 0; j < stencil_[i].size(); j++) {
             cpu_stencils[i*stencil_[0].size()+j] = stencil_[i][j];
-            cout << "[" << stencil_[i][j] << "] "; 
+            // cout << "[" << stencil_[i][j] << "] "; 
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
     }
 
     int stencil_mem_size = total_num_stencil_elements * sizeof(int); 
@@ -57,6 +57,9 @@ using namespace std;
     gpu_solution = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_size, NULL, &err);
 
     gpu_x_deriv_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
+    gpu_y_deriv_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
+    gpu_z_deriv_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
+    gpu_laplacian_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
 
     // One output array: 
     // 	This is our derivative used to update the solution for the current timestep
@@ -92,55 +95,30 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     if (!COMPUTED_WEIGHTS_ON_GPU) {
         int weights_mem_size = total_num_stencil_elements * sizeof(float);  
         std::cout << "Writing x_weights to GPU memory\n"; 
-    
-        float* cpu_weights = new float[total_num_stencil_elements]; 
+
+        float* cpu_x_weights = new float[total_num_stencil_elements]; 
+        float* cpu_y_weights = new float[total_num_stencil_elements]; 
+        float* cpu_z_weights = new float[total_num_stencil_elements]; 
+        float* cpu_lapl_weights = new float[total_num_stencil_elements]; 
+
         for (int i = 0; i < npts; i++) {
             for (int j = 0; j < stencil[i].size(); j++) {
-                cpu_weights[i*stencil[0].size() + j] = lapl_weights[i][j]; //(j > 0) ? 0 : i * stencil[0].size() + j; //x_weights[i][j];
+                cpu_x_weights[i*stencil[0].size() + j] = x_weights[i][j]; 
+                cpu_y_weights[i*stencil[0].size() + j] = y_weights[i][j]; 
+                cpu_z_weights[i*stencil[0].size() + j] = z_weights[i][j]; 
+                cpu_lapl_weights[i*stencil[0].size() + j] = lapl_weights[i][j]; 
             }
         }
 
-        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_weights, NULL, &event); 
+        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_x_weights, NULL, &event); 
+        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_y_weights, NULL, &event); 
+        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_z_weights, NULL, &event); 
+        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_lapl_weights, NULL, &event); 
         queue.finish(); 
 
         COMPUTED_WEIGHTS_ON_GPU = 1; 
     }
 
-    cout << "COMPUTING DERIVATIVE (ON GPU): ";
-    vector<double*>* weights_p;
-
-    switch(which) {
-        case X:
-            weights_p = &x_weights;
-            //printf("weights_p= %d\n", weights_p);
-            //exit(0);
-            cout << "X" << endl;
-            break;
-
-        case Y:
-            weights_p = &y_weights;
-            cout << "Y" << endl;
-            break;
-
-        case Z:
-            //vector<mat>& weights = z_weights;
-            weights_p = &z_weights;
-            cout << "Z" << endl;
-            break;
-
-        case LAPL:
-            weights_p = &lapl_weights;
-            cout << "LAPL" << endl;
-            break;
-
-        default:
-            cout << "???" << endl;
-            printf("Wrong derivative choice\n");
-            printf("Should not happen\n");
-            exit(EXIT_FAILURE);
-    }
-
-    vector<double*>& weights = *weights_p;
 
     cout << "Sending " << rbf_centers.size() << " solution updates to GPU" << endl;
     // update the GPU's view of our solution 
@@ -151,10 +129,40 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     err = queue.enqueueWriteBuffer(gpu_solution, CL_TRUE, 0, npts*sizeof(float), cpu_u, NULL, &event);
     queue.finish(); 
 
-    cout << "Setting kernel arguments\n"; 
+
+    cout << "COMPUTING DERIVATIVE (ON GPU): ";
+
     try {
         kernel.setArg(0, gpu_stencils); 
-        kernel.setArg(1, gpu_x_deriv_weights); 
+        
+        switch(which) {
+            case X:
+                kernel.setArg(1, gpu_x_deriv_weights); 
+                cout << "X" << endl;
+                break;
+
+            case Y:
+                kernel.setArg(1, gpu_y_deriv_weights); 
+                cout << "Y" << endl;
+                break;
+
+            case Z:
+                kernel.setArg(1, gpu_z_deriv_weights); 
+                cout << "Z" << endl;
+                break;
+
+            case LAPL:
+                kernel.setArg(1, gpu_laplacian_weights); 
+                cout << "LAPL" << endl;
+                break;
+
+            default:
+                cout << "???" << endl;
+                printf("Wrong derivative choice\n");
+                printf("Should not happen\n");
+                exit(EXIT_FAILURE);
+        }
+
         kernel.setArg(2, gpu_solution);                 // COPY_IN
         kernel.setArg(3, gpu_derivative_out);           // COPY_OUT 
         kernel.setArg(4, stencil.size());               // const 
@@ -162,12 +170,12 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
-        
+
 
     std::cout<<"Running CL program for " << npts << " stencils\n";
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange, 
-       /* GLOBAL (work-groups in the grid)  */   cl::NDRange(npts), 
-       /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(npts), 
+            /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
@@ -185,12 +193,14 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
     std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
     for (int i = 0; i < npts; i++) {
+#if 0
         std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;
-        double sum = 0.f;
+        float sum = 0.f;
         for (int j = 0; j < stencil[0].size(); j++) {
-            sum += (double)lapl_weights[i][j]; 
+            sum += (float)x_weights[i][j]; 
         }
         std::cout << "sum should be: " << sum << "\tDifference: " << deriv_temp[i] - sum << std::endl;
+#endif 
         deriv[i] = deriv_temp[i]; 
     }
 

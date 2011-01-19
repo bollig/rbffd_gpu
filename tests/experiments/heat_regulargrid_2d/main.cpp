@@ -102,21 +102,42 @@ int main(int argc, char** argv) {
     vector<double> u(rbf_centers.size(),1.);
     cout << "start computing derivative (on CPU)" << endl;
 	    
-    // X derivative from the CPU
-    vector<double> xderiv_cpu(rbf_centers.size());	
-    // X derivative from the GPU
-    vector<double> xderiv_gpu(rbf_centers.size());	
 
-   // vector<double> yderiv(rbf_centers.size());    
-   // vector<double> lapl_deriv(rbf_centers.size());
+    vector<double> xderiv_cpu(rbf_centers.size());	
+    vector<double> xderiv_gpu(rbf_centers.size());	
+    vector<double> yderiv_cpu(rbf_centers.size());	
+    vector<double> yderiv_gpu(rbf_centers.size());	
+    vector<double> zderiv_cpu(rbf_centers.size());	
+    vector<double> zderiv_gpu(rbf_centers.size());	
+    vector<double> lderiv_cpu(rbf_centers.size());	
+    vector<double> lderiv_gpu(rbf_centers.size());	
 
     // Verify that the CPU works
     der->computeDerivCPU(Derivative::X, u, xderiv_cpu);
     der->computeDeriv(Derivative::X, u, xderiv_gpu);
 
+    der->computeDerivCPU(Derivative::Y, u, yderiv_cpu);
+    der->computeDeriv(Derivative::Y, u, yderiv_gpu);
+    
+    der->computeDerivCPU(Derivative::Z, u, zderiv_cpu);
+    der->computeDeriv(Derivative::Z, u, zderiv_gpu);
+
+    der->computeDerivCPU(Derivative::LAPL, u, lderiv_cpu);
+    der->computeDeriv(Derivative::LAPL, u, lderiv_gpu);
+
     for (int i = 0; i < rbf_centers.size(); i++) {
-        std::cout << "Derivative output difference (CPU - GPU) = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+//        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+        if ( (xderiv_gpu[i] - xderiv_cpu[i] > 1e-5) 
+        || (yderiv_gpu[i] - yderiv_cpu[i] > 1e-5) 
+        || (zderiv_gpu[i] - zderiv_cpu[i] > 1e-5) 
+        || (lderiv_gpu[i] - lderiv_cpu[i] > 1e-5) )
+        {
+            std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n"; 
+            exit(EXIT_FAILURE); 
+        }
     }
+    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
+       // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
 
    // der->computeDeriv(Derivative::Y, u, yderiv);
    // der->computeDeriv(Derivative::LAPL, u, lapl_deriv);

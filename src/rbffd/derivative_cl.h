@@ -22,14 +22,14 @@ class DerivativeCL : public Derivative, public CLBaseClass
 
 	cl::Buffer gpu_derivative_out; 
 public:
-    DerivativeCL(std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts, int dim_num);
+    DerivativeCL(std::vector<NodeType>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts, int dim_num);
     ~DerivativeCL(); 
 
     // u : take derivative of this scalar variable (already allocated)
     // deriv : resulting derivative (already allocated)
     // which : which derivative (X, Y, LAPL)
     // This overrides the CPU equivalents to provide a GPU accelerated routine (using OpenCL)
-    virtual void computeDeriv(DerType which, double* u, double* deriv, int npts);
+    virtual void computeDerivatives(DerType which, double* u, double* deriv, int npts);
 
 };
 

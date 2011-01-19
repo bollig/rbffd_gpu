@@ -59,7 +59,7 @@ void StencilGenerator::setRadius(double st_max_radius) {
 }
 
 
-void StencilGenerator::computeStencils(std::vector<NodeType>& node_list, std::vector<unsigned int>& boundary_indices, std::vector<StencilType>& stencil_map, std::vector<double>& avg_stencil_radii) {
+void StencilGenerator::computeStencils(std::vector<NodeType>& node_list, std::vector<size_t>& boundary_indices, std::vector<StencilType>& stencil_map, std::vector<double>& avg_stencil_radii) {
     int nb_rbf = node_list.size();
     int nb_bnd = boundary_indices.size();
     std::vector<NodeType>& rbf_centers = node_list;

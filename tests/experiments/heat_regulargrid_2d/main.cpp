@@ -3,7 +3,9 @@
 #include "pdes/parabolic/new_heat.h"
 
 #include "grids/regulargrid.h"
+#include "grids/stencil_generator.h"
 
+#include "grids/domain_decomposition/domain.h"
 #include "rbffd/derivative_cl.h"
 //#include "rbffd/new_derivative_tests.h"
 
@@ -56,35 +58,42 @@ int main(int argc, char** argv) {
 	    cout << "ERROR! Dim > 3 Not Supported!" << endl;
     }
 
+    grid->setSortBoundaryNodes(true); 
     grid->generate();
+    grid->generateStencils(new StencilGenerator(stencil_size));   // nearest nb_points
+    grid->writeToFile(); 
 #if 0
-    grid->computeStencils();   // nearest nb_points
-    grid->avgStencilRadius(); 
-
-//    grid->writeToFile(((RegularGrid*)grid)->getFullName("regular_grid",0)); 
-
     // Compute stencils given a set of generators
-    GPU* subdomain = new GPU(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());      // TODO: get these extents from the cvt class (add constructor to GPU)
+    // TODO: get these extents from the cvt class (add constructor to GPU)
+    Domain* subdomain = new Domain(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());    
 
     // Clean this up. Have GPU class fill data on constructor. Pass Grid class to constructor.
     // Remove need for extents in constructor.
-    subdomain->fillLocalData(grid->getRbfCenters(), grid->getStencil(), grid->getBoundary(), grid->getAvgDist()); // Forms sets (Q,O,R) and l2g/g2l maps
-    subdomain->fillVarData(grid->getRbfCenters()); // Sets function values in U
+    // Forms sets (Q,O,R) and l2g/g2l maps
+    subdomain->fillLocalData(grid->getNodeList(), grid->getStencils(), 
+                             grid->getBoundaryIndices(), grid->getStencilRadii());    
+    subdomain->fillVarData(grid->getNodeList()); // Sets function values in U
 
     // Verbosely print the memberships of all nodes within the subdomain
     //subdomain->printCenterMemberships(subdomain->G, "G");
+#endif
 
     // 0: 2D problem; 1: 3D problem
     ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(1.0, 1.0);
 
+#if 0
     // Clean this up. Have the Poisson class construct Derivative internally.
     Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim);
+#endif 
+
+    Derivative* der = new DerivativeCL(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices().size(), dim); 
+
     double epsilon = settings->GetSettingAs<double>("EPSILON");
     der->setEpsilon(epsilon);
 
     printf("start computing weights\n");
-    vector<vector<int> >& stencil = grid->getStencil();
-    vector<Vec3>& rbf_centers = grid->getRbfCenters();
+    vector<StencilType>& stencil = grid->getStencils();
+    vector<NodeType>& rbf_centers = grid->getNodeList();
     for (int irbf=0; irbf < rbf_centers.size(); irbf++) {
 		der->computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "x");
 		der->computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "y");
@@ -92,16 +101,22 @@ int main(int argc, char** argv) {
 	}
     cout << "end computing weights" << endl;
 
-    vector<double> u;
-    cout << "start computing derivative (on GPU)" << endl;
+    vector<double> u(rbf_centers.size());
+    cout << "start computing derivative (on CPU)" << endl;
 	    
-    vector<double> xderiv(rbf_centers.size());	
-    vector<double> yderiv(rbf_centers.size());    
-    vector<double> lapl_deriv(rbf_centers.size());
+    // X derivative from the CPU
+    vector<double> xderiv_cpu(rbf_centers.size());	
+    // X derivative from the GPU
+    vector<double> xderiv_gpu(rbf_centers.size());	
 
-    der->computeDeriv(Derivative::X, u, xderiv);
-    der->computeDeriv(Derivative::Y, u, yderiv);
-    der->computeDeriv(Derivative::LAPL, u, lapl_deriv);
+   // vector<double> yderiv(rbf_centers.size());    
+   // vector<double> lapl_deriv(rbf_centers.size());
+
+    // Verify that the CPU works
+    ((Derivative)*der).computeDeriv(Derivative::X, u, xderiv_cpu);
+    der->computeDeriv(Derivative::X, u, xderiv_gpu);
+   // der->computeDeriv(Derivative::Y, u, yderiv);
+   // der->computeDeriv(Derivative::LAPL, u, lapl_deriv);
 
 
 #if 0
@@ -112,8 +127,7 @@ int main(int argc, char** argv) {
 #endif 
 
 
-    delete(subdomain);
-#endif 
+//    delete(subdomain);
     delete(grid);
     delete(settings);
 

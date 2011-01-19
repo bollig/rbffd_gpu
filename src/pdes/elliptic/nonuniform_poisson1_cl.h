@@ -11,16 +11,10 @@
 #include "utils/conf/projectsettings.h"
 #include <boost/numeric/ublas/vector.hpp>
 
-// Set single or double precision here.
-#if 1
-typedef double FLOAT;
-#else
-typedef float FLOAT;
-#endif
+#include "common_typedefs.h"
 
 typedef boost::numeric::ublas::compressed_matrix<FLOAT> MatType;
 typedef boost::numeric::ublas::vector<FLOAT>            VecType;
-typedef std::vector<int>                                StencilType;
 typedef std::vector<StencilType >                       StencilListType;
 typedef Vec3                                            CenterType;
 typedef std::vector<CenterType >                         CenterListType;

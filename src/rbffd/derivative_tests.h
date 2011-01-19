@@ -2,13 +2,11 @@
 #define __DERIVATIVE_TESTS_H__
 
 #include "rbffd/derivative.h"
-#include "grids/original_grid.h"
+#include "grids/grid_interface.h"
 #include "Vec3.h"
 
 #include <string>
 using namespace std;
-
-typedef OriginalGrid Grid;
 
 class DerivativeTests {
 public:
@@ -35,7 +33,7 @@ public:
     void testFunction(DerivativeTests::TESTFUN which, Grid& grid, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex, vector<double>& dulapl_ex);
     void testEigen(Grid& grid, Derivative& der, int stencil_size, int nb_bnd, int tot_nb_pts);
     void testAllFunctions(Derivative& der, Grid& grid);
-    void computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils);
+    void computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<StencilType> stencils, int nb_stencils);
 
 protected:
     bool weightsComputed;

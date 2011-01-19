@@ -10,6 +10,7 @@
 #include "rbffd/rbfs/rbf_gaussian.h"
 #include "rbffd/rbfs/rbf_mq.h"
 #include "utils/conf/projectsettings.h"
+#include "common_typedefs.h" 
 
 //typedef RBF_Gaussian IRBF;
 typedef RBF_MQ IRBF;
@@ -38,7 +39,7 @@ protected:
     std::vector<double*> lapl_weights;
 
     std::vector<Vec3>& rbf_centers;
-    std::vector<std::vector<int> >& stencil;
+    std::vector<StencilType >& stencil;
     std::vector<double> avg_stencil_radius;
 
     std::vector<double> var_eps;
@@ -51,8 +52,8 @@ protected:
 
 public:
     //Derivative(int nb_rbfs);
-    Derivative(std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts, int dim_num);
-    Derivative(ProjectSettings* settings, std::vector<Vec3>& rbf_centers_, std::vector<std::vector<int> >& stencil_, int nb_bnd_pts);
+    Derivative(std::vector<Vec3>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts, int dim_num);
+    Derivative(ProjectSettings* settings, std::vector<Vec3>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts);
     ~Derivative();
 
     AF& cholesky_cpu(AF& arr);
@@ -60,17 +61,16 @@ public:
     double rowDot(AF& a, int row_a, AF& b, int row_b, int ix);
 
     // use an SVD decomposition on the distance matrix to simplify the direct solve.
-    void computeWeightsSVD_Direct(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf);
+    void computeWeightsSVD_Direct(std::vector<Vec3>& rbf_centers, StencilType& stencil, int irbf);
 
     // Use a direct solver on teh distance matrix.
-    int computeWeights(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil, int irbf);
+    int computeWeights(std::vector<Vec3>& rbf_centers, StencilType& stencil, int irbf);
 
     // Use Grady's contourSVD (my c++) version to compute the weights
     // choice: compute either "lapl", "x" or "y" derivative stencils
-    void computeWeightsSVD(std::vector<Vec3>& rbf_centers, std::vector<int>&
-                           stencil, int irbf, const char* choice);
+    void computeWeightsSVD(std::vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, const char* choice);
 
-    void distanceMatrix(std::vector<Vec3>& rbf_centers, std::vector<int>& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num);
+    void distanceMatrix(std::vector<Vec3>& rbf_centers, StencilType& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num);
 
     AF& solve(AF& l, AF& b);
     AF& matmul(AF& arr, AF& x);
@@ -79,8 +79,17 @@ public:
     // deriv : resulting derivative (already allocated)
     // which : which derivative (X, Y, LAPL)
     // NOTE: these are on the CPU. we need GPU equivalents to perform update
-    virtual void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv);
-    virtual void computeDeriv(DerType which, double* u, double* deriv, int npts);
+    
+    // Developers note: the second of these routines WAS the primary and did all the work
+    //          the first was just a redirect to it. However, I need to override the virtual
+    //          routine for a GPU version of the class. Apparently if I override a virtual
+    //          function, any other functions with the same name must be overridden or will
+    //          not be available when calling from the derived class. To work around this
+    //          now BOTH are redirects to the computeDerivatives(..) routine.
+    void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv);
+    void computeDeriv(DerType which, double* u, double* deriv, int npts);
+
+    virtual void computeDerivatives(DerType which, double* u, double* deriv, int npts);
 
 
     std::vector<double*>& getXWeights() { return x_weights; }

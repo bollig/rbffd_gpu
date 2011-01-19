@@ -3,12 +3,15 @@
 #include <vector>
 
 #include "exact_solutions/exact_ncar_poisson2.h"
+
+#include "common_typedefs.h"
+
 using namespace std;
 
 //----------------------------------------------------------------------
 void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 {
-	vector<Vec3>& rbf_centers = grid.getRbfCenters();
+	vector<NodeType>& rbf_centers = grid.getNodeList();
 	int nb_rbf = rbf_centers.size();
 
 	// change the classes the variables are located in
@@ -18,7 +21,7 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 
 
     // Warning! assume DIM = 2
-    this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf);
+    this->computeAllWeights(der, rbf_centers, grid.getStencils(), nb_rbf);
 
 	printf("deriv size: %d\n", (int) rbf_centers.size());
 	printf("xderiv size: %d\n", (int) xderiv.size());
@@ -27,11 +30,11 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 	vector<double> u;
 	vector<double> du_ex; // exact Laplacian
 
-	vector<vector<int> >& stencil = grid.getStencil();
+	vector<StencilType>& stencil = grid.getStencils();
 
 	#if 0
 	for (int i=0; i < 1600; i++) {
-		vector<int>& v = stencil[i];
+		StencilType& v = stencil[i];
 		printf("stencil[%d]\n", i);
 		for (int s=0; s < v.size(); s++) {
 			printf("%d ", v[s]);
@@ -70,7 +73,7 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 	#if 0
 	for (int i=0; i < xderiv.size(); i++) {
 		Vec3& v = rbf_centers[i];
-		vector<int>& st = stencil[i];
+		StencilType& st = stencil[i];
 		printf("(%d), (%f,%f), xder[%d]= %f, yderiv= %f\n", st.size(), v.x(), v.y(), i, xderiv[i], yderiv[i]);
 	}
 	#endif
@@ -79,16 +82,16 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 
 	for (int i=0; i < lapl_deriv.size(); i++) {
 		Vec3& v = rbf_centers[i];
-		vector<int>& st = stencil[i];
+		StencilType& st = stencil[i];
 		printf("(%d), (%f,%f), lapl_der[%d]= %f, du_ex[%d]= %f\n", (int) st.size(), v.x(), v.y(), i, lapl_deriv[i], i, du_ex[i]);
 	}
 
 	// boundary points
-	vector<int>& boundary = grid.getBoundary();
+	vector<size_t>& boundary = grid.getBoundaryIndices();
 	for (int ib=0; ib < boundary.size(); ib++) {
 		int i = boundary[ib];
 		Vec3& v = rbf_centers[i];
-		vector<int>& st = stencil[i];
+		StencilType& st = stencil[i];
 		//printf("bnd (%d), (%f,%f), lapl_der[%d]= %f, du_ex[%d]= %f\n", st.size(), v.x(), v.y(), i, lapl_deriv[i], i, du_ex[i]);
 	}
 
@@ -113,7 +116,7 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 //----------------------------------------------------------------------
 void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
 {
-	vector<Vec3>& rbf_centers = grid.getRbfCenters();
+	vector<NodeType>& rbf_centers = grid.getNodeList();
 	int nb_rbf = rbf_centers.size();
 
 	// change the classes the variables are located in
@@ -130,13 +133,13 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
 	vector<double> dux_ex; // exact derivative
 	vector<double> duy_ex; // exact derivative
 
-	vector<vector<int> >& stencil = grid.getStencil();
+	vector<StencilType>& stencil = grid.getStencils();
 
-        this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf);
+        this->computeAllWeights(der, rbf_centers, grid.getStencils(), nb_rbf);
 
 	#if 0
 	for (int i=0; i < 1600; i++) {
-		vector<int>& v = stencil[i];
+		StencilType& v = stencil[i];
 		printf("stencil[%d]\n", i);
 		for (int s=0; s < v.size(); s++) {
 			printf("%d ", v[s]);
@@ -179,7 +182,7 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
 	#if 1
 	for (int i=0; i < xderiv.size(); i++) {
 		Vec3& v = rbf_centers[i];
-		vector<int>& st = stencil[i];
+		StencilType& st = stencil[i];
 		printf("(%d), (%f,%f), xder[%d]= %f, xder_ex= %f\n", (int) st.size(), v.x(), v.y(), i, xderiv[i], dux_ex[i]);
 		printf("(%d), (%f,%f), yder[%d]= %f, yder_ex= %f\n", (int) st.size(), v.x(), v.y(), i, yderiv[i], duy_ex[i]);
 	}
@@ -192,7 +195,7 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
 	#if 0
 	for (int i=0; i < xderiv.size(); i++) {
 		Vec3& v = rbf_centers[i];
-		vector<int>& st = stencil[i];
+		StencilType& st = stencil[i];
 		printf("(%d), (%f,%f), lapl_der[%d]= %f, du_ex[%d]= %f\n", (int) st.size(), v.x(), v.y(), i, lapl_deriv[i], i, du_ex[i]);
 		printf("(%d), (%f,%f), xder[%d]= %f, xder_ex= %f\n", (int) st.size(), v.x(), v.y(), i, xderiv[i], dux_ex[i]);
 		printf("(%d), (%f,%f), yder[%d]= %f, yder_ex= %f\n", (int) st.size(), v.x(), v.y(), i, yderiv[i], duy_ex[i]);
@@ -200,11 +203,11 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
 	#endif
 
 	// boundary points
-	vector<int>& boundary = grid.getBoundary();
+	vector<size_t>& boundary = grid.getBoundaryIndices();
 	for (int ib=0; ib < boundary.size(); ib++) {
 		int i = boundary[ib];
 		Vec3& v = rbf_centers[i];
-		vector<int>& st = stencil[i];
+		StencilType& st = stencil[i];
 		printf("bnd(%d) sz(%d), (%f,%f), xder[%d]= %f, xder_ex= %f\n", ib, (int) st.size(), v.x(), v.y(), i, xderiv[i], dux_ex[i]);
 		printf("bnd(%d) sz(%d), (%f,%f), yder[%d]= %f, yder_ex= %f\n", ib, (int) st.size(), v.x(), v.y(), i, yderiv[i], duy_ex[i]);
 		//printf("bnd (%d), (%f,%f), lapl_der[%d]= %f, du_ex[%d]= %f\n", st.size(), v.x(), v.y(), i, lapl_deriv[i], i, du_ex[i]);
@@ -242,12 +245,12 @@ void DerivativeTests::testEigen(Grid& grid, Derivative& der, int stencil_size, i
 	vector<double> u(tot_nb_pts);
 	vector<double> lapl_deriv(tot_nb_pts);
 
-	vector<double> avg_stencil_radius = grid.getAvgDist(); // get average stencil radius for each point
+	vector<double> avg_stencil_radius = grid.getStencilRadii(); // get average stencil radius for each point
 
-	vector<vector<int> >& stencil = grid.getStencil();
+	vector<StencilType>& stencil = grid.getStencils();
 
 	// global variable
-        vector<Vec3> rbf_centers = grid.getRbfCenters();
+    vector<NodeType> rbf_centers = grid.getNodeList();
 	int nb_rbf = rbf_centers.size();
 
        // Derivative der(rbf_centers, stencil, grid.getNbBnd());
@@ -318,7 +321,7 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN which, Grid& grid, v
 	duy_ex.resize(0);
 	dulapl_ex.resize(0);
 
-        vector<Vec3>& rbf_centers = grid.getRbfCenters();
+        vector<NodeType>& rbf_centers = grid.getNodeList();
 	int nb_rbf = rbf_centers.size();
 
 	switch(which) {
@@ -438,7 +441,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 	printf("================\n");
 	printf("testderiv: choice= %d\n", choice);
 
-        vector<Vec3>& rbf_centers = grid.getRbfCenters();
+        vector<NodeType>& rbf_centers = grid.getNodeList();
         int nb_rbf = rbf_centers.size();
 	//printf("rbf_center size: %d\n", nb_rbf); exit(0);
 
@@ -452,12 +455,12 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 	vector<double> yderiv(nb_rbf);
 	vector<double> lapl_deriv(nb_rbf);
 
-        this->computeAllWeights(der, rbf_centers, grid.getStencil(), nb_rbf);
+        this->computeAllWeights(der, rbf_centers, grid.getStencils(), nb_rbf);
 
         testFunction(choice, grid, u, dux_ex, duy_ex, dulapl_ex);
 
 
-	avgDist = grid.getAvgDist();
+	avgDist = grid.getStencilRadii();
 #if 1
 	for (int n=0; n < 1; n++) {
 		// perhaps I'll need different (rad,eps) for each. To be determined. 
@@ -466,7 +469,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 		der.computeDeriv(Derivative::LAPL, u, lapl_deriv);
 	}
 #endif
-	vector<int>& boundary = grid.getBoundary();
+	vector<size_t>& boundary = grid.getBoundaryIndices();
 	int nb_bnd = boundary.size();
 
 	enum DERIV {X=0, Y, LAPL};
@@ -549,7 +552,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 	}}
 
 	double inter_error=0.;
-	//vector<int>& boundary = grid.getBoundary();
+	//vector<size_t>& boundary = grid.getBoundary();
 
 	for (int i=(int) boundary.size(); i < nb_rbf; i++) {
 		inter_error += (dulapl_ex[i]-lapl_deriv[i])*(dulapl_ex[i]-lapl_deriv[i]);
@@ -576,7 +579,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
 #endif
 }
 //----------------------------------------------------------------------
-void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<std::vector<int> > stencils, int nb_stencils) {
+void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers, std::vector<StencilType> stencils, int nb_stencils) {
 //#define USE_CONTOURSVD 1
 //#undef USE_CONTOURSVD
 
@@ -595,21 +598,21 @@ void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_c
 }
 //----------------------------------------------------------------------
 void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
-    this->computeAllWeights(der, grid.getRbfCenters(), grid.getStencil(), grid.getStencil().size());
+    this->computeAllWeights(der, grid.getNodeList(), grid.getStencils(), grid.getStencils().size());
 
     // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
 #if 1
-    this->testDeriv(DerivativeTests::C, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::X, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::Y, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::X2, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::XY, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::Y2, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::X3, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::X2Y, der, grid, grid.getAvgDist());
-    this->testDeriv(DerivativeTests::XY2, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::C, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::X, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::Y, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::X2, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::XY, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::Y2, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::X3, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::X2Y, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::XY2, der, grid, grid.getStencilRadii());
     #endif
-    this->testDeriv(DerivativeTests::Y3, der, grid, grid.getAvgDist());
+    this->testDeriv(DerivativeTests::Y3, der, grid, grid.getStencilRadii());
     //der.computeEig();
    // this->testEigen(grid, der, grid.getStencil().size(), grid.getNbBnd(), grid.getRbfCenters().size());
 //    exit(EXIT_FAILURE);

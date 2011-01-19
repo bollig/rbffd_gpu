@@ -295,8 +295,8 @@ void GPU::fillDependencyList(std::set<int> subdomain_R, int subdomain_rank) {
 	return;
 }
 
-void GPU::fillCenterSets(vector<Vec3>& rbf_centers, vector<int> boundary,
-		vector<vector<int> >& stencils) {
+// TODO: remove boundary parameter
+void GPU::fillCenterSets(vector<Vec3>& rbf_centers, vector<StencilType>& stencils) {
 	//********************************
 	//  STENCIL MEMBERSHIP SETS
 	//********************************
@@ -386,11 +386,10 @@ void GPU::fillCenterSets(vector<Vec3>& rbf_centers, vector<int> boundary,
 }
 
 //----------------------------------------------------------------------
-void GPU::fillLocalData(vector<Vec3>& rbf_centers,
-		vector<vector<int> >& stencil, vector<int>& boundary,
+void GPU::fillLocalData(vector<Vec3>& rbf_centers, vector<StencilType>& stencil, vector<size_t>& boundary,
 		vector<double> avg_dist) {
 	// Generate stencil membership lists (i.e., which set each stencil center belongs to)
-	this->fillCenterSets(rbf_centers, boundary, stencil);
+	this->fillCenterSets(rbf_centers, stencil);
 
 	//******************************** 
 	// GEN MAPPINGS local/global and full stencil sets based on membership.
@@ -452,14 +451,14 @@ void GPU::fillLocalData(vector<Vec3>& rbf_centers,
         printf("Q_avg_dists size= %d\n", (int) Q_avg_dists.size());
 }
 //----------------------------------------------------------------------
-set<int>& GPU::stencilSet(set<int>& s, vector<vector<int> >& stencil) {
+set<int>& GPU::stencilSet(set<int>& s, vector<StencilType>& stencil) {
 	set<int>* Sset = new set<int> ;
 	set<int>::iterator qit;
 
 	//set<int>::iterator qit;
 	for (qit = s.begin(); qit != s.end(); qit++) {
 		int qi = *qit;
-		vector<int>& si = stencil[qi];
+	    StencilType& si = stencil[qi];
 
 		for (int j = 0; j < si.size(); j++) {
 			Sset->insert(si[j]);
@@ -497,8 +496,7 @@ void GPU::fillVarData(vector<Vec3>& rbf_centers) {
 //----------------------------------------------------------------------
 
 
-void GPU::printStencilNodesIn(const vector<vector<int> > stencils, const set<
-		int> center_set, const char* display_char) {
+void GPU::printStencilNodesIn(const vector<StencilType> stencils, const set<int> center_set, const char* display_char) {
 	for (int i = 0; i < stencils.size(); i++) {
 		cout << "Stencil[" << i << "] = ";
 		for (int j = 0; j < stencils[i].size(); j++) {
@@ -606,7 +604,7 @@ bool GPU::dependsOnSet(const int local_stencil_id, const set<int> center_set) {
 	if (local_stencil_id >= Q_stencils.size()) {
 		return true;
 	}
-	vector<int> stencil = Q_stencils[local_stencil_id];
+	StencilType& stencil = Q_stencils[local_stencil_id];
 	for (int i = 0; i < stencil.size(); i++) {
 		if (isInSet(stencil[i], center_set)) {
 			return true;
@@ -677,18 +675,18 @@ void GPU::printCenters(const std::vector<Vec3> centers,
 	cout << "}" << endl;
 }
 
-void GPU::printStencil(const std::vector<int> stencil,
+void GPU::printStencil(const StencilType& stencil,
 		const char* stencil_label) {
 	cout << stencil_label << " = " << "\t";
 	int i = 0;
 	if (loc_to_glob.size() > 0) {
-		for (vector<int>::const_iterator setiter = stencil.begin(); setiter
+		for (StencilType::const_iterator setiter = stencil.begin(); setiter
 				!= stencil.end(); setiter++, i++) {
 			// True -> stencil[i][j] is in center set
 			cout << " [" << *setiter << " (" << loc_to_glob[*setiter] << ")] ";
 		}
 	} else { // WE MIGHT BE IN THE ORIGINAL CODE
-		for (vector<int>::const_iterator setiter = stencil.begin(); setiter
+		for (StencilType::const_iterator setiter = stencil.begin(); setiter
 				!= stencil.end(); setiter++, i++) {
 			// True -> stencil[i][j] is in center set
 			cout << " [" << *setiter << " (" << *setiter << ")] ";
@@ -697,19 +695,19 @@ void GPU::printStencil(const std::vector<int> stencil,
 	cout << endl;
 }
 
-void GPU::printStencilPlus(const std::vector<int> stencil, const std::vector<
+void GPU::printStencilPlus(const StencilType& stencil, const std::vector<
 		double> function_values, const char* stencil_label) {
 	cout << stencil_label << " = " << "\t";
 	int i = 0;
 	if (loc_to_glob.size() > 0) {
-		for (vector<int>::const_iterator setiter = stencil.begin(); setiter
+		for (StencilType::const_iterator setiter = stencil.begin(); setiter
 				!= stencil.end(); setiter++, i++) {
 			// True -> stencil[i][j] is in center set
 			cout << " [" << *setiter << " (" << loc_to_glob[*setiter] << ")] {"
 					<< function_values[*setiter] << "} ";
 		}
 	} else { // WE MIGHT BE IN THE ORIGINAL CODE
-		for (vector<int>::const_iterator setiter = stencil.begin(); setiter
+		for (StencilType::const_iterator setiter = stencil.begin(); setiter
 				!= stencil.end(); setiter++, i++) {
 			// True -> stencil[i][j] is in center set
 			cout << " [" << *setiter << " (" << *setiter << ")] {"

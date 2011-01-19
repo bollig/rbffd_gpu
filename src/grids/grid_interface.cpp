@@ -31,7 +31,7 @@ void Grid::writeToFile() {
 void Grid::writeToFile(std::string filename) {
 	std::ofstream fout(filename.c_str()); 
 	if (fout.is_open()) {
-		for (unsigned int i = 0; i < node_list.size(); i++) {
+		for (size_t i = 0; i < node_list.size(); i++) {
 			fout << node_list[i] << std::endl; 
 		}
 	} else {
@@ -125,7 +125,7 @@ std::string Grid::getFilename(int iter) {
 
 void Grid::perturbNodes(double perturb_amount) {
 	pert = perturb_amount; 
-	for (unsigned int i = 0 ; i < node_list.size(); i ++) {
+	for (size_t i = 0 ; i < node_list.size(); i ++) {
 		node_list[i][0] += randf(-pert, pert); 
 		node_list[i][1] += randf(-pert, pert); 
 		node_list[i][2] += randf(-pert, pert); 

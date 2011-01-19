@@ -18,7 +18,7 @@ class Grid
 		// Number of nodes this class is configured for. If this does not 
 		// match the node_list.size() then we need to regenerate the node
 		// set.
-		unsigned int nb_nodes; 
+		size_t nb_nodes; 
 
 		// Perturbation offsets for generated points
 		double pert; 
@@ -33,7 +33,7 @@ class Grid
 		std::vector<NodeType> node_list; 
 
 		// True/False for every node: are you on the boundary?  
-		std::vector<unsigned int> boundary_indices; 
+		std::vector<size_t> boundary_indices; 
 
 		// If a node is on interior the normal is assumed to be 0-vector. 
 		// Nodes on boundary have a non-zero vector. 
@@ -54,7 +54,7 @@ class Grid
 	
 	public:
 		Grid() : pert(0.), nb_nodes(0), boundary_nodes_first(false), DEBUG(0) {}
-		Grid(unsigned int num_nodes) : pert(0), nb_nodes(num_nodes), boundary_nodes_first(false), DEBUG(0) {}
+		Grid(size_t num_nodes) : pert(0), nb_nodes(num_nodes), boundary_nodes_first(false), DEBUG(0) {}
 		Grid(std::vector<NodeType>& nodes) : pert(0), nb_nodes(nodes.size()), boundary_nodes_first(false), DEBUG(0), node_list(nodes) {} 
 
 		virtual ~Grid(){ }
@@ -82,13 +82,13 @@ class Grid
 		// so boundary nodes appear first in the node_list
 		void setSortBoundaryNodes(int sort_boundary_first) { this->boundary_nodes_first = sort_boundary_first; }
 
-		std::vector<NodeType>& 	   getNodeList() 	{ return node_list; }
-		std::vector<unsigned int>& getBoundaryIndices() { return boundary_indices; } 
-		std::vector<Vec3>& 	   getBoundaryNormals() { return boundary_normals; }
-		std::vector<StencilType>&  getStencils() 	{ return stencil_map; }
-		StencilType&	 	   getStencil(int indx) { return stencil_map[indx]; }
-		std::vector<double>& 	   getStencilsAvgRadii(){ return avg_stencil_radii; }
-		double 		           getAvgDist(int indx) { return avg_stencil_radii[indx]; }
+		std::vector<NodeType>& 	    getNodeList() 	{ return node_list; }
+		std::vector<size_t>&  getBoundaryIndices() { return boundary_indices; } 
+		std::vector<Vec3>&          getBoundaryNormals() { return boundary_normals; }
+		std::vector<StencilType>&   getStencils() 	{ return stencil_map; }
+		StencilType&                getStencil(int indx) { return stencil_map[indx]; }
+		std::vector<double>& 	    getStencilRadii(){ return avg_stencil_radii; }
+		double 		                getStencilRadius(int indx) { return avg_stencil_radii[indx]; }
 
 
 

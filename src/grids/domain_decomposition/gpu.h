@@ -8,6 +8,7 @@
 //#include <boost/hash.hpp> // full library
 #include "utils/comm/mpisendable.h"
 
+#include "common_typedefs.h"
 
 // This class should really be called "DomainDecomposition" or "SubDomain" etc.
 // It is used to decompose the problem into a subdomain described by [xmin, xmax]x[ymin, xmax]
@@ -41,7 +42,7 @@ public: 		// Member Properties
 	// Not responsible for any other stencils than QmB and B. 
 	// We index these vectors with the integers contained in sets Q, O, D, etc.
 	// NOTE: (index Q_centers[*][0] is always RBF stencil center)
-	std::vector<std::vector<int> > Q_stencils; 
+	std::vector<StencilType> Q_stencils; 
 	//	std::vector<std::vector<int> > Q_stencils_local; 		// (local index equivalent of Q_stencils) CPUs generate this after receiving the global set. 
 	
 	// We might want to decompose Q_stencils into this: 
@@ -50,7 +51,7 @@ public: 		// Member Properties
 	//std::vector<std::vector<int> > D_stencils; 		// Set of stencils that block until R is received
 	
 	// 3) These get us the physical position of nodes in stencils
-	std::vector<Vec3> G_centers; 		// The full set of centers needed for computation (Q + R = G)
+	std::vector<NodeType> G_centers; 		// The full set of centers needed for computation (Q + R = G)
 
 	// 4) These get us the func values of stencil nodes
 	std::vector<double> U_G;			// U_Q union U_R
@@ -110,7 +111,7 @@ public: 	// Member Functions:
 #endif 
 
 	// Fill this GPUs stencil and position sets based on the global set of RBF centers and stencils. 
-	void fillLocalData(std::vector<Vec3>& rbf_centers, std::vector<std::vector<int> >& stencil, std::vector<int>& boundary, std::vector<double> avg_dist);
+	void fillLocalData(std::vector<Vec3>& rbf_centers, std::vector<StencilType>& stencil, std::vector<size_t>& boundary, std::vector<double> avg_dist);
 
 	// Append to O_by_rank (find what subset of O is needed by rank subdomain_rank)
 	void fillDependencyList(std::set<int> subdomain_R, int subdomain_rank); 
@@ -142,8 +143,8 @@ public: 	// Member Functions:
 	}
 	
 	
-	std::vector<int>& convert_g2l(std::vector<int>& stencil) {
-		std::vector<int>* local_stencil = new std::vector<int>(stencil);
+	StencilType& convert_g2l(StencilType& stencil) {
+		StencilType* local_stencil = new StencilType(stencil);
 		for (int j = 0; j < stencil.size(); j++) {
 			(*local_stencil)[j] = globmap[stencil[j]];
 		}
@@ -170,19 +171,19 @@ public: 	// Member Functions:
 
 	// Dump the final solution to a file along with the vector of nodes that
 	// the values correspond to.
-	virtual int writeFinal(std::vector<Vec3> nodes, char* filename);
+	virtual int writeFinal(std::vector<NodeType> nodes, char* filename);
 
 //public: 	// Member Functions
 	// Fill sets Q, D, O, B, QmB and R to distinguish center memberships
-	void fillCenterSets(std::vector<Vec3>& rbf_centers, std::vector<int> boundary, std::vector<std::vector<int> >& stencils);
+	void fillCenterSets(std::vector<NodeType>& rbf_centers, std::vector<StencilType>& stencils);
 	
 	// Generate a set of ALL nodes that are used by the stencils in set s.
 	// Uses stencil to lookup nodes required by s.
 	// memory for return set is allocoted within stencilSet
-	std::set<int>& stencilSet(std::set<int>& s, std::vector<std::vector<int> >& stencil);
+	std::set<int>& stencilSet(std::set<int>& s, std::vector<StencilType>& stencil);
 	
 	// Print all nodes in stencils and show display_char if they are in center_set; '.' otherwise. 
-	void printStencilNodesIn(const std::vector<std::vector<int> > stencils, const std::set<int> center_set, const char* display_char); 
+	void printStencilNodesIn(const std::vector<StencilType> stencils, const std::set<int> center_set, const char* display_char); 
 	
 	// Print contents of a set
 	void printSet(const std::set<int> center_set, const char* set_label) ; 
@@ -191,10 +192,10 @@ public: 	// Member Functions:
 	void printVector(const std::vector<double> stencil_radii, const char* set_label) ; 
 	void printVector(const std::vector<int> center_set, const char* set_label) ; 
 	
-	void printStencil(const std::vector<int> stencil, const char* stencil_label) ;
+	void printStencil(const StencilType& stencil, const char* stencil_label) ;
 	
 	// Print the stencil plus use the indices in the stencil to gather and print function values
-	void printStencilPlus(const std::vector<int> stencil, const std::vector<double> function_values, const char* stencil_label) ;
+	void printStencilPlus(const StencilType& stencil, const std::vector<double> function_values, const char* stencil_label) ;
 	
 	void printCenters(const std::vector<Vec3> centers, const char* center_label) ;
 	

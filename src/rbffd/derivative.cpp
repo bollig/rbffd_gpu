@@ -10,7 +10,7 @@ using namespace arma;
 
 //----------------------------------------------------------------------
 //Derivative::Derivative(int nb_rbfs) : arr(1,1,1), maxint(maxint = (1 << 31) - 1)
-Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_, int dimensions) :
+Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil_, int nb_bnd_, int dimensions) :
         rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.), debug_mode(0), dim_num(dimensions)
 {
     this->nb_bnd = nb_bnd_;
@@ -34,7 +34,7 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil
     printf("nb_rbfs= %d\n", nb_rbfs); // ok
 }
 //----------------------------------------------------------------------
-Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_) :
+Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, vector<StencilType>& stencil_, int nb_bnd_) :
         rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.)
 {
     this->nb_bnd = nb_bnd_;
@@ -339,7 +339,7 @@ int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stenci
 #endif
 
 //----------------------------------------------------------------------
-void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num)
+void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num)
 {
     Vec3& c = rbf_centers[irbf];
     int n = stencil.size();
@@ -391,8 +391,7 @@ void Derivative::distanceMatrix(vector<Vec3>& rbf_centers, vector<int>& stencil,
 }
 
 //----------------------------------------------------------------------
-void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
-                                   stencil, int irbf, const char* choice)
+void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, const char* choice)
 {
     //printf("Computing Weights for Stencil %d Using ContourSVD\n", irbf);
 
@@ -508,7 +507,7 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, vector<int>&
     //printf("-----------------\n");
 }
 //----------------------------------------------------------------------
-int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf)
+int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf)
 {
     //IRBF rbf(epsilon, dim_num);
     int n = stencil.size();
@@ -734,7 +733,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, vector<int>& stencil, 
     //printf("DONE COMPUTING WEIGHTS: %d\n", irbf);
 }
 //----------------------------------------------------------------------
-void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, vector<int>& stencil, int irbf)
+void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf)
 {
     int nb_eig = stencil.size();
     // NOTE: this was 3 but caused problems in the original heat test. WHY?
@@ -1026,13 +1025,18 @@ void Derivative::computeDeriv(DerType which, vector<double>& u, vector<double>& 
 {
     // printf("computeDeriv, u= %d, deriv= %d\n", &u[0], &deriv[0]);
     //  printf("computeDeriv, u.size= %d, deriv.size= %d\n", u.size(), deriv.size());
-    computeDeriv(which, &u[0], &deriv[0], deriv.size());
+    this->computeDerivatives(which, &u[0], &deriv[0], deriv.size());
 }
 //----------------------------------------------------------------------
 void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
 {
+    this->computeDerivatives(which, u, deriv, npts);
+}
 
-    cout << "COMPUTING DERIVATIVE: ";
+void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int npts)
+{
+
+    cout << "COMPUTING DERIVATIVE (on CPU): ";
     vector<double*>* weights_p;
 
     switch(which) {
@@ -1090,7 +1094,7 @@ void Derivative::computeDeriv(DerType which, double* u, double* deriv, int npts)
 #endif
     for (int i=0; i < stencil.size(); i++) {
         double* w = weights[i];
-        vector<int>& st = stencil[i];
+        StencilType& st = stencil[i];
         //printf("nb el in weight[%d]: %d, in stencil[%d]: %d\n", i, w.n_elem, i, st.size());
         //printf("i=%d, w[0] = %f\n", i, w[0]);
         der = 0.0;
@@ -1138,7 +1142,7 @@ double Derivative::computeEig()
 
     for (int i=nb_bnd; i < sz; i++) {
         double* w = weights[i];
-        vector<int>& st = stencil[i];
+        StencilType& st = stencil[i];
         for (int j=0; j < st.size(); j++) {
             eigmat(i,st[j])  = w[j];
             //		printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));

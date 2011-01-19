@@ -46,12 +46,17 @@ public:
 	int sendSTL(const std::vector<double> *origin, int myrank, int recv_rank) const ; 
 	// Send a STL::Vector (pack as int array and send via MPI)
 	int sendSTL(const std::vector<int> *origin, int myrank, int recv_rank) const ; 
-	// Send a STL::Map (pack as int[2] array and send via MPI)
+	
+    int sendSTL(const std::vector<size_t> *origin, int myrank, int recv_rank) const ; 
+	
+    // Send a STL::Map (pack as int[2] array and send via MPI)
 	int sendSTL(const std::map<int, int> *origin, int myrank, int recv_rank) const ; 
 	// Send a STL::Set (pack as int array and send via MPI)
 	int sendSTL(const std::set<int> *origin, int myrank, int recv_rank) const ; 
 	// Send a STL::Set (pack as int array and send via MPI)
 	int sendSTL(const std::vector<Vec3> *origin, int myrank, int recv_rank) const ; 
+
+	int sendSTL(const std::vector<std::vector<size_t> > *origin, int myrank, int recv_rank) const ; 
 
 	int sendSTL(const std::vector<std::vector<int> > *origin, int myrank, int recv_rank) const ; 
 	int sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank, int recv_rank) const ; 
@@ -60,6 +65,7 @@ public:
 	int recvSTL(std::vector<double> *destination, int myrank, int sender_rank); 
 	// Recv int array and pack as STL::Vector.
 	int recvSTL(std::vector<int> *destination, int myrank, int sender_rank); 
+	int recvSTL(std::vector<size_t> *destination, int myrank, int sender_rank); 
 	// Recv int[2] array and pack as STL::Map.
 	int recvSTL(std::map<int, int> *destination, int myrank, int sender_rank); 	
 	// Recv int array and pack as STL::Set.
@@ -68,6 +74,7 @@ public:
 	int recvSTL(std::vector<Vec3> *destination, int myrank, int sender_rank); 
 	
 	int recvSTL(std::vector<std::vector<int> > *destination, int myrank, int sender_rank); 
+	int recvSTL(std::vector<std::vector<size_t> > *destination, int myrank, int sender_rank); 
 	int recvSTL(std::set<std::vector<Vec3> > *destination, int myrank, int sender_rank); 
 	
 };

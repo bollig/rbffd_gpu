@@ -17,6 +17,7 @@
 		gridgen/regular_grid
 		gridgen/square_cvt
 		gridgen/stencil_gen
+		gridgen/subdomain_gen
 		
 		util/3d_octree
 		#		util/binary_cvt_io

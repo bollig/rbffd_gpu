@@ -5,7 +5,7 @@
 using namespace std;
 
 //----------------------------------------------------------------------
-DerivativeCL::DerivativeCL(vector<Vec3>& rbf_centers_, vector<vector<int> >& stencil_, int nb_bnd_, int dimensions)
+DerivativeCL::DerivativeCL(vector<NodeType>& rbf_centers_, vector<StencilType>& stencil_, int nb_bnd_, int dimensions)
 : Derivative(rbf_centers_, stencil_, nb_bnd_, dimensions), CLBaseClass()	
 {
 	cout << "Inside DerivativeCL constructor" << endl;
@@ -23,15 +23,15 @@ DerivativeCL::DerivativeCL(vector<Vec3>& rbf_centers_, vector<vector<int> >& ste
 	cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
 
 
-	unsigned int total_num_stencil_elements = 0; 
+	int total_num_stencil_elements = 0; 
 	for (int i = 0; i < stencil_.size(); i++) {
 		total_num_stencil_elements += stencil_[i].size(); 
 	}
 
-	unsigned int stencil_mem_size = total_num_stencil_elements * sizeof(int); 
-	unsigned int solution_mem_size = rbf_centers_.size() * sizeof(double); 
-	unsigned int weights_mem_size = total_num_stencil_elements * sizeof(double); 
-	unsigned int deriv_mem_size = rbf_centers_.size() * sizeof(double); 
+	int stencil_mem_size = total_num_stencil_elements * sizeof(int); 
+	int solution_mem_size = rbf_centers_.size() * sizeof(double); 
+	int weights_mem_size = total_num_stencil_elements * sizeof(double); 
+	int deriv_mem_size = rbf_centers_.size() * sizeof(double); 
 
 
 	// Two input arrays: 
@@ -41,9 +41,6 @@ DerivativeCL::DerivativeCL(vector<Vec3>& rbf_centers_, vector<vector<int> >& ste
 	gpu_solution = cl::Buffer(context, CL_MEM_READ_ONLY, solution_mem_size, NULL, &err);
 
 	gpu_x_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
-	gpu_y_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
-	gpu_z_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err);
-	gpu_laplacian_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err);
 
 	// One output array: 
 	// 	This is our derivative used to update the solution for the current timestep
@@ -70,10 +67,16 @@ DerivativeCL::~DerivativeCL() {
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void DerivativeCL::computeDeriv(DerType which, double* u, double* deriv, int npts)
+void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, int npts)
 {
 
-    cout << "COMPUTING DERIVATIVE: ";
+    // 1) Get the correct weights for the DerType
+    // 2) send weights to GPU
+    // 3) send new u to GPU
+    // 4) call kernel to inner prod weights and u writing to deriv
+    // 5) get deriv from GPU
+   
+    cout << "COMPUTING DERIVATIVE (ON GPU): ";
     vector<double*>* weights_p;
 
     switch(which) {

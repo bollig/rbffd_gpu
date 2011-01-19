@@ -10,8 +10,12 @@
 
 class Grid 
 {
-	protected: 
-    	
+	public: 
+		double xmin, xmax; 
+		double ymin, ymax; 
+		double zmin, zmax; 
+
+    protected: 
 		// 0 = Debug output off; 1 = Verbose output and write intermediate files
     		int DEBUG;
 

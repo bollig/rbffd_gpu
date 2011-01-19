@@ -273,7 +273,7 @@ int GPU::writeFinal(std::vector<Vec3> nodes, char* filename) {
 }
 
 // Append to O_by_rank (find what subset of O is needed by rank subdomain_rank)
-void GPU::fillDependencyList(std::set<int> subdomain_R, int subdomain_rank) {
+void GPU::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) {
 	set<int>::iterator qit;
 	int i = 0;
 
@@ -387,7 +387,7 @@ void GPU::fillCenterSets(vector<Vec3>& rbf_centers, vector<StencilType>& stencil
 
 //----------------------------------------------------------------------
 void GPU::fillLocalData(vector<Vec3>& rbf_centers, vector<StencilType>& stencil, vector<size_t>& boundary,
-		vector<double> avg_dist) {
+		vector<double>& avg_dist) {
 	// Generate stencil membership lists (i.e., which set each stencil center belongs to)
 	this->fillCenterSets(rbf_centers, stencil);
 

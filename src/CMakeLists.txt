@@ -19,7 +19,7 @@ SET(REQUIRED_SOURCE_FILES
 	grids/grid_interface.cpp
 	grids/regulargrid2d.cpp
 	grids/regulargrid3d.cpp
-	grids/domain_decomposition/gpu.cpp # Should extend Grid and rename subdomain
+	grids/domain_decomposition/gpu.cpp 
 	grids/stencil_generator.cpp
 
 	pdes/elliptic/ncar_poisson1.cpp

@@ -23,6 +23,7 @@ computeDerivKernel(       \n
         for (int j = 0; j < stencil_size; j++) {        \n
       //      int j = stencil_size - 3; 
             size_t indx = i*stencil_size + j;
+            // TODO: This indexing of solution is giving me memory contention
             der += solution[stencils[indx]] * weights[indx];    \n
         }   \n
         derivative[i] = der;    \n

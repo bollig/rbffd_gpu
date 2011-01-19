@@ -6,11 +6,6 @@
 class RegularGrid : public Grid {
 	protected: 
 		int nx, ny, nz; 
-
-		double xmin, xmax; 
-		double ymin, ymax; 
-		double zmin, zmax; 
-
 		double dx, dy, dz;
 		
 public:

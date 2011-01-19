@@ -111,10 +111,10 @@ public: 	// Member Functions:
 #endif 
 
 	// Fill this GPUs stencil and position sets based on the global set of RBF centers and stencils. 
-	void fillLocalData(std::vector<Vec3>& rbf_centers, std::vector<StencilType>& stencil, std::vector<size_t>& boundary, std::vector<double> avg_dist);
+	void fillLocalData(std::vector<Vec3>& rbf_centers, std::vector<StencilType>& stencil, std::vector<size_t>& boundary, std::vector<double>& avg_dist);
 
 	// Append to O_by_rank (find what subset of O is needed by rank subdomain_rank)
-	void fillDependencyList(std::set<int> subdomain_R, int subdomain_rank); 
+	void fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank); 
 
 	// When we move to 3D this should be updated to reflect zmin, zmax
 	// We could also make this polar coords, striped subdomains etcs. 

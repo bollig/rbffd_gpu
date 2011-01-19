@@ -261,10 +261,10 @@ int main(int argc, char** argv) {
 
     for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
         //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-        if ( (xderiv_gpu[i] - xderiv_cpu[i] > 1e-3) 
-                || (yderiv_gpu[i] - yderiv_cpu[i] > 1e-3) 
-                || (zderiv_gpu[i] - zderiv_cpu[i] > 1e-3) 
-                || (lderiv_gpu[i] - lderiv_cpu[i] > 1e-3) )
+        if ( (xderiv_gpu[i] - xderiv_cpu[i] > 1e-5) 
+                || (yderiv_gpu[i] - yderiv_cpu[i] > 1e-5) 
+                || (zderiv_gpu[i] - zderiv_cpu[i] > 1e-5) 
+                || (lderiv_gpu[i] - lderiv_cpu[i] > 1e-5) )
         {
             std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
             std::cout << "Test failed on " << i << std::endl;
@@ -272,11 +272,12 @@ int main(int argc, char** argv) {
             std::cout << "Y: " << yderiv_gpu[i] - yderiv_cpu[i] << std:: endl; 
             std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
             std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
-            exit(EXIT_FAILURE); 
+           // exit(EXIT_FAILURE); 
         }
     }
-    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
 
+    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
+	exit(EXIT_FAILURE);
 
 
     // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;

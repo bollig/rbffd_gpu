@@ -559,21 +559,23 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
         // d/dx = [ 0 1 0 0 ]
         bx(n)   = 0.0;
         bx(n+1) = 1.; // (if =1, then sum x(i) w(i) = 1 (DO NOT KNOW WHY)
-        bx(n+2) = 0.0;
-        if(dim_num == 3) {
+        if (dim_num >= 2)
+            bx(n+2) = 0.0;
+        if(dim_num == 3)
             bx(n+3) = 0.0;
-        }
 
         by(n)   = 0.0;
         by(n+1) = 0.;
-        by(n+2) = 1.0;
+        if (dim_num >= 2)
+            by(n+2) = 1.0;
         if(dim_num == 3) {
             by(n+3) = 0.0;
         }
 
         bz(n)   = 0.0;
         bz(n+1) = 0.0;
-        bz(n+2) = 0.0;
+        if (dim_num >= 2)
+            bz(n+2) = 0.0;
         if(dim_num == 3) {
             bz(n+3) = 1.0;
         }
@@ -581,7 +583,8 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
         // laplacian of constant and linear functions is zero
         blapl(n) = 0.0;
         blapl(n+1) = 0.0;
-        blapl(n+2) = 0.0;
+        if (dim_num >= 2)
+            blapl(n+2) = 0.0;
         if(dim_num == 3) {
             blapl(n+3) = 0.0;
         }
@@ -592,7 +595,8 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
         double rp = x0v.magnitude();
         br(n)   = 0.0;
         br(n+1) = x0v.x() / rp;
-        br(n+2) = x0v.y() / rp;
+        if (dim_num >= 2)
+            br(n+2) = x0v.y() / rp;
         if(np == 4) {
             br(n+3) = x0v.z() / rp;
         }
@@ -614,8 +618,10 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
             d_matrix(n+1, i) = rbf_centers[stencil[i]].x();
             d_matrix(i, n+1) = rbf_centers[stencil[i]].x();
 
-            d_matrix(n+2, i) = rbf_centers[stencil[i]].y();
-            d_matrix(i, n+2) = rbf_centers[stencil[i]].y();
+            if (np > 2) {
+                d_matrix(n+2, i) = rbf_centers[stencil[i]].y();
+                d_matrix(i, n+2) = rbf_centers[stencil[i]].y();
+            }
 
             if (np == 4) {
                 d_matrix(n+3, i) = rbf_centers[stencil[i]].z();

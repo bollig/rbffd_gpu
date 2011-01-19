@@ -1097,6 +1097,19 @@ void Derivative::computeDerivativesCPU(DerType which, double* u, double* deriv, 
     printf("Weights size: %d\n", (int)weights.size());
     printf("Stencils size: %d\n", (int)stencil.size());
 #endif
+#if 1
+    double der;
+    for (int i=0; i < stencil.size(); i++) {
+        double* w = weights[i];
+        StencilType& st = stencil[i];
+        der = 0.0;
+        int n = st.size();
+        for (int s=0; s < n; s++) {
+            der += w[s] * u[st[s]]; // SOMETHING WRONG!
+        }
+        deriv[i] = der;
+    }
+#else 
     float der;
     for (int i=0; i < stencil.size(); i++) {
         double* w = weights[i];
@@ -1118,6 +1131,7 @@ void Derivative::computeDerivativesCPU(DerType which, double* u, double* deriv, 
         }
         deriv[i] = der;
     }
+#endif 
 }
 
 void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int npts)

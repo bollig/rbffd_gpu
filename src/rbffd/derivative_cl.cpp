@@ -26,9 +26,20 @@ using namespace std;
 
     cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
 
-    int total_num_stencil_elements = 0; 
+    total_num_stencil_elements = 0; 
+
     for (int i = 0; i < stencil_.size(); i++) {
         total_num_stencil_elements += stencil_[i].size(); 
+    }
+    // TODO: queue a WriteBuffer for each stencil and pass the &vector[0] ptr. CPU should handle that
+    //      better than a loop, and we dont have to allocate memory then
+    int* cpu_stencils = new int[total_num_stencil_elements];  
+    for (int i = 0; i < stencil_.size(); i++) {
+        for (int j = 0; j < stencil_[i].size(); j++) {
+            cpu_stencils[i*stencil_.size()+j] = stencil_[i][j];
+            cout << "[" << stencil_[i][j] << "] "; 
+        }
+        std::cout << std::endl;
     }
 
     int stencil_mem_size = total_num_stencil_elements * sizeof(int); 
@@ -36,6 +47,8 @@ using namespace std;
     int weights_mem_size = total_num_stencil_elements * sizeof(double); 
     int deriv_mem_size = rbf_centers_.size() * sizeof(double); 
 
+
+    std::cout << "Allocating GPU memory\n"; 
 
     // Two input arrays: 
     // 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
@@ -49,8 +62,11 @@ using namespace std;
     // 	This is our derivative used to update the solution for the current timestep
     gpu_derivative_out = cl::Buffer(context, CL_MEM_WRITE_ONLY, deriv_mem_size, NULL, &err);
 
-    // Copy our knowns into GPU memory: stencil indices, stencil weights
-    err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_size, &stencil_[0], NULL, &event);
+    std::cout << "Writing to GPU memory\n"; 
+    // Copy our knowns into GPU memory: stencil indices, stencil weights (done in computeDerivatives)
+    err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_size, cpu_stencils, NULL, &event);
+    queue.finish(); 
+    //delete(cpu_stencils); 
 }
 
 DerivativeCL::~DerivativeCL() {
@@ -70,6 +86,24 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     // 3) send new u to GPU
     // 4) call kernel to inner prod weights and u writing to deriv
     // 5) get deriv from GPU
+    static int COMPUTED_WEIGHTS_ON_GPU=0; 
+
+    if (!COMPUTED_WEIGHTS_ON_GPU) {
+        int weights_mem_size = total_num_stencil_elements * sizeof(double);  
+        std::cout << "Writing x_weights to GPU memory\n"; 
+    
+        float* cpu_weights = new float[total_num_stencil_elements]; 
+        for (int i = 0; i < npts; i++) {
+            for (int j = 0; j < stencil[i].size(); j++) {
+                cpu_weights[i*stencil[0].size() + j] = x_weights[i][j]; //(j > 0) ? 0 : i * stencil[0].size() + j; //x_weights[i][j];
+            }
+        }
+
+        err = queue.enqueueWriteBuffer(gpu_x_deriv_weights, CL_TRUE, 0, weights_mem_size, cpu_weights, NULL, &event); 
+        queue.finish(); 
+
+        COMPUTED_WEIGHTS_ON_GPU = 1; 
+    }
 
     cout << "COMPUTING DERIVATIVE (ON GPU): ";
     vector<double*>* weights_p;
@@ -108,28 +142,22 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     vector<double*>& weights = *weights_p;
 
     cout << "Sending " << rbf_centers.size() << " solution updates to GPU" << endl;
+    // update the GPU's view of our solution 
+    err = queue.enqueueWriteBuffer(gpu_solution, CL_TRUE, 0, npts*sizeof(float), u, NULL, &event);
+    queue.finish(); 
 
-#if 0
+    cout << "Setting kernel arguments\n"; 
+    kernel.setArg(0, gpu_stencils); 
+    kernel.setArg(1, gpu_x_deriv_weights); 
+    kernel.setArg(2, gpu_solution);                 // COPY_IN
+    kernel.setArg(3, gpu_derivative_out);           // COPY_OUT 
+    kernel.setArg(4, stencil.size());               // const 
+    kernel.setArg(5, stencil[0].size());            // const
 
-    double der;
-
-    for (int i=0; i < stencil.size(); i++) {
-        double* w = weights[i];
-        vector<int>& st = stencil[i];
-        der = 0.0;
-        int n = st.size();
-        for (int j=0; j < n; j++) {
-            der += w[j] * u[st[j]]; 
-        }
-        deriv[i] = der;
-    }
-#endif 
-
-
-    std::cout<<"Running CL program\n";
-    err = queue.enqueueNDRangeKernel(
-            kernel, cl::NullRange, cl::NDRange(4, 4), cl::NDRange(2, 2)
-            );
+    std::cout<<"Running CL program for " << npts << " stencils\n";
+    err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange, 
+       /* GLOBAL (work-groups in the grid)  */   cl::NDRange(npts), 
+       /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
@@ -139,6 +167,18 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     }
 
     err = queue.finish();
+    float* deriv_temp = new float[npts]; 
+    // Pull the computed derivative back to the CPU
+    err = queue.enqueueReadBuffer(gpu_derivative_out, CL_TRUE, 0, npts*sizeof(float), deriv_temp, NULL, &event);
+
+    err = queue.finish();
+
+    std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
+    for (int i = 0; i < npts; i++) {
+        std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;
+        deriv[i] = deriv_temp[i]; 
+    }
+
     if (err != CL_SUCCESS) {
         std::cerr << "Event::wait() failed (" << err << ")\n";
         std::cout << "Failed to finish queue" << std::endl;

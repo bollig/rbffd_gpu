@@ -10,6 +10,7 @@
 
 class DerivativeCL : public Derivative, public CLBaseClass
 {
+    int total_num_stencil_elements; 
 	// These are pointers to gpu memory. We will need to allocate in the constructor and 
 	// copy to/from the memory in computeDeriv
 	cl::Buffer gpu_stencils; 

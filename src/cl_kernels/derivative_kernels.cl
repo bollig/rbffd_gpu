@@ -12,8 +12,8 @@ computeDerivKernel(             \n
          __global float* weights,   \n
          __global float* solution,  \n
          __global float* derivative,    \n
-   const size_t nb_stencils, \n
-   const size_t stencil_size)  \n
+   const int nb_stencils, \n
+   const int stencil_size)  \n
 {   \n
    size_t i = get_global_id(0);    \n
     
@@ -29,7 +29,7 @@ computeDerivKernel(             \n
 
         float der = 0.0f;       \n
        // for (size_t j = 0; j < 1/*stencil_size*/; j++) {        \n
-            size_t j = 1; 
+            int j = 3; 
             size_t indx = i*stencil_size + j;// + (i * stencil_size); 
  //               der += stencils[stencil_size * i + j] * weight[j];    \n
 

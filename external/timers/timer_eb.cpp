@@ -15,6 +15,10 @@ std::vector<EB::Timer*> EB::Timer::timeList;
 //----------------------------------------------------------------------
 Timer::Timer()
 {
+	static int const_count = 0; 
+	if (!const_count) {
+		timeList.resize(0); 
+	}
 	name = "";
 	scale = 0.;
 	count = 0;
@@ -67,7 +71,7 @@ Timer::Timer(const Timer& t)
 	this->t2 = t.t2;
 	this->nbCalls = t.nbCalls;
 	this->offset = t.offset;
-	this->timeList.push_back(this);
+	timeList.push_back(this);
 	reset();
 }
 //----------------------------------------------------------------------

@@ -4,6 +4,9 @@
 #include "contour_svd.h"
 #include <armadillo>
 #include "stencils.h"
+#include "timer_eb.h"
+
+using namespace EB;
 
 using namespace std;
 using namespace arma;
@@ -32,6 +35,7 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil
     //epsilon = 0.5; // Pretty accurate
 
     printf("nb_rbfs= %d\n", nb_rbfs); // ok
+    setupTimers(); 
 }
 //----------------------------------------------------------------------
 Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, vector<StencilType>& stencil_, int nb_bnd_) :
@@ -61,6 +65,7 @@ Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, ve
 
     debug_mode = settings->GetSettingAs<int>("DEBUG_MODE", ProjectSettings::optional);
     dim_num = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required);
+    setupTimers(); 
 }
 //----------------------------------------------------------------------
 Derivative::~Derivative()
@@ -99,6 +104,11 @@ Derivative::~Derivative()
     }
 }
 //----------------------------------------------------------------------
+//
+void Derivative::setupTimers() {
+	tm["computeWeights"] = new Timer("Derivative::computeWeights (compute weights on CPU)"); 
+}
+
 //----------------------------------------------------------------------
 // Solve for x, Ax = b
 // Assume that arr is non-singular
@@ -509,6 +519,7 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, StencilType& stenc
 //----------------------------------------------------------------------
 int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf)
 {
+	tm["computeWeights"]->start(); 
     //IRBF rbf(epsilon, dim_num);
     int n = stencil.size();
     int np = 1+dim_num; // +3 for the x,y,z monomials
@@ -734,7 +745,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
     br.reset();
     blapl.reset();
 #endif
-
+	tm["computeWeights"]->end();
     return stencil.size();
     //printf("DONE COMPUTING WEIGHTS: %d\n", irbf);
 }

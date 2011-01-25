@@ -6,7 +6,7 @@
 #include "grids/regulargrid.h"
 #include "grids/stencil_generator.h"
 
-//#include "grids/domain_decomposition.h" 
+#include "grids/domain.h"
 
 #include "utils/comm/communicator.h"
 
@@ -15,11 +15,13 @@ using namespace std;
 int main(int argc, char** argv) {
 
     Communicator* comm_unit = new Communicator(argc, argv);
+    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
+
+    // All processes should full this subdomain pointer
+    Domain* subdomain; 
 
     if (comm_unit->getRank() == Communicator::MASTER) { // MASTER THREAD 0
         std::cout << "MPI RANK " << comm_unit->getRank() << ": loading project configuration and generating grid." << endl;
-        ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
-
 
         int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required);
         int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required);
@@ -61,30 +63,40 @@ int main(int argc, char** argv) {
         grid->generateStencils(stencil_generator);	// populates the stencil map stored inside the grid class
         grid->writeToFile();
 
-#if 0
-        std::vector<GPU*> subdomain_list;
-        for (int i = 0; i < comm_unit->getSize(); i++) {
-            // TODO: get a grid decomposition
-            // subdomain_list[i] = new GPU(grid, local_xmin, local_xmax, local_ymin, local_ymax, local_zmin, local_zmax);
-        }
+	int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
+	int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
 
-        drivePDE(subdomain); 
-#endif 
-        // TODO: solve equation
-        //Heat heat(subdomain_list[0]->getGrid());
+	double dt = 0.001;
+
+	Domain* original_domain = new Domain(grid, dt, comm_unit->getSize()); 
+	//domain_decomp->printVerboseDependencyGraph(); 
+
+	// pre allocate pointers to all of the subdivisions
+	std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
+	// allocate and fill in details on subdivisions
+        original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
+
+	subdomain = subdomain_list[0]; 
+	for (int i = 1; i < comm_unit->getSize(); i++) {
+		std::cout << "Sending subdomain[" << i << "]\n";
+		comm_unit->sendObject(subdomain_list[i], i); 
+	}
+
         delete(grid);
-        delete(settings);
 
     } else {
         cout << "MPI RANK " << comm_unit->getRank() << ": waiting to receive subdomain" << endl;
-#if 0 
-        subdomain = new GPU(); // EMPTY object that will be filled by MPI
-
+        
+	subdomain = new Domain(); // EMPTY object that will be filled by MPI
         int status = comm_unit->receiveObject(subdomain, Communicator::MASTER); // Receive from CPU (0)
-        drivePDE(subdomain); 
-#endif 
-
     }
+
+
+    subdomain->printVerboseDependencyGraph(); 
+
+    delete(subdomain); 
+    delete(settings);
+    delete(comm_unit);
 
     // NOTE: if we run with MPI, any EXIT_FAILURE on any of the processors prior to this point
     // WILL cause mpirun to EXIT_FAILURE and our test will fail

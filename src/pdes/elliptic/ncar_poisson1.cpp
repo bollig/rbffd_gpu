@@ -7,7 +7,7 @@
 
 using namespace std;
 
-NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+NCARPoisson1::NCARPoisson1(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
         dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->G_centers),
         boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_),
         t1(tm, "[ncar_poisson_t1] Total"),
@@ -40,7 +40,7 @@ NCARPoisson1::NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative
     test_dirichlet_lockdown = false;
 }
 
-NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
         dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->G_centers),
         boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_),
         t1(tm, "[ncar_poisson_t1] Total"),
@@ -87,7 +87,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
     if (subdomain == NULL) {
         cerr
                 << "In " << __FILE__
-                << " No GPU class passed to Constructor. Cannot perform intermediate communication/updates in solver."
+                << " No Domain class passed to Constructor. Cannot perform intermediate communication/updates in solver."
                 << endl;
         exit(EXIT_FAILURE);
     } else {
@@ -122,7 +122,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // TODO: solve this in parallel
         //     comm_unit->broadcastObjectUpdates(subdomain);
 
-        // Do NOT use GPU as buffer for computation
+        // Do NOT use Domain as buffer for computation
         // Only go up to the number of stencils since we solve for a subset of the values in U_G
         // Since U_G in R is at end of U_G vector we can ignore those.
         //for (int i = 0; i < s.size(); i++) {

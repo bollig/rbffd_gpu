@@ -1,12 +1,13 @@
 #include <math.h>
-#include "grids/original_grid.h"
+#include "timer_eb.h"
 #include "rbffd/derivative.h"
 #include "heat.h"
 #include "exact_solutions/exact_solution.h"
 
 using namespace std;
+using namespace EB;
 
-Heat::Heat(ExactSolution* _solution, std::vector<Vec3>* rbf_centers_, int stencil_size, std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank) 
+Heat::Heat(ExactSolution* _solution, std::vector<NodeType>* rbf_centers_, int stencil_size, std::vector<size_t>* global_boundary_nodes_, Derivative* der_, int rank) 
 :	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),	id(rank), subdomain(NULL), exactSolution(_solution) 
 {
 	nb_stencils = stencil_size;
@@ -32,11 +33,12 @@ Heat::Heat(ExactSolution* _solution, std::vector<Vec3>* rbf_centers_, int stenci
 	diff_x.resize(nb_stencils);
 	diff_y.resize(nb_stencils);
 
+	setupTimers(); 
 	// Cartesian-based Laplacian
 	//grid.laplace();
 }
 
-Heat::Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank) 
+Heat::Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank) 
 : 	exactSolution(_solution), rbf_centers(&subdomain_->G_centers), boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank),subdomain(subdomain_) 
 {
 	nb_stencils = subdomain->Q_stencils.size();
@@ -62,19 +64,20 @@ Heat::Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank
 	diff_x.resize(nb_stencils);
 	diff_y.resize(nb_stencils);
 
+	setupTimers(); 
 	// Cartesian-based Laplacian
 	//grid.laplace();
 }
 
-Heat::Heat(ExactSolution* _solution, OriginalGrid& grid_, Derivative& der_) 
-: 	exactSolution(_solution), rbf_centers(&(grid_.getRbfCenters())),boundary_set(&(grid_.getBoundary())), der(&der_), id(0), subdomain(NULL) 
+Heat::Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_) 
+: 	exactSolution(_solution), rbf_centers(&(grid_.getNodeList())),boundary_set(&(grid_.getBoundaryIndices())), der(&der_), id(0), subdomain(NULL) 
 {
 
     //printf("WARNING!!!!  (BAD CODE DESIGN) DEFAULTING TO EXACT_REGULARGRID.H SOLUTION. YOU SHOULD USE A DIFFERENT CONSTRUCTOR FOR HEAT\n");
     //exactSolution = new ExactRegularGrid(acos(-1.) / 2., 1.);
 
-	nb_stencils = grid_.getStencil().size();
-	nb_rbf = grid_.getRbfCenters().size();
+	nb_stencils = grid_.getStencils().size();
+	nb_rbf = grid_.getNodeList().size();
 	PI = acos(-1.);
 	freq = PI / 2.;
 	decay = 1.;
@@ -95,6 +98,7 @@ Heat::Heat(ExactSolution* _solution, OriginalGrid& grid_, Derivative& der_)
 	diff_x.resize(nb_rbf);
 	diff_y.resize(nb_rbf);
 
+	setupTimers();
 	// Cartesian-based Laplacian
 	//grid.laplace();
 }
@@ -103,14 +107,17 @@ Heat::~Heat() {
 }
 //----------------------------------------------------------------------
 
+void Heat::setupTimers() {
+	tm["advance"] = new Timer("Heat::advanceOneStepWithComm (one step of the second order heat iteration)"); 
+}
 
-// Advance the equation one time step using the GPU class to perform communication
-// Depends on Constructor #2 to be used so that a GPU class exists within this class.
+// Advance the equation one time step using the Domain class to perform communication
+// Depends on Constructor #2 to be used so that a Domain class exists within this class.
 void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
-
+	tm["advance"]->start(); 
 	if (subdomain == NULL) {
 		cerr
-				<< "In HEAT.CPP: Wrong advanceOneStep* routine called! No GPU class passed to Constructor. Cannot perform intermediate communication/updates."
+				<< "In HEAT.CPP: Wrong advanceOneStep* routine called! No Domain class passed to Constructor. Cannot perform intermediate communication/updates."
 				<< endl;
 		exit(-10);
 	} else {
@@ -122,7 +129,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		// the lapl(s1) is size Q but depends on size Q+R; the key difference between
 		// lapl(s) and lapl(s1) is that we have the set R for lapl(s) when we enter this
 		// routine. Thus, we must call for the communicator comm_unit to update
-		// the GPU object at the beginning/end and in the middle of this routine.
+		// the Domain object at the beginning/end and in the middle of this routine.
 		// I think the best approach is to make the Heat class inherit from a ParallelPDE
 		// type. ParallelPDE types will have pure virtual API for executing updates
 		// on MPISendable types. Also I think ParallelPDE types should have internal
@@ -142,7 +149,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 
 		comm_unit->broadcastObjectUpdates(subdomain);
 
-		// Do NOT use GPU as buffer for computation
+		// Do NOT use Domain as buffer for computation
 		// Only go up to the number of stencils since we solve for a subset of the values in U_G
 		// Since U_G in R is at end of U_G vector we can ignore those.
 		for (int i = 0; i < s.size(); i++) {
@@ -193,7 +200,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		// reset boundary solution
 
 		// assert bnd_sol.size() == bnd_index.size()
-		vector<int>& bnd_index = *boundary_set; //grid.getBoundary();
+		vector<size_t>& bnd_index = *boundary_set; //grid.getBoundary();
 		int sz = bnd_sol.size();
 
 		printf("nb bnd pts: %d\n", sz);
@@ -201,7 +208,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		for (int i = 0; i < bnd_sol.size(); i++) {
 			// first order
 			Vec3& v = (*rbf_centers)[bnd_index[i]];
-			printf("bnd[%d] = {%d} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
+			printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
 #ifdef SECOND
 			s1[bnd_index[i]] = bnd_sol[i];
 #else
@@ -210,12 +217,12 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		}
 
 		// Now we need to make sure all CPUs have R2 (intermediate part of timestep)
-		// Do NOT use GPU as buffer for computation
+		// Do NOT use Domain as buffer for computation
 		for (int i = 0; i < s1.size(); i++) {
 			subdomain->U_G[i] = s1[i];
 		}
 		comm_unit->broadcastObjectUpdates(subdomain);
-		// Do NOT use GPU as buffer for computation
+		// Do NOT use Domain as buffer for computation
 		for (int i = 0; i < s1.size(); i++) {
 			s1[i] = subdomain->U_G[i];
 		}
@@ -300,6 +307,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 			subdomain->U_G[i] = s[i];
 		}
 	}
+	tm["advance"]->end();
 	return;
 }
 
@@ -312,7 +320,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	// the lapl(s1) is size Q but depends on size Q+R; the key difference between 
 	// lapl(s) and lapl(s1) is that we have the set R for lapl(s) when we enter this
 	// routine. Thus, we must call for the communicator comm_unit to update
-	// the GPU object at the beginning/end and in the middle of this routine. 
+	// the Domain object at the beginning/end and in the middle of this routine. 
 	// I think the best approach is to make the Heat class inherit from a ParallelPDE 
 	// type. ParallelPDE types will have pure virtual API for executing updates
 	// on MPISendable types. Also I think ParallelPDE types should have internal 
@@ -378,7 +386,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	// reset boundary solution
 
 	// assert bnd_sol.size() == bnd_index.size()
-	vector<int>& bnd_index = *boundary_set; //grid.getBoundary();
+	vector<size_t>& bnd_index = *boundary_set; //grid.getBoundary();
 	int sz = bnd_sol.size();
 
 	printf("nb bnd pts: %d\n", sz);
@@ -386,7 +394,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 	for (int i = 0; i < sz; i++) {
 		// first order
 		Vec3& v = (*rbf_centers)[bnd_index[i]];
-		printf("bnd[%d] = {%d} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
+		printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
 #ifdef SECOND
 		s1[bnd_index[i]] = bnd_sol[i];
 #else
@@ -536,7 +544,7 @@ void Heat::advanceOneStepDivGrad() {
 	// reset boundary solution
 
 	// assert bnd_sol.size() == bnd_index.size()
-	vector<int>& bnd_index = *boundary_set; //grid.getBoundary();
+	vector<size_t>& bnd_index = *boundary_set; //grid.getBoundary();
 	int sz = bnd_sol.size();
 
 	//printf("nb bnd pts: %d\n", sz);
@@ -703,7 +711,7 @@ void Heat::advanceOneStepTwoTerms() {
 	// reset boundary solution
 
 	// assert bnd_sol.size() == bnd_index.size()
-	vector<int>& bnd_index = *boundary_set; //grid.getBoundary();
+	vector<size_t>& bnd_index = *boundary_set; //grid.getBoundary();
 	int sz = bnd_sol.size();
 
 	//printf("nb bnd pts: %d\n", sz);
@@ -822,7 +830,7 @@ void Heat::initialConditions(std::vector<double> *solution) {
 	}
 	//exit(0);
 
-	vector<int>& bnd_index = *boundary_set; //grid.getBoundary();
+	vector<size_t>& bnd_index = *boundary_set; //grid.getBoundary();
 	int sz = bnd_index.size();
 	bnd_sol.resize(sz);
 

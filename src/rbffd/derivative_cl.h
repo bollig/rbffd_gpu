@@ -6,6 +6,7 @@
 #include <vector>
 #include "derivative.h"
 #include "utils/opencl/cl_base_class.h"
+#include "timer_eb.h"
 #include <CL/cl.hpp>
 
 class DerivativeCL : public Derivative, public CLBaseClass
@@ -25,6 +26,8 @@ class DerivativeCL : public Derivative, public CLBaseClass
 public:
     DerivativeCL(std::vector<NodeType>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts, int dim_num, int rank=0);
     ~DerivativeCL(); 
+
+    void setupTimers();
 
     // u : take derivative of this scalar variable (already allocated)
     // deriv : resulting derivative (already allocated)

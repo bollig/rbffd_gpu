@@ -3,7 +3,7 @@
 
 //#include <vector>
 //#include <ArrayT.h>
-#include "grids/domain_decomposition/gpu.h"
+#include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
 #include "utils/comm/communicator.h"
 #include "rbffd/derivative.h"
@@ -12,7 +12,7 @@
 class NCARPoisson1_CUSP : public NCARPoisson1
 {
 public:
-        NCARPoisson1_CUSP(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NCARPoisson1_CUSP(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
         ~NCARPoisson1_CUSP();
 
         // Solve the Poisson problem

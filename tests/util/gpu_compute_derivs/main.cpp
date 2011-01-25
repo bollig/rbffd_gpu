@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "pdes/parabolic/new_heat.h"
+#include "pdes/parabolic/heat.h"
 
 #include "grids/regulargrid.h"
 #include "grids/stencil_generator.h"
@@ -62,21 +62,6 @@ int main(int argc, char** argv) {
     grid->generate();
     grid->generateStencils(new StencilGenerator(stencil_size));   // nearest nb_points
     grid->writeToFile(); 
-#if 0
-    // Compute stencils given a set of generators
-    // TODO: get these extents from the cvt class (add constructor to GPU)
-    Domain* subdomain = new Domain(-1.,1.,-1.,1.,-1.,1.,0.,comm_unit->getRank(),comm_unit->getSize());    
-
-    // Clean this up. Have GPU class fill data on constructor. Pass Grid class to constructor.
-    // Remove need for extents in constructor.
-    // Forms sets (Q,O,R) and l2g/g2l maps
-    subdomain->fillLocalData(grid->getNodeList(), grid->getStencils(), 
-                             grid->getBoundaryIndices(), grid->getStencilRadii());    
-    subdomain->fillVarData(grid->getNodeList()); // Sets function values in U
-
-    // Verbosely print the memberships of all nodes within the subdomain
-    //subdomain->printCenterMemberships(subdomain->G, "G");
-#endif
 
     // 0: 2D problem; 1: 3D problem
     ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(1.0, 1.0);

@@ -36,11 +36,11 @@ typedef float FLOAT;
 
 
 
-NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
 {}
 
-NCARPoisson1_CL::NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+NCARPoisson1_CL::NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_settings, _solution, subdomain_, der_, rank, dim_num_)
 {}
 
@@ -58,7 +58,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
     if (subdomain == NULL) {
         cerr
                 << "In " << __FILE__
-                << " No GPU class passed to Constructor. Cannot perform intermediate communication/updates in solver."
+                << " No Domain class passed to Constructor. Cannot perform intermediate communication/updates in solver."
                 << endl;
         exit(EXIT_FAILURE);
     } else {
@@ -73,7 +73,7 @@ void NCARPoisson1_CL::solve(Communicator* comm_unit) {
         // TODO: solve this in parallel
         //     comm_unit->broadcastObjectUpdates(subdomain);
 
-        // Do NOT use GPU as buffer for computation
+        // Do NOT use Domain as buffer for computation
         // Only go up to the number of stencils since we solve for a subset of the values in U_G
         // Since U_G in R is at end of U_G vector we can ignore those.
         //for (int i = 0; i < s.size(); i++) {

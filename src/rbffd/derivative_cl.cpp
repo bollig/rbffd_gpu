@@ -1,17 +1,29 @@
 #include <stdlib.h>
 #include <math.h>
 #include "derivative_cl.h"
+#include "timer_eb.h"
 
+using namespace EB;
 using namespace std;
+
+void DerivativeCL::setupTimers() {
+    tm["loadAttach"] = new Timer("[Derivative] Load and Attach Kernel"); 
+	tm["construct"] = new Timer("DerivativeCL::DerivativeCL (constructor)"); 
+	tm["computeDerivs"] = new Timer("DerivativeCL::computeDerivatives (compute derivatives using OpenCL"); 
+	tm["sendWeights"] = new Timer("DerivativeCL::   (send stencil weights to GPU)"); 
+}
+
 
 //----------------------------------------------------------------------
     DerivativeCL::DerivativeCL(vector<NodeType>& rbf_centers_, vector<StencilType>& stencil_, int nb_bnd_, int dimensions, int rank)
 : Derivative(rbf_centers_, stencil_, nb_bnd_, dimensions), CLBaseClass(rank)	
 {
+	this->setupTimers(); 
+    tm["construct"]->start(); 
+
     cout << "Inside DerivativeCL constructor" << endl;
 
-    Timer timr("[Derivative] Load and Attach Kernel"); 
-    timr.start(); 
+    tm["loadAttach"]->start(); 
 
 #include "cl_kernels/derivative_kernels.cl"
     this->loadProgram(kernel_source);
@@ -26,7 +38,7 @@ using namespace std;
     catch (cl::Error er) {
         printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
     }
-    timr.end(); 
+    tm["loadAttach"]->end(); 
 
     cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
 
@@ -77,8 +89,7 @@ using namespace std;
     queue.finish(); 
     //delete(cpu_stencils);
     std::cout << "DONE ALLOCATING MEMORY" << std::endl;
-
-
+    tm["construct"]->end(); 
 }
 
 DerivativeCL::~DerivativeCL() {
@@ -92,7 +103,7 @@ DerivativeCL::~DerivativeCL() {
 //
 void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, int npts)
 {
-
+    tm["computeDerivs"]->start(); 
     // 1) Get the correct weights for the DerType
     // 2) send weights to GPU
     // 3) send new u to GPU
@@ -101,6 +112,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     static int COMPUTED_WEIGHTS_ON_GPU=0; 
 
     if (!COMPUTED_WEIGHTS_ON_GPU) {
+	    tm["sendWeights"]->start();
         int weights_mem_size = total_num_stencil_elements * sizeof(float);  
         std::cout << "Writing x_weights to GPU memory\n"; 
 
@@ -130,6 +142,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
         queue.finish(); 
 
         COMPUTED_WEIGHTS_ON_GPU = 1; 
+	tm["sendWeights"]->end();
     }
 
 
@@ -226,6 +239,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     } else {
         std::cout << "CL program finished!" << std::endl;
     }
+    tm["computeDerivs"]->end();
 }
 //----------------------------------------------------------------------
 

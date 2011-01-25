@@ -4,7 +4,7 @@
 #include "timingGE.h"
 #include <vector>
 #include <ArrayT.h>
-#include "grids/domain_decomposition/gpu.h"
+#include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
 #include "utils/comm/communicator.h"
 #include "rbffd/derivative.h"
@@ -16,9 +16,9 @@ protected:
         std::vector<double> sol[2];
 
 	std::vector<Vec3>* rbf_centers;
-	std::vector<int>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
+	std::vector<size_t>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
 	
-        GPU* subdomain;
+        Domain* subdomain;
         Derivative* der;
 
 	std::vector<double> lapl_deriv;
@@ -59,8 +59,8 @@ protected:
         enum boundary_condition_type {DIRICHLET=0, NEUMANN=1, ROBIN=2};
 
 public:
-        NCARPoisson1(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
-        NCARPoisson1(ProjectSettings* _settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NCARPoisson1(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NCARPoisson1(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
         ~NCARPoisson1();
 
         // Solve the Poisson problem

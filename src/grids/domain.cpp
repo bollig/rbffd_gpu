@@ -732,6 +732,23 @@ void Domain::printVector(const vector<int> center_set, const char* set_label) {
 	cout << "}" << endl;
 }
 
+
+void Domain::printVector(const vector<size_t> center_set, const char* set_label) {
+	cout << set_label << " = {" << endl;
+	size_t i = 0;
+	for (vector<size_t>::const_iterator setiter = center_set.begin(); setiter
+			!= center_set.end(); setiter++, i++) {
+		// True -> stencil[i][j] is in center set
+		if (loc_to_glob.size() > 0) {
+			cout << "\t[" << i << " (" << loc_to_glob[i] << ")] = " << *setiter
+				<< endl;
+		} else {
+			cout << "\t[" << i << " (" << i << ")] = " << *setiter << endl;
+		}
+	}
+	cout << "}" << endl;
+}
+
 void Domain::printCenters(const std::vector<Vec3> centers,
 		const char* center_label) {
 	cout << center_label << " = {" << endl;

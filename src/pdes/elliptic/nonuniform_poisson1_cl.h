@@ -3,7 +3,7 @@
 
 //#include <vector>
 //#include <ArrayT.h>
-#include "grids/domain_decomposition/gpu.h"
+#include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
 #include "utils/comm/communicator.h"
 #include "rbffd/derivative.h"
@@ -22,8 +22,8 @@ typedef std::vector<CenterType >                         CenterListType;
 class NonUniformPoisson1_CL : public NCARPoisson1
 {
 public:
-        NonUniformPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
-        NonUniformPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NonUniformPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NonUniformPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
         ~NonUniformPoisson1_CL();
 
         // Solve the Poisson problem

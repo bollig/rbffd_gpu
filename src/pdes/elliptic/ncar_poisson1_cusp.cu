@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include <stdlib.h>
-#include "grids/grid.h"
+#include "grids/grid_interface.h"
 #include "ncar_poisson1_cusp.h"
 #include "exact_solutions/exact_solution.h"
 
@@ -17,7 +17,7 @@ using namespace std;
 
 #define FLOAT float
 
-NCARPoisson1_CUSP::NCARPoisson1_CUSP(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_) :
+NCARPoisson1_CUSP::NCARPoisson1_CUSP(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
 {}
 
@@ -35,7 +35,7 @@ void NCARPoisson1_CUSP::solve(Communicator* comm_unit) {
     if (subdomain == NULL) {
         cerr
                 << "In " << __FILE__
-                << " No GPU class passed to Constructor. Cannot perform intermediate communication/updates in solver."
+                << " No Domain class passed to Constructor. Cannot perform intermediate communication/updates in solver."
                 << endl;
         exit(EXIT_FAILURE);
     } else {

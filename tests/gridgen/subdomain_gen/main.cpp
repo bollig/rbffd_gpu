@@ -68,10 +68,13 @@ int main(int argc, char** argv) {
 
 	double dt = 0.001;
 
-	Domain* domain_decomp = new Domain(grid, dt, comm_unit->getSize()); 
-	domain_decomp->printVerboseDependencyGraph(); 
+	Domain* original_domain = new Domain(grid, dt, comm_unit->getSize()); 
+	//domain_decomp->printVerboseDependencyGraph(); 
+
+	// pre allocate pointers to all of the subdivisions
 	std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
-        domain_decomp->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
+	// allocate and fill in details on subdivisions
+        original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
 
 	subdomain = subdomain_list[0]; 
 	for (int i = 1; i < comm_unit->getSize(); i++) {

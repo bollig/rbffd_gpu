@@ -4,14 +4,15 @@
 #include <vector>
 #include <ArrayT.h>
 #include "utils/comm/communicator.h"
-#include "grids/domain_decomposition/gpu.h"
+#include "grids/domain.h"
 #include "exact_solutions/exact_solution.h" 
-#include "grids/original_grid.h"
+#include "grids/grid_interface.h"
 
-
+#if 0
 // NOTE: This is for backwards compatibility.  
 typedef OriginalGrid Grid; 
 //class Grid;
+#endif
 class Derivative;
 
 
@@ -32,11 +33,11 @@ private:
 
 
 	//Grid& grid;
-	std::vector<Vec3>* rbf_centers;
-	std::vector<int>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
+	std::vector<NodeType>* rbf_centers;
+	std::vector<size_t>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
 	
 
-	GPU* subdomain;
+	Domain* subdomain;
 	Derivative* der;
 	std::vector<double> lapl_deriv;
 	std::vector<double> x_deriv;
@@ -66,9 +67,9 @@ private:
 	int id; 		// Comm rank or comm id
 
 public:
-	Heat(ExactSolution* _solution, std::vector<Vec3>* rb_centers_, int stencil_size, std::vector<int>* global_boundary_nodes_, Derivative* der_, int rank);
+	Heat(ExactSolution* _solution, std::vector<Vec3>* rb_centers_, int stencil_size, std::vector<size_t>* global_boundary_nodes_, Derivative* der_, int rank);
 	// Constructor #2:
-	Heat(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank);
+	Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank);
 	Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_);
 	~Heat();
 
@@ -77,8 +78,8 @@ public:
 		this->dt = dt;
 	}
 
-	// Advance the equation one time step using the GPU class to perform communication
-	// Depends on Constructor #2 to be used so that a GPU class exists within this class.
+	// Advance the equation one time step using the Domain class to perform communication
+	// Depends on Constructor #2 to be used so that a Domain class exists within this class.
 	// This is on the CPU. We need to reimplement this routine on the GPU 
 	void advanceOneStepWithComm(Communicator* comm_unit);
 

@@ -190,6 +190,7 @@ public: 	// Member Functions:
 	// Print contents of a set
 	void printVector(const std::vector<double> stencil_radii, const char* set_label) ; 
 	void printVector(const std::vector<int> center_set, const char* set_label) ; 
+	void printVector(const std::vector<size_t> center_set, const char* set_label) ; 
 	
 	void printStencil(const StencilType& stencil, const char* stencil_label) ;
 	

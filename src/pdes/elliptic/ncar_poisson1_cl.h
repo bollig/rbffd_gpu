@@ -3,7 +3,7 @@
 
 //#include <vector>
 //#include <ArrayT.h>
-#include "grids/domain_decomposition/gpu.h"
+#include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
 #include "utils/comm/communicator.h"
 #include "rbffd/derivative.h"
@@ -14,8 +14,8 @@
 class NCARPoisson1_CL : public NCARPoisson1
 {
 public:
-        NCARPoisson1_CL(ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
-        NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, GPU* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NCARPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
         ~NCARPoisson1_CL();
 
         // Solve the Poisson problem (Overrides NCARPoisson1::solve())

@@ -177,6 +177,10 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 			//printf("dt= %f, time= %f\n", dt, time);
 			double f = exactSolution->tderiv(v, time) - exactSolution->laplacian(v, time);
 			printf("force (local: %d) = %f\n", i, f);
+            // TODO: offload this to GPU. 
+            // s += alpha * lapl_deriv + f
+            // NOTE: f is updated each timestep
+            //       lapl_deriv is calculated on GPU (ideally by passing a GPU mem pointer into it) 
 #ifdef SECOND
 			s1[i] = s[i] + 0.5 * dt * (lapl_deriv[i] + f);
 #else

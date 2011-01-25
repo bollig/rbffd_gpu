@@ -10,6 +10,9 @@ using namespace std;
 {
     cout << "Inside DerivativeCL constructor" << endl;
 
+    Timer timr("[Derivative] Load and Attach Kernel"); 
+    timr.start(); 
+
 #include "cl_kernels/derivative_kernels.cl"
     this->loadProgram(kernel_source);
 
@@ -23,6 +26,7 @@ using namespace std;
     catch (cl::Error er) {
         printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
     }
+    timr.end(); 
 
     cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
 
@@ -73,6 +77,8 @@ using namespace std;
     queue.finish(); 
     //delete(cpu_stencils);
     std::cout << "DONE ALLOCATING MEMORY" << std::endl;
+
+
 }
 
 DerivativeCL::~DerivativeCL() {
@@ -222,3 +228,15 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     }
 }
 //----------------------------------------------------------------------
+
+
+// TODO: 
+//      1) Move writeBuffers to separate routine for stencils and weights.
+//      2) Send solution to GPU in separate routine, then have routine for UPDATES only (we dont want to copy entire solution each step). 
+//      3) Timers
+//      4) Offload more work (for example the timestep update in PDE is a vector-plus-scalar-vector operation.
+//      5) computeDeriv should operate on memory owned by the PDE. The GPU pointer to the solution should be passed in.
+//      6) The PDE class should manage the vec+scal*vec operation to update the solution on GPU. 
+//          (inherit original PDE class with CL specific one; both can use DerivativeCL, but if its a CL 
+//          class it should be able to pass in GPU mem pointer via advanced API).  
+

@@ -49,7 +49,9 @@ public:
 	void printReset();
 };
 
-}
+};
+
+//static std::vector<EB::Timer*> EB::Timer::timeList;
 
 
 #endif

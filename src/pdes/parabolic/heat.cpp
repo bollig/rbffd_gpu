@@ -1,9 +1,11 @@
 #include <math.h>
+#include "timer_eb.h"
 #include "rbffd/derivative.h"
 #include "heat.h"
 #include "exact_solutions/exact_solution.h"
 
 using namespace std;
+using namespace EB;
 
 Heat::Heat(ExactSolution* _solution, std::vector<NodeType>* rbf_centers_, int stencil_size, std::vector<size_t>* global_boundary_nodes_, Derivative* der_, int rank) 
 :	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),	id(rank), subdomain(NULL), exactSolution(_solution) 
@@ -31,6 +33,7 @@ Heat::Heat(ExactSolution* _solution, std::vector<NodeType>* rbf_centers_, int st
 	diff_x.resize(nb_stencils);
 	diff_y.resize(nb_stencils);
 
+	setupTimers(); 
 	// Cartesian-based Laplacian
 	//grid.laplace();
 }
@@ -61,6 +64,7 @@ Heat::Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int r
 	diff_x.resize(nb_stencils);
 	diff_y.resize(nb_stencils);
 
+	setupTimers(); 
 	// Cartesian-based Laplacian
 	//grid.laplace();
 }
@@ -94,6 +98,7 @@ Heat::Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_)
 	diff_x.resize(nb_rbf);
 	diff_y.resize(nb_rbf);
 
+	setupTimers();
 	// Cartesian-based Laplacian
 	//grid.laplace();
 }
@@ -102,11 +107,14 @@ Heat::~Heat() {
 }
 //----------------------------------------------------------------------
 
+void Heat::setupTimers() {
+	tm["advance"] = new Timer("Heat::advanceOneStepWithComm (one step of the second order heat iteration)"); 
+}
 
 // Advance the equation one time step using the Domain class to perform communication
 // Depends on Constructor #2 to be used so that a Domain class exists within this class.
 void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
-
+	tm["advance"]->start(); 
 	if (subdomain == NULL) {
 		cerr
 				<< "In HEAT.CPP: Wrong advanceOneStep* routine called! No Domain class passed to Constructor. Cannot perform intermediate communication/updates."
@@ -295,6 +303,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 			subdomain->U_G[i] = s[i];
 		}
 	}
+	tm["advance"]->end();
 	return;
 }
 

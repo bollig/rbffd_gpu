@@ -10,6 +10,7 @@
 #include "rbffd/rbfs/rbf_gaussian.h"
 #include "rbffd/rbfs/rbf_mq.h"
 #include "utils/conf/projectsettings.h"
+#include "timer_eb.h"
 #include "common_typedefs.h" 
 
 //typedef RBF_Gaussian IRBF;
@@ -50,11 +51,15 @@ protected:
     int debug_mode;		// optional
     int dim_num; 		// required
 
+    std::map<std::string, EB::Timer*> tm; 
+
 public:
     //Derivative(int nb_rbfs);
     Derivative(std::vector<Vec3>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts, int dim_num);
     Derivative(ProjectSettings* settings, std::vector<Vec3>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts);
     ~Derivative();
+ 
+    void setupTimers(); 
 
     AF& cholesky_cpu(AF& arr);
     AF& cholesky(AF& arr);

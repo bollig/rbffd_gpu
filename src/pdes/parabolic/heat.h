@@ -7,6 +7,7 @@
 #include "grids/domain.h"
 #include "exact_solutions/exact_solution.h" 
 #include "grids/grid_interface.h"
+#include "timer_eb.h"
 
 #if 0
 // NOTE: This is for backwards compatibility.  
@@ -19,6 +20,9 @@ class Derivative;
 class Heat
 {
 private:
+	// Lookup our timers with a short string string keyword description
+	std::map<std::string, EB::Timer*> tm; 
+
 	// time step
 	double dt; 
 
@@ -72,6 +76,8 @@ public:
 	Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank);
 	Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_);
 	~Heat();
+
+	void setupTimers();
 
 	// set the time step
 	void setDt(double dt) {

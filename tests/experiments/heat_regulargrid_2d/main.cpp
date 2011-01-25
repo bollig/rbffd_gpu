@@ -11,17 +11,20 @@
 
 #include "exact_solutions/exact_regulargrid.h"
 
+#include "timer_eb.h"
 #include "utils/comm/communicator.h"
 
 using namespace std;
-
+using namespace EB;
 //----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
-
+	Timer tm("Master Loop");
 	// grid should only be valid instance for MASTER
 	Grid* grid; 
 	Domain* subdomain; 
+
+	tm.start(); 
 
 	Communicator* comm_unit = new Communicator(argc, argv);
 
@@ -269,6 +272,8 @@ delete(comm_unit);
 
 cout.flush();
 
+tm.end();
+tm.printAll();
 exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------

@@ -115,7 +115,7 @@ public: 	// Member Functions:
 
 	// When we move to 3D this should be updated to reflect zmin, zmax
 	// We could also make this polar coords, striped subdomains etcs. 
-	bool isInsideSubdomain(Vec3 pt) 
+	bool isInsideSubdomain(Vec3& pt) 
 	{
 		// TODO : need to support xmin != xmax && zmin != zmax but ymin==ymax 
 		// 		  and other combinations
@@ -168,7 +168,7 @@ public: 	// Member Functions:
 
 	// Dump the final solution to a file along with the vector of nodes that
 	// the values correspond to.
-	virtual int writeFinal(std::vector<NodeType> nodes, char* filename);
+	virtual int writeFinal(std::vector<NodeType>& nodes, char* filename);
 
 //public: 	// Member Functions
 	// Fill sets Q, D, O, B, QmB and R to distinguish center memberships
@@ -180,36 +180,36 @@ public: 	// Member Functions:
 	std::set<int>& stencilSet(std::set<int>& s, std::vector<StencilType>& stencil);
 	
 	// Print all nodes in stencils and show display_char if they are in center_set; '.' otherwise. 
-	void printStencilNodesIn(const std::vector<StencilType> stencils, const std::set<int> center_set, const char* display_char); 
+	void printStencilNodesIn(const std::vector<StencilType>& stencils, const std::set<int>& center_set, const char* display_char); 
     	// Dump a bit of ascii art to show the dependency graph for a Domain
     	void printVerboseDependencyGraph(); 
 	
 	// Print contents of a set
-	void printSet(const std::set<int> center_set, const char* set_label) ; 
+	void printSet(const std::set<int>& center_set, const char* set_label) ; 
 	
 	// Print contents of a set
-	void printVector(const std::vector<double> stencil_radii, const char* set_label) ; 
-	void printVector(const std::vector<int> center_set, const char* set_label) ; 
-	void printVector(const std::vector<size_t> center_set, const char* set_label) ; 
+	void printVector(const std::vector<double>& stencil_radii, const char* set_label) ; 
+	void printVector(const std::vector<int>& center_set, const char* set_label) ; 
+	void printVector(const std::vector<size_t>& center_set, const char* set_label) ; 
 	
 	void printStencil(const StencilType& stencil, const char* stencil_label) ;
 	
 	// Print the stencil plus use the indices in the stencil to gather and print function values
-	void printStencilPlus(const StencilType& stencil, const std::vector<double> function_values, const char* stencil_label) ;
+	void printStencilPlus(const StencilType& stencil, const std::vector<double>& function_values, const char* stencil_label) ;
 	
-	void printCenters(const std::vector<Vec3> centers, const char* center_label) ;
+	void printCenters(const std::vector<Vec3>& centers, const char* center_label) ;
 	
 	// Print a table of memberships for a set of centers
-	void printCenterMemberships(const std::set<int> center_set, const char* display_name) ;
+	void printCenterMemberships(const std::set<int>& center_set, const char* display_name) ;
 	
 	// Tell if a stencil depends on nodes in center_set (i.e. Q_stencil[i] depends on R?)
-	bool dependsOnSet( const int global_stencil_id, const std::set<int> center_set);
+	bool dependsOnSet( const int global_stencil_id, const std::set<int>& center_set);
 	
 	// Determine if a center is member of a set (center is global index)
-	bool isInSet(const int center, const std::set<int> center_set) const;
+	bool isInSet(const int center, const std::set<int>& center_set) const;
 
         // Determine if a center is member of a vector (center is global index)
-	bool isInVector(const size_t center, const std::vector<size_t> center_set) const;
+	bool isInVector(const size_t center, const std::vector<size_t>& center_set) const;
 };
 
 #endif

@@ -332,7 +332,7 @@ void Domain::getFinal(std::vector<double> *final) {
 	}
 }
 
-int Domain::writeFinal(std::vector<Vec3> nodes, char* filename) {
+int Domain::writeFinal(std::vector<Vec3>& nodes, char* filename) {
 	//ofstream fout;
 	//fout.open(filename);
 	FILE* fdsol;
@@ -572,7 +572,7 @@ void Domain::fillVarData(vector<Vec3>& rbf_centers) {
 //----------------------------------------------------------------------
 
 
-void Domain::printStencilNodesIn(const vector<StencilType> stencils, const set<int> center_set, const char* display_char) {
+void Domain::printStencilNodesIn(const vector<StencilType>& stencils, const set<int>& center_set, const char* display_char) {
 	for (int i = 0; i < stencils.size(); i++) {
 		cout << "Stencil[" << i << "] = ";
 		for (int j = 0; j < stencils[i].size(); j++) {
@@ -588,7 +588,7 @@ void Domain::printStencilNodesIn(const vector<StencilType> stencils, const set<i
 }
 
 // HERE: center_set is global index
-void Domain::printCenterMemberships(const set<int> center_set,
+void Domain::printCenterMemberships(const set<int>& center_set,
 		const char* display_name) {
 	// Center[ ID ] =     [Q|.]  [D|.]  [O|.]  [R][+]
 	// NOTE: [a|b] --> if (true) then a else b. 
@@ -651,7 +651,7 @@ void Domain::printCenterMemberships(const set<int> center_set,
 	}
 }
 
-bool Domain::isInSet(const int center, const set<int> center_set) const {
+bool Domain::isInSet(const int center, const set<int>& center_set) const {
 	//bool inSet = false;
 	for (set<int>::const_iterator setiter = center_set.begin(); setiter
 			!= center_set.end(); setiter++) {
@@ -663,7 +663,7 @@ bool Domain::isInSet(const int center, const set<int> center_set) const {
 	return false;
 }
 
-bool Domain::isInVector(const size_t center, const vector<size_t> center_set) const {
+bool Domain::isInVector(const size_t center, const vector<size_t>& center_set) const {
 	//bool inSet = false;
 	for (vector<size_t>::const_iterator setiter = center_set.begin(); setiter
 			!= center_set.end(); setiter++) {
@@ -675,7 +675,7 @@ bool Domain::isInVector(const size_t center, const vector<size_t> center_set) co
 	return false;
 }
 
-bool Domain::dependsOnSet(const int local_stencil_id, const set<int> center_set) {
+bool Domain::dependsOnSet(const int local_stencil_id, const set<int>& center_set) {
 	// Q_stencils are in local indices
 	if (local_stencil_id >= Q_stencils.size()) {
 		return true;
@@ -689,7 +689,7 @@ bool Domain::dependsOnSet(const int local_stencil_id, const set<int> center_set)
 	return false;
 }
 
-void Domain::printSet(const set<int> center_set, const char* set_label) {
+void Domain::printSet(const set<int>& center_set, const char* set_label) {
 	cout << set_label << " = {" << endl;
 	for (set<int>::const_iterator setiter = center_set.begin(); setiter
 			!= center_set.end(); setiter++) {
@@ -700,7 +700,7 @@ void Domain::printSet(const set<int> center_set, const char* set_label) {
 	cout << "}" << endl;
 }
 
-void Domain::printVector(const vector<double> stencil_radii, const char* set_label) {
+void Domain::printVector(const vector<double>& stencil_radii, const char* set_label) {
 	cout << set_label << " = {" << endl;
 	int i = 0;
 	for (vector<double>::const_iterator setiter = stencil_radii.begin(); setiter
@@ -716,7 +716,7 @@ void Domain::printVector(const vector<double> stencil_radii, const char* set_lab
 	cout << "}" << endl;
 }
 
-void Domain::printVector(const vector<int> center_set, const char* set_label) {
+void Domain::printVector(const vector<int>& center_set, const char* set_label) {
 	cout << set_label << " = {" << endl;
 	int i = 0;
 	for (vector<int>::const_iterator setiter = center_set.begin(); setiter
@@ -733,7 +733,7 @@ void Domain::printVector(const vector<int> center_set, const char* set_label) {
 }
 
 
-void Domain::printVector(const vector<size_t> center_set, const char* set_label) {
+void Domain::printVector(const vector<size_t>& center_set, const char* set_label) {
 	cout << set_label << " = {" << endl;
 	size_t i = 0;
 	for (vector<size_t>::const_iterator setiter = center_set.begin(); setiter
@@ -749,7 +749,7 @@ void Domain::printVector(const vector<size_t> center_set, const char* set_label)
 	cout << "}" << endl;
 }
 
-void Domain::printCenters(const std::vector<Vec3> centers,
+void Domain::printCenters(const std::vector<Vec3>& centers,
 		const char* center_label) {
 	cout << center_label << " = {" << endl;
 	int i = 0;
@@ -793,7 +793,7 @@ void Domain::printStencil(const StencilType& stencil,
 }
 
 void Domain::printStencilPlus(const StencilType& stencil, const std::vector<
-		double> function_values, const char* stencil_label) {
+		double>& function_values, const char* stencil_label) {
 	cout << stencil_label << " = " << "\t";
 	int i = 0;
 	if (loc_to_glob.size() > 0) {

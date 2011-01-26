@@ -50,7 +50,7 @@ double ExactRegularGrid::laplacian(double x, double y, double z, double t)
 	double nn = freq * r;
 	double freq2 = freq * freq;
 	
-	#if 1
+	#if 0
 	// This is based on mathematica simplified laplacian of exact solution in 2D
 	// F = lapl(f)
 	double x2 = x*x; 
@@ -75,11 +75,22 @@ double ExactRegularGrid::laplacian(double x, double y, double z, double t)
         // Equation
         // dT/dt = lapl(T) - 2/r * sin(pi/2 r) * e^-t
 
-        printf("mylapl = %f (simpLapl = %f)\n", mylapl, simpLapl);
+       // printf("mylapl = %f (simpLapl = %f)\n", mylapl, simpLapl);
+        // NOTE: after using simpLapl and mylapl I found a nan was introduced when calculaing the sin(..)/r when r=0 (it should short circuit because sin(..)==0 so its 0/0 == 0. To bypass his nan we doing the convoluted stuff below for "together"
+        double part1 =  - exp(-t * decay) * freq ; 
+        double part2 = (freq * cos(r * freq));
+        double part3 = (- (2*sin(r * freq))); 
+        double part3_and_4 = 0.;
+        if (part3 > 1e-8) { 
+            part3_and_4 = part3 / r; 
+        }
+        double together = part1*(part2+part3_and_4); 
+        printf("%f * (%f + %e) = %e\n", part1, part2, part3_and_4, together);  
 	//printf("t= %f, alpha= %f\n", t, alpha);
 	//printf("exp= %f, nn= %f, f1= %f, f2= %f\n", exp(-alpha*t), nn, f1, f2);
 
-	return simpLapl;
+//	return simpLapl;
+        return together;
 }
 //----------------------------------------------------------------------
 double ExactRegularGrid::xderiv(double x, double y, double z, double t)

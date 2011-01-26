@@ -74,10 +74,10 @@ void DerivativeCL::setupTimers() {
     //	This one is updated each iteration with the new solution for the previous timestep
     gpu_solution = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_size, NULL, &err);
 
-    gpu_x_deriv_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
-    gpu_y_deriv_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
-    gpu_z_deriv_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
-    gpu_laplacian_weights = cl::Buffer(context, CL_MEM_READ_WRITE, weights_mem_size, NULL, &err); 
+    gpu_x_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
+    gpu_y_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
+    gpu_z_deriv_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
+    gpu_laplacian_weights = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_size, NULL, &err); 
 
     // One output array: 
     // 	This is our derivative used to update the solution for the current timestep

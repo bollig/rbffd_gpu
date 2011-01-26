@@ -542,6 +542,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
    // x0v.print("x0v = ");
 
     rbfs[irbf].resize(n);
+//    std::cout << "[Derivative::computeWeights()] EPSILON = " << epsilon << std::endl; 
     for (int j=0; j < n; j++) {
 
         rbfs[irbf][j] = new IRBF(epsilon, dim_num);

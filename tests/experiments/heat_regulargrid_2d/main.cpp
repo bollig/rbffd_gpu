@@ -80,14 +80,14 @@ int main(int argc, char** argv) {
 			cout << "ERROR! Dim > 3 Not Supported!" << endl;
 		}
 
-        if (grid->loadFromFile()) {
+        // TODO: if (grid->loadFromFile()) 
+        {
     		grid->setSortBoundaryNodes(true); 
 	    	grid->generate();
+		    std::cout << "Generating stencils\n";
+		    grid->generateStencils(new StencilGenerator(stencil_size));   // nearest nb_points
 		    grid->writeToFile(); 
         }
-		std::cout << "Generating stencils\n";
-		grid->generateStencils(new StencilGenerator(stencil_size));   // nearest nb_points
-
 
 		int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
 		int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
@@ -147,8 +147,8 @@ int main(int argc, char** argv) {
 	Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim, comm_unit->getRank());
 #endif 
 
-	//    double epsilon = settings->GetSettingAs<double>("EPSILON");
-	//    der->setEpsilon(epsilon);
+	double epsilon = settings->GetSettingAs<double>("EPSILON");
+	der->setEpsilon(epsilon);
 
 #if 0
 	printf("start computing weights\n");
@@ -190,10 +190,10 @@ int main(int argc, char** argv) {
 
 	for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
 		//        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-		if ( (xderiv_gpu[i] - xderiv_cpu[i] > 1e-5) 
-				|| (yderiv_gpu[i] - yderiv_cpu[i] > 1e-5) 
-				|| (zderiv_gpu[i] - zderiv_cpu[i] > 1e-5) 
-				|| (lderiv_gpu[i] - lderiv_cpu[i] > 1e-5) )
+		if ( (fabs(xderiv_gpu[i] - xderiv_cpu[i]) > 9e-5) 
+				|| (fabs(yderiv_gpu[i] - yderiv_cpu[i]) > 9e-5) 
+				|| (fabs(zderiv_gpu[i] - zderiv_cpu[i]) > 9e-5) 
+				|| (fabs(lderiv_gpu[i] - lderiv_cpu[i]) > 9e-5) )
 		{
 			std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
 			std::cout << "Test failed on " << i << std::endl;

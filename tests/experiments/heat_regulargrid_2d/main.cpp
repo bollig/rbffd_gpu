@@ -159,7 +159,14 @@ int main(int argc, char** argv) {
 #else 
 	printf("start computing weights\n");
 	for (int irbf=0; irbf < subdomain->Q_stencils.size(); irbf++) {
-		der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf);
+#if 1
+        der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf);
+#else 
+        der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf, "x"); 
+        der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf, "y"); 
+        der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf, "z"); 
+        der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf, "lapl"); 
+#endif 
 	}
 	cout << "end computing weights" << endl;
 #endif 
@@ -190,10 +197,40 @@ int main(int argc, char** argv) {
 
 	for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
 		//        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+
+        if (isnan(xderiv_gpu[i])
+                || isnan(yderiv_gpu[i]) 
+                || isnan(zderiv_gpu[i]) 
+                || isnan(lderiv_gpu[i]) 
+           )
+        {
+            std::cout << "One of the derivs calculated by the GPU is NaN (detected by isnan)!\n"; 
+            exit(EXIT_FAILURE); 
+        }
+
+        if ((xderiv_cpu[i] != xderiv_cpu[i]) 
+                || (yderiv_cpu[i] != yderiv_cpu[i]) 
+                || (zderiv_cpu[i] != zderiv_cpu[i]) 
+                || (lderiv_cpu[i] != lderiv_cpu[i]) )
+        {
+            std::cout << "One of the derivs calculated by the CPU is NaN!\n"; 
+            exit(EXIT_FAILURE); 
+        }
+
+        if ((xderiv_gpu[i] != xderiv_gpu[i]) 
+                || (yderiv_gpu[i] != yderiv_gpu[i]) 
+                || (zderiv_gpu[i] != zderiv_gpu[i]) 
+                || (lderiv_gpu[i] != lderiv_gpu[i]) )
+        {
+            std::cout << "One of the derivs calculated by the GPU is NaN!\n"; 
+            exit(EXIT_FAILURE); 
+        }
+
+
 		if ( (fabs(xderiv_gpu[i] - xderiv_cpu[i]) > 9e-5) 
 				|| (fabs(yderiv_gpu[i] - yderiv_cpu[i]) > 9e-5) 
 				|| (fabs(zderiv_gpu[i] - zderiv_cpu[i]) > 9e-5) 
-				|| (fabs(lderiv_gpu[i] - lderiv_cpu[i]) > 9e-5) )
+				|| (fabs(lderiv_gpu[i] - lderiv_cpu[i]) > 9e-5))
 		{
 			std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
 			std::cout << "Test failed on " << i << std::endl;
@@ -204,7 +241,6 @@ int main(int argc, char** argv) {
 			exit(EXIT_FAILURE); 
 		}
 	}
-
 	std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
 
 

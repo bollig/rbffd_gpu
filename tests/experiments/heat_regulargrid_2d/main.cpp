@@ -19,7 +19,9 @@ using namespace EB;
 //----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
-	Timer tm("Master Loop");
+	Timer tm("Total runtime for this processor");
+    Timer tm2("Load project settings"); 
+    Timer tm3("Setup domain decomposition"); 
 	// grid should only be valid instance for MASTER
 	Grid* grid; 
 	Domain* subdomain; 
@@ -30,6 +32,8 @@ int main(int argc, char** argv) {
 
 	cout << " Got Rank: " << comm_unit->getRank() << endl;
 	cout << " Got Size: " << comm_unit->getSize() << endl;
+
+    tm2.start(); 
 
 	ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
 
@@ -63,6 +67,8 @@ int main(int argc, char** argv) {
 
 		double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "0.001"); 
 
+        tm2.stop(); 
+
 		if (dim == 1) {
 			grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
 		} else if (dim == 2) {
@@ -94,16 +100,18 @@ int main(int argc, char** argv) {
 		}
 
 	} else {
+        tm2.stop(); 
 		cout << "MPI RANK " << comm_unit->getRank() << ": waiting to receive subdomain"
 			<< endl;
+        tm3.start(); 
 		subdomain = new Domain(); // EMPTY object that will be filled by MPI
 
 		int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
-
 	}
 
 	comm_unit->barrier();
-
+    tm3.stop(); 
+    
 	subdomain->printVerboseDependencyGraph();
 
 	subdomain->printCenters(subdomain->G_centers, "All Centers Needed by this CPU");

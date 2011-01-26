@@ -7,10 +7,10 @@ using namespace EB;
 using namespace std;
 
 void DerivativeCL::setupTimers() {
-    tm["loadAttach"] = new Timer("[Derivative] Load and Attach Kernel"); 
-	tm["construct"] = new Timer("DerivativeCL::DerivativeCL (constructor)"); 
-	tm["computeDerivs"] = new Timer("DerivativeCL::computeDerivatives (compute derivatives using OpenCL"); 
-	tm["sendWeights"] = new Timer("DerivativeCL::   (send stencil weights to GPU)"); 
+    tm["loadAttach"] = new Timer("[DerivativeCL] Load and Attach Kernel"); 
+	tm["construct"] = new Timer("[DerivativeCL] DerivativeCL (constructor)"); 
+	tm["computeDerivs"] = new Timer("[DerivativeCL] computeDerivatives (compute derivatives using OpenCL"); 
+	tm["sendWeights"] = new Timer("[DerivativeCL]   (send stencil weights to GPU)"); 
 }
 
 

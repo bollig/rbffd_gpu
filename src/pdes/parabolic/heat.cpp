@@ -109,6 +109,7 @@ Heat::~Heat() {
 
 void Heat::setupTimers() {
 	tm["advance"] = new Timer("Heat::advanceOneStepWithComm (one step of the second order heat iteration)"); 
+    tm["applyDerivsONLY"] = new Timer("[Heat] Apply derivatives to update solution (second order timestep; excludes cost of computing derivatives)");
 }
 
 // Advance the equation one time step using the Domain class to perform communication
@@ -159,6 +160,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		// This is on the CPU; we need to call a GPU derivative 
 		der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
 
+        tm["applyDerivsONLY"]->start();  
 		// Use 5 point Cartesian formula for the Laplacian
 		//lapl_deriv = grid.computeCartLaplacian(s);
 #if 1
@@ -215,6 +217,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 			s[bnd_index[i]] = bnd_sol[i];
 #endif
 		}
+        tm["applyDerivsONLY"]->stop(); 
 
 		// Now we need to make sure all CPUs have R2 (intermediate part of timestep)
 		// Do NOT use Domain as buffer for computation
@@ -230,6 +233,8 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 #ifdef SECOND
 		// compute laplace u^*
 		der->computeDeriv(Derivative::LAPL, s1, lapl_deriv);
+
+        tm["applyDerivsONLY"]->start(); 
 		// compute u^{n+1} = u^n + dt*lapl(u^*)
 		for (int i = 0; i < lapl_deriv.size(); i++) {
 			Vec3& v = (*rbf_centers)[i];
@@ -244,6 +249,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		for (int i = 0; i < sz; i++) {
 			s[bnd_index[i]] = bnd_sol[i];
 		}
+        tm["applyDerivsONLY"]->stop();
 #endif
 
 #if 0

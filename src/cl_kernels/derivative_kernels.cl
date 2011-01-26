@@ -19,7 +19,7 @@ computeDerivKernel(       \n
     
    if(i < nb_stencils) {    \n
 
-        float der = 0.0f;       \n
+        __local float der = 0.0f;       \n
         for (int j = 0; j < stencil_size; j++) {        \n
             size_t indx = i*stencil_size + j;
 //            der += 1. * weights[indx];    \n

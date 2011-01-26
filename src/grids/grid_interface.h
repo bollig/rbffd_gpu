@@ -76,8 +76,8 @@ class Grid
 		virtual void writeToFile(std::string filename); 
 
 		// Load data from disk using the class generated filename and specified iter
-			void loadFromFile(int iter); 
-		virtual void loadFromFile(std::string filename); 
+			int loadFromFile(int iter=0); 
+		virtual int loadFromFile(std::string filename); 
 
 		// Sort the nodes so boundary nodes are first in the lists
 		virtual void sortNodes(); 

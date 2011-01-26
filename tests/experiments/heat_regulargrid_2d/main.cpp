@@ -22,6 +22,7 @@ int main(int argc, char** argv) {
 	Timer tm("Total runtime for this processor");
     Timer tm2("Load project settings"); 
     Timer tm3("Setup domain decomposition"); 
+    Timer tm4("Advance One Timestep"); 
 	// grid should only be valid instance for MASTER
 	Grid* grid; 
 	Domain* subdomain; 
@@ -79,10 +80,14 @@ int main(int argc, char** argv) {
 			cout << "ERROR! Dim > 3 Not Supported!" << endl;
 		}
 
-		grid->setSortBoundaryNodes(true); 
-		grid->generate();
+        if (grid->loadFromFile()) {
+    		grid->setSortBoundaryNodes(true); 
+	    	grid->generate();
+		    grid->writeToFile(); 
+        }
+		std::cout << "Generating stencils\n";
 		grid->generateStencils(new StencilGenerator(stencil_size));   // nearest nb_points
-		grid->writeToFile(); 
+
 
 		int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
 		int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
@@ -91,6 +96,8 @@ int main(int argc, char** argv) {
 		// pre allocate pointers to all of the subdivisions
 		std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
 		// allocate and fill in details on subdivisions
+
+		std::cout << "Generating subdomains\n";
 		original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
 
 		subdomain = subdomain_list[0]; 
@@ -245,7 +252,9 @@ int main(int argc, char** argv) {
 			<< ") *************" << endl;
 		subdomain->printVector(subdomain->U_G, "INPUT_TO_HEAT_ADVANCE");
 
+        tm4.start(); 
 		heat.advanceOneStepWithComm(comm_unit);
+        tm4.stop(); 
 		subdomain->printVector(subdomain->U_G, "AFTER HEAT");
 
 		double nrm = heat.maxNorm();

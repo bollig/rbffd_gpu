@@ -44,13 +44,14 @@ void Grid::writeToFile(std::string filename) {
 
 
 
-void Grid::loadFromFile(int iter) {
-	this->loadFromFile(this->getFilename(iter)); 
+int Grid::loadFromFile(int iter) {
+	return this->loadFromFile(this->getFilename(iter)); 
 }
 
 
 
-void Grid::loadFromFile(std::string filename) {
+int Grid::loadFromFile(std::string filename) {
+    std::cout << "[Grid] reading file: " << filename << std::endl;
 	std::ifstream fin(filename.c_str());
        		
 	node_list.clear(); 
@@ -66,14 +67,16 @@ void Grid::loadFromFile(std::string filename) {
 			}
 		}
 	} else {
-		perror ("Error opening file to write"); 
-		exit(EXIT_FAILURE);
+		perror ("Error opening file to read"); 
+        return -1;
+//		exit(EXIT_FAILURE);
 	}
 
 	fin.close(); 
 	nb_nodes = node_list.size(); 
 
 	std::cout << "[Grid] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
+    return 0;
 }
 
 

@@ -606,9 +606,9 @@ void Domain::printCenterMemberships(const set<int>& center_set,
 	cout << "\t\tQ  --> in set Q?" << endl;
 	cout << "\t\tD  --> in set D?" << endl;
 	cout << "\t\tO  --> in set O?" << endl;
-	cout << "\t\tR  --> depends on set R?" << endl;
-	cout << "\t\t+  --> is the center in R?" << endl;
-	cout << "\t\tB*  --> is the center on the global Boundary?" << endl;
+	cout << "\t\tR  --> depends on set R (i.e., nodes in other subdomains)?" << endl;
+	cout << "\t\t+  --> is the node in R (i.e., inside another subdomain)?" << endl;
+	cout << "\t\tB*  --> is the node on the global Boundary?" << endl;
 	int i = 0;
 	for (set<int>::const_iterator setiter = center_set.begin(); setiter
 			!= center_set.end(); setiter++, i++) {

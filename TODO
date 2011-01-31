@@ -1,3 +1,9 @@
+- Push SOURCE only to a GitHub repo. I should have a separate repo for the doc subdir so the source is < 100MB
+
+
+
+
+
 (1/12/2011)
 	- The RBFFD Derivative class really should be the one to genreate stencils given a grid of nodes. WHy does our grid class have to compute stencils?
 		=> If RBFFD wants N nearest neighbors it can generate stencils like that. 

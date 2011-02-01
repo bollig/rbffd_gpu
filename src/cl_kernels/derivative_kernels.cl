@@ -7,7 +7,11 @@ std::string kernel_source = STRINGIFY_WITH_SUBS(
 
 // Use a space between the # and prag to prevent the C
 // preprocessor from interpreting it 
-PRAGMA OPENCL EXTENSION cl_khr_fp64: enable
+
+// If we're on NVidia: 
+//PRAGMA OPENCL EXTENSION cl_khr_fp64: enable \n
+// If we're on ATI: 
+PRAGMA OPENCL EXTENSION cl_amd_fp64: enable \n
 
 // Assuming that our stencils are uniform in size for now
 __kernel void           \n

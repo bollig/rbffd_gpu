@@ -1115,7 +1115,7 @@ void Derivative::computeDerivativesCPU(DerType which, double* u, double* deriv, 
     printf("Weights size: %d\n", (int)weights.size());
     printf("Stencils size: %d\n", (int)stencil.size());
 #endif
-#if 0
+#if 1
     double der;
     for (int i=0; i < stencil.size(); i++) {
         double* w = weights[i];

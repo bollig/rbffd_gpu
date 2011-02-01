@@ -2,6 +2,7 @@
 #include <math.h>
 #include "derivative_cl.h"
 #include "timer_eb.h"
+#include "common_typedefs.h"     // Declares type FLOAT
 
 using namespace EB;
 using namespace std;
@@ -25,14 +26,20 @@ void DerivativeCL::setupTimers() {
 
     tm["loadAttach"]->start(); 
 
-#include "cl_kernels/derivative_kernels.cl"
+    #include "cl_kernels/derivative_kernels.cl"
+//    std::cout << "USING PROGRAM SOURCE: \n====\n" << kernel_source << "\n=====\n"; 
     this->loadProgram(kernel_source);
 
     //    std::cout << "This is my kernel source: ...\n" << kernel_source << "\n...END\n"; 
 
     try{
-        kernel = cl::Kernel(program, "computeDerivKernel", &err);
-
+        if (sizeof(FLOAT) == sizeof(float)) {
+            std::cout << "Loading single precision kernel\n"; 
+            kernel = cl::Kernel(program, "computeDerivKernelFLOAT", &err);
+        } else {
+            std::cout << "Loading double precision kernel\n"; 
+            kernel = cl::Kernel(program, "computeDerivKernelDOUBLE", &err);
+        }
         std::cout << "Done attaching kernels!" << std::endl;
     }
     catch (cl::Error er) {
@@ -61,9 +68,9 @@ void DerivativeCL::setupTimers() {
     }
 
     int stencil_mem_size = total_num_stencil_elements * sizeof(int); 
-    int solution_mem_size = rbf_centers_.size() * sizeof(float); 
-    int weights_mem_size = total_num_stencil_elements * sizeof(float); 
-    int deriv_mem_size = stencil_.size() * sizeof(float); 
+    int solution_mem_size = rbf_centers_.size() * sizeof(FLOAT); 
+    int weights_mem_size = total_num_stencil_elements * sizeof(FLOAT); 
+    int deriv_mem_size = stencil_.size() * sizeof(FLOAT); 
 
 
     std::cout << "Allocating GPU memory\n"; 
@@ -113,13 +120,13 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
     if (!COMPUTED_WEIGHTS_ON_GPU) {
 	    tm["sendWeights"]->start();
-        int weights_mem_size = total_num_stencil_elements * sizeof(float);  
+        int weights_mem_size = total_num_stencil_elements * sizeof(FLOAT);  
         std::cout << "Writing x_weights to GPU memory\n"; 
 
-        float* cpu_x_weights = new float[total_num_stencil_elements]; 
-        float* cpu_y_weights = new float[total_num_stencil_elements]; 
-        float* cpu_z_weights = new float[total_num_stencil_elements]; 
-        float* cpu_lapl_weights = new float[total_num_stencil_elements]; 
+        FLOAT* cpu_x_weights = new FLOAT[total_num_stencil_elements]; 
+        FLOAT* cpu_y_weights = new FLOAT[total_num_stencil_elements]; 
+        FLOAT* cpu_z_weights = new FLOAT[total_num_stencil_elements]; 
+        FLOAT* cpu_lapl_weights = new FLOAT[total_num_stencil_elements]; 
 
         int stencil_size = stencil[0].size();
         if (stencil.size() * stencil_size != total_num_stencil_elements) {
@@ -128,10 +135,10 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
         for (int i = 0; i < stencil.size(); i++) {
             for (int j = 0; j < stencil_size; j++) {
                 int indx = i*stencil_size +j; 
-                cpu_x_weights[indx] = (float)x_weights[i][j]; 
-                cpu_y_weights[indx] = (float)y_weights[i][j]; 
-                cpu_z_weights[indx] = (float)z_weights[i][j]; 
-                cpu_lapl_weights[indx] = (float)lapl_weights[i][j]; 
+                cpu_x_weights[indx] = (FLOAT)x_weights[i][j]; 
+                cpu_y_weights[indx] = (FLOAT)y_weights[i][j]; 
+                cpu_z_weights[indx] = (FLOAT)z_weights[i][j]; 
+                cpu_lapl_weights[indx] = (FLOAT)lapl_weights[i][j]; 
             }
         }
 
@@ -148,11 +155,11 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
     cout << "Sending " << rbf_centers.size() << " solution updates to GPU" << endl;
     // update the GPU's view of our solution 
-    float* cpu_u = new float[rbf_centers.size()]; 
+    FLOAT* cpu_u = new FLOAT[rbf_centers.size()]; 
     for (int i = 0; i < rbf_centers.size(); i++) {
         cpu_u[i] = u[i]; 
     }
-    err = queue.enqueueWriteBuffer(gpu_solution, CL_TRUE, 0, rbf_centers.size()*sizeof(float), cpu_u, NULL, &event);
+    err = queue.enqueueWriteBuffer(gpu_solution, CL_TRUE, 0, rbf_centers.size()*sizeof(FLOAT), cpu_u, NULL, &event);
     queue.finish(); 
 
 
@@ -213,20 +220,24 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     }
 
     err = queue.finish();
-    float* deriv_temp = new float[npts]; 
+    FLOAT* deriv_temp = new FLOAT[npts]; 
     // Pull the computed derivative back to the CPU
-    err = queue.enqueueReadBuffer(gpu_derivative_out, CL_TRUE, 0, npts*sizeof(float), deriv_temp, NULL, &event);
+    err = queue.enqueueReadBuffer(gpu_derivative_out, CL_TRUE, 0, npts*sizeof(FLOAT), deriv_temp, NULL, &event);
 
     err = queue.finish();
 
-    std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
-    for (int i = 0; i < npts; i++) {
-        std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;
-#if 0
+    if (sizeof(FLOAT) == sizeof(float)) {
+        std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
+    }
 
-        float sum = 0.f;
+    for (int i = 0; i < npts; i++) {
+
+#if 0
+        std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;
+
+        FLOAT sum = 0.f;
         for (int j = 0; j < stencil[0].size(); j++) {
-            sum += (float)x_weights[i][j]; 
+            sum += (FLOAT)x_weights[i][j]; 
         }
         std::cout << "sum should be: " << sum << "\tDifference: " << deriv_temp[i] - sum << std::endl;
 #endif 

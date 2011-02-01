@@ -1,3 +1,17 @@
+2/1/11
+==========
+derivative_cl.cpp: 
+    - When FLOAT==double I should copy data directly to GPU instead of creating buffer on CPU
+    - I need to use Gordon's approach to load the kernel so I can write "#pragma OPENCL ..." directly instead of using a substitution for PRAGMA to get #pragma past the C preprocessor
+
+
+RBF_TYPE: 
+    - finish gaussian and inv_multiquadric and test against the multiquadric
+
+
+
+
+
 - Push SOURCE only to a GitHub repo. I should have a separate repo for the doc subdir so the source is < 100MB
 
 

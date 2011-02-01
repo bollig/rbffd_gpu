@@ -25,15 +25,10 @@
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/operation_sparse.hpp>
 #include <boost/numeric/ublas/io.hpp>
+
+#include "common_typedefs.h"
+
 using namespace std;
-
-// Set single or double precision here.
-#if 1
-typedef double FLOAT;
-#else 
-typedef float FLOAT;
-#endif
-
 
 
 NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :

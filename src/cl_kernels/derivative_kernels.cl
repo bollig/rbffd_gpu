@@ -1,17 +1,13 @@
 #define STRINGIFY_WITH_SUBS(s) STRINGIFY(s)
 #define STRINGIFY(s) #s
 
-#define PRAGMA #pragma
 
 std::string kernel_source = STRINGIFY_WITH_SUBS(
 
-// Use a space between the # and prag to prevent the C
-// preprocessor from interpreting it 
 
-// If we're on NVidia: 
-//PRAGMA OPENCL EXTENSION cl_khr_fp64: enable \n
-// If we're on ATI: 
-PRAGMA OPENCL EXTENSION cl_amd_fp64: enable \n
+// NOTE: my CLBaseClass can add FP64 support. It looks at the
+// available device extensions to know which one it should enable
+// at runtime (this works on both ATI and NVidia)
 
 // Assuming that our stencils are uniform in size for now
 __kernel void           \n

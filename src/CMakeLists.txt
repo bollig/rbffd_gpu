@@ -44,6 +44,8 @@ SET( REQUIRED_CU_SOURCE_FILES
 )
 
 SET( REQUIRED_CL_SOURCE_FILES
+    utils/opencl/cl_base_class.cpp
+
 	# find * -name "*cl.c*"
 	pdes/elliptic/ncar_poisson1_cl.cpp
 	#P1 pdes/elliptic/ncar_poisson2_cl.cpp

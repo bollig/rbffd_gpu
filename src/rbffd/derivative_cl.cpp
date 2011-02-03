@@ -9,9 +9,9 @@ using namespace std;
 
 void DerivativeCL::setupTimers() {
     tm["loadAttach"] = new Timer("[DerivativeCL] Load and Attach Kernel"); 
-	tm["construct"] = new Timer("[DerivativeCL] DerivativeCL (constructor)"); 
-	tm["computeDerivs"] = new Timer("[DerivativeCL] computeDerivatives (compute derivatives using OpenCL"); 
-	tm["sendWeights"] = new Timer("[DerivativeCL]   (send stencil weights to GPU)"); 
+    tm["construct"] = new Timer("[DerivativeCL] DerivativeCL (constructor)"); 
+    tm["computeDerivs"] = new Timer("[DerivativeCL] computeDerivatives (compute derivatives using OpenCL"); 
+    tm["sendWeights"] = new Timer("[DerivativeCL]   (send stencil weights to GPU)"); 
 }
 
 
@@ -19,27 +19,50 @@ void DerivativeCL::setupTimers() {
     DerivativeCL::DerivativeCL(vector<NodeType>& rbf_centers_, vector<StencilType>& stencil_, int nb_bnd_, int dimensions, int rank)
 : Derivative(rbf_centers_, stencil_, nb_bnd_, dimensions), CLBaseClass(rank)	
 {
-	this->setupTimers(); 
+    this->setupTimers(); 
     tm["construct"]->start(); 
 
     cout << "Inside DerivativeCL constructor" << endl;
 
     tm["loadAttach"]->start(); 
 
-    #include "cl_kernels/derivative_kernels.cl"
-//    std::cout << "USING PROGRAM SOURCE: \n====\n" << kernel_source << "\n=====\n"; 
-    this->loadProgram(kernel_source);
+    // Defines std::string kernel_source: 
+#include "cl_kernels/derivative_kernels.cl"
+
+    // Split the kernels by __kernel keyword and do not discards the keyword.
+    // TODO: support extensions declared for kernels (this class can add FP64
+    // support)
+    std::vector<std::string> separated_kernels = this->split(kernel_source, "__kernel", true);
+
+
+    std::string kernel_name = "computeDerivKernelDOUBLE"; 
+    bool useDouble = true; 
+    if (!this->getDeviceFP64Extension().compare("")){
+        useDouble = false; 
+    }
+    if ((sizeof(FLOAT) == sizeof(float)) 
+            || !useDouble) {
+        kernel_name = "computeDerivKernelFLOAT"; 
+
+        // Since double is disabled we need to try and find ONLY the specified
+        // kernel so we dont try to build kernels that would error out because
+        // they contain the keyword double
+        std::vector<std::string>::iterator k; 
+        for (k = separated_kernels.begin(); k!=separated_kernels.end(); k++) {
+            if ((*k).find(kernel_name) != std::string::npos) {
+                this->loadProgram(*k, useDouble);
+            }
+        }
+
+    } else {
+        this->loadProgram(kernel_source, useDouble); 
+    }
 
     //    std::cout << "This is my kernel source: ...\n" << kernel_source << "\n...END\n"; 
 
     try{
-        if (sizeof(FLOAT) == sizeof(float)) {
-            std::cout << "Loading single precision kernel\n"; 
-            kernel = cl::Kernel(program, "computeDerivKernelFLOAT", &err);
-        } else {
-            std::cout << "Loading double precision kernel\n"; 
-            kernel = cl::Kernel(program, "computeDerivKernelDOUBLE", &err);
-        }
+        std::cout << "Loading single precision kernel\n"; 
+        kernel = cl::Kernel(program, kernel_name.c_str(), &err);
         std::cout << "Done attaching kernels!" << std::endl;
     }
     catch (cl::Error er) {
@@ -119,7 +142,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     static int COMPUTED_WEIGHTS_ON_GPU=0; 
 
     if (!COMPUTED_WEIGHTS_ON_GPU) {
-	    tm["sendWeights"]->start();
+        tm["sendWeights"]->start();
         int weights_mem_size = total_num_stencil_elements * sizeof(FLOAT);  
         std::cout << "Writing x_weights to GPU memory\n"; 
 
@@ -149,7 +172,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
         queue.finish(); 
 
         COMPUTED_WEIGHTS_ON_GPU = 1; 
-	tm["sendWeights"]->end();
+        tm["sendWeights"]->end();
     }
 
 
@@ -167,7 +190,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
     try {
         kernel.setArg(0, gpu_stencils); 
-        
+
         switch(which) {
             case X:
                 kernel.setArg(1, gpu_x_deriv_weights); 
@@ -198,9 +221,9 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
 
         kernel.setArg(2, gpu_solution);                 // COPY_IN
         kernel.setArg(3, gpu_derivative_out);           // COPY_OUT 
-	int nb_stencils_ = stencil.size(); 
+        int nb_stencils_ = stencil.size(); 
         kernel.setArg(4, sizeof(int), &nb_stencils_);               // const 
-	int stencil_size_ = stencil[0].size(); 
+        int stencil_size_ = stencil[0].size(); 
         kernel.setArg(5, sizeof(int), &stencil_size_);            // const
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));

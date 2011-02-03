@@ -5,5 +5,6 @@
 
 int randi(int i1, int i2);
 double randf(double f1, double f2); 
+//double random(double a, double b); 
 
 #endif 

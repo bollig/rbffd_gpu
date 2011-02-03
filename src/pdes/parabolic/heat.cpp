@@ -3,6 +3,7 @@
 #include "rbffd/derivative.h"
 #include "heat.h"
 #include "exact_solutions/exact_solution.h"
+#include "utils/norms.h"
 
 using namespace std;
 using namespace EB;
@@ -259,54 +260,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 		}
 #endif
 
-		// solution analysis (Put all in a separate routine) 
-
-		vector<double> sol_ex;
-		vector<double> sol_error;
-
-		sol_ex.resize(nb_stencils);
-		sol_error.resize(nb_stencils);
-
-		// exact solution
-		for (int i = 0; i < nb_stencils; i++) {
-			Vec3& v = (*rbf_centers)[i];
-			sol_ex[i] = exactSolution->at(v, time);
-			sol_error[i] = sol_ex[i] - s[i];
-		}
-
-	// Put all this I/O in a separate routine
-
-
-		// print error to a file
-		//	printf("nb_rbf= %d\n", nb_rbf);
-		//	exit(0);
-
-		char filename[256];
-		sprintf(filename, "error.out.%d", id);
-
-		FILE* fderr = fopen(filename, "w");
-		for (int i = 0; i < nb_stencils; i++) {
-			Vec3& v = (*rbf_centers)[i];
-			fprintf(fderr, "%f %f %f %f\n", v[0], v[1], v[2], sol_error[i]);
-		}
-		fclose(fderr);
-
-		sprintf(filename, "solution.out.%d", id);
-
-		// print solution to a file
-		FILE* fdsol = fopen(filename, "w");
-		for (int i = 0; i < nb_stencils; i++) {
-			Vec3& v = (*rbf_centers)[i];
-			fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
-		}
-		fclose(fdsol);
-
-		double nrm_ex = maxNorm(sol_ex);
-                printf("(time: %f) exact max norm: %f\n", time, nrm_ex);
-		double nrm_sol0 = maxNorm(s);
-                printf("(time: %f) max norm(s[0]): %f\n", time, nrm_sol0);
-		double nrm_error = maxNorm(sol_error);
-                printf("(time: %f) nrm_error= %f\n", time, nrm_error);
+        checkError(s); 
 
 		// And now we have full derivative calculated so we need to overwrite U_G
 		for (int i = 0; i < s.size(); i++) {
@@ -316,6 +270,55 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 	tm["advance"]->end();
 	return;
 }
+
+void Heat::checkError(std::vector<double>& solution)
+{
+	    vector<double> sol_error;
+		vector<double> sol_exact;
+
+		sol_error.resize(nb_stencils);
+		sol_exact.resize(nb_stencils);
+
+		for (int i = 0; i < nb_stencils; i++) {
+			Vec3& v = (*rbf_centers)[i];
+			sol_exact[i] = exactSolution->at(v, time);
+			sol_error[i] = sol_exact[i] - solution[i];
+		}
+
+        writeErrorToFile(sol_error);
+
+        // We want: || x_exact - x_approx ||_{1,2,inf} 
+        // and  || x_exact - x_approx ||_{1,2,inf} / || x_exact ||_{1,2,inf}
+
+        printf("l1 error : Absolute = %f, Relative = %f\n", l1norm(solution, sol_exact), l1norm(sol_error) / l1norm(sol_exact) );
+        printf("l2 error : Absolute = %f, Relative = %f\n", l2norm(sol_error), l2norm(sol_error) / l2norm(sol_exact) );
+        printf("linf error : Absolute = %f, Relative = %f\n", linfnorm(sol_error), linfnorm(sol_error) / linfnorm(sol_exact) );
+}
+
+void Heat::writeErrorToFile(std::vector<double>& err) {
+		char filename[256];
+		sprintf(filename, "error.out.%d", id);
+
+		FILE* fderr = fopen(filename, "w");
+		for (int i = 0; i < nb_stencils; i++) {
+			Vec3& v = (*rbf_centers)[i];
+			fprintf(fderr, "%f %f %f %f\n", v[0], v[1], v[2], err[i]);
+		}
+		fclose(fderr);
+#if 0
+		sprintf(filename, "solution.out.%d", id);
+
+		// print solution to a file
+		FILE* fdsol = fopen(filename, "w");
+		for (int i = 0; i < nb_stencils; i++) {
+			Vec3& v = (*rbf_centers)[i];
+			fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
+		}
+		fclose(fdsol);
+#endif 
+}
+
+
 
 //----------------------------------------------------------------------
 void Heat::advanceOneStep(std::vector<double>* updated_solution) {

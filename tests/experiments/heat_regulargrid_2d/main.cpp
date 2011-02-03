@@ -7,7 +7,7 @@
 
 #include "grids/domain.h"
 #include "rbffd/derivative_cl.h"
-//#include "rbffd/new_derivative_tests.h"
+#include "rbffd/derivative_tests.h"
 
 #include "exact_solutions/exact_regulargrid.h"
 
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 
 		double stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
-		double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "0.001"); 
+		double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "0.000001"); 
 
         tm2.stop(); 
 
@@ -170,96 +170,12 @@ int main(int argc, char** argv) {
 	}
 	cout << "end computing weights" << endl;
 #endif 
-	vector<double> u(subdomain->G_centers.size(), 1.);
-	cout << "start computing derivative (on CPU)" << endl;
-
-	vector<double> xderiv_cpu(subdomain->Q_stencils.size());	
-	vector<double> xderiv_gpu(subdomain->Q_stencils.size());	
-	vector<double> yderiv_cpu(subdomain->Q_stencils.size());	
-	vector<double> yderiv_gpu(subdomain->Q_stencils.size());	
-	vector<double> zderiv_cpu(subdomain->Q_stencils.size());	
-	vector<double> zderiv_gpu(subdomain->Q_stencils.size());	
-	vector<double> lderiv_cpu(subdomain->Q_stencils.size());	
-	vector<double> lderiv_gpu(subdomain->Q_stencils.size());	
-
-	// Verify that the CPU works
-	der->computeDerivCPU(Derivative::X, u, xderiv_cpu);
-	der->computeDeriv(Derivative::X, u, xderiv_gpu);
-
-	der->computeDerivCPU(Derivative::Y, u, yderiv_cpu);
-	der->computeDeriv(Derivative::Y, u, yderiv_gpu);
-
-	der->computeDerivCPU(Derivative::Z, u, zderiv_cpu);
-	der->computeDeriv(Derivative::Z, u, zderiv_gpu);
-
-	der->computeDerivCPU(Derivative::LAPL, u, lderiv_cpu);
-	der->computeDeriv(Derivative::LAPL, u, lderiv_gpu);
-
-	for (int i = 0; i < subdomain->Q_stencils.size(); i++) {
-		//        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-
-        if (isnan(xderiv_gpu[i])
-                || isnan(yderiv_gpu[i]) 
-                || isnan(zderiv_gpu[i]) 
-                || isnan(lderiv_gpu[i]) 
-           )
-        {
-            std::cout << "One of the derivs calculated by the GPU is NaN (detected by isnan)!\n"; 
-            exit(EXIT_FAILURE); 
-        }
-
-        if ((xderiv_cpu[i] != xderiv_cpu[i]) 
-                || (yderiv_cpu[i] != yderiv_cpu[i]) 
-                || (zderiv_cpu[i] != zderiv_cpu[i]) 
-                || (lderiv_cpu[i] != lderiv_cpu[i]) )
-        {
-            std::cout << "One of the derivs calculated by the CPU is NaN!\n"; 
-            exit(EXIT_FAILURE); 
-        }
-
-        if ((xderiv_gpu[i] != xderiv_gpu[i]) 
-                || (yderiv_gpu[i] != yderiv_gpu[i]) 
-                || (zderiv_gpu[i] != zderiv_gpu[i]) 
-                || (lderiv_gpu[i] != lderiv_gpu[i]) )
-        {
-            std::cout << "One of the derivs calculated by the GPU is NaN!\n"; 
-            exit(EXIT_FAILURE); 
-        }
 
 
-		if ( (fabs(xderiv_gpu[i] - xderiv_cpu[i]) > 1e-5) 
-				|| (fabs(yderiv_gpu[i] - yderiv_cpu[i]) > 1e-5) 
-				|| (fabs(zderiv_gpu[i] - zderiv_cpu[i]) > 1e-5) 
-				|| (fabs(lderiv_gpu[i] - lderiv_cpu[i]) > 1e-5))
-		{
-			std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
-			std::cout << "Test failed on " << i << std::endl;
-			std::cout << "X: " << xderiv_gpu[i] - xderiv_cpu[i] << " \t \t"; 
-			std::cout << "GPU: " << xderiv_gpu[i] << " CPU: " << xderiv_cpu[i] << std:: endl; 
-			std::cout << "Y: " << yderiv_gpu[i] - yderiv_cpu[i] << " \t \t"; 
-			std::cout << "GPU: " << yderiv_gpu[i] << " CPU: " << yderiv_cpu[i] << std:: endl; 
-			std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << " \t \t"; 
-			std::cout << "GPU: " << zderiv_gpu[i] << " CPU: " << zderiv_cpu[i] << std:: endl; 
-			std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << " \t \t"; 
-			std::cout << "GPU: " << lderiv_gpu[i] << " CPU: " << lderiv_cpu[i] << std:: endl; 
-			exit(EXIT_FAILURE); 
-		}
-	}
-	std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
-
-
-	// (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
-
-	// der->computeDeriv(Derivative::Y, u, yderiv);
-	// der->computeDeriv(Derivative::LAPL, u, lapl_deriv);
-
-
-#if 0
-	if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
+	if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
 		DerivativeTests* der_test = new DerivativeTests();
 		der_test->testAllFunctions(*der, *grid);
 	}
-#endif 
 
 
 
@@ -284,7 +200,7 @@ int main(int argc, char** argv) {
 	// the original code. I will address this next.
 	//heat.setDt(0.011122);
 	heat.setDt(subdomain->dt);
-	subdomain->printVector(subdomain->global_boundary_nodes, "GLOBAL BOUNDARY NODES: ");
+	subdomain->printVector(subdomain->global_boundary_nodes, "INDICES OF GLOBAL BOUNDARY NODES: ");
 	// Even with Cartesian, the max norm stays at one. Strange
 	int iter;
 	for (iter = 0; iter < 1000; iter++) {
@@ -295,13 +211,14 @@ int main(int argc, char** argv) {
         tm4.start(); 
 		heat.advanceOneStepWithComm(comm_unit);
         tm4.stop(); 
-		subdomain->printVector(subdomain->U_G, "AFTER HEAT");
+        char label[256]; 
+        sprintf(label, "SOLUTION AFTER %d ITERATIONS", iter+1); 
+		subdomain->printVector(subdomain->U_G, label);
 
 		double nrm = heat.maxNorm();
-
 		// TODO : Need to add a "comm_unit->sendTerminate()" to
 		// break all processes when problem is encountered
-		if (nrm > 5.)
+		if (nrm > 1.)
 			break;
 		//if (iter > 0) break;
 	}

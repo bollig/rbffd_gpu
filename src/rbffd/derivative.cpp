@@ -1279,8 +1279,8 @@ double Derivative::computeEig()
     //eigval.print("eigval");
 
     int count=0;
-    double max_neg_eig = abs(real(eigval(0)));
-    double min_neg_eig = abs(real(eigval(0)));
+    double max_neg_eig = fabs(real(eigval(0)));
+    double min_neg_eig = fabs(real(eigval(0)));
 
     printf("sz= %d, nb_bnd= %d\n", sz, nb_bnd);
 
@@ -1292,11 +1292,11 @@ double Derivative::computeEig()
         if (e > 0.) {
             count++;
         } else {
-            if (abs(e) > max_neg_eig) {
-                max_neg_eig = abs(e);
+            if (fabs(e) > max_neg_eig) {
+                max_neg_eig = fabs(e);
             }
-            if (abs(e) < min_neg_eig) {
-                min_neg_eig = abs(e);
+            if (fabs(e) < min_neg_eig) {
+                min_neg_eig = fabs(e);
             }
         }
     }

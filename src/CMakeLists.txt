@@ -35,6 +35,7 @@ SET(REQUIRED_SOURCE_FILES
 	utils/geom/parametric_patch.cpp
 	utils/geom/octree.cpp	
 	utils/random.cpp
+    utils/norms.cpp
 )
 
 

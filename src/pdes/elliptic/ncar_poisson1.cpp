@@ -154,7 +154,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // For w_ddr, weights for dA/dr, require (x*dPhi/dx + y*dPhi/dy + z*dPhi/dz). That means we will need to get
         // the stencil centers (Vec3) into the
 
-            new_eps = left_eps + abs(right_eps - left_eps)/2.;
+            new_eps = left_eps + fabs(right_eps - left_eps)/2.;
             der->setEpsilon(new_eps);
 
             cout << "USING EPSILON: " << new_eps << "\t";
@@ -345,7 +345,7 @@ void NCARPoisson1::initialConditions(std::vector<double> *solution) {
 double NCARPoisson1::maxNorm() {
     double nrm = 0.;
     for (int i = 0; i < sol[0].size(); i++) {
-        double s = abs(sol[0][i]);
+        double s = fabs(sol[0][i]);
         if (s > nrm)
             nrm = s;
     }
@@ -359,7 +359,7 @@ double NCARPoisson1::maxNorm() {
 double NCARPoisson1::maxNorm(vector<double> sol) {
     double nrm = 0.;
     for (int i = 0; i < sol.size(); i++) {
-        double s = abs(sol[i]);
+        double s = fabs(sol[i]);
         if (s > nrm)
             nrm = s;
     }
@@ -374,7 +374,7 @@ double NCARPoisson1::maxNorm(double* sol, int nrows, int ncols) {
     double nrm = 0.;
     for (int i = 0; i < nrows; i++) {
         for (int j = 0; j < ncols; j++) {
-        double s = abs(sol[i*ncols + j]);
+        double s = fabs(sol[i*ncols + j]);
         if (s > nrm)
             nrm = s;
         }

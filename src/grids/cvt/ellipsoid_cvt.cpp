@@ -392,7 +392,7 @@ void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool
   Vec3 pt, ptc;
   for (j=0; j < n; j++) {
     // if count == abs(intersect_bnd), then there is no intersection
-	if (count[j] != abs(intersect_bnd[j])) {
+	if (count[j] != fabs(intersect_bnd[j])) {
 		cnt++;
 		printf("===========================\n");
 		//printf("intersect with bndry\n");

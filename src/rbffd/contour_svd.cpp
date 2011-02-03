@@ -238,7 +238,7 @@ columnCoeffsCounter = sum(valsAgree(negPows(:,:,1),...
     for (int j=0; j < mc; j++) {
         columnCoeffsCounter(j) = 0.;
         for (int i=0; i < mg; i++) {
-            int b = (abs(negPows(i,j)) > COEFF_MAGNITUDE_TOL) ? TRUE : FALSE;
+            int b = (fabs(negPows(i,j)) > COEFF_MAGNITUDE_TOL) ? TRUE : FALSE;
             b = (b == TRUE) && (result(i,j) == TRUE) ? TRUE : FALSE;
             columnCoeffsCounter(j) = columnCoeffsCounter(j) + b;
         }
@@ -1150,7 +1150,7 @@ result = abs(val1-val2)./max(abs(val1),abs(val2));
     for (int j=0; j < nv1; j++) {
 	for (int i=0; i < mv1; i++) {
             //double tmp = abs(val1(i,j)-val2(i,j)) / max(abs(val1(i,j)),abs(val2(i,j)));
-            double tmp = abs(val1(i,j)-val2(i,j)) / max(abs(val1(i,j)),abs(val2(i,j)));
+            double tmp = fabs(val1(i,j)-val2(i,j)) / max(fabs(val1(i,j)),fabs(val2(i,j)));
             result(i,j) = tmp;
 	}}
 

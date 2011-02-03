@@ -21,6 +21,9 @@ SET (ARGV
 )
 
 require_config()   # Default is to require test.conf
+require_config(test_28x27_works.conf)
+require_config(test_28x28_works.conf)
+require_config(test_nan_issue.conf)
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 

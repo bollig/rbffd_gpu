@@ -90,7 +90,7 @@ double ExactNCARPoisson2::xderiv(double Xx, double Yy, double Zz, double t)
                                 (Xx*(-0.5 + Sqrt(Power(Xx,2) + Power(Yy,2))))/Sqrt(Power(Xx,2) + Power(Yy,2)))*
                               Cos((-1 + Sqrt(Power(Xx,2) + Power(Yy,2)))*(-0.5 + Sqrt(Power(Xx,2) + Power(Yy,2)))));
 
-    double relerror = abs(firstDerivExact - firstDeriv) / abs(firstDerivExact);
+    double relerror = fabs(firstDerivExact - firstDeriv) / fabs(firstDerivExact);
 
    //cerr << "xderiv Approx: " << firstDeriv << "   \tExact: " << firstDerivExact << "   \tRelative Error (|exact - approx|/|exact|): " << relerror <<endl;
     //exit(EXIT_FAILURE);

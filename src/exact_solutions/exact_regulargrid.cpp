@@ -85,7 +85,7 @@ double ExactRegularGrid::laplacian(double x, double y, double z, double t)
             part3_and_4 = part3 / r; 
         }
         double together = part1*(part2+part3_and_4); 
-        printf("%f * (%f + %e) = %e\n", part1, part2, part3_and_4, together);  
+    //    printf("%f * (%f + %e) = %e\n", part1, part2, part3_and_4, together);  
 	//printf("t= %f, alpha= %f\n", t, alpha);
 	//printf("exp= %f, nn= %f, f1= %f, f2= %f\n", exp(-alpha*t), nn, f1, f2);
 

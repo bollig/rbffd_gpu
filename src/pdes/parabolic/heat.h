@@ -122,8 +122,9 @@ class Heat {
 
         std::vector<double> getSolution() { return sol[0]; }
 
-
-        void checkError(std::vector<double>& solution);
+        // rel_err_max is the maximum tolerable error. If L1, L2 or Linf norms
+        // exceed this value exit(EXIT_FAILURE) the program
+        void checkError(std::vector<double>& solution, double rel_err_max=1e-2);
         void writeErrorToFile(std::vector<double>& error); 
 };
 

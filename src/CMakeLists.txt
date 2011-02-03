@@ -19,7 +19,7 @@ SET(REQUIRED_SOURCE_FILES
 	grids/domain.cpp
 	grids/stencil_generator.cpp
 
-	pdes/elliptic/ncar_poisson1.cpp
+    #*	pdes/elliptic/ncar_poisson1.cpp
 	pdes/parabolic/heat.cpp
 
 	rbffd/contour_svd.cpp
@@ -48,9 +48,9 @@ SET( REQUIRED_CL_SOURCE_FILES
     utils/opencl/cl_base_class.cpp
 
 	# find * -name "*cl.c*"
-	pdes/elliptic/ncar_poisson1_cl.cpp
+    #*	pdes/elliptic/ncar_poisson1_cl.cpp
 	#P1 pdes/elliptic/ncar_poisson2_cl.cpp
-	pdes/elliptic/nonuniform_poisson1_cl.cpp
+    #* pdes/elliptic/nonuniform_poisson1_cl.cpp
 
 	rbffd/derivative_cl.cpp
 )

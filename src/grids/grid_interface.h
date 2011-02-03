@@ -75,6 +75,9 @@ class Grid
 		virtual	void writeToFile(); 
 		virtual void writeToFile(std::string filename); 
 
+        virtual void printNodeList(std::string label); 
+        virtual void printBoundaryIndices(std::string label);  
+
 		// Load data from disk using the class generated filename and specified iter
 			int loadFromFile(int iter=0); 
 		virtual int loadFromFile(std::string filename); 
@@ -86,9 +89,14 @@ class Grid
 		// so boundary nodes appear first in the node_list
 		void setSortBoundaryNodes(int sort_boundary_first) { this->boundary_nodes_first = sort_boundary_first; }
 
+        size_t                      getNodeListSize() { return node_list.size(); }
 		std::vector<NodeType>& 	    getNodeList() 	{ return node_list; }
-		std::vector<size_t>&  getBoundaryIndices() { return boundary_indices; } 
+        size_t                      getBoundaryIndicesSize() { return boundary_indices.size();} 
+		std::vector<size_t>&        getBoundaryIndices() { return boundary_indices; } 
 		std::vector<Vec3>&          getBoundaryNormals() { return boundary_normals; }
+
+        size_t                      getStencilsSize() { return stencil_map.size(); }
+        size_t                      getStencilSize(int indx) { return stencil_map[indx].size(); }
 		std::vector<StencilType>&   getStencils() 	{ return stencil_map; }
 		StencilType&                getStencil(int indx) { return stencil_map[indx]; }
 		std::vector<double>& 	    getStencilRadii(){ return avg_stencil_radii; }

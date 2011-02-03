@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 
 		double stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
-		double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "0.000001"); 
+		double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "0.0001"); 
 
         tm2.stop(); 
 
@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
 			cout << "ERROR! Dim > 3 Not Supported!" << endl;
 		}
 
+        std::cout << "Generating nodes\n"; 
         // TODO: if (grid->loadFromFile()) 
         {
     		grid->setSortBoundaryNodes(true); 
@@ -121,14 +122,31 @@ int main(int argc, char** argv) {
     
 	subdomain->printVerboseDependencyGraph();
 
+#if 0
 	subdomain->printCenters(subdomain->G_centers, "All Centers Needed by this CPU");
+#else 
+    subdomain->printNodeList("All Centers Needed by This Process"); 
+#endif 
 
 	printf("CHECKING STENCILS: \n");
+#if 0
 	for (int irbf = 0; irbf < subdomain->Q_stencils.size(); irbf++) {
+#else 
+	for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
+#endif 
 		printf("Stencil[%d] = ", irbf);
+#if 0
 		if (irbf == subdomain->Q_stencils[irbf][0]) {
+#else 
+        StencilType& s = subdomain->getStencil(irbf); 
+        if (irbf == s[0]) {
+#endif 
 			printf("PASS\n");
+#if 0
 			subdomain->printStencil(subdomain->Q_stencils[irbf], "S");
+#else 
+            subdomain->printStencil(s, "S"); 
+#endif 
 		} else {
 			printf("FAIL\n");
 		}
@@ -136,45 +154,32 @@ int main(int argc, char** argv) {
 
 
 #if 0
-	comm_unit->broadcastObjectUpdates(subdomain);
-	comm_unit->barrier();
-	Grid* sub_grid = subdomain->getGrid(); 
-	// TODO: Clean this up.
-
-
-	Derivative* der = new DerivativeCL(sub_grid->getNodeList(), sub_grid->getStencils(), sub_grid->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
-#else 
 	Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim, comm_unit->getRank());
+#else 
+    // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
+	Derivative* der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
 #endif 
 
 	double epsilon = settings->GetSettingAs<double>("EPSILON");
 	der->setEpsilon(epsilon);
 
+
+	printf("start computing weights\n");
 #if 0
-	printf("start computing weights\n");
-	for (int irbf=0; irbf < sub_grid->getStencils().size(); irbf++) {
-		der->computeWeights(sub_grid->getNodeList(), sub_grid->getStencil(irbf), irbf);
-	}
-	cout << "end computing weights" << endl;
-#else 
-	printf("start computing weights\n");
 	for (int irbf=0; irbf < subdomain->Q_stencils.size(); irbf++) {
-#if 1
         der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf);
-#else 
-        der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf, "x"); 
-        der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf, "y"); 
-        der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf, "z"); 
-        der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf, "lapl"); 
-#endif 
 	}
-	cout << "end computing weights" << endl;
+#else 
+	for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
+		der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);
+	}
 #endif 
+	cout << "end computing weights" << endl;
 
 
 	if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
 		DerivativeTests* der_test = new DerivativeTests();
-		der_test->testAllFunctions(*der, *grid);
+		der_test->testAllFunctions(*der, *(subdomain));
 	}
 
 
@@ -187,6 +192,7 @@ int main(int argc, char** argv) {
 	//ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
 	ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
 
+    // TODO: udpate heat to construct on grid
 	Heat heat(exact, subdomain, der, comm_unit->getRank());
 	heat.initialConditions(&subdomain->U_G);
 
@@ -200,20 +206,33 @@ int main(int argc, char** argv) {
 	// the original code. I will address this next.
 	//heat.setDt(0.011122);
 	heat.setDt(subdomain->dt);
-	subdomain->printVector(subdomain->global_boundary_nodes, "INDICES OF GLOBAL BOUNDARY NODES: ");
+
+#if 0
+    subdomain->printVector(subdomain->global_boundary_nodes, "INDICES OF GLOBAL BOUNDARY NODES: ");
+#else 
+    subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
+#endif 
 	// Even with Cartesian, the max norm stays at one. Strange
 	int iter;
-	for (iter = 0; iter < 1000; iter++) {
+	for (iter = 0; iter < 39; iter++) {
 		cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter
 			<< ") *************" << endl;
+#if 0
 		subdomain->printVector(subdomain->U_G, "INPUT_TO_HEAT_ADVANCE");
-
+#else 
+        char label[256]; 
+        sprintf(label, "INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
+        subdomain->printSolution(label); 
+#endif 
         tm4.start(); 
 		heat.advanceOneStepWithComm(comm_unit);
         tm4.stop(); 
-        char label[256]; 
-        sprintf(label, "SOLUTION AFTER %d ITERATIONS", iter+1); 
+        sprintf(label, "SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
+#if 0
 		subdomain->printVector(subdomain->U_G, label);
+#else 
+        subdomain->printSolution(label); 
+#endif
 
 		double nrm = heat.maxNorm();
 		// TODO : Need to add a "comm_unit->sendTerminate()" to
@@ -228,13 +247,35 @@ int main(int argc, char** argv) {
 #endif 
 	//}
 
+
+    // NOTE: all local subdomains have a U_G solution which is consolidated
+    // into the MASTER process "global_U_G" solution. 
 	comm_unit->consolidateObjects(subdomain);
 
 	if (comm_unit->getRank() == 0) {
-		// TODO assemble final solution
+        // NOTE: the final solution is assembled, but we have to use the 
+        // GLOBAL node list instead of a local subdomain node list
 		subdomain->writeFinal(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
-		// TODO print solution to file
 		cout << "FINAL ITER: " << iter << endl;
+        std::vector<double> final_sol(grid->getNodeListSize()); 
+        ifstream fin; 
+        fin.open("FINAL_SOLUTION.txt"); 
+#if 1
+        int count = 0; 
+        for (int count = 0; count < final_sol.size(); count++) {
+            Vec3 node; 
+            double val;
+            fin >> node[0] >> node[1] >> node[2] >> val;
+            if (fin.good()) {
+                final_sol[count] = val;
+               // std::cout << "Read: " << node << ", " << final_sol[count] << std::endl; 
+            }
+        }
+        fin.close();
+        std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
+        heat.checkError(final_sol, grid->getNodeList()); 
+        std::cout << "============== Solution Valid =============\n"; 
+#endif 
 		delete(grid);
 	}
 printf("REACHED THE END OF MAIN\n");

@@ -599,6 +599,7 @@ void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3> rbf_c
 void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     this->computeAllWeights(der, grid.getNodeList(), grid.getStencils(), grid.getStencils().size());
     this->checkWeights(der, grid.getStencils().size());
+    return;
 
     // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
 #if 1
@@ -688,6 +689,7 @@ void DerivativeTests::checkWeights(Derivative& der, int n) {
             std::cout << "NOTE: all derivs are supposed to be 0" << std::endl;
 			exit(EXIT_FAILURE); 
 		}
+        std::cout << i << " of " << n << std::endl;
 	}
 	std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
 }

@@ -30,11 +30,11 @@ class Heat {
         std::vector<double> sol[2];
 
 
-        std::vector<NodeType>* rbf_centers;
+        std::vector<NodeType>& rbf_centers;
 
         // The indices of rbf_centers that correspond to global domain boundary
         // nodes (i.e. boundaries of the PDE)
-        std::vector<size_t>* boundary_set; 		
+        std::vector<size_t>& boundary_set; 		
 
 
 
@@ -66,15 +66,15 @@ class Heat {
 
     public: 
 
-        Heat(ExactSolution* _solution, std::vector<Vec3>* rb_centers_, int
-                stencil_size, std::vector<size_t>* global_boundary_nodes_,
-                Derivative* der_, int rank);
+        Heat(ExactSolution* _solution, std::vector<Vec3>& rb_centers_, int
+                stencil_size, std::vector<size_t>& global_boundary_nodes_,
+                Derivative* der_, int rank=0);
 
         // Constructor #2:
         Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_,
-                int rank); 
+                int rank = 0); 
         
-        Heat(ExactSolution* _solution, Grid& grid_, Derivative& der_); 
+//        Heat(ExactSolution* _solution, Grid* grid_, Derivative& der_); 
         
         ~Heat();
 
@@ -105,11 +105,11 @@ class Heat {
         // actually pass something to the routine)
         void initialConditions(std::vector<double>* solution = NULL);
 
-        std::vector<Vec3>* getRbfCenters() { return rbf_centers; }
+        std::vector<Vec3>& getRbfCenters() { return rbf_centers; }
 
         double maxNorm(); 
         
-        double maxNorm(std::vector<double> sol);
+        double maxNorm(std::vector<double>& sol);
 
         void computeDiffusion(std::vector<double>& sol);
 
@@ -120,11 +120,11 @@ class Heat {
         // lapl(f)) = T(x,0) = f(x,0) so each iteration we 
         double force(Vec3& pt, double t);
 
-        std::vector<double> getSolution() { return sol[0]; }
+        std::vector<double>& getSolution() { return sol[0]; }
 
         // rel_err_max is the maximum tolerable error. If L1, L2 or Linf norms
         // exceed this value exit(EXIT_FAILURE) the program
-        void checkError(std::vector<double>& solution, double rel_err_max=1e-2);
+        void checkError(std::vector<double>& solution, std::vector<NodeType>& nodes, double rel_err_max=1e-2);
         void writeErrorToFile(std::vector<double>& error); 
 };
 

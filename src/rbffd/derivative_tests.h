@@ -37,15 +37,14 @@ public:
             vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
             vector<double>& dulapl_ex);
     
-    void testEigen(Grid& grid, Derivative& der, int stencil_size, int nb_bnd,
-            int tot_nb_pts);
+    void testEigen(Grid& grid, Derivative& der);
     
     void testAllFunctions(Derivative& der, Grid& grid);
 
-    void computeAllWeights(Derivative& der, std::vector<Vec3> rbf_centers,
-            std::vector<StencilType> stencils, int nb_stencils);
+    void computeAllWeights(Derivative& der, std::vector<Vec3>& rbf_centers,
+            std::vector<StencilType>& stencils);
 
-    void checkWeights(Derivative& der, int n);
+    void checkWeights(Derivative& der, int nb_centers, int nb_stencils);
 
 protected:
     bool weightsComputed;

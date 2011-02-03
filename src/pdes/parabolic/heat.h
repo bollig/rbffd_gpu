@@ -52,6 +52,10 @@ class Heat {
 
         double time; 
 
+        // A tolerance value for relative errors when checking the approximate
+        // solution against the exact solution 
+        double rel_err_tol; 
+
         // boundary values (in the same order as boundary_index)
         std::vector<double> bnd_sol; 
 
@@ -67,12 +71,12 @@ class Heat {
     public: 
 
         Heat(ExactSolution* _solution, std::vector<Vec3>& rb_centers_, int
-                stencil_size, std::vector<size_t>& global_boundary_nodes_,
-                Derivative* der_, int rank=0);
+                num_stencils, std::vector<size_t>& global_boundary_nodes_,
+                Derivative* der_, int rank=0, double rel_err_tol = 1e-2);
 
         // Constructor #2:
         Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_,
-                int rank = 0); 
+                int rank = 0, double rel_err_tol = 1e-2); 
         
 //        Heat(ExactSolution* _solution, Grid* grid_, Derivative& der_); 
         
@@ -85,6 +89,7 @@ class Heat {
 
         // set the time step
         void setDt(double dt) { this->dt = dt; }
+        void setRelErrTol(double tol) { this->rel_err_tol = tol; }
 
         // Advance the equation one time step using the Domain class to perform
         // communication Depends on Constructor #2 to be used so that a Domain
@@ -124,7 +129,7 @@ class Heat {
 
         // rel_err_max is the maximum tolerable error. If L1, L2 or Linf norms
         // exceed this value exit(EXIT_FAILURE) the program
-        void checkError(std::vector<double>& solution, std::vector<NodeType>& nodes, double rel_err_max=1e-2);
+        void checkError(std::vector<double>& solution, std::vector<NodeType>& nodes, double rel_err_max=-1.);
         void writeErrorToFile(std::vector<double>& error); 
 };
 

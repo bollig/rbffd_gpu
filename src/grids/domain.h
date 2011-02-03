@@ -74,7 +74,7 @@ class Domain : public Grid, public MPISendable {
         // l2g[i] = global_indx_matching_i
         std::vector<int> loc_to_glob;
         // g2l[i] = local_indx_matching_i
-        std::map<int, int> globmap;
+        std::map<int, int> glob_to_loc;
 
         // 6) Additional properties (should be possible to avoid these)
 
@@ -158,14 +158,14 @@ class Domain : public Grid, public MPISendable {
         // global to local
         // build a hash table
         int g2l(int ix) {
-            return globmap[ix];
+            return glob_to_loc[ix];
         }
 
 
         StencilType& convert_g2l(StencilType& stencil) {
             StencilType* local_stencil = new StencilType(stencil);
             for (int j = 0; j < stencil.size(); j++) {
-                (*local_stencil)[j] = globmap[stencil[j]];
+                (*local_stencil)[j] = g2l(stencil[j]);
             }
             return *local_stencil;
         }

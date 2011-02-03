@@ -61,7 +61,7 @@ void DerivativeCL::setupTimers() {
     //    std::cout << "This is my kernel source: ...\n" << kernel_source << "\n...END\n"; 
 
     try{
-        std::cout << "Loading single precision kernel\n"; 
+        std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n"; 
         kernel = cl::Kernel(program, kernel_name.c_str(), &err);
         std::cout << "Done attaching kernels!" << std::endl;
     }

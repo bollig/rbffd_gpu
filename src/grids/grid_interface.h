@@ -93,6 +93,7 @@ class Grid
 		std::vector<NodeType>& 	    getNodeList() 	{ return node_list; }
         size_t                      getBoundaryIndicesSize() { return boundary_indices.size();} 
 		std::vector<size_t>&        getBoundaryIndices() { return boundary_indices; } 
+		size_t                      getBoundaryIndex(size_t indx) { return boundary_indices[indx]; } 
 		std::vector<Vec3>&          getBoundaryNormals() { return boundary_normals; }
 
         size_t                      getStencilsSize() { return stencil_map.size(); }

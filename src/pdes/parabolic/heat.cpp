@@ -9,10 +9,10 @@
 using namespace std;
 using namespace EB;
 
-    Heat::Heat(ExactSolution* _solution, std::vector<NodeType>& rbf_centers_, int stencil_size, std::vector<size_t>& global_boundary_nodes_, Derivative* der_, int rank) 
-:	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),	id(rank), subdomain(NULL), exactSolution(_solution) 
+    Heat::Heat(ExactSolution* _solution, std::vector<NodeType>& rbf_centers_, int num_stencils, std::vector<size_t>& global_boundary_nodes_, Derivative* der_, int rank, double rel_err_max) 
+:	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),	id(rank), subdomain(NULL), exactSolution(_solution), rel_err_tol(rel_err_max) 
 {
-    nb_stencils = stencil_size;
+    nb_stencils = num_stencils;
     nb_rbf = rbf_centers.size();
 
     PI = acos(-1.);
@@ -41,8 +41,8 @@ using namespace EB;
     //grid.laplace();
 }
 
-    Heat::Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank) 
-: 	exactSolution(_solution), rbf_centers(subdomain_->getNodeList()), boundary_set(subdomain_->getBoundaryIndices()), der(der_), id(rank),subdomain(subdomain_) 
+    Heat::Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, double rel_err_max) 
+: 	exactSolution(_solution), rbf_centers(subdomain_->getNodeList()), boundary_set(subdomain_->getBoundaryIndices()), der(der_), id(rank),subdomain(subdomain_), rel_err_tol(rel_err_max)
 {
     nb_stencils = subdomain->getStencilsSize();
     nb_rbf = subdomain->getNodeListSize();
@@ -305,6 +305,10 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 //----------------------------------------------------------------------
 void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes, double rel_err_max)
 {
+    if (rel_err_max < 0) { 
+        rel_err_max = rel_err_tol; 
+    }
+
     vector<double> sol_error(sol_vec.size());
     vector<double> sol_exact(sol_vec.size());
 
@@ -504,7 +508,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
     sol_error.resize(nb_stencils);
 
     // exact solution
-    for (int i = 0; i < nb_rbf; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
         Vec3& v = rbf_centers[i];
         sol_ex[i] = exactSolution->at(v, time);
         sol_error[i] = sol_ex[i] - s[i];
@@ -519,7 +523,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
     sprintf(filename, "error.out.%d", id);
 
     FILE* fderr = fopen(filename, "w");
-    for (int i = 0; i < nb_rbf; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
         Vec3& v = rbf_centers[i];
         fprintf(fderr, "%f %f %f %f\n", v[0], v[1], v[2], sol_error[i]);
     }
@@ -529,7 +533,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 
     // print solution to a file
     FILE* fdsol = fopen(filename, "w");
-    for (int i = 0; i < nb_rbf; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
         Vec3& v = rbf_centers[i];
         fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
     }
@@ -676,7 +680,7 @@ void Heat::advanceOneStepDivGrad() {
     sol_error.resize(nb_stencils);
 
     // exact solution
-    for (int i = 0; i < nb_rbf; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
         Vec3& v = rbf_centers[i];
         sol_ex[i] = exactSolution->at(v, time);
         sol_error[i] = sol_ex[i] - s[i];
@@ -695,7 +699,7 @@ void Heat::advanceOneStepDivGrad() {
 
     // print solution to a file
     FILE* fdsol = fopen("solution.out", "w");
-    for (int i = 0; i < nb_rbf; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
         Vec3& v = rbf_centers[i];
         fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
     }
@@ -842,7 +846,7 @@ void Heat::advanceOneStepTwoTerms() {
     sol_error.resize(nb_stencils);
 
     // exact solution
-    for (int i = 0; i < nb_rbf; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
         Vec3& v = rbf_centers[i];
         sol_ex[i] = exactSolution->at(v, time);
         sol_error[i] = sol_ex[i] - s[i];
@@ -853,7 +857,7 @@ void Heat::advanceOneStepTwoTerms() {
     //exit(0);
 
     FILE* fderr = fopen("error.out", "w");
-    for (int i = 0; i < nb_rbf; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
         Vec3& v = rbf_centers[i];
         fprintf(fderr, "%f %f %f %f\n", v[0], v[1], v[2], sol_error[i]);
     }
@@ -861,7 +865,7 @@ void Heat::advanceOneStepTwoTerms() {
 
     // print solution to a file
     FILE* fdsol = fopen("solution.out", "w");
-    for (int i = 0; i < nb_rbf; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
         Vec3& v = rbf_centers[i];
         fprintf(fdsol, "%f %f %f %f\n", v.x(), v.y(), v.z(), s[i]);
     }

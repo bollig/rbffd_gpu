@@ -122,7 +122,7 @@ int Domain::send(int my_rank, int receiver_rank) {
 	sendSTL(&avg_stencil_radii, my_rank, receiver_rank); // Average distances (possibly stencil radii)
 
 	sendSTL(&loc_to_glob, my_rank, receiver_rank); // l2g
-	sendSTL(&globmap, my_rank, receiver_rank); // g2l
+	sendSTL(&glob_to_loc, my_rank, receiver_rank); // g2l
 
 	sendSTL(&O_by_rank, my_rank, receiver_rank); // Subsets of O that this Domain will send out to each other Domain
 	sendSTL(&boundary_indices, my_rank, receiver_rank);
@@ -161,7 +161,7 @@ int Domain::receive(int my_rank, int sender_rank) {
 	recvSTL(&avg_stencil_radii, my_rank, sender_rank); // Average distances (possibly stencil radii)
 
 	recvSTL(&loc_to_glob, my_rank, sender_rank); // l2g
-	recvSTL(&globmap, my_rank, sender_rank); // g2l
+	recvSTL(&glob_to_loc, my_rank, sender_rank); // g2l
 
 	recvSTL(&O_by_rank, my_rank, sender_rank); // Subsets of O that this Domain will send out to each other Domain
 	recvSTL(&boundary_indices, my_rank, sender_rank);
@@ -499,13 +499,13 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
 
 	// global to local map
 	for (int i = 0; i < loc_to_glob.size(); i++) {
-		globmap[loc_to_glob[i]] = i;
+		glob_to_loc[l2g(i)] = i;
 	}
 
 	// Convert all stencils to local indexing.
 	for (int i = 0; i < stencil_map.size(); i++) {
 		for (int j = 0; j < stencil_map[i].size(); j++) {
-			stencil_map[i][j] = globmap[stencil_map[i][j]];
+			stencil_map[i][j] = g2l(stencil_map[i][j]);
 		}
 	}
 
@@ -514,14 +514,15 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
 	set_intersection(Q.begin(), Q.end(), boundary.begin(), boundary.end(),
 			inserter(boundary_indices, boundary_indices.end()));
 	for (int i = 0; i < boundary_indices.size(); i++) {
-		//cout << "Boundary Node[" << i << "] = " << boundary_indices[i]
+		//EVAN: 
+        //cout << "Boundary Node[" << i << "] = " << boundary_indices[i]
 		//		<< endl;
-		boundary_indices[i] = globmap[boundary_indices[i]];
+		boundary_indices[i] = g2l(boundary_indices[i]);
 	}
 	printf("GLOBAL_BOUNDARY.size= %d\n", (int) boundary_indices.size());
 
 	printf("l2g size= %d\n", (int) loc_to_glob.size());
-	printf("g2l size= %d\n", (int) globmap.size());
+	printf("g2l size= %d\n", (int) glob_to_loc.size());
 	printf("node_list size= %d\n", (int) node_list.size());
 	printf("avg_stencil_radii size= %d\n", (int) avg_stencil_radii.size());
 }
@@ -629,7 +630,7 @@ void Domain::printCenterMemberships(const set<int>& center_set, std::string disp
 		} else {
 			cout << ".";
 		}
-		cout << "   ";//<< stencil_map.size() << ":" << globmap[*setiter];
+		cout << "   ";//<< stencil_map.size() << ":" << g2l(*setiter);
 		if (dependsOnSet(*setiter, R)) {
 			cout << "R";
 		} else {
@@ -693,7 +694,7 @@ void Domain::printSet(const set<int>& center_set, std::string set_label) {
 			!= center_set.end(); setiter++) {
 		// True -> stencil[i][j] is in center set
 		int i = *setiter;
-		cout << "\t" << i << " (" << globmap[i] << ")" << endl;
+		cout << "\t" << i << " (" << g2l(i) << ")" << endl;
 	}
 	cout << "}" << endl;
 }
@@ -705,7 +706,7 @@ void Domain::printVector(const vector<double>& stencil_radii, std::string set_la
 			!= stencil_radii.end(); setiter++, i++) {
 		// True -> stencil[i][j] is in center set
 		if (loc_to_glob.size() > 0) {
-			cout << "\t[" << i << " (" << loc_to_glob[i] << ")] = " << *setiter
+			cout << "\t[" << i << " (" << l2g(i) << ")] = " << *setiter
 				<< endl;
 		} else {
 			cout << "\t[" << i << " (" << i << ")] = " << *setiter << endl;

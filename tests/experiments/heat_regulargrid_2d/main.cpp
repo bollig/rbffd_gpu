@@ -39,6 +39,7 @@ int main(int argc, char** argv) {
 	ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
 
 	int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
+	double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
 
 	if (comm_unit->getRank() == Communicator::MASTER) {
 
@@ -157,7 +158,9 @@ int main(int argc, char** argv) {
 	Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim, comm_unit->getRank());
 #else 
     // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
-	Derivative* der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
+
+    Derivative* der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
+//	Derivative* der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
 #endif 
 
 	double epsilon = settings->GetSettingAs<double>("EPSILON");
@@ -206,6 +209,7 @@ int main(int argc, char** argv) {
 	// the original code. I will address this next.
 	//heat.setDt(0.011122);
 	heat.setDt(subdomain->dt);
+    heat.setRelErrTol(max_global_rel_error); 
 
 #if 0
     subdomain->printVector(subdomain->global_boundary_nodes, "INDICES OF GLOBAL BOUNDARY NODES: ");
@@ -214,7 +218,7 @@ int main(int argc, char** argv) {
 #endif 
 	// Even with Cartesian, the max norm stays at one. Strange
 	int iter;
-	for (iter = 0; iter < 39; iter++) {
+	for (iter = 0; iter < 1000; iter++) {
 		cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter
 			<< ") *************" << endl;
 #if 0
@@ -273,7 +277,7 @@ int main(int argc, char** argv) {
         }
         fin.close();
         std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-        heat.checkError(final_sol, grid->getNodeList()); 
+        heat.checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
         std::cout << "============== Solution Valid =============\n"; 
 #endif 
 		delete(grid);

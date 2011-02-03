@@ -1218,7 +1218,7 @@ void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int
         //printf("i=%d, w[0] = %f\n", i, w[0]);
         der = 0.0;
         int n = st.size();
-#if 1
+#if 0
         cout << "STENCIL " << i << "(" << n << "): " << endl;
 #endif
         //printf("(%d) stencil size: %d\n", i, n);

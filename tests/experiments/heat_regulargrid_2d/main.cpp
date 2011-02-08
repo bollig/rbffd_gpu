@@ -193,12 +193,12 @@ int main(int argc, char** argv) {
 		cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter
 			<< ") *************" << endl;
         char label[256]; 
-        sprintf(label, "INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
+        sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
         subdomain->printSolution(label); 
         tm4.start(); 
 		heat.advanceOneStepWithComm(comm_unit);
         tm4.stop(); 
-        sprintf(label, "SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
+        sprintf(label, "LOCAL SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
         subdomain->printSolution(label); 
 
 		double nrm = heat.maxNorm();

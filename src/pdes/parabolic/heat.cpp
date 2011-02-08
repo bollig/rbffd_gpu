@@ -258,7 +258,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
         // Do NOT use Domain as buffer for computation
         for (int i = 0; i < s1.size(); i++) {
             s1[i] = subdomain->U_G[i];
-            printf("s1[%d] = %f\n", i, s1[i]); 
+          //  printf("s1[%d] = %f\n", i, s1[i]); 
         }
 
 #ifdef SECOND

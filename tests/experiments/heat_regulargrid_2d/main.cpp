@@ -141,8 +141,8 @@ int main(int argc, char** argv) {
 
 
     // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
-//    Derivative* der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
-	Derivative* der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
+    Derivative* der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
+	// Derivative* der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
 
 	double epsilon = settings->GetSettingAs<double>("EPSILON");
 	der->setEpsilon(epsilon);

@@ -636,7 +636,7 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
 
     // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
 
-#if 0
+#if 1
     this->testDeriv(DerivativeTests::C, der, grid, grid.getStencilRadii());
 
     this->testDeriv(DerivativeTests::X, der, grid, grid.getStencilRadii());

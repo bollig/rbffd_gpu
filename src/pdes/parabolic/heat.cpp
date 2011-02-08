@@ -22,8 +22,8 @@ using namespace EB;
     time = 0.0; // physical time
 
     // solution + temporary array (for time advancement)
-    sol[0].resize(nb_stencils);
-    sol[1].resize(nb_stencils);
+    sol[0].resize(nb_rbf);
+    sol[1].resize(nb_rbf);
 
 
     // could resize inside the advancement function
@@ -54,8 +54,8 @@ using namespace EB;
     time = 0.0; // physical time
 
     // solution + temporary array (for time advancement)
-    sol[0].resize(nb_stencils);
-    sol[1].resize(nb_stencils);
+    sol[0].resize(nb_rbf);
+    sol[1].resize(nb_rbf);
 
 
     // could resize inside the advancement function
@@ -258,6 +258,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
         // Do NOT use Domain as buffer for computation
         for (int i = 0; i < s1.size(); i++) {
             s1[i] = subdomain->U_G[i];
+            printf("s1[%d] = %f\n", i, s1[i]); 
         }
 
 #ifdef SECOND

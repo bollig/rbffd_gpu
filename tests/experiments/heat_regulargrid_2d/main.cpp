@@ -99,9 +99,11 @@ int main(int argc, char** argv) {
 		std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
 		// allocate and fill in details on subdivisions
 
+    	original_domain->printVerboseDependencyGraph();
 		std::cout << "Generating subdomains\n";
 		original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
 
+    	original_domain->printVerboseDependencyGraph();
 		subdomain = subdomain_list[0]; 
 		for (int i = 1; i < comm_unit->getSize(); i++) {
 			std::cout << "Sending subdomain[" << i << "]\n";
@@ -187,7 +189,7 @@ int main(int argc, char** argv) {
 
     subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
 	int iter;
-	for (iter = 0; iter < 1; iter++) {
+	for (iter = 0; iter < 1000; iter++) {
 		cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter
 			<< ") *************" << endl;
         char label[256]; 

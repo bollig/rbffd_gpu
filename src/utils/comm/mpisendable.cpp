@@ -522,7 +522,7 @@ int MPISendable::recvSTL(std::set<std::vector<Vec3> > *destination, int myrank, 
 	for (int i=0; i < sz; i++) {
 		std::vector<Vec3> temp; 
 		for (int j=0; j < buff[i]; j++) {
-			Vec3 v((double)buff2[offset+j][0], (double)buff2[offset+j][1], (double)buff2[offset+j][2]); // cast to ensure correct constructor
+			Vec3 v(buff2[offset+j][0], buff2[offset+j][1], buff2[offset+j][2]); // cast to ensure correct constructor
 			temp.push_back(v);
 		}
 		offset += buff[i]; 

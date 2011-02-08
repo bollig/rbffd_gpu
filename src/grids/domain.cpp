@@ -73,7 +73,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         double xm = xmin + igx * deltax;
         double ym = ymin + igy * deltay;
         double zm = zmin + igz * deltaz;
-        printf("Subdomain[%d of %d] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n", id+1, comm_size, xm, xm+deltax, ym, ym+deltay, zm, zm+deltaz);
+        printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, xm, xm+deltax, ym, ym+deltay, zm, zm+deltaz);
 	printf("Tile (ix, iy, iz) = (%d, %d, %d)\n", igx, igy, igz); 
         subdomains[id] = new Domain(xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, dt, id, comm_size);
     }
@@ -189,7 +189,7 @@ void Domain::printVerboseDependencyGraph() {
 int Domain::sendUpdate(int my_rank, int receiver_rank) {
 
 	if (my_rank != receiver_rank) {
-		vector<int>::iterator qit;
+		vector<int>::iterator oit;
 		// vector<set<int> > O; gives us the list of (global) indices which we
 		// are sending to receiver_rank		
 
@@ -200,13 +200,14 @@ int Domain::sendUpdate(int my_rank, int receiver_rank) {
 			//	cout << "O_by_rank is NOT size(0)" << endl;
 			int i;
 
-			for (qit = O_by_rank[receiver_rank].begin(); qit
-					!= O_by_rank[receiver_rank].end(); qit++, i++) {
+			for (oit = O_by_rank[receiver_rank].begin(); oit
+					!= O_by_rank[receiver_rank].end(); oit++, i++) {
 				// Elements in O are in global indices 
 				// so we need to first convert to local to index our U_G
-				U_O.push_back(U_G[g2l(*qit)]);
-				cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
-					<< "]: " << U_G[g2l(*qit)] << endl;
+				U_O.push_back(U_G[g2l(*oit)]);
+				cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
+                    << " (local index: " << g2l(*oit) << ")"
+					<< "]: " << U_G[g2l(*oit)] << endl;
 			}
 		}
 		cout << "O_by_rank[" << receiver_rank << "].size = "
@@ -220,13 +221,11 @@ int Domain::sendUpdate(int my_rank, int receiver_rank) {
 
 int Domain::receiveUpdate(int my_rank, int sender_rank) {
 	if (my_rank != sender_rank) {
-		vector<int>::iterator qit;
+		vector<int>::iterator rit;
 		int i = 0;
-		// vector<set<int> > R;
-		// gives us the list of (global) indices which we are receiving from sender_rank		
-		// We send a list of node values 
+		// We receive a list of (global) indices which we are receiving from sender_rank		
 		vector<double> U_R;
-		// Also need to tell what subset of O was sent.
+		// Also need to tell what subset of O was received.
 		vector<int> R_sub;
 
 		recvSTL(&R_sub, my_rank, sender_rank);
@@ -235,13 +234,13 @@ int Domain::receiveUpdate(int my_rank, int sender_rank) {
 		cout << endl << "Received Update from CPU" << sender_rank << " ("
 			<< R_sub.size() << " centers)" << endl;
 		// Then we integrate the values as an update: 
-		for (qit = R_sub.begin(); qit != R_sub.end(); qit++, i++) {
-			cout << "\t(Global Index): " << *qit << "\t (Local Index:" << g2l(
-						*qit) << ")\tOld U_G[" << g2l(*qit) << "]: " << U_G[g2l(
-						*qit)] << "\t New U_G[" << g2l(*qit) << "]: " << U_R[i]
+		for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
+			cout << "\t(Global Index): " << *rit << "\t (Local Index:" << g2l(
+						*rit) << ")\tOld U_G[" << g2l(*rit) << "]: " << U_G[g2l(
+						*rit)] << "\t New U_G[" << g2l(*rit) << "]: " << U_R[i]
 									      << endl;
 			// Global to local mapping required
-			U_G[g2l(*qit)] = U_R[i]; // Overwrite with new values
+			U_G[g2l(*rit)] = U_R[i]; // Overwrite with new values
 		}
 
 		cout << "RANK " << my_rank << " REPORTS: received update" << endl;
@@ -510,16 +509,19 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
 	}
 
 	// This forms the boundary set (needed)
-	printf("BOUNDARY.size= %d\n", (int) boundary.size());
+
+	printf("MASTER BOUNDARY.size= %d\n", (int) boundary.size());
 	set_intersection(Q.begin(), Q.end(), boundary.begin(), boundary.end(),
 			inserter(boundary_indices, boundary_indices.end()));
+	printf("SUBDOMAIN BOUNDARY.size= %d\n", (int)boundary_indices.size());
 	for (int i = 0; i < boundary_indices.size(); i++) {
 		//EVAN: 
-        //cout << "Boundary Node[" << i << "] = " << boundary_indices[i]
-		//		<< endl;
+        cout << "Subdomain Adding Boundary Node[" << i << "] = " << boundary_indices[i]
+            << " (local index: " << g2l(boundary_indices[i]) << ")"
+			<< endl;
 		boundary_indices[i] = g2l(boundary_indices[i]);
 	}
-	printf("GLOBAL_BOUNDARY.size= %d\n", (int) boundary_indices.size());
+	//printf("GLOBAL_BOUNDARY.size= %d\n", (int) boundary_indices.size());
 
 	printf("l2g size= %d\n", (int) loc_to_glob.size());
 	printf("g2l size= %d\n", (int) glob_to_loc.size());
@@ -574,7 +576,7 @@ void Domain::fillVarData(vector<NodeType>& rbf_centers) {
 
 void Domain::printStencilNodesIn(const vector<StencilType>& stencils, const set<int>& center_set, std::string display_char) {
 	for (int i = 0; i < stencils.size(); i++) {
-		cout << "Stencil[" << i << "] = ";
+		cout << "Stencil[local:" << i << " (global: " << l2g(i) << ")] = ";
 		for (int j = 0; j < stencils[i].size(); j++) {
 			cout << " ";
 			if (isInSet(l2g(stencils[i][j]), center_set)) {
@@ -587,7 +589,7 @@ void Domain::printStencilNodesIn(const vector<StencilType>& stencils, const set<
 	}
 }
 
-// HERE: center_set is global index
+// HERE: center_set is in local index
 void Domain::printCenterMemberships(const set<int>& center_set, std::string display_name) {
 	// Center[ ID ] =     [Q|.]  [D|.]  [O|.]  [R][+]
 	// NOTE: [a|b] --> if (true) then a else b. 
@@ -611,8 +613,8 @@ void Domain::printCenterMemberships(const set<int>& center_set, std::string disp
 	int i = 0;
 	for (set<int>::const_iterator setiter = center_set.begin(); setiter
 			!= center_set.end(); setiter++, i++) {
-		cout << i << "\t" << display_name << "[ " << g2l(*setiter) << " | "
-			<< *setiter << " ] =\t\t";
+		cout << i << "\t" << display_name << "[ local:" << *setiter << " | global:"
+			<< l2g(*setiter) << " ] =\t\t";
 		if (isInSet(*setiter, Q)) {
 			cout << "Q";
 		} else {
@@ -694,7 +696,7 @@ void Domain::printSet(const set<int>& center_set, std::string set_label) {
 			!= center_set.end(); setiter++) {
 		// True -> stencil[i][j] is in center set
 		int i = *setiter;
-		cout << "\t" << i << " (" << g2l(i) << ")" << endl;
+		cout << "\t" << i << " (global:" << g2l(i) << ")" << endl;
 	}
 	cout << "}" << endl;
 }
@@ -706,7 +708,7 @@ void Domain::printVector(const vector<double>& stencil_radii, std::string set_la
 			!= stencil_radii.end(); setiter++, i++) {
 		// True -> stencil[i][j] is in center set
 		if (loc_to_glob.size() > 0) {
-			cout << "\t[" << i << " (" << l2g(i) << ")] = " << *setiter
+			cout << "\t[" << i << " (global:" << l2g(i) << ")] = " << *setiter
 				<< endl;
 		} else {
 			cout << "\t[" << i << " (" << i << ")] = " << *setiter << endl;

@@ -45,6 +45,7 @@ public:
             std::vector<StencilType>& stencils);
 
     void checkWeights(Derivative& der, int nb_centers, int nb_stencils);
+    double compareDeriv(double deriv_gpu, double deriv_cpu, std::string label);
 
 protected:
     bool weightsComputed;

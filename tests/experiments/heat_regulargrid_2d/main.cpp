@@ -123,60 +123,33 @@ int main(int argc, char** argv) {
     
 	subdomain->printVerboseDependencyGraph();
 
-#if 0
-	subdomain->printCenters(subdomain->G_centers, "All Centers Needed by this CPU");
-#else 
     subdomain->printNodeList("All Centers Needed by This Process"); 
-#endif 
 
 	printf("CHECKING STENCILS: \n");
-#if 0
-	for (int irbf = 0; irbf < subdomain->Q_stencils.size(); irbf++) {
-#else 
 	for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
-#endif 
 		printf("Stencil[%d] = ", irbf);
-#if 0
-		if (irbf == subdomain->Q_stencils[irbf][0]) {
-#else 
         StencilType& s = subdomain->getStencil(irbf); 
         if (irbf == s[0]) {
-#endif 
 			printf("PASS\n");
-#if 0
-			subdomain->printStencil(subdomain->Q_stencils[irbf], "S");
-#else 
             subdomain->printStencil(s, "S"); 
-#endif 
 		} else {
 			printf("FAIL\n");
 		}
 	}
 
 
-#if 0
-	Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim, comm_unit->getRank());
-#else 
     // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
-
-    Derivative* der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
-//	Derivative* der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
-#endif 
+//    Derivative* der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
+	Derivative* der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
 
 	double epsilon = settings->GetSettingAs<double>("EPSILON");
 	der->setEpsilon(epsilon);
 
 
 	printf("start computing weights\n");
-#if 0
-	for (int irbf=0; irbf < subdomain->Q_stencils.size(); irbf++) {
-        der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[irbf], irbf);
-	}
-#else 
 	for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
 		der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);
 	}
-#endif 
 	cout << "end computing weights" << endl;
 
 
@@ -211,32 +184,20 @@ int main(int argc, char** argv) {
 	heat.setDt(subdomain->dt);
     heat.setRelErrTol(max_global_rel_error); 
 
-#if 0
-    subdomain->printVector(subdomain->global_boundary_nodes, "INDICES OF GLOBAL BOUNDARY NODES: ");
-#else 
+
     subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
-#endif 
-	// Even with Cartesian, the max norm stays at one. Strange
 	int iter;
-	for (iter = 0; iter < 1000; iter++) {
+	for (iter = 0; iter < 1; iter++) {
 		cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter
 			<< ") *************" << endl;
-#if 0
-		subdomain->printVector(subdomain->U_G, "INPUT_TO_HEAT_ADVANCE");
-#else 
         char label[256]; 
         sprintf(label, "INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
         subdomain->printSolution(label); 
-#endif 
         tm4.start(); 
 		heat.advanceOneStepWithComm(comm_unit);
         tm4.stop(); 
         sprintf(label, "SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
-#if 0
-		subdomain->printVector(subdomain->U_G, label);
-#else 
         subdomain->printSolution(label); 
-#endif
 
 		double nrm = heat.maxNorm();
 		// TODO : Need to add a "comm_unit->sendTerminate()" to

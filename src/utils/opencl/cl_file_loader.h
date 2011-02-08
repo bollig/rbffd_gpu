@@ -7,7 +7,7 @@
 #include <sstream>
 #include <CL/cl.hpp> 
 
-typedef std::map<std::string, std::tuple<bool, int> > EXT_MAP
+typedef std::map<std::string, std::pair<bool, int> > EXT_MAP;
 
 class CLFileLoader 
 {

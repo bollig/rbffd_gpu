@@ -1154,7 +1154,7 @@ void Derivative::computeDerivativesCPU(DerType which, double* u, double* deriv, 
 
 void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int npts)
 {
-
+    std::cout << "[Derivative::computeDerivative()]\n"; 
     cout << "COMPUTING DERIVATIVE (on CPU): ";
     vector<double*>* weights_p;
 
@@ -1231,7 +1231,7 @@ void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int
         }
         deriv[i] = der;
     }
-    std::cout << "HERE\n"; 
+
 }
 //----------------------------------------------------------------------
 /**

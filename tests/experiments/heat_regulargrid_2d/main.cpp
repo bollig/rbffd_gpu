@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
 
 	int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
 	double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
+	int use_gpu = settings->GetSettingAs<double>("USE_GPU", ProjectSettings::optional, "1"); 
 
 	if (comm_unit->getRank() == Communicator::MASTER) {
 
@@ -141,8 +142,12 @@ int main(int argc, char** argv) {
 
 
     // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
-    Derivative* der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
-	// Derivative* der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
+    Derivative* der; 
+    if (use_gpu) {
+        der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
+    } else {
+        der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
+    }
 
 	double epsilon = settings->GetSettingAs<double>("EPSILON");
 	der->setEpsilon(epsilon);

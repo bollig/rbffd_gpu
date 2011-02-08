@@ -333,7 +333,7 @@ void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes
     double lifabs = linfnorm(sol_vec, sol_exact); 
     double lirel = (linfnorm(sol_exact) > 1e-10) ? lifabs/linfnorm(sol_exact) : 0.;
 
-    printf("========= Global Norms For Current Solution ========\n"); 
+    printf("========= Norms For Current Solution ========\n"); 
     printf("Absolute =>  || x_exact - x_approx ||_p                    ,  where p={1,2,inf}\n"); 
     printf("Relative =>  || x_exact - x_approx ||_p / || x_exact ||_p  ,  where p={1,2,inf}\n"); 
     printf("l1 error : Absolute = %f, Relative = %f\n", l1fabs, l1rel );

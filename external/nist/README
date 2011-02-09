@@ -1,0 +1,4 @@
+NIST provided MATRIX MARKET I/O Routines
+http://math.nist.gov/MatrixMarket/mmio-c.html
+
+NOTE: mmio.c was changed to extension .cpp so the g++ compiler would stop complaining about undefined routines. 

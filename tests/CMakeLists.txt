@@ -31,7 +31,8 @@
 		util/test_complex
 		util/test_template_macros
         util/gpu_compute_derivs
-        util/cl_file_loader
+        #        util/cl_file_loader
+        util/matrix_market_io
 
 		template
 	)

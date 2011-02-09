@@ -6,6 +6,7 @@
 		graphics_lib
 		timers
 		kdtree
+        nist
 		cuda_libraries
 		opencl_libraries
 	)
@@ -16,6 +17,7 @@
 		utilities	#graphics_lib/utilities
 		timers		#grahpics_lib/timing
 		kdtree		#kdtree/.
+        nist
 	)
 
 	FOREACH (lib ${EXTERNAL_LIBS})

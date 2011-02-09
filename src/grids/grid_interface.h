@@ -24,6 +24,10 @@ class Grid
 		// set.
 		size_t nb_nodes; 
 
+        // Maximum number of nodes to allow in a stencil (can be equal to nb_nodes
+        // if we want to define a global function across a stencil)
+		size_t max_st_size; 
+
 		// Perturbation offsets for generated points
 		double pert; 
 
@@ -98,6 +102,7 @@ class Grid
 		// Enable or disable node sorting (if a grid generator obeys the order)
 		// so boundary nodes appear first in the node_list
 		void setSortBoundaryNodes(int sort_boundary_first) { this->boundary_nodes_first = sort_boundary_first; }
+        void setMaxStencilSize(size_t st_max_size) { this->max_st_size = st_max_size; }
 
         size_t                      getNodeListSize() { return node_list.size(); }
 		std::vector<NodeType>& 	    getNodeList() 	{ return node_list; }

@@ -81,6 +81,8 @@ int main(int argc, char** argv) {
 		} else {
 			cout << "ERROR! Dim > 3 Not Supported!" << endl;
 		}
+        
+        grid->setMaxStencilSize(stencil_size); 
 
         std::cout << "Generating nodes\n"; 
         if (grid->loadFromFile()) 
@@ -89,7 +91,7 @@ int main(int argc, char** argv) {
     		grid->setSortBoundaryNodes(true); 
 	    	grid->generate();
 		    std::cout << "Generating stencils\n";
-		    grid->generateStencils(new StencilGenerator(stencil_size));   // nearest nb_points
+		    grid->generateStencils(new StencilGenerator());   // nearest stencil_size 
 		    grid->writeToFile(); 
         }
 

@@ -18,15 +18,15 @@
 
 class StencilGenerator {
 public:
-    StencilGenerator(int st_max_size, double st_max_radius = 0.);
+    StencilGenerator(double st_max_radius = 0.);
+//    StencilGenerator(int st_max_size, double st_max_radius = 0.);
     ~StencilGenerator();
 
     void setRadius(double st_max_radius);
-    void setSize(double st_max_size);
 
 	// KEY ROUTINE: generates the stencils according to st_max_size and st_max_radius requirements
 	// Remember: if st_max_size is < 0 then we assume 
-    virtual void computeStencils(std::vector<NodeType>& node_list, std::vector<size_t>& boundary_list, std::vector<StencilType>& stencil_map, std::vector<double>& avg_stencil_radii);
+    virtual void computeStencils(std::vector<NodeType>& node_list, std::vector<size_t>& boundary_list, std::vector<StencilType>& stencil_map, size_t max_stencil_size, std::vector<double>& avg_stencil_radii);
     	    
 
 protected:

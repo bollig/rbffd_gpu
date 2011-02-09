@@ -22,7 +22,7 @@ void Grid::generateStencils(StencilGenerator* stencil_generator) {
     this->avg_stencil_radii.resize(node_list.size()); 
 
     // TODO: generate stencils for a *** SUBSET *** of nodes
-    stencil_generator->computeStencils(this->node_list, this->boundary_indices, this->stencil_map, this->avg_stencil_radii);
+    stencil_generator->computeStencils(this->node_list, this->boundary_indices, this->stencil_map, this->max_st_size, this->avg_stencil_radii);
 }
 
 //----------------------------------------------------------------------------
@@ -111,7 +111,9 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
 //----------------------------------------------------------------------------
 
 void Grid::writeStencilsToFile(std::string filename) {
-    std::string fname = "stencils_"; 
+    char prefix[256]; 
+    sprintf(prefix, "stencils_%lu_", this->max_st_size); 
+    std::string fname = prefix; 
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
     if (fout.is_open()) {
@@ -298,7 +300,9 @@ int Grid::loadAvgRadiiFromFile(std::string filename) {
 
 int Grid::loadStencilsFromFile(std::string filename) {
 
-    std::string fname = "stencils_"; 
+    char prefix[256]; 
+    sprintf(prefix, "stencils_%lu_", this->max_st_size); 
+    std::string fname = prefix; 
     fname.append(filename);
     std::cout << "[Grid] reading stencil file: " << fname << std::endl;    
 

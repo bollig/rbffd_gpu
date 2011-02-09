@@ -5,6 +5,7 @@
 
 #include "grid_interface.h"
 #include "utils/random.h"
+#include "mmio.h"
 
 //----------------------------------------------------------------------------
 void Grid::generate() {
@@ -39,15 +40,106 @@ void Grid::writeToFile(std::string filename) {
             fout << node_list[i] << std::endl; 
         }
     } else {
-        perror ("Error opening file to write"); 
+        printf("Error opening file to write\n"); 
         exit(EXIT_FAILURE); 
     }
     fout.close();
     std::cout << "[Grid] \tWrote " << node_list.size() << " nodes to \t" << filename << std::endl;
+
+    this->writeBoundaryToFile(filename); 
+    this->writeNormalsToFile(filename); 
+    this->writeAvgRadiiToFile(filename); 
+    this->writeStencilsToFile(filename); 
+    this->writeExtraToFile(filename); 
 }
 
 
 //----------------------------------------------------------------------------
+
+void Grid::writeBoundaryToFile(std::string filename) {
+    std::string fname = "bndry_"; 
+    fname.append(filename); 
+    std::ofstream fout(fname.c_str()); 
+    if (fout.is_open()) {
+        for (size_t i = 0; i < boundary_indices.size(); i++) {
+            fout << boundary_indices[i] << std::endl; 
+        }
+    } else {
+        printf("Error opening file to write\n"); 
+        exit(EXIT_FAILURE); 
+    }
+    fout.close();
+    std::cout << "[Grid] \tWrote " << boundary_indices.size() << " boundary indices to \t" << filename << std::endl;
+}
+
+//----------------------------------------------------------------------------
+
+void Grid::writeNormalsToFile(std::string filename) {
+    std::string fname = "nrmls_"; 
+    fname.append(filename); 
+    std::ofstream fout(fname.c_str()); 
+    if (fout.is_open()) {
+        for (size_t i = 0; i < boundary_normals.size(); i++) {
+            fout << boundary_normals[i] << std::endl; 
+        }
+    } else {
+        printf("Error opening file to write\n"); 
+        exit(EXIT_FAILURE); 
+    }
+    fout.close();
+    std::cout << "[Grid] \tWrote " << boundary_normals.size() << " boundary normals to \t" << filename << std::endl;
+}
+
+//----------------------------------------------------------------------------
+
+void Grid::writeAvgRadiiToFile(std::string filename) {
+    std::string fname = "avg_radii_"; 
+    fname.append(filename); 
+    std::ofstream fout(fname.c_str()); 
+    if (fout.is_open()) {
+        for (size_t i = 0; i < avg_stencil_radii.size(); i++) {
+            fout << avg_stencil_radii[i] << std::endl; 
+        }
+    } else {
+        printf("Error opening file to write\n"); 
+        exit(EXIT_FAILURE); 
+    }
+    fout.close();
+    std::cout << "[Grid] \tWrote " << avg_stencil_radii.size() << " average stencil radii to \t" << filename << std::endl;
+}
+
+//----------------------------------------------------------------------------
+
+void Grid::writeStencilsToFile(std::string filename) {
+    std::string fname = "stencils_"; 
+    fname.append(filename); 
+    std::ofstream fout(fname.c_str()); 
+    if (fout.is_open()) {
+        for (size_t i = 0; i < stencil_map.size(); i++) {
+            fout << stencil_map[i].size(); 
+            for (size_t j=0; j < stencil_map[i].size(); j++) {
+                fout << " " << stencil_map[i][j];
+            }
+            fout << std::endl;
+        }
+    } else {
+        printf("Error opening file to write\n"); 
+        exit(EXIT_FAILURE); 
+    }
+    fout.close();
+    std::cout << "[Grid] \tWrote " << stencil_map.size() << " stencils to \t" << filename << std::endl;
+}
+
+//----------------------------------------------------------------------------
+
+
+void Grid::writeExtraToFile(std::string filename) {
+    std::cout << "[Grid] Nothing extra to write" << std::endl;
+}
+
+//----------------------------------------------------------------------------
+
+
 
 int Grid::loadFromFile(int iter) {
     return this->loadFromFile(this->getFilename(iter)); 
@@ -61,7 +153,7 @@ int Grid::loadFromFile(std::string filename) {
     std::ifstream fin(filename.c_str());
 
     node_list.clear(); 
-    boundary_indices.clear(); 
+
     boundary_normals.clear();
 
     if (fin.is_open()) {
@@ -73,16 +165,181 @@ int Grid::loadFromFile(std::string filename) {
             }
         }
     } else {
-        perror ("Error opening file to read"); 
+        printf("Error opening node file to read\n"); 
+        return -1;
+        //		exit(EXIT_FAILURE);
+    }
+    fin.close(); 
+    nb_nodes = node_list.size(); 
+    std::cout << "[Grid] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
+
+    if (this->loadBoundaryFromFile(filename)) {
+        printf("Error loading boundary nodes\n"); 
+        return -2;
+    }
+
+    if (this->loadNormalsFromFile(filename)) {
+        printf("Error loading normals\n"); 
+        return -3;
+    }
+
+    if (this->loadAvgRadiiFromFile(filename)) {
+        printf("Error loading avg dists\n"); 
+        return -4;
+    }
+    
+    if (this->loadStencilsFromFile(filename)) {
+        printf("Error loading stencils\n"); 
+        return -4;
+    }
+
+    if (this->loadExtraFromFile(filename)) {
+        printf("Error loading additional data\n"); 
+        return -5;
+    }
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------
+
+int Grid::loadBoundaryFromFile(std::string filename) {
+    std::string fname = "bndry_"; 
+    fname.append(filename);
+    std::cout << "[Grid] reading boundary file: " << fname << std::endl;    
+
+    std::ifstream fin; 
+    fin.open(fname.c_str()); 
+
+    if (fin.is_open()) {
+        boundary_indices.clear(); 
+        while (fin.good()) {
+            size_t indx; 
+            fin >> indx; 
+            if (!fin.eof()) {
+                boundary_indices.push_back(indx); 
+            }
+        }
+    } else {
+        printf("Error opening boundary file to read\n"); 
         return -1;
         //		exit(EXIT_FAILURE);
     }
 
     fin.close(); 
-    nb_nodes = node_list.size(); 
 
-    std::cout << "[Grid] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
+    std::cout << "[Grid] \tLoaded " << boundary_indices.size() << " boundary indices from \t" << fname << std::endl;
+    return 0; 
+}
+
+//----------------------------------------------------------------------------
+
+int Grid::loadNormalsFromFile(std::string filename) {
+    std::string fname = "nrmls_"; 
+    fname.append(filename);
+    std::cout << "[Grid] reading normals file: " << fname << std::endl;    
+
+    std::ifstream fin; 
+    fin.open(fname.c_str()); 
+
+    if (fin.is_open()) {
+        boundary_normals.clear(); 
+        while (fin.good()) {
+            Vec3 norml; 
+            fin >> norml; 
+            if (!fin.eof()) {
+                boundary_normals.push_back(norml); 
+            }
+        }
+    } else {
+        printf("Error opening normals file to read\n"); 
+        return -1;
+        //		exit(EXIT_FAILURE);
+    }
+
+    fin.close(); 
+
+    std::cout << "[Grid] \tLoaded " << boundary_normals.size() << " boundary normals from \t" << fname << std::endl;
+    return 0; 
+}
+
+//----------------------------------------------------------------------------
+
+int Grid::loadAvgRadiiFromFile(std::string filename) {
+    std::string fname = "avg_radii_"; 
+    fname.append(filename);
+    std::cout << "[Grid] reading average stencil radii file: " << fname << std::endl;    
+
+    std::ifstream fin; 
+    fin.open(fname.c_str()); 
+
+    if (fin.is_open()) {
+        avg_stencil_radii.clear(); 
+        while (fin.good()) {
+            double rad; 
+            fin >> rad; 
+            if (!fin.eof()) {
+                avg_stencil_radii.push_back(rad); 
+            }
+        }
+    } else {
+        printf("Error opening average stencil radii file to read\n"); 
+        return -1;
+        //		exit(EXIT_FAILURE);
+    }
+
+    fin.close(); 
+
+    std::cout << "[Grid] \tLoaded " << avg_stencil_radii.size() << " average stencil radii from \t" << fname << std::endl;
+    return 0; 
+}
+
+//----------------------------------------------------------------------------
+
+int Grid::loadStencilsFromFile(std::string filename) {
+
+    std::string fname = "stencils_"; 
+    fname.append(filename);
+    std::cout << "[Grid] reading stencil file: " << fname << std::endl;    
+
+    std::ifstream fin; 
+    fin.open(fname.c_str()); 
+
+    size_t num_el_loaded = 0; 
+    if (fin.is_open()) {
+        stencil_map.clear(); 
+        while (fin.good()) {
+            size_t st_size; 
+            fin >> st_size; 
+            StencilType st; 
+            for (int i = 0; i < st_size; i++) {
+                int st_el; 
+                fin >> st_el; 
+                st.push_back(st_el); 
+            }
+            if (!fin.eof()) {
+                stencil_map.push_back(st); 
+                num_el_loaded += st.size();
+            }
+        }
+    } else {
+        printf("Error opening stencil file to read\n"); 
+        return -1;
+        //		exit(EXIT_FAILURE);
+    }
+
+    fin.close(); 
+        
+    std::cout << "[Grid] \tLoaded " << stencil_map.size() << " stencils, with a total of " << num_el_loaded << " elements from \t" << fname << std::endl;
+    
     return 0;
+}
+
+//----------------------------------------------------------------------------
+
+int Grid::loadExtraFromFile(std::string filename) {
+    std::cout << "No extra loads from disk required." << std::endl;
+    return 0; 
 }
 
 //----------------------------------------------------------------------------

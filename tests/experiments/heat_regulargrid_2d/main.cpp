@@ -83,8 +83,9 @@ int main(int argc, char** argv) {
 		}
 
         std::cout << "Generating nodes\n"; 
-        // TODO: if (grid->loadFromFile()) 
+        if (grid->loadFromFile()) 
         {
+            printf("************** Generating new Grid **************\n"); 
     		grid->setSortBoundaryNodes(true); 
 	    	grid->generate();
 		    std::cout << "Generating stencils\n";

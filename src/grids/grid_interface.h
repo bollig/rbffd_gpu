@@ -74,13 +74,23 @@ class Grid
 		// Write data to disk generating the filename appropriately for the class (calls to writeToFile(std::string)) 
 		virtual	void writeToFile(); 
 		virtual void writeToFile(std::string filename); 
+		        void writeBoundaryToFile(std::string filename); 
+		        void writeNormalsToFile(std::string filename); 
+		        void writeAvgRadiiToFile(std::string filename); 
+		        void writeStencilsToFile(std::string filename); 
+        virtual void writeExtraToFile(std::string filename); 
 
         virtual void printNodeList(std::string label); 
         virtual void printBoundaryIndices(std::string label);  
 
 		// Load data from disk using the class generated filename and specified iter
-			int loadFromFile(int iter=0); 
+    			int loadFromFile(int iter=0); 
 		virtual int loadFromFile(std::string filename); 
+		        int loadBoundaryFromFile(std::string grid_filename); 
+        		int loadNormalsFromFile(std::string grid_filename); 
+		        int loadAvgRadiiFromFile(std::string grid_filename); 
+		        int loadStencilsFromFile(std::string grid_filename); 
+		virtual int loadExtraFromFile(std::string grid_filename); 
 
 		// Sort the nodes so boundary nodes are first in the lists
 		virtual void sortNodes(); 

@@ -185,11 +185,20 @@ void Domain::printVerboseDependencyGraph() {
 	cout << "********************* Node Membership (LOCAL NODES) *********************" << endl;
 	printCenterMemberships(G, "G ");
 
+#if 0
 	printVector(avg_stencil_radii, "Q_AVG_DISTS");
 	for (int i = 0; i < stencil_map.size(); i++) {
 		printStencil(stencil_map[i], "Q_STENCIL: ");
 	}
 	printCenters(node_list, "G_CENTERS");
+#else 
+    std::cout << "-----------------------------\n";
+    std::cout << "See stencils_" << max_st_size << "_" << this->getFilename() 
+        << " for average stencil indices\n";
+    std::cout << "-----------------------------\n";
+    std::cout << "See avg_radii_" << this->getFilename() << " for average stencil radii\n"; 
+    std::cout << "-----------------------------\n";
+#endif
 }
 
 int Domain::sendUpdate(int my_rank, int receiver_rank) {
@@ -522,9 +531,11 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
 	printf("SUBDOMAIN BOUNDARY.size= %d\n", (int)boundary_indices.size());
 	for (int i = 0; i < boundary_indices.size(); i++) {
 		//EVAN: 
+#if 0
         cout << "Subdomain Adding Boundary Node[" << i << "] = " << boundary_indices[i]
             << " (local index: " << g2l(boundary_indices[i]) << ")"
 			<< endl;
+#endif 
 		boundary_indices[i] = g2l(boundary_indices[i]);
 	}
 	//printf("GLOBAL_BOUNDARY.size= %d\n", (int) boundary_indices.size());
@@ -611,7 +622,7 @@ void Domain::printCenterMemberships(const set<int>& center_set, std::string disp
 	//  R  --> depends on nodes in R? 
 	//  +  --> is the center in R?
 	cout << "\t" << display_name
-		<< "[ local_index | global_index ] = \t[Q|.]   [D|.]   [Q|.]   [R][+]   [B|.]"
+		<< "[ global_index | local_index ] = \t[Q|.]   [D|.]   [Q|.]   [R][+]   [B|.]"
 		<< endl;
 	cout << "\tCONDITIONS: " << endl;
 	cout << "\t\tQ  --> in set Q?" << endl;
@@ -620,11 +631,23 @@ void Domain::printCenterMemberships(const set<int>& center_set, std::string disp
 	cout << "\t\tR  --> depends on set R (i.e., nodes in other subdomains)?" << endl;
 	cout << "\t\t+  --> is the node in R (i.e., inside another subdomain)?" << endl;
 	cout << "\t\tB*  --> is the node on the global Boundary?" << endl;
+    cout << "\tGaps in global indices are indicated with [... GAP ...]" << endl;
+    cout << "\t-------------------------------------------------" << endl;
 	int i = 0;
+    int j = 0; 
 	for (set<int>::const_iterator setiter = center_set.begin(); setiter
-			!= center_set.end(); setiter++, i++) {
-		cout << i << "\t" << display_name << "[ local:" << *setiter << " | global:"
-			<< l2g(*setiter) << " ] =\t\t";
+			!= center_set.end(); setiter++, i++, j++) {
+        if (j != *setiter) {
+//            cout << "\tGAP\t------------------------------------------" << std::endl;
+            cout << "[... GAP ...]" << std::endl;
+            j = *setiter; 
+        }
+
+        cout << i << "\t" << display_name 
+            << "[ global:" << (*setiter)
+            << " | local:" << g2l(*setiter) 
+            << " ] =\t\t";
+
 		if (isInSet(*setiter, Q)) {
 			cout << "Q";
 		} else {

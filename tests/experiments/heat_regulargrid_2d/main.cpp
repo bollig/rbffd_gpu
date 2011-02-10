@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
         
         grid->setMaxStencilSize(stencil_size); 
 
-        std::cout << "Generating nodes\n"; 
+        std::cout << "Attempting to load Grid from files\n"; 
         if (grid->loadFromFile()) 
         {
             printf("************** Generating new Grid **************\n"); 
@@ -99,6 +99,8 @@ int main(int argc, char** argv) {
 
 		int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
 		int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
+
+        // TODO: load subdomain from disk
 
         // Construct a new domain given a grid. 
         // TODO: avoid filling sets Q, B, etc; just think of it as a copy constructor for a grid
@@ -134,17 +136,19 @@ int main(int argc, char** argv) {
     subdomain->printNodeList("All Centers Needed by This Process"); 
     subdomain->writeToFile(); 
 
-	printf("CHECKING STENCILS: \n");
+	printf("CHECKING STENCILS: ");
 	for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
-		printf("Stencil[%d] = ", irbf);
+		//  printf("Stencil[%d] = ", irbf);
         StencilType& s = subdomain->getStencil(irbf); 
         if (irbf == s[0]) {
-			printf("PASS\n");
-            subdomain->printStencil(s, "S"); 
+		//	printf("PASS\n");
+        //    subdomain->printStencil(s, "S"); 
 		} else {
-			printf("FAIL\n");
+	    	printf("FAIL on stencil %d\n", irbf);
+            exit(EXIT_FAILURE);
 		}
 	}
+    printf("OK\n");
 
 
     // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
@@ -198,12 +202,14 @@ int main(int argc, char** argv) {
     heat.setRelErrTol(max_global_rel_error); 
 
 
-    subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
+    //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
 	int iter;
 	for (iter = 0; iter < 1000; iter++) {
         // Write intermediate solution from ALL ranks (file names distinguish rank ID)
         if (iter % local_sol_dump_frequency == 0) {
+            // TODO: dump solution inside heat where we can compute errors and residuals
             subdomain->writeLocalSolutionToFile(iter);
+  //          heat.writeErrorToFile(subdomain->getFilename(), iter);
         }
         if (iter % global_sol_dump_frequency == 0) {
             // NOTE: all local subdomains have a U_G solution which is consolidated
@@ -212,7 +218,7 @@ int main(int argc, char** argv) {
             subdomain->writeGlobalSolutionToFile(iter); 
         }
 
-		cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter
+		cout << "*********** Solve Heat (Iteration: " << iter
 			<< ") *************" << endl;
         char label[256]; 
         sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
@@ -220,7 +226,7 @@ int main(int argc, char** argv) {
         tm4.start(); 
 		heat.advanceOneStepWithComm(comm_unit);
         tm4.stop(); 
-        sprintf(label, "LOCAL SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
+        sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
         subdomain->printSolution(label); 
 
 		double nrm = heat.maxNorm();

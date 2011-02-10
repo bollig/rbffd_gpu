@@ -100,11 +100,14 @@ class Domain : public Grid, public MPISendable {
             this->writeLocalSolutionToFile(filename);
         }
 
-        virtual int loadExtraFromFile(std::string filename) {
-           // this->writeG2LToFile(filename);
-           // this->writeL2GToFile(filename);
-           // this->writeSolutionToFile(filename);
-        }
+        // TODO: allow subdomains to load from disk rather than always
+        // initializing on master and then distributing. This would provide
+        // restart capabiility!
+        //virtual int loadExtraFromFile(std::string filename) {
+           // this->loadG2LFromFile(filename);
+           // this->loadL2GFromFile(filename);
+           // this->loadLocalSolutionFromFile(filename);
+        //}
 
         //--------------------------------------------------
         // Domain specific routines: 

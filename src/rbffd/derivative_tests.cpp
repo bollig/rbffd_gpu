@@ -696,7 +696,7 @@ void DerivativeTests::checkWeights(Derivative& der, int nb_centers, int nb_stenc
         double ez = compareDeriv(zderiv_gpu[i], zderiv_cpu[i], "Z", i); 
         double el = compareDeriv(lderiv_gpu[i], lderiv_cpu[i], "Lapl", i); 
 
-        std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
+//        std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
 	}
 	std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
 }

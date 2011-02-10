@@ -40,7 +40,9 @@ int main(int argc, char** argv) {
 
 	int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
 	double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
-	int use_gpu = settings->GetSettingAs<double>("USE_GPU", ProjectSettings::optional, "1"); 
+	int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
+	int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
+	int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
 
 	if (comm_unit->getRank() == Communicator::MASTER) {
 
@@ -98,6 +100,8 @@ int main(int argc, char** argv) {
 		int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
 		int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
 
+        // Construct a new domain given a grid. 
+        // TODO: avoid filling sets Q, B, etc; just think of it as a copy constructor for a grid
 		Domain* original_domain = new Domain(grid, dt, comm_unit->getSize()); 
 		// pre allocate pointers to all of the subdivisions
 		std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
@@ -107,7 +111,6 @@ int main(int argc, char** argv) {
 		std::cout << "Generating subdomains\n";
 		original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
 
-    	original_domain->printVerboseDependencyGraph();
 		subdomain = subdomain_list[0]; 
 		for (int i = 1; i < comm_unit->getSize(); i++) {
 			std::cout << "Sending subdomain[" << i << "]\n";
@@ -128,8 +131,8 @@ int main(int argc, char** argv) {
     tm3.stop(); 
     
 	subdomain->printVerboseDependencyGraph();
-
     subdomain->printNodeList("All Centers Needed by This Process"); 
+    subdomain->writeToFile(); 
 
 	printf("CHECKING STENCILS: \n");
 	for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
@@ -198,6 +201,17 @@ int main(int argc, char** argv) {
     subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
 	int iter;
 	for (iter = 0; iter < 1000; iter++) {
+        // Write intermediate solution from ALL ranks (file names distinguish rank ID)
+        if (iter % local_sol_dump_frequency == 0) {
+            subdomain->writeLocalSolutionToFile(iter);
+        }
+        if (iter % global_sol_dump_frequency == 0) {
+            // NOTE: all local subdomains have a U_G solution which is consolidated
+            // into the MASTER process "global_U_G" solution. 
+        	comm_unit->consolidateObjects(subdomain);
+            subdomain->writeGlobalSolutionToFile(iter); 
+        }
+
 		cout << "*********** COMPUTE DERIVATIVES (Iteration: " << iter
 			<< ") *************" << endl;
         char label[256]; 
@@ -214,7 +228,6 @@ int main(int argc, char** argv) {
 		// break all processes when problem is encountered
 		if (nrm > 1.)
 			break;
-		//if (iter > 0) break;
 	}
 
 	printf("after heat\n");
@@ -222,10 +235,10 @@ int main(int argc, char** argv) {
 #endif 
 	//}
 
-
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 
 	comm_unit->consolidateObjects(subdomain);
+    subdomain->writeGlobalSolutionToFile(-1); 
 
 	if (comm_unit->getRank() == 0) {
         // NOTE: the final solution is assembled, but we have to use the 

@@ -84,6 +84,7 @@ void Communicator::consolidateObjects(MPISendable* object)
 		// 3) Send U_G[0 .. l2g(Q.size)]
 		object->sendFinal(this->getRank(), 0);
 	}
+    this->barrier();
 }
 
 

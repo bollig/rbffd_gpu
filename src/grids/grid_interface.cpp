@@ -69,7 +69,7 @@ void Grid::writeBoundaryToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << boundary_indices.size() << " boundary indices to \t" << filename << std::endl;
+    std::cout << "[Grid] \tWrote " << boundary_indices.size() << " boundary indices to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
@@ -87,7 +87,7 @@ void Grid::writeNormalsToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << boundary_normals.size() << " boundary normals to \t" << filename << std::endl;
+    std::cout << "[Grid] \tWrote " << boundary_normals.size() << " boundary normals to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
@@ -105,14 +105,14 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << avg_stencil_radii.size() << " average stencil radii to \t" << filename << std::endl;
+    std::cout << "[Grid] \tWrote " << avg_stencil_radii.size() << " average stencil radii to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
 
 void Grid::writeStencilsToFile(std::string filename) {
     char prefix[256]; 
-    sprintf(prefix, "stencils_%lu_", this->max_st_size); 
+    sprintf(prefix, "stencils_maxsz%lu_", this->max_st_size); 
     std::string fname = prefix; 
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
@@ -129,7 +129,7 @@ void Grid::writeStencilsToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << stencil_map.size() << " stencils to \t" << filename << std::endl;
+    std::cout << "[Grid] \tWrote " << stencil_map.size() << " stencils to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
@@ -301,7 +301,7 @@ int Grid::loadAvgRadiiFromFile(std::string filename) {
 int Grid::loadStencilsFromFile(std::string filename) {
 
     char prefix[256]; 
-    sprintf(prefix, "stencils_%lu_", this->max_st_size); 
+    sprintf(prefix, "stencils_maxsz%lu_", this->max_st_size); 
     std::string fname = prefix; 
     fname.append(filename);
     std::cout << "[Grid] reading stencil file: " << fname << std::endl;    

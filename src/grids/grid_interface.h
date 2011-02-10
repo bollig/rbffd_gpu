@@ -103,6 +103,7 @@ class Grid
 		// so boundary nodes appear first in the node_list
 		void setSortBoundaryNodes(int sort_boundary_first) { this->boundary_nodes_first = sort_boundary_first; }
         void setMaxStencilSize(size_t st_max_size) { this->max_st_size = st_max_size; }
+        size_t getMaxStencilSize() { return this->max_st_size; }
 
         size_t                      getNodeListSize() { return node_list.size(); }
 		std::vector<NodeType>& 	    getNodeList() 	{ return node_list; }

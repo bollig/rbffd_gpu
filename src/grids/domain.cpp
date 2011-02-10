@@ -22,14 +22,10 @@ Domain::Domain(Grid* grid, double _dt, int _comm_size)
 	ymin(grid->ymin), ymax(grid->ymax),
 	zmin(grid->zmin), zmax(grid->zmax)
 {
-#if 0
-	fillLocalData(grid); 
-	fillVarData(grid->getNodeList());
-#else 
 	// Forms sets (Q,O,R) and l2g/g2l maps
 	fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii()); 
 	fillVarData(grid->getNodeList());
-#endif 
+    this->max_st_size = grid->getMaxStencilSize();
 }
 
 
@@ -39,7 +35,7 @@ Domain::Domain(double _xmin, double _xmax, double _ymin, double _ymax, double _z
 	xmin(_xmin), xmax(_xmax), ymin(_ymin), ymax(_ymax), zmin(_zmin), zmax(_zmax), dt(_dt),
 	id(_comm_rank), comm_size(_comm_size) {
 
-	}
+}
 
 
 void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions, int z_divisions) 
@@ -76,6 +72,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, xm, xm+deltax, ym, ym+deltay, zm, zm+deltaz);
 	printf("Tile (ix, iy, iz) = (%d, %d, %d)\n", igx, igy, igz); 
         subdomains[id] = new Domain(xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, dt, id, comm_size);
+        subdomains[id]->setMaxStencilSize(this->max_st_size);
     }
 
     // Figure out the sets Bi, Oi Qi
@@ -103,8 +100,10 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
 
 
 int Domain::send(int my_rank, int receiver_rank) {
-	double buff[7] = { xmin, xmax, ymin, ymax, zmin, zmax, dt };
-
+    
+    sendSTL(&id, my_rank, receiver_rank);  
+    
+    double buff[7] = { xmin, xmax, ymin, ymax, zmin, zmax, dt };
 	MPI_Send(&buff, 7, MPI::DOUBLE, receiver_rank, TAG, MPI_COMM_WORLD);
 
 	sendSTL(&Q, my_rank, receiver_rank); // All stencil centers in this CPUs QUEUE
@@ -126,6 +125,7 @@ int Domain::send(int my_rank, int receiver_rank) {
 
 	sendSTL(&O_by_rank, my_rank, receiver_rank); // Subsets of O that this Domain will send out to each other Domain
 	sendSTL(&boundary_indices, my_rank, receiver_rank);
+    sendSTL(&max_st_size, my_rank, receiver_rank);  
 
 	cout << "RANK " << my_rank << " REPORTS: sent Domain object" << endl;
 }
@@ -133,6 +133,9 @@ int Domain::send(int my_rank, int receiver_rank) {
 int Domain::receive(int my_rank, int sender_rank) {
 
 	MPI_Status stat;
+
+    // Start by identifying the subdomain ID
+    recvSTL(&id, my_rank, sender_rank);  
 
 	// Get the subdomain bounds and dt
 	double buff[7];
@@ -165,7 +168,10 @@ int Domain::receive(int my_rank, int sender_rank) {
 
 	recvSTL(&O_by_rank, my_rank, sender_rank); // Subsets of O that this Domain will send out to each other Domain
 	recvSTL(&boundary_indices, my_rank, sender_rank);
+    recvSTL(&max_st_size, my_rank, sender_rank);  
 
+    this->nb_nodes = node_list.size();
+    
 	// cout << "EVAN YOURE WRONG HERE!" <<endl;
 	set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
 
@@ -523,9 +529,13 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
 	}
 	//printf("GLOBAL_BOUNDARY.size= %d\n", (int) boundary_indices.size());
 
+    // Finally: update the number of known nodes: 
+    nb_nodes = node_list.size();
+
+
 	printf("l2g size= %d\n", (int) loc_to_glob.size());
 	printf("g2l size= %d\n", (int) glob_to_loc.size());
-	printf("node_list size= %d\n", (int) node_list.size());
+	printf("node_list size= %d (nb_nodes=%d)\n", (int) node_list.size(), (int) nb_nodes);
 	printf("avg_stencil_radii size= %d\n", (int) avg_stencil_radii.size());
 }
 //----------------------------------------------------------------------
@@ -812,4 +822,107 @@ void Domain::printStencilPlus(const StencilType& stencil, const std::vector<
 	}
 	cout << endl;
 }
+
+//----------------------------------------------------------------------
+
+void Domain::writeG2LToFile(std::string filename) {
+
+    std::string fname = "g2lmap_"; 
+    fname.append(filename); 
+    std::ofstream fout(fname.c_str()); 
+    if (fout.is_open()) {
+        std::map<int, int>::iterator mit;  
+        for (mit = glob_to_loc.begin(); mit != glob_to_loc.end(); mit++) {
+            fout << (*mit).first << " " << (*mit).second << std::endl; 
+        }
+    } else {
+        printf("Error opening file to write\n"); 
+        exit(EXIT_FAILURE); 
+    }
+    fout.close();
+    std::cout << "[Domain] \tWrote " << glob_to_loc.size() << " global to local index map elements to \t" << fname << std::endl;
+
+}
+
+//----------------------------------------------------------------------
+
+void Domain::writeL2GToFile(std::string filename) {
+
+    std::string fname = "l2gmap_"; 
+    fname.append(filename); 
+    std::ofstream fout(fname.c_str()); 
+    if (fout.is_open()) {
+        std::vector<int>::iterator mit;  
+        int i = 0; 
+        for (mit = loc_to_glob.begin(); mit != loc_to_glob.end(); mit++, i++) {
+            fout << i << " " << (*mit) << std::endl; 
+        }
+    } else {
+        printf("Error opening file to write\n"); 
+        exit(EXIT_FAILURE); 
+    }
+    fout.close();
+    std::cout << "[Domain] \tWrote " << glob_to_loc.size() << " local to global index map elements to \t" << fname << std::endl;
+
+}
+
+//----------------------------------------------------------------------
+
+void Domain::writeLocalSolutionToFile(std::string filename) {
+
+    std::string fname = "sol_"; 
+    fname.append(filename); 
+    std::ofstream fout(fname.c_str()); 
+    if (fout.is_open()) {
+        std::vector<double>::iterator sit;  
+        for (sit = U_G.begin(); sit != U_G.end(); sit++) {
+            fout << (*sit) << std::endl; 
+        }
+    } else {
+        printf("Error opening file to write\n"); 
+        exit(EXIT_FAILURE); 
+    }
+    fout.close();
+    std::cout << "[Domain] \tWrote " << glob_to_loc.size() << " local solution values to \t" << fname << std::endl;
+
+}
+
+//----------------------------------------------------------------------
+
+void Domain::writeGlobalSolutionToFile(int iter) {
+
+    if (id == Communicator::MASTER) {
+        char nstr[256]; 
+        std::string fname = "globalsol_"; 
+        sprintf(nstr,"%lunodes",global_U_G.size()); 
+        fname.append(nstr); 
+
+        if (iter < 0) {
+            fname.append("_final.ascii");  
+        } else if (iter == 0) {
+            fname.append("_initial.ascii");  
+        } else {
+            char iterstr[256]; 
+            sprintf(iterstr, "%d", iter); 
+            fname.append("_"); 
+            fname.append(iterstr); 
+            fname.append("iters.ascii");  
+        }
+        
+        std::ofstream fout(fname.c_str()); 
+        if (fout.is_open()) {
+            for (int i = 0; i < global_U_G.size(); i++) {
+                fout << global_U_G[i] << std::endl; 
+            }
+        } else {
+            printf("Error opening file to write\n"); 
+            exit(EXIT_FAILURE); 
+        }
+        fout.close();
+        std::cout << "[Domain] \tWrote " << global_U_G.size() << " global solution values to \t" << fname << std::endl;
+    } else {
+        std::cout << "[Domain] \tDeferring global solution write to master process" << std::endl;
+    }
+}
+
 //----------------------------------------------------------------------

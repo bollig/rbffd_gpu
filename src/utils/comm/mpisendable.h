@@ -61,6 +61,10 @@ public:
 	int sendSTL(const std::vector<std::vector<int> > *origin, int myrank, int recv_rank) const ; 
 	int sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank, int recv_rank) const ; 
 
+    // Single element of type size_t (multiple would be "const size_t **origin"
+    int sendSTL(const size_t *origin, int myrank, int recv_rank) const ; 
+    int sendSTL(const int *origin, int myrank, int recv_rank) const ; 
+
 	// Recv double array and pack as STL::Vector.
 	int recvSTL(std::vector<double> *destination, int myrank, int sender_rank); 
 	// Recv int array and pack as STL::Vector.
@@ -76,6 +80,9 @@ public:
 	int recvSTL(std::vector<std::vector<int> > *destination, int myrank, int sender_rank); 
 	int recvSTL(std::vector<std::vector<size_t> > *destination, int myrank, int sender_rank); 
 	int recvSTL(std::set<std::vector<Vec3> > *destination, int myrank, int sender_rank); 
+	
+    int recvSTL(size_t *destination, int myrank, int sender_rank); 
+    int recvSTL(int *destination, int myrank, int sender_rank); 
 	
 };
 

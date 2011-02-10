@@ -8,7 +8,6 @@
 #include "grids/grid_interface.h"
 #include "common_typedefs.h"
 
-// Grid contains: node_list (equiv to G_centers), boundary_indices (equiv to global_boundary_nodes), stencil_map (equiv to Q_stencils), avg_stencil_radii (equiv to Q_avg_dists)
 class Domain : public Grid, public MPISendable {
     public: 		// Member Properties
         int id; 		// which Domain
@@ -33,37 +32,6 @@ class Domain : public Grid, public MPISendable {
         std::set<int> R;			// Nodes REQUIRED from other Domains. 
         // Possibly add: 
         // std::set<int> BmD;
-
-#if 0	
-        // 2) These get us the connectivity of the stencils
-        // Not responsible for any other stencils than QmB and B. 
-        // We index these vectors with the integers contained in sets Q, O, D, etc.
-        // NOTE: (index Q_centers[*][0] is always RBF stencil center)
-        	std::vector<StencilType> Q_stencils; 
-        //	std::vector<std::vector<int> > Q_stencils_local; 		// (local index equivalent of Q_stencils) CPUs generate this after receiving the global set. 
-
-        // We might want to decompose Q_stencils into this: 
-        //std::vector<std::vector<int> > QmB_stencils; 		// Set of stencils we can evaluate without communication
-        //std::vector<std::vector<int> > BmD_stencils; 		// Set of stencils that can be evaluated while sending O and receiving R
-        //std::vector<std::vector<int> > D_stencils; 		// Set of stencils that block until R is received
-
-        // 3) These get us the physical position of nodes in stencils
-        std::vector<NodeType> G_centers; 		// The full set of centers needed for computation (Q + R = G)
-
-        // Precomputed average distances (possibly stencil radii...code is not clear)
-        // stencils in subdomain.
-        std::vector<double> Q_avg_dists;
-
-        // The points in this subdomain which are also part of the global PDE boundary
-        // NOTE: global indices
-        std::vector<size_t> global_boundary_nodes;
-
-        // Since we have global_boundary_nodes we can get the indices of the interior
-        // nodes by doing a difference on the set Q and the global boundary nodes.
-#else 
-        // We make this a subclass of Grid 
-        //	Grid* grid;
-#endif 
 
         // 4) These get us the func values of stencil nodes
         std::vector<double> U_G;			// U_Q union U_R
@@ -108,18 +76,44 @@ class Domain : public Grid, public MPISendable {
         //--------------------------
         // Override Grid:: functions
         //--------------------------
+        virtual std::string className() { return "domain"; }
+
+        virtual std::string getFileDetailString() {
+            char prefix[256]; 
+            sprintf(prefix, "rank%d_", this->id); 
+            std::string s = prefix; 
+            s.append(Grid::getFileDetailString()); 
+            return s;
+        }
         virtual void printNodeList(std::string label) { 
+            // More verbose print: 
             printCenters(this->node_list, label); 
         }
         virtual void printBoundaryIndices(std::string label) {
+            // More verbose print:
             printVector(this->boundary_indices, label); 
         }
+        
+        virtual void writeExtraToFile(std::string filename) {
+            this->writeG2LToFile(filename);
+            this->writeL2GToFile(filename);
+            this->writeLocalSolutionToFile(filename);
+        }
 
+        virtual int loadExtraFromFile(std::string filename) {
+           // this->writeG2LToFile(filename);
+           // this->writeL2GToFile(filename);
+           // this->writeSolutionToFile(filename);
+        }
 
         //--------------------------------------------------
         // Domain specific routines: 
         //--------------------------------------------------
-
+        void writeG2LToFile(std::string filename); 
+        void writeL2GToFile(std::string filename); 
+        void writeLocalSolutionToFile(std::string filename); 
+        void writeLocalSolutionToFile(int iter=0) { this->writeLocalSolutionToFile(this->getFilename(iter)); }  
+        void writeGlobalSolutionToFile(int iter=0);
 
         void printSolution(std::string label) {
             printVector(this->U_G, label); 

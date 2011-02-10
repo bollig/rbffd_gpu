@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 		std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
 		// allocate and fill in details on subdivisions
 
-    	original_domain->printVerboseDependencyGraph();
+    	//original_domain->printVerboseDependencyGraph();
 		std::cout << "Generating subdomains\n";
 		original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
 
@@ -118,6 +118,8 @@ int main(int argc, char** argv) {
 			std::cout << "Sending subdomain[" << i << "]\n";
 			comm_unit->sendObject(subdomain_list[i], i); 
 		}
+
+        printf("----------------------\nEND MASTER ONLY\n----------------------\n\n\n");
 
 	} else {
         tm2.stop(); 

@@ -676,7 +676,7 @@ void Domain::printCenterMemberships(const set<int>& center_set, std::string disp
 			cout << "+";
 		}
 		cout << "   ";
-		if (isInVector(*setiter, this->boundary_indices)) {
+		if (isInVector(g2l(*setiter), this->boundary_indices)) {
 			cout << "B*";
 		} else {
 			cout << ".";

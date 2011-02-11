@@ -99,6 +99,7 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 
     double inter_error=0.;
     for (int i=nb_bnd; i < nb_stencils; i++) {
+        // du_ex is the exact laplacian
         inter_error += (du_ex[i]-lapl_deriv[i])*(du_ex[i]-lapl_deriv[i]);
         printf("inter error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
     }
@@ -112,8 +113,8 @@ void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
     }
     bnd_error /= nb_bnd;
 
-    printf("avg l2_bnd_error= %14.7e\n", sqrt(bnd_error));
-    printf("avg l2_interior_error= %14.7e\n", sqrt(inter_error));
+    printf("avg lapl l2_bnd_error= %14.7e\n", sqrt(bnd_error));
+    printf("avg lapl l2_interior_error= %14.7e\n", sqrt(inter_error));
 }
 //----------------------------------------------------------------------
 void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)

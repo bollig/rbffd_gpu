@@ -45,7 +45,7 @@ protected:
 
     std::vector<double> var_eps;
     double epsilon;  // RBF scaling
-    int nb_bnd; // number of points on the boundary (EB: is this the boundary of subdomain or PDE?)
+//    int nb_bnd; // number of points on the boundary (EB: is this the boundary of subdomain or PDE?)
 
     // Configurable option from projectSettings
     int debug_mode;		// optional

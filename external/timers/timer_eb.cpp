@@ -116,12 +116,19 @@ void Timer::end()
 	//t +=  (clock() - t1) * scale;
 }
 //----------------------------------------------------------------------
-void Timer::print()
+void Timer::print(FILE* fd, int label_width)
 {
 	if (count <= 0) return;
 	int real_count = count - offset;
-	printf("%s:\t avg: %g,\t tot: %g\t (count=%d)\n", 
-		name.c_str(), t/real_count, t, real_count);
+	if (name.length() > label_width) { 
+        fprintf(fd, "%-*.*s...  |  avg: %10.4f  |  tot: %10.4f  |  count=%6d\n", 
+                label_width-3, label_width-3, 
+                name.c_str(), t/real_count, t, real_count);
+    } else {
+	fprintf(fd, "%-*.*s  |  avg: %10.4f  |  tot: %10.4f  |  count=%6d\n", 
+            label_width, label_width, 
+            name.c_str(), t/real_count, t, real_count);
+    }
 }
 //----------------------------------------------------------------------
 void Timer::printReset()
@@ -132,20 +139,35 @@ void Timer::printReset()
 	reset();
 }
 //----------------------------------------------------------------------
-void Timer::printAll()
+void Timer::printAll(FILE* fd, int label_width)
 {
 #if 1
-	printf("====================================\n"); 
-	printf("Timers [All times in ms (1/1000 s)]: \n"); 		
-	printf("====================================\n\n"); 
-
+	fprintf(fd, "====================================\n"); 
+	fprintf(fd, "Timers [All times in ms (1/1000 s)]: \n"); 		
+	fprintf(fd, "====================================\n\n");     
 	for (int i=0; i < timeList.size(); i++) {
 		Timer& tim = *(timeList[i]);
-		tim.print();
+		tim.print(fd, label_width);
 	}
-	printf("\nNOTE: only timers that have called Timer::start() are shown. \n");
-	printf("      [A time of 0.0 may indicate the timer was not stopped.]\n"); 
-	printf("====================================\n"); 
+	fprintf(fd, "\nNOTE: only timers that have called Timer::start() are shown. \n");
+	fprintf(fd, "      [A time of 0.0 may indicate the timer was not stopped.]\n"); 
+	fprintf(fd, "====================================\n"); 
 #endif
 }
 //----------------------------------------------------------------------
+void Timer::writeAllToFile(std::string filename) 
+{
+    // Get the max label width so we can show all columns the same
+    // width and show the FULL label for each timer
+    int label_width = 50; 
+    for (int i = 0; i < timeList.size(); i++) {
+        Timer& tim = *(timeList[i]); 
+        if (tim.name.length() > label_width) {
+            label_width = tim.name.length(); 
+        }
+    }
+
+    FILE* fd = fopen(filename.c_str(), "w"); 
+    printAll(fd, label_width); 
+    fclose(fd); 
+}

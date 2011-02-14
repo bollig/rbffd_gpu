@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <map> 
 
 #include "pdes/parabolic/heat.h"
 
@@ -19,22 +20,35 @@ using namespace EB;
 //----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
-	Timer tm("Total runtime for this processor");
-    Timer tm2("Load project settings"); 
-    Timer tm3("Setup domain decomposition"); 
-    Timer tm4("Advance One Timestep"); 
+
+    std::map<std::string, EB::Timer*> tm; 
+
+	tm["total"] = new Timer("[Main] Total runtime for this proc");
+	tm["grid"] = new Timer("[Main] Grid generation");
+	tm["stencils"] = new Timer("[Main] Stencil generation");
+    tm["settings"] = new Timer("[Main] Load settings"); 
+    tm["decompose"] = new Timer("[Main] Decompose domain"); 
+    tm["consolidate"] = new Timer("[Main] Consolidate subdomain solutions"); 
+    tm["updates"] = new Timer("[Main] Broadcast subdomain update"); 
+    tm["send"] = new Timer("[Main] Send subdomains to other processors (master only)"); 
+    tm["receive"] = new Timer("[Main] Receive subdomain from master (clients only)"); 
+    tm["timestep"] = new Timer("[Main] Advance One Timestep"); 
+    tm["tests"] = new Timer("[Main] Test stencil weights"); 
+    tm["weights"] = new Timer("[Main] Compute all stencils weights"); 
+    tm["oneWeight"] = new Timer("[Main] Compute single stencil weights"); 
+    tm["heat_init"] = new Timer("[Main] Initialize heat"); 
 	// grid should only be valid instance for MASTER
 	Grid* grid; 
 	Domain* subdomain; 
 
-	tm.start(); 
+	tm["total"]->start(); 
 
 	Communicator* comm_unit = new Communicator(argc, argv);
 
 	cout << " Got Rank: " << comm_unit->getRank() << endl;
 	cout << " Got Size: " << comm_unit->getSize() << endl;
 
-    tm2.start(); 
+    tm["settings"]->start(); 
 
 	ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
 
@@ -72,7 +86,7 @@ int main(int argc, char** argv) {
 
 		double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "0.0001"); 
 
-        tm2.stop(); 
+        tm["settings"]->stop(); 
 
 		if (dim == 1) {
 			grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
@@ -91,9 +105,13 @@ int main(int argc, char** argv) {
         {
             printf("************** Generating new Grid **************\n"); 
     		grid->setSortBoundaryNodes(true); 
+            tm["grid"]->start(); 
 	    	grid->generate();
+            tm["grid"]->stop(); 
 		    std::cout << "Generating stencils\n";
+            tm["stencils"]->start(); 
 		    grid->generateStencils(new StencilGenerator());   // nearest stencil_size 
+            tm["stencils"]->stop();
 		    grid->writeToFile(); 
         }
 
@@ -109,30 +127,35 @@ int main(int argc, char** argv) {
 		std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
 		// allocate and fill in details on subdivisions
 
-    	//original_domain->printVerboseDependencyGraph();
 		std::cout << "Generating subdomains\n";
+        tm["decompose"]->start();
+    	//original_domain->printVerboseDependencyGraph();
 		original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
+        tm["decompose"]->stop();
 
+        tm["send"]->start(); 
 		subdomain = subdomain_list[0]; 
 		for (int i = 1; i < comm_unit->getSize(); i++) {
 			std::cout << "Sending subdomain[" << i << "]\n";
 			comm_unit->sendObject(subdomain_list[i], i); 
 		}
+	    comm_unit->barrier();
+        tm["send"]->stop(); 
 
         printf("----------------------\nEND MASTER ONLY\n----------------------\n\n\n");
 
 	} else {
-        tm2.stop(); 
+        tm["settings"]->stop(); 
 		cout << "MPI RANK " << comm_unit->getRank() << ": waiting to receive subdomain"
 			<< endl;
-        tm3.start(); 
-		subdomain = new Domain(); // EMPTY object that will be filled by MPI
 
+        tm["receive"]->start(); 
+		subdomain = new Domain(); // EMPTY object that will be filled by MPI
 		int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
+	    comm_unit->barrier();
+        tm["receive"]->stop(); 
 	}
 
-	comm_unit->barrier();
-    tm3.stop(); 
     
 	subdomain->printVerboseDependencyGraph();
     subdomain->printNodeList("All Centers Needed by This Process"); 
@@ -166,15 +189,24 @@ int main(int argc, char** argv) {
 
 
 	printf("start computing weights\n");
+    tm["weights"]->start(); 
 	for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
+        tm["oneWeight"]->start(); 
 		der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);
+        tm["oneWeight"]->stop();
 	}
+    tm["weights"]->stop(); 
 	cout << "end computing weights" << endl;
 
 
 	if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
+        tm["tests"]->start(); 
 		DerivativeTests* der_test = new DerivativeTests();
 		der_test->testAllFunctions(*der, *(subdomain));
+	    if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) {
+		    der_test->testEigen(*der, *(subdomain));
+        }
+        tm["tests"]->stop();
 	}
 
 
@@ -188,13 +220,10 @@ int main(int argc, char** argv) {
 	ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
 
     // TODO: udpate heat to construct on grid
+    tm["heat_init"]->start(); 
 	Heat heat(exact, subdomain, der, comm_unit->getRank());
 	heat.initialConditions(&subdomain->U_G);
-
-	// Send updates according to MPISendable object.
-
-	comm_unit->broadcastObjectUpdates(subdomain);
-	comm_unit->barrier();
+    tm["heat_init"]->stop(); 
 
 	// This is HARDCODED because we dont have the ability currently to call
 	// maxEig = der.computeEig() and therefore we have a different timestep than
@@ -203,6 +232,11 @@ int main(int argc, char** argv) {
 	heat.setDt(subdomain->dt);
     heat.setRelErrTol(max_global_rel_error); 
 
+	// Send updates according to MPISendable object.
+    tm["updates"]->start(); 
+	comm_unit->broadcastObjectUpdates(subdomain);
+	comm_unit->barrier();
+    tm["updates"]->stop();
 
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
 	int iter;
@@ -216,7 +250,10 @@ int main(int argc, char** argv) {
         if (iter % global_sol_dump_frequency == 0) {
             // NOTE: all local subdomains have a U_G solution which is consolidated
             // into the MASTER process "global_U_G" solution. 
+            tm["consolidate"]->start(); 
         	comm_unit->consolidateObjects(subdomain);
+            comm_unit->barrier();
+            tm["consolidate"]->stop(); 
             subdomain->writeGlobalSolutionToFile(iter); 
         }
 
@@ -225,9 +262,9 @@ int main(int argc, char** argv) {
         char label[256]; 
         sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
         subdomain->printSolution(label); 
-        tm4.start(); 
+        tm["timestep"]->start(); 
 		heat.advanceOneStepWithComm(comm_unit);
-        tm4.stop(); 
+        tm["timestep"]->stop(); 
         sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
         subdomain->printSolution(label); 
 
@@ -245,7 +282,10 @@ int main(int argc, char** argv) {
 
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 
+    tm["consolidate"]->start(); 
 	comm_unit->consolidateObjects(subdomain);
+    comm_unit->barrier();
+    tm["consolidate"]->stop(); 
     subdomain->writeGlobalSolutionToFile(-1); 
 
 	if (comm_unit->getRank() == 0) {
@@ -283,8 +323,9 @@ delete(comm_unit);
 
 cout.flush();
 
-tm.end();
-tm.printAll();
+tm["total"]->stop();
+tm["total"]->printAll();
+tm["total"]->writeAllToFile();
 exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------

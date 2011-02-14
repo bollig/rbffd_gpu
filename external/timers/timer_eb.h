@@ -7,6 +7,7 @@
 #include <string>
 #include <sys/time.h>
 #include <vector>
+#include <stdio.h>
 //#include "time.h"
 
 namespace EB {
@@ -44,8 +45,9 @@ public:
 
 	void stop() { end(); }
 	void start() { begin(); }
-	static void printAll();
-	void print();
+	static void printAll(FILE* fd=stdout, int label_width=50);
+	void print(FILE* fd=stdout, int label_width=50);
+    void writeAllToFile(std::string filename="timer_log"); 
 	void printReset();
 };
 

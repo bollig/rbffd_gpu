@@ -79,7 +79,7 @@ Heat::~Heat() {
 
 void Heat::setupTimers() {
     tm["advance"] = new Timer("Heat::advanceOneStepWithComm (one step of the second order heat iteration)"); 
-    tm["applyDerivsONLY"] = new Timer("[Heat] Apply derivatives to update solution (second order timestep; excludes cost of computing derivatives)");
+    tm["applyDerivsONLY"] = new Timer("[Heat] Apply derivatives to update solution");
 }
 #if 0
 //----------------------------------------------------------------------

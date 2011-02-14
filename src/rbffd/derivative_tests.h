@@ -37,7 +37,7 @@ public:
             vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
             vector<double>& dulapl_ex);
     
-    void testEigen(Grid& grid, Derivative& der);
+    void testEigen(Derivative& der, Grid& grid);
     
     void testAllFunctions(Derivative& der, Grid& grid);
 

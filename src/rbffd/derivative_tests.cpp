@@ -240,7 +240,7 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
 }
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------
-void DerivativeTests::testEigen(Grid& grid, Derivative& der)
+void DerivativeTests::testEigen(Derivative& der, Grid& grid)
 {
 
     int nb_stencils = grid.getStencilsSize();
@@ -314,7 +314,7 @@ void DerivativeTests::testEigen(Grid& grid, Derivative& der)
 
         //recompute Laplace weights
         for (int irbf=0; irbf < nb_stencils; irbf++) {
-            der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "lapl");
+             der.computeWeights(rbf_centers, stencil[irbf], irbf);
         }
         double max_eig = der.computeEig(); // needs lapl_weights
         printf("zero perturbation: max eig: %f\n", max_eig);
@@ -650,8 +650,6 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
     this->testDeriv(DerivativeTests::XY2, der, grid, grid.getStencilRadii());
     this->testDeriv(DerivativeTests::Y3, der, grid, grid.getStencilRadii());
 #endif
-    //der.computeEig();
-    // this->testEigen(grid, der, grid.getStencil().size(), grid.getNbBnd(), grid.getRbfCenters().size());
     //    exit(EXIT_FAILURE);
 }
 

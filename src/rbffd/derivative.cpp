@@ -16,7 +16,7 @@ using namespace arma;
 Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil_, int nb_bnd_, int dimensions) :
         rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.), debug_mode(0), dim_num(dimensions)
 {
-    this->nb_bnd = nb_bnd_;
+    //this->nb_bnd = nb_bnd_;
     this->nb_rbfs = rbf_centers.size();
 
     x_weights.resize(nb_rbfs);
@@ -41,7 +41,7 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil
 Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, vector<StencilType>& stencil_, int nb_bnd_) :
         rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.)
 {
-    this->nb_bnd = nb_bnd_;
+//    this->nb_bnd = nb_bnd_;
     this->nb_rbfs = rbf_centers.size();
 
     x_weights.resize(nb_rbfs);
@@ -1260,6 +1260,10 @@ double Derivative::computeEig()
     mat eigmat(sz, sz);
     eigmat.zeros();
 
+    printf("ERROR! Derivative::computeEig needs to be updated. It assumes all boundary nodes are at the beginning of stencil list (not valid with Domain decomposition)\n"); 
+    exit(EXIT_FAILURE);
+#define BND_UPDATE 0
+#if BND_UPDATE
     for (int i=nb_bnd; i < sz; i++) {
         double* w = weights[i];
         StencilType& st = stencil[i];
@@ -1268,25 +1272,29 @@ double Derivative::computeEig()
             //		printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
         }
     }
+
     for (int i=0; i < nb_bnd; i++) {
         eigmat(i,i) = 1.0;
     }
 
+
+    printf("sz= %d, nb_bnd= %d\n", sz, nb_bnd);
+#endif 
     cx_colvec eigval;
     cx_mat eigvec;
     printf("Computing Eigenvalues of Laplacian Operator on Interior Nodes\n");
     eig_gen(eigval, eigvec, eigmat);
     //eigval.print("eigval");
 
+
     int count=0;
     double max_neg_eig = fabs(real(eigval(0)));
     double min_neg_eig = fabs(real(eigval(0)));
 
-    printf("sz= %d, nb_bnd= %d\n", sz, nb_bnd);
 
     // Compute number of unstable modes
     // Also compute the largest and smallest (in magnitude) eigenvalue
-
+#if BND_UPDATE
     for (int i=0; i < (sz-nb_bnd); i++) {
         double e = real(eigval(i));
         if (e > 0.) {
@@ -1300,6 +1308,7 @@ double Derivative::computeEig()
             }
         }
     }
+#endif 
     printf("epsilon: %g\n", epsilon);
     printf("nb unstable eigenvalues: %d\n", count);
     printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);

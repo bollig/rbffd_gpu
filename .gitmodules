@@ -1,0 +1,3 @@
+[submodule "common/external/jedbrown-cmake-modules"]
+	path = common/external/jedbrown-cmake-modules
+	url = git://github.com/jedbrown/cmake-modules.git

@@ -5,3 +5,11 @@ This directory contains:
 
 NOTE: Add FindCUDA.cmake and FindGLEW.cmake etc.
 
+
+external
+=========
+the subdirs in "external" are all git submodules. That is, they are outside git repos imported into our own repo. To update submodules to their remote head we run: 
+
+git submodule update
+
+

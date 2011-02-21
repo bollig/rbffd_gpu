@@ -18,9 +18,11 @@ SET ( EXEC_SOURCE_FILES
 SET (ARGV
 )
 
-message("EVAN: $ENV{EXTERNAL_INCLUDE_DIRS} \n ${FRAMEWORK_DEPENDENCIES}")
+#message("EVAN: $ENV{EXTERNAL_INCLUDE_DIRS} \n ${FRAMEWORK_DEPENDENCIES}")
 require_config()   # Default is to require test.conf
 #require_config("example.conf")	# we can also specify any file
+
+print_deps()
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 

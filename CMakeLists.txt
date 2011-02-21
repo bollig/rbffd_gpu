@@ -4,6 +4,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 SET( CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_SOURCE_DIR}/common
 	${CMAKE_CURRENT_SOURCE_DIR}/common/UseDoxygen
+	${CMAKE_CURRENT_SOURCE_DIR}/common/external/jedbrown-cmake-modules
 )
 
 

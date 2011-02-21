@@ -7,6 +7,31 @@
 
 #SET ( TEST_COUNT 0 ) 
 
+MACRO ( REQUIRE_PETSC )
+    message( STATUS "Searching for PETSc" )
+    find_package(PETSc)
+    if (PETSC_FOUND)
+        message( STATUS "PETSc found, updating FRAMEWORK_{...} variables.")
+        #message( STATUS "These include dirs will be added to the search: ${PETSC_INCLUDES}")
+        set (FRAMEWORK_DEP_INCLUDE_DIRS ${FRAMEWORK_DEP_INCLUDE_DIRS} ${PETSC_INCLUDES})
+        #message( STATUS "These libraries will be added to the link list: ${PETSC_LIBRARIES}")
+        set (FRAMEWORK_DEPENDENCIES ${FRAMEWORK_DEPENDENCIES} ${PETSC_LIBRARIES})
+        # Might not be necessary: 
+        set (MPIEXEC ${PETSC_MPIEXEC})
+        add_definitions(${PETSC_DEFINITIONS})
+    else (PETSC_FOUND)
+        message(ERROR "A PETSc installation is required to proceed.")
+    endif (PETSC_FOUND)
+ENDMACRO( REQUIRE_PETSC )
+
+
+MACRO ( PRINT_DEPS )
+
+    message( STATUS "Framework Dependency Includes: ${FRAMEWORK_DEP_INCLUDE_DIRS}")
+    message( STATUS "Framework Dependency Libraries: ${FRAMEWORK_DEPENDENCIES}")
+
+ENDMACRO ( PRINT_DEPS )
+
 ############################################
 # 	REQUIRE CONFIG
 # If a config file is required it is copied 

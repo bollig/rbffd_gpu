@@ -33,6 +33,13 @@ protected:
     std::map<std::string, std::string> settings;
     std::string cli_filename;
 
+    // Directory for all I/O: 
+    std::string cwd; 
+    // Directory where we launched the executable from
+    std::string launch_dir; 
+    // Filename for our log. Redirect stdout to this if -o option is specified
+    std::string log_file;
+
 public:
     // Read the file and add settings to the settings map
     ProjectSettings(int argc, char** argv);

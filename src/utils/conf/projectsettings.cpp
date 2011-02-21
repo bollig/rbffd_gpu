@@ -5,11 +5,12 @@
 #include <fstream>
 #include <iostream>
 //----------------------------------------------------------------------
-//#include <sys/stat.h>
+// for mkdir
+#include <sys/types.h>
+#include <sys/stat.h>
+//----------------------------------------------------------------------
 #include <stdlib.h>
 #include <getopt.h>		// for getopt
-
-
 
 
 void closeLogFile(void) {
@@ -23,14 +24,16 @@ void debugExit(void) {
 
 
 ProjectSettings::ProjectSettings(int argc, char** argv) :
-    cli_filename("test.conf")
+    cli_filename("test.conf"), 
+    cwd(".")
 {
     this->parseCommandLineArgs(argc, argv, 0);
     this->ParseFile(cli_filename);
 }
 
 ProjectSettings::ProjectSettings(int argc, char** argv, Communicator* comm_unit):
-    cli_filename("test.conf")
+    cli_filename("test.conf"),
+    cwd(".")
 {
     this->parseCommandLineArgs(argc, argv, comm_unit->getRank());
     this->ParseFile(cli_filename);
@@ -98,6 +101,7 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
     int verbose_flag = 0; /* Flag set by '--verbose' and '--brief'. */
     int c;
     int hostname_flag = 0; // Non-zero if hostname is set;
+    int output_log_flag = 0; 
 
     while (1) {
         // Struct order: { Long_name, Arg_required?, FLAG_TO_SET, Short_name}
@@ -116,7 +120,7 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
             { "output-file", required_argument, 0, 'o' },
             { "file", required_argument, 0, 'o'},
             { "dir", required_argument, 0, 'd'},
-            { "output-dir", no_argument, 0, 'd'},
+            { "output-dir", required_argument, 0, 'd'},
             { "config-file", required_argument, 0, 'c'},
             { "help", no_argument, 0, '?'},
             { 0, 0, 0, 0}
@@ -126,7 +130,7 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
         int option_index = 0;
 
         // the : here indicates a required argument
-        c = getopt_long(argc, argv, "?o:c:", long_options, &option_index);
+        c = getopt_long(argc, argv, "?o:c:d:", long_options, &option_index);
 
         /* Detect the end of the options. */
         if (c == -1)
@@ -141,14 +145,26 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                 break;
 
             case 'o':
+                // we need to change stdout to the specified file,
+                // but it should be with respect to our output directory
+                // specified via to -d flag.
+                output_log_flag = 1; 
                 char logname[256];
                 sprintf(logname, "%s.%d", optarg, my_rank);
-                printf("Redirecting STDOUT to file: `%s'\n", logname);
-                freopen(logname, "w", stdout);
-                atexit(closeLogFile);
-                break;
+                log_file = logname; 
+               break;
             case 'c':
-                cli_filename = std::string(optarg);
+                char ldirbuf[FILENAME_MAX]; 
+                if (getcwd(ldirbuf, sizeof(ldirbuf)) != NULL) {
+                    printf("Current dir: %s\n", ldirbuf); 
+                    launch_dir = ldirbuf;  
+                } else {
+                    perror("Couldnt get CWD"); 
+                }
+
+                cli_filename = launch_dir; 
+                cli_filename.append("/"); 
+                cli_filename.append(optarg); 
                 break;
 
             case 'h':
@@ -159,8 +175,28 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                 // 1) copy name into logdir (global) variable = argv/RANK
                 // 2) mkdir logdir if not already made
                 // 3) set logdir in all classes that write files (Heat, Derivative)
-                mkdir(optarg, O_CREAT);
-                chdir(optarg); 
+                char dirbuf[FILENAME_MAX]; 
+#if 0
+                if (getcwd(dirbuf, sizeof(dirbuf)) != NULL) {
+                    printf("Current dir: %s\n", dirbuf); 
+                    cwd = dirbuf;  
+                } else {
+                    perror("Couldnt get CWD"); 
+                }
+#endif 
+                mkdir(optarg, 0744);
+                printf("Made dir: %s\n", optarg); 
+                if (chdir(optarg) != 0) {
+                    perror("Couldnt change directory!"); 
+                    exit(EXIT_FAILURE);
+                }
+                printf("Change to dir: %s\n", optarg); 
+                if (getcwd(dirbuf, sizeof(dirbuf)) != NULL) {
+                    printf("New dir: %s\n", dirbuf); 
+                    cwd = dirbuf; 
+                } else {
+                    perror("Couldnt get new CWD"); 
+                }
                 break;
 
             case '?':
@@ -184,6 +220,15 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
        we report the final status resulting from them. */
     if (verbose_flag)
         printf("verbose flag is set\n");
+
+    if (output_log_flag) {
+        std::string rfile = cwd; 
+        rfile.append("/"); 
+        rfile.append(log_file); 
+        printf("Redirecting STDOUT to file: `%s'\n", rfile.c_str());
+        freopen(rfile.c_str(), "w", stdout);
+        atexit(closeLogFile);
+    }
 
     /* Print any remaining command line arguments (not options). */
     if (optind < argc) {

@@ -23,14 +23,14 @@ void debugExit(void) {
 
 
 ProjectSettings::ProjectSettings(int argc, char** argv) :
-        cli_filename("test.conf")
+    cli_filename("test.conf")
 {
     this->parseCommandLineArgs(argc, argv, 0);
     this->ParseFile(cli_filename);
 }
 
 ProjectSettings::ProjectSettings(int argc, char** argv, Communicator* comm_unit):
-        cli_filename("test.conf")
+    cli_filename("test.conf")
 {
     this->parseCommandLineArgs(argc, argv, comm_unit->getRank());
     this->ParseFile(cli_filename);
@@ -77,8 +77,8 @@ void ProjectSettings::ParseFile(const std::string filename)
         }
     } else {
         std::cout << "\n[ERROR] Config file: \"" << filename << "\" was not found. Be sure"
-                << " to specify the full/relative path to access the file from"
-                << " the directory you are currently executing in.\n" << std::endl;
+            << " to specify the full/relative path to access the file from"
+            << " the directory you are currently executing in.\n" << std::endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -109,22 +109,17 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
             // 		optional_argument	--> arg is not necessary
             /* These options set a flag. */
             { "verbose", no_argument, &verbose_flag, 1},
-            { "brief",
-              no_argument, &verbose_flag, 0},
-/* These options don't set a flag.
-             We distinguish them by their indices. */
-{ "hostname", required_argument, &hostname_flag, 'h'},
-{
-                "output-file", required_argument, 0, 'o'
-                    },
-{ "file",
-  required_argument, 0, 'o'},
-{ "dir",
-  required_argument, 0, 'd'},
-{ "config-file", required_argument, 0, 'c'},
-{ "help", no_argument, 0,
-  '?'},
-{ 0, 0, 0, 0}
+            { "brief", no_argument, &verbose_flag, 0},
+            /* These options don't set a flag.
+               We distinguish them by their indices. */
+            { "hostname", required_argument, &hostname_flag, 'h'},
+            { "output-file", required_argument, 0, 'o' },
+            { "file", required_argument, 0, 'o'},
+            { "dir", required_argument, 0, 'd'},
+            { "output-dir", no_argument, 0, 'd'},
+            { "config-file", required_argument, 0, 'c'},
+            { "help", no_argument, 0, '?'},
+            { 0, 0, 0, 0}
         };
 
         /* getopt_long stores the option index here. */
@@ -138,53 +133,55 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
             break;
 
         switch (c) {
-        case 0: // Any long option that sets a flag
-            printf("option %s", long_options[option_index].name);
-            if (optarg)
-                printf(" with arg %s", optarg);
-            printf("\n");
-            break;
+            case 0: // Any long option that sets a flag
+                printf("option %s", long_options[option_index].name);
+                if (optarg)
+                    printf(" with arg %s", optarg);
+                printf("\n");
+                break;
 
-        case 'o':
-            char logname[256];
-            sprintf(logname, "%s.%d", optarg, my_rank);
-            printf("Redirecting STDOUT to file: `%s'\n", logname);
-            freopen(logname, "w", stdout);
-            atexit(closeLogFile);
-            break;
-        case 'c':
-            cli_filename = std::string(optarg);
-            break;
+            case 'o':
+                char logname[256];
+                sprintf(logname, "%s.%d", optarg, my_rank);
+                printf("Redirecting STDOUT to file: `%s'\n", logname);
+                freopen(logname, "w", stdout);
+                atexit(closeLogFile);
+                break;
+            case 'c':
+                cli_filename = std::string(optarg);
+                break;
 
-        case 'h':
-            printf("[DISABLED] option -h with value `%s'\n", optarg);
-            break;
+            case 'h':
+                printf("[DISABLED] option -h with value `%s'\n", optarg);
+                break;
 
-        case 'd':
-            // 1) copy name into logdir (global) variable = argv/RANK
-            // 2) mkdir logdir if not already made
-            // 3) set logdir in all classes that write files (Heat, Derivative)
-            break;
+            case 'd':
+                // 1) copy name into logdir (global) variable = argv/RANK
+                // 2) mkdir logdir if not already made
+                // 3) set logdir in all classes that write files (Heat, Derivative)
+                mkdir(optarg, O_CREAT);
+                chdir(optarg); 
+                break;
 
-        case '?':
-            printf("\nUsage: %s [options=arguments]\n", argv[0]);
-            printf("Options:\n");
-            printf(
-                    "\t-o (--output-file, --file) \tSpecify the filename for process to redirect STDOUT to.\n");
-            printf("\t-? (--help) \t\t\tPrint this message\n\n");
-            exit(EXIT_FAILURE);
-            break;
+            case '?':
+                printf("\nUsage: %s [options=arguments]\n", argv[0]);
+                printf("Options:\n");
+                printf(
+                        "\t-o (--output-file, --file) \tSpecify the filename for process to redirect STDOUT to.\n");
+                printf("\t-? (--help) \t\t\tPrint this message\n\n");
+                exit(EXIT_FAILURE);
+                break;
 
-        default:
-            printf("IN DEFAULT ARG OPTION (WHY?)\n");
-            abort(); // abort loop when nothing is left
-            break;
+            default:
+                printf("IN DEFAULT ARG OPTION (WHY?)\n");
+                abort(); // abort loop when nothing is left
+                break;
         }
     } // END WHILE
 
     /* Instead of reporting ‘--verbose’
-     and ‘--brief’ as they are encountered,
-     we report the final status resulting from them. */
+       and ‘--brief’ as they are encountered,
+       we report the final status resulting from them. */
     if (verbose_flag)
         printf("verbose flag is set\n");
 

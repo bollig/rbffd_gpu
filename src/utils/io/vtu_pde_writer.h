@@ -134,13 +134,13 @@ class VtuPDEWriter : public PDEWriter
             }
 
             char fname[FILENAME_MAX]; 
-            sprintf(fname, "subdomain_%d-%04d.vtk", comm_unit->getRank(), iter);
+            sprintf(fname, "subdomain_rank%d-%04d.vtk", comm_unit->getRank(), iter);
  //           sprintf(fname, "subdomain_%d.vtk", comm_unit->getRank(), iter);
             uwriter->SetFileName(fname);
 //            uwriter->WriteNextTime(iter);
             uwriter->Write();
 
-            subdomain->writeLocalToFile(iter);
+            subdomain->writeLocalSolutionToFile(iter);
         }
 
         void writeGlobalVTU(int iter) {
@@ -177,7 +177,7 @@ class VtuPDEWriter : public PDEWriter
             comm_unit->barrier();
 
             this->writeGlobalVTU(iter);
-            subdomain->writeGlobalToFile(iter);
+            subdomain->writeGlobalSolutionToFile(iter);
         }
 
 };

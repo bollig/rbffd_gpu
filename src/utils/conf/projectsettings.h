@@ -105,6 +105,8 @@ protected:
     }
 
     void trim( std::string& str );
+
+    void default_config();
 };
 
 

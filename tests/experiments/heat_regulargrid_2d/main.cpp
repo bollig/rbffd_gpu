@@ -14,6 +14,8 @@
 
 #include "timer_eb.h"
 #include "utils/comm/communicator.h"
+#include "utils/io/pde_writer.h"
+#include "utils/io/vtu_pde_writer.h"
 
 using namespace std;
 using namespace EB;
@@ -58,7 +60,7 @@ int main(int argc, char** argv) {
 	int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
 	int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
 
-	if (comm_unit->getRank() == Communicator::MASTER) {
+	if (comm_unit->isMaster()) {
 
 
 		int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
@@ -139,7 +141,6 @@ int main(int argc, char** argv) {
 			std::cout << "Sending subdomain[" << i << "]\n";
 			comm_unit->sendObject(subdomain_list[i], i); 
 		}
-	    comm_unit->barrier();
         tm["send"]->stop(); 
 
         printf("----------------------\nEND MASTER ONLY\n----------------------\n\n\n");
@@ -152,14 +153,13 @@ int main(int argc, char** argv) {
         tm["receive"]->start(); 
 		subdomain = new Domain(); // EMPTY object that will be filled by MPI
 		int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
-	    comm_unit->barrier();
         tm["receive"]->stop(); 
 	}
 
+	comm_unit->barrier();
     
 	subdomain->printVerboseDependencyGraph();
     subdomain->printNodeList("All Centers Needed by This Process"); 
-    subdomain->writeToFile(); 
 
 	printf("CHECKING STENCILS: ");
 	for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
@@ -221,16 +221,16 @@ int main(int argc, char** argv) {
 
     // TODO: udpate heat to construct on grid
     tm["heat_init"]->start(); 
-	Heat heat(exact, subdomain, der, comm_unit->getRank());
-	heat.initialConditions(&subdomain->U_G);
+	Heat* heat = new Heat(exact, subdomain, der, comm_unit->getRank());
+	heat->initialConditions(&subdomain->U_G);
     tm["heat_init"]->stop(); 
 
 	// This is HARDCODED because we dont have the ability currently to call
 	// maxEig = der.computeEig() and therefore we have a different timestep than
 	// the original code. I will address this next.
-	//heat.setDt(0.011122);
-	heat.setDt(subdomain->dt);
-    heat.setRelErrTol(max_global_rel_error); 
+	//heat->setDt(0.011122);
+	heat->setDt(subdomain->dt);
+    heat->setRelErrTol(max_global_rel_error); 
 
 	// Send updates according to MPISendable object.
     tm["updates"]->start(); 
@@ -238,24 +238,13 @@ int main(int argc, char** argv) {
 	comm_unit->barrier();
     tm["updates"]->stop();
 
+    // Setup a logging class that will monitor our iteration and dump intermediate files
+    PDEWriter* writer = new VtuPDEWriter(subdomain, heat, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
+
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
 	int iter;
 	for (iter = 0; iter < 1000; iter++) {
-        // Write intermediate solution from ALL ranks (file names distinguish rank ID)
-        if (iter % local_sol_dump_frequency == 0) {
-            // TODO: dump solution inside heat where we can compute errors and residuals
-            subdomain->writeLocalSolutionToFile(iter);
-  //          heat.writeErrorToFile(subdomain->getFilename(), iter);
-        }
-        if (iter % global_sol_dump_frequency == 0) {
-            // NOTE: all local subdomains have a U_G solution which is consolidated
-            // into the MASTER process "global_U_G" solution. 
-            tm["consolidate"]->start(); 
-        	comm_unit->consolidateObjects(subdomain);
-            comm_unit->barrier();
-            tm["consolidate"]->stop(); 
-            subdomain->writeGlobalSolutionToFile(iter); 
-        }
+        writer->update(iter);
 
 		cout << "*********** Solve Heat (Iteration: " << iter
 			<< ") *************" << endl;
@@ -263,12 +252,12 @@ int main(int argc, char** argv) {
         sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
         subdomain->printSolution(label); 
         tm["timestep"]->start(); 
-		heat.advanceOneStepWithComm(comm_unit);
+		heat->advanceOneStepWithComm(comm_unit);
         tm["timestep"]->stop(); 
         sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
         subdomain->printSolution(label); 
 
-		double nrm = heat.maxNorm();
+		double nrm = heat->maxNorm();
 		// TODO : Need to add a "comm_unit->sendTerminate()" to
 		// break all processes when problem is encountered
 		if (nrm > 1.)
@@ -286,7 +275,7 @@ int main(int argc, char** argv) {
 	comm_unit->consolidateObjects(subdomain);
     comm_unit->barrier();
     tm["consolidate"]->stop(); 
-    subdomain->writeGlobalSolutionToFile(-1); 
+//    subdomain->writeGlobalSolutionToFile(-1); 
 
 	if (comm_unit->getRank() == 0) {
         // NOTE: the final solution is assembled, but we have to use the 
@@ -309,17 +298,20 @@ int main(int argc, char** argv) {
         }
         fin.close();
         std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-        heat.checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
+        heat->checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
         std::cout << "============== Solution Valid =============\n"; 
 #endif 
 		delete(grid);
 	}
 printf("REACHED THE END OF MAIN\n");
 
+// Writer first so we can dump final solution
+delete(writer);
+delete(heat);
 delete(subdomain);
-
 delete(settings);
 delete(comm_unit); 
+
 
 cout.flush();
 

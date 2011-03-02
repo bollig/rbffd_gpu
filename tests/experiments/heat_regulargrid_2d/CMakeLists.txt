@@ -25,6 +25,8 @@ require_config(test_28x27_works.conf)
 require_config(test_28x28_works.conf)
 require_config(test_nan_issue.conf)
 
+require_framework_vtk()
+
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )

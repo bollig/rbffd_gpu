@@ -34,6 +34,7 @@ class Domain : public Grid, public MPISendable {
         // std::set<int> BmD;
 
         // 4) These get us the func values of stencil nodes
+        // SOLUTION of all nodes in local domain
         std::vector<double> U_G;			// U_Q union U_R
         // Possibly decompose to U_Q, U_R instead since U_R will update each iteration
 
@@ -58,6 +59,7 @@ class Domain : public Grid, public MPISendable {
         // A map for global INDEX=VALUE storage of the final solution
         // recvFinal will populate this and then we can call (TODO) getFinal()
         // to get the values as a vector.
+        // SOLUTION of all nodes in global domain (valid only on master)
         std::map<int,double> global_U_G;
 
     public: 	// Member Functions: 

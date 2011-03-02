@@ -22,19 +22,32 @@ void debugExit(void) {
     fprintf(stderr, "EXIT CALLED\n");
 }
 
+void ProjectSettings::default_config() {
+    char ldirbuf[FILENAME_MAX]; 
+    if (getcwd(ldirbuf, sizeof(ldirbuf)) != NULL) {
+        printf("Current Working Directory: %s\n", ldirbuf); 
+        launch_dir = ldirbuf;  
+    } else {
+        perror("Couldnt get CWD"); 
+    }
+    cli_filename = launch_dir; 
+    cli_filename.append("/test.conf"); 
+}
 
 ProjectSettings::ProjectSettings(int argc, char** argv) :
-    cli_filename("test.conf"), 
     cwd(".")
 {
+    this->default_config(); 
+
     this->parseCommandLineArgs(argc, argv, 0);
     this->ParseFile(cli_filename);
 }
 
 ProjectSettings::ProjectSettings(int argc, char** argv, Communicator* comm_unit):
-    cli_filename("test.conf"),
     cwd(".")
 {
+    this->default_config(); 
+
     this->parseCommandLineArgs(argc, argv, comm_unit->getRank());
     this->ParseFile(cli_filename);
 }
@@ -57,7 +70,7 @@ void ProjectSettings::ParseFile(const std::string filename)
 
     std::string line = comment;
 
-
+    std::cout << "[ProjectSettings]   Reading config file: " << filename << std::endl;
     fin.open(filename.c_str());
     if (fin.is_open()) {
         while (!fin.eof()) {
@@ -152,16 +165,8 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                 char logname[256];
                 sprintf(logname, "%s.%d", optarg, my_rank);
                 log_file = logname; 
-               break;
+                break;
             case 'c':
-                char ldirbuf[FILENAME_MAX]; 
-                if (getcwd(ldirbuf, sizeof(ldirbuf)) != NULL) {
-                    printf("Current dir: %s\n", ldirbuf); 
-                    launch_dir = ldirbuf;  
-                } else {
-                    perror("Couldnt get CWD"); 
-                }
-
                 cli_filename = launch_dir; 
                 cli_filename.append("/"); 
                 cli_filename.append(optarg); 
@@ -185,14 +190,14 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                 }
 #endif 
                 mkdir(optarg, 0744);
-                printf("Made dir: %s\n", optarg); 
+                //printf("Made dir: %s\n", optarg); 
                 if (chdir(optarg) != 0) {
                     perror("Couldnt change directory!"); 
                     exit(EXIT_FAILURE);
                 }
-                printf("Change to dir: %s\n", optarg); 
+                //printf("New Working Directory: %s\n", optarg); 
                 if (getcwd(dirbuf, sizeof(dirbuf)) != NULL) {
-                    printf("New dir: %s\n", dirbuf); 
+                    printf("New Working Directory: %s\n", dirbuf); 
                     cwd = dirbuf; 
                 } else {
                     perror("Couldnt get new CWD"); 

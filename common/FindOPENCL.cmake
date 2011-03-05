@@ -16,18 +16,73 @@
 unset(OPENCL_INCLUDE_DIR CACHE)
 unset(OPENCL_LIBRARIES CACHE)
 
-IF (WIN32)
+#NOTE: NOT SURE IF THIS WILL WORK IN VISUAL STUDIO
+IF (WIN32 OR CYGWIN)
 
-    FIND_PATH(OPENCL_INCLUDE_DIR CL/cl.h )
+    # NOTE: if CUDA_PATH is not set on the user environment we can assume we're
+    # looking for ATI OpenCL
+    SET (CUDA_PATH $ENV{CUDA_PATH})
+
+    IF(CUDA_PATH)
+        MESSAGE("IN NVIDIA CASE!")
+    
+        FILE(TO_CMAKE_PATH $ENV{CUDA_PATH} CONVERTED_PATH_LIST)
+
+        # Remove the leading drive (i.e., "C") and make it lower case
+        # for cygwin
+        LIST(GET CONVERTED_PATH_LIST 0 WIN_DRIVE)
+        LIST(GET CONVERTED_PATH_LIST 1 WIN_PATH)
+        STRING(TOLOWER ${WIN_DRIVE} WIN_DRIVE_LOWER)
+   
+        SET(GPU_TOOLKIT "/cygwin/${WIN_DRIVE_LOWER}${WIN_PATH}")
+
+    ELSE (CUDA_PATH)
+        # TODO: ATI  
+        MESSAGE(ERROR "IN ATI CASE! Not implemented.")
+    	SET (GPU_TOOLKIT "/cygdrive/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v3.2/")
+    ENDIF (CUDA_PATH) 
+
+    FIND_PATH(OPENCL_INCLUDE_DIR CL/cl.h 
+		$ENV{GPU_COMPUTING_TOOLKIT}/include
+	)
+
+    
+MESSAGE("GPU_TOOLKIT/include= ${GPU_TOOLKIT}/include") 
+
+    FIND_PATH(OPENCL_INCLUDE_DIR CL/cl.h 
+                PATHS 
+                ${GPU_TOOLKIT}/include    
+                $ENV{CUDA_PATH}/include
+                )
 
     # TODO this is only a hack assuming the 64 bit library will
     # not be found on 32 bit system
-    FIND_LIBRARY(OPENCL_LIBRARIES opencl64 )
+    FIND_LIBRARY(OPENCL_LIBRARIES 
+                NAMES OpenCL opencl64 
+                PATHS 
+                    /cygdrive/c/Windows/SysWOW64
+                    /cygdrive/c/Windows/System32
+                    ${GPU_TOOLKIT}/lib/Win32
+                    ${GPU_TOOLKIT}/lib/x64
+                    $ENV{CUDA_PATH}/lib/Win32
+                    $ENV{CUDA_PATH}/lib/x64
+                    ~/local/lib
+                    )
     IF( OPENCL_LIBRARIES )
-        FIND_LIBRARY(OPENCL_LIBRARIES opencl32 )
+        FIND_LIBRARY(OPENCL_LIBRARIES 
+                NAMES OpenCL opencl32
+                PATHS 
+                    /cygdrive/c/Windows/SysWOW64
+                    /cygdrive/c/Windows/System32
+                    ${GPU_TOOLKIT}/lib/Win32
+                    ${GPU_TOOLKIT}/lib/x64
+                    $ENV{CUDA_PATH}/lib/Win32
+                    $ENV{CUDA_PATH}/lib/x64
+                    ~/local/lib
+                    )
     ENDIF( OPENCL_LIBRARIES )
 
-ELSE (WIN32)
+ELSE (WIN32 OR CYGWIN)
 
     # Unix style platforms
     # We also search for OpenCL in the NVIDIA GPU SDK default location
@@ -57,7 +112,7 @@ ELSE (WIN32)
 #~/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/ 
 
 
-ENDIF (WIN32)
+ENDIF (WIN32 OR CYGWIN)
 
 SET( OPENCL_FOUND "NO" )
 IF(OPENCL_LIBRARIES )

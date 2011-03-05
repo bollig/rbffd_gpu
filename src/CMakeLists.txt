@@ -22,7 +22,7 @@ SET(REQUIRED_SOURCE_FILES
     #*	pdes/elliptic/ncar_poisson1.cpp
 	pdes/parabolic/heat.cpp
 
-	rbffd/contour_svd.cpp
+    #	rbffd/contour_svd.cpp
 	rbffd/derivative.cpp
 	rbffd/derivative_tests.cpp
 	#P2	rbffd/new_derivative_tests.cpp

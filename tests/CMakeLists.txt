@@ -30,7 +30,7 @@
 		#P3		util/vtk_stencil_visualizer
 		util/test_complex
 		util/test_template_macros
-        util/petsc_test
+        #        util/petsc_test
         util/gpu_compute_derivs
         #        util/cl_file_loader
         util/matrix_market_io

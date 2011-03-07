@@ -44,6 +44,6 @@ IF (OPENCL_FOUND)
 
         ADD_TEST (${TEST_NAME}_test1 "${TEST_NAME}" ${ARGV})
 ELSE(OPENCL_FOUND) 
-	MESSAGE (WARNING "WARNING! Test: ${TEST_NAME} will not be built because CUDA was not found. Please install CUDA v3.1 on your system!")
+    MESSAGE (WARNING "WARNING! Test: ${TEST_NAME} will not be built because OPENCL was not found. Please install CUDA v3.1 on your system!")
 ENDIF(OPENCL_FOUND) 
 

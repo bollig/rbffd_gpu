@@ -39,7 +39,7 @@
 	~/local/lib64)
 
 	# Typically installed separately. Same rules as Armadillo (local dir here; global unecessary)
-	FIND_LIBRARY(fftw fftw3 PATHS /Users/erlebach/Documents/src/fftw-3.2.2/.libs)
+    #	FIND_LIBRARY(fftw fftw3 PATHS /Users/erlebach/Documents/src/fftw-3.2.2/.libs)
 
 
 

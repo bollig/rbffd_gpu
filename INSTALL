@@ -35,7 +35,6 @@ Required software:
 
 Armadillo v0.8.2 			(http://arma.sourceforge.net)
 FFTW 3.2.2 
-gordon_tests/utilities/libutilities.a 	(from https://svn.sc.fsu.edu/svn/collab-ge-bj/src/gordon_tests/utilities)
 OpenMPI  				(Installed by default on OSX10.6)
 
 
@@ -91,5 +90,7 @@ OSX
 
 
 Windows
-	HAVENT TESTED OS YET
-
+    armadillo must be installed before building this library (install to ~/local)
+    #openmpi must be installed before building this library (install to ~/local)
+    install mpich2 using Windows Installer (http://www.mcs.anl.gov/research/projects/mpich2/downloads/index.php?s=downloads)
+        (passphrase: vislab)

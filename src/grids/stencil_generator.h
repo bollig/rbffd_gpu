@@ -11,7 +11,6 @@
 #include <vector>
 #include <iostream> 
 
-#include "utils/comm/communicator.h"
 #include "common_typedefs.h"
 
 // Basic StencilGenerator 

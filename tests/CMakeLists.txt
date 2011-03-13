@@ -13,7 +13,7 @@
 		#P2		experiments/regulargrid3D_heat
 		experiments/heat_regulargrid_2d
 
-		#* 		gridgen/nested_spheres_ccvt
+		gridgen/nested_spheres_ccvt
 		gridgen/regular_grid
 		gridgen/square_cvt
 		gridgen/stencil_gen

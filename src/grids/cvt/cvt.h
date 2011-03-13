@@ -17,17 +17,17 @@ protected:
 	std::map<std::string, Timer*> timers;
 	KDTree* kdtree;
 
-    	unsigned int dim_num;
+    	size_t dim_num;
   
        // Signed int iteration: 
        // iter < 0 => final
        // iter = 0 => initial
        // iter > 0 => iter # 
-	unsigned int cvt_iter;
-	unsigned int it_max;
-        unsigned int write_freq; 	
-	unsigned int nb_samples; 
-        unsigned int sample_batch_size;
+	size_t cvt_iter;
+	size_t it_max;
+        size_t write_freq; 	
+	size_t nb_samples; 
+        size_t sample_batch_size;
 
 	// Current seed for cvt_sample
 	int rand_seed; 
@@ -35,7 +35,7 @@ protected:
 
 	// The number of nodes (from the beginning of the list) which are locked in place. 
 	// These nodes are typically boundary nodes whos position should be updated by another algorithm
-	unsigned int nb_locked_nodes; 
+	size_t nb_locked_nodes; 
 
 	// Can we assume the generators were initialized already or should we call cvt_init?
 	bool generatorsInitialized; 
@@ -48,10 +48,10 @@ public:
 	// the number of dimensions for the CVT. Dimension allows us to generate
 	// a CVT in lower dimensions than the nodes (e.g., 3D node cloud with a
 	// cvt on each xy plane) 
-	CVT (unsigned int nb_nodes, unsigned int dimension, unsigned int nb_locked=0, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_frequency=5, unsigned int sample_batch_size=800); 
-	CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked=0, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_frequency=5, unsigned int sample_batch_size=800); 
+	CVT (size_t nb_nodes, size_t dimension, size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800); 
+	CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800); 
 
-	~CVT(); 
+	virtual ~CVT(); 
 
 
 /*******************
@@ -92,8 +92,8 @@ public:
  ***********************/
 protected: 
 	void cvt_sample(std::vector<NodeType>& sample_node_list, int indx_start, int n_now, sample_type sample_kind, bool init_rand=false);
-	void cvt_iterate(unsigned int sample_batch_size, unsigned int num_samples, sample_type sample);
-	void find_closest(std::vector<NodeType>& sample_node_list, std::vector<NodeType>& generator_list, std::vector<unsigned int>& closest_indx_list); 
+	void cvt_iterate(size_t sample_batch_size, size_t num_samples, sample_type sample);
+	void find_closest(std::vector<NodeType>& sample_node_list, std::vector<NodeType>& generator_list, std::vector<size_t>& closest_indx_list); 
 
 	unsigned long random_initialize(int seed); 
 	void tuple_next_fast(int m, int n, int rank, int x[]);

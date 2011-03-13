@@ -20,7 +20,7 @@
 
 using namespace std;
 
-CVT::CVT(unsigned int nb_generators, unsigned int dimension, unsigned int nb_locked, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size) 
+CVT::CVT(size_t nb_generators, unsigned int dimension, unsigned int nb_locked, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size) 
 	: Grid(nb_generators), 
 	kdtree(NULL), cvt_iter(0),
 	generatorsInitialized(false), 
@@ -30,7 +30,7 @@ CVT::CVT(unsigned int nb_generators, unsigned int dimension, unsigned int nb_loc
 	initTimers(); 
 }
 
-CVT::CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size)
+CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, unsigned int nb_locked, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size)
 	: Grid(nodes), 
 	kdtree(NULL), cvt_iter(0),
 	generatorsInitialized(true), 
@@ -98,7 +98,7 @@ std::string CVT::getFileDetailString() {
 
 //****************************************************************************80
 
-void CVT::cvt_iterate(unsigned int sample_batch_size, unsigned int num_samples, sample_type sample_kind)
+void CVT::cvt_iterate(size_t sample_batch_size, unsigned int num_samples, sample_type sample_kind)
 
 //****************************************************************************80
 //
@@ -212,16 +212,16 @@ void CVT::cvt_iterate(unsigned int sample_batch_size, unsigned int num_samples, 
     	centroids = generators; 
 
 //	std::cout << "Setting up samples\n";
-    	unsigned int num_samples_remaining = num_samples;  
-   	unsigned int this_batch_size = min(num_samples_remaining, sample_batch_size); 
+    	size_t num_samples_remaining = num_samples;  
+   	size_t this_batch_size = min(num_samples_remaining, sample_batch_size); 
 
     	// Our random samples in space	
     	std::vector<NodeType> samples(this_batch_size); 
 	// The index of the nearest generator 
-	std::vector<unsigned int> sample_closest_indx(this_batch_size); 
+	std::vector<size_t> sample_closest_indx(this_batch_size); 
 	// Since all centroids start with initial sample at old generator we have a guaranteed hit
 	// without this hit we would have to check for divide by zero below
-	std::vector<unsigned int> num_sample_hits(centroids.size(), 1); 
+	std::vector<size_t> num_sample_hits(centroids.size(), 1); 
 	
 //	std::cout << "sample_start" << std::endl;
 	while (num_samples_remaining > 0) { 
@@ -324,7 +324,7 @@ void CVT::cvt_iterate(unsigned int sample_batch_size, unsigned int num_samples, 
 
 //****************************************************************************80
 
-void CVT::find_closest(std::vector<NodeType>& sample_node_list, std::vector<NodeType>& generator_list, std::vector<unsigned int>& closest_indx_list)
+void CVT::find_closest(std::vector<NodeType>& sample_node_list, std::vector<NodeType>& generator_list, std::vector<size_t>& closest_indx_list)
 
 //****************************************************************************80
 //
@@ -357,7 +357,7 @@ void CVT::find_closest(std::vector<NodeType>& sample_node_list, std::vector<Node
 //
 //    Input, vector<NodeType> GENERATOR_LIST, the list of current generators
 //
-//    Output, vector<unsigned int> closest_indx_list, the (0-based) index of the nearest generator in GENERATOR_LIST to each of the samples in SAMPLE_NODE_LIST
+//    Output, vector<size_t> closest_indx_list, the (0-based) index of the nearest generator in GENERATOR_LIST to each of the samples in SAMPLE_NODE_LIST
 //    cell generator.
 //
 {

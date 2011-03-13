@@ -44,7 +44,8 @@ void Grid::writeToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << node_list.size() << " nodes to \t" << filename << std::endl;
+    //std::cout << "[Grid] \tWrote " << node_list.size() << " nodes to \t" << filename << std::endl;
+    std::cout << "[" << this->className() << "] \tWrote " << node_list.size() << " nodes to \t" << filename << std::endl;
 
     this->writeBoundaryToFile(filename); 
     this->writeNormalsToFile(filename); 
@@ -69,7 +70,7 @@ void Grid::writeBoundaryToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << boundary_indices.size() << " boundary indices to \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tWrote " << boundary_indices.size() << " boundary indices to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
@@ -87,7 +88,7 @@ void Grid::writeNormalsToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << boundary_normals.size() << " boundary normals to \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tWrote " << boundary_normals.size() << " boundary normals to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
@@ -105,14 +106,14 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << avg_stencil_radii.size() << " average stencil radii to \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tWrote " << avg_stencil_radii.size() << " average stencil radii to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
 
 void Grid::writeStencilsToFile(std::string filename) {
     char prefix[256]; 
-    sprintf(prefix, "stencils_maxsz%lu_", this->max_st_size); 
+    sprintf(prefix, "stencils_maxsz%lu_", (unsigned long)this->max_st_size); 
     std::string fname = prefix; 
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
@@ -129,14 +130,14 @@ void Grid::writeStencilsToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Grid] \tWrote " << stencil_map.size() << " stencils to \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tWrote " << stencil_map.size() << " stencils to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
 
 
 void Grid::writeExtraToFile(std::string filename) {
-    std::cout << "[Grid] Nothing extra to write" << std::endl;
+    std::cout << "[" << this->className() << "] \tNothing extra to write" << std::endl;
 }
 
 //----------------------------------------------------------------------------
@@ -151,7 +152,7 @@ int Grid::loadFromFile(int iter) {
 //----------------------------------------------------------------------------
 
 int Grid::loadFromFile(std::string filename) {
-    std::cout << "[Grid] reading file: " << filename << std::endl;
+    std::cout << "[" << this->className() << "] \treading file: " << filename << std::endl;
     std::ifstream fin(filename.c_str());
 
     node_list.clear(); 
@@ -173,7 +174,7 @@ int Grid::loadFromFile(std::string filename) {
     }
     fin.close(); 
     nb_nodes = node_list.size(); 
-    std::cout << "[Grid] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
+    std::cout << "[" << this->className() << "] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
 
     if (this->loadBoundaryFromFile(filename)) {
         printf("Error loading boundary nodes\n"); 
@@ -208,7 +209,7 @@ int Grid::loadFromFile(std::string filename) {
 int Grid::loadBoundaryFromFile(std::string filename) {
     std::string fname = "bndry_"; 
     fname.append(filename);
-    std::cout << "[Grid] reading boundary file: " << fname << std::endl;    
+    std::cout << "[" << this->className() << "] \treading boundary file: " << fname << std::endl;    
 
     std::ifstream fin; 
     fin.open(fname.c_str()); 
@@ -230,7 +231,7 @@ int Grid::loadBoundaryFromFile(std::string filename) {
 
     fin.close(); 
 
-    std::cout << "[Grid] \tLoaded " << boundary_indices.size() << " boundary indices from \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tLoaded " << boundary_indices.size() << " boundary indices from \t" << fname << std::endl;
     return 0; 
 }
 
@@ -239,7 +240,7 @@ int Grid::loadBoundaryFromFile(std::string filename) {
 int Grid::loadNormalsFromFile(std::string filename) {
     std::string fname = "nrmls_"; 
     fname.append(filename);
-    std::cout << "[Grid] reading normals file: " << fname << std::endl;    
+    std::cout << "[" << this->className() << "] \treading normals file: " << fname << std::endl;    
 
     std::ifstream fin; 
     fin.open(fname.c_str()); 
@@ -261,7 +262,7 @@ int Grid::loadNormalsFromFile(std::string filename) {
 
     fin.close(); 
 
-    std::cout << "[Grid] \tLoaded " << boundary_normals.size() << " boundary normals from \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tLoaded " << boundary_normals.size() << " boundary normals from \t" << fname << std::endl;
     return 0; 
 }
 
@@ -270,7 +271,7 @@ int Grid::loadNormalsFromFile(std::string filename) {
 int Grid::loadAvgRadiiFromFile(std::string filename) {
     std::string fname = "avg_radii_"; 
     fname.append(filename);
-    std::cout << "[Grid] reading average stencil radii file: " << fname << std::endl;    
+    std::cout << "[" << this->className() << "] \treading average stencil radii file: " << fname << std::endl;    
 
     std::ifstream fin; 
     fin.open(fname.c_str()); 
@@ -292,7 +293,7 @@ int Grid::loadAvgRadiiFromFile(std::string filename) {
 
     fin.close(); 
 
-    std::cout << "[Grid] \tLoaded " << avg_stencil_radii.size() << " average stencil radii from \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tLoaded " << avg_stencil_radii.size() << " average stencil radii from \t" << fname << std::endl;
     return 0; 
 }
 
@@ -301,10 +302,10 @@ int Grid::loadAvgRadiiFromFile(std::string filename) {
 int Grid::loadStencilsFromFile(std::string filename) {
 
     char prefix[256]; 
-    sprintf(prefix, "stencils_maxsz%lu_", this->max_st_size); 
+    sprintf(prefix, "stencils_maxsz%lu_", (unsigned long)this->max_st_size); 
     std::string fname = prefix; 
     fname.append(filename);
-    std::cout << "[Grid] reading stencil file: " << fname << std::endl;    
+    std::cout << "[" << this->className() << "] \treading stencil file: " << fname << std::endl;    
 
     std::ifstream fin; 
     fin.open(fname.c_str()); 
@@ -334,7 +335,7 @@ int Grid::loadStencilsFromFile(std::string filename) {
 
     fin.close(); 
         
-    std::cout << "[Grid] \tLoaded " << stencil_map.size() << " stencils, with a total of " << num_el_loaded << " elements from \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tLoaded " << stencil_map.size() << " stencils, with a total of " << num_el_loaded << " elements from \t" << fname << std::endl;
     
     return 0;
 }

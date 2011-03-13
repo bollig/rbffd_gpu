@@ -1,58 +1,63 @@
 #include <stdlib.h>
 
+#include "utils/conf/projectsettings.h"
+
 #include "grids/cvt/nested_sphere_cvt.h"
+
+#include "utils/comm/communicator.h"
 
 using namespace std;
 
-#define NB_INNER_BND 1000
-#define NB_OUTER_BND 1000
-#define NB_INTERIOR 5000
-#define NB_SAMPLES 10000
-#define DIM_NUM 2
-
-
 int main(int argc, char** argv) {
+
+    Communicator* comm_unit = new Communicator(argc, argv);
+
+    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
+
+	
+    int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
+    int nb_interior = settings->GetSettingAs<int>("NB_INTERIOR", ProjectSettings::required); 
+    int nb_inner_boundary = settings->GetSettingAs<int>("NB_INNER_BOUNDARY", ProjectSettings::required); 
+    int nb_outer_boundary = settings->GetSettingAs<int>("NB_OUTER_BOUNDARY", ProjectSettings::required); 
+    int nb_boundary = nb_inner_boundary + nb_outer_boundary; 
+
+    if (dim > 3) {
+	cout << "ERROR! Dim > 3 Not supported!" << endl;
+	exit(EXIT_FAILURE); 
+    }
+
+    double inner_r = settings->GetSettingAs<double>("INNER_RADIUS", ProjectSettings::optional, "0.5"); 
+    double outer_r = settings->GetSettingAs<double>("OUTER_RADIUS", ProjectSettings::optional, "0.5"); 
+
+    double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
+    double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
+    double minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
+    double maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
+    double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
+    double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
+
+    double debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
+
+	// Generate a CVT with nx*ny*nz nodes, in 1, 2 or 3D with 0 locked boundary nodes, 
+	// 20000 samples per iteration for 30 iterations
+    NestedSphereCVT* cgrid = new NestedSphereCVT(nb_interior, nb_inner_boundary, nb_outer_boundary, dim, 0, 20000, 60); 
+    cgrid->setInnerRadius(inner_r); 
+    cgrid->setOuterRadius(outer_r); 
+
+    Grid* grid = cgrid; 
+    grid->setDebug(debug);
+    grid->generate(); 
+    grid->writeToFile(); 
     
-    int N_TOT = NB_INNER_BND + NB_OUTER_BND + NB_INTERIOR;
-
-    // Discrete energy divided by number of sample pts
-    double energy;
-
-    // Output filename
-    char file_out_name[80] = "cvt_nested_spheres.txt";
-
-    // L2 norm of difference between iteration output
-    double it_diff;
-
-    // maximum number of iterations
-    int it_max_bnd = 100;    // Boundary
-    int it_max_int = 500;   // Interior
-
-    // number of iterations taken (output by cvt3d, input to cvt_write)
-    int it_num_boundary = 0;
-    int it_num_interior = 0;
-
-    int sample_num = NB_SAMPLES;
-
-    // generator points
-    double r[DIM_NUM * N_TOT];
-
-    Density* rho = new Density();
-
-
-
-    NestedSphereCVT* cvt = new NestedSphereCVT("nested_spheres", NB_INNER_BND, NB_OUTER_BND, NB_INTERIOR, DIM_NUM);
-
-    //    cvt->SetDensity(rho);
-
-    // Generate the CVT
-    //cvt->cvt(N, batch, init, sample, sample_num, it_max, it_fixed, &seed, r, &it_num, &it_diff, &energy);
-    cvt->cvt(&r[0], &it_num_boundary, &it_num_interior, &it_diff, &energy, it_max_bnd, it_max_int, sample_num);
-
-
-    delete(cvt);
-    //    cvt->cvt_write(DIM_NUM, N_TOT, batch, seed_init, seed, init_string,
-    //          it_max, it_fixed, it_num, it_diff, energy, sample_string, sample_num, r,
-    //        file_out_name, comment);
+    delete(grid);
+    delete(settings);
+#if 0
+    Grid* grid2 = new Grid(); 
+    grid2->loadFromFile("initial_grid.ascii"); 
+    grid2->writeToFile("final_grid.ascii");
+   
+    cout.flush();
+#endif 
+    exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------

@@ -16,7 +16,7 @@ public:
         RegularGrid(int n_x, int n_y, double minX=0., double maxX=1., double minY=0., double maxY=1.);
 	// 3D
         RegularGrid(int n_x, int n_y, int n_z, double minX=0., double maxX=1., double minY=0., double maxY=1., double minZ=0., double maxZ=1.);
-	~RegularGrid();
+	virtual ~RegularGrid();
 
 	// Overrides Grid::generate()
         virtual void generate();

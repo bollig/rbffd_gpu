@@ -20,6 +20,7 @@ SET (ARGV
 # 	"--file=out.txt"
 )
 
+require_config()
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 

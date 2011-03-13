@@ -6,6 +6,10 @@ using namespace std;
 
 #include "nested_sphere_cvt.h"
 
+
+
+
+#if 0
 NestedSphereCVT::NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int sample_num_, int it_max_bndry, int it_max_inter, int dimension, double inner_radius, double outer_radius, int DEBUG_)
     : CVT(nb_inner_bnd + nb_outer_bnd + nb_interior, dimension, file_name, 3 /*USER INIT*/, 3 /*USER SAMPLE*/, sample_num_),
     inner_r(inner_radius), outer_r(outer_radius),
@@ -468,3 +472,5 @@ void NestedSphereCVT::project_to_sphere(double generator[], int k, int ndim, dou
 void NestedSphereCVT::cvt_get_file_prefix(char* filename_buffer) {
     sprintf(filename_buffer, "%s_%.5d_inner_%.5d_outer_%.5d_interior", cvt_file_name, nb_inner, nb_outer, nb_int);
 }
+
+#endif 

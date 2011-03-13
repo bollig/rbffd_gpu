@@ -13,6 +13,7 @@
 
    file changelog: - May 28, 2010   New from scratch for first release
 ======================================================================= */
+#include <stdlib.h>
 
 // include necessary system headers
 #include <iostream>
@@ -29,7 +30,6 @@
 
 // Some helper functions for this tutorial:
 #include "Random.hpp"
-
 /*
 *   Tutorial no. 1: BLAS level 1 functionality
 */

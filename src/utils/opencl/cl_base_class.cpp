@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <vector>
+#include <stdlib.h>
 
 #include "cl_base_class.h"
 

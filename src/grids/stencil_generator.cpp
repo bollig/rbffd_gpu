@@ -5,7 +5,9 @@
  * Created on May 11, 2010, 12:48 PM
  */
 #include <stdlib.h>
+#include <stdio.h>
 #include <vector>
+#include <set>
 
 using namespace std;
 
@@ -109,7 +111,7 @@ void StencilGenerator::computeStencils(std::vector<NodeType>& node_list, std::ve
 		st.resize(st_max_size); 
 	}
 
-        set<int, ltvec> se;
+    std::set<int, ltvec> se;
         ltvec::setRbfCenters(rbf_centers);
         ltvec::setXi(v);
 

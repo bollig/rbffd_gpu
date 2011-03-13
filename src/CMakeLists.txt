@@ -22,7 +22,7 @@ SET(REQUIRED_SOURCE_FILES
     #*	pdes/elliptic/ncar_poisson1.cpp
 	pdes/parabolic/heat.cpp
 
-    #	rbffd/contour_svd.cpp
+    rbffd/contour_svd.cpp
 	rbffd/derivative.cpp
 	rbffd/derivative_tests.cpp
 	#P2	rbffd/new_derivative_tests.cpp
@@ -80,7 +80,7 @@ TARGET_LINK_LIBRARIES ( ${FRAMEWORK_LIBRARY}
 		  	${amira}
 			${armadillo}
 			${clapack}
-			${fftw}
+			${fftw3}
 			${ADDITIONAL_REQUIRED_LIBRARIES} 	# From OS specific CMakeLists.txt
 )
 	
@@ -98,7 +98,7 @@ IF(CUDA_FOUND)
         #        ${amira}
         #        ${armadillo}
         #        ${clapack}
-        #        ${fftw}
+        #        ${fftw3}
         #        ${ADDITIONAL_REQUIRED_LIBRARIES} 	# From OS specific CMakeLists.txt
         #)
 ENDIF(CUDA_FOUND)

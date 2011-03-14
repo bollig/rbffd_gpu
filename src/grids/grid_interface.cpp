@@ -112,25 +112,30 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
 //----------------------------------------------------------------------------
 
 void Grid::writeStencilsToFile(std::string filename) {
-    char prefix[256]; 
-    sprintf(prefix, "stencils_maxsz%lu_", (unsigned long)this->max_st_size); 
-    std::string fname = prefix; 
-    fname.append(filename); 
-    std::ofstream fout(fname.c_str()); 
-    if (fout.is_open()) {
-        for (size_t i = 0; i < stencil_map.size(); i++) {
-            fout << stencil_map[i].size(); 
-            for (size_t j=0; j < stencil_map[i].size(); j++) {
-                fout << " " << stencil_map[i][j];
+    if (max_st_size > 0) {
+        std::ostringstream prefix; 
+        prefix << "stencils_maxsz" << this->max_st_size << "_" << filename; 
+
+        std::string fname = prefix.str(); 
+        fname.append(filename); 
+        std::ofstream fout(fname.c_str()); 
+        if (fout.is_open()) {
+            for (size_t i = 0; i < stencil_map.size(); i++) {
+                fout << stencil_map[i].size(); 
+                for (size_t j=0; j < stencil_map[i].size(); j++) {
+                    fout << " " << stencil_map[i][j];
+                }
+                fout << std::endl;
             }
-            fout << std::endl;
+        } else {
+            printf("Error opening file to write\n"); 
+            exit(EXIT_FAILURE); 
         }
+        fout.close();
+        std::cout << "[" << this->className() << "] \tWrote " << stencil_map.size() << " stencils to \t" << fname << std::endl;
     } else {
-        printf("Error opening file to write\n"); 
-        exit(EXIT_FAILURE); 
+        std::cout << "[" << this->className() << "] \tMax stencil size not set. No stencils to write to disk" << std::endl;
     }
-    fout.close();
-    std::cout << "[" << this->className() << "] \tWrote " << stencil_map.size() << " stencils to \t" << fname << std::endl;
 }
 
 //----------------------------------------------------------------------------
@@ -190,7 +195,7 @@ int Grid::loadFromFile(std::string filename) {
         printf("Error loading avg dists\n"); 
         return -4;
     }
-    
+
     if (this->loadStencilsFromFile(filename)) {
         printf("Error loading stencils\n"); 
         return -4;
@@ -300,43 +305,46 @@ int Grid::loadAvgRadiiFromFile(std::string filename) {
 //----------------------------------------------------------------------------
 
 int Grid::loadStencilsFromFile(std::string filename) {
+    if (max_st_size > 0) {
+        std::ostringstream prefix; 
+        prefix << "stencils_maxsz" << this->max_st_size << "_" << filename; 
 
-    char prefix[256]; 
-    sprintf(prefix, "stencils_maxsz%lu_", (unsigned long)this->max_st_size); 
-    std::string fname = prefix; 
-    fname.append(filename);
-    std::cout << "[" << this->className() << "] \treading stencil file: " << fname << std::endl;    
+        std::string fname = prefix.str();
 
-    std::ifstream fin; 
-    fin.open(fname.c_str()); 
+        std::cout << "[" << this->className() << "] \treading stencil file: " << fname << std::endl;    
 
-    size_t num_el_loaded = 0; 
-    if (fin.is_open()) {
-        stencil_map.clear(); 
-        while (fin.good()) {
-            size_t st_size; 
-            fin >> st_size; 
-            StencilType st; 
-            for (int i = 0; i < st_size; i++) {
-                int st_el; 
-                fin >> st_el; 
-                st.push_back(st_el); 
+        std::ifstream fin; 
+        fin.open(fname.c_str()); 
+
+        size_t num_el_loaded = 0; 
+        if (fin.is_open()) {
+            stencil_map.clear(); 
+            while (fin.good()) {
+                size_t st_size; 
+                fin >> st_size; 
+                StencilType st; 
+                for (int i = 0; i < st_size; i++) {
+                    int st_el; 
+                    fin >> st_el; 
+                    st.push_back(st_el); 
+                }
+                if (!fin.eof()) {
+                    stencil_map.push_back(st); 
+                    num_el_loaded += st.size();
+                }
             }
-            if (!fin.eof()) {
-                stencil_map.push_back(st); 
-                num_el_loaded += st.size();
-            }
+        } else {
+            printf("Error opening stencil file to read\n"); 
+            return -1;
+            //		exit(EXIT_FAILURE);
         }
-    } else {
-        printf("Error opening stencil file to read\n"); 
-        return -1;
-        //		exit(EXIT_FAILURE);
-    }
 
-    fin.close(); 
-        
-    std::cout << "[" << this->className() << "] \tLoaded " << stencil_map.size() << " stencils, with a total of " << num_el_loaded << " elements from \t" << fname << std::endl;
-    
+        fin.close(); 
+
+        std::cout << "[" << this->className() << "] \tLoaded " << stencil_map.size() << " stencils, with a total of " << num_el_loaded << " elements from \t" << fname << std::endl;
+    } else {
+        std::cout << "[" << this->className() << "] \tMax stencil size not set. No stencils to read from disk" << std::endl;
+    }
     return 0;
 }
 

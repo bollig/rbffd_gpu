@@ -19,7 +19,7 @@ protected:
 public: 
 	NestedSphereCVT (size_t nb_nodes_interior, size_t nb_nodes_inner_boundary, size_t nb_nodes_outer_boundary, size_t dimension, size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800)
         : CVT(nb_nodes_interior + nb_nodes_inner_boundary + nb_nodes_outer_boundary, 
-                dimension, nb_locked, num_samples, max_num_iters, write_frequency, sample_batch_size),
+                dimension, nb_nodes_outer_boundary+nb_nodes_inner_boundary /*nb_locked*/, num_samples, max_num_iters, write_frequency, sample_batch_size),
           inner_r(0.5), outer_r(1.0), 
           nb_int(nb_nodes_interior),
           nb_outer(nb_nodes_outer_boundary), 
@@ -42,7 +42,7 @@ public:
  * OVERRIDES GRID::
  *******************/
 	// Overrides Grid::generate()
-	//virtual void generate(); 
+	virtual void generate(); 
 	
 	// Overrides Grid::getFileDetailString()
 //ONLY REPLACE IF WE WANT A MORE VERBOSE FILENAME FOR # OF BOUNDARY NODES

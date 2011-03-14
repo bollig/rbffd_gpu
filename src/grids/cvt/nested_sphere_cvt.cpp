@@ -7,63 +7,35 @@ using namespace std;
 #include "nested_sphere_cvt.h"
 
 
+void NestedSphereCVT::generate() {
 
+    // TODO: initialize boundary
 
-#if 0
-NestedSphereCVT::NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int sample_num_, int it_max_bndry, int it_max_inter, int dimension, double inner_radius, double outer_radius, int DEBUG_)
-    : CVT(nb_inner_bnd + nb_outer_bnd + nb_interior, dimension, file_name, 3 /*USER INIT*/, 3 /*USER SAMPLE*/, sample_num_),
-    inner_r(inner_radius), outer_r(outer_radius),
-    nb_inner(nb_inner_bnd), nb_outer(nb_outer_bnd), nb_int(nb_interior),
-    it_max_interior(it_max_inter), it_max_boundary(it_max_bndry)
-{
-    DEBUG = DEBUG_;
-    nb_bnd = 0;
+	if (!generatorsInitialized || (nb_nodes != node_list.size())) {
+		this->node_list.resize(nb_nodes); 
+		// Random in unit square
+		this->cvt_sample(this->node_list, 0, nb_nodes, CVT::USER_INIT, true); 
 
-#if 0
-    // For testing: quarter spheres
-    geom_extents = new double[2 * dim_num];
-    for (int i = 0; i < dim_num; i++) {
-        geom_extents[0 + i * 2] = -1;
-        geom_extents[1 + i * 2] = 0;
-    }
-    geom_extents[0 + 0 * 2] = -1;
-    geom_extents[1 + 0 * 2] = 0;
-#else
-    // Create bounding volume: [-1,1]^3
-    geom_extents = new double[2 * dim_num];
-    for (int i = 0; i < dim_num; i++) {
-        geom_extents[0 + i * 2] = -1;
-        geom_extents[1 + i * 2] = 1;
-    }
-#endif
+		generatorsInitialized = true;
+		std::cout << "[CVT] Done sampling initial generators\n";
+	}
+		
+	// Should we generate a KDTree to accelerate sampling? Cost of tree generation is 
+	// high and should be amortized by VERY MANY samples. However, too many samples 
+	// argues in favor of discrete Voronoi transform
+	
+	// TODO: get CVT::GRID to generate samples in batches of subvolumes otherwise
+	// 	 batches are always the same sample sets for it. 
+	this->cvt_iterate(sample_batch_size, nb_samples, CVT::USER_SAMPLE);
+	
+	this->writeToFile();
+
+	std::cout << "CVT GENERATE NOT IMPLEMENTED" << std::endl;
 }
 
 
-NestedSphereCVT::NestedSphereCVT(ProjectSettings* settings) :
-        CVT(settings->GetSettingAs<int>("NB_INTERIOR") + settings->GetSettingAs<int>("NB_INNER_BND") + settings->GetSettingAs<int>("NB_OUTER_BND"),
-            settings->GetSettingAs<int>("DIMENSION"), "nested_spheres", 3 /*USER INIT*/, 3 /*USER SAMPLE*/,
-            settings->GetSettingAs<int>("NB_SAMPLES"))
-{
-    inner_r = settings->GetSettingAs<double>("INNER_RADIUS");
-    outer_r = settings->GetSettingAs<double>("OUTER_RADIUS");
-    nb_inner = settings->GetSettingAs<int>("NB_INNER_BND");
-    nb_outer = settings->GetSettingAs<int>("NB_OUTER_BND");
-    nb_int = settings->GetSettingAs<int>("NB_INTERIOR");
-    it_max_interior = settings->GetSettingAs<int>("IT_MAX_INTERIOR");
-    it_max_boundary = settings->GetSettingAs<int>("IT_MAX_BOUNDARY");
 
-    DEBUG = settings->GetSettingAs<int>("DEBUG_MODE");
-    nb_bnd = 0;
-
-    // Create bounding volume: [-1,1]^3
-    geom_extents = new double[2 * dim_num];
-    for (int i = 0; i < dim_num; i++) {
-        geom_extents[0 + i * 2] = -1;
-        geom_extents[1 + i * 2] = 1;
-    }
-
-}
-
+#if 0
 
 //****************************************************************************80
 
@@ -72,8 +44,6 @@ NestedSphereCVT::NestedSphereCVT(ProjectSettings* settings) :
 // Interior generators are r[nb_inner+nb_outer] -> r[nb_tot]
 void NestedSphereCVT::cvt(int *it_num, double *it_diff, double *energy) {
 
-    //void NestedSphereCVT::cvt(double r[], int *it_num_boundary, int *it_num_interior, double *it_diff, double *energy,
-    //      int it_max_boundary, int it_max_interior, int sample_num) {
     t1.start();
     int i;
     bool initialize;

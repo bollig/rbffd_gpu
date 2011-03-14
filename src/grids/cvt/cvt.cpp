@@ -20,7 +20,7 @@
 
 using namespace std;
 
-CVT::CVT(size_t nb_generators, unsigned int dimension, unsigned int nb_locked, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size) 
+CVT::CVT(size_t nb_generators, size_t dimension, size_t nb_locked, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size) 
 	: Grid(nb_generators), 
 	kdtree(NULL), cvt_iter(0),
 	generatorsInitialized(false), 
@@ -30,7 +30,7 @@ CVT::CVT(size_t nb_generators, unsigned int dimension, unsigned int nb_locked, u
 	initTimers(); 
 }
 
-CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, unsigned int nb_locked, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size)
+CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size)
 	: Grid(nodes), 
 	kdtree(NULL), cvt_iter(0),
 	generatorsInitialized(true), 
@@ -98,7 +98,7 @@ std::string CVT::getFileDetailString() {
 
 //****************************************************************************80
 
-void CVT::cvt_iterate(size_t sample_batch_size, unsigned int num_samples, sample_type sample_kind)
+void CVT::cvt_iterate(size_t sample_batch_size, size_t num_samples, sample_type sample_kind)
 
 //****************************************************************************80
 //

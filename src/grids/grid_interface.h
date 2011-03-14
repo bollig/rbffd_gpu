@@ -61,9 +61,9 @@ class Grid
 		std::vector<double> avg_stencil_radii; 
 	
 	public:
-		Grid() : pert(0.), nb_nodes(0), boundary_nodes_first(false), DEBUG(0) {}
-		Grid(size_t num_nodes) : pert(0), nb_nodes(num_nodes), boundary_nodes_first(false), DEBUG(0) {}
-		Grid(std::vector<NodeType>& nodes) : pert(0), nb_nodes(nodes.size()), boundary_nodes_first(false), DEBUG(0), node_list(nodes) {} 
+		Grid() : max_st_size(0), pert(0.), nb_nodes(0), boundary_nodes_first(false), DEBUG(0) {}
+		Grid(size_t num_nodes) : max_st_size(0), pert(0), nb_nodes(num_nodes), boundary_nodes_first(false), DEBUG(0) {}
+		Grid(std::vector<NodeType>& nodes) : max_st_size(0), pert(0), nb_nodes(nodes.size()), boundary_nodes_first(false), DEBUG(0), node_list(nodes) {} 
 
 		virtual ~Grid(){ }
 

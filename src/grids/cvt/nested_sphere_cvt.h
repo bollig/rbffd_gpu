@@ -39,7 +39,7 @@ public:
 
 
 /*******************
- * OVERRIDES GRID::
+ * OVERRIDES GRID:: and CVT::
  *******************/
 	// Overrides Grid::generate()
 	//virtual void generate(); 

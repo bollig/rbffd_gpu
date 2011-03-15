@@ -210,8 +210,10 @@ int main(int argc, char** argv) {
         tm["tests"]->start(); 
         DerivativeTests* der_test = new DerivativeTests();
         der_test->testAllFunctions(*der, *(subdomain));
-        if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) {
-            der_test->testEigen(*der, *(subdomain));
+        if (comm_unit->getSize()) {
+            if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) {
+                der_test->testEigen(*der, *(subdomain));
+            }
         }
         tm["tests"]->stop();
     }
@@ -274,11 +276,11 @@ int main(int argc, char** argv) {
             subdomain->printSolution(label); 
         }
 
-//        double nrm = heat->maxNorm();
+        //        double nrm = heat->maxNorm();
         // TODO : Need to add a "comm_unit->sendTerminate()" to
         // break all processes when problem is encountered
-//        if (nrm > 1.)
-//            break;
+        //        if (nrm > 1.)
+        //            break;
 
         if (prompt_to_continue && comm_unit->isMaster()) {
             std::string buf; 

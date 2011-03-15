@@ -1,4 +1,5 @@
 #include <cmath>
+#include <algorithm>
 
 #include "timer_eb.h"
 #include "rbffd/derivative.h"
@@ -305,6 +306,11 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
     return;
 }
 
+    struct ltclass {
+        bool operator() (size_t i, size_t j) { return (i<j); }
+    } srtobject; 
+
+
 //----------------------------------------------------------------------
 void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes, double rel_err_max)
 {
@@ -323,8 +329,41 @@ void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes
       //  printf("sol_error[%d] = %f\n", i, sol_error[i]); 
     }
 
+    // Get a COPY of the indices because we want to sort them
+    std::vector<size_t> bindices = subdomain->getBoundaryIndices(); 
+    std::sort(bindices.begin(), bindices.end(), srtobject); 
+
+    std::vector<double> sol_vec_bnd(bindices.size()); 
+    std::vector<double> sol_exact_bnd(bindices.size()); 
+
+    std::vector<double> sol_vec_int(subdomain->getNodeListSize() - bindices.size()); 
+    std::vector<double> sol_exact_int(subdomain->getNodeListSize() - bindices.size()); 
+
+    int i = 0;  // Index on boundary
+    int k = 0;  // index on interior
+    for (int j = 0; j < sol_vec.size(); j++) {
+        // Skim off the boundary
+        if (j == bindices[i]) {
+            sol_vec_bnd[i] = sol_vec[j]; 
+            sol_exact_bnd[i] = sol_exact[j]; 
+            i++; 
+          //  std::cout << "BOUNDARY: " << i << " / " << j << std::endl;
+        } else {
+            sol_vec_int[k] = sol_vec[j]; 
+            sol_exact_int[k] = sol_exact[j]; 
+            k++; 
+           // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
+        }
+    }
+
     //    writeErrorToFile(sol_error);
 
+    calcSolNorms(sol_vec, sol_exact, "", rel_err_max);  // Full domain
+    calcSolNorms(sol_vec_int, sol_exact_int, "Interior", rel_err_max);  // Interior only
+    calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Interior only
+}
+
+void Heat::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max) {
     // We want: || x_exact - x_approx ||_{1,2,inf} 
     // and  || x_exact - x_approx ||_{1,2,inf} / || x_exact ||_{1,2,inf}
 
@@ -335,12 +374,16 @@ void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes
     double lifabs = linfnorm(sol_vec, sol_exact); 
     double lirel = (linfnorm(sol_exact) > 1e-10) ? lifabs/linfnorm(sol_exact) : 0.;
 
-    printf("========= Norms For Current Solution ========\n"); 
-    printf("Absolute =>  || x_exact - x_approx ||_p                    ,  where p={1,2,inf}\n"); 
-    printf("Relative =>  || x_exact - x_approx ||_p / || x_exact ||_p  ,  where p={1,2,inf}\n"); 
-    printf("l1 error : Absolute = %f, Relative = %f\n", l1fabs, l1rel );
-    printf("l2 error : Absolute = %f, Relative = %f\n", l2fabs, l2rel );
-    printf("linf error : Absolute = %f, Relative = %f\n", lifabs, lirel);
+    // Only print this when we're looking at the global norms
+    if (!label.compare("")) {
+        printf("========= Norms For Current Solution ========\n"); 
+        printf("Absolute =>  || x_exact - x_approx ||_p                    ,  where p={1,2,inf}\n"); 
+        printf("Relative =>  || x_exact - x_approx ||_p / || x_exact ||_p  ,  where p={1,2,inf}\n"); 
+    }
+
+    printf("%s l1 error : Absolute = %f, Relative = %f\n", label.c_str(), l1fabs, l1rel );
+    printf("%s l2 error : Absolute = %f, Relative = %f\n", label.c_str(), l2fabs, l2rel );
+    printf("%s linf error : Absolute = %f, Relative = %f\n", label.c_str(), lifabs, lirel);
 
     if (l1rel > rel_err_max) {
         printf("[Heat] Error! l1 relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*l1rel, 100.*rel_err_max); 

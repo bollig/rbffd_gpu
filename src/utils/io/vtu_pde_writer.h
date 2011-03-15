@@ -177,7 +177,7 @@ class VtuPDEWriter : public PDEWriter
             comm_unit->barrier();
 
             this->writeGlobalVTU(iter);
-            subdomain->writeGlobalSolutionToFile(iter);
+            //subdomain->writeGlobalSolutionToFile(iter);
         }
 
 };

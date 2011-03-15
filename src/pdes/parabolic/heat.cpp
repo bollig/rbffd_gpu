@@ -213,8 +213,8 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
             // first order
             Vec3& v = rbf_centers[i];
             //printf("dt= %f, time= %f\n", dt, time);
-            // double f = exactSolution->tderiv(v, time) - exactSolution->laplacian(v, time);
-            double f = 0.;
+            double f = force(v, time*dt);
+            //double f = 0.;
             //printf("force (local: %d) = %f\n", i, f);
             // TODO: offload this to GPU. 
             // s += alpha * lapl_deriv + f
@@ -272,8 +272,8 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
             Vec3& v = rbf_centers[i];
             //printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
             //v.print("v");
-            //double f = exactSolution->tderiv(v, time + 0.5 * dt) - exactSolution->laplacian(v, time + 0.5 * dt);
-            double f = 0.;
+            double f = force(v, time+0.5*dt);
+           // double f = 0.;
             s[i] = s[i] + dt * (lapl_deriv[i] + f); // RHS at time+0.5*dt
         }
 

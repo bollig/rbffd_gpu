@@ -260,7 +260,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
         // Do NOT use Domain as buffer for computation
         for (int i = 0; i < s1.size(); i++) {
             s1[i] = subdomain->U_G[i];
-          //  printf("s1[%d] = %f\n", i, s1[i]); 
+            //  printf("s1[%d] = %f\n", i, s1[i]); 
         }
 
 #ifdef SECOND
@@ -274,7 +274,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
             //printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
             //v.print("v");
             double f = force(v, time+0.5*dt);
-           // double f = 0.;
+            // double f = 0.;
             s[i] = s[i] + dt * (lapl_deriv[i] + f); // RHS at time+0.5*dt
         }
 
@@ -306,9 +306,9 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
     return;
 }
 
-    struct ltclass {
-        bool operator() (size_t i, size_t j) { return (i<j); }
-    } srtobject; 
+struct ltclass {
+    bool operator() (size_t i, size_t j) { return (i<j); }
+} srtobject; 
 
 
 //----------------------------------------------------------------------
@@ -325,8 +325,8 @@ void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes
     for (int i = 0; i < sol_vec.size(); i++) {
         Vec3& v = nodes[i];
         sol_exact[i] = exactSolution->at(v, time);
-      //  sol_error[i] = sol_exact[i] - sol_vec[i];
-      //  printf("sol_error[%d] = %f\n", i, sol_error[i]); 
+        //  sol_error[i] = sol_exact[i] - sol_vec[i];
+        //  printf("sol_error[%d] = %f\n", i, sol_error[i]); 
     }
 
     // Get a COPY of the indices because we want to sort them
@@ -347,12 +347,12 @@ void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes
             sol_vec_bnd[i] = sol_vec[j]; 
             sol_exact_bnd[i] = sol_exact[j]; 
             i++; 
-          //  std::cout << "BOUNDARY: " << i << " / " << j << std::endl;
+            //  std::cout << "BOUNDARY: " << i << " / " << j << std::endl;
         } else {
             sol_vec_int[k] = sol_vec[j]; 
             sol_exact_int[k] = sol_exact[j]; 
             k++; 
-           // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
+            // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
         }
     }
 
@@ -360,7 +360,7 @@ void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes
 
     calcSolNorms(sol_vec, sol_exact, "", rel_err_max);  // Full domain
     calcSolNorms(sol_vec_int, sol_exact_int, "Interior", rel_err_max);  // Interior only
-    calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Interior only
+    calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Boundary only
 }
 
 void Heat::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max) {

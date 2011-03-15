@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "derivative_tests.h"
 #include "utils/norms.h"
 #include <vector>
@@ -7,6 +8,11 @@
 #include "common_typedefs.h"
 
 using namespace std;
+
+// Struct to sort indices for the boundary below
+struct indxltclass {
+    bool operator() (size_t i, size_t j) { return (i<j); }
+} srter; 
 
 //----------------------------------------------------------------------
 void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
@@ -496,62 +502,128 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     vector<size_t>& boundary = grid.getBoundaryIndices();
     int nb_bnd = grid.getBoundaryIndicesSize();
 
+//TODO:
+// - sort boundary indices
+// - create partitions: interior, boundary 
+// - compute norms from independent sets
+// WHY?
+//  because we cannot assume that boundary nodes appear first in the node lists. The partitioning
+//  we perform for the domain decomposition pushes some boundary nodes to the bottom of the list. 
+//  This bug shows itself when we subdivide the domain into multiple subdomains. 
+
+    int nb_int = nb_stencils - nb_bnd;
+
+    std::vector<double> dux_ex_bnd(nb_bnd); 
+    std::vector<double> xderiv_bnd(nb_bnd); 
+
+    std::vector<double> dux_ex_int(nb_int); 
+    std::vector<double> xderiv_int(nb_int); 
+
+    std::vector<double> duy_ex_bnd(nb_bnd); 
+    std::vector<double> yderiv_bnd(nb_bnd); 
+
+    std::vector<double> duy_ex_int(nb_int); 
+    std::vector<double> yderiv_int(nb_int); 
+
+    std::vector<double> dulapl_ex_bnd(nb_bnd); 
+    std::vector<double> lapl_deriv_bnd(nb_bnd); 
+
+    std::vector<double> dulapl_ex_int(nb_int); 
+    std::vector<double> lapl_deriv_int(nb_int); 
+
+    std::vector<double> avgDist_bnd(nb_bnd); 
+    std::vector<double> avgDist_int(nb_int); 
+
+
+    // Sort the boundary indices for easier partitioning
+    std::vector<size_t> bindices = grid.getBoundaryIndices(); 
+    std::sort(bindices.begin(), bindices.end(), srter); 
+
+    int i = 0;  // Index on boundary
+    int k = 0;  // index on interior
+    for (int j = 0; j < nb_stencils; j++) {
+        // Skim off the boundary
+        if (j == bindices[i]) {
+            dux_ex_bnd[i] = dux_ex[j]; 
+            xderiv_bnd[i] = xderiv[j]; 
+            duy_ex_bnd[i] = duy_ex[j]; 
+            yderiv_bnd[i] = yderiv[j]; 
+            dulapl_ex_bnd[i] = dulapl_ex[j]; 
+            lapl_deriv_bnd[i] = lapl_deriv[j]; 
+            avgDist_bnd[i] = avgDist[j]; 
+            i++; 
+            //  std::cout << "BOUNDARY: " << i << " / " << j << std::endl;
+        } else {
+            dux_ex_int[k] = dux_ex[j]; 
+            xderiv_int[k] = xderiv[j]; 
+            duy_ex_int[k] = duy_ex[j]; 
+            yderiv_int[k] = yderiv[j]; 
+            dulapl_ex_int[k] = dulapl_ex[j]; 
+            lapl_deriv_int[k] = lapl_deriv[j]; 
+            avgDist_int[k] = avgDist[j]; 
+            k++; 
+            // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
+        }
+    } 
+
     enum DERIV {X=0, Y, LAPL};
     enum NORM {L1=0, L2, LINF};
     enum BNDRY {INT=0, BNDRY};
     double norm[3][3][2]; // norm[DERIV][NORM][BNDRY]
     double normder[3][3][2]; // norm[DERIV][NORM][BNDRY]
 
-    norm[X][L1][BNDRY]   = l1normWeighted(dux_ex,   xderiv, avgDist, 0, nb_bnd);
-    norm[X][L2][BNDRY]   = l2normWeighted(dux_ex,   xderiv, avgDist, 0, nb_bnd);
-    norm[X][LINF][BNDRY] = linfnorm(dux_ex, xderiv, 0, nb_bnd);
+    // These norms are || Lu_exact - Lu_approx ||_? 
+    // where Lu_* are differential operator L applied to solution u_* 
+    // and the || . ||_? is the 1, 2, or inf-norms
+    norm[X][L1][BNDRY]   = l1normWeighted(dux_ex_bnd,   xderiv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[X][L2][BNDRY]   = l2normWeighted(dux_ex_bnd,   xderiv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[X][LINF][BNDRY] = linfnorm(dux_ex_bnd, xderiv_bnd, 0, nb_bnd);
 
-    norm[Y][L1][BNDRY]   = l1normWeighted(duy_ex,   yderiv, avgDist, 0, nb_bnd);
-    norm[Y][L2][BNDRY]   = l2normWeighted(duy_ex,   yderiv, avgDist, 0, nb_bnd);
-    norm[Y][LINF][BNDRY] = linfnorm(duy_ex, yderiv, 0, nb_bnd);
+    norm[Y][L1][BNDRY]   = l1normWeighted(duy_ex_bnd,   yderiv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[Y][L2][BNDRY]   = l2normWeighted(duy_ex_bnd,   yderiv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[Y][LINF][BNDRY] = linfnorm(duy_ex_bnd, yderiv_bnd, 0, nb_bnd);
 
-    norm[LAPL][L1][BNDRY]   = l1normWeighted(dulapl_ex,   lapl_deriv, avgDist, 0, nb_bnd);
-    norm[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex,   lapl_deriv, avgDist, 0, nb_bnd);
-    norm[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex, lapl_deriv, 0, nb_bnd);
+    norm[LAPL][L1][BNDRY]   = l1normWeighted(dulapl_ex_bnd,   lapl_deriv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex_bnd,   lapl_deriv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, lapl_deriv_bnd, 0, nb_bnd);
 
-    norm[X][L1][INT]   = l1normWeighted(dux_ex,   xderiv, avgDist, nb_bnd, nb_stencils);
-    norm[X][L2][INT]   = l2normWeighted(dux_ex,   xderiv, avgDist, nb_bnd, nb_stencils);
-    norm[X][LINF][INT] = linfnorm(dux_ex, xderiv, nb_bnd, nb_stencils);
+    norm[X][L1][INT]   = l1normWeighted(dux_ex_int,   xderiv_int, avgDist_int, 0, nb_int);
+    norm[X][L2][INT]   = l2normWeighted(dux_ex_int,   xderiv_int, avgDist_int, 0, nb_int);
+    norm[X][LINF][INT] = linfnorm(dux_ex_int, xderiv_int, 0, nb_int);
 
-    norm[Y][L1][INT]   = l1normWeighted(duy_ex,   yderiv, avgDist, nb_bnd, nb_stencils);
-    norm[Y][L2][INT]   = l2normWeighted(duy_ex,   yderiv, avgDist, nb_bnd, nb_stencils);
-    norm[Y][LINF][INT] = linfnorm(duy_ex, yderiv, nb_bnd, nb_stencils);
+    norm[Y][L1][INT]   = l1normWeighted(duy_ex_int,   yderiv_int, avgDist_int, 0, nb_int);
+    norm[Y][L2][INT]   = l2normWeighted(duy_ex_int,   yderiv_int, avgDist_int, 0, nb_int);
+    norm[Y][LINF][INT] = linfnorm(duy_ex_int, yderiv_int, 0, nb_int);
 
-    norm[LAPL][L1][INT]   = l1normWeighted(dulapl_ex,   lapl_deriv, avgDist, nb_bnd, nb_stencils);
-    norm[LAPL][L2][INT]   = l2normWeighted(dulapl_ex,   lapl_deriv, avgDist, nb_bnd, nb_stencils);
-    norm[LAPL][LINF][INT] = linfnorm(dulapl_ex, lapl_deriv, nb_bnd, nb_stencils);
+    norm[LAPL][L1][INT]   = l1normWeighted(dulapl_ex_int,   lapl_deriv_int, avgDist_int, 0, nb_int);
+    norm[LAPL][L2][INT]   = l2normWeighted(dulapl_ex_int,   lapl_deriv_int, avgDist_int, 0, nb_int);
+    norm[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, lapl_deriv_int, 0, nb_int);
 
-    // --- Normalization factors
+    // --- Normalization factors (to get denom for relative error: ||u-u_approx|| / || u || )
 
-    normder[X][L1][BNDRY]   = l1normWeighted(dux_ex, avgDist,  0, nb_bnd);
-    normder[X][L2][BNDRY]   = l2normWeighted(dux_ex, avgDist,  0, nb_bnd);
-    normder[X][LINF][BNDRY] = linfnorm(dux_ex, 0, nb_bnd);
+    normder[X][L1][BNDRY]   = l1normWeighted(dux_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[X][L2][BNDRY]   = l2normWeighted(dux_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[X][LINF][BNDRY] = linfnorm(dux_ex_bnd, 0, nb_bnd);
 
-    normder[Y][L1][BNDRY]   = l1normWeighted(duy_ex, avgDist,  0, nb_bnd);
-    normder[Y][L2][BNDRY]   = l2normWeighted(duy_ex, avgDist,  0, nb_bnd);
-    normder[Y][LINF][BNDRY] = linfnorm(duy_ex, 0, nb_bnd);
+    normder[Y][L1][BNDRY]   = l1normWeighted(duy_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[Y][L2][BNDRY]   = l2normWeighted(duy_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[Y][LINF][BNDRY] = linfnorm(duy_ex_bnd, 0, nb_bnd);
 
-    normder[LAPL][L1][BNDRY]   = l1normWeighted(dulapl_ex, avgDist,  0, nb_bnd);
-    normder[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex, avgDist,  0, nb_bnd);
-    normder[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex, 0, nb_bnd);
+    normder[LAPL][L1][BNDRY]   = l1normWeighted(dulapl_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, 0, nb_bnd);
 
-    normder[X][L1][INT]   = l1normWeighted(dux_ex, avgDist,  nb_bnd, nb_stencils);
-    normder[X][L2][INT]   = l2normWeighted(dux_ex, avgDist,  nb_bnd, nb_stencils);
-    normder[X][LINF][INT] = linfnorm(dux_ex, nb_bnd, nb_stencils);
+    normder[X][L1][INT]   = l1normWeighted(dux_ex_int, avgDist_bnd,  0, nb_int);
+    normder[X][L2][INT]   = l2normWeighted(dux_ex_int, avgDist_bnd,  0, nb_int);
+    normder[X][LINF][INT] = linfnorm(dux_ex_int, 0, nb_int);
 
-    normder[Y][L1][INT]   = l1normWeighted(duy_ex, avgDist,  nb_bnd, nb_stencils);
-    normder[Y][L2][INT]   = l2normWeighted(duy_ex, avgDist,  nb_bnd, nb_stencils);
-    normder[Y][LINF][INT] = linfnorm(duy_ex, nb_bnd, nb_stencils);
+    normder[Y][L1][INT]   = l1normWeighted(duy_ex_int, avgDist_int, 0, nb_int);
+    normder[Y][L2][INT]   = l2normWeighted(duy_ex_int, avgDist_int, 0, nb_int);
+    normder[Y][LINF][INT] = linfnorm(duy_ex_int, 0, nb_int);
 
-    normder[LAPL][L1][INT]   = l1normWeighted(dulapl_ex, avgDist,  nb_bnd, nb_stencils);
-    normder[LAPL][L2][INT]   = l2normWeighted(dulapl_ex, avgDist,  nb_bnd, nb_stencils);
-    normder[LAPL][LINF][INT] = linfnorm(dulapl_ex, nb_bnd, nb_stencils);
-
+    normder[LAPL][L1][INT]   = l1normWeighted(dulapl_ex_int, avgDist_int, 0, nb_int);
+    normder[LAPL][L2][INT]   = l2normWeighted(dulapl_ex_int, avgDist_int, 0, nb_int);
+    normder[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, 0, nb_int);
 
 
     printf("----- RESULTS: %d bnd, %d centers, %d stencils\ntestDeriv( %d ) [** Approximating F(X,Y) = %s **] ---\n", nb_bnd, nb_centers, nb_stencils, choice, TESTFUNSTR[(int)choice].c_str());
@@ -575,21 +647,19 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
         }}
 
     double inter_error=0.;
-    //vector<size_t>& boundary = grid.getBoundary();
-
-    for (int i=(int) boundary.size(); i < nb_stencils; i++) {
-        inter_error += (dulapl_ex[i]-lapl_deriv[i])*(dulapl_ex[i]-lapl_deriv[i]);
+    for (int i= 0; i < nb_int; i++) {
+        inter_error += (dulapl_ex_int[i]-lapl_deriv_int[i])*(dulapl_ex_int[i]-lapl_deriv_int[i]);
         //printf("inter error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
     }
-    inter_error /= (nb_stencils-boundary.size());
+    inter_error /= nb_int;
 
     double bnd_error=0.;
-    for (int ib=0; ib < boundary.size(); ib++) {
-        int i = boundary[ib];
-        bnd_error += (dulapl_ex[i]-lapl_deriv[i])*(dulapl_ex[i]-lapl_deriv[i]);
+    for (int i=0; i < nb_bnd; i++) {
+        bnd_error += (dulapl_ex_bnd[i]-lapl_deriv_bnd[i])*(dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
         //printf("bnd error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
     }
-    bnd_error /= boundary.size();
+    bnd_error /= nb_bnd;
+
 #if 1
     double l2_bnd = sqrt(bnd_error);
     printf("avg l2_bnd_error= %14.7e\n", l2_bnd);

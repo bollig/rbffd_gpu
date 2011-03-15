@@ -63,6 +63,10 @@ int main(int argc, char** argv) {
     int prompt_to_continue = settings->GetSettingAs<int>("PROMPT_TO_CONTINUE", ProjectSettings::optional, "1"); 
     int debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
 
+    double start_time = settings->GetSettingAs<double>("START_TIME", ProjectSettings::optional, "0.0"); 
+    double end_time = settings->GetSettingAs<double>("END_TIME", ProjectSettings::optional, "1.0"); 
+    double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
+
     if (comm_unit->isMaster()) {
 
 
@@ -88,8 +92,6 @@ int main(int argc, char** argv) {
         double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
         double stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
-
-        double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "0.0001"); 
 
         tm["settings"]->stop(); 
 
@@ -248,7 +250,11 @@ int main(int argc, char** argv) {
 
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
     int iter;
-    for (iter = 0; iter < 1000; iter++) {
+
+    int num_iters = (int) ((end_time - start_time) / dt);
+    std::cout << "NUM_ITERS = " << num_iters << std::endl;
+
+    for (iter = 0; iter < num_iters; iter++) {
         writer->update(iter);
 
         cout << "*********** Solve Heat (Iteration: " << iter

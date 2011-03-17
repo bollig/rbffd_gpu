@@ -1,7 +1,6 @@
 #ifndef _NCAR_POISSON_1_H_
 #define _NCAR_POISSON_1_H_
 
-#include "timingGE.h"
 #include <vector>
 #include <ArrayT.h>
 #include "grids/domain.h"
@@ -18,7 +17,7 @@ protected:
 	std::vector<Vec3>* rbf_centers;
 	std::vector<size_t>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
 	
-        Domain* subdomain;
+        Grid* subdomain;
         Derivative* der;
 
 	std::vector<double> lapl_deriv;
@@ -47,8 +46,8 @@ protected:
 
         int dim_num;
 
-        Timings tm;
-        Timer t1, t2, t3, t4, t5;
+        EB::TimerList tm;
+        EB::Timer t1, t2, t3, t4, t5;
 
         // FLAGS
         bool disable_sol_constraint; // Disable the solution constraint for Neumann and Robin boundary conditions
@@ -59,8 +58,7 @@ protected:
         enum boundary_condition_type {DIRICHLET=0, NEUMANN=1, ROBIN=2};
 
 public:
-        NCARPoisson1(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
-        NCARPoisson1(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NCARPoisson1(ExactSolution* _solution, Grid* subdomain_, Derivative* der_, int rank, int dim_num_);
         ~NCARPoisson1();
 
         // Solve the Poisson problem
@@ -74,6 +72,10 @@ public:
         //double maxNorm(arma::mat sol);
         double maxNorm(double* sol, int nrows, int ncols);
         double boundaryValues(Vec3& v);
+
+    void setBoundaryCondition(int bc_selection) { boundary_condition = bc_selection; } 
+    void setUseExactRHS(bool useExact) { use_discrete_rhs = !useExact; } 
+    void setUseUniformDiffusivity(bool useUniform) { use_uniform_diffusivity = useUniform; }
 
 };
 

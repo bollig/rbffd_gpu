@@ -43,6 +43,10 @@ void NestedSphereCVT::generate() {
 
         NodeType sphere_center((xmax+xmin)/2., (ymax+ymin)/2., (zmax+zmin)/2.); 
 
+        boundary_indices.resize(nb_inner + nb_outer);
+        boundary_normals.resize(nb_inner + nb_outer);
+
+        int j = 0; 
         //cout << "inner_r = " << inner_r << " nb_inner = " << nb_inner << " inner_arc_seg = " << inner_arc_seg << endl;
         for (int i = 0; i < nb_inner; i++) {
             // r = 0.5
@@ -51,10 +55,11 @@ void NestedSphereCVT::generate() {
             node_list[i][0] = inner_r * cos(theta);
             node_list[i][1] = inner_r * sin(theta);
             node_list[i][2] = 0.;
-            boundary_indices.push_back(i); 
+            boundary_indices[j] = j; 
             Vec3 nrml = sphere_center - node_list[i];
             nrml.normalize();
-            boundary_normals.push_back( nrml ); 
+            boundary_normals[i] = nrml; 
+            j++;
         }
         for (int i = 0; i < nb_outer; i++) {
             // r = 1.0
@@ -66,11 +71,15 @@ void NestedSphereCVT::generate() {
             node_list[(nb_inner+i)][0] = outer_r * cos(theta);
             node_list[(nb_inner+i)][1] = outer_r * sin(theta);
             node_list[(nb_inner+i)][2] = 0.;
-            boundary_indices.push_back(nb_inner+i); 
+            boundary_indices[j] = j; 
             Vec3 nrml = node_list[i] - sphere_center;
             nrml.normalize();
-            boundary_normals.push_back( nrml ); 
+            boundary_normals[j] = nrml ; 
+            j++;
         }
+
+
+    //    std::cout << "NRMLS: " << boundary_normals.size() << std::endl;
     } else if (dim_num == 3) {
 
         std::cout << "TODO: 3D nested sphere cvt" << std::endl;

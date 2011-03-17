@@ -106,7 +106,7 @@ class Grid
         virtual void printBoundaryIndices(std::string label);  
 
         // Load data from disk using the class generated filename and specified iter
-        int loadFromFile(int iter=0); 
+        int loadFromFile(int iter=-1); 
         virtual int loadFromFile(std::string filename); 
         int loadBoundaryFromFile(std::string grid_filename); 
         int loadNormalsFromFile(std::string grid_filename); 
@@ -125,6 +125,7 @@ class Grid
 
         size_t                      getNodeListSize() { return node_list.size(); }
         std::vector<NodeType>& 	    getNodeList() 	{ return node_list; }
+        NodeType& 	                getNode(size_t indx) 	{ return node_list[indx]; }
         size_t                      getBoundaryIndicesSize() { return boundary_indices.size();} 
         std::vector<size_t>&        getBoundaryIndices() { return boundary_indices; } 
         size_t                      getBoundaryIndex(size_t indx) { return boundary_indices[indx]; } 

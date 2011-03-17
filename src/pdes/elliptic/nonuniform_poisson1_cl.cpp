@@ -27,12 +27,8 @@
 #include <boost/numeric/ublas/io.hpp>
 using namespace std;
 
-NonUniformPoisson1_CL::NonUniformPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
+NonUniformPoisson1_CL::NonUniformPoisson1_CL(ExactSolution* _solution, Grid* subdomain_, Derivative* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
-{}
-
-NonUniformPoisson1_CL::NonUniformPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
-        NCARPoisson1(_settings, _solution, subdomain_, der_, rank, dim_num_)
 {}
 
 //----------------------------------------------------------------------
@@ -54,10 +50,10 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         exit(EXIT_FAILURE);
     } else {
 
-        int nb = subdomain->global_boundary_nodes.size();
+        int nb = subdomain->getBoundaryIndices().size();
         // All interior and boundary nodes are included in the stencils.
-        // The first nb Q_stencils should be the global boundary nodes
-        int ni = subdomain->Q_stencils.size() - nb;
+        // The first nb getStencils() should be the global boundary nodes
+        int ni = subdomain->getStencils().size() - nb;
 
         int nn = (nb + ni) ;
 
@@ -101,28 +97,28 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 #if 1
         // Compute all weights including those for the boundary nodes
         for (int i = 0; i < nb + ni; i++) {
-            //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
+            //subdomain->printStencil(subdomain->getStencil(i), "Q[i]");
             // Compute all derivatives for our centers and return the number of
             // weights that will be available
-            numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i);
+            numNonZeros += der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), i);
 #if USE_CONTOURSVD
-            der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "x");
-            der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "y");
-            der->computeWeightsSVD(subdomain->G_centers, subdomain->Q_stencils[i], i, "lapl");
+            der->computeWeightsSVD(subdomain->getNodeList(), subdomain->getStencil(i), i, "x");
+            der->computeWeightsSVD(subdomain->getNodeList(), subdomain->getStencil(i), i, "y");
+            der->computeWeightsSVD(subdomain->getNodeList(), subdomain->getStencil(i), i, "lapl");
 #endif
         }
 #else
         // Compute only interior weights
         for (int i = 0; i < nb; i++) {
             // 1 nonzero per row for boundary (dirichlet has I since we know values and dont need weights)
-            //der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0], dim_num);
+            //der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), subdomain->getStencil(i)[0], dim_num);
             numNonZeros += 1;
         }
         for (int i = nb; i < nb + ni; i++) {
-            //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
+            //subdomain->printStencil(subdomain->getStencil(i), "Q[i]");
             // Compute all derivatives for our centers and return the number of
             // weights that will be available
-            numNonZeros += der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], subdomain->Q_stencils[i][0]);
+            numNonZeros += der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), subdomain->getStencil(i)[0]);
         }
 #endif
         t2.end();
@@ -152,23 +148,23 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             cout << "WARNING! TESTING DIRICHLET LOCKDOWN MODE 3" << endl;
             // Test the case when we specify one Dirichlet point on each boundary. Does this help us tie down the solution? No.
             // What about when we specify 3 points on the boundaries (i.e. a triangle to give us an orientation)?
-            indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[0], subdomain->G_centers);
-            //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[1], subdomain->G_centers);
-            //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[2], subdomain->G_centers);
+            indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(0), subdomain->getNodeList());
+            //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(1), subdomain->getNodeList());
+            //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(2), subdomain->getNodeList());
             //for (int i = 3; i < nb-3; i++) {
             for (int i = 1; i < nb-2; i++) {
                 switch (boundary_condition) {
 
                 case DIRICHLET:
-                    indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
                     break;
 
                 case NEUMANN:
-                    indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
                     break;
 
                 case ROBIN:
-                    indx += this->fillBoundaryRobin(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    indx += this->fillBoundaryRobin(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
                     break;
 
                 default:
@@ -176,9 +172,9 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
                     exit(EXIT_FAILURE);
                 }
             }
-            //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[nb-3], subdomain->G_centers);
-            indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[nb-2], subdomain->G_centers);
-            indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[nb-1], subdomain->G_centers);
+            //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(nb-3), subdomain->getNodeList());
+            indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(nb-2), subdomain->getNodeList());
+            indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(nb-1), subdomain->getNodeList());
         } else {
             cout << "NOT USING DIRICHLET LOCKDOWN MODE" << endl;
             // Normal fill with homogenous boundary conditions. The solutions are not tied down very well.
@@ -186,15 +182,15 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
                 switch (boundary_condition) {
 
                 case DIRICHLET:
-                    indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
                     break;
 
                 case NEUMANN:
-                    indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
                     break;
 
                 case ROBIN:
-                    indx += this->fillBoundaryRobin(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+                    indx += this->fillBoundaryRobin(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
                     break;
 
                 default:
@@ -208,7 +204,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         //--------------------------------------------------
         // Fill Interior weights (LHS + RHS)
         for (int i = nb; i < nb+ni; i++) {
-            indx += this->fillInterior(L_host, F_host, subdomain->Q_stencils[i], subdomain->G_centers);
+            indx += this->fillInterior(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
         }
 
         cout << "DONE FILLING INTERIOR" << endl;
@@ -217,7 +213,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         // Fill Additional Constraint weights (LHS + RHS)
         if ((boundary_condition != DIRICHLET) && (!disable_sol_constraint)) {
             // I forget: is this required for BOTH neumann and robin?
-            this->fillSolutionConstraint(L_host, F_host, subdomain->Q_stencils, subdomain->G_centers, nb, ni);
+            this->fillSolutionConstraint(L_host, F_host, subdomain->getStencils(), subdomain->getNodeList(), nb, ni);
             cout << "DONE ADDING CONSTRAINT" << endl;
         }
 
@@ -275,13 +271,13 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         boost::numeric::ublas::vector<FLOAT> rel_error_host(F_host.size());
 
         for (int i = 0; i < nb + ni; i++) {
-            exact_host(subdomain->Q_stencils[i][0]) = (FLOAT) (exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.));
+            exact_host(subdomain->getStencil(i)[0]) = (FLOAT) (exactSolution->at(subdomain->getNode( subdomain->getStencil(i)[0] ), 0.));
         }
         for (int i = nb+ni; i < exact_host.size(); i++) {
             exact_host(i) = 0.;
         }
 #if 1
-#define CATCH_ZERO_RELATIVE_ERROR 0
+#define CATCH_ZERO_RELATIVE_ERROR 1
         //error_host = x_host - exact_host;
         for (int i = 0; i < nb+ni; i++) {
             error_host[i] = fabs(x_host[i] - exact_host[i]);

@@ -74,7 +74,7 @@ public:
         double boundaryValues(Vec3& v);
 
     void setBoundaryCondition(int bc_selection) { boundary_condition = bc_selection; } 
-    void setUseExactRHS(bool useExact) { use_discrete_rhs = !useExact; } 
+    void setUseDiscreteRHS(bool useDiscrete) { use_discrete_rhs = useDiscrete; } 
     void setUseUniformDiffusivity(bool useUniform) { use_uniform_diffusivity = useUniform; }
 
 };

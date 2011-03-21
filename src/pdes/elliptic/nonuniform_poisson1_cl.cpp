@@ -266,9 +266,9 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         cout << "Results copied to host" << endl;
 
-        boost::numeric::ublas::vector<FLOAT> exact_host(F_host.size());
-        boost::numeric::ublas::vector<FLOAT> error_host(F_host.size());
-        boost::numeric::ublas::vector<FLOAT> rel_error_host(F_host.size());
+        boost::numeric::ublas::vector<FLOAT> exact_host(nb+ni);
+        boost::numeric::ublas::vector<FLOAT> error_host(nb+ni);
+        boost::numeric::ublas::vector<FLOAT> rel_error_host(nb+ni);
 
         for (int i = 0; i < nb + ni; i++) {
             exact_host(subdomain->getStencil(i)[0]) = (FLOAT) (exactSolution->at(subdomain->getNode( subdomain->getStencil(i)[0] ), 0.));
@@ -276,28 +276,32 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         for (int i = nb+ni; i < exact_host.size(); i++) {
             exact_host(i) = 0.;
         }
-#if 1
-#define CATCH_ZERO_RELATIVE_ERROR 1
+       
+        double max_rel_err = 0.0; 
+        size_t max_rel_err_indx = 0;
         //error_host = x_host - exact_host;
         for (int i = 0; i < nb+ni; i++) {
             error_host[i] = fabs(x_host[i] - exact_host[i]);
-#if CATCH_ZERO_RELATIVE_ERROR
-            if ((exact_host[i] < 1e-10) && (error_host[i] < 1e-10)) {
-                rel_error_host[i] = 0.;
+
+            double denom = fabs(exact_host[i]); 
+            if ((denom > 1e-10) && (error_host[i] > 1e-10)) {
+                rel_error_host[i] = error_host[i] / denom;
             } else {
-                rel_error_host[i] = error_host[i] / fabs(exact_host[i]);
+                rel_error_host[i] = 0.; 
             }
-#else
-            rel_error_host[i] = error_host[i] / fabs(exact_host[i]);
-#endif
 
+            if (rel_error_host[i] > max_rel_err) { 
+                max_rel_err = rel_error_host[i]; 
+                max_rel_err_indx = i; 
+            }
         }
-#endif
-
+        std::cout << "Max rel error index: " << max_rel_err_indx << ", Error: " << max_rel_err << ", " << rel_error_host[max_rel_err_indx] << " (" << error_host[max_rel_err_indx] << "/" << fabs(exact_host[max_rel_err_indx]) << ")" << std::endl;
+#if 0
+        // Assume zero error for the nodes NOT maintained on this host
         for (int i = nb+ni; i < error_host.size(); i++) {
             rel_error_host[i] = 0.;
         }
-
+#endif 
         boost::numeric::ublas::vector<FLOAT> residual = prod(L_host, exact_host) - F_host;
 
         cout << "Writing results to disk" << endl;

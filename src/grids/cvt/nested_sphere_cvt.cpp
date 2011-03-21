@@ -79,7 +79,7 @@ void NestedSphereCVT::generate() {
         }
 
 
-    //    std::cout << "NRMLS: " << boundary_normals.size() << std::endl;
+        //    std::cout << "NRMLS: " << boundary_normals.size() << std::endl;
     } else if (dim_num == 3) {
 
         std::cout << "TODO: 3D nested sphere cvt" << std::endl;
@@ -138,7 +138,7 @@ void NestedSphereCVT::user_init(std::vector<NodeType>& user_node_list, int indx_
 bool NestedSphereCVT::reject_point(NodeType& point, int ndim) {
     NodeType sphere_center((xmax+xmin)/2., (ymax+ymin)/2., (zmax+zmin)/2.); 
     double r = (point - sphere_center).magnitude();  
-//    std::cout << r << ">" << outer_r << "----" << point << "----" << sphere_center << std::endl;
+    //    std::cout << r << ">" << outer_r << "----" << point << "----" << sphere_center << std::endl;
     // If the sample does not lie within the bounds of our geometry we
     // reject it. 
     if ((r < inner_r) || (r > outer_r)) {
@@ -147,6 +147,13 @@ bool NestedSphereCVT::reject_point(NodeType& point, int ndim) {
     // Otherwise we keep it.
     return false;
 }
+
+std::string NestedSphereCVT::getFileDetailString() {
+    std::stringstream ss(std::stringstream::out); 
+    ss << nb_inner << "_inner_" << nb_outer << "_outer_" << nb_int << "_interior_" << dim_num << "d"; 
+    return ss.str();	
+}
+
 
 #if 0
 // Project k generators to the surface of the sphere of specified radius

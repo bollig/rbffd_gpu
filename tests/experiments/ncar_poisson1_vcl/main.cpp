@@ -50,15 +50,19 @@ int main(int argc, char** argv) {
     // 0 = Dirichlet, 1 = neumann, 2 = robin
     int boundary_condition = settings->GetSettingAs<int>("BOUNDARY_CONDITION", ProjectSettings::optional, "0"); 
     // 0 = discrete rhs, 1 = exact (test discrete compat condition)
-    int use_exact_rhs = settings->GetSettingAs<int>("USE_EXACT_RHS", ProjectSettings::optional, "1"); 
+    int use_discrete_rhs = settings->GetSettingAs<int>("USE_DISCRETE_RHS", ProjectSettings::optional, "0"); 
     // 0 = assume non-uniform diffusion, 1 = assume uniform 
     int use_uniform_diffusion = settings->GetSettingAs<int>("USE_UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
     int run_derivative_tests = settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
 
     int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
+    
+    
+    int nb_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::required); 
+    int it_max_interior = settings->GetSettingAs<int>("NB_CVT_ITERATIONS", ProjectSettings::required); 
     // Generate a CVT with nx*ny*nz nodes, in 1, 2 or 3D with 0 locked boundary nodes, 
     // 20000 samples per iteration for 30 iterations
-    NestedSphereCVT* grid = new NestedSphereCVT(nb_interior, nb_inner_boundary, nb_outer_boundary, dim, 0, 20000, 10); 
+    NestedSphereCVT* grid = new NestedSphereCVT(nb_interior, nb_inner_boundary, nb_outer_boundary, dim, 0, nb_samples, it_max_interior); 
     grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
     grid->setInnerRadius(inner_r); 
     grid->setOuterRadius(outer_r); 
@@ -100,7 +104,7 @@ int main(int argc, char** argv) {
 
     NCARPoisson1* poisson = new NonUniformPoisson1_CL(exact_poisson, grid, der, 0, dim);
     poisson->setBoundaryCondition(boundary_condition); 
-    poisson->setUseExactRHS(use_exact_rhs); 
+    poisson->setUseDiscreteRHS(use_discrete_rhs); 
     poisson->setUseUniformDiffusivity(use_uniform_diffusion);
 
     poisson->initialConditions();

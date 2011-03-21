@@ -11,6 +11,7 @@
 //class ostream;
 #include <iosfwd>
 #include <iostream> 
+#include <vector>
 // sizeof(Vec3) = 24
 
 class Vec3
@@ -43,8 +44,32 @@ class Vec3
         inline Vec3(const double* pt)
 			{ vec[0] = pt[0]; vec[1] = pt[1]; vec[2] = pt[2]; }
 
+       inline Vec3(std::vector<double> pt)
+        {   
+            if(pt.size() > 3) {
+                std::cout << "Warning! Vec3 can only accept std::vector<double> with size 3!\n"; 
+            } 
+            for (int i = 0; i < pt.size() && i < 3; i++) 
+                vec[i] = pt[i]; 
+        }
+
+
         ~Vec3() {};
         Vec3(Vec3&);
+
+        // Our dimension
+        int size() const {
+            return 3; 
+        }
+
+        int getDimension() const {
+            return size(); 
+        }
+
+        float* data() {
+            return vec; 
+        }
+
         /*
          * memory allocated in class
          */

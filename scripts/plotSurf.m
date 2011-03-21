@@ -36,29 +36,4 @@ tri=tri(sqrt(pmid(:,1).^2 + pmid(:,2).^2) > Ri - 1e-3,:);
 
 % Too Many nodes will wash out our surface
 if length(x) < 2000 || showNodes
-    plot3(x,y,z,'.m')
-end
-
-%title(titlestr); 
-[r,c] = size(tri);
-%disp(r);
-
-%figure;
-h = trisurf(tri, X, Y, Z);
-title(titlestr);
-minz = min(z) 
-maxz = max(z)
-axis([-1 1 -1 1 min(z) max(z)]);
-%axis vis3d
-
-axis off
-l = light('Position',[-1 -1 0]);
-%set(gca,'CameraPosition',[208 -50 7687])
-lighting phong
-shading interp
-
-colorbar EastOutside
-hold off; 
-
-
-end
+    p

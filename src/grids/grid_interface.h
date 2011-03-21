@@ -4,6 +4,7 @@
 #include <vector> 
 #include <string>
 #include "Vec3.h"
+#include "KDTree.h"
 
 #include "stencil_generator.h" 
 #include "common_typedefs.h"
@@ -16,7 +17,8 @@ class Grid
         double zmin, zmax; 
 
     protected: 
-        // 0 = Debug output off; 1 = Verbose output and write intermediate files
+        // 0 = Debug output off; 1 = Verbose output and write intermediate
+        // files
         int DEBUG;
 
         // Number of nodes this class is configured for. If this does not 
@@ -24,20 +26,20 @@ class Grid
         // set.
         size_t nb_nodes; 
 
-        // Maximum number of nodes to allow in a stencil (can be equal to nb_nodes
-        // if we want to define a global function across a stencil)
+        // Maximum number of nodes to allow in a stencil (can be equal to
+        // nb_nodes if we want to define a global function across a stencil)
         size_t max_st_size; 
 
         // Perturbation offsets for generated points
         double pert; 
 
-        // Should we sort our nodes when generating so boundary nodes appear first in the list?
-        // 0 = NO, non-zero = YES 
+        // Should we sort our nodes when generating so boundary nodes appear
+        // first in the list?  0 = NO, non-zero = YES 
         int boundary_nodes_first;
 
         // A list of nodes that are N-dimensional and have no connectivity
-        // NOTE: the Node type can determine its own coordinate system but
-        // all of the nodes must share the same coordinate system. 
+        // NOTE: the Node type can determine its own coordinate system but all
+        // of the nodes must share the same coordinate system. 
         std::vector<NodeType> node_list; 
 
         // True/False for every node: are you on the boundary?  
@@ -47,18 +49,24 @@ class Grid
         // Nodes on boundary have a non-zero vector. 
         std::vector<Vec3> boundary_normals; 
 
-        // These are the stencils connecting our nodes in node_list.
-        // These are not guaranteed to be generated and are usually computed by calling
-        // generateStencils(StencilGenerator*) where the StencilGenerator can use any method
-        // to determine neighbors that will be member to a stencil. For example we could have
-        // separate generators for nearest-neighbor ball queries (all neighbors within max radius)
-        // and one for a maximum number of nearest neighbors, and one that generates only FD stencils
-        // by taking nodes due north/east/south/west (assuming a regular grid). 
+        // These are the stencils connecting our nodes in node_list.  These are
+        // not guaranteed to be generated and are usually computed by calling
+        // generateStencils(StencilGenerator*) where the StencilGenerator can
+        // use any method to determine neighbors that will be member to a
+        // stencil. For example we could have separate generators for
+        // nearest-neighbor ball queries (all neighbors within max radius) and
+        // one for a maximum number of nearest neighbors, and one that
+        // generates only FD stencils by taking nodes due north/east/south/west
+        // (assuming a regular grid). 
         std::vector<StencilType> stencil_map; 
 
-        // These are the average radii for each stencil. That is, the average distance between the 
-        // stencil center and its connected neighbors.
+        // These are the average radii for each stencil. That is, the average
+        // distance between the stencil center and its connected neighbors.
         std::vector<double> avg_stencil_radii; 
+
+        // An internal KDTree representation of the nodes. Useful for CVT
+        // sampling (if updated) and also for neighbor queries
+        KDTree* node_list_kdtree; 
 
     public:
         Grid() : 
@@ -66,6 +74,7 @@ class Grid
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
             max_st_size(0), pert(0.), nb_nodes(0),
+            node_list_kdtree(NULL),
             boundary_nodes_first(false), DEBUG(0)
             {}
         Grid(size_t num_nodes) : 
@@ -73,6 +82,7 @@ class Grid
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
             max_st_size(0), pert(0), nb_nodes(num_nodes), 
+            node_list_kdtree(NULL),
             boundary_nodes_first(false), DEBUG(0) 
             {}
         Grid(std::vector<NodeType>& nodes) : 
@@ -80,6 +90,7 @@ class Grid
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
             max_st_size(0), pert(0), nb_nodes(nodes.size()), 
+            node_list_kdtree(NULL), 
             boundary_nodes_first(false), DEBUG(0), node_list(nodes) 
             {} 
 
@@ -138,6 +149,15 @@ class Grid
         std::vector<double>& 	    getStencilRadii(){ return avg_stencil_radii; }
         double 		                getStencilRadius(int indx) { return avg_stencil_radii[indx]; }
 
+        
+        
+        KDTree* getNodeListAsKDTree() {
+            if (node_list_kdtree == NULL) {
+                // TODO: hardcoded dimension should be changed
+                node_list_kdtree = new KDTree(node_list); 
+            }
+            return node_list_kdtree; 
+        }
 
 
         // Convert a basic filename like "output_file" to something more descriptive

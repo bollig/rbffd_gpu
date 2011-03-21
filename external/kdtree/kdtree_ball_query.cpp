@@ -20,7 +20,7 @@ void retrieve_tree( const mxArray* matptr, KDTree* & tree){
     if( tree -> ndims() <= 0 )
         mexErrMsgTxt("the k-D tree must have k>0"); 
 }
-void retrieve_point( const mxArray* matptr, vector<double>& point ){
+void retrieve_point( const mxArray* matptr, Point& point ){
     // check that I actually received something
     if( matptr == NULL )
         mexErrMsgTxt("vararg{2} must be a [kxN] matrix of data\n");
@@ -62,14 +62,14 @@ void mexFunction(int nlhs, mxArray * plhs[], int nrhs, const mxArray * prhs[]){
     KDTree* tree;
     retrieve_tree( prhs[0], tree ); 
     // retrieve the query point
-    vector<double> point(tree->ndims(),0);
+    Point point(tree->ndims(),0);
     retrieve_point(prhs[1], point);
     // retrieve the radius
     double radius = 0;
     retrieve_radius(prhs[2], radius);
     
     vector<int> idxsInRange;
-    vector<double> dists;
+    Point dists;
     tree->ball_query( point, radius, idxsInRange, dists );
     
     if( nlhs == 1 ){
@@ -86,7 +86,7 @@ void mexFunction(int nlhs, mxArray * plhs[], int nrhs, const mxArray * prhs[]){
 	    for (int i=0; i < idxsInRange.size(); i++)
 	    	indexes[ i ] = idxsInRange[i] + 1;
 	    
-	    // convert vector<double> back in matlab format
+	    // convert Point back in matlab format
 	    plhs[1] = mxCreateDoubleMatrix(dists.size(), 1, mxREAL);
 	    double* distances = mxGetPr(plhs[1]);
 	    for (int i=0; i < dists.size(); i++)
@@ -99,7 +99,7 @@ void mexFunction(int nlhs, mxArray * plhs[], int nrhs, const mxArray * prhs[]){
 #endif
 int test1(){
 	int N = 30;
-	vector< Point > A(N, vector<double>(2,0));
+	vector< Point > A(N, Point(2,0));
 	A[0][0]   =  0.0565 ;  A[0][1]= 0.8670   ;
 	A[1][0]   =  0.2016 ;  A[1][1]= 0.7061   ;
 	A[2][0]   =  0.0795 ;  A[2][1]= 0.6096   ;
@@ -135,7 +135,7 @@ int test1(){
 	cout << "tree created" << endl;
 	
 	// create query
-	vector<double> point(2,0);
+	Point point(2,0);
 	point[0]=.5; point[1]=.5;
 	double radius = .2;
 	

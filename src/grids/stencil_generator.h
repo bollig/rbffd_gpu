@@ -1,12 +1,5 @@
-/*
- * File:   stencil.h
- * Author: bollig
- *
- * Created on May 11, 2010, 12:48 PM
- */
-
-#ifndef _STENCIL_H
-#define	_STENCIL_H
+#ifndef _STENCIL_GENERATOR_H
+#define	_STENCIL_GENERATOR_H
 
 #include <vector>
 #include <iostream> 

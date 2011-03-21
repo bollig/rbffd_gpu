@@ -5,6 +5,7 @@
 
 #include "grids/regulargrid.h"
 #include "grids/stencil_generator.h"
+#include "grids/kdtree_stencil_generator.h"
 
 #include "grids/domain.h"
 #include "rbffd/derivative_cl.h"
@@ -115,9 +116,14 @@ int main(int argc, char** argv) {
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
+            grid->writeToFile(); 
             std::cout << "Generating stencils\n";
             tm["stencils"]->start(); 
-            grid->generateStencils(new StencilGenerator());   // nearest stencil_size 
+#if 0
+            grid->generateStencils(new KDTreeStencilGenerator());   // nearest stencil_size 
+#else 
+            grid->generateStencils(new StencilGenerator());   // brute force nearest stencil_size 
+#endif 
             tm["stencils"]->stop();
             grid->writeToFile(); 
         }

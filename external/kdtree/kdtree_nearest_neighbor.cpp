@@ -68,7 +68,8 @@ void mexFunction(int nlhs, mxArray * plhs[], int nrhs, const mxArray * prhs[]){
 // C++ tests go here
 int test1(){
 	int N = 8;
-	vector< Point > A(N, vector<double>(3,0));
+//	vector< Point > A(N, vector<double>(3,0));
+	vector< Point > A(N, Point(0,0,0));
 	A[0][0] = 200; A[0][1] = 300; A[0][2] = 400;
 	A[1][0] = 100; A[1][1] = 200; A[1][2] = 300;
 	A[2][0] = 600; A[2][1] = 100; A[2][2] = 500;
@@ -139,7 +140,8 @@ int test3(){
 	tree -> print_tree();
 	
 	// Query 
-	vector<double> p( A[15] );
+	//vector<double> p( A[15] );
+    Point p(A[15]);
 //	p[0] = .3; p[1] = .6096; //10
 //	p[0] = .2; p[1] = .6096; //30
 //	p[0] = .6; p[1] = .65;   //27

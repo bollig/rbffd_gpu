@@ -32,7 +32,7 @@ class Grid
         // Maximum number of nodes to allow in a stencil (can be equal to
         // nb_nodes if we want to define a global function across a stencil)
         size_t max_st_size; 
-        
+
         // Maximum radius allowed when searching stencil nodes
         double max_st_radius; 
 
@@ -85,7 +85,7 @@ class Grid
             pert(0.), nb_nodes(0),
             node_list_kdtree(NULL),
             boundary_nodes_first(false), DEBUG(0)
-            {}
+    {}
         Grid(size_t num_nodes) : 
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
@@ -94,7 +94,7 @@ class Grid
             pert(0), nb_nodes(num_nodes), 
             node_list_kdtree(NULL),
             boundary_nodes_first(false), DEBUG(0) 
-            {}
+    {}
         Grid(std::vector<NodeType>& nodes) : 
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
@@ -103,7 +103,7 @@ class Grid
             pert(0), nb_nodes(nodes.size()), 
             node_list_kdtree(NULL), 
             boundary_nodes_first(false), DEBUG(0), node_list(nodes) 
-            {} 
+    {} 
 
         virtual ~Grid(){ }
 
@@ -113,6 +113,7 @@ class Grid
         // SECOND MOST IMPORTANT ROUTINE: generates stencil connectivity of node_list stored in stencil_map
         void generateStencils(st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
         void generateStencils(size_t st_max_size, st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
+        
         void generateStencilsBruteForce(); 
         void generateStencilsKDTree(); 
         void generateStencilsHash();
@@ -147,27 +148,48 @@ class Grid
 
         // Enable or disable node sorting (if a grid generator obeys the order)
         // so boundary nodes appear first in the node_list
-        void setSortBoundaryNodes(int sort_boundary_first) { this->boundary_nodes_first = sort_boundary_first; }
-        void setMaxStencilSize(size_t st_max_size) { this->max_st_size = st_max_size; }
-        size_t getMaxStencilSize() { return this->max_st_size; }
+        void setSortBoundaryNodes(int sort_boundary_first) 
+        { this->boundary_nodes_first = sort_boundary_first; }
 
-        size_t                      getNodeListSize() { return node_list.size(); }
-        std::vector<NodeType>& 	    getNodeList() 	{ return node_list; }
-        NodeType& 	                getNode(size_t indx) 	{ return node_list[indx]; }
-        size_t                      getBoundaryIndicesSize() { return boundary_indices.size();} 
-        std::vector<size_t>&        getBoundaryIndices() { return boundary_indices; } 
-        size_t                      getBoundaryIndex(size_t indx) { return boundary_indices[indx]; } 
-        std::vector<Vec3>&          getBoundaryNormals() { return boundary_normals; }
+        void setMaxStencilSize(size_t st_max_size) 
+        { this->max_st_size = st_max_size; }
 
-        size_t                      getStencilsSize() { return stencil_map.size(); }
-        size_t                      getStencilSize(int indx) { return stencil_map[indx].size(); }
-        std::vector<StencilType>&   getStencils() 	{ return stencil_map; }
-        StencilType&                getStencil(int indx) { return stencil_map[indx]; }
-        std::vector<double>& 	    getStencilRadii(){ return avg_stencil_radii; }
-        double 		                getStencilRadius(int indx) { return avg_stencil_radii[indx]; }
+        size_t getMaxStencilSize() 
+        { return this->max_st_size; }
 
-        
-        
+        size_t getNodeListSize() 
+        { return node_list.size(); }
+
+        std::vector<NodeType>& getNodeList() 	
+        { return node_list; }
+
+        NodeType& getNode(size_t indx) 	
+        { return node_list[indx]; }
+
+        size_t getBoundaryIndicesSize() 
+        { return boundary_indices.size();} 
+        std::vector<size_t>& getBoundaryIndices() 
+        { return boundary_indices; } 
+        size_t getBoundaryIndex(size_t indx) 
+        { return boundary_indices[indx]; } 
+        std::vector<Vec3>& getBoundaryNormals() 
+        { return boundary_normals; }
+
+        size_t getStencilsSize() 
+        { return stencil_map.size(); }
+        size_t getStencilSize(int indx) 
+        { return stencil_map[indx].size(); }
+        std::vector<StencilType>& getStencils()
+        { return stencil_map; }
+        StencilType& getStencil(int indx)
+        { return stencil_map[indx]; }
+        std::vector<double>& getStencilRadii()
+        { return avg_stencil_radii; }
+        double getStencilRadius(int indx) 
+        { return avg_stencil_radii[indx]; }
+
+
+
         KDTree* getNodeListAsKDTree() {
             if (node_list_kdtree == NULL) {
                 // TODO: hardcoded dimension should be changed
@@ -177,9 +199,10 @@ class Grid
         }
 
 
-        // Convert a basic filename like "output_file" to something more descriptive
-        // and appropriate to the grid like "output_file_120nodes_final.ascii"
-        // or "output_file_356_nodes_final.bin"
+        // Convert a basic filename like "output_file" to something more
+        // descriptive and appropriate to the grid like
+        // "output_file_120nodes_final.ascii" or
+        // "output_file_356_nodes_final.bin"
         std::string getFilename(std::string base_filename, int iter=0);
 
         // Get a filename appropriate for output from this class
@@ -187,16 +210,17 @@ class Grid
         // the class's internal name instead of a user specified string. 
         std::string getFilename(int iter=0); 
 
-        // Get a string that gives some detail about the grid (used by expandFilename(...))
+        // Get a string that gives some detail about the grid (used by
+        // expandFilename(...)) 
         // NOTE: replace spaces with '_'
         virtual std::string getFileDetailString(); 
 
         virtual std::string className() { return "grid"; }
 
 
-        // Select a random number [randf(-pert, pert)] for each node dimension and add
-        // to randomly perturb nodes in space; store perturb_percent in pert to maintain
-        // limited history of node perturbation
+        // Select a random number [randf(-pert, pert)] for each node dimension
+        // and add to randomly perturb nodes in space; store perturb_percent in
+        // pert to maintain limited history of node perturbation
         virtual void perturbNodes(double perturb_amount);
 
         void setExtents( double minX, double maxX, double minY, double maxY, double minZ, double maxZ ) {
@@ -209,36 +233,35 @@ class Grid
         }
 
 
-
-
         // Set DEBUG to 0 or 1
         void setDebug(int debug_) { DEBUG = debug_; }
 
-        // NOTE: this grid does not have details of node connectivity. We could add this
-        // in a subclass if we wanted like a TriangularGrid or RectilinearGrid. 
+        // NOTE: this grid does not have details of node connectivity. We could
+        // add this in a subclass if we wanted like a TriangularGrid or
+        // RectilinearGrid. 
 }; 
 
 // A small class that allows us to sort stencil nodes by their distance to to
 // the stencil center
 class ltvec {
-public:
-    static NodeType xi;
-    static vector<NodeType>* rbf_centers;
+    public:
+        static NodeType xi;
+        static vector<NodeType>* rbf_centers;
 
-    static void setXi(NodeType& xi) {
-        ltvec::xi = xi;
-    }
+        static void setXi(NodeType& xi) {
+            ltvec::xi = xi;
+        }
 
-    static void setRbfCenters(vector<NodeType>& rbf_centers_) {
-        rbf_centers = &rbf_centers_;
-    }
+        static void setRbfCenters(vector<NodeType>& rbf_centers_) {
+            rbf_centers = &rbf_centers_;
+        }
 
-    bool operator()(const int i, const int j) {
-        double d1 = ((*rbf_centers)[i] - xi).square();
-        double d2 = ((*rbf_centers)[j] - xi).square();
-        // allows duplicates
-        return d1 <= d2;
-    }
+        bool operator()(const int i, const int j) {
+            double d1 = ((*rbf_centers)[i] - xi).square();
+            double d2 = ((*rbf_centers)[j] - xi).square();
+            // allows duplicates
+            return d1 <= d2;
+        }
 };
 
 #endif //__GRID_H__

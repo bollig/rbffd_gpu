@@ -4,8 +4,6 @@
 #include "pdes/parabolic/heat.h"
 
 #include "grids/regulargrid.h"
-#include "grids/stencil_generator.h"
-#include "grids/kdtree_stencil_generator.h"
 
 #include "grids/domain.h"
 #include "rbffd/derivative_cl.h"
@@ -119,11 +117,7 @@ int main(int argc, char** argv) {
             grid->writeToFile(); 
             std::cout << "Generating stencils\n";
             tm["stencils"]->start(); 
-#if 0
-            grid->generateStencils(new KDTreeStencilGenerator());   // nearest stencil_size 
-#else 
-            grid->generateStencils(new StencilGenerator());   // brute force nearest stencil_size 
-#endif 
+            grid->generateStencils(Grid::ST_BRUTE_FORCE);   // brute force nearest stencil_size 
             tm["stencils"]->stop();
             grid->writeToFile(); 
         }

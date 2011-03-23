@@ -3,7 +3,6 @@
 #include "pdes/parabolic/heat.h"
 
 #include "grids/regulargrid.h"
-#include "grids/stencil_generator.h"
 
 //#include "grids/domain_decomposition/domain.h"
 #include "rbffd/derivative_cl.h"
@@ -60,7 +59,7 @@ int main(int argc, char** argv) {
 
     grid->setSortBoundaryNodes(true); 
     grid->generate();
-    grid->generateStencils(new StencilGenerator(stencil_size));   // nearest nb_points
+    grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
     grid->writeToFile(); 
 
     // 0: 2D problem; 1: 3D problem

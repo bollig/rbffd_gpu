@@ -6,7 +6,6 @@
 #include "Vec3.h"
 #include "KDTree.h"
 
-#include "stencil_generator.h" 
 #include "common_typedefs.h"
 
 class Grid 
@@ -15,6 +14,10 @@ class Grid
         double xmin, xmax; 
         double ymin, ymax; 
         double zmin, zmax; 
+
+    public: 
+        // We allow multiple types of stencil generators (for backwards compat)
+        enum st_generator_t {ST_BRUTE_FORCE=0, ST_KDTREE, ST_HASH};
 
     protected: 
         // 0 = Debug output off; 1 = Verbose output and write intermediate
@@ -100,7 +103,12 @@ class Grid
         virtual void generate(); 
 
         // SECOND MOST IMPORTANT ROUTINE: generates stencil connectivity of node_list stored in stencil_map
-        virtual void generateStencils(StencilGenerator* stencil_generator);	
+//        virtual void generateStencils(StencilGenerator* stencil_generator);	
+        void generateStencils(st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
+        void generateStencils(size_t st_max_size, st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
+        void generateStencilsBruteForce(); 
+        void generateStencilsKDTree(); 
+        void generateStencilsHash();
 
 
 
@@ -200,5 +208,28 @@ class Grid
         // NOTE: this grid does not have details of node connectivity. We could add this
         // in a subclass if we wanted like a TriangularGrid or RectilinearGrid. 
 }; 
+
+// A small class that allows us to sort stencil nodes by their distance to to
+// the stencil center
+class ltvec {
+public:
+    static NodeType xi;
+    static vector<NodeType>* rbf_centers;
+
+    static void setXi(NodeType& xi) {
+        ltvec::xi = xi;
+    }
+
+    static void setRbfCenters(vector<NodeType>& rbf_centers_) {
+        rbf_centers = &rbf_centers_;
+    }
+
+    bool operator()(const int i, const int j) {
+        double d1 = ((*rbf_centers)[i] - xi).square();
+        double d2 = ((*rbf_centers)[j] - xi).square();
+        // allows duplicates
+        return d1 <= d2;
+    }
+};
 
 #endif //__GRID_H__

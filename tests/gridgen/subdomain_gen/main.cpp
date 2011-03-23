@@ -4,7 +4,6 @@
 #include "utils/conf/projectsettings.h"
 
 #include "grids/regulargrid.h"
-#include "grids/stencil_generator.h"
 
 #include "grids/domain.h"
 
@@ -51,16 +50,11 @@ int main(int argc, char** argv) {
         double debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0");
 
 
-        // Regular Stencil generator uses brute force nearest neighbor search.
-        // KDTreeStencilGenerator uses a kdtree to find the N nearest neighbors for the stencil
-        // Other types of StencilGenerators can exist
-        StencilGenerator* stencil_generator = new StencilGenerator(stencil_size);
-
         Grid* grid = new RegularGrid(nx, ny,  nz, minX, maxX, minY, maxY, minZ, maxZ);
         grid->setSortBoundaryNodes(sort_nodes);
         grid->setDebug(debug);
         grid->generate();
-        grid->generateStencils(stencil_generator);	// populates the stencil map stored inside the grid class
+        grid->generateStencils(Grid::ST_BRUTE_FORCE);	// populates the stencil map stored inside the grid class
         grid->writeToFile();
 
 	int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 

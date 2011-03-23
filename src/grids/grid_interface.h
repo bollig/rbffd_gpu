@@ -111,7 +111,6 @@ class Grid
         virtual void generate(); 
 
         // SECOND MOST IMPORTANT ROUTINE: generates stencil connectivity of node_list stored in stencil_map
-//        virtual void generateStencils(StencilGenerator* stencil_generator);	
         void generateStencils(st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
         void generateStencils(size_t st_max_size, st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
         void generateStencilsBruteForce(); 

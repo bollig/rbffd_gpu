@@ -458,6 +458,8 @@ void Grid::generateStencils(st_generator_t generator_choice) {
 void Grid::computeStencilRadii() {
     // NOTE: this currently assumes that nodes are sorted [boundary; interior]
     this->avg_stencil_radii.resize(node_list.size()); 
+    this->min_stencil_radii.resize(node_list.size()); 
+    this->max_stencil_radii.resize(node_list.size()); 
 
     int nb_rbf = node_list.size();
     int nb_bnd = boundary_indices.size();
@@ -474,6 +476,16 @@ void Grid::computeStencilRadii() {
     for (int i = 0; i < nb_rbf; i++) {
         StencilType& st = stencil_map[i];
 
+//        std::cout << "st.size() = " << st.size() << std::endl;
+
+        double dmin = (rbf_centers[st[1]] - rbf_centers[st[0]]).square(); 
+        min_stencil_radii[i] = sqrt(dmin); 
+
+        double dmax = (rbf_centers[st[st.size()-1]] - rbf_centers[st[0]]).square(); 
+        max_stencil_radii[i] = sqrt(dmax); 
+
+        std::cout << "st.max_dist = " << max_stencil_radii[i] << std::endl;
+        
         avg_stencil_radii[i] = 0.;
         if (i < nb_bnd) {
             avg_bnd[i] = 0.;
@@ -482,7 +494,7 @@ void Grid::computeStencilRadii() {
         }
 
         // Now iterate over the ith stencil and query distance to neighbors
-        for (int k = 1; k < max_st_size; k++) {
+        for (int k = 1; k < st.size(); k++) {
             double d = (rbf_centers[st[k]] - rbf_centers[st[0]]).square();
             double ss = sqrt(d);
 
@@ -555,7 +567,7 @@ void Grid::generateStencilsBruteForce() {
     }
 
     if (max_st_size > nb_rbf) {
-//        int new_stencil_size = (int) (0.5 * nb_rbf);
+        //        int new_stencil_size = (int) (0.5 * nb_rbf);
         int new_stencil_size = nb_rbf;
         new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
         std::cout << "[Grid] WARNING! Not enough nodes to reach specified stencil_size (size: " << max_st_size << ")!\n"; 
@@ -584,12 +596,14 @@ void Grid::generateStencilsBruteForce() {
     for (int i = 0; i < nb_rbf; i++) {
         Vec3& v = rbf_centers[i];
         StencilType& st = stencil_map[i];
-
+#if 0
         if (st.size() < max_st_size) {
             //		std::cout << "[Grid] WARNING! stencil_map[" << i << "].size() < " << max_st_size << "! Resizing this vector.\n"; 	
-            st.resize(max_st_size); 
+//            st.resize(max_st_size); 
         }
-
+#else 
+        st.clear();         // In case we have residual info
+#endif 
         std::set<int, ltvec> se;
         ltvec::setRbfCenters(rbf_centers);
         ltvec::setXi(v);
@@ -611,7 +625,7 @@ void Grid::generateStencilsBruteForce() {
             double ss = sqrt(d);
 
             if (ss < max_st_radius) {
-                st[k] = *sei;
+                st.push_back(*sei);
                 sei++;
             } else {
                 break; // We can cut loop because the nodes are sorted by dist

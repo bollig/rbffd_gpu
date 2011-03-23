@@ -436,7 +436,6 @@ void Grid::generateStencils(size_t st_max_size, st_generator_t generator_choice)
 //----------------------------------------------------------------------------
 
 void Grid::generateStencils(st_generator_t generator_choice) {
-
     switch (generator_choice)
     {
         case ST_BRUTE_FORCE:
@@ -484,7 +483,7 @@ void Grid::computeStencilRadii() {
         double dmax = (rbf_centers[st[st.size()-1]] - rbf_centers[st[0]]).square(); 
         max_stencil_radii[i] = sqrt(dmax); 
 
-        std::cout << "st.max_dist = " << max_stencil_radii[i] << std::endl;
+//        std::cout << "st.max_dist = " << max_stencil_radii[i] << std::endl;
         
         avg_stencil_radii[i] = 0.;
         if (i < nb_bnd) {

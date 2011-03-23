@@ -32,6 +32,9 @@ class Grid
         // Maximum number of nodes to allow in a stencil (can be equal to
         // nb_nodes if we want to define a global function across a stencil)
         size_t max_st_size; 
+        
+        // Maximum radius allowed when searching stencil nodes
+        double max_st_radius; 
 
         // Perturbation offsets for generated points
         double pert; 
@@ -54,18 +57,20 @@ class Grid
 
         // These are the stencils connecting our nodes in node_list.  These are
         // not guaranteed to be generated and are usually computed by calling
-        // generateStencils(StencilGenerator*) where the StencilGenerator can
-        // use any method to determine neighbors that will be member to a
-        // stencil. For example we could have separate generators for
-        // nearest-neighbor ball queries (all neighbors within max radius) and
-        // one for a maximum number of nearest neighbors, and one that
-        // generates only FD stencils by taking nodes due north/east/south/west
-        // (assuming a regular grid). 
+        // generateStencils(st_generator_t type)
         std::vector<StencilType> stencil_map; 
 
         // These are the average radii for each stencil. That is, the average
         // distance between the stencil center and its connected neighbors.
         std::vector<double> avg_stencil_radii; 
+
+        // The shortest distance for each stencil
+        std::vector<double> min_stencil_radii; 
+
+        // The longest distance for each stencil
+        std::vector<double> max_stencil_radii; 
+
+
 
         // An internal KDTree representation of the nodes. Useful for CVT
         // sampling (if updated) and also for neighbor queries
@@ -76,7 +81,8 @@ class Grid
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
-            max_st_size(0), pert(0.), nb_nodes(0),
+            max_st_size(0), max_st_radius(DBL_MAX),
+            pert(0.), nb_nodes(0),
             node_list_kdtree(NULL),
             boundary_nodes_first(false), DEBUG(0)
             {}
@@ -84,7 +90,8 @@ class Grid
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
-            max_st_size(0), pert(0), nb_nodes(num_nodes), 
+            max_st_size(0), max_st_radius(DBL_MAX), 
+            pert(0), nb_nodes(num_nodes), 
             node_list_kdtree(NULL),
             boundary_nodes_first(false), DEBUG(0) 
             {}
@@ -92,7 +99,8 @@ class Grid
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
-            max_st_size(0), pert(0), nb_nodes(nodes.size()), 
+            max_st_size(0), max_st_radius(DBL_MAX), 
+            pert(0), nb_nodes(nodes.size()), 
             node_list_kdtree(NULL), 
             boundary_nodes_first(false), DEBUG(0), node_list(nodes) 
             {} 
@@ -109,6 +117,8 @@ class Grid
         void generateStencilsBruteForce(); 
         void generateStencilsKDTree(); 
         void generateStencilsHash();
+
+        void computeStencilRadii();
 
 
 

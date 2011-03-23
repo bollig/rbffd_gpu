@@ -5,10 +5,14 @@
 
 #include "grids/regulargrid.h"
 #include "utils/comm/communicator.h"
+#include "timer_eb.h" 
 
 using namespace std;
 
 int main(int argc, char** argv) {
+    EB::TimerList tm;
+    tm["kdtree"] = new EB::Timer("Generate stencils using KDTree"); 
+    tm["brute"] = new EB::Timer("Generate stencils using Brute Force"); 
 
     Communicator* comm_unit = new Communicator(argc, argv);
 
@@ -46,7 +50,29 @@ int main(int argc, char** argv) {
     grid->setSortBoundaryNodes(sort_nodes); 
     grid->setDebug(debug);
     grid->generate();  
+
+#if 1
+    tm["kdtree"]->start(); 
+    grid->generateStencils(stencil_size, Grid::ST_KDTREE);	// populates the stencil map stored inside the grid class 
+    tm["kdtree"]->stop(); 
+
+    std::vector<StencilType>& stencil2 = grid->getStencils();    
+	std::cout << "ALL STENCILS: " << std::endl;	
+	for (int i = 0; i < stencil2.size(); i++) {
+		for (int j = 0; j < stencil2[i].size(); j++) {
+			std::cout << " [" << stencil2[i][j] << "] "; 
+		}
+		std::cout << std::endl;
+	}
+#endif 
+
+
+
+    tm["brute"]->start(); 
     grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);	// populates the stencil map stored inside the grid class 
+
+    tm["brute"]->stop(); 
+
     grid->writeToFile(); 
 
     std::vector<StencilType>& stencil = grid->getStencils();    
@@ -59,6 +85,7 @@ int main(int argc, char** argv) {
 		}
 		std::cout << std::endl;
 	}
+
 
     if (dim == 1) {
        // Extra test for ctest: 
@@ -80,6 +107,10 @@ int main(int argc, char** argv) {
 
     delete(grid);
     delete(settings);
+
+    tm.printAll();
+    tm.writeToFile();
+
     exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------

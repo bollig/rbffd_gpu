@@ -668,8 +668,14 @@ class KDTree {
 
         void k_closest_points(const Point& Xq, int k, vector<int>& idxs, vector<double>& distances) {
             // initialize search data
+#if 1
             Bmin = Point(-DBL_MAX, -DBL_MAX, -DBL_MAX);//vector<double>(ndim, -DBL_MAX);
-            Bmax = Point(-DBL_MAX, -DBL_MAX, -DBL_MAX);// Bmax = vector<double>(ndim, +DBL_MAX);
+            Bmax = Point(+DBL_MAX, +DBL_MAX, +DBL_MAX);// Bmax = vector<double>(ndim, +DBL_MAX);
+#else 
+            // Original. NOT supported by Vec3: 
+            Bmin = Point(ndim, -DBL_MAX);
+            Bmax = Point(ndim, +DBL_MAX);
+#endif 
             this->k = k;
             this->terminate_search = false;
 

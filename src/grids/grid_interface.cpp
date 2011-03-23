@@ -637,7 +637,63 @@ void Grid::generateStencilsBruteForce() {
 //----------------------------------------------------------------------
 void Grid::generateStencilsKDTree() 
 {
+    int nb_rbf = node_list.size();
+    int nb_bnd = boundary_indices.size();
 
+    if (node_list_kdtree == NULL) {        
+        // It hasnt been constructed yet
+        node_list_kdtree = new KDTree(node_list);
+    } else {
+        // It might not be up to date, but we'll trust someone else to deal
+        // with that problem
+    }
+
+    if (max_st_size < 1) {
+        std::cout << "[Grid] ERROR! Stencil size must be >= 1" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (max_st_size > nb_rbf) {
+        //        int new_stencil_size = (int) (0.5 * nb_rbf);
+        int new_stencil_size = nb_rbf;
+        new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
+        std::cout << "[Grid] WARNING! Not enough nodes to reach specified stencil_size (size: " << max_st_size << ")!\n"; 
+        std::cout << "[Grid] WARNING! Using new stencil size: " << new_stencil_size << "!\n";
+        std::cout << "[Grid] WARNING! This is the largest possible stencil give your domain resolution.\n"; 
+        max_st_size = new_stencil_size;
+    }
+
+    if (nb_bnd == 0) {
+
+        std::cout << "[Grid] WARNING! nb_bnd == 0; Did the Grid::generate() execute properly?!\n";
+        //        exit(EXIT_FAILURE);
+    }
+
+    // for each node, a vector of stencil nodes (global indexing)
+    if (stencil_map.size() < nb_rbf) {
+        std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
+        stencil_map.resize(nb_rbf);
+    }
+
+    for (size_t i = 0; i < node_list.size(); i++) {
+        StencilType& st = stencil_map[i]; 
+        st.clear();     // In case of any residual stencil info
+        NodeType& center = node_list[i];
+        std::vector<double> nearest_dists; 
+        std::vector<int> nearest_ids; 
+        node_list_kdtree->k_closest_points(center, max_st_size, nearest_ids, nearest_dists); 
+        
+        // NOTE: KDTree returns dists and ids in reverse order.
+        for (size_t j = 0; j < max_st_size; j++) { 
+            int rev_indx = (nearest_ids.size() - 1) - j; 
+            if (nearest_dists[rev_indx] < max_st_radius) {
+                st.push_back(nearest_ids[rev_indx]); 
+            } else {
+                break; 
+            }
+        }
+    }
+    this->computeStencilRadii();
 }
 
 //----------------------------------------------------------------------

@@ -123,7 +123,7 @@ class Grid
 
 
         // Write data to disk generating the filename appropriately for the class (calls to writeToFile(std::string)) 
-        virtual	void writeToFile(); 
+        virtual	void writeToFile(int iter=-1); 
         virtual void writeToFile(std::string filename); 
         void writeBoundaryToFile(std::string filename); 
         void writeNormalsToFile(std::string filename); 

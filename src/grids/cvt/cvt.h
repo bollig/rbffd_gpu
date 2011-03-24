@@ -66,7 +66,7 @@ class CVT : public Grid
 
         virtual std::string className() {return "cvt";}
 
-        virtual void writeToFile() { 
+        virtual void writeToFile(int iter=0) { 
             if (cvt_iter < it_max) { 
                 Grid::writeToFile(this->getFilename(cvt_iter)); 
             } else { 

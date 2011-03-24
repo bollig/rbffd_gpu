@@ -23,8 +23,8 @@ void Grid::generate() {
 //----------------------------------------------------------------------------
 
 
-void Grid::writeToFile() {
-    this->writeToFile(this->getFilename());
+void Grid::writeToFile(int iter) {
+    this->writeToFile(this->getFilename(iter));
 }
 //----------------------------------------------------------------------------
 

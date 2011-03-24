@@ -18,20 +18,20 @@ int main(int argc, char** argv) {
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
 
-	
+
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
     int ny = 1; 
     int nz = 1; 
     if (dim > 1) {
-    	ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
+        ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
     }
     if (dim > 2) {
-	nz = settings->GetSettingAs<int> ("NB_Z", ProjectSettings::required); 
+        nz = settings->GetSettingAs<int> ("NB_Z", ProjectSettings::required); 
     } 
     if (dim > 3) {
-	cout << "ERROR! Dim > 3 Not supported!" << endl;
-	exit(EXIT_FAILURE); 
+        cout << "ERROR! Dim > 3 Not supported!" << endl;
+        exit(EXIT_FAILURE); 
     }
 
     double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
@@ -56,14 +56,16 @@ int main(int argc, char** argv) {
     grid->generateStencils(stencil_size, Grid::ST_KDTREE);	// populates the stencil map stored inside the grid class 
     tm["kdtree"]->stop(); 
 
-    std::vector<StencilType>& stencil2 = grid->getStencils();    
-	std::cout << "ALL STENCILS: " << std::endl;	
-	for (int i = 0; i < stencil2.size(); i++) {
-		for (int j = 0; j < stencil2[i].size(); j++) {
-			std::cout << " [" << stencil2[i][j] << "] "; 
-		}
-		std::cout << std::endl;
-	}
+    if (debug) {
+        std::vector<StencilType>& stencil2 = grid->getStencils();    
+        std::cout << "ALL STENCILS: " << std::endl;	
+        for (int i = 0; i < stencil2.size(); i++) {
+            for (int j = 0; j < stencil2[i].size(); j++) {
+                std::cout << " [" << stencil2[i][j] << "] "; 
+            }
+            std::cout << std::endl;
+        }
+    }
 #endif 
 
 
@@ -76,33 +78,34 @@ int main(int argc, char** argv) {
     grid->writeToFile(); 
 
     std::vector<StencilType>& stencil = grid->getStencils();    
-	StencilType& sten = grid->getStencil(0); 
+    StencilType& sten = grid->getStencil(0); 
 
-	std::cout << "ALL STENCILS: " << std::endl;	
-	for (int i = 0; i < stencil.size(); i++) {
-		for (int j = 0; j < stencil[i].size(); j++) {
-			std::cout << " [" << stencil[i][j] << "] "; 
-		}
-		std::cout << std::endl;
-	}
-
+    if(debug) {
+        std::cout << "ALL STENCILS: " << std::endl;	
+        for (int i = 0; i < stencil.size(); i++) {
+            for (int j = 0; j < stencil[i].size(); j++) {
+                std::cout << " [" << stencil[i][j] << "] "; 
+            }
+            std::cout << std::endl;
+        }
+    }
 
     if (dim == 1) {
-       // Extra test for ctest: 
-       // When we have a 1D grid, two nodes are boundary. 
-       // Recall that these nodes are sorted to the front of the
-       // list so we expect this pattern:      
-       // B1   [0]  [9]  [2]  [3]  [4] 
-       // B2   [1]  [8]  [7]  [6]  [5] 
-       // I1   [2]  [9]  [3]  [0]  [4] 
-       if ((sten[0] != 0)
-       ||  (sten[1] != 1)
-       ||  (sten[2] != 2)
-       ||  (sten[3] != 3)
-       ||  (sten[4] != 4))
-       {
-               exit(EXIT_FAILURE); 
-       }
+        // Extra test for ctest: 
+        // When we have a 1D grid, two nodes are boundary. 
+        // Recall that these nodes are sorted to the front of the
+        // list so we expect this pattern:      
+        // B1   [0]  [9]  [2]  [3]  [4] 
+        // B2   [1]  [8]  [7]  [6]  [5] 
+        // I1   [2]  [9]  [3]  [0]  [4] 
+        if ((sten[0] != 0)
+                ||  (sten[1] != 1)
+                ||  (sten[2] != 2)
+                ||  (sten[3] != 3)
+                ||  (sten[4] != 4))
+        {
+            exit(EXIT_FAILURE); 
+        }
     }
 
     delete(grid);

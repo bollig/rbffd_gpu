@@ -51,7 +51,7 @@ class Node {
 
 class KDTree {
     private:
-        Timer t1, t2, t3, t4, t5;
+        Timer t1, t2, t3, t4, t5, t6;
 
         // Core data contained in the tree
     private:
@@ -158,7 +158,8 @@ class KDTree {
             t2("[kdtree_t2] Build Recursively"),
             t3("[kdtree_t3] Init_common"),
             t4("[kdtree_t4] Heapsort Input Points (before Partitioning)"),
-            t5("[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
+            t5("[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)"),
+            t6("[kdtree_t6] Nearest N-neighbors query")
     {
         cout << "BUILDING NEW KDTREE" << endl;
         vector<Point> vector_points;
@@ -194,7 +195,8 @@ class KDTree {
             t2("[kdtree_t2] Build Recursively"),
             t3( "[kdtree_t3] Init_common"),
             t4( "[kdtree_t4] Heapsort Input Points (before Partitioning)"),
-            t5( "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)")
+            t5( "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)"),
+            t6("[kdtree_t6] Nearest N-neighbors query")
     {
         // initialize data
         this -> npoints = points.size();
@@ -667,6 +669,7 @@ class KDTree {
     public:
 
         void k_closest_points(const Point& Xq, int k, vector<int>& idxs, vector<double>& distances) {
+            t6.start();
             // initialize search data
 #if 1
             Bmin = Point(-DBL_MAX, -DBL_MAX, -DBL_MAX);//vector<double>(ndim, -DBL_MAX);
@@ -697,7 +700,8 @@ class KDTree {
 
             // invert the vector, passing first closest results
             std::reverse(idxs.begin(), idxs.end());
-            std::reverse(idxs.begin(), idxs.end());
+            std::reverse(distances.begin(), distances.end());
+            t6.stop();
         }
 
     private:

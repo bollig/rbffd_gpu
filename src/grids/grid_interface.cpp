@@ -435,23 +435,23 @@ void Grid::generateStencils(size_t st_max_size, st_generator_t generator_choice)
 
 //----------------------------------------------------------------------------
 
-void Grid::generateStencils(st_generator_t generator_choice) {
-    switch (generator_choice)
-    {
-        case ST_BRUTE_FORCE:
-            this->generateStencilsBruteForce(); 
-            break; 
-        case ST_KDTREE: 
-            this->generateStencilsKDTree(); 
-            break; 
-        case ST_HASH: 
-            this->generateStencilsHash(); 
-            break; 
-        default: 
-            std::cout << "ERROR! Invalid choice of stencil generator\n"; 
-            exit(EXIT_FAILURE); 
-    };
-}
+    void Grid::generateStencils(st_generator_t generator_choice) {
+        switch (generator_choice)
+        {
+            case ST_BRUTE_FORCE:
+                this->generateStencilsBruteForce(); 
+                break; 
+            case ST_KDTREE: 
+                this->generateStencilsKDTree(); 
+                break; 
+            case ST_HASH: 
+                this->generateStencilsHash(); 
+                break; 
+            default: 
+                std::cout << "ERROR! Invalid choice of stencil generator\n"; 
+                exit(EXIT_FAILURE); 
+        };
+    }
 
 //----------------------------------------------------------------------------
 void Grid::computeStencilRadii() {
@@ -475,7 +475,7 @@ void Grid::computeStencilRadii() {
     for (int i = 0; i < nb_rbf; i++) {
         StencilType& st = stencil_map[i];
 
-//        std::cout << "st.size() = " << st.size() << std::endl;
+        //        std::cout << "st.size() = " << st.size() << std::endl;
 
         double dmin = (rbf_centers[st[1]] - rbf_centers[st[0]]).square(); 
         min_stencil_radii[i] = sqrt(dmin); 
@@ -483,8 +483,8 @@ void Grid::computeStencilRadii() {
         double dmax = (rbf_centers[st[st.size()-1]] - rbf_centers[st[0]]).square(); 
         max_stencil_radii[i] = sqrt(dmax); 
 
-//        std::cout << "st.max_dist = " << max_stencil_radii[i] << std::endl;
-        
+        //        std::cout << "st.max_dist = " << max_stencil_radii[i] << std::endl;
+
         avg_stencil_radii[i] = 0.;
         if (i < nb_bnd) {
             avg_bnd[i] = 0.;
@@ -598,7 +598,7 @@ void Grid::generateStencilsBruteForce() {
 #if 0
         if (st.size() < max_st_size) {
             //		std::cout << "[Grid] WARNING! stencil_map[" << i << "].size() < " << max_st_size << "! Resizing this vector.\n"; 	
-//            st.resize(max_st_size); 
+            //            st.resize(max_st_size); 
         }
 #else 
         st.clear();         // In case we have residual info
@@ -640,12 +640,11 @@ void Grid::generateStencilsKDTree()
     int nb_rbf = node_list.size();
     int nb_bnd = boundary_indices.size();
 
+    // It might not be up to date, but we'll trust someone else to deal
+    // with that problem
     if (node_list_kdtree == NULL) {        
         // It hasnt been constructed yet
         node_list_kdtree = new KDTree(node_list);
-    } else {
-        // It might not be up to date, but we'll trust someone else to deal
-        // with that problem
     }
 
     if (max_st_size < 1) {
@@ -681,14 +680,16 @@ void Grid::generateStencilsKDTree()
         NodeType& center = node_list[i];
         std::vector<double> nearest_dists; 
         std::vector<int> nearest_ids; 
+        // Nodes are returned closest first, farthest last
         node_list_kdtree->k_closest_points(center, max_st_size, nearest_ids, nearest_dists); 
-        
-        // NOTE: KDTree returns dists and ids in reverse order.
+
+        st.resize(max_st_size);  
+
         for (size_t j = 0; j < max_st_size; j++) { 
-            int rev_indx = (nearest_ids.size() - 1) - j; 
-            if (nearest_dists[rev_indx] < max_st_radius) {
-                st.push_back(nearest_ids[rev_indx]); 
+            if (nearest_dists[j] < max_st_radius) {
+                st[j] = nearest_ids[j]; 
             } else {
+                st.resize(j); // trim off extra entries in each stencil
                 break; 
             }
         }
@@ -699,5 +700,10 @@ void Grid::generateStencilsKDTree()
 //----------------------------------------------------------------------
 void Grid::generateStencilsHash()
 {
+    // Create an overlay grid
+    //      assign each node an i,j,k grid cell location
+    //      search only cells within the max_radius, but go outward by 
+    //              cells starting at the center cell. 
+    // NOTE: does not require KDTree construction and allows immediate query
 
 }

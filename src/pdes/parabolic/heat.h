@@ -125,7 +125,9 @@ class Heat {
         // forcing term to force an exact solution we are solving: dT/dt =
         // lapl(T) + force(x,t) T (x, t) = f(x,t) dT/dt = lapl(T) + (df/dt -
         // lapl(f)) = T(x,0) = f(x,0) so each iteration we 
-        double force(Vec3& pt, double t);
+        // pt_indx gives us the index of pt in our solution in case we want 
+        // the forcing term to adjust according to current solution
+        double force(size_t pt_indx, Vec3& pt, double t);
 
         std::vector<double>& getSolution() { return sol[0]; }
 

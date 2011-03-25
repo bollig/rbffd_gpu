@@ -30,3 +30,7 @@ else
     titlestr1=sprintf('[%s] ', testCaseName);
     titlestr2=sprintf('%s: %s', titleprefix, zfilename);
     title({titlestr1,titlestr2});
+end
+pbaspect([1 1 1]); % Square the plot box aspect ratio
+
+end

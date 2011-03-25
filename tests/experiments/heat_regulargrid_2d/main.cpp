@@ -24,8 +24,7 @@ using namespace EB;
 //----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
-
-    std::map<std::string, EB::Timer*> tm; 
+    TimerList tm;
 
     tm["total"] = new Timer("[Main] Total runtime for this proc");
     tm["grid"] = new Timer("[Main] Grid generation");
@@ -120,13 +119,10 @@ int main(int argc, char** argv) {
             grid->writeToFile(); 
             std::cout << "Generating stencils\n";
             tm["stencils"]->start(); 
-#if 0
-            grid->generateStencils(new KDTreeStencilGenerator());   // nearest stencil_size 
-#else 
-            grid->generateStencils(new StencilGenerator());   // brute force nearest stencil_size 
-#endif 
+            grid->generateStencils(Grid::ST_KDTREE);   
             tm["stencils"]->stop();
             grid->writeToFile(); 
+            tm.writeToFile("gridgen_timer_log"); 
         }
 
         int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 

@@ -17,7 +17,6 @@ SET(REQUIRED_SOURCE_FILES
     grids/regulargrid.cpp
     grids/grid_interface.cpp
     grids/domain.cpp
-    grids/stencil_generator.cpp
 
     pdes/elliptic/ncar_poisson1.cpp
     pdes/parabolic/heat.cpp

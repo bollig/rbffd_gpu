@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
         //          tm["grid"]->stop(); 
         std::cout << "Generating stencils\n";
         //        tm["stencils"]->start(); 
-        grid->generateStencils(new StencilGenerator());   // nearest stencil_size 
+        grid->generateStencils(Grid::ST_BRUTE_FORCE);   // nearest stencil_size 
         //      tm["stencils"]->stop();
         grid->writeToFile(); 
     }

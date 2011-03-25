@@ -14,7 +14,10 @@
 #include "timer_eb.h"
 #include "utils/comm/communicator.h"
 #include "utils/io/pde_writer.h"
+
+#if USE_VTK
 #include "utils/io/vtu_pde_writer.h"
+#endif 
 
 using namespace std;
 using namespace EB;
@@ -248,7 +251,11 @@ int main(int argc, char** argv) {
     tm["updates"]->stop();
 
     // Setup a logging class that will monitor our iteration and dump intermediate files
+#if USE_VTK
     PDEWriter* writer = new VtuPDEWriter(subdomain, heat, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
+#else 
+    PDEWriter* writer = new PDEWriter(subdomain, heat, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
+#endif 
 
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
     int iter;

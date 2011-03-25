@@ -35,6 +35,8 @@
 	# efb06: bollig account
 	/Users/erlebach/Documents/src/armadillo-0.9.52 
 	/usr/local/lib64 
+	~/local/usr/lib64
+	~/local/usr/lib
 	~/local/lib 
 	~/local/lib64)
 
@@ -61,7 +63,8 @@
 		/Users/erlebach/Documents/src/fftw-3.2.2/include
 		/Users/erlebach/Documents/src/armadillo-0.9.52/include
 		/opt/local/include   # for boost
-                ~efb06/local/include
+                ~/local/include
+		~/local/usr/include
 	)
 		
 	INCLUDE_DIRECTORIES ( ${RBF_INCLUDE_DIRS} )

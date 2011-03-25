@@ -4,8 +4,6 @@
 #include "pdes/parabolic/heat.h"
 
 #include "grids/regulargrid.h"
-#include "grids/stencil_generator.h"
-#include "grids/kdtree_stencil_generator.h"
 
 #include "grids/domain.h"
 #include "rbffd/derivative_cl.h"

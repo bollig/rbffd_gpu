@@ -1,4 +1,5 @@
-function [] = plot_nodes(nb_inner_bnd, nb_outer_bnd, nb_interior, iter_max_bnd, iter_max_int, iter_step, dim)
+ q:q
+ cfunction [] = plot_nodes(nb_inner_bnd, nb_outer_bnd, nb_interior, iter_max_bnd, iter_max_int, iter_step, dim)
 
     if (nargin < 4)
         iter_max_bnd = 100;

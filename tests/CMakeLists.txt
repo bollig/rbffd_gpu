@@ -5,8 +5,10 @@
 	SET (TEST_COLLECTION
 		# find * |grep -v "\." | grep -v "incomplete\/" | grep -v "cut\/"| grep "\/" | grep -v "NOTES" |grep -v "TODO"
 		#P2		experiments/ncar_poisson1
+		#P2		experiments/ncar_poisson1
 		#P2		experiments/ncar_poisson2
-		#*		experiments/ncar_poisson1_nonuniform_diffusivity
+        #*		experiments/ncar_poisson1_nonuniform_diffusivity
+        experiments/ncar_poisson1_vcl
 		#*		experiments/original_heat
 		#P1		experiments/ncar_poisson1_regular_grid
 		#P2		experiments/regular_square2D_heat

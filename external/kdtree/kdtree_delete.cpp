@@ -34,7 +34,7 @@ using namespace std;
 #include <iostream>
 int test1(){
 	int N = 8;
-	vector< Point > A(N, vector<double>(3,0));
+	vector< Point > A(N, Point(0,0,0));
 	A[0][0] = 200; A[0][1] = 300; A[0][2] = 400;
 	A[1][0] = 100; A[1][1] = 200; A[1][2] = 300;
 	A[2][0] = 600; A[2][1] = 100; A[2][2] = 500;

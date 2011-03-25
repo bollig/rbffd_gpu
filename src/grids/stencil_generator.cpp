@@ -67,6 +67,11 @@ void StencilGenerator::computeStencils(std::vector<NodeType>& node_list, std::ve
     int nb_bnd = boundary_indices.size();
     std::vector<NodeType>& rbf_centers = node_list;
 
+    if (st_max_size < 1) {
+        std::cout << "[StencilGenerator] ERROR! Stencil size must be >= 1" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
     if (st_max_size > nb_rbf) {
         int new_stencil_size = (int) (0.5 * nb_rbf);
         new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;

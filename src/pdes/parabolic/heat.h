@@ -38,7 +38,9 @@ class Heat {
 
 
 
-        Domain* subdomain; Derivative* der; 
+        Domain* subdomain;
+        Derivative* der; 
+
         std::vector<double> lapl_deriv;
         std::vector<double> x_deriv; 
         std::vector<double> y_deriv;
@@ -130,6 +132,7 @@ class Heat {
         // rel_err_max is the maximum tolerable error. If L1, L2 or Linf norms
         // exceed this value exit(EXIT_FAILURE) the program
         void checkError(std::vector<double>& solution, std::vector<NodeType>& nodes, double rel_err_max=-1.);
+        void calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max=1.);
         void writeErrorToFile(std::vector<double>& error); 
 };
 

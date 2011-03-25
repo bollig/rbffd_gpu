@@ -114,7 +114,7 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
 void Grid::writeStencilsToFile(std::string filename) {
     if (max_st_size > 0) {
         std::ostringstream prefix; 
-        prefix << "stencils_maxsz" << this->max_st_size << "_" << filename; 
+        prefix << "stencils_maxsz" << this->max_st_size << "_";
 
         std::string fname = prefix.str(); 
         fname.append(filename); 

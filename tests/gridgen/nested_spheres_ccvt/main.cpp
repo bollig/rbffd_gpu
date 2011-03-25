@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     }
 
     double inner_r = settings->GetSettingAs<double>("INNER_RADIUS", ProjectSettings::optional, "0.5"); 
-    double outer_r = settings->GetSettingAs<double>("OUTER_RADIUS", ProjectSettings::optional, "0.5"); 
+    double outer_r = settings->GetSettingAs<double>("OUTER_RADIUS", ProjectSettings::optional, "1.0"); 
 
     double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
     double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
@@ -41,6 +41,7 @@ int main(int argc, char** argv) {
 	// Generate a CVT with nx*ny*nz nodes, in 1, 2 or 3D with 0 locked boundary nodes, 
 	// 20000 samples per iteration for 30 iterations
     NestedSphereCVT* cgrid = new NestedSphereCVT(nb_interior, nb_inner_boundary, nb_outer_boundary, dim, 0, 20000, 60); 
+    cgrid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
     cgrid->setInnerRadius(inner_r); 
     cgrid->setOuterRadius(outer_r); 
 

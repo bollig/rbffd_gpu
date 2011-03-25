@@ -1,0 +1,2 @@
+example usage for my timer. Its the same as Gordon's timer but ive improved the 
+I/O and allow hash lookup for timer names. See test_timer.cpp for example usage. 

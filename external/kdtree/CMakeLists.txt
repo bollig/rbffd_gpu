@@ -10,6 +10,6 @@ set(SOURCES
 	kdtree_range_query.cpp
 )
 #KDTree.h
-include_directories( . ${timers_SOURCE_DIR})
+include_directories( . ${timers_SOURCE_DIR} ${utilities_SOURCE_DIR})
 add_definitions( -DCPPONLY )
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

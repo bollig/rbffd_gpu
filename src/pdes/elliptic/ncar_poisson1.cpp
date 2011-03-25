@@ -7,17 +7,17 @@
 
 using namespace std;
 
-NCARPoisson1::NCARPoisson1(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
-        dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->G_centers),
-        boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_),
-        t1(tm, "[ncar_poisson_t1] Total"),
-        t2(tm, "[ncar_poisson_t2] Compute Weights"),
-        t3(tm, "[ncar_poisson_t3] Implicit Assemble"),
-        t4(tm, "[ncar_poisson_t4] Solve"),
-        t5(tm, "[ncar_poisson_t5] Solve w/o memcpy")
+NCARPoisson1::NCARPoisson1(ExactSolution* _solution, Grid* subdomain_, Derivative* der_, int rank, int dim_num_) :
+        dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->getNodeList()),
+        boundary_set(&subdomain_->getBoundaryIndices()), der(der_), id(rank), subdomain(subdomain_),
+        t1("[ncar_poisson_t1] Total"),
+        t2("[ncar_poisson_t2] Compute Weights"),
+        t3("[ncar_poisson_t3] Implicit Assemble"),
+        t4("[ncar_poisson_t4] Solve"),
+        t5("[ncar_poisson_t5] Solve w/o memcpy")
 {
-    nb_stencils = subdomain->Q_stencils.size();
-    nb_rbf = subdomain->G_centers.size();
+    nb_stencils = subdomain->getStencils().size();
+    nb_rbf = subdomain->getNodeList().size();
 
     time = 0.0; // physical time
 
@@ -40,17 +40,18 @@ NCARPoisson1::NCARPoisson1(ExactSolution* _solution, Domain* subdomain_, Derivat
     test_dirichlet_lockdown = false;
 }
 
+#if 0
 NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
-        dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->G_centers),
-        boundary_set(&subdomain_->global_boundary_nodes), der(der_), id(rank), subdomain(subdomain_),
+        dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->getNodeList()),
+        boundary_set(&subdomain_->getBoundaryIndices()), der(der_), id(rank), subdomain(subdomain_),
         t1(tm, "[ncar_poisson_t1] Total"),
         t2(tm, "[ncar_poisson_t2] Compute Weights"),
         t3(tm, "[ncar_poisson_t3] Implicit Assemble"),
         t4(tm, "[ncar_poisson_t4] Solve"),
         t5(tm, "[ncar_poisson_t5] Solve w/o memcpy")
 {
-    nb_stencils = subdomain->Q_stencils.size();
-    nb_rbf = subdomain->G_centers.size();
+    nb_stencils = subdomain->getStencils().size();
+    nb_rbf = subdomain->getNodeList().size();
 
     time = 0.0; // physical time
 
@@ -71,11 +72,12 @@ NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, 
     use_uniform_diffusivity = settings->GetSettingAs<int>("USE_UNIFORM_DIFFUSIVITY", ProjectSettings::required);
     test_dirichlet_lockdown = settings->GetSettingAs<int>("TEST_DIRICHLET_LOCKDOWN", ProjectSettings::optional);
 }
+#endif 
 
 //----------------------------------------------------------------------
 
 NCARPoisson1::~NCARPoisson1() {
-    this->tm.dumpTimings();
+    t1.printAll();
 }
 //----------------------------------------------------------------------
 // Solve the poisson system.
@@ -92,10 +94,10 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         exit(EXIT_FAILURE);
     } else {
 
-        int nb = subdomain->global_boundary_nodes.size();
+        int nb = subdomain->getBoundaryIndices().size();
         // All interior and boundary nodes are included in the stencils.
-        // The first nb Q_stencils should be the global boundary nodes
-        int ni = subdomain->Q_stencils.size() - nb;
+        // The first nb getStencils() should be the global boundary nodes
+        int ni = subdomain->getStencils().size() - nb;
 
         int nn = (nb + ni) ;
         double err_norm = 100;
@@ -160,9 +162,9 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             cout << "USING EPSILON: " << new_eps << "\t";
 
         for (int i = 0; i < nb + ni; i++) {
-            //subdomain->printStencil(subdomain->Q_stencils[i], "Q[i]");
+            //subdomain->printStencil(subdomain->getStencils()[i], "Q[i]");
             // Compute all derivatives for our centers
-            der->computeWeights(subdomain->G_centers, subdomain->Q_stencils[i], i);
+            der->computeWeights(subdomain->getNodeList(), subdomain->getStencils()[i], i);
         }
 
         // The derivative weights go into a matrix that is TotNumNodes x TotNumNodes
@@ -190,36 +192,36 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
     //    cout << "WARNING! using x,y,z weights separately to compute d/dr!" << endl;
         // Block 1 (top left corner): d/dr weights for nb boundary points using nb+ni possible weights
         for (int i = 0; i < nb; i++) {
-            //arma::mat& r_weights = der->getRWeights(subdomain->Q_stencils[i][0]);
-            double* x_weights = der->getXWeights(subdomain->Q_stencils[i][0]);
-            double* y_weights = der->getYWeights(subdomain->Q_stencils[i][0]);
-            double* z_weights = der->getZWeights(subdomain->Q_stencils[i][0]);
+            //arma::mat& r_weights = der->getRWeights(subdomain->getStencils()[i][0]);
+            double* x_weights = der->getXWeights(subdomain->getStencils()[i][0]);
+            double* y_weights = der->getYWeights(subdomain->getStencils()[i][0]);
+            double* z_weights = der->getZWeights(subdomain->getStencils()[i][0]);
 
             // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
-            Vec3& center = subdomain->G_centers[subdomain->Q_stencils[i][0]];
+            Vec3& center = subdomain->getNode(subdomain->getStencils()[i][0]);
             double r = center.magnitude();
       //  r = 1.;
-            for (int j = 0; j < subdomain->Q_stencils[i].size(); j++) {
-                //L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = r_weights(j);        // Block 1 (weights for d/dr)
-                L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][j]) = (center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j];        // Block 1 (weights for d/dr)
+            for (int j = 0; j < subdomain->getStencils()[i].size(); j++) {
+                //L(subdomain->getStencils()[i][0],subdomain->getStencils()[i][j]) = r_weights(j);        // Block 1 (weights for d/dr)
+                L(subdomain->getStencils()[i][0],subdomain->getStencils()[i][j]) = (center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j];        // Block 1 (weights for d/dr)
             }
 
             if (r < 1e-8) {
                 cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
                 exit(EXIT_FAILURE);
             }
-            // Again, make sure we use Q_stencils[i][0] so we are forming the diagonals
+            // Again, make sure we use getStencils()[i][0] so we are forming the diagonals
             // correctly using the stencil center index (WARNING! this is not consistent for
             // domain decomposition... how to address this? TODO in the future..)
-            L(subdomain->Q_stencils[i][0],subdomain->Q_stencils[i][0]) -= 1./r;
+            L(subdomain->getStencils()[i][0],subdomain->getStencils()[i][0]) -= 1./r;
         }
 
         // Block 2 (bottom left corner): laplacian weights for ni interior points using nb+ni possible weights
         for (int i = 0; i < ni; i++) {
-            int indx = i + nb; // offset into Q_stencils to get the interior stencils only
-            double* l_weights = der->getLaplWeights(subdomain->Q_stencils[indx][0]);
-            for (int j = 0; j < subdomain->Q_stencils[indx].size(); j++) {
-                L(subdomain->Q_stencils[indx][0],subdomain->Q_stencils[indx][j]) = l_weights[j];        // Block 1 (weights for laplacian)
+            int indx = i + nb; // offset into getStencils() to get the interior stencils only
+            double* l_weights = der->getLaplWeights(subdomain->getStencils()[indx][0]);
+            for (int j = 0; j < subdomain->getStencils()[indx].size(); j++) {
+                L(subdomain->getStencils()[indx][0],subdomain->getStencils()[indx][j]) = l_weights[j];        // Block 1 (weights for laplacian)
             }
         }
 
@@ -227,8 +229,8 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
 
         for (int i = 0; i < ni; i ++) {
             int indx = i + nb;
-            Vec3& v = subdomain->G_centers[subdomain->Q_stencils[indx][0]];
-            F(subdomain->Q_stencils[indx][0]) = exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
+            Vec3& v = subdomain->getNode(subdomain->getStencils()[indx][0]);
+            F(subdomain->getStencils()[indx][0]) = exactSolution->laplacian(v.x(), v.y(), v.z(), 0.);
         }
         F(nn) = 0.;
 
@@ -246,7 +248,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
         // Fill our exact solution
         exact.zeros();
         for (int i = 0; i < nb + ni; i++) {
-            exact(subdomain->Q_stencils[i][0]) = exactSolution->at(subdomain->G_centers[subdomain->Q_stencils[i][0]], 0.);
+            exact(subdomain->getStencils()[i][0]) = exactSolution->at(subdomain->getNode(subdomain->getStencils()[i][0]), 0.);
         }
 
         // Compute our errors

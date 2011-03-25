@@ -214,7 +214,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
             // first order
             Vec3& v = rbf_centers[i];
             //printf("dt= %f, time= %f\n", dt, time);
-            double f = force(v, time*dt);
+            double f = force(i, v, time*dt);
             //double f = 0.;
             //printf("force (local: %d) = %f\n", i, f);
             // TODO: offload this to GPU. 
@@ -273,7 +273,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
             Vec3& v = rbf_centers[i];
             //printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
             //v.print("v");
-            double f = force(v, time+0.5*dt);
+            double f = force(i, v, time+0.5*dt);
             // double f = 0.;
             s[i] = s[i] + dt * (lapl_deriv[i] + f); // RHS at time+0.5*dt
         }
@@ -487,7 +487,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
         // first order
         Vec3& v = rbf_centers[i];
         //printf("dt= %f, time= %f\n", dt, time);
-        double f = force(v, time);
+        double f = force(i, v, time);
         //printf("force (local: %d) = %f\n", i, f);
         //printf("Before %f,", s[i]);
 #ifdef SECOND
@@ -528,7 +528,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
         Vec3& v = rbf_centers[i];
         //printf("i= %d, nb_rbf= %d\n", i, nb_rbf);
         //v.print("v");
-        double f = force(v, time+0.5*dt);
+        double f = force(i, v, time+0.5*dt);
         s[i] = s[i] + dt * (lapl_deriv[i] + f); // RHS at time+0.5*dt
     }
 
@@ -558,7 +558,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
         Vec3& v = rbf_centers[i];
         sol_ex[i] = exactSolution->at(v, time);
         sol_error[i] = sol_ex[i] - s[i];
-        printf("%d Force: %f\tLapl: %f\t Solution: %f\t Exact: %f \t Error: %f\n",i, force(v, time), lapl_deriv[i], s[i], sol_ex[i], sol_error[i]);
+        printf("%d Force: %f\tLapl: %f\t Solution: %f\t Exact: %f \t Error: %f\n",i, force(i, v, time), lapl_deriv[i], s[i], sol_ex[i], sol_error[i]);
     }
 
     // print error to a file
@@ -1013,10 +1013,23 @@ double Heat::maxNorm(vector<double>& sol) {
 // The forcing term.
 // Here we get the term using the method of manufactured solutions.
 // (plugin lapl(u) to get rhs of the equation). 
-double Heat::force(Vec3& v, double t) {
+double Heat::force(size_t v_indx, Vec3& v, double t) {
 
     //cout << "TDERIV: " << exactSolution->tderiv(v,t) << "\tLapl: " << exactSolution->laplacian(v,t) << endl;
     //return exactSolution->laplacian(v,t);
+#if 1
+    // Gordon's suggestion
     return exactSolution->tderiv(v, t) - exactSolution->laplacian(v, t);
+#else 
+#if 0
+//    return sol[0][v_indx] - exactSolution->at(v, t); 
+    return exactSolution->at(v, t) - sol[0][v_indx]; 
+#else 
+    // Exact update we expect at the current time 
+    // minus what we actually have at the current time tells us
+    // exactly what our forcing needs to be
+    return exactSolution->laplacian(v,t) - lapl_deriv[v_indx];
+#endif 
+#endif 
 }
 //----------------------------------------------------------------------

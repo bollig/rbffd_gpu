@@ -194,8 +194,16 @@ int main(int argc, char** argv) {
         der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
     }
 
-    double epsilon = settings->GetSettingAs<double>("EPSILON");
-    der->setEpsilon(epsilon);
+    int use_var_eps = settings->GetSettingAs<int>("USE_VARIABLE_EPSILON", ProjectSettings::optional, "0");
+    if (use_var_eps) {
+        double alpha = settings->GetSettingAs<double>("VAR_EPSILON_ALPHA", ProjectSettings::optional, "1.0"); 
+        double beta = settings->GetSettingAs<double>("VAR_EPSILON_BETA", ProjectSettings::optional, "1.0"); 
+        der->setVariableEpsilon(subdomain->getStencilRadii(), alpha, beta); 
+    } else {
+        double epsilon = settings->GetSettingAs<double>("EPSILON", ProjectSettings::required);
+        der->setEpsilon(epsilon);
+    }
+
 
 
     printf("start computing weights\n");

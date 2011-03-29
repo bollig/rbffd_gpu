@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
+#include <math.h>
 #include "ArrayT.h"
 #include "Vec3.h"
 //#include <armadillo>
@@ -43,8 +44,14 @@ protected:
     std::vector<StencilType >& stencil;
     std::vector<double> avg_stencil_radius;
 
-    std::vector<double> var_eps;
-    double epsilon;  // RBF scaling
+    // Two choices of epsilon (support parameter) for RBFs: 
+    //  0) Static: 
+    //  1) Variable: 
+    //  (fill this buffer with uniform values if static)
+    std::vector<double> var_epsilon;
+    // specify selection for epsilon type in case subsets of the code depend on it
+    int use_var_eps;
+
 //    int nb_bnd; // number of points on the boundary (EB: is this the boundary of subdomain or PDE?)
 
     // Configurable option from projectSettings
@@ -56,7 +63,6 @@ protected:
 public:
     //Derivative(int nb_rbfs);
     Derivative(std::vector<Vec3>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts, int dim_num);
-    Derivative(ProjectSettings* settings, std::vector<Vec3>& rbf_centers_, std::vector<StencilType>& stencil_, int nb_bnd_pts);
     ~Derivative();
  
     void setupTimers(); 
@@ -75,7 +81,9 @@ public:
     // choice: compute either "lapl", "x" or "y" derivative stencils
     void computeWeightsSVD(std::vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, const char* choice);
 
-    void distanceMatrix(std::vector<Vec3>& rbf_centers, StencilType& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num);
+    // Fill distance_matrix with nrows-by-ncols values for a distance matrix where each row i corresponds 
+    // to the distances from rbf_centers in stencil i to the ith rbf_center. 
+    void distanceMatrix(std::vector<Vec3>& rbf_centers, StencilType& stencil, double rbf_support, int irbf, double* distance_matrix, int nrows, int ncols, int dim_num);
 
     AF& solve(AF& l, AF& b);
     AF& matmul(AF& arr, AF& x);
@@ -117,26 +125,38 @@ public:
 
     double computeEig();
 
-
+    // Update the derivative class with a set of avg stencil radii. 
+    // Other parameters are 
+    //      alpha  -> scaling on numerator for (eps = alpha/(r^beta)) where r is the stencil radius
+    //      beta   -> power on r for (eps = alpha/r^beta). 
     void setAvgStencilRadius(std::vector<double>& avg_radius_) {
+        this->setVariableEpsilon(avg_radius_); 
+    }
+    void setVariableEpsilon(std::vector<double>& avg_radius_, float alpha=1.0f, float beta=1.0f) {
+        use_var_eps = 1;
+        std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
         avg_stencil_radius = avg_radius_;
-        var_eps.resize(avg_stencil_radius.size());
-        for (int i=0; i < var_eps.size(); i++) {
-            var_eps[i] = 1. / avg_stencil_radius[i];
-            //printf("avg rad(%d) = %f\n", i, avg_stencil_radius[i]);
+        var_epsilon.resize(avg_stencil_radius.size());
+        for (int i=0; i < var_epsilon.size(); i++) {
+            var_epsilon[i] = alpha / pow(avg_stencil_radius[i], beta);
+            printf("var_epsilon(%d) = %f\n", i, var_epsilon[i]);
         }
     }
-
+#if 0
+    // Update the variable epsilons without using stencil radii
     void setVariableEpsilon(std::vector<double>& var_eps_) {
         this->var_eps = var_eps_;
     }
-
+#endif 
     double minimum(std::vector<double>& vec);
 
     double setEpsilon(double eps) { 
-
-    		std::cout << "DERIVATIVE:: SET EPSILON = " << eps << std::endl;
-	    this->epsilon = eps; return this->epsilon;
+        use_var_eps = 1; 
+        std::cout << "DERIVATIVE:: SET UNIFORM EPSILON = " << eps << std::endl;
+        for (int i = 0; i < var_epsilon.size(); i++) {
+           this->var_epsilon[i] = eps; 
+        }
+        return this->var_epsilon[0];
     }
 };
 

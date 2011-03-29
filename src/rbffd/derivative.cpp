@@ -26,6 +26,13 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil
     lapl_weights.resize(nb_rbfs);
     rbfs.resize(nb_rbfs);
 
+    // each stencil has a support specified at its center
+    // but more importantly, the stencil nodes (neighbors) 
+    // also have their own supports 
+    // TODO: verify that the Domain class passes all nb_rbfs to each subdomain
+    var_epsilon.resize(nb_rbfs); 
+
+#if 0
     // derivative depends strongly on epsilon!
     // there must be a range of epsilon for which the derivative is approx. constant!
     epsilon = 0.1; // laplacian returns zero (related to SVD perhaps)
@@ -33,40 +40,12 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil
     epsilon = 2.; // Pretty accurate
     //epsilon = 1.;
     //epsilon = 0.5; // Pretty accurate
+#endif 
 
     printf("nb_rbfs= %d\n", nb_rbfs); // ok
     setupTimers(); 
 }
-//----------------------------------------------------------------------
-Derivative::Derivative(ProjectSettings* settings, vector<Vec3>& rbf_centers_, vector<StencilType>& stencil_, int nb_bnd_) :
-        rbf_centers(rbf_centers_), stencil(stencil_), maxint((1 << 31) - 1.)
-{
-//    this->nb_bnd = nb_bnd_;
-    this->nb_rbfs = rbf_centers.size();
 
-    x_weights.resize(nb_rbfs);
-    y_weights.resize(nb_rbfs);
-    z_weights.resize(nb_rbfs);
-    r_weights.resize(nb_rbfs);
-    lapl_weights.resize(nb_rbfs);
-    rbfs.resize(nb_rbfs);
-
-    // derivative depends strongly on epsilon!
-    // there must be a range of epsilon for which the derivative is approx. constant!
-    epsilon = 0.1; // laplacian returns zero (related to SVD perhaps)
-    //epsilon = 3.; // Pretty accurate
-    epsilon = 2.; // Pretty accurate
-    //epsilon = 1.;
-    //epsilon = 0.5; // Pretty accurate
-
-    printf("nb_rbfs= %d\n", nb_rbfs); // ok
-
-    epsilon = settings->GetSettingAs<int>("EPSILON", ProjectSettings::required);
-
-    debug_mode = settings->GetSettingAs<int>("DEBUG_MODE", ProjectSettings::optional);
-    dim_num = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required);
-    setupTimers(); 
-}
 //----------------------------------------------------------------------
 Derivative::~Derivative()
 {
@@ -349,7 +328,7 @@ int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stenci
 #endif
 
 //----------------------------------------------------------------------
-void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& stencil,int irbf, double* distance_matrix, int nrows, int ncols, int dim_num)
+void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& stencil, double rbf_support, int irbf, double* distance_matrix, int nrows, int ncols, int dim_num)
 {
     Vec3& c = rbf_centers[irbf];
     int n = stencil.size();
@@ -363,7 +342,7 @@ void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& sten
     arma::mat ar(distance_matrix,nrows,ncols,false);
 
 
-    IRBF rbf(epsilon, dim_num);
+    IRBF rbf(rbf_support, dim_num);
 
     //mat ar(n,n);
     // Derivative of a constant should be zero
@@ -450,11 +429,18 @@ void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, StencilType& stenc
     var_eps[irbf] = 1.; // works
     var_eps[irbf] *= .07; // TEMP Does not work
 #endif
+
+#if 0
     double rad = 1.1;              // rad should also be proportional to (1/avg_stencil_radius)
     double eps = 1.0; // * var_eps[irbf]; // variable epsilon (for 300 pts)
     //double eps = 1.1; // * var_eps[irbf]; // variable epsilon (for 300 pts)
     //double eps = 1.5 * var_eps[irbf]; // variable epsilon (for 1000 pts)
-
+#else 
+    double rad = 1.1; 
+    double eps = var_epsilon[irbf]; 
+    std::cout << "computeWeightsSVD not yet verified to support variable espilon" << std::endl;
+    exit(EXIT_FAILURE); 
+#endif 
     //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
     //cout << "CHOICE: " << choice << endl;
 
@@ -545,7 +531,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
 //    std::cout << "[Derivative::computeWeights()] EPSILON = " << epsilon << std::endl; 
     for (int j=0; j < n; j++) {
 
-        rbfs[irbf][j] = new IRBF(epsilon, dim_num);
+        rbfs[irbf][j] = new IRBF(var_epsilon[irbf], dim_num);
 
         // We want to evaluate every basis function. Each stencil node xjv has
         // its own basis function and we evaluate them with the distance to the
@@ -618,7 +604,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
     // n+4 = 1 + dim(3) for x,y,z
     arma::mat d_matrix(n+np, n+np);
     d_matrix.zeros(n+np,n+np);
-    this->distanceMatrix(rbf_centers, stencil, irbf, d_matrix.memptr(), d_matrix.n_rows, d_matrix.n_cols, dim_num);
+    this->distanceMatrix(rbf_centers, stencil, var_epsilon[irbf], irbf, d_matrix.memptr(), d_matrix.n_rows, d_matrix.n_cols, dim_num);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -761,7 +747,7 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, StencilType
     // uses of DIM in the rbf classes and forced dimension 3. In this case we still had 2 unstable eigenvalues. 
     // perhaps its because the contoursvd is not N dimensional? Natasha did mention that as we increase the dim
     // the window for safely picking epsilon to avoid instability is narrowed. 
-    IRBF rbf(epsilon, dim_num);
+    IRBF rbf(var_epsilon[irbf], dim_num);
     int n = stencil.size();
 
     arma::rowvec bx, by, bz, blapl, br;
@@ -819,7 +805,7 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, StencilType
 
     arma::mat ar(n+4, n+4);
     ar.zeros(n+4,n+4);
-    this->distanceMatrix(rbf_centers, stencil, irbf, ar.memptr(), ar.n_rows, ar.n_cols, 3);
+    this->distanceMatrix(rbf_centers, stencil, var_epsilon[irbf], irbf, ar.memptr(), ar.n_rows, ar.n_cols, 3);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -1309,7 +1295,7 @@ double Derivative::computeEig()
         }
     }
 #endif 
-    printf("epsilon: %g\n", epsilon);
+//    printf("epsilon: %g\n", epsilon);
     printf("nb unstable eigenvalues: %d\n", count);
     printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
     printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);

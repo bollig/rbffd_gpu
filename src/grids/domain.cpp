@@ -221,13 +221,13 @@ int Domain::sendUpdate(int my_rank, int receiver_rank) {
                 // so we need to first convert to local to index our U_G
                 U_O.push_back(U_G[g2l(*oit)]);
                 if (DEBUG) {
-                cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
-                    << " (local index: " << g2l(*oit) << ")"
-                    << "]: " << U_G[g2l(*oit)] << endl;
+                    cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
+                        << " (local index: " << g2l(*oit) << ")"
+                        << "]: " << U_G[g2l(*oit)] << endl;
                 }
             }
         }
-        
+
         cout << "O_by_rank[" << receiver_rank << "].size = "
             << O_by_rank[receiver_rank].size() << endl;
 
@@ -287,8 +287,8 @@ int Domain::sendFinal(int my_rank, int receiver_rank) {
                 // so we need to first convert to local to index our U_G
                 U_Q.push_back(U_G[g2l(*qit)]);
                 if (DEBUG) {
-                cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
-                    << "]: " << U_G[g2l(*qit)] << endl;
+                    cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
+                        << "]: " << U_G[g2l(*qit)] << endl;
                 }
             }
         }
@@ -328,10 +328,12 @@ int Domain::receiveFinal(int my_rank, int sender_rank) {
     }
 
     cout << "RECEIVED FINAL FROM CPU " << sender_rank << endl;
-    cout << "NEW FINAL_U_G: " << endl;
-    map<int, double>::iterator it;
-    for (it = global_U_G.begin(); it != global_U_G.end(); it++) {
-        cout << "\tU_G[" << (*it).first << "] = " << (*it).second << endl;
+    if (DEBUG) {
+        cout << "NEW FINAL_U_G: " << endl;
+        map<int, double>::iterator it;
+        for (it = global_U_G.begin(); it != global_U_G.end(); it++) {
+            cout << "\tU_G[" << (*it).first << "] = " << (*it).second << endl;
+        }
     }
 }
 

@@ -53,12 +53,10 @@ public:
 
     template <typename RT>
     void SetSetting(std::string key, RT value) {
-	    // TODO: change to stringstream for any type of input that is cast as string
-		char strg[80];
-		sprintf(strg, "%f", (float*) &value);
-		settings[key] = std::string(strg);
-		//settings[key] = ss_typecast<std::string> value;
-	}
+	    std::ostringstream oss; 
+        oss << value; 
+        settings[key] = oss.str(); 
+    }
 
 
 

@@ -68,8 +68,8 @@ namespace EB {
 
             void set(float t); //add a time from an external timer (GPU)
 
-            static void printAll(FILE* fd=stdout, int label_width=50);
-            void print(FILE* fd=stdout, int label_width=50);
+            static void printAll(FILE* fd=stdout, int label_width=22);
+            void print(FILE* fd=stdout, int label_width=22);
             void writeAllToFile(std::string filename="timer_log"); 
             void printReset();
     };

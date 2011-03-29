@@ -239,8 +239,8 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
     }
     bnd_error /= boundary.size();
 
-    printf("avg l2_bnd_error= %14.7e\n", sqrt(bnd_error));
-    printf("avg l2_interior_error= %14.7e\n", sqrt(inter_error));
+    printf("[checkDerivs] avg l2_bnd_error= %14.7e\n", sqrt(bnd_error));
+    printf("[checkDerivs] avg l2_interior_error= %14.7e\n", sqrt(inter_error));
 
     exit(0);
 }
@@ -320,7 +320,7 @@ void DerivativeTests::testEigen(Derivative& der, Grid& grid)
 
         //recompute Laplace weights
         for (int irbf=0; irbf < nb_stencils; irbf++) {
-             der.computeWeights(rbf_centers, stencil[irbf], irbf);
+            der.computeWeights(rbf_centers, stencil[irbf], irbf);
         }
         double max_eig = der.computeEig(); // needs lapl_weights
         printf("zero perturbation: max eig: %f\n", max_eig);
@@ -486,30 +486,29 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     vector<double> lapl_deriv(nb_stencils);
 
     this->computeAllWeights(der, rbf_centers, grid.getStencils());
-//EB
+    //EB
     testFunction(choice, grid, u, dux_ex, duy_ex, dulapl_ex);
 
 
     avgDist = grid.getStencilRadii();
-#if 1
     for (int n=0; n < 1; n++) {
         // perhaps I'll need different (rad,eps) for each. To be determined. 
         der.computeDeriv(Derivative::X, u, xderiv);
         der.computeDeriv(Derivative::Y, u, yderiv);
         der.computeDeriv(Derivative::LAPL, u, lapl_deriv);
     }
-#endif
+
     vector<size_t>& boundary = grid.getBoundaryIndices();
     int nb_bnd = grid.getBoundaryIndicesSize();
 
-//TODO:
-// - sort boundary indices
-// - create partitions: interior, boundary 
-// - compute norms from independent sets
-// WHY?
-//  because we cannot assume that boundary nodes appear first in the node lists. The partitioning
-//  we perform for the domain decomposition pushes some boundary nodes to the bottom of the list. 
-//  This bug shows itself when we subdivide the domain into multiple subdomains. 
+    //TODO:
+    // - sort boundary indices
+    // - create partitions: interior, boundary 
+    // - compute norms from independent sets
+    // WHY?
+    //  because we cannot assume that boundary nodes appear first in the node lists. The partitioning
+    //  we perform for the domain decomposition pushes some boundary nodes to the bottom of the list. 
+    //  This bug shows itself when we subdivide the domain into multiple subdomains. 
 
     int nb_int = nb_stencils - nb_bnd;
 
@@ -538,33 +537,34 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     // Sort the boundary indices for easier partitioning
     std::vector<size_t> bindices = grid.getBoundaryIndices(); 
     std::sort(bindices.begin(), bindices.end(), srter); 
-
-    int i = 0;  // Index on boundary
-    int k = 0;  // index on interior
-    for (int j = 0; j < nb_stencils; j++) {
-        // Skim off the boundary
-        if (j == bindices[i]) {
-            dux_ex_bnd[i] = dux_ex[j]; 
-            xderiv_bnd[i] = xderiv[j]; 
-            duy_ex_bnd[i] = duy_ex[j]; 
-            yderiv_bnd[i] = yderiv[j]; 
-            dulapl_ex_bnd[i] = dulapl_ex[j]; 
-            lapl_deriv_bnd[i] = lapl_deriv[j]; 
-            avgDist_bnd[i] = avgDist[j]; 
-            i++; 
-            //  std::cout << "BOUNDARY: " << i << " / " << j << std::endl;
-        } else {
-            dux_ex_int[k] = dux_ex[j]; 
-            xderiv_int[k] = xderiv[j]; 
-            duy_ex_int[k] = duy_ex[j]; 
-            yderiv_int[k] = yderiv[j]; 
-            dulapl_ex_int[k] = dulapl_ex[j]; 
-            lapl_deriv_int[k] = lapl_deriv[j]; 
-            avgDist_int[k] = avgDist[j]; 
-            k++; 
-            // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
-        }
-    } 
+    {
+        int i = 0;  // Index on boundary
+        int k = 0;  // index on interior
+        for (int j = 0; j < nb_stencils; j++) {
+            // Skim off the boundary
+            if (j == bindices[i]) {
+                dux_ex_bnd[i] = dux_ex[j]; 
+                xderiv_bnd[i] = xderiv[j]; 
+                duy_ex_bnd[i] = duy_ex[j]; 
+                yderiv_bnd[i] = yderiv[j]; 
+                dulapl_ex_bnd[i] = dulapl_ex[j]; 
+                lapl_deriv_bnd[i] = lapl_deriv[j]; 
+                avgDist_bnd[i] = avgDist[j]; 
+//                std::cout << "BOUNDARY: " << i << " / " << j << ", " << avgDist_bnd[i] << std::endl;
+                i++; 
+            } else {
+                dux_ex_int[k] = dux_ex[j]; 
+                xderiv_int[k] = xderiv[j]; 
+                duy_ex_int[k] = duy_ex[j]; 
+                yderiv_int[k] = yderiv[j]; 
+                dulapl_ex_int[k] = dulapl_ex[j]; 
+                lapl_deriv_int[k] = lapl_deriv[j]; 
+                avgDist_int[k] = avgDist[j]; 
+  //              std::cout << "INTERIOR: " << k << " / " << j << ", " << avgDist_int[k] << std::endl;
+                k++; 
+            }
+        } 
+    }
 
     enum DERIV {X=0, Y, LAPL};
     enum NORM {L1=0, L2, LINF};
@@ -613,8 +613,8 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     normder[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex_bnd, avgDist_bnd,  0, nb_bnd);
     normder[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, 0, nb_bnd);
 
-    normder[X][L1][INT]   = l1normWeighted(dux_ex_int, avgDist_bnd,  0, nb_int);
-    normder[X][L2][INT]   = l2normWeighted(dux_ex_int, avgDist_bnd,  0, nb_int);
+    normder[X][L1][INT]   = l1normWeighted(dux_ex_int, avgDist_int,  0, nb_int);
+    normder[X][L2][INT]   = l2normWeighted(dux_ex_int, avgDist_int,  0, nb_int);
     normder[X][LINF][INT] = linfnorm(dux_ex_int, 0, nb_int);
 
     normder[Y][L1][INT]   = l1normWeighted(duy_ex_int, avgDist_int, 0, nb_int);
@@ -649,6 +649,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     double inter_error=0.;
     for (int i= 0; i < nb_int; i++) {
         inter_error += (dulapl_ex_int[i]-lapl_deriv_int[i])*(dulapl_ex_int[i]-lapl_deriv_int[i]);
+    //    std::cout << i << "dulapl_ex_int " << dulapl_ex_int[i] << ", " << lapl_deriv_int[i] << std::endl;
         //printf("inter error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
     }
     inter_error /= nb_int;
@@ -656,7 +657,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     double bnd_error=0.;
     for (int i=0; i < nb_bnd; i++) {
         bnd_error += (dulapl_ex_bnd[i]-lapl_deriv_bnd[i])*(dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
-        //printf("bnd error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
+   //     printf("bnd error[%d] = %14.7g\n", i, dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
     }
     bnd_error /= nb_bnd;
 
@@ -670,7 +671,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
         exit(EXIT_FAILURE);
     }
     if (l2_bnd > 1.e0) {
-        
+
         printf ("WARNING! Boundary l2 error is high but we'll trust it to continue\n");
         return ;
 
@@ -731,65 +732,65 @@ void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
 //  CPU for our computation to proceed.
 //----------------------------------------------------------------------
 void DerivativeTests::checkWeights(Derivative& der, int nb_centers, int nb_stencils) {
-	vector<double> u(nb_centers, 1.);
+    vector<double> u(nb_centers, 1.);
 
-	vector<double> xderiv_gpu(nb_stencils);	
-	vector<double> yderiv_gpu(nb_stencils);	
-	vector<double> zderiv_gpu(nb_stencils);	
-	vector<double> lderiv_gpu(nb_stencils);	
+    vector<double> xderiv_gpu(nb_stencils);	
+    vector<double> yderiv_gpu(nb_stencils);	
+    vector<double> zderiv_gpu(nb_stencils);	
+    vector<double> lderiv_gpu(nb_stencils);	
 
-	vector<double> xderiv_cpu(nb_stencils);	
-	vector<double> yderiv_cpu(nb_stencils);	
-	vector<double> zderiv_cpu(nb_stencils);	
-	vector<double> lderiv_cpu(nb_stencils);	
+    vector<double> xderiv_cpu(nb_stencils);	
+    vector<double> yderiv_cpu(nb_stencils);	
+    vector<double> zderiv_cpu(nb_stencils);	
+    vector<double> lderiv_cpu(nb_stencils);	
 
     cout << "start computing derivatives on CPU" << endl;
-	// Verify that the CPU works
-	der.computeDerivCPU(Derivative::X, u, xderiv_cpu);
-	der.computeDerivCPU(Derivative::Y, u, yderiv_cpu);
-	der.computeDerivCPU(Derivative::Z, u, zderiv_cpu);
-	der.computeDerivCPU(Derivative::LAPL, u, lderiv_cpu);
+    // Verify that the CPU works
+    der.computeDerivCPU(Derivative::X, u, xderiv_cpu);
+    der.computeDerivCPU(Derivative::Y, u, yderiv_cpu);
+    der.computeDerivCPU(Derivative::Z, u, zderiv_cpu);
+    der.computeDerivCPU(Derivative::LAPL, u, lderiv_cpu);
 
     cout << "start computing derivative on CPU/GPU" << endl;
     // Verify the GPU works
     der.computeDeriv(Derivative::X, u, xderiv_gpu);
-	der.computeDeriv(Derivative::Y, u, yderiv_gpu);
-	der.computeDeriv(Derivative::Z, u, zderiv_gpu);
-	der.computeDeriv(Derivative::LAPL, u, lderiv_gpu);
+    der.computeDeriv(Derivative::Y, u, yderiv_gpu);
+    der.computeDeriv(Derivative::Z, u, zderiv_gpu);
+    der.computeDeriv(Derivative::LAPL, u, lderiv_gpu);
 
     cout << "start derivative comparison" << endl;
-	for (int i = 0; i < nb_stencils; i++) {
-		//        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+    for (int i = 0; i < nb_stencils; i++) {
+        //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
         double ex = compareDeriv(xderiv_gpu[i], xderiv_cpu[i], "X", i); 
         double ey = compareDeriv(yderiv_gpu[i], yderiv_cpu[i], "Y", i); 
         double ez = compareDeriv(zderiv_gpu[i], zderiv_cpu[i], "Z", i); 
         double el = compareDeriv(lderiv_gpu[i], lderiv_cpu[i], "Lapl", i); 
 
-//        std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
-	}
-	std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
+        //        std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
+    }
+    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
 }
 
 double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx) {
 
-        if (isnan(deriv_gpu))
-        {
-            std::cout << "One of the derivs calculated by the GPU is NaN (detected by isnan)!\n"; 
-            exit(EXIT_FAILURE); 
-        }
+    if (isnan(deriv_gpu))
+    {
+        std::cout << "One of the derivs calculated by the GPU is NaN (detected by isnan)!\n"; 
+        exit(EXIT_FAILURE); 
+    }
 
-        double abs_error = fabs(deriv_gpu - deriv_cpu); 
+    double abs_error = fabs(deriv_gpu - deriv_cpu); 
 
-		if (abs_error > 1e-5) 
-		{
-			std::cout << "ERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. TRY A DIFFERENT SUPPORT PARAMETER!\n";
-			std::cout << "Test failed on" << std::endl;
-			std::cout << label << "[" << indx << "] = " << abs_error << "    (GPU: " 
-                      << deriv_gpu << " CPU: " << deriv_cpu << ")"
-                      << std::endl; 
-            std::cout << "NOTE: all derivs are supposed to be 0" << std::endl;
-			//exit(EXIT_FAILURE); 
-            exit(EXIT_FAILURE);
-		}
-        return abs_error;
+    if (abs_error > 1e-5) 
+    {
+        std::cout << "ERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. TRY A DIFFERENT SUPPORT PARAMETER!\n";
+        std::cout << "Test failed on" << std::endl;
+        std::cout << label << "[" << indx << "] = " << abs_error << "    (GPU: " 
+            << deriv_gpu << " CPU: " << deriv_cpu << ")"
+            << std::endl; 
+        std::cout << "NOTE: all derivs are supposed to be 0" << std::endl;
+        //exit(EXIT_FAILURE); 
+        exit(EXIT_FAILURE);
+    }
+    return abs_error;
 }

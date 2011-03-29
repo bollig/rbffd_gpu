@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
 
-    int prompt_to_continue = settings->GetSettingAs<int>("PROMPT_TO_CONTINUE", ProjectSettings::optional, "1"); 
+    int prompt_to_continue = settings->GetSettingAs<int>("PROMPT_TO_CONTINUE", ProjectSettings::optional, "0"); 
     int debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
 
     double start_time = settings->GetSettingAs<double>("START_TIME", ProjectSettings::optional, "0.0"); 

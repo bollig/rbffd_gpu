@@ -6,6 +6,7 @@
 //      writer for elliptic and parabolic
 #include "pdes/parabolic/heat.h"
 #include "utils/comm/communicator.h"
+#include "timer_eb.h" 
 
 class PDEWriter
 {
@@ -16,12 +17,15 @@ class PDEWriter
         Domain* subdomain; 
         Heat* heat; 
         Communicator* comm_unit;
+        EB::TimerList tm; 
 
     public: 
         PDEWriter(Domain* subdomain_, Heat* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
             : subdomain(subdomain_), heat(heat_), comm_unit(comm_unit_), 
             local_write_freq(local_write_freq_), 
-            global_write_freq(global_write_freq_) { ; } 
+            global_write_freq(global_write_freq_) { 
+                tm["write"] = new EB::Timer("write grid info and solution to disk");
+            } 
 
         virtual ~PDEWriter() {
             this->writeFinal(); 
@@ -37,15 +41,22 @@ class PDEWriter
          */
         void update(int iter) { 
             if (iter == 0) { 
+                tm["write"]->start(); 
                 this->writeInitial(); 
+                tm["write"]->stop(); 
             }
 
             if ((iter % local_write_freq) == 0) { 
+                tm["write"]->start(); 
                 this->writeLocal(iter); 
+                tm["write"]->stop(); 
             }
 
             if ((iter % global_write_freq) == 0) { 
+                tm["write"]->start(); 
                 this->writeGlobal(iter); 
+                tm["write"]->stop();
+                tm.printAll(); 
             } 
         }
 

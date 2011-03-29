@@ -43,12 +43,12 @@ ProjectSettings::ProjectSettings(int argc, char** argv) :
     this->ParseFile(cli_filename);
 }
 
-ProjectSettings::ProjectSettings(int argc, char** argv, Communicator* comm_unit):
+ProjectSettings::ProjectSettings(int argc, char** argv, int mpi_rank):
     cwd(".")
 {
     this->default_config(); 
 
-    this->parseCommandLineArgs(argc, argv, comm_unit->getRank());
+    this->parseCommandLineArgs(argc, argv, mpi_rank);
     this->ParseFile(cli_filename);
 }
 

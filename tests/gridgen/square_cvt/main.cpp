@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
 
     Communicator* comm_unit = new Communicator(argc, argv);
 
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
+    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
 	
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 

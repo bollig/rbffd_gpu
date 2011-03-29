@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 
     tm["settings"]->start(); 
 
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
+    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 

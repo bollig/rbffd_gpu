@@ -4,12 +4,11 @@
 #include <string>
 #include <map>
 //#include <stdlib.h>
-//#include <iostream>
+#include <iostream>
 #include <stdio.h>
 #include <sstream>
 //#include <fstream>
 #include <sstream>
-#include "utils/comm/communicator.h"
 
 
 /**
@@ -43,7 +42,7 @@ protected:
 public:
     // Read the file and add settings to the settings map
     ProjectSettings(int argc, char** argv);
-    ProjectSettings(int argc, char** argv, Communicator* comm_unit);
+    ProjectSettings(int argc, char** argv, int mpi_rank);
     ProjectSettings(const std::string filename);
 
     // Read the file and add/update settings in the settings map

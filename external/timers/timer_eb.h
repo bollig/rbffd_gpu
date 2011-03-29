@@ -79,7 +79,7 @@ namespace EB {
     class TimerList : public std::map<std::string, EB::Timer*>
     {
         public: 
-            void writeToFile(std::string filename) {
+            void writeToFile(std::string filename="timer_log") {
                 (*(this->begin())).second->writeAllToFile(filename); 
             } 
             void printAll() {

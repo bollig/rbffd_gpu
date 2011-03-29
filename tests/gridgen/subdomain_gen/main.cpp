@@ -14,7 +14,7 @@ using namespace std;
 int main(int argc, char** argv) {
 
     Communicator* comm_unit = new Communicator(argc, argv);
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
+    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
     // All processes should full this subdomain pointer
     Domain* subdomain; 

@@ -22,6 +22,12 @@ SET (ARGV
 
 require_config()
 
+FIND_PACKAGE(Boost) 
+
+IF(BOOST_FOUND) 
+
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
+
+ENDIF(BOOST_FOUND)

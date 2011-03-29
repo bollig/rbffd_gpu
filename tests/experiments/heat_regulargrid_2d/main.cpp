@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
         der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
     }
 
-    int use_var_eps = settings->GetSettingAs<int>("USE_VARIABLE_EPSILON", ProjectSettings::optional, "0");
+    int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");
     if (use_var_eps) {
         double alpha = settings->GetSettingAs<double>("VAR_EPSILON_ALPHA", ProjectSettings::optional, "1.0"); 
         double beta = settings->GetSettingAs<double>("VAR_EPSILON_BETA", ProjectSettings::optional, "1.0"); 
@@ -322,6 +322,7 @@ int main(int argc, char** argv) {
         // NOTE: the final solution is assembled, but we have to use the 
         // GLOBAL node list instead of a local subdomain node list
         subdomain->writeFinal(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
+        comm_unit->barrier();
         cout << "FINAL ITER: " << iter << endl;
         std::vector<double> final_sol(grid->getNodeListSize()); 
         ifstream fin; 
@@ -339,12 +340,13 @@ int main(int argc, char** argv) {
         }
         fin.close();
         std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-        heat->checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
+      //  heat->checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
         std::cout << "============== Solution Valid =============\n"; 
 #endif 
         delete(grid);
     }
-printf("REACHED THE END OF MAIN\n");
+
+printf("Cleaning up objects\n");
 
 // Writer first so we can dump final solution
 delete(writer);
@@ -355,6 +357,8 @@ delete(comm_unit);
 
 
 cout.flush();
+
+printf("REACHED THE END OF MAIN\n");
 
 tm["total"]->stop();
 tm["total"]->printAll();

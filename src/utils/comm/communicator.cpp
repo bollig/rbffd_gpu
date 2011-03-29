@@ -7,10 +7,17 @@ using namespace std;
 
 #include "communicator.h"
 
+extern "C" {
+    int comm_destruct_called =0;
+}
 void closeAllMPI(void) {
-
-    std::cout << "[Communicator] finalizing MPI with atexit" << std::endl;
-    MPI_Finalize();
+    std::cout << "[Communicator] Comm Unit Destroyed?: " << comm_destruct_called << std::endl;
+    if (!comm_destruct_called) {
+        std::cout << "[Communicator] aborting MPI with atexit" << std::endl;
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    } else {
+        std::cout << "[Communicator] already finalized. Nothing to do atexit" << std::endl;
+    }
 }
 
 Communicator::Communicator(int argc, char** argv) {
@@ -24,8 +31,9 @@ Communicator::Communicator(int argc, char** argv) {
 
 
 Communicator::~Communicator() {
-	//MPI_Finalize();
+	MPI_Finalize();
     std::cout << "[Communicator] destroying communicator on rank " << this->getRank() << ", delaying MPI_Finalize within atexit()." << std::endl;
+    comm_destruct_called = 1;
 }
 
 

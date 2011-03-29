@@ -60,6 +60,37 @@ Timer::Timer(const char* name_, int offset, int nbCalls)
 	//printf("constructor: this= %d, name= %s\n", this, name.c_str());
 	reset();
 }
+
+//----------------------------------------------------------------------
+Timer::Timer(const char* name_, float initial_time, int offset, int nbCalls) 
+{
+    name = name_;
+
+	switch (CLOCKS_PER_SEC) {
+	case 1000000:
+		scale = 1000. / (float) CLOCKS_PER_SEC;
+		break;
+	case 1000:
+		scale = 1. / (float) CLOCKS_PER_SEC;
+		break;
+	default:
+		printf("Timer does handle this case\n");
+		printf("CLOCKS_PER_SEC= %ld\n", (long) CLOCKS_PER_SEC);
+		exit(0);
+	}
+	count = 1;
+	unit = "ms";
+	t = initial_time;
+	t1 = 0;
+	t2 = 0;
+
+	this->nbCalls = nbCalls;
+	this->offset = offset;
+	timeList.push_back(this);
+	//printf("constructor: this= %d, name= %s\n", this, name.c_str());
+	reset();
+}
+
 //----------------------------------------------------------------------
 Timer::Timer(const Timer& t)
 {

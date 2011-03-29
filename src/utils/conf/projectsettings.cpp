@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 //----------------------------------------------------------------------
 #include <stdlib.h>
+#include <limits.h>
 #include <getopt.h>		// for getopt
 
 
@@ -167,9 +168,24 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                 log_file = logname; 
                 break;
             case 'c':
-                cli_filename = launch_dir; 
-                cli_filename.append("/"); 
-                cli_filename.append(optarg); 
+                // Handle some relative and absolute paths (in case our 
+                // shell (read: submit script) cant help us on this one)
+                if (optarg[0] == '/') { 
+                    cli_filename = optarg; 
+                } else if (optarg[0] == '~') {
+                    cli_filename = getenv("HOME"); 
+                    cli_filename.append("/"); 
+                    cli_filename.append(&optarg[1]);
+                } else if (optarg[0] == '.') {
+                    char rpat[PATH_MAX]; 
+                    realpath(optarg,rpat); 
+                    //printf("<--%s-->file\n", rpat);
+                    cli_filename = rpat; 
+                } else { 
+                    cli_filename = launch_dir; 
+                    cli_filename.append("/"); 
+                    cli_filename.append(optarg); 
+                }
                 break;
 
             case 'h':

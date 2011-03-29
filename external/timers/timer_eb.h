@@ -4,13 +4,30 @@
 // gettimeofday: measured in sec/microsec: wall clock time
 // irrespective of CPU/system/threads, etc.
 
-#include <string>
+
+#ifdef WIN32
+#include <time.h>
+#include <Windows.h>
+#include "gtod_windows.h"
+#else
 #include <sys/time.h>
+#endif
+
+#ifdef WIN32
+    #if defined(rtps_EXPORTS)
+        #define RTPS_EXPORT __declspec(dllexport)
+    #else
+        #define RTPS_EXPORT __declspec(dllimport)
+	#endif 
+#else
+    #define RTPS_EXPORT
+#endif
+
+#include <string>
 #include <vector>
 #include <stdio.h>
 #include <map> 
 #include <string> 
-//#include "time.h"
 
 namespace EB {
 
@@ -47,6 +64,9 @@ public:
 
 	void stop() { end(); }
 	void start() { begin(); }
+
+    void set(float t); //add a time from an external timer (GPU)
+
 	static void printAll(FILE* fd=stdout, int label_width=50);
 	void print(FILE* fd=stdout, int label_width=50);
     void writeAllToFile(std::string filename="timer_log"); 
@@ -58,7 +78,7 @@ public:
 class TimerList : public std::map<std::string, EB::Timer*>
 {
     public: 
-    void writeToFile(std::string filename = "timer_log") {
+    void writeToFile(std::string filename) {
         (*(this->begin())).second->writeAllToFile(filename); 
     } 
     void printAll() {

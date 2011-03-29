@@ -115,6 +115,17 @@ void Timer::end()
 
 	//t +=  (clock() - t1) * scale;
 }
+
+void Timer::set(float tt)
+{
+    count++;
+    if (count <= offset) return;
+    t += tt;
+    if (count == nbCalls) {
+        print();
+        reset();
+    }
+}
 //----------------------------------------------------------------------
 void Timer::print(FILE* fd, int label_width)
 {

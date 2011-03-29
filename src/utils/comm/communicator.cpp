@@ -1,21 +1,31 @@
 #include <mpi.h>
 #include <cmath>
 #include <iostream>
+#include <stdlib.h> 
 
 using namespace std; 
 
 #include "communicator.h"
+
+void closeAllMPI(void) {
+
+    std::cout << "[Communicator] finalizing MPI with atexit" << std::endl;
+    MPI_Finalize();
+}
 
 Communicator::Communicator(int argc, char** argv) {
  	MPI_Init(&argc, &argv); 
 
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
+
+    atexit(closeAllMPI);
 }
 
 
 Communicator::~Communicator() {
-	MPI_Finalize();
+	//MPI_Finalize();
+    std::cout << "[Communicator] destroying communicator on rank " << this->getRank() << ", delaying MPI_Finalize within atexit()." << std::endl;
 }
 
 

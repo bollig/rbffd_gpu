@@ -1,10 +1,12 @@
 #ifndef _Domain_H_
 #define _Domain_H_
+
+#include "utils/comm/mpisendable.h"
+
 #include <vector>
 #include <set>
 #include <map>
 
-#include "utils/comm/mpisendable.h"
 #include "grids/grid_interface.h"
 #include "common_typedefs.h"
 

@@ -1,7 +1,9 @@
 #ifndef __MPI_SENDABLE__
 #define __MPI_SENDABLE__
 
+// NOTE: include mpi.h must be before stdlib.h for mpich2
 #include <mpi.h>
+
 #include <vector> 
 #include <set> 
 #include <map>

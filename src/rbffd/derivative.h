@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
-#include <math.h>
+#include <cmath>
 #include "ArrayT.h"
 #include "Vec3.h"
 //#include <armadillo>
@@ -132,13 +132,13 @@ public:
     void setAvgStencilRadius(std::vector<double>& avg_radius_) {
         this->setVariableEpsilon(avg_radius_); 
     }
-    void setVariableEpsilon(std::vector<double>& avg_radius_, float alpha=1.0f, float beta=1.0f) {
+    void setVariableEpsilon(std::vector<double>& avg_radius_, double alpha=1.0f, double beta=1.0f) {
         use_var_eps = 1;
         std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
         avg_stencil_radius = avg_radius_;
         var_epsilon.resize(avg_stencil_radius.size());
         for (int i=0; i < var_epsilon.size(); i++) {
-            var_epsilon[i] = alpha / pow(avg_stencil_radius[i], beta);
+            var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
             printf("var_epsilon(%d) = %f\n", i, var_epsilon[i]);
         }
     }

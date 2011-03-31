@@ -320,6 +320,8 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         this->write_to_file(rel_error_host, "E_relative.mtx");
 
         std::cout << "Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = " << norm_2(exact_host - x_host) / norm_2(exact_host) << std::endl;
+        std::cout << "Relative residual || x_exact - x_approx ||_1 / || x_exact ||_1  = " << norm_1(exact_host - x_host) / norm_1(exact_host) << std::endl;
+        std::cout << "Relative residual || x_exact - x_approx ||_inf / || x_exact ||_inf  = " << norm_inf(exact_host - x_host) / norm_inf(exact_host) << std::endl;
         std::cout << "Relative residual || A*x_exact - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, exact_host) - F_host) / norm_2(F_host) << std::endl;
         std::cout << "Relative residual || A*x_approx - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, x_host) - F_host) / norm_2(F_host) << std::endl;
         std::cout << "[Precision] sizeof(FLOAT) = " << sizeof(FLOAT) << " bytes (4 = single; 8 = double)" << std::endl;

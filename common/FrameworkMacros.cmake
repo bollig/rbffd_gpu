@@ -10,7 +10,7 @@
 MACRO ( REQUIRE_FRAMEWORK_VTK )
     # if VTK_FOUND and ENABLED
     #   assume the rbf_vtk lib was built
-    message( STATUS "TODO" )
+    message( STATUS "TODO: DISABLE TEST IF VTK NOT FOUND" )
     find_package(VTK)
     if (VTK_FOUND)
          INCLUDE( ${USE_VTK_FILE} )

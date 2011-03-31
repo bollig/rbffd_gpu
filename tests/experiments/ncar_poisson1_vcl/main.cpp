@@ -16,9 +16,7 @@ using namespace std;
 
 int main(int argc, char** argv) {
 
-    Communicator* comm_unit = new Communicator(argc, argv);
-
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit);
+    ProjectSettings* settings = new ProjectSettings(argc, argv);
 
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
@@ -31,8 +29,6 @@ int main(int argc, char** argv) {
         cout << "ERROR! Dim > 3 Not supported!" << endl;
         exit(EXIT_FAILURE); 
     }
-
-    double epsilon = settings->GetSettingAs<double>("EPSILON");
 
     double inner_r = settings->GetSettingAs<double>("INNER_RADIUS", ProjectSettings::optional, "0.5"); 
     double outer_r = settings->GetSettingAs<double>("OUTER_RADIUS", ProjectSettings::optional, "1.0"); 
@@ -94,7 +90,17 @@ int main(int argc, char** argv) {
 
     Derivative* der = new Derivative(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndicesSize(), dim);
 
-    der->setEpsilon(epsilon);
+   // Enable variable epsilon. Not verified to be perfected in the derivative calculation.
+   // But it has improved the heat equation already
+    int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");
+    if (use_var_eps) {
+        double alpha = settings->GetSettingAs<double>("VAR_EPSILON_ALPHA", ProjectSettings::optional, "1.0"); 
+        double beta = settings->GetSettingAs<double>("VAR_EPSILON_BETA", ProjectSettings::optional, "1.0"); 
+        der->setVariableEpsilon(grid->getStencilRadii(), alpha, beta); 
+    } else {
+        double epsilon = settings->GetSettingAs<double>("EPSILON", ProjectSettings::required);
+        der->setEpsilon(epsilon);
+    }
 
     if (run_derivative_tests) {
         DerivativeTests* der_test = new DerivativeTests();
@@ -108,7 +114,7 @@ int main(int argc, char** argv) {
     poisson->setUseUniformDiffusivity(use_uniform_diffusion);
 
     poisson->initialConditions();
-    poisson->solve(comm_unit);
+    poisson->solve();
 
     delete(poisson);
 //    delete(der);

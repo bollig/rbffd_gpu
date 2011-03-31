@@ -62,7 +62,7 @@ public:
         ~NCARPoisson1();
 
         // Solve the Poisson problem
-        virtual void solve(Communicator* comm_unit);
+        virtual void solve(Communicator* comm_unit=NULL);
 
 	// Only update the updated_solution vector if it is non-null (i.e. we actually pass something to the routine)
 	void initialConditions(std::vector<double>* solution = NULL);

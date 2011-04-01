@@ -42,6 +42,14 @@ nfigs = length(figs);
        % Get the axes element from the figure; get the title object from
        % the axes; get the string from the title
        titlestr = get(get(get(figs(i), 'CurrentAxes'), 'Title'), 'String');
+       title = get(get(figs(i), 'CurrentAxes'), 'Title');
+%       oldfontsize = get(get(get(figs(i), 'CurrentAxes'), 'Title'), 'FontSize');
+ %      set(figs(i),'FontSize', 18);
+
+       window_dim = get(figs(i), 'Position'); 
+       % Increase window width to 800x600
+       set(figs(i), 'Position', [100, 900, 1024, 768]); 
+       
        if iscell(titlestr)
            titlestr = strcat(titlestr{1:end});
        end
@@ -59,9 +67,13 @@ nfigs = length(figs);
        
        filename = sprintf('%s', titlestr);
        %print(figs(i), '-zbuffer','-dpdf','-r600', filename);
-       exportfig(figs(i),filename,'Format','png','Color','rgb','Renderer','zbuffer','Resolution',600,'bounds','loose');
+       exportfig(figs(i),filename,'Format','png','FontMode','fixed','FontSize','18','Color','rgb','Renderer','zbuffer','Resolution',600,'bounds','loose');
        % Export a figure with separate text so text is visible at printer 
        % resolution. 
        % exportfig(gcf,'test.eps','separatetext',1);
+       
+       % Put things back the way we found them: 
+ %      set(title,'FontSize', oldfontsize);
+       set(figs(i), 'Position', window_dim); 
    end
 end

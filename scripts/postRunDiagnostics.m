@@ -10,8 +10,8 @@ end
 [A, rows, cols, entries] = mmread(MatrixMarketFilename);
 
 checkSymmetry(A, MatrixMarketFilename, testCaseName); 
-
-checkEigenvalues(A, MatrixMarketFilename, testCaseName);
+checkReordering(A, MatrixMarketFilename, 0);
+%checkEigenvalues(A, MatrixMarketFilename, testCaseName);
 
 fprintf(1, 'end\n');
 end

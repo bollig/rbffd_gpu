@@ -31,7 +31,7 @@ protected:
     int nb_rbfs;
     double maxint;
 
-    BasesListType rbfs;
+    //BasesListType rbfs;
     double* weights_p;
     // Make sure these are deleted inside the destructor
     std::vector<double*> x_weights;
@@ -83,7 +83,7 @@ public:
 
     // Fill distance_matrix with nrows-by-ncols values for a distance matrix where each row i corresponds 
     // to the distances from rbf_centers in stencil i to the ith rbf_center. 
-    void distanceMatrix(std::vector<Vec3>& rbf_centers, StencilType& stencil, double rbf_support, int irbf, double* distance_matrix, int nrows, int ncols, int dim_num);
+    void distanceMatrix(std::vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, double* distance_matrix, int nrows, int ncols, int dim_num);
 
     AF& solve(AF& l, AF& b);
     AF& matmul(AF& arr, AF& x);
@@ -120,8 +120,8 @@ public:
     double* getRWeights(int indx) { return r_weights[indx]; }
     double* getLaplWeights(int indx) { return lapl_weights[indx]; }
 
-    BasesType& getRBFList(int stencil_indx) { return rbfs[stencil_indx]; }
-    BasesListType& getRBFList() { return rbfs; }
+//    BasesType& getRBFList(int stencil_indx) { return rbfs[stencil_indx]; }
+//    BasesListType& getRBFList() { return rbfs; }
 
     double computeEig();
 

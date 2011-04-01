@@ -177,6 +177,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(nb-1), subdomain->getNodeList());
         } else {
             cout << "NOT USING DIRICHLET LOCKDOWN MODE" << endl;
+            cout << "Use discrete rhs: " << use_discrete_rhs << " (0=Exact; 1=Discrete)" << endl;
             // Normal fill with homogenous boundary conditions. The solutions are not tied down very well.
             for (int i = 0; i < nb; i++) {
                 switch (boundary_condition) {

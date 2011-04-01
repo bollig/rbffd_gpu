@@ -139,7 +139,8 @@ public:
         var_epsilon.resize(avg_stencil_radius.size());
         for (int i=0; i < var_epsilon.size(); i++) {
             var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
-            printf("var_epsilon(%d) = %f\n", i, var_epsilon[i]);
+            printf("avg_stencil_radius(%d) = %10.10f\n", i , avg_stencil_radius[i]); 
+            printf("var_epsilon(%d) = %10.10f\n", i, var_epsilon[i]);
         }
     }
 #if 0

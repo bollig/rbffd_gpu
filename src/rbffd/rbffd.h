@@ -15,36 +15,29 @@
 
 //typedef RBF_Gaussian IRBF;
 typedef RBF_MQ IRBF;
+// TODO: put this in rbf.h and have all rbf types available
+enum RBFType {MQ=0, GA, IMQ, TPS, W2};
 
-// Temporary:
-#define RBFFD Derivative
+// Should match how many DerTypes we have
+#define NUM_DERIV_TYPES 4
+
 class RBFFD
 {
     public:
         enum DerType {X, Y, Z, LAPL};
 
     protected: 
-        TimerList tm; 
+        EB::TimerList tm; 
 
-        Grid& grid_ref;
+        Domain& grid_ref;
 
-        // The weights calculated by this class
-        // NOTE: we could put these in a single vector or a map and have each
-        // element looked up by a key "dxdy", "dzdy", etc.
-#if 0
-        std::vector<double*> x_weights;
-        std::vector<double*> y_weights;
-        std::vector<double*> z_weights;
-        std::vector<double*> lapl_weights;
-#else 
         // Weight array. Each element is associated with one DerType (see above). 
-        std::vector<double*>[4] weights; 
-#endif 
+        std::vector<double*>[NUM_DERIV_TYPES] weights; 
+        
         // 0/1 (false/true) are the weights for the associated stencil computed yet? 
-        //
         // NOTE: each vector is associate with one DerType (see above), and each element
         // of the vector corresponds to a stencil 
-        std::vector<int>[4] stWeightsComputed; 
+        std::vector<int> stWeightsComputed; 
 
         // A list of support parameters for each RBF centered at each node
         std::vector<double> var_epsilon;
@@ -60,20 +53,25 @@ class RBFFD
         // Have any parameters been modified?
         int modified; 
 
+        //TODO: add choice for RBF (only one option at the moment)
+
     public: 
 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives
         // (up to 3 right now) 
-        RBFFD(const Grid& grid, int dim_num); 
+        RBFFD(const Domain& grid, int dim_num, RBF_Type rbf_choice=0); 
 
-        ~RBFFD(); 
+        virtual ~RBFFD(); 
 
-        // Compute the full set of derivative weights for all stencils 
-        int computeAllWeightsForAllDerivs();
-        // Compute the full set of weights for a derivative type
-        int computeAllWeightsForDeriv(DerType which); 
-        // Compute the full set of derivative weights for a stencil
-//TODO:        int computeAllWeightsForStencil(int st_indx); 
+        // NOTE: we compute all weights for a stencil at the same time,
+        // because we can do this for (nearly) free. Its a multiple RHS
+        // solve---hard to justify NOT doing this! 
+        //
+        void computeAllWeightsForAllStencils();
+        void computeAllWeightsForStencil(int st_indx);
+        //void computeWeightsForStencil(DerType which, int st_indx);
+
+        // TODO: consider computing single set of weights for stencil
 
         // Use a direct solver on to calculate weights.
         virtual int computeStencilWeights(std::vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, double* weights)
@@ -125,19 +123,6 @@ class RBFFD
             }
         }
 
-#if 0
-        // Accessors for weight data: 
-        std::vector<double*>& getXWeights() { return x_weights; }
-        std::vector<double*>& getYWeights() { return y_weights; }
-        std::vector<double*>& getZWeights() { return z_weights; }
-        std::vector<double*>& getRWeights() { return r_weights; }
-        std::vector<double*>& getLaplWeights() { return lapl_weights; }
-        double* getXWeights(int indx) { return x_weights[indx]; }
-        double* getYWeights(int indx) { return y_weights[indx]; }
-        double* getZWeights(int indx) { return z_weights[indx]; }
-        double* getRWeights(int indx) { return r_weights[indx]; }
-        double* getLaplWeights(int indx) { return lapl_weights[indx]; }
-#else 
         // Accessors for weight data: 
         std::vector<double*>& getXWeights() { return weights[this->X]; }
         std::vector<double*>& getYWeights() { return weights[this->Y]; }
@@ -150,10 +135,9 @@ class RBFFD
 
         std::vector<double*>& getWeights(DerType choice) { return weights[choice]; }
         double*& getStencilWeights(DerType choice, int st_indx) { return weights[choice][st_indx]; } 
-#endif 
 
-        void writeWeightsToFile(std::string filename); 
-        void loadWeightsFromFile(std::string filename); 
+        void writeWeightsToFile(std::string filename) {;} 
+        void loadWeightsFromFile(std::string filename) {;} 
 
 
     protected: 
@@ -162,8 +146,6 @@ class RBFFD
         arma::mat distanceMatrix(std::vector<NodeType>& rbf_centers,
                 StencilType& stencil, size_t stencil_center_indx, int dim_num); 
 
-        // TEMPORARY: 
-#undef RBFFD
 };
 
 #endif 

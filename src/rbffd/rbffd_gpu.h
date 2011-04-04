@@ -20,7 +20,7 @@ class RBFFD_GPU : public RBFFD, public CLBaseClass
         //
         //TODO: - constructor should allocate the buffers on the GPU
         //      - onStart applyWeights... will check if(modified) { updateGPUstructs } 
-        RBFFD(const Grid& grid, int dim_num, int rank=0); 
+        RBFFD(const Domain& grid, int dim_num, RBF_Type rbf_choice=0); 
         ~RBFFD(); 
 
         // FIXME: assumes size of buffers does not change (should check if it

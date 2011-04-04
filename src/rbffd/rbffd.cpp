@@ -48,12 +48,11 @@ void RBFFD::computeAllWeightsForAllStencils() {
 }
 
 //--------------------------------------------------------------------
-arma::mat RBFFD::getStencilMultiRHS(StencilType& stencil, int num_monomials) {
-    arma::mat* rhs = new arma::mat(stencil.size(), NUM_DERIV_TYPES); 
+void RBFFD::getStencilMultiRHS(StencilType& stencil, int num_monomials, arma::mat& rhs) {
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
-       rhs.col(i) = this->getStencilRHS(i, stencil, num_monomials); 
+       this->getStencilRHS(i, stencil, num_monomials, rhs.col(i)); 
     }
-    return *rhs; 
+//    return rhs; 
 }
 //--------------------------------------------------------------------
 
@@ -109,22 +108,26 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     // Stencil center
     Vec3& x0v = rbf_centers[stencil[0]];
 
-    arma::mat rhs = this->getStencilMultiRHS(rbf, x0v, stencil, np);
-    arma::mat lhs = this->getStencilLHS(rbf, x0v, stencil, np);
+    arma::mat rhs = arma::mat(n+np, NUM_DERIV_TYPES); 
+    arma::mat lhs = arma::mat(n+np, n+np); 
+
+    this->getStencilMultiRHS(rbf, x0v, stencil, np, rhs);
+    this->getStencilLHS(rbf, x0v, stencil, np, lhs);
 
     rhs.print("RHS="); 
-    lhs.print("RHS="); 
+    lhs.print("LHS="); 
 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
     arma::mat weights_new = arma::solve(lhs, trans(rhs)); //bx*Ainv;
 
-    if (this->weights[which][irbf] == NULL) {
-        this->weights[which][irbf] = new double[n+np];
+    for (int i = 0; i < NUM_DERIV_TYPES; i++) {
+    if (this->weights[i][irbf] == NULL) {
+        this->weights[i][irbf] = new double[n+np];
     }
     for (int j = 0; j < n+np; j++) {
-        this->weights[which][irbf][j] = weights_new[j];
+        this->weights[i][irbf][j] = weights_new[j];
     }
 
 #if DEBUG
@@ -147,19 +150,19 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
         exit(EXIT_FAILURE);
     }
 #endif // DEBUG
+    }
 
     tm["computeWeights"]->end();
 }
 
 //--------------------------------------------------------------------
 
-arma::mat RBFFD::getStencilRHS(DerType which, StencilType& stencil, int num_monomials) { 
+arma::mat RBFFD::getStencilRHS(DerType which, StencilType& stencil, int num_monomials, arma::mat& rhs) { 
 
     int np = num_monomials; 
     int n = stencil.size(); 
 
-    // Single RHS
-    arma::mat* rhs = new arma::mat(n+np, 1); 
+    // Assume single RHS
     rhs.zeros();
 
     // NOTE: we want to evaluate the analytic derivs of phi at the stencil center point
@@ -228,6 +231,7 @@ arma::mat RBFFD::getStencilRHS(DerType which, StencilType& stencil, int num_mono
         }
     }
 
+    return rhs;
 }
 
 
@@ -246,46 +250,19 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     // Stencil center
     Vec3& x0v = rbf_centers[stencil[0]];
 
-    arma::mat rhs = this->fillWeightRHS(rbf, x0v, stencil, np);
+    arma::mat rhs(n+np, 1); 
+    arma::mat lhs(n+np, n+np); 
+
+    this->getStencilRHS(rbf, x0v, stencil, np, rhs);
+    this->getStencilLHS(rbf, x0v, stencil, np, lhs); 
 
     rhs.print("RHS="); 
-
-    // Generate a distance matrix and find the SVD of it.
-    // n+4 = 1 + dim(3) for x,y,z
-    arma::mat d_matrix(n+np, n+np);
-    d_matrix.zeros(n+np,n+np);
-    // value 0 => stencil center is at index 0 in "stencil"
-    // dim_num required for RBF
-    d_matrix = this->distanceMatrix(rbf_centers, stencil, 0, dim_num);
-
-    // Fill the polynomial part
-    for (int i=0; i < n; i++) {
-        d_matrix(n, i) = 1.0;
-        d_matrix(i, n) = 1.0;
-    }
-    if (np > 1) {
-        for (int i=0; i < n; i++) {
-            d_matrix(n+1, i) = rbf_centers[stencil[i]].x();
-            d_matrix(i, n+1) = rbf_centers[stencil[i]].x();
-
-            if (np > 2) {
-                d_matrix(n+2, i) = rbf_centers[stencil[i]].y();
-                d_matrix(i, n+2) = rbf_centers[stencil[i]].y();
-            }
-
-            if (np == 4) {
-                d_matrix(n+3, i) = rbf_centers[stencil[i]].z();
-                d_matrix(i, n+3) = rbf_centers[stencil[i]].z();
-            }
-        }
-    }
-
-    d_matrix.print("DISTANCE MATRIX: ");
+    lhs.print("LHS=");
 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
-    arma::mat weights_new = arma::solve(d_matrix, trans(rhs)); //bx*Ainv;
+    arma::mat weights_new = arma::solve(lhs, trans(rhs)); //bx*Ainv;
 
     if (this->weights[which][irbf] == NULL) {
         this->weights[which][irbf] = new double[n+np];

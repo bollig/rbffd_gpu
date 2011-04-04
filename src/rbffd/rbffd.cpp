@@ -1,11 +1,13 @@
+
+
 #include "rbffd.h"
 
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
-    RBFFD::RBFFD(const Domain& grid, int dim_num_, RBF_Type rbf_choice) 
+    RBFFD::RBFFD(Domain& grid, int dim_num_)//, RBF_Type rbf_choice) 
 : grid_ref(grid), dim_num(dim_num)
 {
-    int nb_rbfs = grid->getNodeListSize(); 
+    int nb_rbfs = grid.getNodeListSize(); 
 
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
         // All weights should be NULL initially so we can tell if they're
@@ -23,13 +25,11 @@
 }
 //--------------------------------------------------------------------
 
-~RBFFD::RBFFD() {
+RBFFD::~RBFFD() {
     for (int j = 0; j < NUM_DERIV_TYPES; j++) {
-        if (weights[j] != NULL) {
-            for (int i = 0; i < weights[j].size(); i++) {
-                if (weights[j][i] != NULL) {
-                    delete [] weights[j][i];
-                }
+        for (int i = 0; i < weights[j].size(); i++) {
+            if (weights[j][i] != NULL) {
+                delete [] weights[j][i];
             }
         }
     }
@@ -39,7 +39,7 @@
 // Compute the full set of derivative weights for all stencils 
 void RBFFD::computeAllWeightsForAllStencils() {
 
-    std::vector<StencilType>& st_map = grid_ref->getStencils(); 
+    std::vector<StencilType>& st_map = grid_ref.getStencils(); 
     size_t nb_st = st_map.size(); 
 
     for (size_t i = 0; i < nb_st; i++) {
@@ -48,23 +48,32 @@ void RBFFD::computeAllWeightsForAllStencils() {
 }
 
 //--------------------------------------------------------------------
-void RBFFD::getStencilMultiRHS(StencilType& stencil, int num_monomials, arma::mat& rhs) {
+void RBFFD::getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs) {
+    size_t nn = stencil.size()+num_monomials; 
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
-       this->getStencilRHS(i, stencil, num_monomials, rhs.col(i)); 
+        arma::mat col(nn,1); 
+        // Fill by column
+       this->getStencilRHS((DerType)i, rbf_centers, stencil, num_monomials, col); 
+       rhs.submat(0,(DerType)i,nn,i) = col; 
     }
 //    return rhs; 
 }
 //--------------------------------------------------------------------
 
 
-arma::mat RBFFD::getStencilLHS(IRBF& rbf, NodeType& center, StencilType& stencil, int num_monomials) {
-// Generate a distance matrix and find the SVD of it.
+void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& d_matrix) {
+
+    int n = stencil.size();
+    int np = num_monomials;
+    // Generate a distance matrix and find the SVD of it.
     // n+4 = 1 + dim(3) for x,y,z
-    arma::mat d_matrix(n+np, n+np);
-    d_matrix.zeros(n+np,n+np);
+//    arma::mat d_matrix(n+np, n+np);
+//    d_matrix.zeros(n+np,n+np);
+    d_matrix.zeros(); 
+
     // value 0 => stencil center is at index 0 in "stencil"
     // dim_num required for RBF
-    d_matrix = this->distanceMatrix(rbf_centers, stencil, 0, dim_num);
+    this->distanceMatrix(rbf_centers, stencil, 0, dim_num, d_matrix);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -89,7 +98,6 @@ arma::mat RBFFD::getStencilLHS(IRBF& rbf, NodeType& center, StencilType& stencil
     }
 
     d_matrix.print("DISTANCE MATRIX: ");
-    return d_matrix; 
 }
 
 //--------------------------------------------------------------------
@@ -97,13 +105,12 @@ arma::mat RBFFD::getStencilLHS(IRBF& rbf, NodeType& center, StencilType& stencil
 // Compute the full set of weights for a derivative type
 void RBFFD::computeAllWeightsForStencil(int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
-    tm["computeWeights"]->start(); 
+    tm["computeAllWeights"]->start(); 
+    StencilType& stencil = grid_ref.getStencil(st_indx); 
     int n = stencil.size();
     int np = 1+dim_num; // +3 for the x,y,z monomials
 
-    StencilType stencil = grid_ref->getStencil(st_indx); 
-    std::vector<NodeType>& rbf_centers = grid_ref->getNodeList(); 
-
+    std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
 
     // Stencil center
     Vec3& x0v = rbf_centers[stencil[0]];
@@ -111,8 +118,8 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     arma::mat rhs = arma::mat(n+np, NUM_DERIV_TYPES); 
     arma::mat lhs = arma::mat(n+np, n+np); 
 
-    this->getStencilMultiRHS(rbf, x0v, stencil, np, rhs);
-    this->getStencilLHS(rbf, x0v, stencil, np, lhs);
+    this->getStencilMultiRHS(rbf_centers, stencil, np, rhs);
+    this->getStencilLHS(rbf_centers, stencil, np, lhs);
 
     rhs.print("RHS="); 
     lhs.print("LHS="); 
@@ -121,34 +128,34 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
     arma::mat weights_new = arma::solve(lhs, trans(rhs)); //bx*Ainv;
-
+    int irbf = st_indx;
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
-    if (this->weights[i][irbf] == NULL) {
-        this->weights[i][irbf] = new double[n+np];
-    }
-    for (int j = 0; j < n+np; j++) {
-        this->weights[i][irbf][j] = weights_new[j];
-    }
+        if (this->weights[i][irbf] == NULL) {
+            this->weights[i][irbf] = new double[n+np];
+        }
+        for (int j = 0; j < n+np; j++) {
+            this->weights[i][irbf][j] = weights_new[j];
+        }
 
 #if DEBUG
-    double sum_nodes_only = 0.;
-    double sum_nodes_and_monomials = 0.;
-    for (int j = 0; j < n; j++) {
-        sum_nodes_only += weights_new[j];
-    }
-    sum_nodes_and_monomials = sum_nodes_only;
-    for (int j = n; j < n+np; j++) {
-        sum_nodes_and_monomials += weights_new[j];
-    }
+        double sum_nodes_only = 0.;
+        double sum_nodes_and_monomials = 0.;
+        for (int j = 0; j < n; j++) {
+            sum_nodes_only += weights_new[j];
+        }
+        sum_nodes_and_monomials = sum_nodes_only;
+        for (int j = n; j < n+np; j++) {
+            sum_nodes_and_monomials += weights_new[j];
+        }
 
-    cout << "(" << irbf << ") ";
-    weights_new.print("lapl_weights");
-    cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
-    cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
-    if (sum_nodes_only > 1e-7) {
-        cout << "WARNING! SUM OF WEIGHTS FOR LAPL NODES IS NOT ZERO: " << sum_nodes_only << endl;
-        exit(EXIT_FAILURE);
-    }
+        cout << "(" << irbf << ") ";
+        weights_new.print("lapl_weights");
+        cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
+        cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
+        if (sum_nodes_only > 1e-7) {
+            cout << "WARNING! SUM OF WEIGHTS FOR LAPL NODES IS NOT ZERO: " << sum_nodes_only << endl;
+            exit(EXIT_FAILURE);
+        }
 #endif // DEBUG
     }
 
@@ -157,13 +164,15 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
 
 //--------------------------------------------------------------------
 
-arma::mat RBFFD::getStencilRHS(DerType which, StencilType& stencil, int num_monomials, arma::mat& rhs) { 
+void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs) { 
 
     int np = num_monomials; 
     int n = stencil.size(); 
 
     // Assume single RHS
     rhs.zeros();
+
+    NodeType& x0v = rbf_centers[stencil[0]];
 
     // NOTE: we want to evaluate the analytic derivs of phi at the stencil center point
     // using every stencil RBF: 
@@ -231,7 +240,6 @@ arma::mat RBFFD::getStencilRHS(DerType which, StencilType& stencil, int num_mono
         }
     }
 
-    return rhs;
 }
 
 
@@ -240,12 +248,14 @@ arma::mat RBFFD::getStencilRHS(DerType which, StencilType& stencil, int num_mono
 void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
     tm["computeWeights"]->start(); 
-    int n = stencil.size();
+
+
+
+    StencilType stencil = grid_ref.getStencil(st_indx); 
+    std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
+
     int np = 1+dim_num; // +3 for the x,y,z monomials
-
-    StencilType stencil = grid_ref->getStencil(st_indx); 
-    std::vector<NodeType>& rbf_centers = grid_ref->getNodeList(); 
-
+    int n = stencil.size();
 
     // Stencil center
     Vec3& x0v = rbf_centers[stencil[0]];
@@ -253,8 +263,8 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     arma::mat rhs(n+np, 1); 
     arma::mat lhs(n+np, n+np); 
 
-    this->getStencilRHS(rbf, x0v, stencil, np, rhs);
-    this->getStencilLHS(rbf, x0v, stencil, np, lhs); 
+    this->getStencilRHS(which, rbf_centers, stencil, np, rhs);
+    this->getStencilLHS(rbf_centers, stencil, np, lhs); 
 
     rhs.print("RHS="); 
     lhs.print("LHS=");
@@ -263,6 +273,7 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
     arma::mat weights_new = arma::solve(lhs, trans(rhs)); //bx*Ainv;
+    int irbf = st_indx;
 
     if (this->weights[which][irbf] == NULL) {
         this->weights[which][irbf] = new double[n+np];
@@ -320,8 +331,8 @@ void RBFFD::setupTimers() {
 
 //--------------------------------------------------------------------
 
-arma::mat RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, size_t stencil_center_indx, int dim_num) {
-
+void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, size_t stencil_center_indx, int dim_num, arma::mat& ar) {
+    int irbf = stencil_center_indx;
     Vec3& c = rbf_centers[irbf];
     int n = stencil.size();
     //printf("stencil size= %d\n", n);
@@ -331,7 +342,11 @@ arma::mat RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType&
 
     //arma::mat &ar = *distance_matrix;
     // mat NewMat(memspace, rowdim, coldim, reuseMemSpace?)
-    arma::mat ar(distance_matrix,nrows,ncols,false);
+
+
+    // Assume ar is pre-allocated
+#if 0
+    arma::mat& ar(distance_matrix,nrows,ncols,false);
 
     //mat ar(n,n);
     // Derivative of a constant should be zero
@@ -342,7 +357,7 @@ arma::mat RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType&
     } else {
         ar.zeros(n,n);
     }
-
+#endif 
     int st_center = -1;
 
     // which stencil point is irbf

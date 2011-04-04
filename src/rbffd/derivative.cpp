@@ -368,12 +368,13 @@ void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& sten
     for (int i=0; i < n; i++) {
         Vec3& xiv = rbf_centers[stencil[i]];
         for (int j=0; j < n; j++) {
-            IRBF rbf(var_epsilon[stencil[j]], dim_num);
+            // FIXME: this should work with stencil[j] (theoretically correct). But it doesnt!
+	    IRBF rbf(var_epsilon[stencil[i]], dim_num);
             // rbf centered at xj
             Vec3& xjv = rbf_centers[stencil[j]];
             ar(i,j) = rbf(xiv, xjv);
         }}
- //   ar.print("INSIDE DMATRIX");
+    ar.print("INSIDE DMATRIX");
 }
 
 //----------------------------------------------------------------------

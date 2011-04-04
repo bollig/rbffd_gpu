@@ -154,9 +154,9 @@ public:
 
 	// Found that alpha=0.05 works remarkably well for regular grid cases 10x10, 28x28, 100x100
 	// about to test 100^3
-	var_epsilon[i] = alpha * sqrt(stencils[i].size()) / avg_stencil_radius[i] ;
+	var_epsilon[i] = (alpha * sqrt(stencils[i].size())) / avg_stencil_radius[i] ;
 
-            printf("var_epsilon(%d) = %f\n", i, var_epsilon[i]);
+            printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
         }
     }
 #if 0

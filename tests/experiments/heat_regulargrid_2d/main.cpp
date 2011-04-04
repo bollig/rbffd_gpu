@@ -56,6 +56,7 @@ int main(int argc, char** argv) {
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
+    int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
@@ -198,7 +199,7 @@ int main(int argc, char** argv) {
     if (use_var_eps) {
         double alpha = settings->GetSettingAs<double>("VAR_EPSILON_ALPHA", ProjectSettings::optional, "1.0"); 
         double beta = settings->GetSettingAs<double>("VAR_EPSILON_BETA", ProjectSettings::optional, "1.0"); 
-        der->setVariableEpsilon(subdomain->getStencilRadii(), alpha, beta); 
+        der->setVariableEpsilon(subdomain->getStencilRadii(), subdomain->getStencils(), alpha, beta); 
     } else {
         double epsilon = settings->GetSettingAs<double>("EPSILON", ProjectSettings::required);
         der->setEpsilon(epsilon);
@@ -271,7 +272,7 @@ int main(int argc, char** argv) {
     int num_iters = (int) ((end_time - start_time) / dt);
     std::cout << "NUM_ITERS = " << num_iters << std::endl;
 
-    for (iter = 0; iter < num_iters; iter++) {
+    for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
         cout << "*********** Solve Heat (Iteration: " << iter

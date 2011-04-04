@@ -130,17 +130,33 @@ public:
     //      alpha  -> scaling on numerator for (eps = alpha/(r^beta)) where r is the stencil radius
     //      beta   -> power on r for (eps = alpha/r^beta). 
     void setAvgStencilRadius(std::vector<double>& avg_radius_) {
-        this->setVariableEpsilon(avg_radius_); 
+	this->setVariableEpsilon(avg_radius_); 
     }
-    void setVariableEpsilon(std::vector<double>& avg_radius_, double alpha=1.0f, double beta=1.0f) {
+    void setVariableEpsilon(std::vector<double>& avg_radius_) {
+	// FIXME: stencil is class param, but avg_radius is not
+        this->setVariableEpsilon(avg_radius_, stencil); 
+    }
+    void setVariableEpsilon(std::vector<double>& avg_radius_, std::vector<StencilType>& stencils, double alpha=1.0f, double beta=1.0f) {
         use_var_eps = 1;
         std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
         avg_stencil_radius = avg_radius_;
         var_epsilon.resize(avg_stencil_radius.size());
         for (int i=0; i < var_epsilon.size(); i++) {
-            var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
-            printf("avg_stencil_radius(%d) = %10.10f\n", i , avg_stencil_radius[i]); 
-            printf("var_epsilon(%d) = %10.10f\n", i, var_epsilon[i]);
+           // var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
+//            var_epsilon[i] = alpha * avg_stencil_radius[i] / sqrt(beta);
+            
+	// Hardy 1972: 
+	//var_epsilon[i] = 1.0 / (0.815 * avg_stencil_radius[i]);
+
+	// Franke 1982: 
+	// TODO: franke actually had max_stencil_radius in denom
+	//var_epsilon[i] = 0.8 * sqrt(stencils[i].size()) / max_stencil_radius[i] ;
+
+	// Found that alpha=0.05 works remarkably well for regular grid cases 10x10, 28x28, 100x100
+	// about to test 100^3
+	var_epsilon[i] = alpha * sqrt(stencils[i].size()) / avg_stencil_radius[i] ;
+
+            printf("var_epsilon(%d) = %f\n", i, var_epsilon[i]);
         }
     }
 #if 0

@@ -52,6 +52,11 @@ public:
 
     template <typename RT>
     void SetSetting(std::string key, RT value) {
+        if (this->Exists(key)) {
+            std::cout << "Updating Key: " << key << " = " << value << std::endl;
+        } else {
+            std::cout << "New Manual Key: " << key << " = " << value << std::endl;
+        }
 	    std::ostringstream oss; 
         oss << value; 
         settings[key] = oss.str(); 

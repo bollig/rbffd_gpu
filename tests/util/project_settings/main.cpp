@@ -25,6 +25,8 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     cout << "CVT_FILENAME passed" << endl;
 
+    config.SetSetting<string>("CVT_FILENAME", "updated_config");
+
     cout << "SUCCESS!" << endl;
 
     return EXIT_SUCCESS; 		// PASS TEST

@@ -24,7 +24,6 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil
     z_weights.resize(nb_rbfs);
     r_weights.resize(nb_rbfs);
     lapl_weights.resize(nb_rbfs);
-    rbfs.resize(nb_rbfs);
 
     // each stencil has a support specified at its center
     // but more importantly, the stencil nodes (neighbors) 
@@ -72,13 +71,6 @@ Derivative::~Derivative()
     for (int i = 0; i < r_weights.size(); i++) {
         if (r_weights[i] != NULL) {
             delete [] r_weights[i];
-        }
-    }
-    for (int i = 0; i < rbfs.size(); i++) {
-        for (int j = 0; j < rbfs[i].size(); j++) {
-            if (rbfs[i][j] != NULL) {
-                delete [] rbfs[i][j];
-            }
         }
     }
 }
@@ -328,7 +320,7 @@ int Derivative::distanceMatrixSVD(vector<Vec3>& rbf_centers, vector<int>& stenci
 #endif
 
 //----------------------------------------------------------------------
-void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& stencil, double rbf_support, int irbf, double* distance_matrix, int nrows, int ncols, int dim_num)
+void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& stencil, int irbf, double* distance_matrix, int nrows, int ncols, int dim_num)
 {
     Vec3& c = rbf_centers[irbf];
     int n = stencil.size();
@@ -340,9 +332,6 @@ void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& sten
     //arma::mat &ar = *distance_matrix;
     // mat NewMat(memspace, rowdim, coldim, reuseMemSpace?)
     arma::mat ar(distance_matrix,nrows,ncols,false);
-
-
-    IRBF rbf(rbf_support, dim_num);
 
     //mat ar(n,n);
     // Derivative of a constant should be zero
@@ -368,11 +357,19 @@ void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& sten
         exit(0);
     }
 
+    // DMat: (note: phi_0(x_N) is the 0th RBF evaluated at x_N) 
+    //
+    //  | phi_0(x_0)   phi_1(x_0)   ... phi_N(x_0) |
+    //  | phi_0(x_1)   phi_1(x_1)   ... phi_N(x_1) |
+    //  |     ...         ...             ...      | 
+    //  | phi_0(x_N)   phi_1(x_N)   ... phi_N(x_N) |
+    //
     // stencil includes the point itself
     for (int i=0; i < n; i++) {
         Vec3& xiv = rbf_centers[stencil[i]];
         for (int j=0; j < n; j++) {
-            // rbf centered at xi
+            IRBF rbf(var_epsilon[stencil[j]], dim_num);
+            // rbf centered at xj
             Vec3& xjv = rbf_centers[stencil[j]];
             ar(i,j) = rbf(xiv, xjv);
         }}
@@ -527,27 +524,28 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
     //printf("CenterSize:%d\tStencilSize: %d\n", rbf_centers.size(), stencil.size());
    // x0v.print("x0v = ");
 
-    rbfs[irbf].resize(n);
 //    std::cout << "[Derivative::computeWeights()] EPSILON = " << epsilon << std::endl; 
+    
+    // NOTE: we want to evaluate the analytic derivs of phi at the stencil center point
+    // using every stencil RBF: 
+    //  | phi_0(x_0)  phi_1(x_0) ... phi_N(x_0) |^T
     for (int j=0; j < n; j++) {
-
-        rbfs[irbf][j] = new IRBF(var_epsilon[irbf], dim_num);
 
         // We want to evaluate every basis function. Each stencil node xjv has
         // its own basis function and we evaluate them with the distance to the
         // stencil center node x0v. This is B_j(||x0v - xjv||)
         // NOTE: when all basis functions are the same (eqn and support) then
         // B_c(||x0v - xjv||) = B_j(||x0v - xjv||).
-        IRBF* rbf = rbfs[irbf][j];
+        IRBF rbf(var_epsilon[stencil[j]], dim_num); 
 
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3& xjv = rbf_centers[stencil[j]];
         //xjv.print("xjv = ");
-        bx(j) = rbf->xderiv(x0v, xjv);
-        by(j) = rbf->yderiv(x0v, xjv);
-        bz(j) = rbf->zderiv(x0v, xjv);
-        br(j) = rbf->radialderiv(x0v, xjv);
-        blapl(j) = rbf->lapl_deriv(x0v, xjv);
+        bx(j) = rbf.xderiv(x0v, xjv);
+        by(j) = rbf.yderiv(x0v, xjv);
+        bz(j) = rbf.zderiv(x0v, xjv);
+        br(j) = rbf.radialderiv(x0v, xjv);
+        blapl(j) = rbf.lapl_deriv(x0v, xjv);
        // printf("blapl(%d)= %f [lapl(%f, %f)]\n", j, blapl(j), (x0v-xjv).magnitude(), epsilon);
        // (x0v-xjv).print("lapl(x)");
     }
@@ -604,7 +602,7 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
     // n+4 = 1 + dim(3) for x,y,z
     arma::mat d_matrix(n+np, n+np);
     d_matrix.zeros(n+np,n+np);
-    this->distanceMatrix(rbf_centers, stencil, var_epsilon[irbf], irbf, d_matrix.memptr(), d_matrix.n_rows, d_matrix.n_cols, dim_num);
+    this->distanceMatrix(rbf_centers, stencil, irbf, d_matrix.memptr(), d_matrix.n_rows, d_matrix.n_cols, dim_num);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -748,6 +746,11 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, StencilType
     // perhaps its because the contoursvd is not N dimensional? Natasha did mention that as we increase the dim
     // the window for safely picking epsilon to avoid instability is narrowed. 
     IRBF rbf(var_epsilon[irbf], dim_num);
+    
+    // TODO: 
+    std::cout << "ERROR! computeWeightsSVD_Direct uses var_epsilon improperly. This will be fixed soon. Remind Evan!" << std::endl;
+    exit(EXIT_FAILURE); 
+
     int n = stencil.size();
 
     arma::rowvec bx, by, bz, blapl, br;
@@ -805,7 +808,7 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, StencilType
 
     arma::mat ar(n+4, n+4);
     ar.zeros(n+4,n+4);
-    this->distanceMatrix(rbf_centers, stencil, var_epsilon[irbf], irbf, ar.memptr(), ar.n_rows, ar.n_cols, 3);
+    this->distanceMatrix(rbf_centers, stencil, irbf, ar.memptr(), ar.n_rows, ar.n_cols, 3);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {

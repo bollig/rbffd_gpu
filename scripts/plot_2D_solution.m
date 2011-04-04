@@ -20,7 +20,7 @@ end
 
 function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior, saveFigs)
 
-    showNodes = 1;
+    forceShowNodes = 1;
 
     % Get the number of figures before our efforts
     existingfigs = findobj('Type', 'figure');
@@ -32,16 +32,16 @@ function plot_2D_steady_solution(nodefile, testCaseName, nbboundary, nbinterior,
     plotHeightfield(nodefile, 'X_exact.mtx','Exact Solution', testCaseName);
     plotHeightfield(nodefile, 'X_approx.mtx', 'Approximate Solution', testCaseName);
     plotHeightfield(nodefile, 'E_absolute.mtx', 'Absolute Error', testCaseName);
-    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName, showNodes);
-    plotRelativeError(nodefile, 'E_absolute.mtx', 'X_exact.mtx', 'Relative Error', testCaseName, showNodes);
+    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName, forceShowNodes);
+    plotRelativeError(nodefile, 'E_absolute.mtx', 'X_exact.mtx', 'Relative Error', testCaseName, forceShowNodes);
     % Plot heightfield, but specify that the boundary nodes should be
     % zeroed
     %plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Boundary Equals 0)', testCaseName, showNodes, nbboundary, 0); 
-if 0
-    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName, showNodes);
+if 1
+   % plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error', testCaseName, forceShowNodes);
     % Plot heightfield, but specify that the boundary nodes should be
     % excluded
-    plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Interior Nodes Only)', testCaseName, showNodes, nbboundary); 
+    %plotHeightfield(nodefile, 'E_relative.mtx', 'Relative Error (Interior Nodes Only)', testCaseName, forceShowNodes, nbboundary); 
     postRunDiagnostics('L_host.mtx', testCaseName);
 
     figure; 

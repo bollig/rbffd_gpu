@@ -30,6 +30,12 @@ void Grid::writeToFile(int iter) {
 
 void Grid::writeToFile(std::string filename) {
     std::ofstream fout(filename.c_str()); 
+
+    // Increase our precision when writing to disk: 
+    fout.setf(ios::fixed, ios::floatfield); 
+    fout.setf(ios::showpoint); 
+    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
+
     if (fout.is_open()) {
         for (size_t i = 0; i < node_list.size(); i++) {
             fout << node_list[i] << std::endl; 
@@ -56,6 +62,12 @@ void Grid::writeBoundaryToFile(std::string filename) {
     std::string fname = "bndry_"; 
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
+
+    // Increase our precision when writing to disk: 
+    fout.setf(ios::fixed, ios::floatfield); 
+    fout.setf(ios::showpoint); 
+    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
+
     if (fout.is_open()) {
         for (size_t i = 0; i < boundary_indices.size(); i++) {
             fout << boundary_indices[i] << std::endl; 
@@ -74,6 +86,12 @@ void Grid::writeNormalsToFile(std::string filename) {
     std::string fname = "nrmls_"; 
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
+
+    // Increase our precision when writing to disk: 
+    fout.setf(ios::fixed, ios::floatfield); 
+    fout.setf(ios::showpoint); 
+    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
+
     if (fout.is_open()) {
         for (size_t i = 0; i < boundary_normals.size(); i++) {
             fout << boundary_normals[i] << std::endl; 
@@ -92,6 +110,12 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
     std::string fname = "avg_radii_"; 
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
+
+    // Increase our precision when writing to disk: 
+    fout.setf(ios::fixed, ios::floatfield); 
+    fout.setf(ios::showpoint); 
+    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
+
     if (fout.is_open()) {
         for (size_t i = 0; i < avg_stencil_radii.size(); i++) {
             fout << avg_stencil_radii[i] << std::endl; 
@@ -114,6 +138,12 @@ void Grid::writeStencilsToFile(std::string filename) {
         std::string fname = prefix.str(); 
         fname.append(filename); 
         std::ofstream fout(fname.c_str()); 
+
+        // Increase our precision when writing to disk: 
+    fout.setf(ios::fixed, ios::floatfield); 
+    fout.setf(ios::showpoint); 
+    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
+
         if (fout.is_open()) {
             for (size_t i = 0; i < stencil_map.size(); i++) {
                 fout << stencil_map[i].size(); 

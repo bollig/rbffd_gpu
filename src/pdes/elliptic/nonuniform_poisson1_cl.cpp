@@ -177,6 +177,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(nb-1), subdomain->getNodeList());
         } else {
             cout << "NOT USING DIRICHLET LOCKDOWN MODE" << endl;
+            cout << "Use discrete rhs: " << use_discrete_rhs << " (0=Exact; 1=Discrete)" << endl;
             // Normal fill with homogenous boundary conditions. The solutions are not tied down very well.
             for (int i = 0; i < nb; i++) {
                 switch (boundary_condition) {
@@ -320,6 +321,8 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         this->write_to_file(rel_error_host, "E_relative.mtx");
 
         std::cout << "Relative residual || x_exact - x_approx ||_2 / || x_exact ||_2  = " << norm_2(exact_host - x_host) / norm_2(exact_host) << std::endl;
+        std::cout << "Relative residual || x_exact - x_approx ||_1 / || x_exact ||_1  = " << norm_1(exact_host - x_host) / norm_1(exact_host) << std::endl;
+        std::cout << "Relative residual || x_exact - x_approx ||_inf / || x_exact ||_inf  = " << norm_inf(exact_host - x_host) / norm_inf(exact_host) << std::endl;
         std::cout << "Relative residual || A*x_exact - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, exact_host) - F_host) / norm_2(F_host) << std::endl;
         std::cout << "Relative residual || A*x_approx - F ||_2 / || F ||_2  = " << norm_2(prod(L_host, x_host) - F_host) / norm_2(F_host) << std::endl;
         std::cout << "[Precision] sizeof(FLOAT) = " << sizeof(FLOAT) << " bytes (4 = single; 8 = double)" << std::endl;

@@ -22,7 +22,6 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil
     x_weights.resize(nb_rbfs);
     y_weights.resize(nb_rbfs);
     z_weights.resize(nb_rbfs);
-    r_weights.resize(nb_rbfs);
     lapl_weights.resize(nb_rbfs);
 
     // each stencil has a support specified at its center
@@ -66,11 +65,6 @@ Derivative::~Derivative()
     for (int i = 0; i < lapl_weights.size(); i++) {
         if (lapl_weights[i] != NULL) {
             delete [] lapl_weights[i];
-        }
-    }
-    for (int i = 0; i < r_weights.size(); i++) {
-        if (r_weights[i] != NULL) {
-            delete [] r_weights[i];
         }
     }
 }
@@ -359,22 +353,25 @@ void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& sten
 
     // DMat: (note: phi_0(x_N) is the 0th RBF evaluated at x_N) 
     //
-    //  | phi_0(x_0)   phi_1(x_0)   ... phi_N(x_0) |
-    //  | phi_0(x_1)   phi_1(x_1)   ... phi_N(x_1) |
+    //  | phi_0(x_0)   phi_0(x_1)   ... phi_0(x_N) |
+    //  | phi_1(x_0)   phi_1(x_1)   ... phi_1(x_N) |
     //  |     ...         ...             ...      | 
-    //  | phi_0(x_N)   phi_1(x_N)   ... phi_N(x_N) |
+    //  | phi_N(x_0)   phi_N(x_1)   ... phi_N(x_N) |
     //
     // stencil includes the point itself
-    for (int i=0; i < n; i++) {
-        Vec3& xiv = rbf_centers[stencil[i]];
-        for (int j=0; j < n; j++) {
-            // FIXME: this should work with stencil[j] (theoretically correct). But it doesnt!
-	    IRBF rbf(var_epsilon[stencil[i]], dim_num);
+
+    for (int j=0; j < n; j++) {
+        IRBF rbf(var_epsilon[stencil[j]], dim_num);
+        Vec3& xjv = rbf_centers[stencil[j]];
+        for (int i=0; i < n; i++) {
             // rbf centered at xj
-            Vec3& xjv = rbf_centers[stencil[j]];
-            ar(i,j) = rbf(xiv, xjv);
-        }}
-    ar.print("INSIDE DMATRIX");
+            Vec3& xiv = rbf_centers[stencil[i]];
+            // A little unintuitive for C programmers, but we match notation with
+            // papers like Bayona et al 2010 to keep things consistent
+            ar(j,i) = rbf(xiv, xjv);
+        }
+    }
+    //    ar.print("INSIDE DMATRIX");
 }
 
 //----------------------------------------------------------------------
@@ -515,38 +512,43 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
     bx.zeros(n+np); // extra lines to enforce d/dx(constant)=0, d/dx(linear fct) is constant
     by.zeros(n+np);
     bz.zeros(n+np);
-    br.zeros(n+np);
     blapl.zeros(n+np);
 
     // stencil includes the point itself
     //printf("IRBF = %d, centered: %d\n", irbf, stencil[irbf]);
 
-    Vec3& x0v = rbf_centers[stencil[0]];
+    // This is the stencil center, x_0 
+    Vec3& xjv = rbf_centers[stencil[0]];
     //printf("CenterSize:%d\tStencilSize: %d\n", rbf_centers.size(), stencil.size());
    // x0v.print("x0v = ");
 
 //    std::cout << "[Derivative::computeWeights()] EPSILON = " << epsilon << std::endl; 
     
-    // NOTE: we want to evaluate the analytic derivs of phi at the stencil center point
-    // using every stencil RBF: 
+    // NOTE: we want to evaluate the analytic derivs at x_0 for each translate of our
+    // basis function centered at the various nodes of the stencil:
     //  | phi_0(x_0)  phi_1(x_0) ... phi_N(x_0) |^T
-    for (int j=0; j < n; j++) {
+    for (int i=0; i < n; i++) {
 
-        // We want to evaluate every basis function. Each stencil node xjv has
+        // We want to evaluate every basis function (i.e., all centers x_j). 
+        // Each stencil node xjv has
         // its own basis function and we evaluate them with the distance to the
         // stencil center node x0v. This is B_j(||x0v - xjv||)
         // NOTE: when all basis functions are the same (eqn and support) then
-        // B_c(||x0v - xjv||) = B_j(||x0v - xjv||).
-        IRBF rbf(var_epsilon[stencil[j]], dim_num); 
+        // B_0(||x0v - xjv||) = B_j(||x0v - xjv||).
+        IRBF rbf(var_epsilon[stencil[i]], dim_num); 
 
         // printf("%d\t%d\n", j, stencil[j]);
-        Vec3& xjv = rbf_centers[stencil[j]];
+        Vec3& xiv = rbf_centers[stencil[i]];
         //xjv.print("xjv = ");
-        bx(j) = rbf.xderiv(x0v, xjv);
-        by(j) = rbf.yderiv(x0v, xjv);
-        bz(j) = rbf.zderiv(x0v, xjv);
-        br(j) = rbf.radialderiv(x0v, xjv);
-        blapl(j) = rbf.lapl_deriv(x0v, xjv);
+        
+        // Remember: we evaluate the RBF function as rbf.eval(x, x_center) ==
+        // phi(||x-x_center||) = phi_j(x): 
+        // In this case the stencil center is x and the ith stencil node is the
+        // RBF center
+        bx(i) = rbf.xderiv(xjv, xiv);
+        by(i) = rbf.yderiv(xjv, xiv);
+        bz(i) = rbf.zderiv(xjv, xiv);
+        blapl(i) = rbf.lapl_deriv(xjv, xiv);
        // printf("blapl(%d)= %f [lapl(%f, %f)]\n", j, blapl(j), (x0v-xjv).magnitude(), epsilon);
        // (x0v-xjv).print("lapl(x)");
     }
@@ -586,17 +588,6 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
             blapl(n+3) = 0.0;
         }
 
-        // d/dr = ((x/r) d/dx + (y/r) d/dy + (z/r) d/dz)  => [ 0 x/r y/r z/r ]
-        // NOTE: we apply d/dr to each: 1, x, y, z
-        // (x/r) dx/dx + (y/r) dx/dy + (z/r) dx/dz = x/r
-        double rp = x0v.magnitude();
-        br(n)   = 0.0;
-        br(n+1) = x0v.x() / rp;
-        if (dim_num >= 2)
-            br(n+2) = x0v.y() / rp;
-        if(np == 4) {
-            br(n+3) = x0v.z() / rp;
-        }
     }
 
     // Generate a distance matrix and find the SVD of it.
@@ -612,17 +603,19 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
     }
     if (np > 1) {
         for (int i=0; i < n; i++) {
-            d_matrix(n+1, i) = rbf_centers[stencil[i]].x();
-            d_matrix(i, n+1) = rbf_centers[stencil[i]].x();
+            NodeType& xiv = rbf_centers[stencil[i]]; 
+
+            d_matrix(n+1, i) = xiv.x();  
+            d_matrix(i, n+1) = xiv.x(); 
 
             if (np > 2) {
-                d_matrix(n+2, i) = rbf_centers[stencil[i]].y();
-                d_matrix(i, n+2) = rbf_centers[stencil[i]].y();
+                d_matrix(n+2, i) = xiv.y();  
+                d_matrix(i, n+2) = xiv.y();  
             }
 
             if (np == 4) {
-                d_matrix(n+3, i) = rbf_centers[stencil[i]].z();
-                d_matrix(i, n+3) = rbf_centers[stencil[i]].z();
+                d_matrix(n+3, i) = xiv.z(); 
+                d_matrix(i, n+3) = xiv.z();
             }
         }
     }
@@ -637,6 +630,10 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
+    //
+    // What if A is not symmetric (i.e., when we have are computing weights
+    // with variable epsilon?)
+    //  -> In that case the system is singular, but is it still positive definite?             
     arma::mat weights_x = arma::solve(d_matrix, trans(bx)); //bx*Ainv;
     arma::mat weights_y = arma::solve(d_matrix, trans(by)); //by*Ainv;
     arma::mat weights_z = arma::solve(d_matrix, trans(bz)); //bz*Ainv;
@@ -694,41 +691,26 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
 
 
 #if 0
-    double sum_r = 0.;
     double sum_l = 0.;
     for (int is = 0; is < n; is++) {
-        sum_r += this->r_weights[irbf][is];
         sum_l += this->lapl_weights[irbf][is];
     }
-#if 0
-    if (sum_r > 1e-7) {
-        cout << "WARNING! SUM OF WEIGHTS FOR R IS NOT ZERO: " << sum_r << endl;
-        exit(EXIT_FAILURE);
-    }
-#endif
     if (sum_l > 1e-7) {
         cout << "WARNING! SUM OF WEIGHTS FOR LAPL IS NOT ZERO: " << sum_l << endl;
         exit(EXIT_FAILURE);
     }
 #if 0
-    //br.print("br = ");
    // d_matrix.print("Distance Matrix =");
 
     blapl.print("A_l");
     this->lapl_weights[irbf].print("Laplacian Weights = ");
-
-    br.print("A_r");
-    this->r_weights[irbf].print("R Weights = ");
-
     cout << "LAPL WEIGHT SUM: " << sum_l << endl;
-    cout << "R WEIGHT SUM: " << sum_r << endl;
 
 #endif
 
     bx.reset();
     by.reset();
     bz.reset();
-    br.reset();
     blapl.reset();
 #endif
 	tm["computeWeights"]->end();
@@ -754,7 +736,7 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, StencilType
 
     int n = stencil.size();
 
-    arma::rowvec bx, by, bz, blapl, br;
+    arma::rowvec bx, by, bz, blapl;
 
     bx.zeros(n+4); // extra lines to enforce d/dx(constant)=0, d/dx(linear fct) is constant
     by.zeros(n+4);

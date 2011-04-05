@@ -37,7 +37,6 @@ protected:
     std::vector<double*> x_weights;
     std::vector<double*> y_weights;
     std::vector<double*> z_weights;
-    std::vector<double*> r_weights;
     std::vector<double*> lapl_weights;
 
     std::vector<Vec3>& rbf_centers;
@@ -111,13 +110,11 @@ public:
     std::vector<double*>& getXWeights() { return x_weights; }
     std::vector<double*>& getYWeights() { return y_weights; }
     std::vector<double*>& getZWeights() { return z_weights; }
-    std::vector<double*>& getRWeights() { return r_weights; }
     std::vector<double*>& getLaplWeights() { return lapl_weights; }
 
     double* getXWeights(int indx) { return x_weights[indx]; }
     double* getYWeights(int indx) { return y_weights[indx]; }
     double* getZWeights(int indx) { return z_weights[indx]; }
-    double* getRWeights(int indx) { return r_weights[indx]; }
     double* getLaplWeights(int indx) { return lapl_weights[indx]; }
 
 //    BasesType& getRBFList(int stencil_indx) { return rbfs[stencil_indx]; }

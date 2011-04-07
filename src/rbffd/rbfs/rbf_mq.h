@@ -23,7 +23,7 @@ class RBF_MQ : public RBF{
         RBF_MQ(CMPLX epsilon, int dim_num) : RBF(epsilon, dim_num) {
         }
 
-        ~RBF_MQ() {};
+        virtual ~RBF_MQ() {};
 
         // f = (1+eps2*r^2)^{1/2}
         inline double eval(const Vec3& x, const Vec3& x_center) {

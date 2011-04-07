@@ -72,6 +72,8 @@ Derivative::~Derivative()
 //
 void Derivative::setupTimers() {
 	tm["computeWeights"] = new Timer("Derivative::computeWeights (compute weights on CPU)"); 
+	tm["applyWeights"] = new Timer("[Derivative] apply weights (routine: computeDeriv)"); 
+	tm["applyWeightsCPU"] = new Timer("[Derivative] apply weights ON CPU (routine: computeDerivativesCPU)"); 
 }
 
 //----------------------------------------------------------------------
@@ -1031,7 +1033,7 @@ void Derivative::computeDerivCPU(DerType which, vector<double>& u, vector<double
 }
 void Derivative::computeDerivativesCPU(DerType which, double* u, double* deriv, int npts)
 {
-
+    tm["applyWeightsCPU"]->start();
     cout << "COMPUTING DERIVATIVE (on CPU): ";
     vector<double*>* weights_p;
 
@@ -1122,10 +1124,12 @@ void Derivative::computeDerivativesCPU(DerType which, double* u, double* deriv, 
         deriv[i] = der;
     }
 #endif 
+    tm["applyWeightsCPU"]->stop();
 }
 
 void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int npts)
 {
+    tm["applyWeights"]->start(); 
     std::cout << "[Derivative::computeDerivative()]\n"; 
     cout << "COMPUTING DERIVATIVE (on CPU): ";
     vector<double*>* weights_p;
@@ -1203,7 +1207,7 @@ void Derivative::computeDerivatives(DerType which, double* u, double* deriv, int
         }
         deriv[i] = der;
     }
-
+    tm["applyWeights"]->stop();
 }
 //----------------------------------------------------------------------
 /**

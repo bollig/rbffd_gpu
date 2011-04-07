@@ -133,7 +133,7 @@ DerivativeCL::~DerivativeCL() {
 //
 void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, int npts)
 {
-    tm["computeDerivs"]->start(); 
+    tm["applyWeights"]->start(); 
     // 1) Get the correct weights for the DerType
     // 2) send weights to GPU
     // 3) send new u to GPU
@@ -273,7 +273,7 @@ void DerivativeCL::computeDerivatives(DerType which, double* u, double* deriv, i
     } else {
         std::cout << "CL program finished!" << std::endl;
     }
-    tm["computeDerivs"]->end();
+    tm["applyWeights"]->end();
 }
 //----------------------------------------------------------------------
 

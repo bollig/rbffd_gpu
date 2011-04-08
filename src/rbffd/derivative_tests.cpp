@@ -666,11 +666,12 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     printf("avg l2_bnd_error= %14.7e\n", l2_bnd);
     double l2_int = sqrt(inter_error);
     printf("avg l2_interior_error= %14.7e\n", l2_int);
-    if (l2_int > 1.e-1) {
+    // NaN is the only number not equal to itself
+    if ((l2_int > 1.e-1) || (l2_int != l2_int)) {
         printf ("ERROR! Interior l2 error is too high to continue\n");
         exit(EXIT_FAILURE);
     }
-    if (l2_bnd > 1.e0) {
+    if ((l2_bnd > 1.e0) || (l2_int != l2_int)) {
 
         printf ("WARNING! Boundary l2 error is high but we'll trust it to continue\n");
         return ;

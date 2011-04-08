@@ -258,7 +258,7 @@ int main(int argc, char** argv) {
     comm_unit->broadcastObjectUpdates(subdomain);
     comm_unit->barrier();
     tm["updates"]->stop();
-
+#undef USE_VTK
     // Setup a logging class that will monitor our iteration and dump intermediate files
 #if USE_VTK
     PDEWriter* writer = new VtuPDEWriter(subdomain, heat, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);

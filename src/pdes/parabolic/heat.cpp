@@ -341,7 +341,8 @@ void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes
 
     int i = 0;  // Index on boundary
     int k = 0;  // index on interior
-    for (int j = 0; j < sol_vec.size(); j++) {
+    //for (int j = 0; j < sol_vec.size(); j++) {
+    for (int j = 0; j < subdomain->getNodeListSize(); j++) {
         // Skim off the boundary
         if (j == bindices[i]) {
             sol_vec_bnd[i] = sol_vec[j]; 

@@ -258,7 +258,7 @@ int main(int argc, char** argv) {
     comm_unit->broadcastObjectUpdates(subdomain);
     comm_unit->barrier();
     tm["updates"]->stop();
-
+#undef USE_VTK
     // Setup a logging class that will monitor our iteration and dump intermediate files
 #if USE_VTK
     PDEWriter* writer = new VtuPDEWriter(subdomain, heat, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
@@ -318,12 +318,11 @@ int main(int argc, char** argv) {
     comm_unit->barrier();
     tm["consolidate"]->stop(); 
     //    subdomain->writeGlobalSolutionToFile(-1); 
-
+    std::cout << "Checking Solution on Master\n";
     if (comm_unit->getRank() == 0) {
         // NOTE: the final solution is assembled, but we have to use the 
         // GLOBAL node list instead of a local subdomain node list
         subdomain->writeFinal(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
-        comm_unit->barrier();
         cout << "FINAL ITER: " << iter << endl;
         std::vector<double> final_sol(grid->getNodeListSize()); 
         ifstream fin; 
@@ -341,7 +340,7 @@ int main(int argc, char** argv) {
         }
         fin.close();
         std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-      //  heat->checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
+        heat->checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
         std::cout << "============== Solution Valid =============\n"; 
 #endif 
         delete(grid);
@@ -356,7 +355,6 @@ delete(subdomain);
 delete(settings);
 delete(comm_unit); 
 
-
 cout.flush();
 
 printf("REACHED THE END OF MAIN\n");
@@ -364,6 +362,7 @@ printf("REACHED THE END OF MAIN\n");
 tm["total"]->stop();
 tm["total"]->printAll();
 tm["total"]->writeAllToFile();
+
 exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------

@@ -88,7 +88,7 @@ int MPISendable::sendSTL(const std::set<int> *origin, int myrank, int recv_rank)
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     // Static allocations are needed for message passing. 
-    int buff[sz]; 
+    int* buff = new int[sz]; 
 
     int i = 0;
     for (set<int>::const_iterator it=origin->begin(); it != origin->end(); it++, i++) {
@@ -96,8 +96,11 @@ int MPISendable::sendSTL(const std::set<int> *origin, int myrank, int recv_rank)
     }
 
     // Send stencil set Q (note: no values sent yet)
-    MPI_Send(&buff, sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff[0], sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
+
     cout << "RANK " << myrank << " REPORTS: finished sending std::set<int> to RANK " << recv_rank << endl;
+    delete [] buff; 
+    cout << "RANK " << myrank << " buff was freed\n";  
 }
 
 //----------------------------------------------------------------------------
@@ -208,7 +211,7 @@ int MPISendable::sendSTL(const std::vector<std::vector<int> > *origin, int myran
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     // Static allocations are needed for message passing. 
-    int buff[sz]; 
+    int* buff = new int[sz]; 
 
     int totsize = 0;
     int i = 0;
@@ -219,9 +222,9 @@ int MPISendable::sendSTL(const std::vector<std::vector<int> > *origin, int myran
     }
 
     // Send offsets into stencil buffer
-    MPI_Send(&buff, sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff[0], sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
-    int buff2[totsize]; 
+    int* buff2 = new int[totsize]; 
     int offset = 0; 
     for (std::vector<std::vector<int> >::const_iterator it=origin->begin(); it != origin->end(); it++) {
         const std::vector<int> *vint = &(*it);
@@ -232,9 +235,12 @@ int MPISendable::sendSTL(const std::vector<std::vector<int> > *origin, int myran
     }
 
     // Send stencil buffer
-    MPI_Send(&buff2, totsize, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff2[0], totsize, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<int> > to RANK " << recv_rank << endl;
+    delete [] buff; 
+    delete [] buff2; 
+    cout << "RANK " << myrank << " REPORTS: freed buff and buff2\n"; 
 }
 
 //----------------------------------------------------------------------------
@@ -439,8 +445,8 @@ int MPISendable::recvSTL(std::set<int> *destination, int myrank, int sender_rank
     int sz;
     MPI_Recv(&sz, 1, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
-    int buff[sz];
-    MPI_Recv(buff, sz, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
+    int* buff = new int[sz];
+    MPI_Recv(&buff[0], sz, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     // WARNING! THIS ERASES ALL ELEMENTS IN destination
     destination->clear(); 
@@ -449,6 +455,8 @@ int MPISendable::recvSTL(std::set<int> *destination, int myrank, int sender_rank
         destination->insert(buff[i]);
     }	
     cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;
+    delete [] buff; 
+    cout << "RANK " << myrank << " REPORTS: buff freed\n";
 }
 
 //----------------------------------------------------------------------------
@@ -536,8 +544,8 @@ int MPISendable::recvSTL(std::vector<std::vector<int> > *destination, int myrank
     MPI_Recv(&sz, 1, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     // Offsets into vector
-    int buff[sz];
-    MPI_Recv(buff, sz, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
+    int* buff = new int[sz];
+    MPI_Recv(&buff[0], sz, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     int totsize = 0;
     for (int i=0; i < sz; i++) {
@@ -545,8 +553,8 @@ int MPISendable::recvSTL(std::vector<std::vector<int> > *destination, int myrank
     }
 
     // Raw data
-    int buff2[totsize];
-    MPI_Recv(buff2, totsize, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
+    int* buff2 = new int[totsize];
+    MPI_Recv(&buff2[0], totsize, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     // WARNING! THIS ERASES ALL ELEMENTS IN destination
     destination->clear(); 
@@ -561,6 +569,9 @@ int MPISendable::recvSTL(std::vector<std::vector<int> > *destination, int myrank
         destination->push_back(temp);
     }	
     cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;	
+    delete [] buff; 
+    delete [] buff2; 
+    cout << "RANK " << myrank << " REPORTS: freed buff and buff2\n";
 }
 
 //----------------------------------------------------------------------------

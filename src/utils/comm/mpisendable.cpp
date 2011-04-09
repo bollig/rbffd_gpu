@@ -18,12 +18,13 @@ int MPISendable::sendSTL(const std::vector<double> *origin, int myrank, int recv
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     if (sz > 0) {
-        double buff[sz]; 
+        double* buff = new double[sz]; 
         for (int i = 0; i < sz; i++) {
             buff[i] = (*origin)[i]; 
         }
 
-        MPI_Send(&buff, sz, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
+        MPI_Send(&buff[0], sz, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
+        delete [] buff; 
     }
     cout << "RANK " << myrank << " REPORTS: finished sending std::vector<double> to RANK " << recv_rank << endl;
     return sz; 
@@ -38,12 +39,13 @@ int MPISendable::sendSTL(const std::vector<int> *origin, int myrank, int recv_ra
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     if (sz > 0) {
-        int buff[sz]; 
+        int* buff = new int[sz]; 
         for (int i = 0; i < sz; i++) {
             buff[i] = (*origin)[i]; 
         }
 
-        MPI_Send(&buff, sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);	
+        MPI_Send(&buff[0], sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
+        delete [] buff; 
     }
     cout << "RANK " << myrank << " REPORTS: finished sending std::vector<int> to RANK " << recv_rank << endl;
     return sz; 
@@ -66,13 +68,17 @@ int MPISendable::sendSTL(const std::vector<size_t> *origin, int myrank, int recv
             type = MPI::UNSIGNED;  
         } else if (sizeof(size_t) == sizeof(unsigned short)) {
             type = MPI::UNSIGNED_SHORT; 
-        } 
-        size_t buff[sz]; 
+        } else { 
+            cout << "UNKOWN MPI_Datatype FOR SIZE_T\n";
+            exit(EXIT_FAILURE); 
+        }
+        size_t* buff = new size_t[sz]; 
         for (int i = 0; i < sz; i++) {
             buff[i] = (*origin)[i]; 
         }
 
-        MPI_Send(&buff, sz, type, recv_rank, TAG, MPI_COMM_WORLD);	
+        MPI_Send(&buff[0], sz, type, recv_rank, TAG, MPI_COMM_WORLD);	
+        delete [] buff; 
     }
     cout << "RANK " << myrank << " REPORTS: finished sending std::vector<int> to RANK " << recv_rank << endl;
     return sz; 
@@ -125,6 +131,7 @@ int MPISendable::sendSTL(const std::vector<Vec3> *origin, int myrank, int recv_r
     // Send stencil set Q (note: no values sent yet)
     MPI_Send(&buff[0], sz*3, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
     cout << "RANK " << myrank << " REPORTS: finished sending std::set<Vec3> to RANK " << recv_rank << endl;
+    delete [] buff; 
 }
 
 //----------------------------------------------------------------------------
@@ -139,17 +146,18 @@ int MPISendable::sendSTL(const std::map<int, int> *origin, int myrank, int recv_
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     // 0  =  KEY; 1 = VALUE
-    int buff[sz][2]; 
+    int* buff = new int[sz*2]; 
 
     int i = 0;
     for (map<int, int>::const_iterator miter=origin->begin(); miter != origin->end(); miter++, i++) {
-        buff[i][0] = (*miter).first;
-        buff[i][1] = (*miter).second;
+        buff[i*2 + 0] = (*miter).first;
+        buff[i*2 + 1] = (*miter).second;
     }
 
     // Send stencil set Q (note: no values sent yet)
-    MPI_Send(&buff, sz*2, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff[0], sz*2, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
     cout << "RANK " << myrank << " REPORTS: finished sending std::map<int,int> to RANK " << recv_rank << endl;
+    delete [] buff; 
 }
 
 //----------------------------------------------------------------------------
@@ -162,7 +170,7 @@ int MPISendable::sendSTL(const std::vector<std::vector<size_t> > *origin, int my
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     // Static allocations are needed for message passing. 
-    int buff[sz]; 
+    int* buff = new int[sz]; 
 
     int totsize = 0;
     int i = 0;
@@ -173,9 +181,9 @@ int MPISendable::sendSTL(const std::vector<std::vector<size_t> > *origin, int my
     }
 
     // Send offsets into stencil buffer
-    MPI_Send(&buff, sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff[0], sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
-    size_t buff2[totsize]; 
+    size_t* buff2 = new size_t[totsize]; 
     int offset = 0; 
     for (std::vector<std::vector<size_t> >::const_iterator it=origin->begin(); it != origin->end(); it++) {
         const std::vector<size_t> *vint = &(*it);
@@ -192,13 +200,18 @@ int MPISendable::sendSTL(const std::vector<std::vector<size_t> > *origin, int my
         type = MPI::UNSIGNED;  
     } else if (sizeof(size_t) == sizeof(unsigned short)) {
         type = MPI::UNSIGNED_SHORT; 
-    } 
+    } else {
+        cout << "UNKNOWN MPI_Datatype for SIZE_T\n"; 
+        exit(EXIT_FAILURE); 
+    }
 
     // Send stencil buffer
-    MPI_Send(&buff2, totsize, type, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff2[0], totsize, type, recv_rank, TAG, MPI_COMM_WORLD);
 
     cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<size_t> > to RANK " << recv_rank << endl;
     cout << "WARNING! size_t passing is not verified YET.\n";
+    delete [] buff;
+    delete [] buff2;
 }
 
 //----------------------------------------------------------------------------
@@ -252,7 +265,7 @@ int MPISendable::sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank,
     // length of set
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
-    int buff[sz]; 
+    int* buff = new int[sz]; 
 
     int totsize = 0;
     int i = 0; 
@@ -263,25 +276,27 @@ int MPISendable::sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank,
     }
 
     // Offsets into into stencil buffer
-    MPI_Send(&buff, sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff[0], sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
-    double buff2[totsize][3]; 
+    double* buff2 = new double[totsize*3]; 
     int offset = 0; 
     for (set<std::vector<Vec3> >::const_iterator it=origin->begin(); it != origin->end(); it++) {
         const std::vector<Vec3> *vint = &(*it);
         for (int i = 0; i < vint->size(); i++) {
-            buff2[offset + i][0] = (*vint)[i].x();
-            buff2[offset + i][1] = (*vint)[i].y();
-            buff2[offset + i][2] = (*vint)[i].z();
+            buff2[(offset + i)*3 + 0] = (*vint)[i].x();
+            buff2[(offset + i)*3 + 1] = (*vint)[i].y();
+            buff2[(offset + i)*3 + 2] = (*vint)[i].z();
             cout << "COUNTING: " << offset + i << " of " << totsize << endl;
         }
         offset += vint->size(); 
     }
 
     // Raw data
-    MPI_Send(&buff2, totsize * 3, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff2[0], totsize * 3, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
 
     cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<Vec3> > to RANK " << recv_rank << endl;
+    delete [] buff; 
+    delete [] buff2; 
 }
 //----------------------------------------------------------------------------
 
@@ -297,7 +312,11 @@ int MPISendable::sendSTL(const size_t *destination, int myrank, int recv_rank) c
         type = MPI::UNSIGNED;  
     } else if (sizeof(size_t) == sizeof(unsigned short)) {
         type = MPI::UNSIGNED_SHORT; 
-    } 
+    } else {
+        cout << "UNKNOWN MPI_Datatype for SIZE_T\n"; 
+        exit(EXIT_FAILURE); 
+    }
+
     size_t buf = (*destination); 
 
     // Length of set
@@ -313,12 +332,12 @@ int MPISendable::sendSTL(const int *destination, int myrank, int recv_rank) cons
     MPI_Status stat; 
 
     MPI_Datatype type = MPI::INT; 
-    size_t buf = (*destination); 
+    int buf = (*destination); 
 
     // Length of set
     MPI_Send(&buf, 1, type, recv_rank, TAG, MPI_COMM_WORLD);
 
-    cout << "RANK " << myrank << " REPORTS: finished sending size_t (size: 1) to RANK " << recv_rank << endl;
+    cout << "RANK " << myrank << " REPORTS: finished sending int (size: 1) to RANK " << recv_rank << endl;
 }
 
 //----------------------------------------------------------------------------

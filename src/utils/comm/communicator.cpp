@@ -13,7 +13,10 @@ extern "C" {
 void closeAllMPI(void) {
     std::cout << "[Communicator] Comm Unit Destroyed?: " << comm_destruct_called << std::endl;
     if (!comm_destruct_called) {
-        std::cout << "[Communicator] aborting MPI with atexit" << std::endl;
+	char* myhostname; 
+	myhostname = getenv("HOSTNAME"); 	
+
+        std::cout << "[Communicator] calling MPI_Abort on host: " << myhostname << std::endl;
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     } else {
         std::cout << "[Communicator] already finalized. Nothing to do atexit" << std::endl;

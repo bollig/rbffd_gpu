@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
         double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
         double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
-        double stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
+        int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
         tm["settings"]->stop(); 
 

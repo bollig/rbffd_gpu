@@ -113,17 +113,17 @@ int MPISendable::sendSTL(const std::vector<Vec3> *origin, int myrank, int recv_r
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     // Static allocations are needed for message passing. 
-    double buff[sz][3]; 
+    double* buff = new double[sz*3]; 
 
     int i = 0;
     for (std::vector<Vec3>::const_iterator it=origin->begin(); it != origin->end(); it++, i++) {
-        buff[i][0] = (*it).x();
-        buff[i][1] = (*it).y();
-        buff[i][2] = (*it).z();	
+        buff[i*3 + 0] = (*it).x();
+        buff[i*3 + 1] = (*it).y();
+        buff[i*3 + 2] = (*it).z();	
     }
 
     // Send stencil set Q (note: no values sent yet)
-    MPI_Send(&buff, sz*3, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
+    MPI_Send(&buff[0], sz*3, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
     cout << "RANK " << myrank << " REPORTS: finished sending std::set<Vec3> to RANK " << recv_rank << endl;
 }
 
@@ -469,17 +469,18 @@ int MPISendable::recvSTL(std::vector<Vec3> *destination, int myrank, int sender_
     int sz;
     MPI_Recv(&sz, 1, MPI::INT, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
-    double buff[sz][3];
-    MPI_Recv(buff, sz*3, MPI::DOUBLE, sender_rank, TAG, MPI_COMM_WORLD, &stat);
+    double* buff = new double[sz*3]; // I reallly want double[sz][3]
+    MPI_Recv(&buff[0], sz*3, MPI::DOUBLE, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     // WARNING! THIS ERASES ALL ELEMENTS IN destination
     destination->clear(); 
 
     for (int i=0; i < sz; i++) {
-        Vec3 v(buff[i][0], buff[i][1], buff[i][2]);
+        Vec3 v(buff[i*3 + 0], buff[i*3 + 1], buff[i*3 + 2]);
         destination->push_back(v);
     }	
     cout << "RANK " << myrank << " REPORTS: received std::set<Vec3> (size: " << sz << ") from RANK " << sender_rank << endl;
+    delete [] buff; 
 }
 
 //----------------------------------------------------------------------------

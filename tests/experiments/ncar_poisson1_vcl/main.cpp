@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
     if (use_var_eps) {
         double alpha = settings->GetSettingAs<double>("VAR_EPSILON_ALPHA", ProjectSettings::optional, "1.0"); 
         double beta = settings->GetSettingAs<double>("VAR_EPSILON_BETA", ProjectSettings::optional, "1.0"); 
-        der->setVariableEpsilon(grid->getStencilRadii(), alpha, beta); 
+        der->setVariableEpsilon(grid->getStencilRadii(),grid->getStencils(), alpha, beta); 
     } else {
         double epsilon = settings->GetSettingAs<double>("EPSILON", ProjectSettings::required);
         der->setEpsilon(epsilon);

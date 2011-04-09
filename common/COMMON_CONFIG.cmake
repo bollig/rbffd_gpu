@@ -34,14 +34,32 @@
 	FIND_LIBRARY (armadillo armadillo PATHS
 	# efb06: bollig account
 	/Users/erlebach/Documents/src/armadillo-0.9.52 
-	/usr/local/lib64 
 	~/local/usr/lib64
 	~/local/usr/lib
 	~/local/lib 
-	~/local/lib64)
+	~/local/lib64
+	/usr/lib
+	/usr/local/lib
+	/usr/lib64
+	/usr/local/lib64
+	NO_DEFAULT_PATH
+	)
+	MESSAGE(STATUS "Found armadillo in: ${armadillo}")
 
 	# Typically installed separately. Same rules as Armadillo (local dir here; global unecessary)
-   	FIND_LIBRARY(fftw3 fftw3 PATHS /Users/erlebach/Documents/src/fftw-3.2.2/.libs)
+   	FIND_LIBRARY(fftw3 fftw3 PATHS 
+		/Users/erlebach/Documents/src/fftw-3.2.2/.libs
+	~/local/usr/lib64
+	~/local/usr/lib
+	~/local/lib 
+	~/local/lib64
+	/usr/lib
+	/usr/local/lib
+	/usr/lib64
+	/usr/local/lib64
+	NO_DEFAULT_PATH
+	)
+	MESSAGE(STATUS "Found fftw3 in: ${fftw3}")
 
 
 

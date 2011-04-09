@@ -111,6 +111,10 @@ void ProjectSettings::trim( std::string& str )
 }
 
 int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
+
+    char* myhostname = getenv("HOSTNAME"); 
+    std::cout << "[Rank " << my_rank << " is on host: " << myhostname << std::endl;
+
     // Borrowed from Getopt-Long Example in GNU LibC manual
     int verbose_flag = 0; /* Flag set by '--verbose' and '--brief'. */
     int c;

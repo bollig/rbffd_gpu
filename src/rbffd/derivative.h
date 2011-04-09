@@ -153,7 +153,7 @@ class Derivative
                 //            var_epsilon[i] = alpha * avg_stencil_radius[i] / sqrt(beta);
 
                 // Hardy 1972: 
-                //var_epsilon[i] = 1.0 / (0.815 * avg_stencil_radius[i]);
+                //var_epsilon[stencil[i][0]] = 1.0 / (0.815 * avg_stencil_radius[stencil[i][0]]);
 
                 // Franke 1982: 
                 // TODO: franke actually had max_stencil_radius in denom
@@ -161,11 +161,11 @@ class Derivative
 
                 // Note: for 24x24, alpha = 0.04. For 64x64, alpha = 0.05; for 1000x1000, alpha = 0.07
                 // we use stencils[i][0] to get the index for the stencil center and its corresponding "avg_radius" 
-                std::cout << "var_epsilon[" << i << "] = " << alpha << " * sqrt( " << stencils[i].size() << " / avg_radius_[ " << stencils[i][0] << " ] " << std::endl; 
+                //std::cout << "var_epsilon[" << i << "] = " << alpha << " * sqrt( " << stencils[i].size() << " / avg_radius_[ " << stencils[i][0] << " ] " << std::endl; 
                 // the indx on var_epsilon should be linear 0->stencils.size(), but just in case we have random access based on stencil center index
                 var_epsilon[stencils[i][0]] = (alpha * sqrt(stencils[i].size())) / avg_radius_[stencils[i][0]] ;
-
-                //   printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
+                        
+                printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
             }
         }
 #if 0

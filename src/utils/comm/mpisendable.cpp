@@ -1,4 +1,5 @@
 #include "mpisendable.h"
+#include <stdlib.h> 
 
 // TODO: make sure size_t send/recv works
 // TODO: send vector data without copying to buffer http://stackoverflow.com/questions/2546298/vector-usage-in-mpic

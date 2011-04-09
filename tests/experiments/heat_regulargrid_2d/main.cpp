@@ -346,6 +346,7 @@ int main(int argc, char** argv) {
         delete(grid);
     }
 
+cout.flush();
 printf("Cleaning up objects\n");
 
 // Writer first so we can dump final solution
@@ -355,7 +356,6 @@ delete(subdomain);
 delete(settings);
 delete(comm_unit); 
 
-cout.flush();
 
 printf("REACHED THE END OF MAIN\n");
 

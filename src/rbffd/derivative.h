@@ -165,7 +165,7 @@ class Derivative
                 // the indx on var_epsilon should be linear 0->stencils.size(), but just in case we have random access based on stencil center index
                 var_epsilon[stencils[i][0]] = (alpha * sqrt(stencils[i].size())) / avg_radius_[stencils[i][0]] ;
                         
-                printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
+                //printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
             }
         }
 #if 0

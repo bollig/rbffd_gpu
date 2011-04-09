@@ -28,7 +28,8 @@ class Derivative
     protected:
         typedef ArrayT<double> AF;
         //AF arr;
-        int nb_rbfs;
+        size_t nb_rbfs;
+        size_t nb_stencils;
         double maxint;
 
         //BasesListType rbfs;
@@ -140,9 +141,14 @@ class Derivative
         void setVariableEpsilon(std::vector<double>& avg_radius_, std::vector<StencilType>& stencils, double alpha=1.0f, double beta=1.0f) {
             use_var_eps = 1;
             //std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
+            std::cout << "NOTE: We are computing the variable support parameter using the avg radius of a stencil.\n"; 
+            std::cout << "Every node in the stencil will use the same support!\n"; 
+            std::cout << "If you want unique support for each node in the stencil you will need to modify Derivative.h and make sure the Domain class passes additional stencil information for ghost nodes (right now ghost nodes are contained within stencils, but we are unaware of what their own stencils (i.e., stencils for which they are the centers) look like\n"; 
+
+            std::cout << "AVG_RADIUS.size() = " << avg_radius_.size() << "\t STENCILS.size() = " << stencils.size() << std::endl;
             avg_stencil_radius = avg_radius_;
             var_epsilon.resize(avg_stencil_radius.size());
-            for (int i=0; i < var_epsilon.size(); i++) {
+            for (int i=0; i < stencils.size(); i++) {
                 // var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
                 //            var_epsilon[i] = alpha * avg_stencil_radius[i] / sqrt(beta);
 
@@ -154,7 +160,10 @@ class Derivative
                 //var_epsilon[i] = 0.8 * sqrt(stencils[i].size()) / max_stencil_radius[i] ;
 
                 // Note: for 24x24, alpha = 0.04. For 64x64, alpha = 0.05; for 1000x1000, alpha = 0.07
-                var_epsilon[i] = (alpha * sqrt(stencils[i].size())) / avg_stencil_radius[i] ;
+                // we use stencils[i][0] to get the index for the stencil center and its corresponding "avg_radius" 
+                std::cout << "var_epsilon[" << i << "] = " << alpha << " * sqrt( " << stencils[i].size() << " / avg_radius_[ " << stencils[i][0] << " ] " << std::endl; 
+                // the indx on var_epsilon should be linear 0->stencils.size(), but just in case we have random access based on stencil center index
+                var_epsilon[stencils[i][0]] = (alpha * sqrt(stencils[i].size())) / avg_radius_[stencils[i][0]] ;
 
                 //   printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
             }

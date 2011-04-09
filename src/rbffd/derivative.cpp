@@ -18,17 +18,20 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil
 {
     //this->nb_bnd = nb_bnd_;
     this->nb_rbfs = rbf_centers.size();
+    this->nb_stencils = stencil.size();
 
-    x_weights.resize(nb_rbfs);
-    y_weights.resize(nb_rbfs);
-    z_weights.resize(nb_rbfs);
-    lapl_weights.resize(nb_rbfs);
+    x_weights.resize(nb_stencils);
+    y_weights.resize(nb_stencils);
+    z_weights.resize(nb_stencils);
+    lapl_weights.resize(nb_stencils);
 
     // each stencil has a support specified at its center
     // but more importantly, the stencil nodes (neighbors) 
     // also have their own supports 
     // TODO: verify that the Domain class passes all nb_rbfs to each subdomain
-    var_epsilon.resize(nb_rbfs); 
+    // TODO: allow var_epsilon to be unique for each node of each stencil. Right 
+    // now its just a unique eps per stencil, and all nodes within the stencil have the same support
+    var_epsilon.resize(nb_stencils); 
 
 #if 0
     // derivative depends strongly on epsilon!
@@ -40,7 +43,8 @@ Derivative::Derivative(vector<Vec3>& rbf_centers_, vector<StencilType >& stencil
     //epsilon = 0.5; // Pretty accurate
 #endif 
 
-    printf("nb_rbfs= %d\n", nb_rbfs); // ok
+    printf("nb_rbfs= %lu\n", nb_rbfs); // ok
+    printf("nb_stencils= %lu\n", nb_stencils); // ok
     setupTimers(); 
 }
 
@@ -363,7 +367,8 @@ void Derivative::distanceMatrix(vector<NodeType>& rbf_centers, StencilType& sten
     // stencil includes the point itself
 
     for (int j=0; j < n; j++) {
-        IRBF rbf(var_epsilon[stencil[j]], dim_num);
+        // FIXME: allow var_epsilon[stencil[j]] (we need to pass stencil info for ghost nodes if this is to be allowed)
+        IRBF rbf(var_epsilon[stencil[0]], dim_num);
         Vec3& xjv = rbf_centers[stencil[j]];
         for (int i=0; i < n; i++) {
             // rbf centered at xj
@@ -537,7 +542,8 @@ int Derivative::computeWeights(vector<Vec3>& rbf_centers, StencilType& stencil, 
         // stencil center node x0v. This is B_j(||x0v - xjv||)
         // NOTE: when all basis functions are the same (eqn and support) then
         // B_0(||x0v - xjv||) = B_j(||x0v - xjv||).
-        IRBF rbf(var_epsilon[stencil[i]], dim_num); 
+        // FIXME: allow var_epsilon[stencil[irbf]] (we need to pass stencil info for ghost nodes if this is to be allowed)
+        IRBF rbf(var_epsilon[stencil[0]], dim_num); 
 
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3& xiv = rbf_centers[stencil[i]];
@@ -730,7 +736,9 @@ void Derivative::computeWeightsSVD_Direct(vector<Vec3>& rbf_centers, StencilType
     // uses of DIM in the rbf classes and forced dimension 3. In this case we still had 2 unstable eigenvalues. 
     // perhaps its because the contoursvd is not N dimensional? Natasha did mention that as we increase the dim
     // the window for safely picking epsilon to avoid instability is narrowed. 
-    IRBF rbf(var_epsilon[irbf], dim_num);
+    
+    // FIXME: allow var_epsilon[stencil[irbf]] (we need to pass stencil info for ghost nodes if this is to be allowed)
+    IRBF rbf(var_epsilon[stencil[0]], dim_num);
     
     // TODO: 
     std::cout << "ERROR! computeWeightsSVD_Direct uses var_epsilon improperly. This will be fixed soon. Remind Evan!" << std::endl;

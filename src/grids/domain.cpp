@@ -484,8 +484,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 }
 
 //----------------------------------------------------------------------
-void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<size_t>& boundary,
-        vector<double>& avg_dist) {
+void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<size_t>& boundary, vector<double>& avg_dist) {
     // Generate stencil membership lists (i.e., which set each stencil center belongs to)
     this->fillCenterSets(rbf_centers, stencil);
 

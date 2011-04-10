@@ -359,7 +359,7 @@ void Heat::checkError(std::vector<double>& sol_vec, std::vector<NodeType>& nodes
 
     //    writeErrorToFile(sol_error);
 
-    calcSolNorms(sol_vec, sol_exact, "Full Domain", rel_err_max);  // Full domain
+    calcSolNorms(sol_vec, sol_exact, "Interior & Boundary", rel_err_max);  // Full domain
     calcSolNorms(sol_vec_int, sol_exact_int, "Interior", rel_err_max);  // Interior only
     calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Boundary only
 }

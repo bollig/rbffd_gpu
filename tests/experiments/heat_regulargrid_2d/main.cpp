@@ -217,7 +217,6 @@ int main(int argc, char** argv) {
     tm["weights"]->stop(); 
     cout << "end computing weights" << endl;
 
-
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
         tm["tests"]->start(); 
         DerivativeTests* der_test = new DerivativeTests();
@@ -234,8 +233,6 @@ int main(int argc, char** argv) {
 
     // SOLVE HEAT EQUATION
 
-    //EB 4
-#if 1
     // Exact Solution ( freq, decay )
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
     ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
@@ -258,7 +255,6 @@ int main(int argc, char** argv) {
     comm_unit->broadcastObjectUpdates(subdomain);
     comm_unit->barrier();
     tm["updates"]->stop();
-#undef USE_VTK
     // Setup a logging class that will monitor our iteration and dump intermediate files
 #if USE_VTK
     PDEWriter* writer = new VtuPDEWriter(subdomain, heat, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
@@ -275,8 +271,7 @@ int main(int argc, char** argv) {
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
-        cout << "*********** Solve Heat (Iteration: " << iter
-            << ") *************" << endl;
+        std::cout << "*********** Solve Heat (Iteration: " << iter << ") *************" << endl;
 
         char label[256]; 
         if (debug) {
@@ -307,9 +302,6 @@ int main(int argc, char** argv) {
     }
 
     printf("after heat\n");
-    //	exit(0);
-#endif 
-    //}
 
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 

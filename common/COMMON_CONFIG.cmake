@@ -2,7 +2,15 @@
 # Build Options (Definitions and compiler flags)
 ###############################################
 	# Used by ALL compilers
-	ADD_DEFINITIONS(-g)
+	ADD_DEFINITIONS("-g -shared-intel -openmp")
+SET (CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS_INIT} "-openmp"
+     CACHE STRING "Flags used by the linker during the creation of dll's.")
+
+SET (CMAKE_STATIC_LINKER_FLAGS ${CMAKE_STATIC_LINKER_FLAGS_INIT} "-openmp"
+     CACHE STRING "Flags used by the linker during the creation of dll's.")
+
+SET (CMAKE_MODULE_LINKER_FLAGS ${CMAKE_MODULE_LINKER_FLAGS_INIT} "-openmp"
+     CACHE STRING "Flags used by the linker during the creation of dll's.")
 	# Used by SPECIFIC compilers
  	# SET (CMAKE_CXX_FLAGS)
 

@@ -10,7 +10,7 @@
 #include <Windows.h>
 #include "gtod_windows.h"
 #else
-#include <sys/time.h>
+#include <time.h>
 #endif
 
 #ifdef WIN32

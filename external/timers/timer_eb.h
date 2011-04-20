@@ -10,7 +10,11 @@
 #include <Windows.h>
 #include "gtod_windows.h"
 #else
-#include <time.h>
+#if (__PGI)
+    #include <time.h>
+#else 
+    #include <sys/time.h>
+#endif
 #endif
 
 #ifdef WIN32
@@ -29,6 +33,12 @@
 #include <map> 
 #include <string> 
 
+#if (__PGI)
+#define CLOCK_T_TYPE __clock_t
+#else 
+#define CLOCK_T_TYPE clock_t
+#endif 
+
 namespace EB {
 
     class Timer
@@ -40,8 +50,8 @@ namespace EB {
             struct timeval t_start, t_end;
             double elapsed;
             float t;
-            clock_t t1;
-            clock_t t2;
+            CLOCK_T_TYPE t1;
+            CLOCK_T_TYPE t2;
             float scale;
             std::string name;
             std::string unit;

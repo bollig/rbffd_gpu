@@ -125,9 +125,6 @@ MACRO ( ADD_SERIAL_FRAMEWORK_TEST _execname _sourcelist _argv)
 
     ADD_DEPENDENCIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
     TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
-
-SET_TARGET_PROPERTIES(${_execname} PROPERTIES LINK_FLAGS -openmp)
-
     # Number tests according 
     MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
     ADD_TEST (NAME ${_full_test_name} COMMAND "${_execname}" ${_argv})
@@ -156,7 +153,6 @@ MACRO ( ADD_PARALLEL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs )
             TARGET_LINK_LIBRARIES (${_execname}
                 ${MPI_LIBRARIES}
                 )
-SET_TARGET_PROPERTIES(${_execname} PROPERTIES LINK_FLAGS -openmp)
 
             # Add a Parallel Test
             # Format: ADD_TEST( [TestName] [MPIExecutable] [MPINumProcFlag] [#ofProcs] [MPIOptions] [Executable] [Arg1] [Arg2] ... [ArgN])
@@ -179,7 +175,6 @@ MACRO ( ADD_SERIAL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv)
         ADD_SERIAL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}")
         ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
         TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
-SET_TARGET_PROPERTIES(${_execname} PROPERTIES LINK_FLAGS -openmp)
     ELSE (OPENCL_FOUND)
         MESSAGE (WARNING "\nWARNING! ${_full_test_name} is disabled because OpenCL was not found.")
     ENDIF (OPENCL_FOUND)
@@ -195,7 +190,6 @@ MACRO ( ADD_PARALLEL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs
         TARGET_LINK_LIBRARIES ( ${_execname} 
             ${FRAMEWORK_OPENCL_LIBRARY} 
             )
-SET_TARGET_PROPERTIES(${_execname} PROPERTIES LINK_FLAGS -openmp)
     ELSE (OPENCL_FOUND)
         MESSAGE (WARNING "\nWARNING! ${_full_test_name} is disabled because OpenCL was not found.")
     ENDIF (OPENCL_FOUND)
@@ -221,9 +215,7 @@ MACRO ( ADD_SERIAL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv)
         ADD_DEPENDENCIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
         ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
         TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
-	SET_TARGET_PROPERTIES(${_execname} PROPERTIES LINK_FLAGS -openmp)
         TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
-
         # Number tests according 
         MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
         ADD_TEST (NAME ${_full_test_name} COMMAND "${_execname}" ${_argv})
@@ -261,7 +253,6 @@ MACRO ( ADD_PARALLEL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)
                     ${MPI_LIBRARIES}
                     )
 
-		SET_TARGET_PROPERTIES(${_execname} PROPERTIES LINK_FLAGS -openmp)
                 # Add a Parallel Test
                 # Format: ADD_TEST( [TestName] [MPIExecutable] [MPINumProcFlag] [#ofProcs] [MPIOptions] [Executable] [Arg1] [Arg2] ... [ArgN])
                 MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )

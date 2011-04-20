@@ -1,7 +1,5 @@
 # 1) Change the PROJECT (<NAME>) to your test name
 PROJECT (heat_regulargrid_2d)
-add_definitions("-openmp")
-
 
 # Provided in RBF.framework/common directory 
 include(FrameworkMacros)

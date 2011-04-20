@@ -5,6 +5,7 @@ SET( CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_SOURCE_DIR}/common
 	${CMAKE_CURRENT_SOURCE_DIR}/common/UseDoxygen
 	${CMAKE_CURRENT_SOURCE_DIR}/common/external/jedbrown-cmake-modules
+	${CMAKE_CURRENT_SOURCE_DIR}/common/external/armadillo
 )
 
 
@@ -48,12 +49,18 @@ SET(FRAMEWORK_CUDA_LIBRARY ${FRAMEWORK_LIBRARY}_cuda)
 SET(FRAMEWORK_OPENCL_LIBRARY ${FRAMEWORK_LIBRARY}_opencl)
 SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# Use Armadillos MKL stuff
+include(ARMA_FindMKL)
 
+message(STATUS "MKL_FOUND     = ${MKL_FOUND}")
+
+include_directories(${MKL_INCLUDE_DIRS})
 
 # This is an external dependency
 # Its name should not change
 SET( FRAMEWORK_DEPENDENCIES
 	$ENV{EXTERNAL_LIB_DEPENDENCIES}
+    ${MKL_LIBRARIES}
 	#${CUDA_LIBRARIES}
 )
 

@@ -75,13 +75,11 @@ ADD_DEPENDENCIES (${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
 # NOTE: order of libraries is important in Linux. 
 # 	does not matter on macOSX
 TARGET_LINK_LIBRARIES ( ${FRAMEWORK_LIBRARY}
-    imf
-    m
     ${FRAMEWORK_DEPENDENCIES}
     ${amira}
     ${armadillo}
     ${clapack}
-    #${fftw3}
+    ${fftw3}
     ${ADDITIONAL_REQUIRED_LIBRARIES} 	# From OS specific CMakeLists.txt
     )
 

@@ -140,9 +140,9 @@ void Grid::writeStencilsToFile(std::string filename) {
         std::ofstream fout(fname.c_str()); 
 
         // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
+        fout.setf(ios::fixed, ios::floatfield); 
+        fout.setf(ios::showpoint); 
+        fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
 
         if (fout.is_open()) {
             for (size_t i = 0; i < stencil_map.size(); i++) {
@@ -728,12 +728,72 @@ void Grid::generateStencilsKDTree()
 }
 
 //----------------------------------------------------------------------
+// Create an overlay grid
+//      assign each node an i,j,k grid cell location
+//      search only cells within the max_radius, but go outward by 
+//              cells starting at the center cell. 
+// NOTE: does not require KDTree construction and allows immediate query
 void Grid::generateStencilsHash()
 {
-    // Create an overlay grid
-    //      assign each node an i,j,k grid cell location
-    //      search only cells within the max_radius, but go outward by 
-    //              cells starting at the center cell. 
-    // NOTE: does not require KDTree construction and allows immediate query
+    // Dimensions of the hash overlay grid (hnx by hny by hnz regular grid
+    // spanning the full bounding box of the domain extent
+    size_t hnx = 10; 
+    size_t hny = 10; 
+    size_t hnz = 1; 
+    std::vector< std::vector<size_t> > cell_hash; 
+    cell_hash.resize(hnx * hny * hnz); 
 
+    // Foreach node: 
+    //     determine hashid (cellid)
+    //          node(x,y,z) exists in cellid((x-xmin)/dx, (y-ymin)/dy, (z-zmin)/dz)
+    //          linearize cellid(xc, yc, zc) = ((xc*NY) + yc)*NZ + zc
+    //          append node to list contained in map[cellid].second
+    for (size_t i = 0; i < this->nb_nodes; i++) {
+        double xc = node.x(); 
+        double yc = node.y(); 
+        double zc = node.z();
+        size_t cell_id = ((xc*hny) + yc)*hnz + zc; 
+        cell_hash[cell_id].push_back(node_indx); 
+    }
+
+    // TODO: Sort nodes according to hash for better access patterns
+    
+    // Foreach node: 
+    //      Generate a stencil:
+    //          append cell_hash[cellid(this->node)] list to candidate list
+    //          if (stencil_size > cell_hash.length) then 
+    //              append 8 (or 26 if 3D) neigboring cell_hash lists to candidate list
+    //          end
+    //          sort the candidate list according to distance from node
+    //          select stencil_size closest matches
+    for (size_t p = 0; p < this->nb_nodes; p++) {
+        std::vector<size_t> candidate_list; 
+        std::vector<float> candidate_list; 
+        // 1
+        // 2D: 1+4 
+        // (or 1+8?--> given that we're searching a radius,
+        // we know the 4 corners are less likely to fall under radius. start
+        // with 4 and go up if necessary); 3D: 1+6
+        //      +  
+        //  +  +++  +
+        //      + 
+        //
+        // +++ +++ +++
+        // +++ +++ +++ 
+        // +++ +++ +++
+        //
+        size_t level; 
+        // iterate over neighboring cells in X
+        for (size_t i = -1; i < 1; i+=1) {
+            // iterate over neighboring cells in Y
+            for (size_t j = -1; j < 1; j++) {
+                // iterate over neighboring cells in Z
+                for (size_t k = -1; k < 1; k++) {
+                    size_t cell_id = ((xc*hny) + yc)*hnz + zc; 
+                    if (cell_hash[
+                        
+                }
+            }
+        }
+    }
 }

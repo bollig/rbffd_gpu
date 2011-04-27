@@ -718,14 +718,11 @@ void Grid::generateStencilsKDTree()
 // NOTE: does not require KDTree construction and allows immediate query
 void Grid::generateStencilsHash()
 {
-    // TODO: dim_num as member to grid_interface so we know what our dimensionality is to reduce computation here
-   // int dim_num = 3;
     // Dimensions of the hash overlay grid (hnx by hny by hnz regular grid
     // spanning the full bounding box of the domain extent)
-    // TODO: config file options for these parameters
-    size_t hnx = ns_nbx; //10; 
-    size_t hny = ns_nby; // (dim_num < 2) ? 1 : 10; 
-    size_t hnz = ns_nbz; // (dim_num < 3) ? 1 : 10;
+    size_t hnx = ns_nbx; 
+    size_t hny = ns_nby;
+    size_t hnz = ns_nbz;
 
     std::vector< std::vector<size_t> > cell_hash; 
     // list of lists 
@@ -753,6 +750,8 @@ void Grid::generateStencilsHash()
         // to select the CELL_ID (do we really need an optimization like that
         // though?)
         double xc = floor((node.x() - xmin) / cdx); 
+        // This logic saves us when our nodes lie on xmax, ymax, or zmax
+        // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
         xc = (xc == hnx) ? xc-1 : xc; 
         double yc = floor((node.y() - ymin) / cdy); 
         yc = (yc == hny) ? yc-1 : yc; 
@@ -779,17 +778,44 @@ void Grid::generateStencilsHash()
     //          sort the candidate list according to distance from node
     //          select stencil_size closest matches
     for (size_t p = 0; p < this->nb_nodes; p++) {
+        // The list of cells we will search to find our neighbors
         std::vector<size_t> candidate_list; 
         size_t level; 
-        // iterate over neighboring cells in X
-        for (size_t i = -1; i < 1; i+=1) {
-            // iterate over neighboring cells in Y
-            for (size_t j = -1; j < 1; j++) {
-                // iterate over neighboring cells in Z
-                for (size_t k = -1; k < 1; k++) {
-                        
-                }
-            }
+        int min_cx = 0; 
+        int max_cx = 0; 
+        int min_cy = 0; 
+        int max_cy = 0;
+        int min_cz = 0; 
+        int max_cz = 0;
+
+        // start by searching only our cell
+ 
+        NodeType node = this->getNode(p);
+        // xc, yc and zc are the (x,y,z) corresponding to the cell id
+        // xmin,ymin,zmin are member properties of the Grid class
+        // cdx,cdy,cdz are the deltaX, deltaY, deltaZ for the cell overlays
+        // TODO: we note that the xc, yc and zc can be treated at binary digits
+        // to select the CELL_ID (do we really need an optimization like that
+        // though?)
+        double xc = floor((node.x() - xmin) / cdx); 
+        // This logic saves us when our nodes lie on xmax, ymax, or zmax
+        // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
+        xc = (xc == hnx) ? xc-1 : xc; 
+        double yc = floor((node.y() - ymin) / cdy); 
+        yc = (yc == hny) ? yc-1 : yc; 
+        double zc = floor((node.z() - zmin) / cdz);
+        zc = (zc == hnz) ? zc-1 : zc; 
+
+        size_t cell_id = ((xc*hny) + yc)*hnz + zc; 
+
+        std::vector<float> dists(cell_hash[cell_id].size(), 0.f); 
+        for (size_t q = 0; q < cell_hash[cell_id].size(); q++) {
+           NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
+           dists[q] = (node - neighbor).magnitude(); 
+           std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << dists[q] << std::endl;
         }
+       
+        std::cout << std::endl;
+        // TODO: expand search to satisfy neighbor requests
     }
 }

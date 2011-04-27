@@ -12,6 +12,7 @@ using namespace std;
 int main(int argc, char** argv) {
     EB::TimerList tm;
     tm["kdtree"] = new EB::Timer("Generate stencils using KDTree"); 
+    tm["hash"] = new EB::Timer("Generate stencils using Hash"); 
     tm["brute"] = new EB::Timer("Generate stencils using Brute Force"); 
 
     Communicator* comm_unit = new Communicator(argc, argv);
@@ -52,6 +53,24 @@ int main(int argc, char** argv) {
     grid->generate();  
 
 #if 1
+    tm["hash"]->start(); 
+    grid->generateStencils(stencil_size, Grid::ST_HASH);	// populates the stencil map stored inside the grid class 
+    tm["hash"]->stop(); 
+
+    if (debug) {
+        std::vector<StencilType>& stencil2 = grid->getStencils();    
+        std::cout << "ALL STENCILS: " << std::endl;	
+        for (int i = 0; i < stencil2.size(); i++) {
+            for (int j = 0; j < stencil2[i].size(); j++) {
+                std::cout << " [" << stencil2[i][j] << "] "; 
+            }
+            std::cout << std::endl;
+        }
+    }
+#endif 
+
+
+#if 0
     tm["kdtree"]->start(); 
     grid->generateStencils(stencil_size, Grid::ST_KDTREE);	// populates the stencil map stored inside the grid class 
     tm["kdtree"]->stop(); 

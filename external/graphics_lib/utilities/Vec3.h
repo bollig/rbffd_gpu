@@ -9,7 +9,6 @@
 #include <math.h>
 
 //class ostream;
-#include <iosfwd>
 #include <iostream> 
 #include <vector>
 // sizeof(Vec3) = 24
@@ -255,7 +254,16 @@ class Vec3
 	// Allow output to C++ streams
 	friend std::ostream& operator<< (std::ostream& os, const Vec3& p) {
 		//    os << '(' << p.x()  << ',' << p.y() << ',' << p.z() << ')';
-		os << p.x() << ' ' << p.y() << ' ' << p.z();
+
+        os.setf(std::ios::fixed, std::ios::floatfield); 
+        os.setf(std::ios::showpoint); 
+        os.precision( 8 );   // 8 Digits because our Vec3 is actually a Vec3f 
+        os.width(13);
+		os << std::right << p.x() ;
+        os.width(13);
+        os << std::right << p.y();
+        os.width(13);
+        os << std::right << p.z();
 		if (os.fail())
 		      std::cout << "operator<<(ostream&,Vec3&) failed" << std::endl;
 		return os;

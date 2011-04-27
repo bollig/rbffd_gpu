@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <set>
+#include <limits> // for ST_HASH
 
 #include "grid_interface.h"
 #include "utils/random.h"
@@ -31,11 +32,6 @@ void Grid::writeToFile(int iter) {
 void Grid::writeToFile(std::string filename) {
     std::ofstream fout(filename.c_str()); 
 
-    // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
-
     if (fout.is_open()) {
         for (size_t i = 0; i < node_list.size(); i++) {
             fout << node_list[i] << std::endl; 
@@ -63,11 +59,6 @@ void Grid::writeBoundaryToFile(std::string filename) {
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
 
-    // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
-
     if (fout.is_open()) {
         for (size_t i = 0; i < boundary_indices.size(); i++) {
             fout << boundary_indices[i] << std::endl; 
@@ -86,11 +77,6 @@ void Grid::writeNormalsToFile(std::string filename) {
     std::string fname = "nrmls_"; 
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
-
-    // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
 
     if (fout.is_open()) {
         for (size_t i = 0; i < boundary_normals.size(); i++) {
@@ -111,11 +97,13 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
 
+    // NOTE: we keep the precision extension here because our radii are double precision (nodes are single and only need 8 digits)
+#if 1
     // Increase our precision when writing to disk: 
     fout.setf(ios::fixed, ios::floatfield); 
     fout.setf(ios::showpoint); 
     fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
-
+#endif 
     if (fout.is_open()) {
         for (size_t i = 0; i < avg_stencil_radii.size(); i++) {
             fout << avg_stencil_radii[i] << std::endl; 
@@ -138,11 +126,6 @@ void Grid::writeStencilsToFile(std::string filename) {
         std::string fname = prefix.str(); 
         fname.append(filename); 
         std::ofstream fout(fname.c_str()); 
-
-        // Increase our precision when writing to disk: 
-        fout.setf(ios::fixed, ios::floatfield); 
-        fout.setf(ios::showpoint); 
-        fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
 
         if (fout.is_open()) {
             for (size_t i = 0; i < stencil_map.size(); i++) {
@@ -735,25 +718,52 @@ void Grid::generateStencilsKDTree()
 // NOTE: does not require KDTree construction and allows immediate query
 void Grid::generateStencilsHash()
 {
+    // TODO: dim_num as member to grid_interface so we know what our dimensionality is to reduce computation here
+    int dim_num = 2;
     // Dimensions of the hash overlay grid (hnx by hny by hnz regular grid
-    // spanning the full bounding box of the domain extent
-    size_t hnx = 10; 
-    size_t hny = 10; 
-    size_t hnz = 1; 
-    std::vector< std::vector<size_t> > cell_hash; 
-    cell_hash.resize(hnx * hny * hnz); 
+    // spanning the full bounding box of the domain extent)
+    // TODO: config file options for these parameters
+    size_t hnx = 2; 
+    size_t hny = (dim_num < 2) ? 1 : 2; 
+    size_t hnz = (dim_num < 3) ? 1 : 2;
 
+    std::vector< std::vector<size_t> > cell_hash; 
+    // list of lists 
+    cell_hash.resize(hnx * hny * hnz);  
+
+    double cdx = (xmax - xmin) / hnx;
+    //double cdx = (hnx > 1) ? (xmax - xmin) / (hnx - 1.) : (xmax - xmin) / hnx;
+    double cdy = (ymax - ymin) / hny;
+    double cdz = (zmax - zmin) / hnz;
+        
+    NodeType cell_start(xmin, ymin, zmin); 
+    NodeType cell_end(xmax, ymax, zmax); 
+
+    std::cout << "Cell START: " << cell_start << std::endl;
+    std::cout << "Cell END: " << cell_end << std::endl;
+    std::cout << "Cell DELTAS: " << cdx << ", " << cdy << ", " << cdz << std::endl; 
+    std::cout << "cell_hash.size = " << cell_hash.size() << std::endl;
     // Foreach node: 
     //     determine hashid (cellid)
     //          node(x,y,z) exists in cellid((x-xmin)/dx, (y-ymin)/dy, (z-zmin)/dz)
     //          linearize cellid(xc, yc, zc) = ((xc*NY) + yc)*NZ + zc
-    //          append node to list contained in map[cellid].second
+    //          append node to list contained in list[cellid]
     for (size_t i = 0; i < this->nb_nodes; i++) {
-        double xc = node.x(); 
-        double yc = node.y(); 
-        double zc = node.z();
+        NodeType node = this->getNode(i);
+        // xc, yc and zc are the (x,y,z) corresponding to the cell id
+        // xmin,ymin,zmin are member properties of the Grid class
+        // cdx,cdy,cdz are the deltaX, deltaY, deltaZ for the cell overlays
+        double xc = floor((node.x() - xmin) / cdx); 
+        xc = (xc == hnx) ? xc-1 : xc; 
+        double yc = floor((node.y() - ymin) / cdy); 
+        //yc = (yc == hny) ? yc-1 : yc; 
+        double zc = floor((node.z() - zmin) / cdz);
+        //zc = (zc == hnz) ? zc-1 : zc; 
         size_t cell_id = ((xc*hny) + yc)*hnz + zc; 
-        cell_hash[cell_id].push_back(node_indx); 
+
+        std::cout << "RELATIVE POSITION: " << node << " , CELL: " << cell_id << " ( " << xc << ", " << yc << ", " << zc << " )" << std::endl;
+
+        //cell_hash[cell_id].push_back(i); 
     }
 
     // TODO: Sort nodes according to hash for better access patterns
@@ -768,20 +778,6 @@ void Grid::generateStencilsHash()
     //          select stencil_size closest matches
     for (size_t p = 0; p < this->nb_nodes; p++) {
         std::vector<size_t> candidate_list; 
-        std::vector<float> candidate_list; 
-        // 1
-        // 2D: 1+4 
-        // (or 1+8?--> given that we're searching a radius,
-        // we know the 4 corners are less likely to fall under radius. start
-        // with 4 and go up if necessary); 3D: 1+6
-        //      +  
-        //  +  +++  +
-        //      + 
-        //
-        // +++ +++ +++
-        // +++ +++ +++ 
-        // +++ +++ +++
-        //
         size_t level; 
         // iterate over neighboring cells in X
         for (size_t i = -1; i < 1; i+=1) {
@@ -789,8 +785,6 @@ void Grid::generateStencilsHash()
             for (size_t j = -1; j < 1; j++) {
                 // iterate over neighboring cells in Z
                 for (size_t k = -1; k < 1; k++) {
-                    size_t cell_id = ((xc*hny) + yc)*hnz + zc; 
-                    if (cell_hash[
                         
                 }
             }

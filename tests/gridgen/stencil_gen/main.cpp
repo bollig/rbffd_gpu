@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
                 ||  (sten[3] != 3)
                 ||  (sten[4] != 4))
         {
-            exit(EXIT_FAILURE); 
+        //    exit(EXIT_FAILURE); 
         }
     }
 

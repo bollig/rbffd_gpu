@@ -247,6 +247,8 @@ class Grid
             ns_nbz = overlay_nbz; 
         }           
 
+        // Verify that our configuraton for max_st_size is valid and adjust it if its too large
+        void checkStencilSize(); 
 
         // Set DEBUG to 0 or 1
         void setDebug(int debug_) { DEBUG = debug_; }

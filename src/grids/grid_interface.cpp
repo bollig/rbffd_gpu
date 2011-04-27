@@ -764,8 +764,7 @@ void Grid::generateStencilsHash()
 
         size_t nb_neighbor_nodes_to_check = 0; 
         int level = 0; 
-        std::cout << "max_st_size = " << max_st_size << std::endl;
-        while ((nb_neighbor_nodes_to_check <= max_st_size) && (level < 3)) {
+        while (nb_neighbor_nodes_to_check <= max_st_size) {
             int xlevel = level;
             int ylevel = (hny > 1) ? level : 0;
             int zlevel = (hnz > 1) ? level : 0; 
@@ -796,8 +795,7 @@ void Grid::generateStencilsHash()
         
 //                        std::cout << "( " << xc_o << ", " << yc_o << ", " << zc_o << " ) = " << cell_id << std::endl;
 
-//                        if (cell_hash[cell_id].size() > 0) {
-                        {                       
+                        if (cell_hash[cell_id].size() > 0) {
                            neighbor_cell_set.insert(cell_id);
                         }
                     }
@@ -810,15 +808,13 @@ void Grid::generateStencilsHash()
             nb_neighbor_nodes_to_check = 0;
             for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
                 size_t cell_id = *it; 
-               // std::cout << "Node ID: " << p << " in CELL " << node_cell_id << ", Checking NEIGHBOR CELL: " << cell_id << std::endl;
+                std::cout << "Node ID: " << p << " in CELL " << node_cell_id << ", Checking NEIGHBOR CELL: " << cell_id << std::endl;
                 nb_neighbor_nodes_to_check += cell_hash[cell_id].size();
             }
             std::cout << "NODE ID: " << p << "  LEVEL: " << level << "\t";
             std::cout << "NB_NEIGHBORS = " << nb_neighbor_nodes_to_check << " of " << max_st_size << std::endl;
-
             level ++; 
         }
-        std::cout << std::endl;
 
 #if 0
         std::vector<float> dists(cell_hash[cell_id].size(), 0.f); 

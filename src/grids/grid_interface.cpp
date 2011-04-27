@@ -719,13 +719,13 @@ void Grid::generateStencilsKDTree()
 void Grid::generateStencilsHash()
 {
     // TODO: dim_num as member to grid_interface so we know what our dimensionality is to reduce computation here
-    int dim_num = 2;
+    int dim_num = 3;
     // Dimensions of the hash overlay grid (hnx by hny by hnz regular grid
     // spanning the full bounding box of the domain extent)
     // TODO: config file options for these parameters
-    size_t hnx = 2; 
-    size_t hny = (dim_num < 2) ? 1 : 2; 
-    size_t hnz = (dim_num < 3) ? 1 : 2;
+    size_t hnx = 10; 
+    size_t hny = (dim_num < 2) ? 1 : 10; 
+    size_t hnz = (dim_num < 3) ? 1 : 10;
 
     std::vector< std::vector<size_t> > cell_hash; 
     // list of lists 
@@ -739,10 +739,6 @@ void Grid::generateStencilsHash()
     NodeType cell_start(xmin, ymin, zmin); 
     NodeType cell_end(xmax, ymax, zmax); 
 
-    std::cout << "Cell START: " << cell_start << std::endl;
-    std::cout << "Cell END: " << cell_end << std::endl;
-    std::cout << "Cell DELTAS: " << cdx << ", " << cdy << ", " << cdz << std::endl; 
-    std::cout << "cell_hash.size = " << cell_hash.size() << std::endl;
     // Foreach node: 
     //     determine hashid (cellid)
     //          node(x,y,z) exists in cellid((x-xmin)/dx, (y-ymin)/dy, (z-zmin)/dz)
@@ -753,21 +749,27 @@ void Grid::generateStencilsHash()
         // xc, yc and zc are the (x,y,z) corresponding to the cell id
         // xmin,ymin,zmin are member properties of the Grid class
         // cdx,cdy,cdz are the deltaX, deltaY, deltaZ for the cell overlays
+        // TODO: we note that the xc, yc and zc can be treated at binary digits
+        // to select the CELL_ID (do we really need an optimization like that
+        // though?)
         double xc = floor((node.x() - xmin) / cdx); 
         xc = (xc == hnx) ? xc-1 : xc; 
         double yc = floor((node.y() - ymin) / cdy); 
-        //yc = (yc == hny) ? yc-1 : yc; 
+        yc = (yc == hny) ? yc-1 : yc; 
         double zc = floor((node.z() - zmin) / cdz);
-        //zc = (zc == hnz) ? zc-1 : zc; 
+        zc = (zc == hnz) ? zc-1 : zc; 
         size_t cell_id = ((xc*hny) + yc)*hnz + zc; 
 
-        std::cout << "RELATIVE POSITION: " << node << " , CELL: " << cell_id << " ( " << xc << ", " << yc << ", " << zc << " )" << std::endl;
-
-        //cell_hash[cell_id].push_back(i); 
+//        std::cout << "NODE:" << node << "   in   CELL: " << cell_id << "      ( " << xc << ", " << yc << ", " << zc << " )" << std::endl;
+        cell_hash[cell_id].push_back(i); 
     }
 
-    // TODO: Sort nodes according to hash for better access patterns
+    for (size_t i = 0; i < cell_hash.size(); i++) {
+        std::cout << "CELL[" << i << "].size() = " << cell_hash[i].size() << std::endl;
+    }
     
+    // TODO: Sort nodes according to hash for better access patterns
+
     // Foreach node: 
     //      Generate a stencil:
     //          append cell_hash[cellid(this->node)] list to candidate list

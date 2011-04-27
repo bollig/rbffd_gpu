@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
 #endif 
 
 
-#if 0
+#if 1
     tm["kdtree"]->start(); 
     grid->generateStencils(stencil_size, Grid::ST_KDTREE);	// populates the stencil map stored inside the grid class 
     tm["kdtree"]->stop(); 
@@ -88,16 +88,10 @@ int main(int argc, char** argv) {
 #endif 
 
 
-
+#if 0
     tm["brute"]->start(); 
     grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);	// populates the stencil map stored inside the grid class 
-
     tm["brute"]->stop(); 
-
-    grid->writeToFile(); 
-
-    std::vector<StencilType>& stencil = grid->getStencils();    
-    StencilType& sten = grid->getStencil(0); 
 
     if(debug) {
         std::cout << "ALL STENCILS: " << std::endl;	
@@ -108,6 +102,12 @@ int main(int argc, char** argv) {
             std::cout << std::endl;
         }
     }
+#endif 
+
+    grid->writeToFile(); 
+
+    std::vector<StencilType>& stencil = grid->getStencils();    
+    StencilType& sten = grid->getStencil(0); 
 
     if (dim == 1) {
         // Extra test for ctest: 

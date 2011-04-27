@@ -11,9 +11,15 @@
 class Grid 
 {
     public: 
+        // Bounding box of domain (should contain ALL points regardless of
+        // geom)
         double xmin, xmax; 
         double ymin, ymax; 
         double zmin, zmax; 
+
+        // Number of subdivisions in domain bounding box to use in each
+        // direction for the cell overlay in the hash neighbor qeury 
+        size_t ns_nbx, ns_nby, ns_nbz; 
 
     public: 
         // We allow multiple types of stencil generators (for backwards compat)
@@ -81,6 +87,7 @@ class Grid
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
+            ns_nbx(10), ns_nby(10), ns_nbz(10),
             max_st_size(0), max_st_radius(DBL_MAX),
             pert(0.), nb_nodes(0),
             node_list_kdtree(NULL),
@@ -90,6 +97,7 @@ class Grid
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
+            ns_nbx(10), ns_nby(10), ns_nbz(10),
             max_st_size(0), max_st_radius(DBL_MAX), 
             pert(0), nb_nodes(num_nodes), 
             node_list_kdtree(NULL),
@@ -99,6 +107,7 @@ class Grid
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
+            ns_nbx(10), ns_nby(10), ns_nbz(10),
             max_st_size(0), max_st_radius(DBL_MAX), 
             pert(0), nb_nodes(nodes.size()), 
             node_list_kdtree(NULL), 
@@ -231,6 +240,12 @@ class Grid
             zmin = minZ; 
             zmax = maxZ;
         }
+
+        void setNSHashDims(size_t overlay_nbx, size_t overlay_nby, size_t overlay_nbz) {
+            ns_nbx = overlay_nbx; 
+            ns_nby = overlay_nby; 
+            ns_nbz = overlay_nbz; 
+        }           
 
 
         // Set DEBUG to 0 or 1

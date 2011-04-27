@@ -719,13 +719,13 @@ void Grid::generateStencilsKDTree()
 void Grid::generateStencilsHash()
 {
     // TODO: dim_num as member to grid_interface so we know what our dimensionality is to reduce computation here
-    int dim_num = 3;
+   // int dim_num = 3;
     // Dimensions of the hash overlay grid (hnx by hny by hnz regular grid
     // spanning the full bounding box of the domain extent)
     // TODO: config file options for these parameters
-    size_t hnx = 10; 
-    size_t hny = (dim_num < 2) ? 1 : 10; 
-    size_t hnz = (dim_num < 3) ? 1 : 10;
+    size_t hnx = ns_nbx; //10; 
+    size_t hny = ns_nby; // (dim_num < 2) ? 1 : 10; 
+    size_t hnz = ns_nbz; // (dim_num < 3) ? 1 : 10;
 
     std::vector< std::vector<size_t> > cell_hash; 
     // list of lists 

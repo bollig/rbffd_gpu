@@ -28,11 +28,21 @@ int main(int argc, char** argv) {
         ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
     }
     if (dim > 2) {
-        nz = settings->GetSettingAs<int> ("NB_Z", ProjectSettings::required); 
+        nz = settings->GetSettingAs<int>("NB_Z", ProjectSettings::required); 
     } 
     if (dim > 3) {
         cout << "ERROR! Dim > 3 Not supported!" << endl;
         exit(EXIT_FAILURE); 
+    }
+
+    int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
+    int ns_ny = 1; 
+    int ns_nz = 1; 
+    if (dim > 1) {
+        ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10"); 
+    }
+    if (dim > 2) {
+        ns_nz = settings->GetSettingAs<int>("NS_NB_Z", ProjectSettings::optional, "10"); 
     }
 
     double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
@@ -54,6 +64,7 @@ int main(int argc, char** argv) {
 
 #if 1
     tm["hash"]->start(); 
+    grid->setNSHashDims(ns_nx, ns_ny, ns_nz); 
     grid->generateStencils(stencil_size, Grid::ST_HASH);	// populates the stencil map stored inside the grid class 
     tm["hash"]->stop(); 
 

@@ -281,4 +281,13 @@ class ltvec {
         }
 };
 
+// Small class to sort pairs of distances and node indices
+class ltdists {
+    public:
+        bool operator()(const std::pair<float,size_t> i, const std::pair<float,size_t> j) {
+            return i.first <= j.first;
+        }
+};
+
+
 #endif //__GRID_H__

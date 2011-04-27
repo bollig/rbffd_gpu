@@ -819,22 +819,30 @@ void Grid::generateStencilsHash()
         }
 
 #if 1
-        float* dists = new float[nb_neighbor_nodes_to_check];
+        std::vector< std::pair<float, size_t> > dists(nb_neighbor_nodes_to_check);
         size_t d_count = 0;  
         for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
             size_t cell_id = *it; 
             for (size_t q = 0; q < cell_hash[cell_id].size(); q++) {
                 NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
-                dists[d_count] = (node - neighbor).magnitude(); 
-                       std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << dists[d_count] << std::endl;
+               dists[d_count] = std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
+            //           std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << dists[d_count] << std::endl;
                 d_count++;
             }
         }
 
-        delete [] dists;
+        // TODO: sort node indices according to distances 
+        ltdists sorter;
+        std::sort(dists.begin(), dists.end(), sorter); 
+
+
+        for (size_t i = 0; i < dists.size(); i++) {
+              std::cout << "DIST (" << i << ") = " << dists[i].first << "\t NeighborIndx: " << dists[i].second << std::endl;
+        }
+
+        // TODO: keep only the max_st_size closest matches in stencil_map
+        
 #endif 
-        // TODO: expand search to satisfy neighbor requests
-        // TODO: keep only the max_st_size closest matches
     }
 }
 

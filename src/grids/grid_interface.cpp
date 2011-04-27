@@ -764,7 +764,9 @@ void Grid::generateStencilsHash()
 
         size_t nb_neighbor_nodes_to_check = 0; 
         int level = 0; 
-        while (nb_neighbor_nodes_to_check <= max_st_size) {
+        // TODO: cut-off search if (max_st_radius+cdx) is execeeded
+        //          (requires a working impl of max_st_radius)
+        while (nb_neighbor_nodes_to_check < max_st_size) {
             int xlevel = level;
             int ylevel = (hny > 1) ? level : 0;
             int zlevel = (hnz > 1) ? level : 0; 
@@ -808,7 +810,7 @@ void Grid::generateStencilsHash()
             nb_neighbor_nodes_to_check = 0;
             for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
                 size_t cell_id = *it; 
-                std::cout << "Node ID: " << p << " in CELL " << node_cell_id << ", Checking NEIGHBOR CELL: " << cell_id << std::endl;
+//                std::cout << "Node ID: " << p << " in CELL " << node_cell_id << ", Checking NEIGHBOR CELL: " << cell_id << std::endl;
                 nb_neighbor_nodes_to_check += cell_hash[cell_id].size();
             }
             std::cout << "NODE ID: " << p << "  LEVEL: " << level << "\t";
@@ -816,14 +818,20 @@ void Grid::generateStencilsHash()
             level ++; 
         }
 
-#if 0
-        std::vector<float> dists(cell_hash[cell_id].size(), 0.f); 
-        for (size_t q = 0; q < cell_hash[cell_id].size(); q++) {
-            NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
-            dists[q] = (node - neighbor).magnitude(); 
-            //           std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << dists[q] << std::endl;
-
+#if 1
+        float* dists = new float[nb_neighbor_nodes_to_check];
+        size_t d_count = 0;  
+        for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
+            size_t cell_id = *it; 
+            for (size_t q = 0; q < cell_hash[cell_id].size(); q++) {
+                NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
+                dists[d_count] = (node - neighbor).magnitude(); 
+                       std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << dists[d_count] << std::endl;
+                d_count++;
+            }
         }
+
+        delete [] dists;
 #endif 
         // TODO: expand search to satisfy neighbor requests
         // TODO: keep only the max_st_size closest matches

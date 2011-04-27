@@ -11,6 +11,7 @@ using namespace std;
 
 int main(int argc, char** argv) {
     EB::TimerList tm;
+    tm["grid"] = new EB::Timer("Generate grid"); 
     tm["kdtree"] = new EB::Timer("Generate stencils using KDTree"); 
     tm["hash"] = new EB::Timer("Generate stencils using Hash"); 
     tm["brute"] = new EB::Timer("Generate stencils using Brute Force"); 
@@ -57,10 +58,12 @@ int main(int argc, char** argv) {
     int sort_nodes = settings->GetSettingAs<int>("SORT_NODES", ProjectSettings::optional, "0"); 
     double debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
 
+    tm["grid"]->start(); 
     Grid* grid = new RegularGrid(nx, ny,  nz, minX, maxX, minY, maxY, minZ, maxZ); 
     grid->setSortBoundaryNodes(sort_nodes); 
     grid->setDebug(debug);
     grid->generate();  
+    tm["grid"]->stop();
 
 #if 1
     tm["hash"]->start(); 
@@ -81,7 +84,7 @@ int main(int argc, char** argv) {
 #endif 
 
 
-#if 1
+#if 0
     tm["kdtree"]->start(); 
     grid->generateStencils(stencil_size, Grid::ST_KDTREE);	// populates the stencil map stored inside the grid class 
     tm["kdtree"]->stop(); 

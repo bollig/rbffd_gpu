@@ -62,7 +62,7 @@
 	/usr/local/lib
 	/usr/lib64
 	/usr/local/lib64
-	NO_DEFAULT_PATH
+    #	NO_DEFAULT_PATH
 	)
 	MESSAGE(STATUS "Found fftw3 in: ${fftw3}")
 

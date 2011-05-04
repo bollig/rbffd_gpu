@@ -11,7 +11,8 @@
 
 // ltvec declared in grid_interface.h
 NodeType ltvec::xi;
-vector<NodeType>* ltvec::rbf_centers;
+std::vector<NodeType>* ltvec::rbf_centers;
+//float* ltdist::dists;
 
 //----------------------------------------------------------------------------
 void Grid::generate() {
@@ -573,8 +574,6 @@ void Grid::generateStencilsBruteForce() {
     int nb_bnd = boundary_indices.size();
     std::vector<NodeType>& rbf_centers = node_list;
 
-    ltvec ltvec_inst;
-
     // O(n^2) algorithm, whose cost is independent of the number of nearest sought
 
     for (int i = 0; i < nb_rbf; i++) {
@@ -819,41 +818,36 @@ void Grid::generateStencilsHash()
             level ++; 
         }
 
-#if 1
-        std::vector< std::pair<float, size_t> > dists;
-
-        dists.reserve(nb_neighbor_nodes_to_check);
+        std::set< std::pair<float,size_t> , ltdist> dists;
         size_t d_count = 0;  
         for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
             size_t cell_id = *it; 
             for (size_t q = 0; q < cell_hash[cell_id].size(); q++) {
                 NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
-                dists[d_count] = std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
-                //           std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << dists[d_count] << std::endl;
+                //dists[d_count] = std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
+//                std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << (node - neighbor).magnitude()  << std::endl;
+                dists.insert(std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] )); 
                 d_count++;
             }
         }
 
-        // sort node indices according to distances 
-        ltdists sorter;
-        std::sort(dists.begin(), dists.end(), sorter); 
+        // Set insertion auto-sorts by distance
 
         StencilType& st = stencil_map[p]; 
         //st.clear();     // In case of any residual stencil info
 
         st.resize(max_st_size);  
-
+        std::set< std::pair<float,size_t> , ltdist>::iterator sorted_ids = dists.begin(); 
         for (size_t j = 0; j < max_st_size; j++) { 
-            if (dists[j].first < max_st_radius) {
-                //std::cout << "NODE ID: " << p << "\tDIST (" << j << ") = " << dists[j].first << "\t NeighborIndx: " << dists[j].second << std::endl;
-                st[j] = dists[j].second; 
+            if ((*sorted_ids).first < max_st_radius) {
+ //               std::cout << "NODE ID: " << p << "\tDIST (" << j << ") = " << (*sorted_ids).first << "\t NeighborIndx: " << (*sorted_ids).second << std::endl;
+                st[j] = (*sorted_ids).second; 
+                sorted_ids++;
             } else {
                 st.resize(j); // trim off extra entries in each stencil
                 break; 
             }
         }
-
-#endif 
     }
 
     this->computeStencilRadii();

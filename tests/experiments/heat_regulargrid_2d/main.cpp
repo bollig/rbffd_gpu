@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
             grid->writeToFile(); 
             std::cout << "Generating stencils\n";
             tm["stencils"]->start(); 
-            grid->generateStencils(Grid::ST_KDTREE);   
+            grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 

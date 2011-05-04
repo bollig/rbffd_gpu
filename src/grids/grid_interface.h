@@ -281,28 +281,7 @@ class ltvec {
         }
 };
 
-#if 0
-class ltdist {
-    public:
-        static float* dists;
-
-#if 0
-        static void setDists(vector<float>& dists_) {
-            dists = &dists_;
-            for (int i = 0; i < (*dists).size(); i ++) { 
-                std::cout << "dists[" << i << "] = " << (*dists)[i] << std::endl;
-            }
-        }
-#endif 
-        bool operator()(const size_t i, const size_t j) {
-            float d1 = dists[i];
-            float d2 = dists[j];
-            std::cout << "comparing: " << d1 << "(" << i << ")" << ", " << d2 << "(" << j << ")" << std::endl;
-            // allows duplicates
-            return d1 <= d2;
-        }
-};
-#endif 
+// allow insertion sort of <distance, node_indx> pairs for std::set
 class ltdist {
     public: 
         bool operator() (const std::pair<float,size_t> i, const std::pair<float,size_t> j)
@@ -310,14 +289,5 @@ class ltdist {
             return i.first <= j.first; 
         }
 };
-// Small class to sort pairs of distances and node indices
-#if 0
-class ltdists {
-    public:
-        bool operator()(const std::pair<float,size_t> i, const std::pair<float,size_t> j) {
-            return i.first <= j.first;
-        }
-};
-#endif 
 
 #endif //__GRID_H__

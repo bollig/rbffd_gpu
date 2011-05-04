@@ -727,16 +727,6 @@ void Grid::generateStencilsHash()
     //          sort the candidate list according to distance from node
     //          select stencil_size closest matches
     for (size_t p = 0; p < this->nb_nodes; p++) {
-        // The list of cells we will search to find our neighbors
-        std::vector<size_t> candidate_list; 
-        int min_cx = 0; 
-        int max_cx = 0; 
-        int min_cy = 0; 
-        int max_cy = 0;
-        int min_cz = 0; 
-        int max_cz = 0;
-
-        // start by searching only our cell
 
         NodeType node = this->getNode(p);
         // xc, yc and zc are the (x,y,z) corresponding to the cell id
@@ -818,6 +808,7 @@ void Grid::generateStencilsHash()
             level ++; 
         }
 
+        // Compute distances for each neighbor and insert them into a sorted set. 
         std::set< std::pair<float,size_t> , ltdist> dists;
         size_t d_count = 0;  
         for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
@@ -825,7 +816,7 @@ void Grid::generateStencilsHash()
             for (size_t q = 0; q < cell_hash[cell_id].size(); q++) {
                 NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
                 //dists[d_count] = std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
-//                std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << (node - neighbor).magnitude()  << std::endl;
+                //                std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << (node - neighbor).magnitude()  << std::endl;
                 dists.insert(std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] )); 
                 d_count++;
             }
@@ -840,7 +831,7 @@ void Grid::generateStencilsHash()
         std::set< std::pair<float,size_t> , ltdist>::iterator sorted_ids = dists.begin(); 
         for (size_t j = 0; j < max_st_size; j++) { 
             if ((*sorted_ids).first < max_st_radius) {
- //               std::cout << "NODE ID: " << p << "\tDIST (" << j << ") = " << (*sorted_ids).first << "\t NeighborIndx: " << (*sorted_ids).second << std::endl;
+                // std::cout << "NODE ID: " << p << "\tDIST (" << j << ") = " << (*sorted_ids).first << "\t NeighborIndx: " << (*sorted_ids).second << std::endl;
                 st[j] = (*sorted_ids).second; 
                 sorted_ids++;
             } else {

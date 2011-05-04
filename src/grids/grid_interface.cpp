@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <set>
+#include <limits> // for ST_HASH
 
 #include "grid_interface.h"
 #include "utils/random.h"
@@ -31,11 +32,6 @@ void Grid::writeToFile(int iter) {
 void Grid::writeToFile(std::string filename) {
     std::ofstream fout(filename.c_str()); 
 
-    // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
-
     if (fout.is_open()) {
         for (size_t i = 0; i < node_list.size(); i++) {
             fout << node_list[i] << std::endl; 
@@ -63,11 +59,6 @@ void Grid::writeBoundaryToFile(std::string filename) {
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
 
-    // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
-
     if (fout.is_open()) {
         for (size_t i = 0; i < boundary_indices.size(); i++) {
             fout << boundary_indices[i] << std::endl; 
@@ -86,11 +77,6 @@ void Grid::writeNormalsToFile(std::string filename) {
     std::string fname = "nrmls_"; 
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
-
-    // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
 
     if (fout.is_open()) {
         for (size_t i = 0; i < boundary_normals.size(); i++) {
@@ -111,11 +97,13 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
     fname.append(filename); 
     std::ofstream fout(fname.c_str()); 
 
+    // NOTE: we keep the precision extension here because our radii are double precision (nodes are single and only need 8 digits)
+#if 1
     // Increase our precision when writing to disk: 
     fout.setf(ios::fixed, ios::floatfield); 
     fout.setf(ios::showpoint); 
     fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
-
+#endif 
     if (fout.is_open()) {
         for (size_t i = 0; i < avg_stencil_radii.size(); i++) {
             fout << avg_stencil_radii[i] << std::endl; 
@@ -138,11 +126,6 @@ void Grid::writeStencilsToFile(std::string filename) {
         std::string fname = prefix.str(); 
         fname.append(filename); 
         std::ofstream fout(fname.c_str()); 
-
-        // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
 
         if (fout.is_open()) {
             for (size_t i = 0; i < stencil_map.size(); i++) {
@@ -584,39 +567,11 @@ void Grid::computeStencilRadii() {
 
 
 void Grid::generateStencilsBruteForce() {
-    this->stencil_map.resize(node_list.size());
+    this->checkStencilSize(); 
 
     int nb_rbf = node_list.size();
     int nb_bnd = boundary_indices.size();
     std::vector<NodeType>& rbf_centers = node_list;
-
-    if (max_st_size < 1) {
-        std::cout << "[Grid] ERROR! Stencil size must be >= 1" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if (max_st_size > nb_rbf) {
-        //        int new_stencil_size = (int) (0.5 * nb_rbf);
-        int new_stencil_size = nb_rbf;
-        new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
-        std::cout << "[Grid] WARNING! Not enough nodes to reach specified stencil_size (size: " << max_st_size << ")!\n"; 
-        std::cout << "[Grid] WARNING! Using new stencil size: " << new_stencil_size << "!\n";
-        std::cout << "[Grid] WARNING! This is the largest possible stencil give your domain resolution.\n"; 
-        max_st_size = new_stencil_size;
-    }
-
-    if (nb_bnd == 0) {
-
-        std::cout << "[Grid] WARNING! nb_bnd == 0; Did the Grid::generate() execute properly?!\n";
-        //        exit(EXIT_FAILURE);
-    }
-
-    // for each node, a vector of stencil nodes (global indexing)
-    if (stencil_map.size() < nb_rbf) {
-        std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
-        stencil_map.resize(nb_rbf);
-    }
-    //printf("stencil size: %d, nb_rbf= %d\n", stencil.size(), nb_rbf);
 
     ltvec ltvec_inst;
 
@@ -667,6 +622,8 @@ void Grid::generateStencilsBruteForce() {
 //----------------------------------------------------------------------
 void Grid::generateStencilsKDTree() 
 {
+    this->checkStencilSize(); 
+
     int nb_rbf = node_list.size();
     int nb_bnd = boundary_indices.size();
 
@@ -675,33 +632,6 @@ void Grid::generateStencilsKDTree()
     if (node_list_kdtree == NULL) {        
         // It hasnt been constructed yet
         node_list_kdtree = new KDTree(node_list);
-    }
-
-    if (max_st_size < 1) {
-        std::cout << "[Grid] ERROR! Stencil size must be >= 1" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if (max_st_size > nb_rbf) {
-        //        int new_stencil_size = (int) (0.5 * nb_rbf);
-        int new_stencil_size = nb_rbf;
-        new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
-        std::cout << "[Grid] WARNING! Not enough nodes to reach specified stencil_size (size: " << max_st_size << ")!\n"; 
-        std::cout << "[Grid] WARNING! Using new stencil size: " << new_stencil_size << "!\n";
-        std::cout << "[Grid] WARNING! This is the largest possible stencil give your domain resolution.\n"; 
-        max_st_size = new_stencil_size;
-    }
-
-    if (nb_bnd == 0) {
-
-        std::cout << "[Grid] WARNING! nb_bnd == 0; Did the Grid::generate() execute properly?!\n";
-        //        exit(EXIT_FAILURE);
-    }
-
-    // for each node, a vector of stencil nodes (global indexing)
-    if (stencil_map.size() < nb_rbf) {
-        std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
-        stencil_map.resize(nb_rbf);
     }
 
     for (size_t i = 0; i < node_list.size(); i++) {
@@ -728,12 +658,236 @@ void Grid::generateStencilsKDTree()
 }
 
 //----------------------------------------------------------------------
+// Create an overlay grid
+//      assign each node an i,j,k grid cell location
+//      search only cells within the max_radius, but go outward by 
+//              cells starting at the center cell. 
+// NOTE: does not require KDTree construction and allows immediate query
 void Grid::generateStencilsHash()
 {
-    // Create an overlay grid
-    //      assign each node an i,j,k grid cell location
-    //      search only cells within the max_radius, but go outward by 
-    //              cells starting at the center cell. 
-    // NOTE: does not require KDTree construction and allows immediate query
+    this->checkStencilSize(); 
 
+    // Dimensions of the hash overlay grid (hnx by hny by hnz regular grid
+    // spanning the full bounding box of the domain extent)
+    size_t hnx = ns_nbx; 
+    size_t hny = ns_nby;
+    size_t hnz = ns_nbz;
+
+    std::vector< std::vector<size_t> > cell_hash; 
+    // list of lists 
+    cell_hash.resize(hnx * hny * hnz);  
+
+    double cdx = (xmax - xmin) / hnx;
+    //double cdx = (hnx > 1) ? (xmax - xmin) / (hnx - 1.) : (xmax - xmin) / hnx;
+    double cdy = (ymax - ymin) / hny;
+    double cdz = (zmax - zmin) / hnz;
+
+    NodeType cell_start(xmin, ymin, zmin); 
+    NodeType cell_end(xmax, ymax, zmax); 
+
+    // Foreach node: 
+    //     determine hashid (cellid)
+    //          node(x,y,z) exists in cellid((x-xmin)/dx, (y-ymin)/dy, (z-zmin)/dz)
+    //          linearize cellid(xc, yc, zc) = ((xc*NY) + yc)*NZ + zc
+    //          append node to list contained in list[cellid]
+    for (size_t i = 0; i < this->nb_nodes; i++) {
+        NodeType node = this->getNode(i);
+        // xc, yc and zc are the (x,y,z) corresponding to the cell id
+        // xmin,ymin,zmin are member properties of the Grid class
+        // cdx,cdy,cdz are the deltaX, deltaY, deltaZ for the cell overlays
+        // TODO: we note that the xc, yc and zc can be treated at binary digits
+        // to select the CELL_ID (do we really need an optimization like that
+        // though?)
+        size_t xc = floor((node.x() - xmin) / cdx); 
+        // This logic saves us when our nodes lie on xmax, ymax, or zmax
+        // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
+        xc = (xc == hnx) ? xc-1 : xc; 
+        size_t yc = floor((node.y() - ymin) / cdy); 
+        yc = (yc == hny) ? yc-1 : yc; 
+        size_t zc = floor((node.z() - zmin) / cdz);
+        zc = (zc == hnz) ? zc-1 : zc; 
+        size_t cell_id = ((xc*hny) + yc)*hnz + zc; 
+
+        //       std::cout << "NODE:" << node << "   in   CELL: " << cell_id << "      ( " << xc << ", " << yc << ", " << zc << " )" << std::endl;
+        cell_hash[cell_id].push_back(i); 
+    }
+
+#if 0
+    for (size_t i = 0; i < cell_hash.size(); i++) {
+        std::cout << "CELL[" << i << "].size() = " << cell_hash[i].size() << std::endl;
+    }
+#endif 
+    // TODO: Sort nodes according to hash for better access patterns
+
+    // Foreach node: 
+    //      Generate a stencil:
+    //          append cell_hash[cellid(this->node)] list to candidate list
+    //          if (stencil_size > cell_hash.length) then 
+    //              append 8 (or 26 if 3D) neigboring cell_hash lists to candidate list
+    //          end
+    //          sort the candidate list according to distance from node
+    //          select stencil_size closest matches
+    for (size_t p = 0; p < this->nb_nodes; p++) {
+        // The list of cells we will search to find our neighbors
+        std::vector<size_t> candidate_list; 
+        int min_cx = 0; 
+        int max_cx = 0; 
+        int min_cy = 0; 
+        int max_cy = 0;
+        int min_cz = 0; 
+        int max_cz = 0;
+
+        // start by searching only our cell
+
+        NodeType node = this->getNode(p);
+        // xc, yc and zc are the (x,y,z) corresponding to the cell id
+        // xmin,ymin,zmin are member properties of the Grid class
+        // cdx,cdy,cdz are the deltaX, deltaY, deltaZ for the cell overlays
+        size_t xc = floor((node.x() - xmin) / cdx); 
+        // This logic saves us when our nodes lie on xmax, ymax, or zmax
+        // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
+        xc = (xc == hnx) ? xc-1 : xc; 
+        size_t yc = floor((node.y() - ymin) / cdy); 
+        yc = (yc == hny) ? yc-1 : yc; 
+        size_t zc = floor((node.z() - zmin) / cdz);
+        zc = (zc == hnz) ? zc-1 : zc; 
+
+        size_t node_cell_id = ((xc*hny) + yc)*hnz + zc; 
+
+        // List of cell indices we will check
+        // NOTE: we leverage set here because it does NOT allow duplicates,
+        // so cells are not searched twice
+        std::set<size_t> neighbor_cell_set; 
+
+        // Generate a list of cells to check for nearest neighbors
+        // For each node expand the search until the max_st_size can be satisifed
+        // DO NOT check cells with 0 node inside
+
+        size_t nb_neighbor_nodes_to_check = 0; 
+        int level = 0; 
+        // TODO: cut-off search if (max_st_radius+cdx) is execeeded
+        //          (requires a working impl of max_st_radius)
+        while (nb_neighbor_nodes_to_check < max_st_size) {
+            int xlevel = level;
+            int ylevel = (hny > 1) ? level : 0;
+            int zlevel = (hnz > 1) ? level : 0; 
+
+            for (int xindx = 0-xlevel; xindx <= 0+xlevel; xindx++) {
+                for (int yindx = 0-ylevel; yindx <= 0+ylevel; yindx++) {
+                    for (int zindx = 0-zlevel; zindx <= 0+zlevel; zindx++) {
+                        // Offset cell
+                        int xc_o = (xc + xindx); 
+                        int yc_o = (yc + yindx); 
+                        int zc_o = (zc + zindx); 
+
+#if 1
+                        // If the neighbor cell is outside our overlay we ignore the task
+                        if ((xc_o < 0) || (xc_o >= hnx)) {
+                            continue;
+                        }
+
+                        if ((yc_o < 0) || (yc_o >= hny)) {
+                            continue;
+                        }
+
+                        if ((zc_o < 0) || (zc_o >= hny)) {
+                            continue;
+                        }
+#endif 
+                        size_t cell_id = ((xc_o*hny) + yc_o)*hnz + zc_o; 
+
+                        //                        std::cout << "( " << xc_o << ", " << yc_o << ", " << zc_o << " ) = " << cell_id << std::endl;
+
+                        if (cell_hash[cell_id].size() > 0) {
+                            neighbor_cell_set.insert(cell_id);
+                        }
+                    }
+                }
+            }
+
+            // Now count the number of nodes we'll be checking.
+            // If its greater than max_st_size then we can stop expanding search
+
+            nb_neighbor_nodes_to_check = 0;
+            for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
+                size_t cell_id = *it; 
+                //                std::cout << "Node ID: " << p << " in CELL " << node_cell_id << ", Checking NEIGHBOR CELL: " << cell_id << std::endl;
+                nb_neighbor_nodes_to_check += cell_hash[cell_id].size();
+            }
+            //    std::cout << "NODE ID: " << p << "  LEVEL: " << level << "\t";
+            //    std::cout << "NB_NEIGHBORS = " << nb_neighbor_nodes_to_check << " of " << max_st_size << std::endl;
+            level ++; 
+        }
+
+#if 1
+        std::vector< std::pair<float, size_t> > dists;
+
+        dists.reserve(nb_neighbor_nodes_to_check);
+        size_t d_count = 0;  
+        for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
+            size_t cell_id = *it; 
+            for (size_t q = 0; q < cell_hash[cell_id].size(); q++) {
+                NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
+                dists[d_count] = std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
+                //           std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << dists[d_count] << std::endl;
+                d_count++;
+            }
+        }
+
+        // sort node indices according to distances 
+        ltdists sorter;
+        std::sort(dists.begin(), dists.end(), sorter); 
+
+        StencilType& st = stencil_map[p]; 
+        //st.clear();     // In case of any residual stencil info
+
+        st.resize(max_st_size);  
+
+        for (size_t j = 0; j < max_st_size; j++) { 
+            if (dists[j].first < max_st_radius) {
+                //std::cout << "NODE ID: " << p << "\tDIST (" << j << ") = " << dists[j].first << "\t NeighborIndx: " << dists[j].second << std::endl;
+                st[j] = dists[j].second; 
+            } else {
+                st.resize(j); // trim off extra entries in each stencil
+                break; 
+            }
+        }
+
+#endif 
+    }
+
+    this->computeStencilRadii();
+}
+
+
+
+void Grid::checkStencilSize() {
+    int nb_rbf = node_list.size();
+    int nb_bnd = boundary_indices.size();
+
+    if (max_st_size < 1) {
+        std::cout << "[Grid] ERROR! Stencil size must be >= 1" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (max_st_size > nb_rbf) {
+        //        int new_stencil_size = (int) (0.5 * nb_rbf);
+        int new_stencil_size = nb_rbf;
+        new_stencil_size = (new_stencil_size > 1) ? new_stencil_size : 1;
+        std::cout << "[Grid] WARNING! Not enough nodes to reach specified stencil_size (size: " << max_st_size << ")!\n"; 
+        std::cout << "[Grid] WARNING! Using new stencil size: " << new_stencil_size << "!\n";
+        std::cout << "[Grid] WARNING! This is the largest possible stencil give your domain resolution.\n"; 
+        max_st_size = new_stencil_size;
+    }
+
+    if (nb_bnd == 0) {
+        std::cout << "[Grid] WARNING! nb_bnd == 0; Did the Grid::generate() execute properly?!\n";
+        //        exit(EXIT_FAILURE);
+    }
+
+    // for each node, a vector of stencil nodes (global indexing)
+    if (stencil_map.size() < nb_rbf) {
+        std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
+        stencil_map.resize(nb_rbf);
+    }
 }

@@ -148,7 +148,7 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
             this->weights[i][irbf][j] = weights_new(j, i);
         }
 
-#if 0
+#if DEBUG
         double sum_nodes_only = 0.;
         double sum_nodes_and_monomials = 0.;
         for (int j = 0; j < n; j++) {

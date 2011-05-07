@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
 
     printf("start computing weights\n");
     tm["weights"]->start(); 
-#if 1
+#if 0
     for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
         tm["oneWeight"]->start(); 
      //   der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);

@@ -5,7 +5,7 @@
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
     RBFFD::RBFFD(Domain& grid, int dim_num_)//, RBF_Type rbf_choice) 
-: grid_ref(grid), dim_num(dim_num)
+: grid_ref(grid), dim_num(dim_num_)
 {
     int nb_rbfs = grid.getNodeListSize(); 
 
@@ -54,7 +54,8 @@ void RBFFD::getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& 
         arma::mat col(nn,1); 
         // Fill by column
        this->getStencilRHS((DerType)i, rbf_centers, stencil, num_monomials, col); 
-       rhs.submat(0,(DerType)i,nn,i) = col; 
+       // we want a( : , i ) where : is a vec of length nn
+       rhs.submat(0,i,nn-1,i) = col; 
     }
 //    return rhs; 
 }

@@ -74,7 +74,7 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 
     // value 0 => stencil center is at index 0 in "stencil"
     // dim_num required for RBF
-    this->distanceMatrix(rbf_centers, stencil, 0, dim_num, d_matrix);
+    this->distanceMatrix(rbf_centers, stencil, dim_num, d_matrix);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -98,7 +98,7 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
         }
     }
 
-    d_matrix.print("DISTANCE MATRIX: ");
+   // d_matrix.print("DISTANCE MATRIX BEFORE: ");
 }
 
 //--------------------------------------------------------------------
@@ -122,35 +122,40 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     this->getStencilMultiRHS(rbf_centers, stencil, np, rhs);
     this->getStencilLHS(rbf_centers, stencil, np, lhs);
 
-    rhs.print("RHS="); 
     lhs.print("LHS="); 
+    rhs.print("RHS="); 
+
 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
-    arma::mat weights_new = arma::solve(lhs, trans(rhs)); //bx*Ainv;
+    // We dont need the transpose of the RHS because we fill it in column form already
+    // Also we use the multiple rhs solver for improved efficiency (BLAS3).
+    arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
     int irbf = st_indx;
+    weights_new.print("weights");
+    // FIXME: do not save the extra NP coeffs
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
         if (this->weights[i][irbf] == NULL) {
             this->weights[i][irbf] = new double[n+np];
         }
         for (int j = 0; j < n+np; j++) {
-            this->weights[i][irbf][j] = weights_new[j];
+            this->weights[i][irbf][j] = weights_new(j, i);
         }
 
-#if DEBUG
+#if 1
         double sum_nodes_only = 0.;
         double sum_nodes_and_monomials = 0.;
         for (int j = 0; j < n; j++) {
-            sum_nodes_only += weights_new[j];
+            sum_nodes_only += weights_new(j,i);
         }
         sum_nodes_and_monomials = sum_nodes_only;
         for (int j = n; j < n+np; j++) {
-            sum_nodes_and_monomials += weights_new[j];
+            sum_nodes_and_monomials += weights_new(j,i);
         }
 
-        cout << "(" << irbf << ") ";
-        weights_new.print("lapl_weights");
+        cout << "(Stencil: " << irbf << ", DerivType: " << i << ") ";
+        //weights_new.print("lapl_weights");
         cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
         cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
         if (sum_nodes_only > 1e-7) {
@@ -183,7 +188,6 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //  DMat(stencil) 
     // CONSISTENCY: index x_"j" indices stencil center in all papers
     for (int j=0; j < n; j++) {
-        std::cout << "J = " << j << std::endl;
         // We want to evaluate every basis function. Each stencil node xjv has
         // its own basis function and we evaluate them with the distance to the
         // stencil center node x0v. This is B_j(||x0v - xjv||)
@@ -240,7 +244,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
         }
     }
-
+    rhs.print("RHS before");
 }
 
 
@@ -335,10 +339,11 @@ void RBFFD::setupTimers() {
 
 //--------------------------------------------------------------------
 
-void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, size_t stencil_center_indx, int dim_num, arma::mat& ar) {
-    int irbf = stencil_center_indx;
+void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, int dim_num, arma::mat& ar) {
+    // We assume that all stencils are centered around the first node in the Stencil node list.
+    size_t irbf = stencil[0]; 
     Vec3& c = rbf_centers[irbf];
-    int n = stencil.size();
+    size_t n = stencil.size();
     //printf("stencil size= %d\n", n);
 
     //printf("stencil size(%d): n= %d\n", irbf, n);
@@ -378,22 +383,27 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
 
     // DMat: (note: phi_0(x_N) is the 0th RBF evaluated at x_N) 
     //
-    //  | phi_0(x_0)   phi_1(x_0)   ... phi_N(x_0) |
-    //  | phi_0(x_1)   phi_1(x_1)   ... phi_N(x_1) |
+    //  | phi_0(x_0)   phi_0(x_1)   ... phi_0(x_N) |
+    //  | phi_1(x_0)   phi_1(x_1)   ... phi_1(x_N) |
     //  |     ...         ...             ...      | 
-    //  | phi_0(x_N)   phi_1(x_N)   ... phi_N(x_N) |
+    //  | phi_N(x_0)   phi_N(x_1)   ... phi_N(x_N) |
     //
     // stencil includes the point itself
-    for (int i=0; i < n; i++) {
-        Vec3& xiv = rbf_centers[stencil[i]];
-        for (int j=0; j < n; j++) {
-            IRBF rbf(var_epsilon[stencil[j]], dim_num);
-            // rbf centered at xj
-            Vec3& xjv = rbf_centers[stencil[j]];
-            ar(i,j) = rbf(xiv, xjv);
+    for (int j=0; j < n; j++) {
+        // We allow a unique var_epsilon at each RBF. within a stencil.
+        // TODO: test when its a unique var_epsilon by stencil, not by RBF *WITHIN* a stencil
+        IRBF rbf(var_epsilon[stencil[j]], dim_num);
+        // rbf centered at xj
+        Vec3& xjv = rbf_centers[stencil[j]];
+        for (int i=0; i < n; i++) {
+            // by row
+            Vec3& xiv = rbf_centers[stencil[i]];
+            // Center is on right:
+            ar(j,i) = rbf(xiv, xjv);
         }
     }
-    //   ar.print("INSIDE DMATRIX");
+
+//    ar.print("INSIDE DMATRIX");
 
 }
 

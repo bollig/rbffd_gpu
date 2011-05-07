@@ -73,7 +73,8 @@ int main(int argc, char** argv) {
         //          tm["grid"]->stop(); 
         std::cout << "Generating stencils\n";
         //        tm["stencils"]->start(); 
-        grid->generateStencils(Grid::ST_BRUTE_FORCE);   // nearest stencil_size 
+        grid->generateStencils(Grid::ST_HASH);   // nearest stencil_size 
+        //grid->generateStencils(Grid::ST_BRUTE_FORCE);   // nearest stencil_size 
         //      tm["stencils"]->stop();
         grid->writeToFile(); 
     }
@@ -107,6 +108,12 @@ int main(int argc, char** argv) {
         der_test->testAllFunctions(*der, *grid);
 //        delete(der_test);
     }
+
+    der->writeToFile(Derivative::X, "x_weights.mtx"); 
+    der->writeToFile(Derivative::Y, "y_weights.mtx"); 
+    der->writeToFile(Derivative::Z, "z_weights.mtx"); 
+    der->writeToFile(Derivative::LAPL, "lapl_weights.mtx"); 
+
 
     NCARPoisson1* poisson = new NonUniformPoisson1_CL(exact_poisson, grid, der, 0, dim);
     poisson->setBoundaryCondition(boundary_condition); 

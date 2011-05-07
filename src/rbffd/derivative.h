@@ -184,6 +184,8 @@ class Derivative
             }
             return this->var_epsilon[0];
         }
+
+        void writeToFile(DerType which, std::string filename="weights.mtx");
 };
 
 #endif

@@ -101,6 +101,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             // Compute all derivatives for our centers and return the number of
             // weights that will be available
             numNonZeros += der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), i);
+#undef USE_CONTOURSVD
 #if USE_CONTOURSVD
             der->computeWeightsSVD(subdomain->getNodeList(), subdomain->getStencil(i), i, "x");
             der->computeWeightsSVD(subdomain->getNodeList(), subdomain->getStencil(i), i, "y");
@@ -123,7 +124,11 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 #endif
         t2.end();
         cout << "Weights computed" << endl;
-
+        der->writeToFile(Derivative::X, "x_weights.mtx"); 
+        der->writeToFile(Derivative::Y, "y_weights.mtx"); 
+        der->writeToFile(Derivative::Z, "z_weights.mtx"); 
+        der->writeToFile(Derivative::LAPL, "lapl_weights.mtx"); 
+        cout << "Weights written to file" << endl;
         t3.start();
 
         int nm = nb + ni;
@@ -141,7 +146,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         F_host(nm-1) = 0.;
 
         int indx = 0;
-
+#if 1
         //--------------------------------------------------
         // Fill Boundary weights (LHS + RHS)
         if (test_dirichlet_lockdown) {
@@ -201,7 +206,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             }
         }
         cout << "DONE FILLING BOUNDARY" << endl;
-
+#endif 
         //--------------------------------------------------
         // Fill Interior weights (LHS + RHS)
         for (int i = nb; i < nb+ni; i++) {

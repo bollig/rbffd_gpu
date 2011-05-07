@@ -6,6 +6,9 @@
 #include "stencils.h"
 #include "timer_eb.h"
 
+// The Matrix-Market File Format Spec
+#include "mmio.h"
+
 using namespace EB;
 
 using namespace std;
@@ -181,10 +184,12 @@ Derivative::AF& Derivative::cholesky(AF& arr)
 
     printf("\n");
 
+#if 0
     for (int j=0; j < n; j++) {
 	for (int i=0; i < n; i++) {
             //printf("arr(%d,%d)= %f\n", i,j, arr(i,j));
 	}}
+#endif 
     printf("\n");
 
     // Cholesky decomposition (save on memory)
@@ -1320,4 +1325,75 @@ double Derivative::minimum(vector<double>& vec)
     }
     return min;
 }
+//----------------------------------------------------------------------
+
+void Derivative::writeToFile(DerType which, std::string filename) {
+
+    // number of non-zeros (should be close to max_st_size*num_stencils)
+    size_t nz = 0;
+
+    std::vector<double*>* deriv_choice_ptr; 
+
+    switch (which) {
+        case X: 
+            deriv_choice_ptr = &x_weights; 
+            break; 
+        case Y: 
+            deriv_choice_ptr = &y_weights; 
+            break; 
+        case Z: 
+            deriv_choice_ptr = &z_weights; 
+            break; 
+        case LAPL: 
+            deriv_choice_ptr = &lapl_weights; 
+            break; 
+        default: 
+            std::cout << "[Derivative] ERROR! INVALID CHOICE INSIDE writeToFile()\n"; 
+            exit(EXIT_FAILURE);
+            break; 
+    }
+
+    for (size_t i = 0; i < stencil.size(); i++) {
+        nz += stencil[i].size();
+    }
+    fprintf(stdout, "Writing %d weights to %s\n", nz, filename.c_str()); 
+
+    // Num stencils (x_weights.size())
+    const size_t M = (*deriv_choice_ptr).size();
+    // We have a square MxN matrix
+    const size_t N = M;
+
+    // Value obtained from mm_set_* routine
+    MM_typecode matcode;                        
+    
+  //  int I[nz] = { 0, 4, 2, 8 };
+  //  int J[nz] = { 3, 8, 7, 5 };
+  //  double val[nz] = {1.1, 2.2, 3.2, 4.4};
+
+    int err = 0; 
+    FILE *f; 
+    f = fopen(filename.c_str(), "w"); 
+    err += mm_initialize_typecode(&matcode);
+    err += mm_set_matrix(&matcode);
+    err += mm_set_coordinate(&matcode);
+    err += mm_set_real(&matcode);
+
+    err += mm_write_banner(f, matcode); 
+    err += mm_write_mtx_crd_size(f, M, N, nz);
+
+    /* NOTE: matrix market files use 1-based indices, i.e. first element
+       of a vector has index 1, not 0.  */
+//    fprintf(stdout, "Writing file contents: \n"); 
+    for (size_t i = 0; i < stencil.size(); i++) {
+        for (size_t j = 0; j < stencil[i].size(); j++) {
+            // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
+            fprintf(f, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+           // fprintf(stdout, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+            //fprintf(stdout, "%d %d %lg\n", i, j, (*deriv_choice_ptr)[i][j]); 
+        }
+    }
+
+    fclose(f);
+}
+
 //----------------------------------------------------------------------

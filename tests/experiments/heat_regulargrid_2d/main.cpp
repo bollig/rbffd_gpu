@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
             grid->generate();
             tm["grid"]->stop(); 
             grid->writeToFile(); 
-            std::cout << "Generating stencils\n";
+            std::cout << "Generating stencils using Grid::ST_HASH\n";
             tm["stencils"]->start(); 
             grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
@@ -214,6 +214,10 @@ int main(int argc, char** argv) {
         der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);
         tm["oneWeight"]->stop();
     }
+    der->writeToFile(Derivative::X, "x_weights.mtx"); 
+    der->writeToFile(Derivative::Y, "y_weights.mtx"); 
+    der->writeToFile(Derivative::Z, "z_weights.mtx"); 
+    der->writeToFile(Derivative::LAPL, "lapl_weights.mtx"); 
     tm["weights"]->stop(); 
     cout << "end computing weights" << endl;
 

@@ -213,6 +213,8 @@ int main(int argc, char** argv) {
     printf("start computing weights\n");
     tm["weights"]->start(); 
 #if 0
+#if 1
+    // Preferred for fine grain control of weights per stencil: 
     for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
         tm["oneWeight"]->start(); 
      //   der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);
@@ -220,6 +222,20 @@ int main(int argc, char** argv) {
         tm["oneWeight"]->stop();
     }
 #else 
+    // What we used to do: 
+    for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
+        tm["oneWeight"]->start(); 
+        der->computeWeightsForStencil(RBFFD::X, irbf);
+        tm["oneWeight"]->stop();
+    }
+    for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
+        der->computeWeightsForStencil(RBFFD::Y, irbf);
+        der->computeWeightsForStencil(RBFFD::Z, irbf);
+        der->computeWeightsForStencil(RBFFD::LAPL, irbf);
+    }
+#endif 
+#else 
+    // Preferred for simplest code (will remove the other cases above in later commits)
     der->computeAllWeightsForAllStencils();
 #endif 
     tm["weights"]->stop(); 

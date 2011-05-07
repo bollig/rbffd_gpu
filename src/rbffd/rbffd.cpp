@@ -261,8 +261,6 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
     tm["computeOneWeights"]->start(); 
 
-
-
     StencilType stencil = grid_ref.getStencil(st_indx); 
     std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
 
@@ -279,15 +277,22 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
 
     this->getStencilRHS(which, rbf_centers, stencil, np, rhs);
     this->getStencilLHS(rbf_centers, stencil, np, lhs); 
-
-    rhs.print("RHS="); 
-    lhs.print("LHS=");
-
+ 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
-    arma::mat weights_new = arma::solve(lhs, trans(rhs)); //bx*Ainv;
+    // We avoid the transpose of RHS by allocating a colvec with armadillo
+    arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
     int irbf = st_indx;
+
+#if 0
+    char buf[256]; 
+    sprintf(buf, "LHS(%d)=", st_indx); 
+    lhs.print(buf); 
+    sprintf(buf, "RHS(%d)=", st_indx); 
+    rhs.print(buf); 
+    weights_new.print("weights");
+#endif 
 
     if (this->weights[which][irbf] == NULL) {
         this->weights[which][irbf] = new double[n+np];

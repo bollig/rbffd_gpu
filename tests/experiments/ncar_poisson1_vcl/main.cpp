@@ -109,12 +109,6 @@ int main(int argc, char** argv) {
 //        delete(der_test);
     }
 
-    der->writeToFile(Derivative::X, "x_weights.mtx"); 
-    der->writeToFile(Derivative::Y, "y_weights.mtx"); 
-    der->writeToFile(Derivative::Z, "z_weights.mtx"); 
-    der->writeToFile(Derivative::LAPL, "lapl_weights.mtx"); 
-
-
     NCARPoisson1* poisson = new NonUniformPoisson1_CL(exact_poisson, grid, der, 0, dim);
     poisson->setBoundaryCondition(boundary_condition); 
     poisson->setUseDiscreteRHS(use_discrete_rhs); 

@@ -1,6 +1,6 @@
-
-
 #include "rbffd.h"
+// For writing weights in (sparse) matrix market format
+#include "mmio.h"
 
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
@@ -105,7 +105,7 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 // Compute the full set of weights for a derivative type
 void RBFFD::computeAllWeightsForStencil(int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
-    tm["computeAllWeights"]->start(); 
+    tm["computeAllWeightsOne"]->start(); 
     StencilType& stencil = grid_ref.getStencil(st_indx); 
     int n = stencil.size();
     int np = 1+dim_num; // +3 for the x,y,z monomials
@@ -159,7 +159,7 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
 #endif // DEBUG
     }
 
-    tm["computeWeights"]->end();
+    tm["computeAllWeightsOne"]->end();
 }
 
 //--------------------------------------------------------------------
@@ -170,7 +170,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     int n = stencil.size(); 
 
     // Assume single RHS
-    rhs.zeros();
+//    rhs.zeros(n);
 
     NodeType& x0v = rbf_centers[stencil[0]];
 
@@ -182,7 +182,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //  DMat(stencil) 
     // CONSISTENCY: index x_"j" indices stencil center in all papers
     for (int j=0; j < n; j++) {
-
+        std::cout << "J = " << j << std::endl;
         // We want to evaluate every basis function. Each stencil node xjv has
         // its own basis function and we evaluate them with the distance to the
         // stencil center node x0v. This is B_j(||x0v - xjv||)
@@ -195,16 +195,16 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         //xjv.print("xjv = ");
         switch (which) {
             case X:
-                rhs(j,1) = rbf.xderiv(x0v, xjv);
+                rhs(j,0) = rbf.xderiv(x0v, xjv);
                 break; 
             case Y: 
-                rhs(j,1) = rbf.yderiv(x0v, xjv);
+                rhs(j,0) = rbf.yderiv(x0v, xjv);
                 break; 
             case Z:
-                rhs(j,1) = rbf.zderiv(x0v, xjv);
+                rhs(j,0) = rbf.zderiv(x0v, xjv);
                 break; 
             case LAPL: 
-                rhs(j,1) = rbf.lapl_deriv(x0v, xjv);
+                rhs(j,0) = rbf.lapl_deriv(x0v, xjv);
                 break; 
             default:
                 std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
@@ -247,7 +247,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
 void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
-    tm["computeWeights"]->start(); 
+    tm["computeOneWeights"]->start(); 
 
 
 
@@ -261,7 +261,9 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     Vec3& x0v = rbf_centers[stencil[0]];
 
     arma::mat rhs(n+np, 1); 
+    rhs.zeros();
     arma::mat lhs(n+np, n+np); 
+    lhs.zeros();
 
     this->getStencilRHS(which, rbf_centers, stencil, np, rhs);
     this->getStencilLHS(rbf_centers, stencil, np, lhs); 
@@ -303,7 +305,7 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     }
 #endif // DEBUG
 
-    tm["computeWeights"]->end();
+    tm["computeOneWeights"]->end();
 }
 
 //--------------------------------------------------------------------
@@ -322,8 +324,9 @@ void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* der
 //--------------------------------------------------------------------
 
 void RBFFD::setupTimers() {
-    tm["computeWeightsAll"] = new EB::Timer("[RBFFD] Compute All Weights (CPU)"); 
-    tm["computeWeights"] = new EB::Timer("[RBFFD] Compute Weights For Stencil (CPU)"); 
+    tm["computeAllWeightsAll"] = new EB::Timer("[RBFFD] Compute All Weights For ALL Stencils (CPU)"); 
+    tm["computeAllWeightsOne"] = new EB::Timer("[RBFFD] Compute All Weights For One Stencil (CPU)"); 
+    tm["computeOneWeights"] = new EB::Timer("[RBFFD] Compute One Weights For One Stencil (CPU)"); 
     tm["fillDMat"] = new EB::Timer("[RBFFD] Fill Distance Matrix"); 
     tm["apply"] = new EB::Timer("[RBFFD] Apply Weights for a single derivative type of u"); 
     tm["applyAll"] = new EB::Timer("[RBFFD] Apply Weights for all derivative types of u"); 
@@ -395,3 +398,74 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
 
 //--------------------------------------------------------------------
 
+void RBFFD::writeToFile(DerType which, std::string filename) {
+
+    // number of non-zeros (should be close to max_st_size*num_stencils)
+    size_t nz = 0;
+
+    std::vector<StencilType>& stencil = grid_ref.getStencils(); 
+    std::vector<double*>* deriv_choice_ptr = &(weights[which]); 
+#if 0
+    switch (which) {
+        case X: 
+            deriv_choice_ptr = &x_weights; 
+            break; 
+        case Y: 
+            deriv_choice_ptr = &y_weights; 
+            break; 
+        case Z: 
+            deriv_choice_ptr = &z_weights; 
+            break; 
+        case LAPL: 
+            deriv_choice_ptr = &lapl_weights; 
+            break; 
+        default: 
+            std::cout << "[Derivative] ERROR! INVALID CHOICE INSIDE writeToFile()\n"; 
+            exit(EXIT_FAILURE);
+            break; 
+    }
+#endif 
+    for (size_t i = 0; i < stencil.size(); i++) {
+        nz += stencil[i].size();
+    }
+    fprintf(stdout, "Writing %d weights to %s\n", nz, filename.c_str()); 
+
+    // Num stencils (x_weights.size())
+    const size_t M = (*deriv_choice_ptr).size();
+    // We have a square MxN matrix
+    const size_t N = M;
+
+    // Value obtained from mm_set_* routine
+    MM_typecode matcode;                        
+    
+  //  int I[nz] = { 0, 4, 2, 8 };
+  //  int J[nz] = { 3, 8, 7, 5 };
+  //  double val[nz] = {1.1, 2.2, 3.2, 4.4};
+
+    int err = 0; 
+    FILE *f; 
+    f = fopen(filename.c_str(), "w"); 
+    err += mm_initialize_typecode(&matcode);
+    err += mm_set_matrix(&matcode);
+    err += mm_set_coordinate(&matcode);
+    err += mm_set_real(&matcode);
+
+    err += mm_write_banner(f, matcode); 
+    err += mm_write_mtx_crd_size(f, M, N, nz);
+
+    /* NOTE: matrix market files use 1-based indices, i.e. first element
+       of a vector has index 1, not 0.  */
+//    fprintf(stdout, "Writing file contents: \n"); 
+    for (size_t i = 0; i < stencil.size(); i++) {
+        for (size_t j = 0; j < stencil[i].size(); j++) {
+            // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
+            fprintf(f, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+           // fprintf(stdout, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+            //fprintf(stdout, "%d %d %lg\n", i, j, (*deriv_choice_ptr)[i][j]); 
+        }
+    }
+
+    fclose(f);
+}
+
+//----------------------------------------------------------------------

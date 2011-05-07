@@ -6,8 +6,9 @@
 #include "grids/regulargrid.h"
 
 #include "grids/domain.h"
-#include "rbffd/derivative_cl.h"
-#include "rbffd/derivative_tests.h"
+//#include "rbffd/derivative_cl.h"
+//#include "rbffd/derivative_tests.h"
+#include "rbffd/rbffd.h"
 
 #include "exact_solutions/exact_regulargrid.h"
 
@@ -188,39 +189,50 @@ int main(int argc, char** argv) {
     }
 
     // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
-    Derivative* der; 
+//    Derivative* der; 
+    RBFFD* der;
     if (use_gpu) {
-        der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
+//        der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
+        der = new RBFFD(*subdomain, dim); 
     } else {
-        der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
+    //    der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
+        der = new RBFFD(*subdomain, dim); 
     }
 
     int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");
     if (use_var_eps) {
         double alpha = settings->GetSettingAs<double>("VAR_EPSILON_ALPHA", ProjectSettings::optional, "1.0"); 
         double beta = settings->GetSettingAs<double>("VAR_EPSILON_BETA", ProjectSettings::optional, "1.0"); 
-        der->setVariableEpsilon(subdomain->getStencilRadii(), subdomain->getStencils(), alpha, beta); 
+        //der->setVariableEpsilon(subdomain->getStencilRadii(), subdomain->getStencils(), alpha, beta); 
+        der->setVariableEpsilon(alpha, beta); 
     } else {
         double epsilon = settings->GetSettingAs<double>("EPSILON", ProjectSettings::required);
         der->setEpsilon(epsilon);
     }
 
-
-
     printf("start computing weights\n");
     tm["weights"]->start(); 
+#if 1
     for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
         tm["oneWeight"]->start(); 
-        der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);
+     //   der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);
+        der->computeAllWeightsForStencil(irbf);
         tm["oneWeight"]->stop();
     }
-    der->writeToFile(Derivative::X, "x_weights.mtx"); 
-    der->writeToFile(Derivative::Y, "y_weights.mtx"); 
-    der->writeToFile(Derivative::Z, "z_weights.mtx"); 
-    der->writeToFile(Derivative::LAPL, "lapl_weights.mtx"); 
+#else 
+    der->computeAllWeightsForAllStencils();
+#endif 
     tm["weights"]->stop(); 
+
     cout << "end computing weights" << endl;
 
+    der->writeToFile(RBFFD::X, "x_weights.mtx"); 
+    der->writeToFile(RBFFD::Y, "y_weights.mtx"); 
+    der->writeToFile(RBFFD::Z, "z_weights.mtx"); 
+    der->writeToFile(RBFFD::LAPL, "lapl_weights.mtx"); 
+
+    cout << "end write weights to file" << endl;
+#if 0
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
         tm["tests"]->start(); 
         DerivativeTests* der_test = new DerivativeTests();
@@ -232,8 +244,6 @@ int main(int argc, char** argv) {
         }
         tm["tests"]->stop();
     }
-
-
 
     // SOLVE HEAT EQUATION
 
@@ -342,12 +352,14 @@ int main(int argc, char** argv) {
         delete(grid);
     }
 
+
 cout.flush();
 printf("Cleaning up objects\n");
 
 // Writer first so we can dump final solution
 delete(writer);
 delete(heat);
+#endif
 delete(subdomain);
 delete(settings);
 delete(comm_unit); 

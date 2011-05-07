@@ -20,7 +20,7 @@ typedef RBF_MQ IRBF;
 // TODO: put this in rbf.h and have all rbf types available
 //enum RBF_Type {MQ=0, GA, IMQ, TPS, W2};
 
-// Should match how many DerTypes we have
+// Should match how many DerTypes we have below
 #define NUM_DERIV_TYPES 4
 
 class RBFFD
@@ -109,10 +109,10 @@ class RBFFD
         }
 
         void setVariableEpsilon(double alpha=1.0f, double beta=1.0f) {
-            this->setVariableEpsilon(grid_ref.getStencilRadii(), alpha, beta);
+           this->setVariableEpsilon(grid_ref.getStencilRadii(), alpha, beta);
         }
         void setVariableEpsilon(std::vector<double>& avg_radius_, double alpha=1.0f, double beta=1.0f) {
-            modified = 1;
+            //modified = 1;
             use_var_eps = 1;
             std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
             std::vector<double>& avg_stencil_radius = avg_radius_;
@@ -138,7 +138,7 @@ class RBFFD
         std::vector<double*>& getWeights(DerType choice) { return weights[choice]; }
         double*& getStencilWeights(DerType choice, int st_indx) { return weights[choice][st_indx]; } 
 
-        void writeWeightsToFile(std::string filename) {;} 
+        void writeToFile(DerType which, std::string filename="weights.mtx");
         void loadWeightsFromFile(std::string filename) {;} 
 
 

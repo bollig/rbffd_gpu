@@ -112,16 +112,36 @@ class RBFFD
            this->setVariableEpsilon(grid_ref.getStencilRadii(), alpha, beta);
         }
         void setVariableEpsilon(std::vector<double>& avg_radius_, double alpha=1.0f, double beta=1.0f) {
-            //modified = 1;
+            modified = 1;
             use_var_eps = 1;
             std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
             std::vector<double>& avg_stencil_radius = avg_radius_;
 
             var_epsilon.resize(avg_stencil_radius.size());
             for (int i=0; i < var_epsilon.size(); i++) {
+                StencilType& stencil = grid_ref.getStencil(i);
+#if 0
                 var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
                 printf("avg_stencil_radius(%d) = %10.10f\n", i , avg_stencil_radius[i]); 
                 printf("var_epsilon(%d) = %10.10f\n", i, var_epsilon[i]);
+#endif                
+                // var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
+                //            var_epsilon[i] = alpha * avg_stencil_radius[i] / sqrt(beta);
+
+                // Hardy 1972: 
+                //var_epsilon[stencil[i][0]] = 1.0 / (0.815 * avg_stencil_radius[stencil[i][0]]);
+
+                // Franke 1982: 
+                // TODO: franke actually had max_stencil_radius in denom
+                //var_epsilon[i] = 0.8 * sqrt(stencils[i].size()) / max_stencil_radius[i] ;
+
+                // Note: for 24x24, alpha = 0.04. For 64x64, alpha = 0.05; for 1000x1000, alpha = 0.07
+                // we use stencils[i][0] to get the index for the stencil center and its corresponding "avg_radius" 
+                //std::cout << "var_epsilon[" << i << "] = " << alpha << " * sqrt( " << stencils[i].size() << " / avg_radius_[ " << stencils[i][0] << " ] " << std::endl; 
+                // the indx on var_epsilon should be linear 0->stencils.size(), but just in case we have random access based on stencil center index
+                var_epsilon[stencil[0]] = (alpha * sqrt(stencil.size())) / avg_radius_[stencil[0]] ;
+                        
+                //printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
             }
         }
 

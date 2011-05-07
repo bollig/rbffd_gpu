@@ -125,7 +125,6 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     lhs.print("LHS="); 
     rhs.print("RHS="); 
 
-
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
@@ -166,6 +165,7 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     }
 
     tm["computeAllWeightsOne"]->end();
+    exit(EXIT_FAILURE);
 }
 
 //--------------------------------------------------------------------
@@ -193,7 +193,9 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // stencil center node x0v. This is B_j(||x0v - xjv||)
         // NOTE: when all basis functions are the same (eqn and support) then
         // B_c(||x0v - xjv||) = B_j(||x0v - xjv||).
-        IRBF rbf(var_epsilon[stencil[j]], dim_num); 
+        //
+        // FIXME: allow var_epsilon[stencil[j]] (we need to pass stencil info for ghost nodes if this is to be allowed)
+        IRBF rbf(var_epsilon[stencil[0]], dim_num); 
 
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3& xjv = rbf_centers[stencil[j]];
@@ -391,8 +393,9 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
     // stencil includes the point itself
     for (int j=0; j < n; j++) {
         // We allow a unique var_epsilon at each RBF. within a stencil.
-        // TODO: test when its a unique var_epsilon by stencil, not by RBF *WITHIN* a stencil
-        IRBF rbf(var_epsilon[stencil[j]], dim_num);
+        // TODO: test when its a uniq var_epsilon by stencil, not by RBF *WITHIN* a stencil
+        // FIXME: allow var_epsilon[stencil[j]] (we need to pass stencil info for ghost nodes if this is to be allowed)
+        IRBF rbf(var_epsilon[stencil[0]], dim_num);
         // rbf centered at xj
         Vec3& xjv = rbf_centers[stencil[j]];
         for (int i=0; i < n; i++) {

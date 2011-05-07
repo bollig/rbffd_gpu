@@ -122,9 +122,6 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     this->getStencilMultiRHS(rbf_centers, stencil, np, rhs);
     this->getStencilLHS(rbf_centers, stencil, np, lhs);
 
-    lhs.print("LHS="); 
-    rhs.print("RHS="); 
-
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
@@ -132,7 +129,16 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     // Also we use the multiple rhs solver for improved efficiency (BLAS3).
     arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
     int irbf = st_indx;
+    
+#if 0
+    char buf[256]; 
+    sprintf(buf, "LHS(%d)=", st_indx); 
+    lhs.print(buf); 
+    sprintf(buf, "RHS(%d)=", st_indx); 
+    rhs.print(buf); 
     weights_new.print("weights");
+#endif 
+
     // FIXME: do not save the extra NP coeffs
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
         if (this->weights[i][irbf] == NULL) {
@@ -142,7 +148,7 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
             this->weights[i][irbf][j] = weights_new(j, i);
         }
 
-#if 1
+#if 0
         double sum_nodes_only = 0.;
         double sum_nodes_and_monomials = 0.;
         for (int j = 0; j < n; j++) {
@@ -165,7 +171,6 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     }
 
     tm["computeAllWeightsOne"]->end();
-    exit(EXIT_FAILURE);
 }
 
 //--------------------------------------------------------------------
@@ -176,7 +181,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     int n = stencil.size(); 
 
     // Assume single RHS
-//    rhs.zeros(n);
+    rhs.zeros(n+np,1);
 
     NodeType& x0v = rbf_centers[stencil[0]];
 
@@ -246,7 +251,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
         }
     }
-    rhs.print("RHS before");
+//    rhs.print("RHS before");
 }
 
 

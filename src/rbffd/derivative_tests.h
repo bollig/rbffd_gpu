@@ -6,7 +6,6 @@
 #include "Vec3.h"
 
 #include <string>
-using namespace std;
 
 class DerivativeTests {
     
@@ -44,25 +43,24 @@ class DerivativeTests {
 
         //---------- Cleaned -----------
         
-        void testAllFunctions();
+        // FIXME: when nb_stencils_to_test != 0 we have a segfault. probably
+        // because the subset of stencils we're checkign might NOT have
+        // interior nodes, or may over compensate for boundary nodes. 
+        void testAllFunctions(size_t nb_stencils_to_test=0);
 
         // NOTE: nb_stencils_to_test==0 implies that ALL stencils will be tested. 
         void compareGPUandCPUDerivs(size_t nb_stencils_to_test=0);
         double compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx);
 
+        void testDeriv(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0);
+
+        void fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils_to_test, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);
 
         //---------- TODO --------------
 
 #if 0
         void checkDerivatives(Derivative& der, Grid& grid);
         void checkXDerivatives(Derivative& der, Grid& grid);
-
-        void testDeriv(DerivativeTests::TESTFUN choice, Derivative& der, Grid&
-                grid, std::vector<double> avgDist);
-
-        void testFunction(DerivativeTests::TESTFUN which, Grid& grid,
-                vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
-                vector<double>& dulapl_ex);
 
         void testEigen(Derivative& der, Grid& grid);
 

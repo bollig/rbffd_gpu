@@ -31,6 +31,8 @@ class RBFFD
     protected: 
         EB::TimerList tm; 
 
+        std::string DerTypeSTR[10];
+
         Domain& grid_ref;
 
         // Weight array. Each element is associated with one DerType (see above). 

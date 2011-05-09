@@ -20,26 +20,24 @@ struct indxltclass {
 // relative error it should be safe to assume we can adequately approximate
 // a laplacian and other linear differential operators for our PDEs.
 //----------------------------------------------------------------------
-void DerivativeTests::testAllFunctions() {
-#if 0
+void DerivativeTests::testAllFunctions(size_t nb_stencils_to_test) {
+#if 1
     // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
-    this->testDeriv(DerivativeTests::C, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::X, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::Y, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::X2, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::XY, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::Y2, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::X3, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::X2Y, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::XY2, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::Y3, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::C, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::X, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::Y, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::X2, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::XY, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::Y2, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::X3, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::X2Y, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::XY2, nb_stencils_to_test);
+    this->testDeriv(DerivativeTests::Y3, nb_stencils_to_test);
 #endif
     //    exit(EXIT_FAILURE);
 }
 
 //----------------------------------------------------------------------
-//  Test all weights. If weights do not sum to within 1e-5 (single precision)
-//  of the value 0 then exit_failure.
 //  NOTE: if Derivative der is an instance of a GPU enabled class then 
 //  this will check that our GPU precision is sufficiently close to the 
 //  CPU for our computation to proceed.
@@ -51,7 +49,7 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
     // If nb_stencils_to_test is 0 we stick with the original assumption we're
     // going to check all stencils
     if (nb_stencils_to_test) { 
-        nb_stencils = nb_stencils_to_test;
+        nb_stencils = (nb_stencils > nb_stencils_to_test) ? nb_stencils_to_test : nb_stencils;
     }
 
     // We want weights to sum to 0, so they are all going to be scaled by 1.
@@ -77,7 +75,7 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
     vector<double> zderiv_cpu(nb_stencils);	
     vector<double> lderiv_cpu(nb_stencils);	
 
-    cout << "start applying weights to compute derivatives on CPU" << endl;
+    //cout << "start applying weights to compute derivatives on CPU" << endl;
     // Verify that the CPU works
     // Force der to use the CPU version of applyWeights
     der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
@@ -85,7 +83,7 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
     der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
     der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
 
-    cout << "start applying weights to compute derivatives on GPU" << endl;
+    //cout << "start applying weights to compute derivatives on GPU" << endl;
     // Verify the GPU works
     // If der is a GPU class then this uses the GPU. 
     der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
@@ -93,23 +91,25 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
     der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false);
     der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
 
-    cout << "start derivative comparison" << endl;
+    //cout << "start derivative comparison" << endl;
     for (int i = 0; i < nb_stencils; i++) {
 #if 0
         std::cout << "cpu: " << xderiv_cpu[i] << " - gpu: " << xderiv_gpu[i] << " = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-                std::cout << "cpu: " << yderiv_cpu[i] << " - gpu: " << yderiv_gpu[i] << " = " << yderiv_cpu[i] - yderiv_gpu[i] << std::endl;
-                std::cout << "cpu: " << zderiv_cpu[i] << " - gpu: " << zderiv_gpu[i] << " = " << zderiv_cpu[i] - zderiv_gpu[i] << std::endl;
+        std::cout << "cpu: " << yderiv_cpu[i] << " - gpu: " << yderiv_gpu[i] << " = " << yderiv_cpu[i] - yderiv_gpu[i] << std::endl;
+        std::cout << "cpu: " << zderiv_cpu[i] << " - gpu: " << zderiv_gpu[i] << " = " << zderiv_cpu[i] - zderiv_gpu[i] << std::endl;
 #endif 
         double ex = compareDeriv(xderiv_gpu[i], xderiv_cpu[i], "X", i); 
         double ey = compareDeriv(yderiv_gpu[i], yderiv_cpu[i], "Y", i); 
         double ez = compareDeriv(zderiv_gpu[i], zderiv_cpu[i], "Z", i); 
         double el = compareDeriv(lderiv_gpu[i], lderiv_cpu[i], "Lapl", i); 
 
-            std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
+        //     std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
     }
-    std::cout << "CONGRATS! " << nb_stencils << " DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
+    std::cout << "[DerivativeTests] *****  Test passed: " << nb_stencils << " derivatives verified to match on GPU and CPU ******\n";
 }
 
+//----------------------------------------------------------------------
+//
 double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx) {
 
     if (isnan(deriv_gpu))
@@ -135,6 +135,367 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 }
 
 
+//----------------------------------------------------------------------
+// NOTE: if nb_stencils_to_test is 0 then we check all stencils
+void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test)
+{
+    printf("================\n");
+    printf("testderiv: choice= %d\n", choice);
+
+    vector<NodeType>& rbf_centers = grid->getNodeList();
+    int nb_centers = grid->getNodeListSize();
+    int nb_stencils = grid->getStencilsSize();
+
+    if (nb_stencils_to_test) {
+        nb_stencils = (nb_stencils > nb_stencils_to_test) ? nb_stencils_to_test : nb_stencils;
+    }
+    std::cout << "NB STENCILS: " << nb_stencils << std::endl;
+
+    vector<double> u(nb_centers);
+    vector<double> dux_ex(nb_stencils); // exact derivative
+    vector<double> duy_ex(nb_stencils); // exact derivative
+    vector<double> dulapl_ex(nb_stencils); // exact derivative
+
+    // change the classes the variables are located in
+    vector<double> xderiv(nb_stencils);
+    vector<double> yderiv(nb_stencils);
+    vector<double> lapl_deriv(nb_stencils);
+
+    if (!weightsComputed) {
+        der->computeAllWeightsForAllStencils(); 
+    }
+
+
+    // Fill the test case based on our choice
+    fillTestFunction(choice, nb_stencils, u, dux_ex, duy_ex, dulapl_ex);
+
+    std::vector<double>& avgDist = grid->getStencilRadii();
+
+    der->applyWeightsForDeriv(RBFFD::X, u, xderiv, true);
+    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv, false);
+    der->applyWeightsForDeriv(RBFFD::LAPL, u, lapl_deriv, false);
+
+    vector<size_t>& boundary = grid->getBoundaryIndices();
+    int nb_bnd = grid->getBoundaryIndicesSize();
+
+    //TODO:
+    // - sort boundary indices
+    // - create partitions: interior, boundary 
+    // - compute norms from independent sets
+    // WHY?
+    //  because we cannot assume that boundary nodes appear first in the node lists. The partitioning
+    //  we perform for the domain decomposition pushes some boundary nodes to the bottom of the list. 
+    //  This bug shows itself when we subdivide the domain into multiple subdomains. 
+
+    int nb_int = nb_stencils - nb_bnd;
+
+    std::vector<double> dux_ex_bnd(nb_bnd); 
+    std::vector<double> xderiv_bnd(nb_bnd); 
+
+    std::vector<double> dux_ex_int(nb_int); 
+    std::vector<double> xderiv_int(nb_int); 
+
+    std::vector<double> duy_ex_bnd(nb_bnd); 
+    std::vector<double> yderiv_bnd(nb_bnd); 
+
+    std::vector<double> duy_ex_int(nb_int); 
+    std::vector<double> yderiv_int(nb_int); 
+
+    std::vector<double> dulapl_ex_bnd(nb_bnd); 
+    std::vector<double> lapl_deriv_bnd(nb_bnd); 
+
+    std::vector<double> dulapl_ex_int(nb_int); 
+    std::vector<double> lapl_deriv_int(nb_int); 
+
+    std::vector<double> avgDist_bnd(nb_bnd); 
+    std::vector<double> avgDist_int(nb_int); 
+
+
+    // Sort the boundary indices for easier partitioning
+    std::vector<size_t> bindices = grid->getBoundaryIndices(); 
+    std::sort(bindices.begin(), bindices.end(), srter); 
+    {
+        int i = 0;  // Index on boundary
+        int k = 0;  // index on interior
+        for (int j = 0; j < nb_stencils; j++) {
+            // Skim off the boundary
+            if (j == bindices[i]) {
+                dux_ex_bnd[i] = dux_ex[j]; 
+                xderiv_bnd[i] = xderiv[j]; 
+                duy_ex_bnd[i] = duy_ex[j]; 
+                yderiv_bnd[i] = yderiv[j]; 
+                dulapl_ex_bnd[i] = dulapl_ex[j]; 
+                lapl_deriv_bnd[i] = lapl_deriv[j]; 
+                avgDist_bnd[i] = avgDist[j]; 
+                //                std::cout << "BOUNDARY: " << i << " / " << j << ", " << avgDist_bnd[i] << std::endl;
+                i++; 
+            } else {
+                dux_ex_int[k] = dux_ex[j]; 
+                xderiv_int[k] = xderiv[j]; 
+                duy_ex_int[k] = duy_ex[j]; 
+                yderiv_int[k] = yderiv[j]; 
+                dulapl_ex_int[k] = dulapl_ex[j]; 
+                lapl_deriv_int[k] = lapl_deriv[j]; 
+                avgDist_int[k] = avgDist[j]; 
+                //              std::cout << "INTERIOR: " << k << " / " << j << ", " << avgDist_int[k] << std::endl;
+                k++; 
+            }
+        } 
+    }
+
+    enum DERIV {X=0, Y, LAPL};
+    enum NORM {L1=0, L2, LINF};
+    enum BNDRY {INT=0, BNDRY};
+    double norm[3][3][2]; // norm[DERIV][NORM][BNDRY]
+    double normder[3][3][2]; // norm[DERIV][NORM][BNDRY]
+
+    // These norms are || Lu_exact - Lu_approx ||_? 
+    // where Lu_* are differential operator L applied to solution u_* 
+    // and the || . ||_? is the 1, 2, or inf-norms
+    norm[X][L1][BNDRY]   = l1normWeighted(dux_ex_bnd,   xderiv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[X][L2][BNDRY]   = l2normWeighted(dux_ex_bnd,   xderiv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[X][LINF][BNDRY] = linfnorm(dux_ex_bnd, xderiv_bnd, 0, nb_bnd);
+
+    norm[Y][L1][BNDRY]   = l1normWeighted(duy_ex_bnd,   yderiv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[Y][L2][BNDRY]   = l2normWeighted(duy_ex_bnd,   yderiv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[Y][LINF][BNDRY] = linfnorm(duy_ex_bnd, yderiv_bnd, 0, nb_bnd);
+
+    norm[LAPL][L1][BNDRY]   = l1normWeighted(dulapl_ex_bnd,   lapl_deriv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex_bnd,   lapl_deriv_bnd, avgDist_bnd, 0, nb_bnd);
+    norm[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, lapl_deriv_bnd, 0, nb_bnd);
+
+    norm[X][L1][INT]   = l1normWeighted(dux_ex_int,   xderiv_int, avgDist_int, 0, nb_int);
+    norm[X][L2][INT]   = l2normWeighted(dux_ex_int,   xderiv_int, avgDist_int, 0, nb_int);
+    norm[X][LINF][INT] = linfnorm(dux_ex_int, xderiv_int, 0, nb_int);
+
+    norm[Y][L1][INT]   = l1normWeighted(duy_ex_int,   yderiv_int, avgDist_int, 0, nb_int);
+    norm[Y][L2][INT]   = l2normWeighted(duy_ex_int,   yderiv_int, avgDist_int, 0, nb_int);
+    norm[Y][LINF][INT] = linfnorm(duy_ex_int, yderiv_int, 0, nb_int);
+
+    norm[LAPL][L1][INT]   = l1normWeighted(dulapl_ex_int,   lapl_deriv_int, avgDist_int, 0, nb_int);
+    norm[LAPL][L2][INT]   = l2normWeighted(dulapl_ex_int,   lapl_deriv_int, avgDist_int, 0, nb_int);
+    norm[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, lapl_deriv_int, 0, nb_int);
+
+    // --- Normalization factors (to get denom for relative error: ||u-u_approx|| / || u || )
+
+    normder[X][L1][BNDRY]   = l1normWeighted(dux_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[X][L2][BNDRY]   = l2normWeighted(dux_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[X][LINF][BNDRY] = linfnorm(dux_ex_bnd, 0, nb_bnd);
+
+    normder[Y][L1][BNDRY]   = l1normWeighted(duy_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[Y][L2][BNDRY]   = l2normWeighted(duy_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[Y][LINF][BNDRY] = linfnorm(duy_ex_bnd, 0, nb_bnd);
+
+    normder[LAPL][L1][BNDRY]   = l1normWeighted(dulapl_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex_bnd, avgDist_bnd,  0, nb_bnd);
+    normder[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, 0, nb_bnd);
+
+    normder[X][L1][INT]   = l1normWeighted(dux_ex_int, avgDist_int,  0, nb_int);
+    normder[X][L2][INT]   = l2normWeighted(dux_ex_int, avgDist_int,  0, nb_int);
+    normder[X][LINF][INT] = linfnorm(dux_ex_int, 0, nb_int);
+
+    normder[Y][L1][INT]   = l1normWeighted(duy_ex_int, avgDist_int, 0, nb_int);
+    normder[Y][L2][INT]   = l2normWeighted(duy_ex_int, avgDist_int, 0, nb_int);
+    normder[Y][LINF][INT] = linfnorm(duy_ex_int, 0, nb_int);
+
+    normder[LAPL][L1][INT]   = l1normWeighted(dulapl_ex_int, avgDist_int, 0, nb_int);
+    normder[LAPL][L2][INT]   = l2normWeighted(dulapl_ex_int, avgDist_int, 0, nb_int);
+    normder[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, 0, nb_int);
+
+
+    printf("----- RESULTS: %d bnd, %d centers, %d stencils\ntestDeriv( %d ) [** Approximating F(X,Y) = %s **] ---\n", nb_bnd, nb_centers, nb_stencils, choice, TESTFUNSTR[(int)choice].c_str());
+    //printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM=10}\n");
+    printf("norm[x/y/lapl][L1,L2,LINF][interior/bndry]\n");
+    for (int k=0; k < 2; k++) {
+        for (int i=0; i < 3; i++) {
+            // If our L2 absolute norm is > 1e-9 we show relative.
+            if (fabs(normder[i][1][k]) < 1.e-9) {
+                printf("(abs err): norm[%d][][%d]= %10.3e, %10.3e, %10.3e\n", i, k, norm[i][0][k], norm[i][1][k], norm[i][2][k]);
+            } else {
+                printf("(rel err): norm[%d][][%d]= %10.3e, %10.3e, %10.3e, normder= %10.3e\n", i, k, 
+                        norm[i][0][k]/normder[i][0][k], 
+                        norm[i][1][k]/normder[i][1][k], 
+                        norm[i][2][k]/normder[i][2][k], normder[i][1][k]); 
+                //printf("   normder[%d][][%d]= %10.3e, %10.3e, %10.3e\n", i, k, 
+                //normder[i][0][k], 
+                //normder[i][1][k], 
+                //normder[i][2][k]); 
+            }
+        }}
+
+    double inter_error=0.;
+    for (int i= 0; i < nb_int; i++) {
+        inter_error += (dulapl_ex_int[i]-lapl_deriv_int[i])*(dulapl_ex_int[i]-lapl_deriv_int[i]);
+        //    std::cout << i << "dulapl_ex_int " << dulapl_ex_int[i] << ", " << lapl_deriv_int[i] << std::endl;
+        //printf("inter error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
+    }
+    inter_error /= nb_int;
+
+    double bnd_error=0.;
+    for (int i=0; i < nb_bnd; i++) {
+        bnd_error += (dulapl_ex_bnd[i]-lapl_deriv_bnd[i])*(dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
+        //     printf("bnd error[%d] = %14.7g\n", i, dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
+    }
+    bnd_error /= nb_bnd;
+
+#if 1
+    double l2_bnd = sqrt(bnd_error);
+    printf("avg l2_bnd_error= %14.7e\n", l2_bnd);
+    double l2_int = sqrt(inter_error);
+    printf("avg l2_interior_error= %14.7e\n", l2_int);
+    // NaN is the only number not equal to itself
+    if ((l2_int > 1.e-1) || (l2_int != l2_int)) {
+        printf ("ERROR! Interior l2 error is too high to continue\n");
+        exit(EXIT_FAILURE);
+    }
+    if ((l2_bnd > 1.e0) || (l2_int != l2_int)) {
+
+        printf ("WARNING! Boundary l2 error is high but we'll trust it to continue\n");
+        return ;
+
+        printf ("ERROR! Boundary l2 error is too high to continue\n");
+        exit(EXIT_FAILURE);
+    }
+#endif
+}
+
+//----------------------------------------------------------------------
+void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
+        vector<double>& dulapl_ex)
+{
+    u.resize(0);
+    dux_ex.resize(0);
+    duy_ex.resize(0);
+    dulapl_ex.resize(0);
+
+    vector<NodeType>& rbf_centers = grid->getNodeList();
+    int nb_centers = grid->getNodeList().size(); 
+
+    switch(which) {
+        case C:
+            for (int i=0; i < nb_stencils; i++) {
+                dux_ex.push_back(0.);
+                duy_ex.push_back(0.);
+                dulapl_ex.push_back(0.);
+            }
+
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(1.);
+            }
+            break;
+        case X:
+            printf("nb_stencils= %d\n", nb_stencils);
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(1.);
+                duy_ex.push_back(0.);
+                dulapl_ex.push_back(0.);
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.x());
+            }
+            printf("u.size= %d\n", (int) u.size());
+            break;
+        case Y:
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(0.);
+                duy_ex.push_back(1.);
+                dulapl_ex.push_back(0.);
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.y());
+            }
+            break;
+        case X2:
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(2.*v.x());
+                duy_ex.push_back(0.);
+                dulapl_ex.push_back(2.);
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.x()*v.x());
+            }
+            break;
+        case XY:
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(v.y());
+                duy_ex.push_back(v.x());
+                dulapl_ex.push_back(0.);
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.x()*v.y());
+            }
+            break;
+        case Y2:
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(0.);
+                duy_ex.push_back(2.*v.y());
+                dulapl_ex.push_back(2.);
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.y()*v.y());
+            }
+            break;
+        case X3:
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(3.*v.x()*v.x());
+                duy_ex.push_back(0.);
+                dulapl_ex.push_back(6.*v.x());
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.x()*v.x()*v.x());
+            }
+            break;
+        case X2Y:
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(2.*v.x()*v.y());
+                duy_ex.push_back(v.x()*v.x());
+                dulapl_ex.push_back(2.*v.y());
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.x()*v.x()*v.y());
+            }
+            break;
+        case XY2:
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(v.y()*v.y());
+                duy_ex.push_back(2.*v.x()*v.y());
+                dulapl_ex.push_back(2.*v.x());
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.x()*v.y()*v.y());
+            }
+            break;
+        case Y3:
+            for (int i=0; i < nb_stencils; i++) {
+                Vec3& v = rbf_centers[i];
+                dux_ex.push_back(0.);
+                duy_ex.push_back(3.*v.y()*v.y());
+                dulapl_ex.push_back(6.*v.y());
+            }
+            for (int i =0; i < nb_centers; i++) {
+                Vec3& v = rbf_centers[i];
+                u.push_back(v.y()*v.y()*v.y());
+            }
+            break;
+    }
+}
 
 
 
@@ -454,361 +815,6 @@ void DerivativeTests::testEigen(Derivative& der, Grid& grid)
         double max_eig = der.computeEig(); // needs lapl_weights
         printf("zero perturbation: max eig: %f\n", max_eig);
     }
-}
-//----------------------------------------------------------------------
-void DerivativeTests::testFunction(DerivativeTests::TESTFUN which, Grid& grid, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
-        vector<double>& dulapl_ex)
-{
-    u.resize(0);
-    dux_ex.resize(0);
-    duy_ex.resize(0);
-    dulapl_ex.resize(0);
-
-    vector<NodeType>& rbf_centers = grid.getNodeList();
-    int nb_centers = grid.getNodeList().size(); 
-    int nb_stencils = grid.getStencilsSize();
-
-    switch(which) {
-        case C:
-            for (int i=0; i < nb_stencils; i++) {
-                dux_ex.push_back(0.);
-                duy_ex.push_back(0.);
-                dulapl_ex.push_back(0.);
-            }
-
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(1.);
-            }
-            break;
-        case X:
-            printf("nb_stencils= %d\n", nb_stencils);
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(1.);
-                duy_ex.push_back(0.);
-                dulapl_ex.push_back(0.);
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.x());
-            }
-            printf("u.size= %d\n", (int) u.size());
-            break;
-        case Y:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(0.);
-                duy_ex.push_back(1.);
-                dulapl_ex.push_back(0.);
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.y());
-            }
-            break;
-        case X2:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(2.*v.x());
-                duy_ex.push_back(0.);
-                dulapl_ex.push_back(2.);
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.x());
-            }
-            break;
-        case XY:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(v.y());
-                duy_ex.push_back(v.x());
-                dulapl_ex.push_back(0.);
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.y());
-            }
-            break;
-        case Y2:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(0.);
-                duy_ex.push_back(2.*v.y());
-                dulapl_ex.push_back(2.);
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.y()*v.y());
-            }
-            break;
-        case X3:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(3.*v.x()*v.x());
-                duy_ex.push_back(0.);
-                dulapl_ex.push_back(6.*v.x());
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.x()*v.x());
-            }
-            break;
-        case X2Y:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(2.*v.x()*v.y());
-                duy_ex.push_back(v.x()*v.x());
-                dulapl_ex.push_back(2.*v.y());
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.x()*v.y());
-            }
-            break;
-        case XY2:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(v.y()*v.y());
-                duy_ex.push_back(2.*v.x()*v.y());
-                dulapl_ex.push_back(2.*v.x());
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.y()*v.y());
-            }
-            break;
-        case Y3:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
-                dux_ex.push_back(0.);
-                duy_ex.push_back(3.*v.y()*v.y());
-                dulapl_ex.push_back(6.*v.y());
-            }
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
-                u.push_back(v.y()*v.y()*v.y());
-            }
-            break;
-    }
-}
-
-//----------------------------------------------------------------------
-void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der, Grid& grid, std::vector<double> avgDist)
-{
-    printf("================\n");
-    printf("testderiv: choice= %d\n", choice);
-
-    vector<NodeType>& rbf_centers = grid.getNodeList();
-    int nb_centers = grid.getNodeListSize();
-    int nb_stencils = grid.getStencilsSize();
-
-    vector<double> u(nb_centers);
-    vector<double> dux_ex(nb_stencils); // exact derivative
-    vector<double> duy_ex(nb_stencils); // exact derivative
-    vector<double> dulapl_ex(nb_stencils); // exact derivative
-
-    // change the classes the variables are located in
-    vector<double> xderiv(nb_stencils);
-    vector<double> yderiv(nb_stencils);
-    vector<double> lapl_deriv(nb_stencils);
-
-    this->computeAllWeights(der, rbf_centers, grid.getStencils());
-    //EB
-    testFunction(choice, grid, u, dux_ex, duy_ex, dulapl_ex);
-
-
-    avgDist = grid.getStencilRadii();
-    for (int n=0; n < 1; n++) {
-        // perhaps I'll need different (rad,eps) for each. To be determined. 
-        der.computeDeriv(Derivative::X, u, xderiv);
-        der.computeDeriv(Derivative::Y, u, yderiv);
-        der.computeDeriv(Derivative::LAPL, u, lapl_deriv);
-    }
-
-    vector<size_t>& boundary = grid.getBoundaryIndices();
-    int nb_bnd = grid.getBoundaryIndicesSize();
-
-    //TODO:
-    // - sort boundary indices
-    // - create partitions: interior, boundary 
-    // - compute norms from independent sets
-    // WHY?
-    //  because we cannot assume that boundary nodes appear first in the node lists. The partitioning
-    //  we perform for the domain decomposition pushes some boundary nodes to the bottom of the list. 
-    //  This bug shows itself when we subdivide the domain into multiple subdomains. 
-
-    int nb_int = nb_stencils - nb_bnd;
-
-    std::vector<double> dux_ex_bnd(nb_bnd); 
-    std::vector<double> xderiv_bnd(nb_bnd); 
-
-    std::vector<double> dux_ex_int(nb_int); 
-    std::vector<double> xderiv_int(nb_int); 
-
-    std::vector<double> duy_ex_bnd(nb_bnd); 
-    std::vector<double> yderiv_bnd(nb_bnd); 
-
-    std::vector<double> duy_ex_int(nb_int); 
-    std::vector<double> yderiv_int(nb_int); 
-
-    std::vector<double> dulapl_ex_bnd(nb_bnd); 
-    std::vector<double> lapl_deriv_bnd(nb_bnd); 
-
-    std::vector<double> dulapl_ex_int(nb_int); 
-    std::vector<double> lapl_deriv_int(nb_int); 
-
-    std::vector<double> avgDist_bnd(nb_bnd); 
-    std::vector<double> avgDist_int(nb_int); 
-
-
-    // Sort the boundary indices for easier partitioning
-    std::vector<size_t> bindices = grid.getBoundaryIndices(); 
-    std::sort(bindices.begin(), bindices.end(), srter); 
-    {
-        int i = 0;  // Index on boundary
-        int k = 0;  // index on interior
-        for (int j = 0; j < nb_stencils; j++) {
-            // Skim off the boundary
-            if (j == bindices[i]) {
-                dux_ex_bnd[i] = dux_ex[j]; 
-                xderiv_bnd[i] = xderiv[j]; 
-                duy_ex_bnd[i] = duy_ex[j]; 
-                yderiv_bnd[i] = yderiv[j]; 
-                dulapl_ex_bnd[i] = dulapl_ex[j]; 
-                lapl_deriv_bnd[i] = lapl_deriv[j]; 
-                avgDist_bnd[i] = avgDist[j]; 
-                //                std::cout << "BOUNDARY: " << i << " / " << j << ", " << avgDist_bnd[i] << std::endl;
-                i++; 
-            } else {
-                dux_ex_int[k] = dux_ex[j]; 
-                xderiv_int[k] = xderiv[j]; 
-                duy_ex_int[k] = duy_ex[j]; 
-                yderiv_int[k] = yderiv[j]; 
-                dulapl_ex_int[k] = dulapl_ex[j]; 
-                lapl_deriv_int[k] = lapl_deriv[j]; 
-                avgDist_int[k] = avgDist[j]; 
-                //              std::cout << "INTERIOR: " << k << " / " << j << ", " << avgDist_int[k] << std::endl;
-                k++; 
-            }
-        } 
-    }
-
-    enum DERIV {X=0, Y, LAPL};
-    enum NORM {L1=0, L2, LINF};
-    enum BNDRY {INT=0, BNDRY};
-    double norm[3][3][2]; // norm[DERIV][NORM][BNDRY]
-    double normder[3][3][2]; // norm[DERIV][NORM][BNDRY]
-
-    // These norms are || Lu_exact - Lu_approx ||_? 
-    // where Lu_* are differential operator L applied to solution u_* 
-    // and the || . ||_? is the 1, 2, or inf-norms
-    norm[X][L1][BNDRY]   = l1normWeighted(dux_ex_bnd,   xderiv_bnd, avgDist_bnd, 0, nb_bnd);
-    norm[X][L2][BNDRY]   = l2normWeighted(dux_ex_bnd,   xderiv_bnd, avgDist_bnd, 0, nb_bnd);
-    norm[X][LINF][BNDRY] = linfnorm(dux_ex_bnd, xderiv_bnd, 0, nb_bnd);
-
-    norm[Y][L1][BNDRY]   = l1normWeighted(duy_ex_bnd,   yderiv_bnd, avgDist_bnd, 0, nb_bnd);
-    norm[Y][L2][BNDRY]   = l2normWeighted(duy_ex_bnd,   yderiv_bnd, avgDist_bnd, 0, nb_bnd);
-    norm[Y][LINF][BNDRY] = linfnorm(duy_ex_bnd, yderiv_bnd, 0, nb_bnd);
-
-    norm[LAPL][L1][BNDRY]   = l1normWeighted(dulapl_ex_bnd,   lapl_deriv_bnd, avgDist_bnd, 0, nb_bnd);
-    norm[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex_bnd,   lapl_deriv_bnd, avgDist_bnd, 0, nb_bnd);
-    norm[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, lapl_deriv_bnd, 0, nb_bnd);
-
-    norm[X][L1][INT]   = l1normWeighted(dux_ex_int,   xderiv_int, avgDist_int, 0, nb_int);
-    norm[X][L2][INT]   = l2normWeighted(dux_ex_int,   xderiv_int, avgDist_int, 0, nb_int);
-    norm[X][LINF][INT] = linfnorm(dux_ex_int, xderiv_int, 0, nb_int);
-
-    norm[Y][L1][INT]   = l1normWeighted(duy_ex_int,   yderiv_int, avgDist_int, 0, nb_int);
-    norm[Y][L2][INT]   = l2normWeighted(duy_ex_int,   yderiv_int, avgDist_int, 0, nb_int);
-    norm[Y][LINF][INT] = linfnorm(duy_ex_int, yderiv_int, 0, nb_int);
-
-    norm[LAPL][L1][INT]   = l1normWeighted(dulapl_ex_int,   lapl_deriv_int, avgDist_int, 0, nb_int);
-    norm[LAPL][L2][INT]   = l2normWeighted(dulapl_ex_int,   lapl_deriv_int, avgDist_int, 0, nb_int);
-    norm[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, lapl_deriv_int, 0, nb_int);
-
-    // --- Normalization factors (to get denom for relative error: ||u-u_approx|| / || u || )
-
-    normder[X][L1][BNDRY]   = l1normWeighted(dux_ex_bnd, avgDist_bnd,  0, nb_bnd);
-    normder[X][L2][BNDRY]   = l2normWeighted(dux_ex_bnd, avgDist_bnd,  0, nb_bnd);
-    normder[X][LINF][BNDRY] = linfnorm(dux_ex_bnd, 0, nb_bnd);
-
-    normder[Y][L1][BNDRY]   = l1normWeighted(duy_ex_bnd, avgDist_bnd,  0, nb_bnd);
-    normder[Y][L2][BNDRY]   = l2normWeighted(duy_ex_bnd, avgDist_bnd,  0, nb_bnd);
-    normder[Y][LINF][BNDRY] = linfnorm(duy_ex_bnd, 0, nb_bnd);
-
-    normder[LAPL][L1][BNDRY]   = l1normWeighted(dulapl_ex_bnd, avgDist_bnd,  0, nb_bnd);
-    normder[LAPL][L2][BNDRY]   = l2normWeighted(dulapl_ex_bnd, avgDist_bnd,  0, nb_bnd);
-    normder[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, 0, nb_bnd);
-
-    normder[X][L1][INT]   = l1normWeighted(dux_ex_int, avgDist_int,  0, nb_int);
-    normder[X][L2][INT]   = l2normWeighted(dux_ex_int, avgDist_int,  0, nb_int);
-    normder[X][LINF][INT] = linfnorm(dux_ex_int, 0, nb_int);
-
-    normder[Y][L1][INT]   = l1normWeighted(duy_ex_int, avgDist_int, 0, nb_int);
-    normder[Y][L2][INT]   = l2normWeighted(duy_ex_int, avgDist_int, 0, nb_int);
-    normder[Y][LINF][INT] = linfnorm(duy_ex_int, 0, nb_int);
-
-    normder[LAPL][L1][INT]   = l1normWeighted(dulapl_ex_int, avgDist_int, 0, nb_int);
-    normder[LAPL][L2][INT]   = l2normWeighted(dulapl_ex_int, avgDist_int, 0, nb_int);
-    normder[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, 0, nb_int);
-
-
-    printf("----- RESULTS: %d bnd, %d centers, %d stencils\ntestDeriv( %d ) [** Approximating F(X,Y) = %s **] ---\n", nb_bnd, nb_centers, nb_stencils, choice, TESTFUNSTR[(int)choice].c_str());
-    //printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM=10}\n");
-    printf("norm[x/y/lapl][L1,L2,LINF][interior/bndry]\n");
-    for (int k=0; k < 2; k++) {
-        for (int i=0; i < 3; i++) {
-            // If our L2 absolute norm is > 1e-9 we show relative.
-            if (fabs(normder[i][1][k]) < 1.e-9) {
-                printf("(abs err): norm[%d][][%d]= %10.3e, %10.3e, %10.3e\n", i, k, norm[i][0][k], norm[i][1][k], norm[i][2][k]);
-            } else {
-                printf("(rel err): norm[%d][][%d]= %10.3e, %10.3e, %10.3e, normder= %10.3e\n", i, k, 
-                        norm[i][0][k]/normder[i][0][k], 
-                        norm[i][1][k]/normder[i][1][k], 
-                        norm[i][2][k]/normder[i][2][k], normder[i][1][k]); 
-                //printf("   normder[%d][][%d]= %10.3e, %10.3e, %10.3e\n", i, k, 
-                //normder[i][0][k], 
-                //normder[i][1][k], 
-                //normder[i][2][k]); 
-            }
-        }}
-
-    double inter_error=0.;
-    for (int i= 0; i < nb_int; i++) {
-        inter_error += (dulapl_ex_int[i]-lapl_deriv_int[i])*(dulapl_ex_int[i]-lapl_deriv_int[i]);
-        //    std::cout << i << "dulapl_ex_int " << dulapl_ex_int[i] << ", " << lapl_deriv_int[i] << std::endl;
-        //printf("inter error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
-    }
-    inter_error /= nb_int;
-
-    double bnd_error=0.;
-    for (int i=0; i < nb_bnd; i++) {
-        bnd_error += (dulapl_ex_bnd[i]-lapl_deriv_bnd[i])*(dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
-        //     printf("bnd error[%d] = %14.7g\n", i, dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
-    }
-    bnd_error /= nb_bnd;
-
-#if 1
-    double l2_bnd = sqrt(bnd_error);
-    printf("avg l2_bnd_error= %14.7e\n", l2_bnd);
-    double l2_int = sqrt(inter_error);
-    printf("avg l2_interior_error= %14.7e\n", l2_int);
-    // NaN is the only number not equal to itself
-    if ((l2_int > 1.e-1) || (l2_int != l2_int)) {
-        printf ("ERROR! Interior l2 error is too high to continue\n");
-        exit(EXIT_FAILURE);
-    }
-    if ((l2_bnd > 1.e0) || (l2_int != l2_int)) {
-
-        printf ("WARNING! Boundary l2 error is high but we'll trust it to continue\n");
-        return ;
-
-        printf ("ERROR! Boundary l2 error is too high to continue\n");
-        exit(EXIT_FAILURE);
-    }
-#endif
 }
 //----------------------------------------------------------------------
 void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3>& rbf_centers, std::vector<StencilType>& stencils) {

@@ -15,7 +15,7 @@ using namespace std;
     this->setupTimers(); 
     this->loadKernel(); 
     this->allocateGPUMem();
-    this->updateStencils(true); 
+    this->updateStencils(false); 
 }
 
 
@@ -149,7 +149,7 @@ void RBFFD_CL::updateStencils(bool forceFinish) {
         //std::cout << endl;
     }
 
-    std::cout << "Writing GPU Stencils buffer: (bytes)" << stencil_mem_bytes << std::endl;
+    //    std::cout << "Writing GPU Stencils buffer: (bytes)" << stencil_mem_bytes << std::endl;
     err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_bytes, &cpu_stencils[0], NULL, &event);
     if (forceFinish) {
         queue.finish();
@@ -173,7 +173,7 @@ void RBFFD_CL::updateWeights(bool forceFinish) {
 
         tm["sendWeights"]->start();
         int weights_mem_size = gpu_stencil_size * sizeof(FLOAT);  
-        std::cout << "Writing weights to GPU memory\n"; 
+        //        std::cout << "Writing weights to GPU memory\n"; 
 
         FLOAT* cpu_weights[NUM_DERIV_TYPES]; 
 
@@ -196,7 +196,7 @@ void RBFFD_CL::updateWeights(bool forceFinish) {
                 for (j = 0; j < stencil_size; j++) {
                     size_t indx = i*stencil_size + j; 
                     cpu_weights[which][indx] = (FLOAT)weights[which][i][j]; 
-                  //  std::cout << cpu_weights[which][indx] << "   ";
+                    //  std::cout << cpu_weights[which][indx] << "   ";
                 }
                 // Pad end of the stencil with 0's so our linear combination
                 // excludes whatever function values are found at the end of
@@ -205,7 +205,7 @@ void RBFFD_CL::updateWeights(bool forceFinish) {
                 for (; j < max_stencil_size; j++) {
                     size_t indx = i*stencil_size + j; 
                     cpu_weights[which][indx] = (FLOAT)0.;
-                  //  std::cout << cpu_weights[which][indx] << "   ";
+                    //  std::cout << cpu_weights[which][indx] << "   ";
                 }
 
                 //std::cout << std::endl;
@@ -230,7 +230,7 @@ void RBFFD_CL::updateWeights(bool forceFinish) {
         weightsModified = false;
 
     } else {
-        std::cout << "No need to update gpu_weights" << std::endl;
+        //        std::cout << "No need to update gpu_weights" << std::endl;
     }
 }
 
@@ -238,7 +238,7 @@ void RBFFD_CL::updateWeights(bool forceFinish) {
 //
 void RBFFD_CL::updateFunction(size_t nb_nodes, double* u, bool forceFinish) {
 
-    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
+    //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
 
     // update the GPU's view of our solution 
     FLOAT* cpu_u = new FLOAT[nb_nodes]; 
@@ -266,16 +266,15 @@ void RBFFD_CL::updateFunction(size_t nb_nodes, double* u, bool forceFinish) {
 //
 void RBFFD_CL::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU)
 {
+    cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
-        this->updateFunction(npts, u, true); 
+        this->updateFunction(npts, u, false); 
     }
 
     // Will only update if necessary
-    this->updateWeights(true);
-
-    cout << "COMPUTING DERIVATIVE (ON GPU): " << which << std::endl;
+    this->updateWeights(false);
 
     try {
         kernel.setArg(0, gpu_stencils); 
@@ -343,7 +342,7 @@ void RBFFD_CL::applyWeightsForDeriv(DerType which, int npts, double* u, double* 
         std::cerr << "Event::wait() failed (" << err << ")\n";
         std::cout << "Failed to finish queue" << std::endl;
     } else {
-        std::cout << "CL program finished!" << std::endl;
+        //        std::cout << "CL program finished!" << std::endl;
     }
     tm["applyWeights"]->end();
 }

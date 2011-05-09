@@ -61,6 +61,7 @@ class RBFFD
         // FIXME: has no effect
         // Have any parameters been modified?
         int modified; 
+        bool weightsModified;
 
         //TODO: add choice for RBF (only one option at the moment)
 
@@ -82,18 +83,20 @@ class RBFFD
         void computeWeightsForStencil(DerType, int st_indx);
 
         // Apply weights to an input solution vector and get the corresponding derivatives out
-        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv) { 
+        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             std::cout << "CPU: ";
             deriv.resize(u.size()); 
-            RBFFD::applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0]);
+            RBFFD::applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0], isChangedU);
         }
 
         // Can be CPU or GPU depending on Subclasses
         // NOTE: We apply the necessary weights to get the FULL derivative of u(x,y,z).
         //       That is, we see L{u}(x,y,z) evaluated all ALL points
+        //       Also, if isChangedU==false then we can avoid overwriting a
+        //       local u with the one passed in (e.g., when using the GPU)
         // TODO: npts is unused at the momement. Could prove useful if we had a
         //      applyWeightsForDerivAtNode(i) routine
-        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv);
+        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
 
         void setEpsilon(double eps) { 
             modified = 1;

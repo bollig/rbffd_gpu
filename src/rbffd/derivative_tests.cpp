@@ -58,12 +58,12 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
     // \sum w_i f(x,y,z) = 0     where     f(x,y,z) = 1
     vector<double> u(nb_centers, 1.);
 
-#if 0
+#if 1
     // We could also check a derivative function like in our test_deriv routines
     for (size_t i = 0; i < nb_centers; i++) {
         NodeType& node_r = grid->getNode(i); 
         NodeType center(0.,0.,0.); 
-        u[i] = sin((node_r-center).magnitude()); 
+        u[i] = node_r.x();// sin((node_r-center).magnitude()); 
     }
 #endif
 
@@ -80,18 +80,18 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
     cout << "start applying weights to compute derivatives on CPU" << endl;
     // Verify that the CPU works
     // Force der to use the CPU version of applyWeights
-    der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
 
     cout << "start applying weights to compute derivatives on GPU" << endl;
     // Verify the GPU works
     // If der is a GPU class then this uses the GPU. 
-    der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu);
-    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu);
-    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu);
-    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu);
+    der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
+    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false);
+    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false);
+    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
 
     cout << "start derivative comparison" << endl;
     for (int i = 0; i < nb_stencils; i++) {
@@ -118,7 +118,7 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 
     if (abs_error > 1e-5) 
     {
-        std::cout << "ERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. TRY A DIFFERENT SUPPORT PARAMETER!\n";
+        std::cout << "\nERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. TRY A DIFFERENT SUPPORT PARAMETER!\n";
         std::cout << "Test failed on" << std::endl;
         std::cout << label << "[" << indx << "] = " << abs_error << "    (GPU: " 
             << deriv_gpu << " CPU: " << deriv_cpu << ")"

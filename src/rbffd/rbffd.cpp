@@ -5,7 +5,8 @@
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
     RBFFD::RBFFD(Domain* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
-: grid_ref(*grid), dim_num(dim_num_), rank(rank_)
+: grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
+    weightsModified(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
@@ -45,6 +46,8 @@ void RBFFD::computeAllWeightsForAllStencils() {
     for (size_t i = 0; i < nb_st; i++) {
         this->computeAllWeightsForStencil(i); 
     }
+    
+    weightsModified = true;
 }
 
 //--------------------------------------------------------------------
@@ -171,6 +174,8 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     }
 
     tm["computeAllWeightsOne"]->end();
+
+    weightsModified = true;
 }
 
 //--------------------------------------------------------------------
@@ -323,11 +328,13 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
 #endif // DEBUG
 
     tm["computeOneWeights"]->end();
+    
+    weightsModified = true;
 }
 
 //--------------------------------------------------------------------
-
-void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv) {
+// NOTE: ignore isChangedU because we are on the CPU
+void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
     std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyAll"]->start(); 
     size_t nb_stencils = grid_ref.getStencilsSize(); 

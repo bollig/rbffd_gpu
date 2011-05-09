@@ -12,7 +12,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         cl::Buffer gpu_weights[NUM_DERIV_TYPES]; 
 
         cl::Buffer gpu_stencils; 
-        size_t*    cpu_stencils;
+        int*    cpu_stencils;
 
         cl::Buffer gpu_deriv_out[NUM_DERIV_TYPES]; 
 
@@ -22,8 +22,6 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // Total size of the gpu-stencils buffer. This should also be the size
         // of a single element of gpu_weights array. 
         size_t gpu_stencil_size; 
-        // Total number of bytes allocated for stencil (i.e., gpu_stencil_size*sizeof(float|double))
-        size_t stencil_mem_size; 
 
         // number of bytes for: 
         //      - gpu_stencils
@@ -33,7 +31,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         size_t stencil_mem_bytes;
         size_t deriv_mem_bytes;
         size_t weights_mem_bytes;
-        size_t solution_mem_bytes;
+        size_t function_mem_bytes;
 
         // Is a double precision extension available on the unit? 
         bool useDouble; 
@@ -68,21 +66,23 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // FIXME: HACK--> this routine is called in a situation where we want to access a superclass routine inside. 
         //                This override is how we hack this together.
         // Apply weights to an input solution vector and get the corresponding derivatives out
-        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv) { 
+        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             std::cout << "GPU: ";
             deriv.resize(u.size()); 
-            applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0]);
+            applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0], isChangedU);
         }
-        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv);
+        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
 
 
     protected: 
         void setupTimers(); 
         void loadKernel(); 
         void allocateGPUMem(); 
-        void updateStencils();
-        void updateWeights();
-        void updateFunction();
+        // forceFinish ==> should we fire a queue.finish() and make sure all
+        // tasks are completed (synchronously) before returning
+        void updateStencils(bool forceFinish);
+        void updateWeights(bool forceFinish);
+        void updateFunction(size_t nb_nodes, double* u, bool forceFinish);
 
 };
 

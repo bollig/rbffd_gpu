@@ -6,10 +6,9 @@
 #include "grids/regulargrid.h"
 
 #include "grids/domain.h"
-//#include "rbffd/derivative_cl.h"
 #include "rbffd/derivative_tests.h"
 #include "rbffd/rbffd.h"
-#include "rbffd/rbffd_gpu.h"
+#include "rbffd/rbffd_cl.h"
 
 #include "exact_solutions/exact_regulargrid.h"
 
@@ -193,7 +192,7 @@ int main(int argc, char** argv) {
 //    Derivative* der; 
     RBFFD* der;
     if (use_gpu) {
-        der = new RBFFD_GPU(subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD_CL(subdomain, dim, comm_unit->getRank()); 
     } else {
         der = new RBFFD(subdomain, dim, comm_unit->getRank()); 
     }

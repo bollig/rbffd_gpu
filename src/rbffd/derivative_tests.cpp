@@ -23,16 +23,16 @@ struct indxltclass {
 void DerivativeTests::testAllFunctions(size_t nb_stencils_to_test) {
 #if 1
     // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
-    this->testDeriv(DerivativeTests::C, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::X, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::Y, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::X2, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::XY, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::Y2, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::X3, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::X2Y, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::XY2, nb_stencils_to_test);
-    this->testDeriv(DerivativeTests::Y3, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::C, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::X, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::Y, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::X2, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::XY, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::Y2, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::X3, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::X2Y, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::XY2, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::Y3, nb_stencils_to_test);
 #endif
     //    exit(EXIT_FAILURE);
 }
@@ -136,11 +136,16 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 
 
 //----------------------------------------------------------------------
+// Evaluate a test function and its analytic derivs to fill buffers. 
+// Then compute approximate derviatives using the RBFFD class. 
+// Compare the analytic and approximate derivatives and assess the
+// viability of the RBFFD stencils and weights for PDE solution.
 // NOTE: if nb_stencils_to_test is 0 then we check all stencils
-void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test)
+void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test)
 {
+    printf("\n================\n");
+    printf("testFunction( %d ) [** Approximating F(X,Y) = %s **] \n",choice, TESTFUNSTR[(int)choice].c_str());
     printf("================\n");
-    printf("testderiv: choice= %d\n", choice);
 
     vector<NodeType>& rbf_centers = grid->getNodeList();
     int nb_centers = grid->getNodeListSize();
@@ -149,7 +154,6 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, size_t nb_stenc
     if (nb_stencils_to_test) {
         nb_stencils = (nb_stencils > nb_stencils_to_test) ? nb_stencils_to_test : nb_stencils;
     }
-    std::cout << "NB STENCILS: " << nb_stencils << std::endl;
 
     vector<double> u(nb_centers);
     vector<double> dux_ex(nb_stencils); // exact derivative
@@ -164,7 +168,6 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, size_t nb_stenc
     if (!weightsComputed) {
         der->computeAllWeightsForAllStencils(); 
     }
-
 
     // Fill the test case based on our choice
     fillTestFunction(choice, nb_stencils, u, dux_ex, duy_ex, dulapl_ex);
@@ -303,7 +306,8 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, size_t nb_stenc
     normder[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, 0, nb_int);
 
 
-    printf("----- RESULTS: %d bnd, %d centers, %d stencils\ntestDeriv( %d ) [** Approximating F(X,Y) = %s **] ---\n", nb_bnd, nb_centers, nb_stencils, choice, TESTFUNSTR[(int)choice].c_str());
+    printf("----- RESULTS: %d bnd, %d centers, %d stencils\n",  nb_bnd, nb_centers, nb_stencils); 
+
     //printf("{C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM=10}\n");
     printf("norm[x/y/lapl][L1,L2,LINF][interior/bndry]\n");
     for (int k=0; k < 2; k++) {

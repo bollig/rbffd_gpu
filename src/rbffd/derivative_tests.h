@@ -37,6 +37,7 @@ class DerivativeTests {
             // Only compute weights if we need to. 
             if (!weightsComputed) {
                 der->computeAllWeightsForAllStencils();
+                weightsComputed = true;
             }
         };
         ~DerivativeTests() { /*noop*/ }
@@ -52,9 +53,11 @@ class DerivativeTests {
         void compareGPUandCPUDerivs(size_t nb_stencils_to_test=0);
         double compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx);
 
-        void testDeriv(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0);
+        void testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0);
 
+    protected: 
         void fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils_to_test, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);
+
 
         //---------- TODO --------------
 

@@ -4,10 +4,10 @@
 
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
-    RBFFD::RBFFD(Domain& grid, int dim_num_)//, RBF_Type rbf_choice) 
-: grid_ref(grid), dim_num(dim_num_)
+    RBFFD::RBFFD(Domain* grid, int dim_num_)//, RBF_Type rbf_choice) 
+: grid_ref(*grid), dim_num(dim_num_)
 {
-    int nb_rbfs = grid.getNodeListSize(); 
+    int nb_rbfs = grid_ref.getNodeListSize(); 
 
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
         // All weights should be NULL initially so we can tell if they're
@@ -53,11 +53,11 @@ void RBFFD::getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& 
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
         arma::mat col(nn,1); 
         // Fill by column
-       this->getStencilRHS((DerType)i, rbf_centers, stencil, num_monomials, col); 
-       // we want a( : , i ) where : is a vec of length nn
-       rhs.submat(0,i,nn-1,i) = col; 
+        this->getStencilRHS((DerType)i, rbf_centers, stencil, num_monomials, col); 
+        // we want a( : , i ) where : is a vec of length nn
+        rhs.submat(0,i,nn-1,i) = col; 
     }
-//    return rhs; 
+    //    return rhs; 
 }
 //--------------------------------------------------------------------
 
@@ -68,8 +68,8 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
     int np = num_monomials;
     // Generate a distance matrix and find the SVD of it.
     // n+4 = 1 + dim(3) for x,y,z
-//    arma::mat d_matrix(n+np, n+np);
-//    d_matrix.zeros(n+np,n+np);
+    //    arma::mat d_matrix(n+np, n+np);
+    //    d_matrix.zeros(n+np,n+np);
     d_matrix.zeros(); 
 
     // value 0 => stencil center is at index 0 in "stencil"
@@ -98,7 +98,7 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
         }
     }
 
-   // d_matrix.print("DISTANCE MATRIX BEFORE: ");
+    // d_matrix.print("DISTANCE MATRIX BEFORE: ");
 }
 
 //--------------------------------------------------------------------
@@ -129,7 +129,7 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     // Also we use the multiple rhs solver for improved efficiency (BLAS3).
     arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
     int irbf = st_indx;
-    
+
 #if 0
     char buf[256]; 
     sprintf(buf, "LHS(%d)=", st_indx); 
@@ -251,7 +251,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
         }
     }
-//    rhs.print("RHS before");
+    //    rhs.print("RHS before");
 }
 
 
@@ -277,7 +277,7 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
 
     this->getStencilRHS(which, rbf_centers, stencil, np, rhs);
     this->getStencilLHS(rbf_centers, stencil, np, lhs); 
- 
+
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
     // the solver for increased efficiency
@@ -327,15 +327,8 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
 
 //--------------------------------------------------------------------
 
-// Use a direct solver on to calculate weights.
-int RBFFD::computeStencilWeights(std::vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, double* weights) {
-
-}
-
-//--------------------------------------------------------------------
-
 void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv) {
-    ;
+        std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES\n"    ;
 }
 
 //--------------------------------------------------------------------
@@ -416,7 +409,7 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
         }
     }
 
-//    ar.print("INSIDE DMATRIX");
+    //    ar.print("INSIDE DMATRIX");
 
 }
 
@@ -461,10 +454,10 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
 
     // Value obtained from mm_set_* routine
     MM_typecode matcode;                        
-    
-  //  int I[nz] = { 0, 4, 2, 8 };
-  //  int J[nz] = { 3, 8, 7, 5 };
-  //  double val[nz] = {1.1, 2.2, 3.2, 4.4};
+
+    //  int I[nz] = { 0, 4, 2, 8 };
+    //  int J[nz] = { 3, 8, 7, 5 };
+    //  double val[nz] = {1.1, 2.2, 3.2, 4.4};
 
     int err = 0; 
     FILE *f; 
@@ -479,12 +472,12 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
 
     /* NOTE: matrix market files use 1-based indices, i.e. first element
        of a vector has index 1, not 0.  */
-//    fprintf(stdout, "Writing file contents: \n"); 
+    //    fprintf(stdout, "Writing file contents: \n"); 
     for (size_t i = 0; i < stencil.size(); i++) {
         for (size_t j = 0; j < stencil[i].size(); j++) {
             // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
             fprintf(f, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
-           // fprintf(stdout, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+            // fprintf(stdout, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
             //fprintf(stdout, "%d %d %lg\n", i, j, (*deriv_choice_ptr)[i][j]); 
         }
     }
@@ -493,3 +486,37 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
 }
 
 //----------------------------------------------------------------------
+void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, double beta) {
+    modified = 1;
+    use_var_eps = 1;
+    std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
+    std::vector<double>& avg_stencil_radius = avg_radius_;
+
+    var_epsilon.resize(avg_stencil_radius.size());
+    for (int i=0; i < var_epsilon.size(); i++) {
+        StencilType& stencil = grid_ref.getStencil(i);
+#if 0
+        var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
+        printf("avg_stencil_radius(%d) = %10.10f\n", i , avg_stencil_radius[i]); 
+        printf("var_epsilon(%d) = %10.10f\n", i, var_epsilon[i]);
+#endif                
+        // var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
+        //            var_epsilon[i] = alpha * avg_stencil_radius[i] / sqrt(beta);
+
+        // Hardy 1972: 
+        //var_epsilon[stencil[i][0]] = 1.0 / (0.815 * avg_stencil_radius[stencil[i][0]]);
+
+        // Franke 1982: 
+        // TODO: franke actually had max_stencil_radius in denom
+        //var_epsilon[i] = 0.8 * sqrt(stencils[i].size()) / max_stencil_radius[i] ;
+
+        // Note: for 24x24, alpha = 0.04. For 64x64, alpha = 0.05; for 1000x1000, alpha = 0.07
+        // we use stencils[i][0] to get the index for the stencil center and its corresponding "avg_radius" 
+        //std::cout << "var_epsilon[" << i << "] = " << alpha << " * sqrt( " << stencils[i].size() << " / avg_radius_[ " << stencils[i][0] << " ] " << std::endl; 
+        // the indx on var_epsilon should be linear 0->stencils.size(), but just in case we have random access based on stencil center index
+        var_epsilon[stencil[0]] = (alpha * sqrt(stencil.size())) / avg_radius_[stencil[0]] ;
+
+        //printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
+    }
+}
+

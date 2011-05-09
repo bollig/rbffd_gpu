@@ -7,8 +7,9 @@
 
 #include "grids/domain.h"
 //#include "rbffd/derivative_cl.h"
-//#include "rbffd/derivative_tests.h"
+#include "rbffd/derivative_tests.h"
 #include "rbffd/rbffd.h"
+#include "rbffd/rbffd_gpu.h"
 
 #include "exact_solutions/exact_regulargrid.h"
 
@@ -192,11 +193,9 @@ int main(int argc, char** argv) {
 //    Derivative* der; 
     RBFFD* der;
     if (use_gpu) {
-//        der = new DerivativeCL(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
-        der = new RBFFD(*subdomain, dim); 
+        der = new RBFFD_GPU(subdomain, dim); 
     } else {
-    //    der = new Derivative(subdomain->getNodeList(), subdomain->getStencils(), subdomain->getBoundaryIndices().size(), dim); 
-        der = new RBFFD(*subdomain, dim); 
+        der = new RBFFD(subdomain, dim); 
     }
 
     int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");
@@ -248,20 +247,32 @@ int main(int argc, char** argv) {
     der->writeToFile(RBFFD::LAPL, "lapl_weights.mtx"); 
 
     cout << "end write weights to file" << endl;
-#if 0
+
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
+        bool weightsPreComputed = true; 
         tm["tests"]->start(); 
-        DerivativeTests* der_test = new DerivativeTests();
-        der_test->testAllFunctions(*der, *(subdomain));
-        if (comm_unit->getSize()) {
+        // The test class only computes weights if they havent been done already
+        DerivativeTests* der_test = new DerivativeTests(der, subdomain, weightsPreComputed);
+        if (use_gpu) {
+            // Applies weights on both GPU and CPU and compares results for the first 10 stencils
+            der_test->compareGPUandCPUDerivs(10);
+        }
+        der_test->testAllFunctions();
+
+#if 0
+        // For now we can only test eigenvalues on an MPI size of 1 (we could distribute with Par-Eiegen solver)
+        if (comm_unit->getSize() == 1) {
             if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) {
-                der_test->testEigen(*der, *(subdomain));
+                der_test->testEigen(*der, *subdomain);
             }
         }
+#endif
         tm["tests"]->stop();
     }
 
     // SOLVE HEAT EQUATION
+
+#if 0
 
     // Exact Solution ( freq, decay )
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);

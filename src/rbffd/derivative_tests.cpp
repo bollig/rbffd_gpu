@@ -3,8 +3,6 @@
 #include "utils/norms.h"
 #include <vector>
 
-#include "exact_solutions/exact_ncar_poisson2.h"
-
 #include "common_typedefs.h"
 
 using namespace std;
@@ -14,6 +12,124 @@ struct indxltclass {
     bool operator() (size_t i, size_t j) { return (i<j); }
 } srter; 
 
+//----------------------------------------------------------------------
+// Run a sequence of tests for increasingly complex functions. 
+// Our goal is to approximate derivatives to a function f(x,y,z), 
+// such that the derivatives are equal to  0, x, y, x^2, etc.
+// IF we can accurately approximate the derivatives up to x^3 within 1e-2
+// relative error it should be safe to assume we can adequately approximate
+// a laplacian and other linear differential operators for our PDEs.
+//----------------------------------------------------------------------
+void DerivativeTests::testAllFunctions() {
+#if 0
+    // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
+    this->testDeriv(DerivativeTests::C, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::X, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::Y, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::X2, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::XY, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::Y2, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::X3, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::X2Y, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::XY2, der, grid, grid.getStencilRadii());
+    this->testDeriv(DerivativeTests::Y3, der, grid, grid.getStencilRadii());
+#endif
+    //    exit(EXIT_FAILURE);
+}
+
+//----------------------------------------------------------------------
+//  Test all weights. If weights do not sum to within 1e-5 (single precision)
+//  of the value 0 then exit_failure.
+//  NOTE: if Derivative der is an instance of a GPU enabled class then 
+//  this will check that our GPU precision is sufficiently close to the 
+//  CPU for our computation to proceed.
+//----------------------------------------------------------------------
+void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
+    size_t nb_centers = grid->getNodeListSize(); 
+    size_t nb_stencils = grid->getStencilsSize(); 
+
+    // If nb_stencils_to_test is 0 we stick with the original assumption we're
+    // going to check all stencils
+    if (nb_stencils_to_test) { 
+        nb_stencils = nb_stencils_to_test;
+    }
+
+    // We want weights to sum to 0, so they are all going to be scaled by 1.
+    // \sum w_i f(x,y,z) = 0     where     f(x,y,z) = 1
+    vector<double> u(nb_centers, 1.);
+
+    vector<double> xderiv_gpu(nb_stencils);	
+    vector<double> yderiv_gpu(nb_stencils);	
+    vector<double> zderiv_gpu(nb_stencils);	
+    vector<double> lderiv_gpu(nb_stencils);	
+
+    vector<double> xderiv_cpu(nb_stencils);	
+    vector<double> yderiv_cpu(nb_stencils);	
+    vector<double> zderiv_cpu(nb_stencils);	
+    vector<double> lderiv_cpu(nb_stencils);	
+
+    cout << "start applying weights to compute derivatives on CPU" << endl;
+    // Verify that the CPU works
+    // Force der to use the CPU version of applyWeights
+    der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu);
+
+    cout << "start applying weights to compute derivatives on GPU" << endl;
+    // Verify the GPU works
+    // If der is a GPU class then this uses the GPU. 
+    der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu);
+    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu);
+    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu);
+    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu);
+
+    cout << "start derivative comparison" << endl;
+    for (int i = 0; i < nb_stencils; i++) {
+        //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+        double ex = compareDeriv(xderiv_gpu[i], xderiv_cpu[i], "X", i); 
+        double ey = compareDeriv(yderiv_gpu[i], yderiv_cpu[i], "Y", i); 
+        double ez = compareDeriv(zderiv_gpu[i], zderiv_cpu[i], "Z", i); 
+        double el = compareDeriv(lderiv_gpu[i], lderiv_cpu[i], "Lapl", i); 
+
+        //        std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
+    }
+    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
+}
+
+double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx) {
+
+    if (isnan(deriv_gpu))
+    {
+        std::cout << "One of the derivs calculated by the GPU is NaN (detected by isnan)!\n"; 
+        exit(EXIT_FAILURE); 
+    }
+
+    double abs_error = fabs(deriv_gpu - deriv_cpu); 
+
+    if (abs_error > 1e-5) 
+    {
+        std::cout << "ERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. TRY A DIFFERENT SUPPORT PARAMETER!\n";
+        std::cout << "Test failed on" << std::endl;
+        std::cout << label << "[" << indx << "] = " << abs_error << "    (GPU: " 
+            << deriv_gpu << " CPU: " << deriv_cpu << ")"
+            << std::endl; 
+        std::cout << "NOTE: all derivs are supposed to be 0" << std::endl;
+        //exit(EXIT_FAILURE); 
+        exit(EXIT_FAILURE);
+    }
+    return abs_error;
+}
+
+
+
+
+
+
+
+
+
+#if 0
 //----------------------------------------------------------------------
 void DerivativeTests::checkDerivatives(Derivative& der, Grid& grid)
 {
@@ -550,7 +666,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
                 dulapl_ex_bnd[i] = dulapl_ex[j]; 
                 lapl_deriv_bnd[i] = lapl_deriv[j]; 
                 avgDist_bnd[i] = avgDist[j]; 
-//                std::cout << "BOUNDARY: " << i << " / " << j << ", " << avgDist_bnd[i] << std::endl;
+                //                std::cout << "BOUNDARY: " << i << " / " << j << ", " << avgDist_bnd[i] << std::endl;
                 i++; 
             } else {
                 dux_ex_int[k] = dux_ex[j]; 
@@ -560,7 +676,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
                 dulapl_ex_int[k] = dulapl_ex[j]; 
                 lapl_deriv_int[k] = lapl_deriv[j]; 
                 avgDist_int[k] = avgDist[j]; 
-  //              std::cout << "INTERIOR: " << k << " / " << j << ", " << avgDist_int[k] << std::endl;
+                //              std::cout << "INTERIOR: " << k << " / " << j << ", " << avgDist_int[k] << std::endl;
                 k++; 
             }
         } 
@@ -649,7 +765,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     double inter_error=0.;
     for (int i= 0; i < nb_int; i++) {
         inter_error += (dulapl_ex_int[i]-lapl_deriv_int[i])*(dulapl_ex_int[i]-lapl_deriv_int[i]);
-    //    std::cout << i << "dulapl_ex_int " << dulapl_ex_int[i] << ", " << lapl_deriv_int[i] << std::endl;
+        //    std::cout << i << "dulapl_ex_int " << dulapl_ex_int[i] << ", " << lapl_deriv_int[i] << std::endl;
         //printf("inter error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
     }
     inter_error /= nb_int;
@@ -657,7 +773,7 @@ void DerivativeTests::testDeriv(DerivativeTests::TESTFUN choice, Derivative& der
     double bnd_error=0.;
     for (int i=0; i < nb_bnd; i++) {
         bnd_error += (dulapl_ex_bnd[i]-lapl_deriv_bnd[i])*(dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
-   //     printf("bnd error[%d] = %14.7g\n", i, dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
+        //     printf("bnd error[%d] = %14.7g\n", i, dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
     }
     bnd_error /= nb_bnd;
 
@@ -702,96 +818,4 @@ void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3>& rbf_
     }
 #endif
 }
-//----------------------------------------------------------------------
-void DerivativeTests::testAllFunctions(Derivative& der, Grid& grid) {
-    this->computeAllWeights(der, grid.getNodeList(), grid.getStencils());
-    this->checkWeights(der, grid.getNodeListSize(), grid.getStencilsSize());
-
-    // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
-
-#if 1
-    this->testDeriv(DerivativeTests::C, der, grid, grid.getStencilRadii());
-
-    this->testDeriv(DerivativeTests::X, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::Y, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::X2, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::XY, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::Y2, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::X3, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::X2Y, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::XY2, der, grid, grid.getStencilRadii());
-    this->testDeriv(DerivativeTests::Y3, der, grid, grid.getStencilRadii());
 #endif
-    //    exit(EXIT_FAILURE);
-}
-
-//----------------------------------------------------------------------
-//  Test all weights. If weights do not sum to within 1e-5 (single precision)
-//  of the value 0 then exit_failure.
-//  NOTE: if Derivative der is an instance of a GPU enabled class then 
-//  this will check that our GPU precision is sufficiently close to the 
-//  CPU for our computation to proceed.
-//----------------------------------------------------------------------
-void DerivativeTests::checkWeights(Derivative& der, int nb_centers, int nb_stencils) {
-    vector<double> u(nb_centers, 1.);
-
-    vector<double> xderiv_gpu(nb_stencils);	
-    vector<double> yderiv_gpu(nb_stencils);	
-    vector<double> zderiv_gpu(nb_stencils);	
-    vector<double> lderiv_gpu(nb_stencils);	
-
-    vector<double> xderiv_cpu(nb_stencils);	
-    vector<double> yderiv_cpu(nb_stencils);	
-    vector<double> zderiv_cpu(nb_stencils);	
-    vector<double> lderiv_cpu(nb_stencils);	
-
-    cout << "start computing derivatives on CPU" << endl;
-    // Verify that the CPU works
-    der.computeDerivCPU(Derivative::X, u, xderiv_cpu);
-    der.computeDerivCPU(Derivative::Y, u, yderiv_cpu);
-    der.computeDerivCPU(Derivative::Z, u, zderiv_cpu);
-    der.computeDerivCPU(Derivative::LAPL, u, lderiv_cpu);
-
-    cout << "start computing derivative on CPU/GPU" << endl;
-    // Verify the GPU works
-    der.computeDeriv(Derivative::X, u, xderiv_gpu);
-    der.computeDeriv(Derivative::Y, u, yderiv_gpu);
-    der.computeDeriv(Derivative::Z, u, zderiv_gpu);
-    der.computeDeriv(Derivative::LAPL, u, lderiv_gpu);
-
-    cout << "start derivative comparison" << endl;
-    for (int i = 0; i < nb_stencils; i++) {
-        //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-        double ex = compareDeriv(xderiv_gpu[i], xderiv_cpu[i], "X", i); 
-        double ey = compareDeriv(yderiv_gpu[i], yderiv_cpu[i], "Y", i); 
-        double ez = compareDeriv(zderiv_gpu[i], zderiv_cpu[i], "Z", i); 
-        double el = compareDeriv(lderiv_gpu[i], lderiv_cpu[i], "Lapl", i); 
-
-        //        std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
-    }
-    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
-}
-
-double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx) {
-
-    if (isnan(deriv_gpu))
-    {
-        std::cout << "One of the derivs calculated by the GPU is NaN (detected by isnan)!\n"; 
-        exit(EXIT_FAILURE); 
-    }
-
-    double abs_error = fabs(deriv_gpu - deriv_cpu); 
-
-    if (abs_error > 1e-5) 
-    {
-        std::cout << "ERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. TRY A DIFFERENT SUPPORT PARAMETER!\n";
-        std::cout << "Test failed on" << std::endl;
-        std::cout << label << "[" << indx << "] = " << abs_error << "    (GPU: " 
-            << deriv_gpu << " CPU: " << deriv_cpu << ")"
-            << std::endl; 
-        std::cout << "NOTE: all derivs are supposed to be 0" << std::endl;
-        //exit(EXIT_FAILURE); 
-        exit(EXIT_FAILURE);
-    }
-    return abs_error;
-}

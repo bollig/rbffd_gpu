@@ -53,6 +53,11 @@ class RBFFD
         // independent of dimension for grid). 
         int dim_num;
 
+        // Potentially useful if we want to know the rank of our MPI process
+        // for assigning procs or gpus?
+        int rank; 
+
+
         // FIXME: has no effect
         // Have any parameters been modified?
         int modified; 
@@ -63,7 +68,7 @@ class RBFFD
 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives
         // (up to 3 right now) 
-        RBFFD(Domain* grid, int dim_num);
+        RBFFD(Domain* grid, int dim_num, int rank=0);
         // , RBF_Type rbf_choice=MQ); 
 
         virtual ~RBFFD(); 
@@ -86,6 +91,8 @@ class RBFFD
         // Can be CPU or GPU depending on Subclasses
         // NOTE: We apply the necessary weights to get the FULL derivative of u(x,y,z).
         //       That is, we see L{u}(x,y,z) evaluated all ALL points
+        // TODO: npts is unused at the momement. Could prove useful if we had a
+        //      applyWeightsForDerivAtNode(i) routine
         virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv);
 
         void setEpsilon(double eps) { 
@@ -112,6 +119,7 @@ class RBFFD
         void setVariableEpsilon(double alpha=1.0f, double beta=1.0f) {
             this->setVariableEpsilon(grid_ref.getStencilRadii(), alpha, beta);
         }
+
         void setVariableEpsilon(std::vector<double>& avg_radius_, double alpha=1.0f, double beta=1.0f); 
 
         // Accessors for weight data: 
@@ -136,11 +144,9 @@ class RBFFD
 
         void distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, int dim_num, arma::mat& d_matrix); 
 
-
         void getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs);
         void getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs);
         void getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& lhs);
-
 };
 
 #endif 

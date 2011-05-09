@@ -4,8 +4,8 @@
 
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
-    RBFFD::RBFFD(Domain* grid, int dim_num_)//, RBF_Type rbf_choice) 
-: grid_ref(*grid), dim_num(dim_num_)
+    RBFFD::RBFFD(Domain* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
+: grid_ref(*grid), dim_num(dim_num_), rank(rank_)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 

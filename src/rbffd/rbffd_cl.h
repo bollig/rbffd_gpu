@@ -1,27 +1,40 @@
-#ifndef __RBFFD_GPU_H__
-#define __RBFFD_GPU_H__
+#ifndef __RBFFD_CL_H__
+#define __RBFFD_CL_H__
 
 //#include <CL/cl.hpp> 
 #include "utils/opencl/cl_base_class.h"
 #include "rbffd.h"
 
-class RBFFD_GPU : public RBFFD, public CLBaseClass
+class RBFFD_CL : public RBFFD, public CLBaseClass
 {
     protected: 
-        // TODO: Pointers to GPU weights
-        cl::Buffer gpu_weights[4]; 
+        // Weight buffers matching number of weights we have in super class
+        cl::Buffer gpu_weights[NUM_DERIV_TYPES]; 
 
         cl::Buffer gpu_stencils; 
         size_t*    cpu_stencils;
 
-        cl::Buffer gpu_deriv_out[4]; 
+        cl::Buffer gpu_deriv_out[NUM_DERIV_TYPES]; 
+
+
+        cl::Buffer gpu_function; 
 
         // Total size of the gpu-stencils buffer. This should also be the size
         // of a single element of gpu_weights array. 
         size_t gpu_stencil_size; 
         // Total number of bytes allocated for stencil (i.e., gpu_stencil_size*sizeof(float|double))
         size_t stencil_mem_size; 
-    
+
+        // number of bytes for: 
+        //      - gpu_stencils
+        //      - gpu_deriv_out[ i ]
+        //      - gpu_weights[ i ]
+        //      - gpu_function
+        size_t stencil_mem_bytes;
+        size_t deriv_mem_bytes;
+        size_t weights_mem_bytes;
+        size_t solution_mem_bytes;
+
         // Is a double precision extension available on the unit? 
         bool useDouble; 
 
@@ -32,9 +45,9 @@ class RBFFD_GPU : public RBFFD, public CLBaseClass
         //TODO: - constructor should allocate the buffers on the GPU
         //      - onStart applyWeights... will check if(modified) { updateGPUstructs } 
 
-        RBFFD_GPU(Domain* grid, int dim_num, int rank=0);
+        RBFFD_CL(Domain* grid, int dim_num, int rank=0);
 
-        virtual ~RBFFD_GPU() { /*noop*/ }; 
+        virtual ~RBFFD_CL() { /*noop*/ }; 
 
         // FIXME: assumes size of buffers does not change (should check if it
         // does and resize accordingly on the GPU. 
@@ -68,6 +81,8 @@ class RBFFD_GPU : public RBFFD, public CLBaseClass
         void loadKernel(); 
         void allocateGPUMem(); 
         void updateStencils();
+        void updateWeights();
+        void updateFunction();
 
 };
 

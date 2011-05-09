@@ -63,7 +63,7 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
     for (size_t i = 0; i < nb_centers; i++) {
         NodeType& node_r = grid->getNode(i); 
         NodeType center(0.,0.,0.); 
-        u[i] = node_r.x();// sin((node_r-center).magnitude()); 
+        u[i] =  sin((node_r-center).magnitude()); 
     }
 #endif
 
@@ -95,13 +95,17 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
 
     cout << "start derivative comparison" << endl;
     for (int i = 0; i < nb_stencils; i++) {
-        //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+#if 0
+        std::cout << "cpu: " << xderiv_cpu[i] << " - gpu: " << xderiv_gpu[i] << " = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+                std::cout << "cpu: " << yderiv_cpu[i] << " - gpu: " << yderiv_gpu[i] << " = " << yderiv_cpu[i] - yderiv_gpu[i] << std::endl;
+                std::cout << "cpu: " << zderiv_cpu[i] << " - gpu: " << zderiv_gpu[i] << " = " << zderiv_cpu[i] - zderiv_gpu[i] << std::endl;
+#endif 
         double ex = compareDeriv(xderiv_gpu[i], xderiv_cpu[i], "X", i); 
         double ey = compareDeriv(yderiv_gpu[i], yderiv_cpu[i], "Y", i); 
         double ez = compareDeriv(zderiv_gpu[i], zderiv_cpu[i], "Z", i); 
         double el = compareDeriv(lderiv_gpu[i], lderiv_cpu[i], "Lapl", i); 
 
-                std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
+            std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
     }
     std::cout << "CONGRATS! " << nb_stencils << " DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
 }

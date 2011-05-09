@@ -39,11 +39,12 @@ class RBFFD
         // 0/1 (false/true) are the weights for the associated stencil computed yet? 
         // NOTE: each vector is associate with one DerType (see above), and each element
         // of the vector corresponds to a stencil 
-        std::vector<int> stWeightsComputed; 
+        // TODO:        std::vector<int> stWeightsComputed; 
 
         // A list of support parameters for each RBF centered at each node
         std::vector<double> var_epsilon;
 
+        // FIXME: has no effect
         // 0/1 (false/true) should we assume our support parameter is
         // heterogenous (true) or homogenous (false)?
         int use_var_eps; 
@@ -52,6 +53,7 @@ class RBFFD
         // independent of dimension for grid). 
         int dim_num;
 
+        // FIXME: has no effect
         // Have any parameters been modified?
         int modified; 
 
@@ -82,6 +84,8 @@ class RBFFD
         }
 
         // Can be CPU or GPU depending on Subclasses
+        // NOTE: We apply the necessary weights to get the FULL derivative of u(x,y,z).
+        //       That is, we see L{u}(x,y,z) evaluated all ALL points
         virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv);
 
         void setEpsilon(double eps) { 

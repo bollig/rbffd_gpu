@@ -58,6 +58,15 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
     // \sum w_i f(x,y,z) = 0     where     f(x,y,z) = 1
     vector<double> u(nb_centers, 1.);
 
+#if 0
+    // We could also check a derivative function like in our test_deriv routines
+    for (size_t i = 0; i < nb_centers; i++) {
+        NodeType& node_r = grid->getNode(i); 
+        NodeType center(0.,0.,0.); 
+        u[i] = sin((node_r-center).magnitude()); 
+    }
+#endif
+
     vector<double> xderiv_gpu(nb_stencils);	
     vector<double> yderiv_gpu(nb_stencils);	
     vector<double> zderiv_gpu(nb_stencils);	
@@ -92,9 +101,9 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
         double ez = compareDeriv(zderiv_gpu[i], zderiv_cpu[i], "Z", i); 
         double el = compareDeriv(lderiv_gpu[i], lderiv_cpu[i], "Lapl", i); 
 
-        //        std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
+                std::cout << i << " of " << nb_stencils << "   (Errors: " << ex << ", " << ey << ", " << ez << ", " << el << ")" << std::endl;
     }
-    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
+    std::cout << "CONGRATS! " << nb_stencils << " DERIVATIVES WERE CALCULATED THE SAME ON THE GPU/CPU AND ON THE CPU\n";
 }
 
 double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx) {

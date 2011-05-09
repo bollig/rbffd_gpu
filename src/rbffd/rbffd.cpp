@@ -328,7 +328,24 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
 //--------------------------------------------------------------------
 
 void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv) {
-        std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES\n"    ;
+    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
+    tm["applyAll"]->start(); 
+    size_t nb_stencils = grid_ref.getStencilsSize(); 
+    double der;
+
+    // TODO: this if we took advantage of a sparse matrix container, we might be able to
+    // improve this Mat-Vec multiply. We could also do it on the GPU.
+    for (size_t i=0; i < nb_stencils; i++) {
+        double* w = this->weights[which][i]; 
+        StencilType& st = grid_ref.getStencil(i);
+        der = 0.0;
+        size_t n = st.size();
+        for (size_t s=0; s < n; s++) {
+            der += w[s] * u[st[s]]; 
+        }
+        deriv[i] = der;
+    }
+    tm["applyAll"]->stop();
 }
 
 //--------------------------------------------------------------------

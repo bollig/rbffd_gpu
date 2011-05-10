@@ -506,7 +506,7 @@ void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb
 
 //----------------------------------------------------------------------
 //
-void DerivativeTests::testEigen(RBFFD::DerType which, float maxPerturbation, unsigned int maxNumPerturbations)
+void DerivativeTests::testEigen(RBFFD::DerType which, unsigned int maxNumPerturbations, float maxPerturbation)
 {
 
     int nb_stencils = grid->getStencilsSize();

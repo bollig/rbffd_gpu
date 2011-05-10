@@ -54,7 +54,7 @@ class DerivativeTests {
 
         void testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0);
 
-        void testEigen(RBFFD::DerType which=RBFFD::LAPL, float maxPerturbation=0.05, unsigned int maxNumPerturbations=100);
+        void testEigen(RBFFD::DerType which=RBFFD::LAPL, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
 
     protected: 
         void fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils_to_test, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);

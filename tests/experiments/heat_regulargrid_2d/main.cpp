@@ -260,13 +260,14 @@ int main(int argc, char** argv) {
         der_test->testAllFunctions();
         // For now we can only test eigenvalues on an MPI size of 1 (we could distribute with Par-Eiegen solver)
         if (comm_unit->getSize() == 1) {
-            //if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) 
+            if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) 
             {
                 // FIXME: why does this happen? Perhaps because X Y and Z are unidirectional? 
                 // Test X and 4 eigenvalues are > 0
                 // Test Y and 30 are > 0
                 // Test Z and 36 are > 0
-                der_test->testEigen(RBFFD::LAPL);
+                // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
+                der_test->testEigen(RBFFD::LAPL, 0);
             }
         }
         tm["tests"]->stop();

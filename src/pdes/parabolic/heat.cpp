@@ -2,7 +2,7 @@
 #include <algorithm>
 
 #include "timer_eb.h"
-#include "rbffd/derivative.h"
+#include "rbffd/rbffd.h"
 #include "heat.h"
 #include "exact_solutions/exact_solution.h"
 #include "utils/norms.h"
@@ -10,7 +10,7 @@
 using namespace std;
 using namespace EB;
 
-    Heat::Heat(ExactSolution* _solution, std::vector<NodeType>& rbf_centers_, int num_stencils, std::vector<size_t>& global_boundary_nodes_, Derivative* der_, int rank, double rel_err_max) 
+    Heat::Heat(ExactSolution* _solution, std::vector<NodeType>& rbf_centers_, int num_stencils, std::vector<size_t>& global_boundary_nodes_, RBFFD* der_, int rank, double rel_err_max) 
 :	rbf_centers(rbf_centers_), boundary_set(global_boundary_nodes_), der(der_),	id(rank), subdomain(NULL), exactSolution(_solution), rel_err_tol(rel_err_max) 
 {
     nb_stencils = num_stencils;
@@ -42,7 +42,7 @@ using namespace EB;
     //grid.laplace();
 }
 
-    Heat::Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, double rel_err_max) 
+    Heat::Heat(ExactSolution* _solution, Domain* subdomain_, RBFFD* der_, int rank, double rel_err_max) 
 : 	exactSolution(_solution), rbf_centers(subdomain_->getNodeList()), boundary_set(subdomain_->getBoundaryIndices()), der(der_), id(rank),subdomain(subdomain_), rel_err_tol(rel_err_max)
 {
     nb_stencils = subdomain->getStencilsSize();
@@ -188,7 +188,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 
         // This is on the CPU or GPU depending on type of Derivative class used
         // (e.g., DerivativeCL will compute on GPU using OpenCL)
-        der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
+        der->applyWeightsForDeriv(RBFFD::LAPL, s, lapl_deriv);
 
         tm["applyDerivsONLY"]->start();  
         // Use 5 point Cartesian formula for the Laplacian
@@ -265,7 +265,7 @@ void Heat::advanceOneStepWithComm(Communicator* comm_unit) {
 
 #ifdef SECOND
         // compute laplace u^*
-        der->computeDeriv(Derivative::LAPL, s1, lapl_deriv);
+        der->applyWeightsForDeriv(RBFFD::LAPL, s1, lapl_deriv);
 
         tm["applyDerivsONLY"]->start(); 
         // compute u^{n+1} = u^n + dt*lapl(u^*)
@@ -463,7 +463,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
         }
         cout << "USING updated_solution" << endl;
     }
-    der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
+    der->applyWeightsForDeriv(RBFFD::LAPL, s, lapl_deriv);
 
     // Use 5 point Cartesian formula for the Laplacian
     //lapl_deriv = grid.computeCartLaplacian(s);
@@ -522,7 +522,7 @@ void Heat::advanceOneStep(std::vector<double>* updated_solution) {
 
 #ifdef SECOND
     // compute laplace u^* 
-    der->computeDeriv(Derivative::LAPL, s1, lapl_deriv);
+    der->applyWeightsForDeriv(RBFFD::LAPL, s1, lapl_deriv);
     //cerr << "SECOND ORDER TIME" << endl;
     // compute u^{n+1} = u^n + dt*lapl(u^*)
     for (int i = 0; i < nb_stencils; i++) {
@@ -614,8 +614,8 @@ void Heat::advanceOneStepDivGrad() {
     //	vector<Vec3>* rbf_centers = grid.getRbfCenters();
 
     // compute laplace u^n 
-    der->computeDeriv(Derivative::X, s, x_deriv);
-    der->computeDeriv(Derivative::Y, s, y_deriv);
+    der->applyWeightsForDeriv(RBFFD::X, s, x_deriv);
+    der->applyWeightsForDeriv(RBFFD::Y, s, y_deriv);
 
 #if 0
     for (int i=0; i < nb_rbf; i++) {
@@ -628,9 +628,9 @@ void Heat::advanceOneStepDivGrad() {
     exit(0);
 #endif
 
-    der->computeDeriv(Derivative::X, x_deriv, xx_deriv);
-    der->computeDeriv(Derivative::Y, y_deriv, yy_deriv);
-    //der.computeDeriv(Derivative::LAPL, s, lapl_deriv);
+    der->applyWeightsForDeriv(RBFFD::X, x_deriv, xx_deriv);
+    der->applyWeightsForDeriv(RBFFD::Y, y_deriv, yy_deriv);
+    //der.applyWeightsForDeriv(RBFFD::LAPL, s, lapl_deriv);
 
     for (int i = 0; i < s.size(); i++) {
         lapl_deriv[i] = xx_deriv[i] + yy_deriv[i];
@@ -684,12 +684,12 @@ void Heat::advanceOneStepDivGrad() {
 
 #ifdef SECOND
     // compute laplace u^* 
-    //der.computeDeriv(Derivative::LAPL, s1, lapl_deriv);
+    //der.applyWeightsForDeriv(RBFFD::LAPL, s1, lapl_deriv);
     // compute laplace u^n 
-    der->computeDeriv(Derivative::X, s1, x_deriv);
-    der->computeDeriv(Derivative::Y, s1, y_deriv);
-    der->computeDeriv(Derivative::X, x_deriv, xx_deriv);
-    der->computeDeriv(Derivative::Y, y_deriv, yy_deriv);
+    der->applyWeightsForDeriv(RBFFD::X, s1, x_deriv);
+    der->applyWeightsForDeriv(RBFFD::Y, s1, y_deriv);
+    der->applyWeightsForDeriv(RBFFD::X, x_deriv, xx_deriv);
+    der->applyWeightsForDeriv(RBFFD::Y, y_deriv, yy_deriv);
 
     for (int i = 0; i < s.size(); i++) {
         lapl_deriv[i] = xx_deriv[i] + yy_deriv[i];
@@ -777,11 +777,11 @@ void Heat::advanceOneStepTwoTerms() {
 
     // compute laplace u^n 
     computeDiffusion(s);
-    der->computeDeriv(Derivative::X, s, x_deriv);
-    der->computeDeriv(Derivative::Y, s, y_deriv);
-    der->computeDeriv(Derivative::X, diffusion, diff_x);
-    der->computeDeriv(Derivative::Y, diffusion, diff_y);
-    der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
+    der->applyWeightsForDeriv(RBFFD::X, s, x_deriv);
+    der->applyWeightsForDeriv(RBFFD::Y, s, y_deriv);
+    der->applyWeightsForDeriv(RBFFD::X, diffusion, diff_x);
+    der->applyWeightsForDeriv(RBFFD::Y, diffusion, diff_y);
+    der->applyWeightsForDeriv(RBFFD::LAPL, s, lapl_deriv);
 
 #if 0
     for (int i=0; i < nb_rbf; i++) {
@@ -794,9 +794,9 @@ void Heat::advanceOneStepTwoTerms() {
     exit(0);
 #endif
 
-    //der.computeDeriv(Derivative::X, x_deriv, xx_deriv);
-    //der.computeDeriv(Derivative::Y, y_deriv, yy_deriv);
-    //der.computeDeriv(Derivative::LAPL, s, lapl_deriv);
+    //der.applyWeightsForDeriv(RBFFD::X, x_deriv, xx_deriv);
+    //der.applyWeightsForDeriv(RBFFD::Y, y_deriv, yy_deriv);
+    //der.applyWeightsForDeriv(RBFFD::LAPL, s, lapl_deriv);
 
     //for (int i=0; i < s.size(); i++) {
     //lapl_deriv[i] = xx_deriv[i] + yy_deriv[i];
@@ -851,14 +851,14 @@ void Heat::advanceOneStepTwoTerms() {
 
 #ifdef SECOND
     // compute laplace u^* 
-    //der.computeDeriv(Derivative::LAPL, s1, lapl_deriv);
+    //der.applyWeightsForDeriv(RBFFD::LAPL, s1, lapl_deriv);
     // compute laplace u^n 
     computeDiffusion(s1);
-    der->computeDeriv(Derivative::X, s1, x_deriv);
-    der->computeDeriv(Derivative::Y, s1, y_deriv);
-    der->computeDeriv(Derivative::X, diffusion, diff_x);
-    der->computeDeriv(Derivative::Y, diffusion, diff_y);
-    der->computeDeriv(Derivative::LAPL, s, lapl_deriv);
+    der->applyWeightsForDeriv(RBFFD::X, s1, x_deriv);
+    der->applyWeightsForDeriv(RBFFD::Y, s1, y_deriv);
+    der->applyWeightsForDeriv(RBFFD::X, diffusion, diff_x);
+    der->applyWeightsForDeriv(RBFFD::Y, diffusion, diff_y);
+    der->applyWeightsForDeriv(RBFFD::LAPL, s, lapl_deriv);
 
     // compute u^{n+1} = u^n + dt*lapl(u^*)
     for (int i = 0; i < nb_stencils; i++) {

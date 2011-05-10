@@ -8,9 +8,7 @@
 #include "exact_solutions/exact_solution.h" 
 #include "grids/grid_interface.h" 
 #include "timer_eb.h" 
-#include "rbffd/derivative.h"
-
-//class Derivative;
+#include "rbffd/rbffd.h"
 
 class Heat { 
     
@@ -39,7 +37,7 @@ class Heat {
 
 
         Domain* subdomain;
-        Derivative* der; 
+        RBFFD* der; 
 
         std::vector<double> lapl_deriv;
         std::vector<double> x_deriv; 
@@ -72,15 +70,13 @@ class Heat {
 
     public: 
 
-        Heat(ExactSolution* _solution, std::vector<Vec3>& rb_centers_, int
-                num_stencils, std::vector<size_t>& global_boundary_nodes_,
-                Derivative* der_, int rank=0, double rel_err_tol = 1e-2);
+        Heat(ExactSolution* _solution, std::vector<Vec3>& rb_centers_, 
+                int num_stencils, std::vector<size_t>& global_boundary_nodes_,
+                RBFFD* der_, int rank=0, double rel_err_tol = 1e-2);
 
         // Constructor #2:
-        Heat(ExactSolution* _solution, Domain* subdomain_, Derivative* der_,
+        Heat(ExactSolution* _solution, Domain* subdomain_, RBFFD* der_,
                 int rank = 0, double rel_err_tol = 1e-2); 
-        
-//        Heat(ExactSolution* _solution, Grid* grid_, Derivative& der_); 
         
         ~Heat();
 

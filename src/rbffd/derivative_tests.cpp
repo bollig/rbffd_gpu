@@ -520,30 +520,6 @@ void DerivativeTests::testEigen(RBFFD::DerType which, float maxPerturbation, uns
     std::vector<NodeType>& rbf_centers = grid->getNodeList();
     std::vector<double>& avg_stencil_radius = grid->getStencilRadii(); // get average stencil radius for each point
 
-    // Variable epsilon is managed by RBFFD
-#if 0
-    // Set things up for variable epsilon
-    vector<double> epsv(tot_nb_pts);
-
-    for (int i=0; i < tot_nb_pts; i++) {
-        //epsv[i] = 1. / avg_stencil_radius[i];
-        epsv[i] = 1.; // fixed epsilon
-        //printf("avg rad(%d) = %f\n", i, avg_stencil_radius[i]);
-    }
-    double mm = minimum(avg_stencil_radius);
-    printf("min avg_stencil_radius= %f\n", mm);
-
-    der.setVariableEpsilon(epsv);
-#endif 
-
-    // Weights should already be computed
-#if 0
-    // Laplacian weights with zero grid perturbation
-    for (int irbf=0; irbf < nb_stencils; irbf++) {
-        der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "lapl");
-    }
-#endif 
-
     RBFFD::EigenvalueOutput eig_results; 
 
     double max_eig = der->computeEigenvalues(which, &eig_results); // needs lapl_weights
@@ -579,13 +555,6 @@ void DerivativeTests::testEigen(RBFFD::DerType which, float maxPerturbation, uns
             v.setValue(v.x()+vx, v.y()+vy);
         }
 
-        //rbf_centers[10].print("rbf_centers[10]");
-        //continue;
-
-        //recompute Laplace weights
-        //for (int irbf=0; irbf < nb_stencils; irbf++) {
-        //    der.computeWeights(rbf_centers, stencil[irbf], irbf);
-        //}
         der->computeWeightsForAllStencils(which);
 
         double max_eig = der->computeEigenvalues(which); 

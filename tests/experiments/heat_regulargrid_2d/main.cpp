@@ -256,16 +256,15 @@ int main(int argc, char** argv) {
             // Applies weights on both GPU and CPU and compares results for the first 10 stencils
             der_test->compareGPUandCPUDerivs(10);
         }
+        // Test approximations to derivatives of functions f(x,y,z) = 0, x, y, xy, etc. etc.
         der_test->testAllFunctions();
-
-#if 0
         // For now we can only test eigenvalues on an MPI size of 1 (we could distribute with Par-Eiegen solver)
         if (comm_unit->getSize() == 1) {
-            if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) {
-                der_test->testEigen(*der, *subdomain);
+            //if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) 
+            {
+                der_test->testEigen();
             }
         }
-#endif
         tm["tests"]->stop();
     }
 

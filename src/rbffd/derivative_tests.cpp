@@ -136,6 +136,7 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 
 
 //----------------------------------------------------------------------
+//
 // Evaluate a test function and its analytic derivs to fill buffers. 
 // Then compute approximate derviatives using the RBFFD class. 
 // Compare the analytic and approximate derivatives and assess the
@@ -364,6 +365,7 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
 }
 
 //----------------------------------------------------------------------
+//
 void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
         vector<double>& dulapl_ex)
 {
@@ -389,7 +391,7 @@ void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb
             }
             break;
         case X:
-            printf("nb_stencils= %d\n", nb_stencils);
+            printf("nb_stencils= %lu\n", nb_stencils);
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex.push_back(1.);
@@ -502,9 +504,107 @@ void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb
 }
 
 
+//----------------------------------------------------------------------
+//
+void DerivativeTests::testEigen(float maxPerturbation, unsigned int maxNumPerturbations)
+{
 
+    int nb_stencils = grid->getStencilsSize();
+    int nb_bnd = grid->getBoundaryIndicesSize();
+    int tot_nb_pts = grid->getNodeListSize();
 
+    // read input file
+    // compute stencils (do this only 
 
+    //double pert = 0.05;
+    vector<double> u(tot_nb_pts);
+    vector<double> lapl_deriv(nb_stencils);
+
+    vector<double>& avg_stencil_radius = grid->getStencilRadii(); // get average stencil radius for each point
+
+    vector<StencilType>& stencil = grid->getStencils();
+
+    // global variable
+    vector<NodeType>& rbf_centers = grid->getNodeList();
+
+    // Variable epsilon is managed by RBFFD
+#if 0
+    // Set things up for variable epsilon
+    vector<double> epsv(tot_nb_pts);
+
+    for (int i=0; i < tot_nb_pts; i++) {
+        //epsv[i] = 1. / avg_stencil_radius[i];
+        epsv[i] = 1.; // fixed epsilon
+        //printf("avg rad(%d) = %f\n", i, avg_stencil_radius[i]);
+    }
+    double mm = minimum(avg_stencil_radius);
+    printf("min avg_stencil_radius= %f\n", mm);
+
+    der.setVariableEpsilon(epsv);
+#endif 
+
+    // Weights should already be computed
+#if 0
+    // Laplacian weights with zero grid perturbation
+    for (int irbf=0; irbf < nb_stencils; irbf++) {
+        der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "lapl");
+    }
+#endif 
+    RBFFD::DerType which = RBFFD::LAPL; 
+    RBFFD::EigenvalueOutput eig_results; 
+
+    double max_eig = der->computeEigenvalues(which, &eig_results); // needs lapl_weights
+
+    printf("zero perturbation: max eig: %f\n", max_eig);
+
+    // Archive our original nodes
+    std::vector<NodeType> rbf_centers_orig = grid->getNodeList();
+    // Start perturbing the nodes within the grid
+    std::vector<NodeType>& rbf_centers_perturb = grid->getNodeList();
+
+    if ((maxPerturbation < 0.f) || (maxPerturbation > 1.f)) {
+        std::cout << "[DerivativeTests] ERROR in testEigen(...)! Max Perturbation must be in [0., 1.]: " << maxPerturbation << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    double percent = maxPerturbation; // in [0,1]
+    printf("percent distortion of original grid= %f\n", percent);
+
+    // set a random seed
+    srandom(time(0));
+
+    for (unsigned int i=0; i < maxNumPerturbations; i++) {
+        printf("---- iteration %d ------\n", i);
+        //update rbf centers by random perturbations at a fixed percentage of average radius computed
+        //based on the unperturbed mesh
+        rbf_centers_perturb.assign(rbf_centers_orig.begin(), rbf_centers_orig.end());
+
+        for (int j=0; j < tot_nb_pts; j++) {
+            Vec3& v = rbf_centers[j];
+            double vx = avg_stencil_radius[j]*percent*randf(-1.,1.);
+            double vy = avg_stencil_radius[j]*percent*randf(-1.,1.);
+            v.setValue(v.x()+vx, v.y()+vy);
+        }
+
+        //rbf_centers[10].print("rbf_centers[10]");
+        //continue;
+
+        //recompute Laplace weights
+        //for (int irbf=0; irbf < nb_stencils; irbf++) {
+        //    der.computeWeights(rbf_centers, stencil[irbf], irbf);
+        //}
+        der->computeWeightsForAllStencils(which);
+
+        double max_eig = der->computeEigenvalues(which); 
+
+        printf("Max Perturbation: %f, max eig: %f\n", percent, max_eig);
+    }
+
+    // Restore and undo all changes we made
+    std::cout << "Restoring original node positions\n"; 
+    rbf_centers_perturb.assign(rbf_centers_orig.begin(), rbf_centers_orig.end());
+    der->computeWeightsForAllStencils(RBFFD::LAPL);
+}
 
 
 #if 0
@@ -739,87 +839,6 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
     exit(0);
 }
 //----------------------------------------------------------------------
-//----------------------------------------------------------------------
-void DerivativeTests::testEigen(Derivative& der, Grid& grid)
-{
-
-    int nb_stencils = grid.getStencilsSize();
-    int nb_bnd = grid.getBoundaryIndicesSize();
-    int tot_nb_pts = grid.getNodeListSize();
-
-    // read input file
-    // compute stencils (do this only 
-
-    //double pert = 0.05;
-    vector<double> u(tot_nb_pts);
-    vector<double> lapl_deriv(nb_stencils);
-
-    vector<double>& avg_stencil_radius = grid.getStencilRadii(); // get average stencil radius for each point
-
-    vector<StencilType>& stencil = grid.getStencils();
-
-    // global variable
-    vector<NodeType>& rbf_centers = grid.getNodeList();
-
-    // Derivative der(rbf_centers, stencil, grid.getNbBnd());
-    der.setAvgStencilRadius(avg_stencil_radius);
-
-    // Set things up for variable epsilon
-
-
-    vector<double> epsv(tot_nb_pts);
-
-    for (int i=0; i < tot_nb_pts; i++) {
-        //epsv[i] = 1. / avg_stencil_radius[i];
-        epsv[i] = 1.; // fixed epsilon
-        //printf("avg rad(%d) = %f\n", i, avg_stencil_radius[i]);
-    }
-    double mm = minimum(avg_stencil_radius);
-    printf("min avg_stencil_radius= %f\n", mm);
-
-    der.setVariableEpsilon(epsv);
-
-    // Laplacian weights with zero grid perturbation
-    for (int irbf=0; irbf < nb_stencils; irbf++) {
-        der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "lapl");
-    }
-
-    double max_eig = der.computeEig(); // needs lapl_weights
-    printf("zero perturbation: max eig: %f\n", max_eig);
-
-    vector<Vec3> rbf_centers_orig;
-    rbf_centers_orig.assign(rbf_centers.begin(), rbf_centers.end());
-
-    double percent = 0.05; // in [0,1]
-    printf("percent distortion of original grid= %f\n", percent);
-
-    // set a random seed
-    srandom(time(0));
-
-    for (int i=0; i < 100; i++) {
-        printf("---- iteration %d ------\n", i);
-        //update rbf centers by random perturbations at a fixed percentage of average radius computed
-        //based on the unperturbed mesh
-        rbf_centers.assign(rbf_centers_orig.begin(), rbf_centers_orig.end());
-
-        for (int j=0; j < tot_nb_pts; j++) {
-            Vec3& v = rbf_centers[j];
-            double vx = avg_stencil_radius[j]*percent*randf(-1.,1.);
-            double vy = avg_stencil_radius[j]*percent*randf(-1.,1.);
-            v.setValue(v.x()+vx, v.y()+vy);
-        }
-
-        //rbf_centers[10].print("rbf_centers[10]");
-        //continue;
-
-        //recompute Laplace weights
-        for (int irbf=0; irbf < nb_stencils; irbf++) {
-            der.computeWeights(rbf_centers, stencil[irbf], irbf);
-        }
-        double max_eig = der.computeEig(); // needs lapl_weights
-        printf("zero perturbation: max eig: %f\n", max_eig);
-    }
-}
 //----------------------------------------------------------------------
 void DerivativeTests::computeAllWeights(Derivative& der, std::vector<Vec3>& rbf_centers, std::vector<StencilType>& stencils) {
     //#define USE_CONTOURSVD 1

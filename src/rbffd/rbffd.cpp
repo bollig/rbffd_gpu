@@ -259,9 +259,17 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //    rhs.print("RHS before");
 }
 
+//--------------------------------------------------------------------
+//
+void RBFFD::computeWeightsForAllStencils(DerType which) {
+    size_t nb_stencils = grid_ref.getStencilsSize(); 
+    for (size_t i = 0; i < nb_stencils; i++) {
+        this->computeWeightsForStencil(which, i);
+    }
+}
 
 //--------------------------------------------------------------------
-
+//
 void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
     tm["computeOneWeights"]->start(); 
@@ -355,6 +363,98 @@ void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* der
     tm["applyAll"]->stop();
 }
 
+//----------------------------------------------------------------------
+//
+// Fills a large matrix with the weights for interior nodes as we would for an implicit system
+// and puts 1's on the diagonal for boundary nodes.
+// Then computes the eigenvalue decomposition using Armadillo
+// Then computes the maximum and minimum abs(eigenvalue.real())
+// Then counts the number of eigenvalues > 0 and stops the computation
+// because any eigenvalues > 0 indicate an unstable laplace operator
+double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output) 
+{
+    std::vector<double*>& weights_r = this->weights[which];
+
+#if 1
+    // compute eigenvalues of derivative operator
+    size_t sz = weights_r.size();
+    size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
+
+    printf("sz= %lu\n", sz);
+    printf("weights.size= %d\n", (int) weights_r.size());
+
+
+    printf("Generating matrix of laplacian weights for interior nodes\n");
+    arma::mat eigmat(sz, sz);
+    eigmat.zeros();
+
+#define BND_UPDATE 1
+#if BND_UPDATE
+    for (int i=nb_bnd; i < sz; i++) {
+        double* w = weights_r[i];
+        StencilType& st = grid_ref.getStencil(i);
+        for (int j=0; j < st.size(); j++) {
+            eigmat(i,st[j])  = w[j];
+            //		printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
+        }
+    }
+
+    for (int i=0; i < nb_bnd; i++) {
+        eigmat(i,i) = 1.0;
+    }
+
+
+    printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
+#endif 
+    arma::cx_colvec eigval;
+    arma::cx_mat eigvec;
+    printf("Computing Eigenvalues of Laplacian Operator on Interior Nodes\n");
+    eig_gen(eigval, eigvec, eigmat);
+    //eigval.print("eigval");
+
+
+    int count=0;
+    double max_neg_eig = fabs(real(eigval(0)));
+    double min_neg_eig = fabs(real(eigval(0)));
+
+
+    // Compute number of unstable modes
+    // Also compute the largest and smallest (in magnitude) eigenvalue
+#if BND_UPDATE
+    for (int i=0; i < (sz-nb_bnd); i++) {
+        double e = real(eigval(i));
+        if (e > 0.) {
+            count++;
+        } else {
+            if (fabs(e) > max_neg_eig) {
+                max_neg_eig = fabs(e);
+            }
+            if (fabs(e) < min_neg_eig) {
+                min_neg_eig = fabs(e);
+            }
+        }
+    }
+#endif 
+//    printf("epsilon: %g\n", epsilon);
+    printf("nb unstable eigenvalues: %d\n", count);
+    printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
+    printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);
+
+    if (count > 0) {
+        printf("unstable Laplace operator\n");
+        exit(0);
+    }
+    //exit(0);
+#endif
+
+    if (output) {
+        output->max_neg_eig = max_neg_eig; 
+        output->min_neg_eig = min_neg_eig; 
+    }
+
+    return max_neg_eig;
+}
+
 //--------------------------------------------------------------------
 
 void RBFFD::setupTimers() {
@@ -406,7 +506,7 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
         }
     }
     if (st_center == -1) {
-        printf("inconsistency with global rbf map (stencil should contain center: %d)\n", irbf);
+        printf("inconsistency with global rbf map (stencil should contain center: %lu)\n", irbf);
         exit(0);
     }
 
@@ -469,7 +569,7 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
     for (size_t i = 0; i < stencil.size(); i++) {
         nz += stencil[i].size();
     }
-    fprintf(stdout, "Writing %d weights to %s\n", nz, filename.c_str()); 
+    fprintf(stdout, "Writing %lu weights to %s\n", nz, filename.c_str()); 
 
     // Num stencils (x_weights.size())
     const size_t M = (*deriv_choice_ptr).size();

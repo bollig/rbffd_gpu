@@ -51,22 +51,21 @@ class DerivativeTests {
 
         // NOTE: nb_stencils_to_test==0 implies that ALL stencils will be tested. 
         void compareGPUandCPUDerivs(size_t nb_stencils_to_test=0);
-        double compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx);
 
         void testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0);
+
+        void testEigen(float maxPerturbation=0.05, unsigned int maxNumPerturbations=100);
 
     protected: 
         void fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils_to_test, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);
 
+        double compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx);
 
         //---------- TODO --------------
 
 #if 0
         void checkDerivatives(Derivative& der, Grid& grid);
         void checkXDerivatives(Derivative& der, Grid& grid);
-
-        void testEigen(Derivative& der, Grid& grid);
-
         void computeAllWeights(Derivative& der, std::vector<Vec3>& rbf_centers,
                 std::vector<StencilType>& stencils);
 #endif 

@@ -28,6 +28,11 @@ class RBFFD
     public:
         enum DerType {X, Y, Z, LAPL};
 
+        typedef struct e_val_output {
+            double max_neg_eig; 
+            double min_neg_eig;
+        } EigenvalueOutput;
+
     protected: 
         EB::TimerList tm; 
 
@@ -83,6 +88,7 @@ class RBFFD
         void computeAllWeightsForAllStencils();
         void computeAllWeightsForStencil(int st_indx);
         void computeWeightsForStencil(DerType, int st_indx);
+        void computeWeightsForAllStencils(DerType);
 
         // Apply weights to an input solution vector and get the corresponding derivatives out
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
@@ -99,6 +105,12 @@ class RBFFD
         // TODO: npts is unused at the momement. Could prove useful if we had a
         //      applyWeightsForDerivAtNode(i) routine
         virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
+
+
+        // Returns MAXIMUM negative eigenvalue
+        // Use output to obtain MINIMUM and MAXIMUM
+        double computeEigenvalues(DerType which, EigenvalueOutput* output=NULL);
+
 
         void setEpsilon(double eps) { 
             modified = 1;

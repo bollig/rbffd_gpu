@@ -375,16 +375,16 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
 {
     std::vector<double*>& weights_r = this->weights[which];
 
-#if 1
     // compute eigenvalues of derivative operator
     size_t sz = weights_r.size();
     size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
 
+#if 0
     printf("sz= %lu\n", sz);
     printf("weights.size= %d\n", (int) weights_r.size());
+#endif 
 
-
-    printf("Generating matrix of laplacian weights for interior nodes\n");
+    printf("Generating matrix of weights for interior nodes\n");
     arma::mat eigmat(sz, sz);
     eigmat.zeros();
 
@@ -395,7 +395,7 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
         StencilType& st = grid_ref.getStencil(i);
         for (int j=0; j < st.size(); j++) {
             eigmat(i,st[j])  = w[j];
-            //		printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
+            // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
         }
     }
 
@@ -435,17 +435,14 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
         }
     }
 #endif 
-//    printf("epsilon: %g\n", epsilon);
-    printf("nb unstable eigenvalues: %d\n", count);
-    printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
-    printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);
 
     if (count > 0) {
-        printf("unstable Laplace operator\n");
-        exit(0);
+        printf("\n[RBFFD] ****** Error: Number unstable eigenvalues: %d *******\n\n", count);
+        exit(EXIT_FAILURE);
     }
-    //exit(0);
-#endif
+    
+    printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
+    printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);
 
     if (output) {
         output->max_neg_eig = max_neg_eig; 

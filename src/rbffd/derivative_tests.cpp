@@ -506,26 +506,19 @@ void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb
 
 //----------------------------------------------------------------------
 //
-void DerivativeTests::testEigen(float maxPerturbation, unsigned int maxNumPerturbations)
+void DerivativeTests::testEigen(RBFFD::DerType which, float maxPerturbation, unsigned int maxNumPerturbations)
 {
 
     int nb_stencils = grid->getStencilsSize();
     int nb_bnd = grid->getBoundaryIndicesSize();
     int tot_nb_pts = grid->getNodeListSize();
 
-    // read input file
-    // compute stencils (do this only 
+    std::vector<double> u(tot_nb_pts);
+    std::vector<double> deriv(nb_stencils);
 
-    //double pert = 0.05;
-    vector<double> u(tot_nb_pts);
-    vector<double> lapl_deriv(nb_stencils);
-
-    vector<double>& avg_stencil_radius = grid->getStencilRadii(); // get average stencil radius for each point
-
-    vector<StencilType>& stencil = grid->getStencils();
-
-    // global variable
-    vector<NodeType>& rbf_centers = grid->getNodeList();
+    std::vector<StencilType>& stencil = grid->getStencils();
+    std::vector<NodeType>& rbf_centers = grid->getNodeList();
+    std::vector<double>& avg_stencil_radius = grid->getStencilRadii(); // get average stencil radius for each point
 
     // Variable epsilon is managed by RBFFD
 #if 0
@@ -550,7 +543,7 @@ void DerivativeTests::testEigen(float maxPerturbation, unsigned int maxNumPertur
         der.computeWeightsSVD(rbf_centers, stencil[irbf], irbf, "lapl");
     }
 #endif 
-    RBFFD::DerType which = RBFFD::LAPL; 
+
     RBFFD::EigenvalueOutput eig_results; 
 
     double max_eig = der->computeEigenvalues(which, &eig_results); // needs lapl_weights

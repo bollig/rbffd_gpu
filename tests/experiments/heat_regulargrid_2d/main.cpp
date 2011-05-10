@@ -262,15 +262,17 @@ int main(int argc, char** argv) {
         if (comm_unit->getSize() == 1) {
             //if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) 
             {
-                der_test->testEigen();
+                // FIXME: why does this happen? Perhaps because X Y and Z are unidirectional? 
+                // Test X and 4 eigenvalues are > 0
+                // Test Y and 30 are > 0
+                // Test Z and 36 are > 0
+                der_test->testEigen(RBFFD::LAPL);
             }
         }
         tm["tests"]->stop();
     }
 
     // SOLVE HEAT EQUATION
-
-#if 0
 
     // Exact Solution ( freq, decay )
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
@@ -384,7 +386,6 @@ printf("Cleaning up objects\n");
 // Writer first so we can dump final solution
 delete(writer);
 delete(heat);
-#endif
 delete(subdomain);
 delete(settings);
 delete(comm_unit); 

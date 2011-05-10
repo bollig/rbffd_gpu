@@ -47,8 +47,10 @@ void Grid::writeToFile(std::string filename) {
 
     this->writeBoundaryToFile(filename); 
     this->writeNormalsToFile(filename); 
-    this->writeAvgRadiiToFile(filename); 
-    this->writeStencilsToFile(filename); 
+    if (stencilsComputed) {
+        this->writeAvgRadiiToFile(filename); 
+        this->writeStencilsToFile(filename); 
+    }
     this->writeExtraToFile(filename); 
 }
 
@@ -202,12 +204,16 @@ int Grid::loadFromFile(std::string filename) {
 
     if (this->loadAvgRadiiFromFile(filename)) {
         printf("Error loading avg dists\n"); 
+        stencilsComputed = false; 
         return -4;
     }
 
     if (this->loadStencilsFromFile(filename)) {
         printf("Error loading stencils\n"); 
+        stencilsComputed = false; 
         return -4;
+    } else {
+        stencilsComputed = true;
     }
 
     if (this->loadExtraFromFile(filename)) {
@@ -448,24 +454,26 @@ void Grid::generateStencils(size_t st_max_size, st_generator_t generator_choice)
 }
 
 //----------------------------------------------------------------------------
-
-    void Grid::generateStencils(st_generator_t generator_choice) {
-        switch (generator_choice)
-        {
-            case ST_BRUTE_FORCE:
-                this->generateStencilsBruteForce(); 
-                break; 
-            case ST_KDTREE: 
-                this->generateStencilsKDTree(); 
-                break; 
-            case ST_HASH: 
-                this->generateStencilsHash(); 
-                break; 
-            default: 
-                std::cout << "ERROR! Invalid choice of stencil generator\n"; 
-                exit(EXIT_FAILURE); 
-        };
-    }
+void Grid::generateStencils(st_generator_t generator_choice) 
+{
+    switch (generator_choice)
+    {
+        case ST_BRUTE_FORCE:
+            this->generateStencilsBruteForce(); 
+            break; 
+        case ST_KDTREE: 
+            this->generateStencilsKDTree(); 
+            break; 
+        case ST_HASH: 
+            this->generateStencilsHash(); 
+            break; 
+        default: 
+            std::cout << "ERROR! Invalid choice of stencil generator\n"; 
+            exit(EXIT_FAILURE); 
+    };
+    
+    stencilsComputed=true;
+}
 
 //----------------------------------------------------------------------------
 void Grid::computeStencilRadii() {

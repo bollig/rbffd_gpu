@@ -76,11 +76,12 @@ class Grid
         // The longest distance for each stencil
         std::vector<double> max_stencil_radii; 
 
-
-
         // An internal KDTree representation of the nodes. Useful for CVT
         // sampling (if updated) and also for neighbor queries
         KDTree* node_list_kdtree; 
+
+
+        bool stencilsComputed;
 
     public:
         Grid() : 
@@ -91,6 +92,7 @@ class Grid
             max_st_size(0), max_st_radius(DBL_MAX),
             pert(0.), nb_nodes(0),
             node_list_kdtree(NULL),
+            stencilsComputed(false),
             boundary_nodes_first(false), DEBUG(0)
     {}
         Grid(size_t num_nodes) : 
@@ -101,6 +103,7 @@ class Grid
             max_st_size(0), max_st_radius(DBL_MAX), 
             pert(0), nb_nodes(num_nodes), 
             node_list_kdtree(NULL),
+            stencilsComputed(false),
             boundary_nodes_first(false), DEBUG(0) 
     {}
         Grid(std::vector<NodeType>& nodes) : 
@@ -111,6 +114,7 @@ class Grid
             max_st_size(0), max_st_radius(DBL_MAX), 
             pert(0), nb_nodes(nodes.size()), 
             node_list_kdtree(NULL), 
+            stencilsComputed(false),
             boundary_nodes_first(false), DEBUG(0), node_list(nodes) 
     {} 
 
@@ -128,8 +132,6 @@ class Grid
         void generateStencilsHash();
 
         void computeStencilRadii();
-
-
 
         // Write data to disk generating the filename appropriately for the class (calls to writeToFile(std::string)) 
         virtual	void writeToFile(int iter=-1); 

@@ -87,6 +87,10 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE); 
         }
 
+        int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
+        int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
+        int ns_nz = settings->GetSettingAs<int>("NS_NB_Z", ProjectSettings::optional, "10");
+
         double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
         double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
         double minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
@@ -121,6 +125,7 @@ int main(int argc, char** argv) {
             grid->writeToFile(); 
             std::cout << "Generating stencils using Grid::ST_HASH\n";
             tm["stencils"]->start(); 
+            grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
             grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
             grid->writeToFile(); 

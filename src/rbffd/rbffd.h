@@ -38,7 +38,7 @@ class RBFFD
 
         std::string DerTypeSTR[10];
 
-        Domain& grid_ref;
+        Grid& grid_ref;
 
         // Weight array. Each element is associated with one DerType (see above). 
         std::vector<double*> weights[NUM_DERIV_TYPES]; 
@@ -76,7 +76,7 @@ class RBFFD
 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives
         // (up to 3 right now) 
-        RBFFD(Domain* grid, int dim_num, int rank=0);
+        RBFFD(Grid* grid, int dim_num, int rank=0);
         // , RBF_Type rbf_choice=MQ); 
 
         virtual ~RBFFD(); 

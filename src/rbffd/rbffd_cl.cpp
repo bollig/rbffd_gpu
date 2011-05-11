@@ -9,7 +9,7 @@ using namespace std;
 
 //----------------------------------------------------------------------
 //
-    RBFFD_CL::RBFFD_CL(Domain* grid, int dim_num, int rank)
+    RBFFD_CL::RBFFD_CL(Grid* grid, int dim_num, int rank)
 : RBFFD(grid, dim_num, rank), CLBaseClass(rank)	
 {
     this->setupTimers(); 

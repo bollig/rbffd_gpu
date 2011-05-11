@@ -43,7 +43,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         //TODO: - constructor should allocate the buffers on the GPU
         //      - onStart applyWeights... will check if(modified) { updateGPUstructs } 
 
-        RBFFD_CL(Domain* grid, int dim_num, int rank=0);
+        RBFFD_CL(Grid* grid, int dim_num, int rank=0);
 
         virtual ~RBFFD_CL() { /*noop*/ }; 
 

@@ -9,7 +9,8 @@
 #include "pdes/elliptic/nonuniform_poisson1_cl.cpp"
 #include "exact_solutions/exact_ncar_poisson2.h"
 
-#include "rbffd/derivative.h"
+#include "rbffd/rbffd_cl.h"
+#include "rbffd/rbffd.h"
 #include "rbffd/derivative_tests.h"
 
 using namespace std;
@@ -33,6 +34,10 @@ int main(int argc, char** argv) {
     double inner_r = settings->GetSettingAs<double>("INNER_RADIUS", ProjectSettings::optional, "0.5"); 
     double outer_r = settings->GetSettingAs<double>("OUTER_RADIUS", ProjectSettings::optional, "1.0"); 
 
+    int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
+    int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
+    int ns_nz = settings->GetSettingAs<int>("NS_NB_Z", ProjectSettings::optional, "10");
+        
     double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
     double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
     double minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
@@ -64,6 +69,7 @@ int main(int argc, char** argv) {
     grid->setOuterRadius(outer_r); 
     grid->setDebug(debug);
     grid->setMaxStencilSize(stencil_size);
+    grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
     if(grid->loadFromFile())
     {
         printf("************** Generating new Grid **************\n"); 
@@ -89,7 +95,14 @@ int main(int argc, char** argv) {
         exact_poisson = new ExactNCARPoisson2();        // 2D problem works with uniform diffusion
     }
 
-    Derivative* der = new Derivative(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndicesSize(), dim);
+    bool use_gpu = true;
+    RBFFD* der;
+    if (use_gpu) {
+        der = new RBFFD_CL(grid, dim); 
+    } else {
+        der = new RBFFD(grid, dim); 
+    }
+
 
    // Enable variable epsilon. Not verified to be perfected in the derivative calculation.
    // But it has improved the heat equation already
@@ -97,17 +110,34 @@ int main(int argc, char** argv) {
     if (use_var_eps) {
         double alpha = settings->GetSettingAs<double>("VAR_EPSILON_ALPHA", ProjectSettings::optional, "1.0"); 
         double beta = settings->GetSettingAs<double>("VAR_EPSILON_BETA", ProjectSettings::optional, "1.0"); 
-        der->setVariableEpsilon(grid->getStencilRadii(),grid->getStencils(), alpha, beta); 
+        der->setVariableEpsilon(alpha, beta); 
     } else {
         double epsilon = settings->GetSettingAs<double>("EPSILON", ProjectSettings::required);
         der->setEpsilon(epsilon);
     }
 
+    der->computeAllWeightsForAllStencils();
+
     if (run_derivative_tests) {
-        DerivativeTests* der_test = new DerivativeTests();
-        der_test->testAllFunctions(*der, *grid);
-//        delete(der_test);
+        DerivativeTests* der_test = new DerivativeTests(der, grid, true);
+        if (use_gpu) {
+            // Applies weights on both GPU and CPU and compares results for the first 10 stencils
+            der_test->compareGPUandCPUDerivs(10);
+        }
+        // Test approximations to derivatives of functions f(x,y,z) = 0, x, y, xy, etc. etc.
+        der_test->testAllFunctions();
+        // For now we can only test eigenvalues on an MPI size of 1 (we could distribute with Par-Eiegen solver)
+        if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) 
+        {
+            // FIXME: why does this happen? Perhaps because X Y and Z are unidirectional? 
+            // Test X and 4 eigenvalues are > 0
+            // Test Y and 30 are > 0
+            // Test Z and 36 are > 0
+            // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
+            der_test->testEigen(RBFFD::LAPL, 0);
+        }
     }
+ 
 
     NCARPoisson1* poisson = new NonUniformPoisson1_CL(exact_poisson, grid, der, 0, dim);
     poisson->setBoundaryCondition(boundary_condition); 

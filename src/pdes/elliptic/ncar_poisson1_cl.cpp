@@ -31,11 +31,11 @@
 using namespace std;
 
 
-NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
+NCARPoisson1_CL::NCARPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, RBFFD* der_, int rank, int dim_num_) :
         NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
 {}
 
-NCARPoisson1_CL::NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_) :
+NCARPoisson1_CL::NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, RBFFD* der_, int rank, int dim_num_) :
         NCARPoisson1(_settings, _solution, subdomain_, der_, rank, dim_num_)
 {}
 

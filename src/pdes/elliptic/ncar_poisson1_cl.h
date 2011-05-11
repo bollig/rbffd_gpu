@@ -6,7 +6,7 @@
 #include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
 #include "utils/comm/communicator.h"
-#include "rbffd/derivative.h"
+#include "rbffd/rbffd.h"
 #include "ncar_poisson1.h"
 #include "utils/conf/projectsettings.h"
 #include <boost/numeric/ublas/vector.hpp>
@@ -14,8 +14,8 @@
 class NCARPoisson1_CL : public NCARPoisson1
 {
 public:
-        NCARPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
-        NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NCARPoisson1_CL(ExactSolution* _solution, Domain* subdomain_, RBFFD* der_, int rank, int dim_num_);
+        NCARPoisson1_CL(ProjectSettings* _settings, ExactSolution* _solution, Domain* subdomain_, RBFFD* der_, int rank, int dim_num_);
         ~NCARPoisson1_CL();
 
         // Solve the Poisson problem (Overrides NCARPoisson1::solve())

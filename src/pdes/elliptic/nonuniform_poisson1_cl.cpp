@@ -27,8 +27,8 @@
 #include <boost/numeric/ublas/io.hpp>
 using namespace std;
 
-NonUniformPoisson1_CL::NonUniformPoisson1_CL(ExactSolution* _solution, Grid* subdomain_, Derivative* der_, int rank, int dim_num_) :
-        NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
+NonUniformPoisson1_CL::NonUniformPoisson1_CL(ExactSolution* _solution, Grid* subdomain_, RBFFD* der_, int rank, int dim_num_) :
+    NCARPoisson1(_solution, subdomain_, der_, rank, dim_num_)
 {}
 
 //----------------------------------------------------------------------
@@ -44,9 +44,9 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
     t1.start();
     if (subdomain == NULL) {
         cerr
-                << "In " << __FILE__
-                << " No Domain class passed to Constructor. Cannot perform intermediate communication/updates in solver."
-                << endl;
+            << "In " << __FILE__
+            << " No Domain class passed to Constructor. Cannot perform intermediate communication/updates in solver."
+            << endl;
         exit(EXIT_FAILURE);
     } else {
 
@@ -94,47 +94,44 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         t2.start();
         int numNonZeros = 0;
+        if (!weightsPrecomputed) {
 #if 1
-        // Compute all weights including those for the boundary nodes
-        for (int i = 0; i < nb + ni; i++) {
-            //subdomain->printStencil(subdomain->getStencil(i), "Q[i]");
-            // Compute all derivatives for our centers and return the number of
-            // weights that will be available
-            numNonZeros += der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), i);
-#undef USE_CONTOURSVD
-#if USE_CONTOURSVD
-            der->computeWeightsSVD(subdomain->getNodeList(), subdomain->getStencil(i), i, "x");
-            der->computeWeightsSVD(subdomain->getNodeList(), subdomain->getStencil(i), i, "y");
-            der->computeWeightsSVD(subdomain->getNodeList(), subdomain->getStencil(i), i, "lapl");
-#endif
-        }
+            // Compute all weights including those for the boundary nodes
+            for (int i = 0; i < nb + ni; i++) {
+                //subdomain->printStencil(subdomain->getStencil(i), "Q[i]");
+                // Compute all derivatives for our centers and return the number of
+                // weights that will be available
+                der->computeAllWeightsForStencil(i);
+                numNonZeros += subdomain->getStencilSize(i);
+            }
 #else
-        // Compute only interior weights
-        for (int i = 0; i < nb; i++) {
-            // 1 nonzero per row for boundary (dirichlet has I since we know values and dont need weights)
-            //der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), subdomain->getStencil(i)[0], dim_num);
-            numNonZeros += 1;
-        }
-        for (int i = nb; i < nb + ni; i++) {
-            //subdomain->printStencil(subdomain->getStencil(i), "Q[i]");
-            // Compute all derivatives for our centers and return the number of
-            // weights that will be available
-            numNonZeros += der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), subdomain->getStencil(i)[0]);
-        }
+            // Compute only interior weights
+            for (int i = 0; i < nb; i++) {
+                // 1 nonzero per row for boundary (dirichlet has I since we know values and dont need weights)
+                //der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), subdomain->getStencil(i)[0], dim_num);
+                numNonZeros += 1;
+            }
+            for (int i = nb; i < nb + ni; i++) {
+                //subdomain->printStencil(subdomain->getStencil(i), "Q[i]");
+                // Compute all derivatives for our centers and return the number of
+                // weights that will be available
+                numNonZeros += der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(i), subdomain->getStencil(i)[0]);
+            }
 #endif
+        }
         t2.end();
         cout << "Weights computed" << endl;
-        der->writeToFile(Derivative::X, "x_weights.mtx"); 
-        der->writeToFile(Derivative::Y, "y_weights.mtx"); 
-        der->writeToFile(Derivative::Z, "z_weights.mtx"); 
-        der->writeToFile(Derivative::LAPL, "lapl_weights.mtx"); 
+        der->writeToFile(RBFFD::X, "x_weights.mtx"); 
+        der->writeToFile(RBFFD::Y, "y_weights.mtx"); 
+        der->writeToFile(RBFFD::Z, "z_weights.mtx"); 
+        der->writeToFile(RBFFD::LAPL, "lapl_weights.mtx"); 
         cout << "Weights written to file" << endl;
         t3.start();
 
         int nm = nb + ni;
         if ((boundary_condition != DIRICHLET) && (!disable_sol_constraint)) {
             //nm = nm+1; // Constrain constant on far right of the implicit system
-             nm = nm+4; // Constrain constant, plus X and Y on far right of implicit system
+            nm = nm+4; // Constrain constant, plus X and Y on far right of implicit system
         }
 
         // 1) Fill the ublas matrix on the CPU
@@ -160,21 +157,21 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             for (int i = 1; i < nb-2; i++) {
                 switch (boundary_condition) {
 
-                case DIRICHLET:
-                    indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
-                    break;
+                    case DIRICHLET:
+                        indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
+                        break;
 
-                case NEUMANN:
-                    indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
-                    break;
+                    case NEUMANN:
+                        indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
+                        break;
 
-                case ROBIN:
-                    indx += this->fillBoundaryRobin(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
-                    break;
+                    case ROBIN:
+                        indx += this->fillBoundaryRobin(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
+                        break;
 
-                default:
-                    cout << "ERROR! boundary_condition has invalid value: " << boundary_condition << endl;
-                    exit(EXIT_FAILURE);
+                    default:
+                        cout << "ERROR! boundary_condition has invalid value: " << boundary_condition << endl;
+                        exit(EXIT_FAILURE);
                 }
             }
             //indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(nb-3), subdomain->getNodeList());
@@ -187,21 +184,21 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             for (int i = 0; i < nb; i++) {
                 switch (boundary_condition) {
 
-                case DIRICHLET:
-                    indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
-                    break;
+                    case DIRICHLET:
+                        indx += this->fillBoundaryDirichlet(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
+                        break;
 
-                case NEUMANN:
-                    indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
-                    break;
+                    case NEUMANN:
+                        indx += this->fillBoundaryNeumann(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
+                        break;
 
-                case ROBIN:
-                    indx += this->fillBoundaryRobin(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
-                    break;
+                    case ROBIN:
+                        indx += this->fillBoundaryRobin(L_host, F_host, subdomain->getStencil(i), subdomain->getNodeList());
+                        break;
 
-                default:
-                    cout << "ERROR! boundary_condition has invalid value: " << boundary_condition << endl;
-                    exit(EXIT_FAILURE);
+                    default:
+                        cout << "ERROR! boundary_condition has invalid value: " << boundary_condition << endl;
+                        exit(EXIT_FAILURE);
                 }
             }
         }
@@ -282,7 +279,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         for (int i = nb+ni; i < exact_host.size(); i++) {
             exact_host(i) = 0.;
         }
-       
+
         double max_rel_err = 0.0; 
         size_t max_rel_err_indx = 0;
         //error_host = x_host - exact_host;
@@ -333,450 +330,450 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         std::cout << "[Precision] sizeof(FLOAT) = " << sizeof(FLOAT) << " bytes (4 = single; 8 = double)" << std::endl;
 
         cout.flush();
+        }
+
+
+        t1.end();
+
+        return;
     }
 
 
-    t1.end();
-
-    return;
-}
-
-
-int NonUniformPoisson1_CL::fillBoundaryNeumann(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
-{
-    int indx = 0;
+    int NonUniformPoisson1_CL::fillBoundaryNeumann(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
+    {
+        int indx = 0;
 
 
-    double* x_weights = der->getXWeights(stencil[0]);
-    double* y_weights = der->getYWeights(stencil[0]);
-    double* z_weights = der->getZWeights(stencil[0]);
+        double* x_weights = der->getXWeights(stencil[0]);
+        double* y_weights = der->getYWeights(stencil[0]);
+        double* z_weights = der->getZWeights(stencil[0]);
 
-    // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
-    Vec3& center = centers[stencil[0]];
-    double r = center.magnitude();
+        // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
+        Vec3& center = centers[stencil[0]];
+        double r = center.magnitude();
 
-    if (r < 1e-8) {
-        cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
-        exit(EXIT_FAILURE);
-    }
+        if (r < 1e-8) {
+            cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
+            exit(EXIT_FAILURE);
+        }
 
-    //--------- SETUP LHS SYSTEM BASED ON BOUNDARY CONDITIONS -----------
+        //--------- SETUP LHS SYSTEM BASED ON BOUNDARY CONDITIONS -----------
 
-    // Neumann condition says:  dPhi(x)/dn = f(x)
-    //      dPhi/dn = Grad(Phi(x)) .dot. n(x)
-    // where n(x) is the UNIT normal vector n (NORMALIZED!!! WITH PROPER SIGN!!!!)
-    //
+        // Neumann condition says:  dPhi(x)/dn = f(x)
+        //      dPhi/dn = Grad(Phi(x)) .dot. n(x)
+        // where n(x) is the UNIT normal vector n (NORMALIZED!!! WITH PROPER SIGN!!!!)
+        //
 
-    Vec3 normal = center;
-    normal.normalize();
+        Vec3 normal = center;
+        normal.normalize();
 
-    if (r < 0.6) {
-        cout << "STENCIL " << stencil[0] << " IS INNER BOUNDARY: switching normal sign" << endl;
-        normal *= -1;
-    }
-
-    for (int j = 0; j < stencil.size(); j++) {
-
-        double value = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
-        // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
-        L(stencil[0],stencil[j]) = (FLOAT)value;
-        indx++;
-    }
-
-    this->fillBoundaryNeumannRHS(F, stencil, centers);
-
-    return indx;
-}
-
-void NonUniformPoisson1_CL::fillBoundaryNeumannRHS(VecType& F, StencilType& stencil, CenterListType& centers)
-{
-    double rhs_val;
-    double* x_weights = der->getXWeights(stencil[0]);
-    double* y_weights = der->getYWeights(stencil[0]);
-    double* z_weights = der->getZWeights(stencil[0]);
-    Vec3& center = centers[stencil[0]];
-    Vec3 normal = center;
-    normal.normalize();
-
-    if (this->use_discrete_rhs) {
-
-        // Discrete Neuman
-        //F_host(i) = (FLOAT)0.;
-        double discrete_condition = 0.;
+        if (r < 0.6) {
+            cout << "STENCIL " << stencil[0] << " IS INNER BOUNDARY: switching normal sign" << endl;
+            normal *= -1;
+        }
 
         for (int j = 0; j < stencil.size(); j++) {
-            double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
-            Vec3& vj = centers[stencil[j]];
-            discrete_condition += weight * exactSolution->at(vj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
-        }
-        rhs_val = discrete_condition;
-    } else {
 
-        // Continuous: n * (d/dx + d/dy + d/dz) = ?   (value determined by exact solution's analytic derivatives)
-        rhs_val = (normal.x() *exactSolution->xderiv(center,0.) + normal.y() *exactSolution->yderiv(center,0.) + normal.z() *exactSolution->zderiv(center,0.));
-    }
-
-    F[stencil[0]] = (FLOAT) rhs_val;
-}
-
-
-int NonUniformPoisson1_CL::fillBoundaryRobin(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
-{
-    int indx = 0;
-
-    double* x_weights = der->getXWeights(stencil[0]);
-    double* y_weights = der->getYWeights(stencil[0]);
-    double* z_weights = der->getZWeights(stencil[0]);
-
-    // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
-    Vec3& center = centers[stencil[0]];
-    double r = center.magnitude();
-
-    if (r < 1e-8) {
-        cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
-        exit(EXIT_FAILURE);
-    }
-
-    Vec3 normal = center;
-    normal.normalize();
-
-    if (r < 0.6) {
-        cout << "STENCIL " << stencil[0] << " IS INNER BOUNDARY: switching normal sign" << endl;
-        normal *= -1;
-    }
-
-    for (int j = 0; j < stencil.size(); j++) {
-
-        // The Robin boundary condition says:
-        //      n .dot. d(Phi/r)/dr = f
-        // where n is the UNIT normal
-        // Use the quotient rule to reduce this to:
-        //  ( n .dot. d(Phi)/dr ) * (1/r) - Phi/(r^2) = f
-        // Then we approximate the (n .dot. d(Phi/dr)) with:
-        double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]) / r;
-
-        // Remember to remove 1/r^2 for the boundary condition: n d/dr(a/r) = 0
-        if (j == 0) {
-            weight -= (1./(r*r));
-        }
-        // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
-        L(stencil[0],stencil[j]) = (FLOAT)weight;
-        indx++;
-    }
-
-    this->fillBoundaryRobinRHS(F, stencil, centers);
-
-    return indx;
-}
-
-
-void NonUniformPoisson1_CL::fillBoundaryRobinRHS(VecType& F, StencilType& stencil, CenterListType& centers)
-{
-    double rhs_val;
-    double* x_weights = der->getXWeights(stencil[0]);
-    double* y_weights = der->getYWeights(stencil[0]);
-    double* z_weights = der->getZWeights(stencil[0]);
-    Vec3& center = centers[stencil[0]];
-    double r = center.magnitude();
-    Vec3 normal = center;
-    normal.normalize();
-
-    if (this->use_discrete_rhs) {
-
-        // Discrete Robin
-        double discrete_condition = 0.;
-        for (int j = 0; j < stencil.size(); j++) {
-            // [(x*d/dx + y*d/dy + z*d/dz)(1/r) - (1/r^2)]*(\Phi) {Handle the 1/r^2 below}
-            //
-            // Use quotient rule:
-            // n .dot. d/dr(A/r) = (n .dot. dA/dr)*(1/r) - A/(r*r)
-            // = (n.x * dA/dx + n.y + dA/dy + n.z * dA/dz) * (1/r) - A/(r*r)
-            // NOTE: handle all to left of minus sign here:
-            double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]) / r;
-            Vec3& vj = centers[stencil[j]];
-            discrete_condition += weight * exactSolution->at(vj,0);
-        }
-        // Handle the (-A/(r*r)) here
-        discrete_condition -= exactSolution->at(center,0) / (r*r);
-
-        rhs_val = discrete_condition;
-    } else {
-
-        // Continuous: (n.x * dA/dx + n.y + dA/dy + n.z * dA/dz) * (1/r) - A/(r*r) = ?   (value determined by exact solution's analytic derivatives)
-        double n_dot_dadr = (normal.x() *exactSolution->xderiv(center,0.) + normal.y() *exactSolution->yderiv(center,0.) + normal.z() *exactSolution->zderiv(center,0.));
-        rhs_val = (n_dot_dadr / r) - exactSolution->at(center,0.) / (r*r);
-    }
-
-    F[stencil[0]] = (FLOAT) rhs_val;
-}
-
-
-int NonUniformPoisson1_CL::fillBoundaryDirichlet(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
-{
-    int indx = 0;
-
-    //--------- BOUNDARY NODE ENTRIES -----------
-    for (int j = 0; j < stencil.size(); j++) {
-        if (j == 0) {
-            L(stencil[0],stencil[j]) = (FLOAT)1.;
-        } else {
-            L(stencil[0],stencil[j]) = (FLOAT)0.;
-        }
-        indx++;
-    }
-
-    F[stencil[0]] = (FLOAT) 0.;
-
-    return indx;
-}
-
-void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni)
-{
-    int nn = nb + ni;
-    // constraint on solution
-
-    F(nn) = 0.0;    // Constant value
-    F(nn+1) = 0.0;  // X-coeff value
-    F(nn+2) = 0.0;  // Y-coeff value
-    F(nn+3) = 0.0;  // FOR SOL_CONSTRAINT
-
-// Constrain solution constraint only the boundary
-    for (int i = 0; i < nb; i++) {
-        // last columns
-        L(stencils[i][0], nn) = 1;  // Constrain constant
-        L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
-        L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
-
-        // SOL_CONSTRAINT: solution constraint to make the Neumann boundary condition complete
-        // last row
-        L(nn+3, stencils[i][0]) = 1;
-
-
-        // update of RHS
-        Vec3& v = centers[stencils[i][0]];
-
-        // FOR SOL_CONSTRAINT last element of last row and last column: sum of exact solutions at all points
-        F(nn+3) += exactSolution->at(v,0);
-    }
-
-// Ignore solution constraint on the interior
-    for (int i = nb; i < nb+ni; i++) {
-        // last columns
-        L(stencils[i][0], nn) = 1;  // Constrain constant
-        L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
-        L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
-    }
-
-#if 0
-    for (int i = 0; i < nb+ni; i++) {
-        // last columns
-        L(stencils[i][0], nn) = 1;  // Constrain constant
-        L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
-        L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
-
-        // SOL_CONSTRAINT: solution constraint to make the Neumann boundary condition complete
-        // last row
-        L(nn+3, stencils[i][0]) = 1;
-
-
-        // update of RHS
-        Vec3& v = centers[stencils[i][0]];
-
-        // FOR SOL_CONSTRAINT last element of last row and last column: sum of exact solutions at all points
-        F(nn+3) += exactSolution->at(v,0);
-    }
-#endif
-
-    // Constrain by specifying exactly what the value of the aX + bY + c = f coeffs are
-    L(nn,nn) = 1.0;
-    L(nn+1,nn+1) = 1.0;
-    L(nn+2,nn+2) = 1.0;
-
-    L(nn+3,nn+3) = 0.0;     // FOR SOL_CONSTRAINT
-
-    L(nn+2,nn+3) = 1.0;     // FOR SOL_CONSTRAINT because we have one whole colum of zeros, so we fill in with a 1 to say that
-    F(nn+2) = F(nn+3);      // The sum of SOL_CONSTRAINT and the coeff of this entry are equal to the sum of the sol constraint (redundant I know)
-}
-
-#if 0
-void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni)
-{
-    int nn = nb + ni;
-    // constraint on solution
-
-    F(nn) = 0.0;
-    for (int i = 0; i < nb+ni; i++) {
-        // last row
-        L(nn, stencils[i][0]) = 1;
-        // last column
-        L(stencils[i][0], nn) = 1;  // Constrain constant
-        // Final constraint to make the Neumann boundary condition complete
-
-        // update of RHS
-        Vec3& v = centers[stencils[i][0]];
-
-        // last element of last row and last column: sum of exact solutions at all points
-        F(nn) += exactSolution->at(v,0);
-    }
-    // No constraint on bottom right corner
-    L(nn,nn) = 0.0;
-}
-#endif
-
-
-void NonUniformPoisson1_CL::fillSolutionNoConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni)
-{
-    int nn = nb+ni;
-    // constraint on solution
-    F(nn) = 0.0;
-    for (int i = 0; i < nb+ni; i++) {
-        // last row
-        L(nn, stencils[i][0]) = 0;
-        // last column
-        L(stencils[i][0], nn) = 0;
-    }
-    // No constraint on bottom right corner
-    L(nn,nn) = 1;
-}
-
-
-int NonUniformPoisson1_CL::fillInterior(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
-{
-    int indx = 0;
-    // Count only the interior fill
-    indx += this->fillInteriorLHS(L, F, stencil, centers);
-    this->fillInteriorRHS(L, F, stencil, centers);
-
-    return indx;
-}
-
-
-int NonUniformPoisson1_CL::fillInteriorLHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
-{
-    int indx = 0;
-    Vec3 st_center = centers[stencil[0]];
-    // Do I want the gradK at each stencil node or only the center?
-    double diffusivity = exactSolution->diffuseCoefficient(st_center);
-    Vec3* gradK = exactSolution->diffuseGradient(st_center);
-
-    //--------------------------------------------------
-    // Fill Interior weights (LHS)
-    if (use_uniform_diffusivity) {
-        double* lapl_weights = der->getLaplWeights(stencil[0]);
-        for (int j = 0; j < stencil.size(); j++) {
-            L(stencil[0],stencil[j]) = (FLOAT) lapl_weights[j];
-            //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
+            double value = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
+            // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
+            L(stencil[0],stencil[j]) = (FLOAT)value;
             indx++;
         }
-    } else {
+
+        this->fillBoundaryNeumannRHS(F, stencil, centers);
+
+        return indx;
+    }
+
+    void NonUniformPoisson1_CL::fillBoundaryNeumannRHS(VecType& F, StencilType& stencil, CenterListType& centers)
+    {
+        double rhs_val;
+        double* x_weights = der->getXWeights(stencil[0]);
+        double* y_weights = der->getYWeights(stencil[0]);
+        double* z_weights = der->getZWeights(stencil[0]);
+        Vec3& center = centers[stencil[0]];
+        Vec3 normal = center;
+        normal.normalize();
+
+        if (this->use_discrete_rhs) {
+
+            // Discrete Neuman
+            //F_host(i) = (FLOAT)0.;
+            double discrete_condition = 0.;
+
+            for (int j = 0; j < stencil.size(); j++) {
+                double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
+                Vec3& vj = centers[stencil[j]];
+                discrete_condition += weight * exactSolution->at(vj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
+            }
+            rhs_val = discrete_condition;
+        } else {
+
+            // Continuous: n * (d/dx + d/dy + d/dz) = ?   (value determined by exact solution's analytic derivatives)
+            rhs_val = (normal.x() *exactSolution->xderiv(center,0.) + normal.y() *exactSolution->yderiv(center,0.) + normal.z() *exactSolution->zderiv(center,0.));
+        }
+
+        F[stencil[0]] = (FLOAT) rhs_val;
+    }
+
+
+    int NonUniformPoisson1_CL::fillBoundaryRobin(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
+    {
+        int indx = 0;
+
+        double* x_weights = der->getXWeights(stencil[0]);
+        double* y_weights = der->getYWeights(stencil[0]);
+        double* z_weights = der->getZWeights(stencil[0]);
+
+        // DONT FORGET TO ADD IN THE -1/r on the stencil center weights
+        Vec3& center = centers[stencil[0]];
+        double r = center.magnitude();
+
+        if (r < 1e-8) {
+            cerr << "WARNING! VANISHING SPHERE RADIUS! CANNOT FILL -1/r in " << __FILE__ << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        Vec3 normal = center;
+        normal.normalize();
+
+        if (r < 0.6) {
+            cout << "STENCIL " << stencil[0] << " IS INNER BOUNDARY: switching normal sign" << endl;
+            normal *= -1;
+        }
+
+        for (int j = 0; j < stencil.size(); j++) {
+
+            // The Robin boundary condition says:
+            //      n .dot. d(Phi/r)/dr = f
+            // where n is the UNIT normal
+            // Use the quotient rule to reduce this to:
+            //  ( n .dot. d(Phi)/dr ) * (1/r) - Phi/(r^2) = f
+            // Then we approximate the (n .dot. d(Phi/dr)) with:
+            double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]) / r;
+
+            // Remember to remove 1/r^2 for the boundary condition: n d/dr(a/r) = 0
+            if (j == 0) {
+                weight -= (1./(r*r));
+            }
+            // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
+            L(stencil[0],stencil[j]) = (FLOAT)weight;
+            indx++;
+        }
+
+        this->fillBoundaryRobinRHS(F, stencil, centers);
+
+        return indx;
+    }
+
+
+    void NonUniformPoisson1_CL::fillBoundaryRobinRHS(VecType& F, StencilType& stencil, CenterListType& centers)
+    {
+        double rhs_val;
+        double* x_weights = der->getXWeights(stencil[0]);
+        double* y_weights = der->getYWeights(stencil[0]);
+        double* z_weights = der->getZWeights(stencil[0]);
+        Vec3& center = centers[stencil[0]];
+        double r = center.magnitude();
+        Vec3 normal = center;
+        normal.normalize();
+
+        if (this->use_discrete_rhs) {
+
+            // Discrete Robin
+            double discrete_condition = 0.;
+            for (int j = 0; j < stencil.size(); j++) {
+                // [(x*d/dx + y*d/dy + z*d/dz)(1/r) - (1/r^2)]*(\Phi) {Handle the 1/r^2 below}
+                //
+                // Use quotient rule:
+                // n .dot. d/dr(A/r) = (n .dot. dA/dr)*(1/r) - A/(r*r)
+                // = (n.x * dA/dx + n.y + dA/dy + n.z * dA/dz) * (1/r) - A/(r*r)
+                // NOTE: handle all to left of minus sign here:
+                double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]) / r;
+                Vec3& vj = centers[stencil[j]];
+                discrete_condition += weight * exactSolution->at(vj,0);
+            }
+            // Handle the (-A/(r*r)) here
+            discrete_condition -= exactSolution->at(center,0) / (r*r);
+
+            rhs_val = discrete_condition;
+        } else {
+
+            // Continuous: (n.x * dA/dx + n.y + dA/dy + n.z * dA/dz) * (1/r) - A/(r*r) = ?   (value determined by exact solution's analytic derivatives)
+            double n_dot_dadr = (normal.x() *exactSolution->xderiv(center,0.) + normal.y() *exactSolution->yderiv(center,0.) + normal.z() *exactSolution->zderiv(center,0.));
+            rhs_val = (n_dot_dadr / r) - exactSolution->at(center,0.) / (r*r);
+        }
+
+        F[stencil[0]] = (FLOAT) rhs_val;
+    }
+
+
+    int NonUniformPoisson1_CL::fillBoundaryDirichlet(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
+    {
+        int indx = 0;
+
+        //--------- BOUNDARY NODE ENTRIES -----------
+        for (int j = 0; j < stencil.size(); j++) {
+            if (j == 0) {
+                L(stencil[0],stencil[j]) = (FLOAT)1.;
+            } else {
+                L(stencil[0],stencil[j]) = (FLOAT)0.;
+            }
+            indx++;
+        }
+
+        F[stencil[0]] = (FLOAT) 0.;
+
+        return indx;
+    }
+
+    void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni)
+    {
+        int nn = nb + ni;
+        // constraint on solution
+
+        F(nn) = 0.0;    // Constant value
+        F(nn+1) = 0.0;  // X-coeff value
+        F(nn+2) = 0.0;  // Y-coeff value
+        F(nn+3) = 0.0;  // FOR SOL_CONSTRAINT
+
+        // Constrain solution constraint only the boundary
+        for (int i = 0; i < nb; i++) {
+            // last columns
+            L(stencils[i][0], nn) = 1;  // Constrain constant
+            L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
+            L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
+
+            // SOL_CONSTRAINT: solution constraint to make the Neumann boundary condition complete
+            // last row
+            L(nn+3, stencils[i][0]) = 1;
+
+
+            // update of RHS
+            Vec3& v = centers[stencils[i][0]];
+
+            // FOR SOL_CONSTRAINT last element of last row and last column: sum of exact solutions at all points
+            F(nn+3) += exactSolution->at(v,0);
+        }
+
+        // Ignore solution constraint on the interior
+        for (int i = nb; i < nb+ni; i++) {
+            // last columns
+            L(stencils[i][0], nn) = 1;  // Constrain constant
+            L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
+            L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
+        }
+
+#if 0
+        for (int i = 0; i < nb+ni; i++) {
+            // last columns
+            L(stencils[i][0], nn) = 1;  // Constrain constant
+            L(stencils[i][0], nn+1) = centers[stencils[i][0]].x();  // Constrain X
+            L(stencils[i][0], nn+2) = centers[stencils[i][0]].y();  // Constrain Y
+
+            // SOL_CONSTRAINT: solution constraint to make the Neumann boundary condition complete
+            // last row
+            L(nn+3, stencils[i][0]) = 1;
+
+
+            // update of RHS
+            Vec3& v = centers[stencils[i][0]];
+
+            // FOR SOL_CONSTRAINT last element of last row and last column: sum of exact solutions at all points
+            F(nn+3) += exactSolution->at(v,0);
+        }
+#endif
+
+        // Constrain by specifying exactly what the value of the aX + bY + c = f coeffs are
+        L(nn,nn) = 1.0;
+        L(nn+1,nn+1) = 1.0;
+        L(nn+2,nn+2) = 1.0;
+
+        L(nn+3,nn+3) = 0.0;     // FOR SOL_CONSTRAINT
+
+        L(nn+2,nn+3) = 1.0;     // FOR SOL_CONSTRAINT because we have one whole colum of zeros, so we fill in with a 1 to say that
+        F(nn+2) = F(nn+3);      // The sum of SOL_CONSTRAINT and the coeff of this entry are equal to the sum of the sol constraint (redundant I know)
+    }
+
+#if 0
+    void NonUniformPoisson1_CL::fillSolutionConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni)
+    {
+        int nn = nb + ni;
+        // constraint on solution
+
+        F(nn) = 0.0;
+        for (int i = 0; i < nb+ni; i++) {
+            // last row
+            L(nn, stencils[i][0]) = 1;
+            // last column
+            L(stencils[i][0], nn) = 1;  // Constrain constant
+            // Final constraint to make the Neumann boundary condition complete
+
+            // update of RHS
+            Vec3& v = centers[stencils[i][0]];
+
+            // last element of last row and last column: sum of exact solutions at all points
+            F(nn) += exactSolution->at(v,0);
+        }
+        // No constraint on bottom right corner
+        L(nn,nn) = 0.0;
+    }
+#endif
+
+
+    void NonUniformPoisson1_CL::fillSolutionNoConstraint(MatType& L, VecType& F, StencilListType& stencils, CenterListType& centers, int nb, int ni)
+    {
+        int nn = nb+ni;
+        // constraint on solution
+        F(nn) = 0.0;
+        for (int i = 0; i < nb+ni; i++) {
+            // last row
+            L(nn, stencils[i][0]) = 0;
+            // last column
+            L(stencils[i][0], nn) = 0;
+        }
+        // No constraint on bottom right corner
+        L(nn,nn) = 1;
+    }
+
+
+    int NonUniformPoisson1_CL::fillInterior(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
+    {
+        int indx = 0;
+        // Count only the interior fill
+        indx += this->fillInteriorLHS(L, F, stencil, centers);
+        this->fillInteriorRHS(L, F, stencil, centers);
+
+        return indx;
+    }
+
+
+    int NonUniformPoisson1_CL::fillInteriorLHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
+    {
+        int indx = 0;
+        Vec3 st_center = centers[stencil[0]];
+        // Do I want the gradK at each stencil node or only the center?
+        double diffusivity = exactSolution->diffuseCoefficient(st_center);
+        Vec3* gradK = exactSolution->diffuseGradient(st_center);
+
+        //--------------------------------------------------
+        // Fill Interior weights (LHS)
+        if (use_uniform_diffusivity) {
+            double* lapl_weights = der->getLaplWeights(stencil[0]);
+            for (int j = 0; j < stencil.size(); j++) {
+                L(stencil[0],stencil[j]) = (FLOAT) lapl_weights[j];
+                //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
+                indx++;
+            }
+        } else {
+            double* x_weights = der->getXWeights(stencil[0]);
+            double* y_weights = der->getYWeights(stencil[0]);
+            double* z_weights = der->getZWeights(stencil[0]);
+            double* lapl_weights = der->getLaplWeights(stencil[0]);
+
+            for (int j = 0; j < stencil.size(); j++) {
+
+                double grad_k_grad_phi_weight = gradK->x()*x_weights[j] + gradK->y()*y_weights[j] + gradK->z()*z_weights[j];
+                double k_lapl_phi_weight = diffusivity*lapl_weights[j];
+
+                // Our non-uniform diffusivity: grad(K) * grad(Phi) + K * lapl(Phi) = div(K*grad(Phi))
+                // As K flattens (grad_k goes to 0) leaving only the scaled laplacian weights
+                double weight = grad_k_grad_phi_weight + k_lapl_phi_weight;
+
+                L(stencil[0],stencil[j]) = (FLOAT) weight;
+
+                indx++;
+            }
+        }
+        delete(gradK);
+        return indx;
+    }
+
+
+    void NonUniformPoisson1_CL::fillInteriorRHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
+    {
+        Vec3& v = centers[stencil[0]];
         double* x_weights = der->getXWeights(stencil[0]);
         double* y_weights = der->getYWeights(stencil[0]);
         double* z_weights = der->getZWeights(stencil[0]);
         double* lapl_weights = der->getLaplWeights(stencil[0]);
+        int i = stencil[0];
 
-        for (int j = 0; j < stencil.size(); j++) {
+        // Do I want the diffusivity (and its gradient) at all nodes or just the center?
+        double diffusivity = exactSolution->diffuseCoefficient(v);
+        Vec3* gradK = exactSolution->diffuseGradient(v);
 
-            double grad_k_grad_phi_weight = gradK->x()*x_weights[j] + gradK->y()*y_weights[j] + gradK->z()*z_weights[j];
-            double k_lapl_phi_weight = diffusivity*lapl_weights[j];
+        // Enable/disable this in the constructor/config file
+        if (!use_discrete_rhs) {
 
-            // Our non-uniform diffusivity: grad(K) * grad(Phi) + K * lapl(Phi) = div(K*grad(Phi))
-            // As K flattens (grad_k goes to 0) leaving only the scaled laplacian weights
-            double weight = grad_k_grad_phi_weight + k_lapl_phi_weight;
-
-            L(stencil[0],stencil[j]) = (FLOAT) weight;
-
-            indx++;
-        }
-    }
-    delete(gradK);
-    return indx;
-}
-
-
-void NonUniformPoisson1_CL::fillInteriorRHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
-{
-    Vec3& v = centers[stencil[0]];
-    double* x_weights = der->getXWeights(stencil[0]);
-    double* y_weights = der->getYWeights(stencil[0]);
-    double* z_weights = der->getZWeights(stencil[0]);
-    double* lapl_weights = der->getLaplWeights(stencil[0]);
-    int i = stencil[0];
-
-    // Do I want the diffusivity (and its gradient) at all nodes or just the center?
-    double diffusivity = exactSolution->diffuseCoefficient(v);
-    Vec3* gradK = exactSolution->diffuseGradient(v);
-
-    // Enable/disable this in the constructor/config file
-    if (!use_discrete_rhs) {
-
-        // exact laplacian
-        if (use_uniform_diffusivity) {
-            F[i] = (FLOAT)(exactSolution->laplacian(v));
-        } else {
-            double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)*gradK->z();
-            double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
-            F[i] = (FLOAT)(grad_k_grad_phi + k_lapl_phi);
-        }
-    } else {
-        double exact = 0.;
-        if (use_uniform_diffusivity) {
-            double discrete_rhs = 0.;
-            for (int j = 0; j < stencil.size(); j++) {
-                Vec3& vj = centers[stencil[j]];
-                discrete_rhs += lapl_weights[j] * exactSolution->at(vj);
+            // exact laplacian
+            if (use_uniform_diffusivity) {
+                F[i] = (FLOAT)(exactSolution->laplacian(v));
+            } else {
+                double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)*gradK->z();
+                double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
+                F[i] = (FLOAT)(grad_k_grad_phi + k_lapl_phi);
             }
-            // discrete laplacian
-            F[i] = (FLOAT) (discrete_rhs);
-            exact = exactSolution->laplacian(v);
         } else {
-            double discrete_rhs = 0.;
-            for (int j = 0; j < stencil.size(); j++) {
-                Vec3& vj = centers[stencil[j]];
-                double xderiv_approx = x_weights[j] * exactSolution->at(vj);
-                double yderiv_approx = y_weights[j] * exactSolution->at(vj);
-                double zderiv_approx = z_weights[j] * exactSolution->at(vj);
-                double lapl_approx = lapl_weights[j] * exactSolution->at(vj);
+            double exact = 0.;
+            if (use_uniform_diffusivity) {
+                double discrete_rhs = 0.;
+                for (int j = 0; j < stencil.size(); j++) {
+                    Vec3& vj = centers[stencil[j]];
+                    discrete_rhs += lapl_weights[j] * exactSolution->at(vj);
+                }
+                // discrete laplacian
+                F[i] = (FLOAT) (discrete_rhs);
+                exact = exactSolution->laplacian(v);
+            } else {
+                double discrete_rhs = 0.;
+                for (int j = 0; j < stencil.size(); j++) {
+                    Vec3& vj = centers[stencil[j]];
+                    double xderiv_approx = x_weights[j] * exactSolution->at(vj);
+                    double yderiv_approx = y_weights[j] * exactSolution->at(vj);
+                    double zderiv_approx = z_weights[j] * exactSolution->at(vj);
+                    double lapl_approx = lapl_weights[j] * exactSolution->at(vj);
 
-                double grad_k_grad_phi_j = xderiv_approx*gradK->x() + yderiv_approx*gradK->y() + zderiv_approx*gradK->z();
-                double k_lapl_phi_j = lapl_approx * diffusivity;
+                    double grad_k_grad_phi_j = xderiv_approx*gradK->x() + yderiv_approx*gradK->y() + zderiv_approx*gradK->z();
+                    double k_lapl_phi_j = lapl_approx * diffusivity;
 
-                discrete_rhs += grad_k_grad_phi_j + k_lapl_phi_j;
+                    discrete_rhs += grad_k_grad_phi_j + k_lapl_phi_j;
+                }
+                // discrete laplacian
+                F[i] = (FLOAT) discrete_rhs;
+
+                double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)
+                    *gradK->z();
+                double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
+                // Previously: double exact = exactSolution->laplacian(v);
+                exact = grad_k_grad_phi + k_lapl_phi;
             }
-            // discrete laplacian
-            F[i] = (FLOAT) discrete_rhs;
 
-            double grad_k_grad_phi = exactSolution->xderiv(v)*gradK->x() + exactSolution->yderiv(v)*gradK->y() + exactSolution->zderiv(v)
-                                     *gradK->z();
-            double k_lapl_phi = exactSolution->laplacian(v) * diffusivity;
-            // Previously: double exact = exactSolution->laplacian(v);
-            exact = grad_k_grad_phi + k_lapl_phi;
+            // Print error in discrete laplacian approximation:
+            Vec3& v2 = centers[stencil[0]];
+            double diff = fabs(exact - F[i]);
+            double rel_diff = diff / fabs(exact);
+            if (diff > 1e-9) {
+                cout.precision(3);
+                cout << "RHS[" << i << "] : Discrete laplacian differs by " << std::scientific << diff << " (rel: " << rel_diff << ", st.size: " << stencil.size() << ")" << endl;
+            } else {
+                cout << "RHS[" << i << "] : Good." << endl;
+            }
         }
+        delete(gradK);
+    }
 
-        // Print error in discrete laplacian approximation:
-        Vec3& v2 = centers[stencil[0]];
-        double diff = fabs(exact - F[i]);
-        double rel_diff = diff / fabs(exact);
-        if (diff > 1e-9) {
-            cout.precision(3);
-            cout << "RHS[" << i << "] : Discrete laplacian differs by " << std::scientific << diff << " (rel: " << rel_diff << ", st.size: " << stencil.size() << ")" << endl;
-        } else {
-            cout << "RHS[" << i << "] : Good." << endl;
+
+    //----------------------------------------------------------------------
+
+    template<typename T>
+        void NonUniformPoisson1_CL::write_to_file(boost::numeric::ublas::vector<T> vec, std::string filename)
+        {
+            std::ofstream fout;
+            fout.open(filename.c_str());
+            for (int i = 0; i < vec.size(); i++) {
+                fout << std::scientific << vec[i] << std::endl;
+            }
+            fout.close();
         }
-    }
-    delete(gradK);
-}
-
-
-//----------------------------------------------------------------------
-
-template<typename T>
-void NonUniformPoisson1_CL::write_to_file(boost::numeric::ublas::vector<T> vec, std::string filename)
-{
-    std::ofstream fout;
-    fout.open(filename.c_str());
-    for (int i = 0; i < vec.size(); i++) {
-        fout << std::scientific << vec[i] << std::endl;
-    }
-    fout.close();
-}
 

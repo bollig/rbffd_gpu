@@ -4,7 +4,7 @@
 #include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
 #include "utils/comm/communicator.h"
-#include "rbffd/derivative.h"
+#include "rbffd/rbffd.h"
 #include "pdes/elliptic/ncar_poisson1.h"
 #include "utils/conf/projectsettings.h"
 #include <boost/numeric/ublas/vector.hpp>
@@ -20,7 +20,7 @@ typedef std::vector<CenterType >                         CenterListType;
 class NonUniformPoisson1_CL : public NCARPoisson1
 {
 public:
-        NonUniformPoisson1_CL(ExactSolution* _solution, Grid* subdomain_, Derivative* der_, int rank, int dim_num_);
+        NonUniformPoisson1_CL(ExactSolution* _solution, Grid* subdomain_, RBFFD* der_, int rank, int dim_num_);
         ~NonUniformPoisson1_CL();
 
         // Solve the Poisson problem

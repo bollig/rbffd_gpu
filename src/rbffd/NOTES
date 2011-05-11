@@ -1,5 +1,5 @@
-DerivativeTests is horribly written; 
-
-There should be no need for a grid inside of it. It should only depend on the Derivative class
-
-The Derivative class should 
+Need to add new class: 
+    - Use ContourSVD to compute weights
+        - Inherit RBFFD
+    - Use SVD to compute weights
+        - Inherit RBFFD

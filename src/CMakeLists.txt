@@ -22,10 +22,12 @@ SET(REQUIRED_SOURCE_FILES
     pdes/parabolic/heat.cpp
 
     rbffd/rbffd.cpp
-    rbffd/contour_svd.cpp
     rbffd/derivative_tests.cpp
-    rbffd/stencils.cpp
     rbffd/rbfs/rbf.cpp
+
+    # Need to cleanup: 
+    #rbffd/contour_svd.cpp
+    #rbffd/stencils.cpp
 
     utils/comm/communicator.cpp
     utils/comm/mpisendable.cpp

@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
 
     int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
     
+    int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1");
     
     int nb_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::required); 
     int it_max_interior = settings->GetSettingAs<int>("NB_CVT_ITERATIONS", ProjectSettings::required); 
@@ -95,7 +96,6 @@ int main(int argc, char** argv) {
         exact_poisson = new ExactNCARPoisson2();        // 2D problem works with uniform diffusion
     }
 
-    bool use_gpu = true;
     RBFFD* der;
     if (use_gpu) {
         der = new RBFFD_CL(grid, dim); 
@@ -139,7 +139,13 @@ int main(int argc, char** argv) {
     }
  
 
-    NCARPoisson1* poisson = new NonUniformPoisson1_CL(exact_poisson, grid, der, 0, dim);
+    NCARPoisson1* poisson;
+//    if (use_gpu) {
+    if (true) {
+        poisson = new NonUniformPoisson1_CL(exact_poisson, grid, der, 0, dim);
+    } else {
+        poisson = new NCARPoisson1(exact_poisson, grid, der, 0, dim);
+    }
     poisson->setBoundaryCondition(boundary_condition); 
     poisson->setUseDiscreteRHS(use_discrete_rhs); 
     poisson->setUseUniformDiffusivity(use_uniform_diffusion);

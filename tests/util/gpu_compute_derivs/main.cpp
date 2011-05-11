@@ -4,9 +4,7 @@
 
 #include "grids/regulargrid.h"
 
-//#include "grids/domain_decomposition/domain.h"
-#include "rbffd/derivative_cl.h"
-//#include "rbffd/new_derivative_tests.h"
+#include "rbffd/rbffd_cl.h"
 
 #include "exact_solutions/exact_regulargrid.h"
 
@@ -45,6 +43,8 @@ int main(int argc, char** argv) {
 
     double stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
+    int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
+
     Grid* grid; 
  
     if (dim == 1) {
@@ -65,12 +65,13 @@ int main(int argc, char** argv) {
     // 0: 2D problem; 1: 3D problem
     ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(1.0, 1.0);
 
-#if 0
-    // Clean this up. Have the Poisson class construct Derivative internally.
-    Derivative* der = new DerivativeCL(subdomain->G_centers, subdomain->Q_stencils, subdomain->global_boundary_nodes.size(), dim, comm_unit->getRank());
-#endif 
+    RBFFD* der;
+    if (use_gpu) {
+        der = new RBFFD_CL(grid, dim); 
+    } else {
+        der = new RBFFD(grid, dim); 
+    }
 
-    Derivative* der = new DerivativeCL(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices().size(), dim, comm_unit->getRank()); 
 
     double epsilon = settings->GetSettingAs<double>("EPSILON");
     der->setEpsilon(epsilon);
@@ -78,9 +79,7 @@ int main(int argc, char** argv) {
     printf("start computing weights\n");
     vector<StencilType>& stencil = grid->getStencils();
     vector<NodeType>& rbf_centers = grid->getNodeList();
-    for (int irbf=0; irbf < rbf_centers.size(); irbf++) {
-		der->computeWeights(rbf_centers, stencil[irbf], irbf);
-	}
+    der->computeAllWeightsForAllStencils();
     cout << "end computing weights" << endl;
 
     vector<double> u(rbf_centers.size(),1.);
@@ -97,17 +96,18 @@ int main(int argc, char** argv) {
     vector<double> lderiv_gpu(rbf_centers.size());	
 
     // Verify that the CPU works
-    der->computeDerivCPU(Derivative::X, u, xderiv_cpu);
-    der->computeDeriv(Derivative::X, u, xderiv_gpu);
+    // NOTE: we pass booleans at the end of the param list to indicate that
+    // the function "u" is new (true) or same as previous calls (false). This
+    // helps avoid overhead of passing "u" to the GPU.
+    der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
 
-    der->computeDerivCPU(Derivative::Y, u, yderiv_cpu);
-    der->computeDeriv(Derivative::Y, u, yderiv_gpu);
-    
-    der->computeDerivCPU(Derivative::Z, u, zderiv_cpu);
-    der->computeDeriv(Derivative::Z, u, zderiv_gpu);
-
-    der->computeDerivCPU(Derivative::LAPL, u, lderiv_cpu);
-    der->computeDeriv(Derivative::LAPL, u, lderiv_gpu);
+    der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
+    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false);
+    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false);
+    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
 
     for (int i = 0; i < rbf_centers.size(); i++) {
 //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
@@ -128,13 +128,13 @@ int main(int argc, char** argv) {
     std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
        // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
 
-   // der->computeDeriv(Derivative::Y, u, yderiv);
-   // der->computeDeriv(Derivative::LAPL, u, lapl_deriv);
+   // der->applyWeightsForDeriv(RBFFD::Y, u, yderiv);
+   // der->applyWeightsForDeriv(RBFFD::LAPL, u, lapl_deriv);
 
 
 #if 0
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
-        DerivativeTests* der_test = new DerivativeTests();
+        RBFFDTests* der_test = new DerivativeTests();
         der_test->testAllFunctions(*der, *grid);
     }
 #endif 

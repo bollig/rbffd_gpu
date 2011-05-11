@@ -23,7 +23,6 @@ SET(REQUIRED_SOURCE_FILES
 
     rbffd/rbffd.cpp
     rbffd/contour_svd.cpp
-    rbffd/derivative.cpp
     rbffd/derivative_tests.cpp
     rbffd/stencils.cpp
     rbffd/rbfs/rbf.cpp
@@ -51,7 +50,6 @@ SET( REQUIRED_CL_SOURCE_FILES
     #P1 pdes/elliptic/ncar_poisson2_cl.cpp
     #* pdes/elliptic/nonuniform_poisson1_cl.cpp
     rbffd/rbffd_cl.cpp
-    rbffd/derivative_cl.cpp
     )
 
 ###############################################

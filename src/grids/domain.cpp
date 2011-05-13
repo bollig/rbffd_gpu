@@ -18,8 +18,8 @@ Domain::Domain(const Domain& subdomain) {
     exit(EXIT_FAILURE);
 }
 
-    Domain::Domain(Grid* grid, double _dt, int _comm_size)
-: comm_size(_comm_size), id(0), dt(_dt), 
+    Domain::Domain(Grid* grid, int _comm_size)
+: comm_size(_comm_size), id(0), 
     xmin(grid->xmin), xmax(grid->xmax),
     ymin(grid->ymin), ymax(grid->ymax),
     zmin(grid->zmin), zmax(grid->zmax)
@@ -32,9 +32,9 @@ Domain::Domain(const Domain& subdomain) {
 
 
 // Construct a new Domain object
-Domain::Domain(double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, double _dt,
+Domain::Domain(double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, 
         int _comm_rank, int _comm_size) :
-    xmin(_xmin), xmax(_xmax), ymin(_ymin), ymax(_ymax), zmin(_zmin), zmax(_zmax), dt(_dt),
+    xmin(_xmin), xmax(_xmax), ymin(_ymin), ymax(_ymax), zmin(_zmin), zmax(_zmax),
     id(_comm_rank), comm_size(_comm_size) {
 
     }
@@ -73,7 +73,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         double zm = zmin + igz * deltaz;
         printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, xm, xm+deltax, ym, ym+deltay, zm, zm+deltaz);
         printf("Tile (ix, iy, iz) = (%d, %d, %d)\n", igx, igy, igz); 
-        subdomains[id] = new Domain(xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, dt, id, comm_size);
+        subdomains[id] = new Domain(xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, id, comm_size);
         subdomains[id]->setMaxStencilSize(this->max_st_size);
     }
 
@@ -105,8 +105,8 @@ int Domain::send(int my_rank, int receiver_rank) {
 
     sendSTL(&id, my_rank, receiver_rank);  
 
-    double buff[7] = { xmin, xmax, ymin, ymax, zmin, zmax, dt };
-    MPI_Send(&buff, 7, MPI::DOUBLE, receiver_rank, TAG, MPI_COMM_WORLD);
+    double buff[6] = { xmin, xmax, ymin, ymax, zmin, zmax };
+    MPI_Send(&buff, 6, MPI::DOUBLE, receiver_rank, TAG, MPI_COMM_WORLD);
 
     sendSTL(&Q, my_rank, receiver_rank); // All stencil centers in this CPUs QUEUE
     sendSTL(&D, my_rank, receiver_rank); // Set of stencil centers DEPEND on nodes in R before evaluation
@@ -141,9 +141,9 @@ int Domain::receive(int my_rank, int sender_rank) {
     // Start by identifying the subdomain ID
     recvSTL(&id, my_rank, sender_rank);  
 
-    // Get the subdomain bounds and dt
-    double buff[7];
-    MPI_Recv(&buff, 7, MPI::DOUBLE, sender_rank, TAG, MPI_COMM_WORLD, &stat);
+    // Get the subdomain bounds 
+    double buff[6];
+    MPI_Recv(&buff, 6, MPI::DOUBLE, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     xmin = buff[0];
     xmax = buff[1];
@@ -151,7 +151,6 @@ int Domain::receive(int my_rank, int sender_rank) {
     ymax = buff[3];
     zmin = buff[4]; 
     zmax = buff[5];
-    dt = buff[6];
 
     recvSTL(&Q, my_rank, sender_rank); // All stencil centers in this CPUs QUEUE
     recvSTL(&D, my_rank, sender_rank); // Set of stencil centers DEPEND on nodes in R before evaluation

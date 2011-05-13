@@ -15,14 +15,12 @@ class Domain : public Grid, public MPISendable {
         int id; 		// which Domain
         int comm_size; 	// Total number of Domains
 
-
         double xmin;
         double xmax;
         double ymin;
         double ymax;
         double zmin;
         double zmax;
-        double dt; 
 
         // 1) These are the sets of stencil centers
         std::set<int> G; 			// All nodes required for computation
@@ -58,10 +56,10 @@ class Domain : public Grid, public MPISendable {
         Domain(const Domain& subdomain); // Copy constructor
 
         // Requires communicator to pass messages. This must be preconstructed comm_unit 
-        Domain(double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, double _dt, int _comm_rank, int _comm_size);
+        Domain(double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, int _comm_rank, int _comm_size);
 
 
-        Domain(Grid* _grid, double _dt, int _comm_size);
+        Domain(Grid* _grid, int _comm_size);
 
 
         //--------------------------

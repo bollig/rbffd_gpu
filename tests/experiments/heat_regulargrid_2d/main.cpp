@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 
         // Construct a new domain given a grid. 
         // TODO: avoid filling sets Q, B, etc; just think of it as a copy constructor for a grid
-        Domain* original_domain = new Domain(grid, dt, comm_unit->getSize()); 
+        Domain* original_domain = new Domain(grid, comm_unit->getSize()); 
         // pre allocate pointers to all of the subdivisions
         std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
         // allocate and fill in details on subdivisions

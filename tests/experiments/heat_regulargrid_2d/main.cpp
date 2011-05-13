@@ -216,32 +216,7 @@ int main(int argc, char** argv) {
 
     printf("start computing weights\n");
     tm["weights"]->start(); 
-#if 0
-#if 1
-    // Preferred for fine grain control of weights per stencil: 
-    for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
-        tm["oneWeight"]->start(); 
-     //   der->computeWeights(subdomain->getNodeList(), subdomain->getStencil(irbf), irbf);
-        der->computeAllWeightsForStencil(irbf);
-        tm["oneWeight"]->stop();
-    }
-#else 
-    // What we used to do: 
-    for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
-        tm["oneWeight"]->start(); 
-        der->computeWeightsForStencil(RBFFD::X, irbf);
-        tm["oneWeight"]->stop();
-    }
-    for (int irbf=0; irbf < subdomain->getStencilsSize(); irbf++) {
-        der->computeWeightsForStencil(RBFFD::Y, irbf);
-        der->computeWeightsForStencil(RBFFD::Z, irbf);
-        der->computeWeightsForStencil(RBFFD::LAPL, irbf);
-    }
-#endif 
-#else 
-    // Preferred for simplest code (will remove the other cases above in later commits)
     der->computeAllWeightsForAllStencils();
-#endif 
     tm["weights"]->stop(); 
 
     cout << "end computing weights" << endl;
@@ -285,7 +260,7 @@ int main(int argc, char** argv) {
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
     ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
 
-#if 0
+#if 1
     PDE* pde; 
     // We need to provide comm_unit to pass ghost node info
 #if 0
@@ -297,6 +272,10 @@ int main(int argc, char** argv) {
         // Implies initial conditions are generated
         pde = new HeatPDE(subdomain, der, comm_unit);
     }
+
+
+    pde->writeLocalSolutionToFile(1); 
+    pde->writeGlobalSolutionToFile(1); 
     
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
     comm_unit->broadcastObjectUpdates(pde);

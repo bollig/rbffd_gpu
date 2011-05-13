@@ -613,8 +613,13 @@ void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, d
     std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
     std::vector<double>& avg_stencil_radius = avg_radius_;
 
-    var_epsilon.resize(avg_stencil_radius.size());
-    for (int i=0; i < var_epsilon.size(); i++) {
+    size_t nb_stencils = grid_ref.getStencilsSize(); 
+    size_t nb_radii = avg_stencil_radius.size(); 
+
+    std::cout << "NB_STENCILS: " << nb_stencils << ", NB_RADII: " << nb_radii << std::endl;
+
+    var_epsilon.resize(nb_stencils);
+    for (int i=0; i < nb_stencils; i++) {
         StencilType& stencil = grid_ref.getStencil(i);
 #if 0
         var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);

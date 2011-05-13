@@ -293,8 +293,13 @@ int main(int argc, char** argv) {
     } else 
 #endif 
     { 
+        // Implies initial conditions are generated
         pde = new HeatPDE(subdomain, der, comm_unit);
     }
+    
+    // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
+    comm_unit->broadcastObjectUpdates(pde);
+    comm_unit->barrier();
 
 #if 0
     // TODO: udpate heat to construct on grid

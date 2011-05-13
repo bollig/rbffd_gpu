@@ -14,6 +14,9 @@ typedef float FLOAT;
 typedef Vec3 NodeType; 
 typedef std::vector<int> StencilType; 
 
+// Start with a scalar solution to our equations
+typedef double SolutionType;
+
 
 
 #endif

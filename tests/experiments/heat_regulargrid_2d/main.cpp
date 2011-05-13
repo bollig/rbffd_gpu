@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <map> 
 
-#include "pdes/parabolic/heat.h"
+#include "pdes/parabolic/heat_pde.h"
+#include "pdes/parabolic/heat_pde_cl.h"
 
 #include "grids/regulargrid.h"
 
@@ -284,6 +285,18 @@ int main(int argc, char** argv) {
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
     ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
 
+    PDE* pde; 
+    // We need to provide comm_unit to pass ghost node info
+#if 0
+    if (use_gpu) {
+        pde = new HeatPDE_CL(subdomain, der, comm_unit); 
+    } else 
+#endif 
+    { 
+        pde = new HeatPDE(subdomain, der, comm_unit);
+    }
+
+#if 0
     // TODO: udpate heat to construct on grid
     tm["heat_init"]->start(); 
     Heat* heat = new Heat(exact, subdomain, der, comm_unit->getRank());
@@ -392,6 +405,7 @@ printf("Cleaning up objects\n");
 // Writer first so we can dump final solution
 delete(writer);
 delete(heat);
+#endif 
 delete(subdomain);
 delete(settings);
 delete(comm_unit); 

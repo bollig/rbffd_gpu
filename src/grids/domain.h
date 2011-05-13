@@ -177,7 +177,8 @@ class Domain : public Grid, public MPISendable {
 
         std::vector<double>& getU() { return U_G; };
 
-        // The following four routines are required by MPISendable inheritence.
+        // ******** BEGIN MPISENDABLE ************
+        // The following seven routines are required by MPISendable inheritence.
         virtual int send(int my_rank, int receiver_rank); 
         virtual int receive(int my_rank, int sender_rank);
         virtual int sendUpdate(int my_rank, int receiver_rank); 
@@ -187,6 +188,8 @@ class Domain : public Grid, public MPISendable {
         virtual int receiveFinal(int my_rank, int sender_rank);
 
         virtual int initFinal();
+        // ******** END MPISENDABLE ************
+        
         virtual void getFinal(std::vector<double>* final);
 
         // Dump the final solution to a file along with the vector of nodes that

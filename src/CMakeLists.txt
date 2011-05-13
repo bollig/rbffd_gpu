@@ -18,8 +18,11 @@ SET(REQUIRED_SOURCE_FILES
     grids/grid_interface.cpp
     grids/domain.cpp
 
-    pdes/elliptic/ncar_poisson1.cpp
-    pdes/parabolic/heat.cpp
+    #   pdes/elliptic/ncar_poisson1.cpp
+    #    pdes/parabolic/heat.cpp
+    pdes/pde.cpp
+    pdes/time_dependent_pde.cpp
+    pdes/parabolic/heat_pde.cpp
 
     rbffd/rbffd.cpp
     rbffd/derivative_tests.cpp

@@ -4,7 +4,7 @@
 #include "grids/domain.h"
 //TODO: change to a base_pde class so we can reuse the 
 //      writer for elliptic and parabolic
-#include "pdes/parabolic/heat.h"
+#include "pdes/time_dependent_pde.h"
 #include "utils/comm/communicator.h"
 #include "timer_eb.h" 
 
@@ -15,12 +15,12 @@ class PDEWriter
         int local_write_freq; 
         int global_write_freq; 
         Domain* subdomain; 
-        Heat* heat; 
+        PDE* heat; 
         Communicator* comm_unit;
         EB::TimerList tm; 
 
     public: 
-        PDEWriter(Domain* subdomain_, Heat* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
+        PDEWriter(Domain* subdomain_, TimeDependentPDE* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
             : subdomain(subdomain_), heat(heat_), comm_unit(comm_unit_), 
             local_write_freq(local_write_freq_), 
             global_write_freq(global_write_freq_) { 
@@ -74,7 +74,7 @@ class PDEWriter
          * Write the local solution, error, etc for a subdomain
          */
         virtual void writeLocal(int iter) { 
-            subdomain->writeLocalSolutionToFile(iter); 
+            heat->writeLocalSolutionToFile(iter); 
             //    heat->writeSolutionToFile(iter); 
             //    heat->writeErrorToFile(iter);  
         }
@@ -84,9 +84,9 @@ class PDEWriter
          *      writing local information (e.g., no error)
          */
         virtual void writeGlobal(int iter) {
-            comm_unit->consolidateObjects(subdomain);
+            comm_unit->consolidateObjects(heat);
             comm_unit->barrier();
-            subdomain->writeGlobalSolutionToFile(iter);
+            heat->writeGlobalSolutionToFile(iter);
         }
 
         /** 

@@ -1,3 +1,5 @@
+#define REMOVE_SOLUTION_FROM_DOMAIN
+
 #include <stdlib.h>
 #include <algorithm>
 #include <iostream>
@@ -117,7 +119,9 @@ int Domain::send(int my_rank, int receiver_rank) {
 
     sendSTL(&node_list, my_rank, receiver_rank); // Q_centers + R_centers = node_list (all nodes necessary on receiver_rank CPU)
 
+#ifndef REMOVE_SOLUTION_FROM_DOMAIN
     sendSTL(&U_G, my_rank, receiver_rank); // Initial function values of all centers in G
+#endif 
     sendSTL(&avg_stencil_radii, my_rank, receiver_rank); // Average distances (possibly stencil radii)
 
     sendSTL(&loc_to_glob, my_rank, receiver_rank); // l2g
@@ -160,7 +164,9 @@ int Domain::receive(int my_rank, int sender_rank) {
 
     recvSTL(&node_list, my_rank, sender_rank); // Q_centers + R_centers = node_list (all nodes necessary on sender_rank CPU)
 
+#ifndef REMOVE_SOLUTION_FROM_DOMAIN
     recvSTL(&U_G, my_rank, sender_rank); // Initial Function values of all centers in G
+#endif
     recvSTL(&avg_stencil_radii, my_rank, sender_rank); // Average distances (possibly stencil radii)
 
     recvSTL(&loc_to_glob, my_rank, sender_rank); // l2g
@@ -201,174 +207,7 @@ void Domain::printVerboseDependencyGraph() {
 #endif
 }
 
-int Domain::sendUpdate(int my_rank, int receiver_rank) {
 
-    if (my_rank != receiver_rank) {
-        vector<int>::iterator oit;
-        // vector<set<int> > O; gives us the list of (global) indices which we
-        // are sending to receiver_rank		
-
-        // We send a list of node values 
-        vector<double> U_O;
-
-        if (O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
-            //	cout << "O_by_rank is NOT size(0)" << endl;
-            int i;
-
-            for (oit = O_by_rank[receiver_rank].begin(); oit
-                    != O_by_rank[receiver_rank].end(); oit++, i++) {
-                // Elements in O are in global indices 
-                // so we need to first convert to local to index our U_G
-                U_O.push_back(U_G[g2l(*oit)]);
-                if (DEBUG) {
-                    cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
-                        << " (local index: " << g2l(*oit) << ")"
-                        << "]: " << U_G[g2l(*oit)] << endl;
-                }
-            }
-        }
-
-        cout << "O_by_rank[" << receiver_rank << "].size = "
-            << O_by_rank[receiver_rank].size() << endl;
-
-        sendSTL(&O_by_rank[receiver_rank], my_rank, receiver_rank);
-        sendSTL(&U_O, my_rank, receiver_rank);
-        cout << "RANK " << my_rank << " REPORTS: sent update" << endl;
-    }
-}
-
-int Domain::receiveUpdate(int my_rank, int sender_rank) {
-    if (my_rank != sender_rank) {
-        vector<int>::iterator rit;
-        int i = 0;
-        // We receive a list of (global) indices which we are receiving from sender_rank		
-        vector<double> U_R;
-        // Also need to tell what subset of O was received.
-        vector<int> R_sub;
-
-        recvSTL(&R_sub, my_rank, sender_rank);
-        recvSTL(&U_R, my_rank, sender_rank);
-
-        cout << endl << "Received Update from CPU" << sender_rank << " ("
-            << R_sub.size() << " centers)" << endl;
-        // Then we integrate the values as an update: 
-        for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-            if (DEBUG) {
-                cout << "\t(Global Index): " << *rit << "\t (Local Index:" << g2l(
-                            *rit) << ")\tOld U_G[" << g2l(*rit) << "]: " << U_G[g2l(
-                            *rit)] << "\t New U_G[" << g2l(*rit) << "]: " << U_R[i]
-                                                 << endl;
-            }
-            // Global to local mapping required
-            U_G[g2l(*rit)] = U_R[i]; // Overwrite with new values
-        }
-
-        cout << "RANK " << my_rank << " REPORTS: received update" << endl;
-    }
-}
-
-int Domain::sendFinal(int my_rank, int receiver_rank) {
-
-    if (my_rank != receiver_rank) {
-        set<int>::iterator qit;
-        // vector<set<int> > O; gives us the list of (global) indices which we
-        // are sending to receiver_rank
-
-        // We send a list of node values
-        vector<double> U_Q;
-
-        if (O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
-            //	cout << "O_by_rank is NOT size(0)" << endl;
-            int i;
-
-            // TODO the set U_G should be in order (Q, R) so we dont need this full copy (maybe...)
-            for (qit = Q.begin(); qit != Q.end(); qit++, i++) {
-                // Elements in Q are in global indices
-                // so we need to first convert to local to index our U_G
-                U_Q.push_back(U_G[g2l(*qit)]);
-                if (DEBUG) {
-                    cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
-                        << "]: " << U_G[g2l(*qit)] << endl;
-                }
-            }
-        }
-
-        sendSTL(&Q, my_rank, receiver_rank);
-        sendSTL(&U_Q, my_rank, receiver_rank);
-        cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
-    }
-}
-
-int Domain::receiveFinal(int my_rank, int sender_rank) {
-    // A couple options for this routine:
-    // Receive the stl set<int> for Q and the vector<double> for U_Q
-    // do a linear merge by hand:
-    // 		- The set<int> Q is pre-sorted
-    //		- Therefore we do linear loop:
-    //			if (remoteQ[i] < localQ[j]) && (remoteQ[i] > localQ[j-1])
-    //				localQ[j].insert(remoteQ[i], j)
-    // 				localU_G[j].insert(remoteU_G[i], j)
-    // OR since we have set<int>:KEY = set<double>:VALUE we can use a map and
-    // say: map<int, double> solution;
-    // 		for i...
-    //			solution[remoteQ[i]] = U_G[i];
-    // 	Then use an iterator to copy content into global U_G vector
-
-    set<int> remoteQ;
-    vector<double> remoteU_Q;
-
-    recvSTL(&remoteQ, my_rank, sender_rank);
-    recvSTL(&remoteU_Q, my_rank, sender_rank);
-
-    //pair<map<char,int>::iterator,bool> ret;
-    set<int>::iterator qit;
-    int i = 0;
-    for (qit = remoteQ.begin(); qit != remoteQ.end(); qit++, i++) {
-        global_U_G.insert(pair<int, double> (*qit, remoteU_Q[i]));
-    }
-
-    cout << "RECEIVED FINAL FROM CPU " << sender_rank << endl;
-    if (DEBUG) {
-        cout << "NEW FINAL_U_G: " << endl;
-        map<int, double>::iterator it;
-        for (it = global_U_G.begin(); it != global_U_G.end(); it++) {
-            cout << "\tU_G[" << (*it).first << "] = " << (*it).second << endl;
-        }
-    }
-}
-
-int Domain::initFinal() {
-    //pair<map<char,int>::iterator,bool> ret;
-    set<int>::iterator qit;
-    int i = 0;
-    for (qit = Q.begin(); qit != Q.end(); qit++, i++) {
-        global_U_G.insert(pair<int, double> (*qit, U_G[g2l(*qit)]));
-    }
-}
-
-void Domain::getFinal(std::vector<double> *final) {
-    map<int, double>::iterator it;
-    final->clear();
-    for (it = global_U_G.begin(); it != global_U_G.end(); it++) {
-        final->push_back((*it).second);
-    }
-}
-
-int Domain::writeFinal(std::vector<NodeType>& nodes, std::string filename) {
-    //ofstream fout;
-    //fout.open(filename);
-    FILE* fdsol;
-    fdsol = fopen(filename.c_str(), "w");
-    map<int, double>::iterator it;
-    int i = 0;
-    for (it = global_U_G.begin(); it != global_U_G.end(); it++, i++) {
-        // TODO 3D print
-        //fout << nodes[(*it).first].x() << " " << nodes[(*it).first].y() << " " << (*it).second << endl;
-        fprintf(fdsol, "%f %f %f %f\n", nodes[(*it).first].x(), nodes[(*it).first].y(), nodes[(*it).first].z(), (*it).second);
-    }
-    //fout.close();
-    fclose(fdsol);
-}
 
 // Append to O_by_rank (find what subset of O is needed by rank subdomain_rank)
 void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) {
@@ -576,6 +415,7 @@ set<int>& Domain::stencilSet(set<int>& s, vector<StencilType>& stencil) {
 }
 //----------------------------------------------------------------------
 void Domain::fillVarData(vector<NodeType>& rbf_centers) {
+#ifndef REMOVE_SOLUTION_FROM_DOMAIN
     // Initial condition: linear data: x + 2 y + 3 z
     // NOTE: the loops here should be structured similar to Domain::fillLocalData
     // to ensure our l2g and g2l mappings apply correctly.
@@ -599,6 +439,7 @@ void Domain::fillVarData(vector<NodeType>& rbf_centers) {
         double s = *qit;//v.x() + 2.*v.y() + 3.*v.z();
         U_G.push_back(s);
     }
+#endif 
 }
 //----------------------------------------------------------------------
 
@@ -897,63 +738,6 @@ void Domain::writeL2GToFile(std::string filename) {
 
 }
 
-//----------------------------------------------------------------------
 
-void Domain::writeLocalSolutionToFile(std::string filename) {
-
-    std::string fname = "sol_"; 
-    fname.append(filename); 
-    std::ofstream fout(fname.c_str()); 
-    if (fout.is_open()) {
-        std::vector<double>::iterator sit;  
-        for (sit = U_G.begin(); sit != U_G.end(); sit++) {
-            fout << (*sit) << std::endl; 
-        }
-    } else {
-        printf("Error opening file to write\n"); 
-        exit(EXIT_FAILURE); 
-    }
-    fout.close();
-    std::cout << "[Domain] \tWrote " << glob_to_loc.size() << " local solution values to \t" << fname << std::endl;
-
-}
-
-//----------------------------------------------------------------------
-
-void Domain::writeGlobalSolutionToFile(int iter) {
-
-    if (id == Communicator::MASTER) {
-        char nstr[256]; 
-        std::string fname = "globalsol_"; 
-        sprintf(nstr,"%lunodes",global_U_G.size()); 
-        fname.append(nstr); 
-
-        if (iter < 0) {
-            fname.append("_final.ascii");  
-        } else if (iter == 0) {
-            fname.append("_initial.ascii");  
-        } else {
-            char iterstr[256]; 
-            sprintf(iterstr, "%d", iter); 
-            fname.append("_"); 
-            fname.append(iterstr); 
-            fname.append("iters.ascii");  
-        }
-
-        std::ofstream fout(fname.c_str()); 
-        if (fout.is_open()) {
-            for (int i = 0; i < global_U_G.size(); i++) {
-                fout << global_U_G[i] << std::endl; 
-            }
-        } else {
-            printf("Error opening file to write\n"); 
-            exit(EXIT_FAILURE); 
-        }
-        fout.close();
-        std::cout << "[Domain] \tWrote " << global_U_G.size() << " global solution values to \t" << fname << std::endl;
-    } else {
-        std::cout << "[Domain] \tDeferring global solution write to master process" << std::endl;
-    }
-}
 
 //----------------------------------------------------------------------

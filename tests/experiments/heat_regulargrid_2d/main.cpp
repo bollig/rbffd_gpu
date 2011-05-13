@@ -285,6 +285,7 @@ int main(int argc, char** argv) {
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
     ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
 
+#if 0
     PDE* pde; 
     // We need to provide comm_unit to pass ghost node info
 #if 0
@@ -300,7 +301,7 @@ int main(int argc, char** argv) {
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
     comm_unit->broadcastObjectUpdates(pde);
     comm_unit->barrier();
-
+#endif 
 #if 0
     // TODO: udpate heat to construct on grid
     tm["heat_init"]->start(); 

@@ -35,12 +35,6 @@ class Domain : public Grid, public MPISendable {
         // Possibly add: 
         // std::set<int> BmD;
 
-        // 4) These get us the func values of stencil nodes
-        // SOLUTION of all nodes in local domain
-        std::vector<double> U_G;			// U_Q union U_R
-        // Possibly decompose to U_Q, U_R instead since U_R will update each iteration
-
-
         // 5) These are the maps between local and global indexing space
         // l2g[i] = global_indx_matching_i
         std::vector<int> loc_to_glob;
@@ -56,13 +50,6 @@ class Domain : public Grid, public MPISendable {
         // how many node updates we will receive from each Domain and can instead send
         // and receive exactly what is required): 
         // std::vector<std::set<int> > R_by_rank;
-
-    private:
-        // A map for global INDEX=VALUE storage of the final solution
-        // recvFinal will populate this and then we can call (TODO) getFinal()
-        // to get the values as a vector.
-        // SOLUTION of all nodes in global domain (valid only on master)
-        std::map<int,double> global_U_G;
 
     public: 	// Member Functions: 
 
@@ -101,7 +88,7 @@ class Domain : public Grid, public MPISendable {
         virtual void writeExtraToFile(std::string filename) {
             this->writeG2LToFile(filename);
             this->writeL2GToFile(filename);
-            this->writeLocalSolutionToFile(filename);
+           // this->writeLocalSolutionToFile(filename);
         }
 
         // TODO: allow subdomains to load from disk rather than always
@@ -118,13 +105,8 @@ class Domain : public Grid, public MPISendable {
         //--------------------------------------------------
         void writeG2LToFile(std::string filename); 
         void writeL2GToFile(std::string filename); 
-        void writeLocalSolutionToFile(std::string filename); 
-        void writeLocalSolutionToFile(int iter=0) { this->writeLocalSolutionToFile(this->getFilename(iter)); }  
-        void writeGlobalSolutionToFile(int iter=0);
 
-        void printSolution(std::string label) {
-            printVector(this->U_G, label); 
-        }
+
 
         // Decompose the current domain into x_divisions by y_divisions by z_divisions. 	
         void generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions = 1, int z_divisions = 1); 
@@ -175,27 +157,20 @@ class Domain : public Grid, public MPISendable {
         // fill data variable U
         void fillVarData(std::vector<NodeType>& rbf_centers);
 
-        std::vector<double>& getU() { return U_G; };
-
         // ******** BEGIN MPISENDABLE ************
         // The following seven routines are required by MPISendable inheritence.
         virtual int send(int my_rank, int receiver_rank); 
         virtual int receive(int my_rank, int sender_rank);
-        virtual int sendUpdate(int my_rank, int receiver_rank); 
-        virtual int receiveUpdate(int my_rank, int sender_rank);
 
-        virtual int sendFinal(int my_rank, int receiver_rank);
-        virtual int receiveFinal(int my_rank, int sender_rank);
+        virtual int sendUpdate(int my_rank, int receiver_rank) { std::cout << "[Domain] sending node updates not allowed yet.\n"; }
+        virtual int receiveUpdate(int my_rank, int sender_rank) { std::cout << "[Domain] receiving node updates not allowed yet.\n"; }
 
-        virtual int initFinal();
+        virtual int sendFinal(int my_rank, int receiver_rank) { std::cout << "[Domain] nothing final to send\n"; }
+        virtual int receiveFinal(int my_rank, int sender_rank) { std::cout << "[Domain] nothing final to receive\n"; }
+
+        virtual int initFinal() { ; }
         // ******** END MPISENDABLE ************
         
-        virtual void getFinal(std::vector<double>* final);
-
-        // Dump the final solution to a file along with the vector of nodes that
-        // the values correspond to.
-        virtual int writeFinal(std::vector<NodeType>& nodes, std::string filename);
-
         //public: 	// Member Functions
         // Fill sets Q, D, O, B, QmB and R to distinguish center memberships
         void fillCenterSets(std::vector<NodeType>& rbf_centers, std::vector<StencilType>& stencils);

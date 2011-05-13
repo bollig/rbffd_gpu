@@ -5,13 +5,6 @@ int PDE::send(int my_rank, int receiver_rank) {
 }
 
 int PDE::receive(int my_rank, int sender_rank) {;}
-int PDE::sendUpdate(int my_rank, int receiver_rank){ ;} 
-int PDE::receiveUpdate(int my_rank, int sender_rank){;}
-
-int PDE::sendFinal(int my_rank, int receiver_rank){;}
-int PDE::receiveFinal(int my_rank, int sender_rank){;}
-int PDE::initFinal(){;}
-
 
 //----------------------------------------------------------------------------
 std::string PDE::getFileDetailString() {
@@ -69,8 +62,8 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
 
     if (comm_ref.getRank() == Communicator::MASTER) {
 
-    std::string fname = "globalsol_";
-    fname.append(filename); 
+        std::string fname = "globalsol_";
+        fname.append(filename); 
 #if 0
         char nstr[256]; 
         std::string fname = "globalsol_"; 
@@ -106,13 +99,16 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
 }
 
 
-#if 0
+#if 1
 int PDE::sendUpdate(int my_rank, int receiver_rank) {
 
     if (my_rank != receiver_rank) {
         vector<int>::iterator oit;
         // vector<set<int> > O; gives us the list of (global) indices which we
         // are sending to receiver_rank		
+        
+        // FIXME: domain should not make these public. hide them behind accessors
+        std::vector<std::vector<int> >& O_by_rank = grid_ref.O_by_rank;
 
         // We send a list of node values 
         vector<double> U_O;
@@ -126,11 +122,11 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
                 // Elements in O are in global indices 
                 // so we need to first convert to local to index our U_G
                 U_O.push_back(U_G[g2l(*oit)]);
-                if (DEBUG) {
-                    cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
-                        << " (local index: " << g2l(*oit) << ")"
-                        << "]: " << U_G[g2l(*oit)] << endl;
-                }
+#if DEBUG
+                cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
+                    << " (local index: " << g2l(*oit) << ")"
+                    << "]: " << U_G[g2l(*oit)] << endl;
+#endif 
             }
         }
 
@@ -159,12 +155,12 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
             << R_sub.size() << " centers)" << endl;
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-            if (DEBUG) {
-                cout << "\t(Global Index): " << *rit << "\t (Local Index:" << g2l(
-                            *rit) << ")\tOld U_G[" << g2l(*rit) << "]: " << U_G[g2l(
-                            *rit)] << "\t New U_G[" << g2l(*rit) << "]: " << U_R[i]
-                                                 << endl;
-            }
+#if DEBUG
+            cout << "\t(Global Index): " << *rit << "\t (Local Index:" << g2l(
+                        *rit) << ")\tOld U_G[" << g2l(*rit) << "]: " << U_G[g2l(
+                        *rit)] << "\t New U_G[" << g2l(*rit) << "]: " << U_R[i]
+                                             << endl;
+#endif 
             // Global to local mapping required
             U_G[g2l(*rit)] = U_R[i]; // Overwrite with new values
         }
@@ -192,10 +188,10 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
                 // Elements in Q are in global indices
                 // so we need to first convert to local to index our U_G
                 U_Q.push_back(U_G[g2l(*qit)]);
-                if (DEBUG) {
-                    cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
-                        << "]: " << U_G[g2l(*qit)] << endl;
-                }
+#if DEBUG    
+                cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
+                    << "]: " << U_G[g2l(*qit)] << endl;
+#endif 
             }
         }
 

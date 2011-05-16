@@ -260,7 +260,6 @@ int main(int argc, char** argv) {
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
     ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
 
-#if 1
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
     // We need to provide comm_unit to pass ghost node info
@@ -278,30 +277,23 @@ int main(int argc, char** argv) {
     pde->writeLocalSolutionToFile(0); 
     
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
+    tm["updates"]->start(); 
     comm_unit->broadcastObjectUpdates(pde);
     comm_unit->barrier();
+    tm["updates"]->stop();
     
     tm["heat_init"]->stop(); 
 
     pde->writeLocalSolutionToFile(-1); 
 
-    //    pde->setDt(dt); 
+//TODO:    pde->setRelErrTol(max_global_rel_error); 
 
-#endif 
-#if 0
-    heat->setDt(subdomain->dt);
-    heat->setRelErrTol(max_global_rel_error); 
-
-    // Send updates according to MPISendable object.
-    tm["updates"]->start(); 
-    comm_unit->broadcastObjectUpdates(subdomain);
-    comm_unit->barrier();
-    tm["updates"]->stop();
     // Setup a logging class that will monitor our iteration and dump intermediate files
 #if USE_VTK
-    PDEWriter* writer = new VtuPDEWriter(subdomain, heat, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
+    // TODO: update VtuPDEWriter for the new PDE classes
+    PDEWriter* writer = new VtuPDEWriter(subdomain, pde, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
 #else 
-    PDEWriter* writer = new PDEWriter(subdomain, heat, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
+    PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
 #endif 
 
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
@@ -316,20 +308,19 @@ int main(int argc, char** argv) {
         std::cout << "*********** Solve Heat (Iteration: " << iter << ") *************" << endl;
 
         char label[256]; 
-        if (debug) {
+#if 0
             sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
             subdomain->printSolution(label); 
-        }
+#endif 
         tm["timestep"]->start(); 
-        heat->advanceOneStepWithComm(comm_unit);
+        pde->advance(TimeDependentPDE::FIRST_EULER, dt);
         tm["timestep"]->stop(); 
 
-        if (debug) {
+#if 0
             sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
             subdomain->printSolution(label); 
-        }
-
-        //        double nrm = heat->maxNorm();
+#endif 
+        //        double nrm = pde->maxNorm();
         // TODO : Need to add a "comm_unit->sendTerminate()" to
         // break all processes when problem is encountered
         //        if (nrm > 1.)
@@ -342,7 +333,7 @@ int main(int argc, char** argv) {
         }
 
     }
-
+#if 0
     printf("after heat\n");
 
     // NOTE: all local subdomains have a U_G solution which is consolidated

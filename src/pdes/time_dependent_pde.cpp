@@ -70,14 +70,14 @@ void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
 // Advancing requires: 
 //  - computing an update to the current solution (i.e., calling applyWeightsForDerivs(currentSolution)) 
 //  - applying the updates to the current solution (i.e., RK45 weighted summation of intermediate updates).
-void TimeDependentPDE::advance(TimeScheme& which) {
+void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
     switch (which) 
     {
         case FIRST_EULER: 
-            advanceFirstEuler(); 
+            advanceFirstEuler(delta_t); 
             break; 
         case SECOND_EULER: 
-            advanceSecondEuler();
+            advanceSecondEuler(delta_t);
             break;  
         default: 
             std::cout << "[TimeDependentPDE] Invalid TimeScheme specified. Bailing...\n";
@@ -86,8 +86,8 @@ void TimeDependentPDE::advance(TimeScheme& which) {
     };
 }
 
-void TimeDependentPDE::advanceFirstEuler() {;}
-void TimeDependentPDE::advanceSecondEuler() {;}
+void TimeDependentPDE::advanceFirstEuler(double dt) {;}
+void TimeDependentPDE::advanceSecondEuler(double dt) {;}
 
 
 

@@ -273,13 +273,10 @@ int main(int argc, char** argv) {
         pde = new HeatPDE(subdomain, der, comm_unit);
     }
 
-
-    pde->writeLocalSolutionToFile(1); 
-    pde->writeGlobalSolutionToFile(1); 
-    
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
     comm_unit->broadcastObjectUpdates(pde);
     comm_unit->barrier();
+
 #endif 
 #if 0
     // TODO: udpate heat to construct on grid

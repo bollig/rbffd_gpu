@@ -1,10 +1,14 @@
 #include "pde.h"
 
 int PDE::send(int my_rank, int receiver_rank) {
-
+    // Initially we have nothing to send.
+    ; 
 }
 
-int PDE::receive(int my_rank, int sender_rank) {;}
+int PDE::receive(int my_rank, int sender_rank) {
+    // Initially we have nothing to receive 
+    ;
+}
 
 //----------------------------------------------------------------------------
 std::string PDE::getFileDetailString() {
@@ -99,7 +103,6 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
 }
 
 
-#if 1
 int PDE::sendUpdate(int my_rank, int receiver_rank) {
 
     if (my_rank != receiver_rank) {
@@ -121,11 +124,11 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
                     != O_by_rank[receiver_rank].end(); oit++, i++) {
                 // Elements in O are in global indices 
                 // so we need to first convert to local to index our U_G
-                U_O.push_back(U_G[g2l(*oit)]);
+                U_O.push_back(U_G[grid_ref.g2l(*oit)]);
 #if DEBUG
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
-                    << " (local index: " << g2l(*oit) << ")"
-                    << "]: " << U_G[g2l(*oit)] << endl;
+                    << " (local index: " << grid_ref.g2l(*oit) << ")"
+                    << "]: " << U_G[grid_ref.g2l(*oit)] << endl;
 #endif 
             }
         }
@@ -156,13 +159,13 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
 #if DEBUG
-            cout << "\t(Global Index): " << *rit << "\t (Local Index:" << g2l(
-                        *rit) << ")\tOld U_G[" << g2l(*rit) << "]: " << U_G[g2l(
-                        *rit)] << "\t New U_G[" << g2l(*rit) << "]: " << U_R[i]
+            cout << "\t(Global Index): " << *rit << "\t (Local Index:" << grid_ref.g2l(
+                        *rit) << ")\tOld U_G[" << grid_ref.g2l(*rit) << "]: " << U_G[grid_ref.g2l(
+                        *rit)] << "\t New U_G[" << grid_ref.g2l(*rit) << "]: " << U_R[i]
                                              << endl;
 #endif 
             // Global to local mapping required
-            U_G[g2l(*rit)] = U_R[i]; // Overwrite with new values
+            U_G[grid_ref.g2l(*rit)] = U_R[i]; // Overwrite with new values
         }
 
         cout << "RANK " << my_rank << " REPORTS: received update" << endl;
@@ -179,23 +182,23 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
         // We send a list of node values
         vector<double> U_Q;
 
-        if (O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
+        if (grid_ref.O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
             //	cout << "O_by_rank is NOT size(0)" << endl;
             int i;
 
             // TODO the set U_G should be in order (Q, R) so we dont need this full copy (maybe...)
-            for (qit = Q.begin(); qit != Q.end(); qit++, i++) {
+            for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
                 // Elements in Q are in global indices
                 // so we need to first convert to local to index our U_G
-                U_Q.push_back(U_G[g2l(*qit)]);
+                U_Q.push_back(U_G[grid_ref.g2l(*qit)]);
 #if DEBUG    
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
-                    << "]: " << U_G[g2l(*qit)] << endl;
+                    << "]: " << U_G[grid_ref.g2l(*qit)] << endl;
 #endif 
             }
         }
 
-        sendSTL(&Q, my_rank, receiver_rank);
+        sendSTL(&grid_ref.Q, my_rank, receiver_rank);
         sendSTL(&U_Q, my_rank, receiver_rank);
         cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
     }
@@ -232,24 +235,25 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
     }
 
     cout << "RECEIVED FINAL FROM CPU " << sender_rank << endl;
-    if (DEBUG) {
+#if DEBUG
         cout << "NEW FINAL_U_G: " << endl;
         map<int, double>::iterator it;
         for (it = global_U_G.begin(); it != global_U_G.end(); it++) {
             cout << "\tU_G[" << (*it).first << "] = " << (*it).second << endl;
         }
-    }
+#endif 
 }
 
 int PDE::initFinal() {
     //pair<map<char,int>::iterator,bool> ret;
     set<int>::iterator qit;
     int i = 0;
-    for (qit = Q.begin(); qit != Q.end(); qit++, i++) {
-        global_U_G.insert(pair<int, double> (*qit, U_G[g2l(*qit)]));
+    for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
+        global_U_G.insert(pair<int, double> (*qit, U_G[grid_ref.g2l(*qit)]));
     }
 }
 
+#if 0
 void PDE::getFinal(std::vector<double> *final) {
     map<int, double>::iterator it;
     final->clear();
@@ -257,6 +261,7 @@ void PDE::getFinal(std::vector<double> *final) {
         final->push_back((*it).second);
     }
 }
+
 
 int PDE::writeFinal(std::vector<NodeType>& nodes, std::string filename) {
     //ofstream fout;

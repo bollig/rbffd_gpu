@@ -53,7 +53,10 @@ class PDE : public MPISendable
     public: 
         PDE(Domain* grid, RBFFD* der, Communicator* comm) 
             : grid_ref(*grid), der_ref(*der), comm_ref(*comm)
-        {;}
+        {
+            // We want our solution to match the number of nodes
+            U_G.resize(grid_ref.getNodeListSize());
+        }
 
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble() =0; 

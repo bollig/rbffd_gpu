@@ -333,7 +333,6 @@ int main(int argc, char** argv) {
             cout << "Press [Enter] to continue" << std::endl;
             cin.get(); 
         }
-
     }
 #if 1
     printf("after heat\n");

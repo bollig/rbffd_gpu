@@ -68,10 +68,11 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // Apply weights to an input solution vector and get the corresponding derivatives out
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             std::cout << "GPU: ";
-            deriv.resize(u.size()); 
-            applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0], isChangedU);
+            size_t nb_stencils = grid_ref.getStencilsSize();
+            deriv.resize(nb_stencils); 
+            applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
         }
-        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDeriv(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
 
     protected: 

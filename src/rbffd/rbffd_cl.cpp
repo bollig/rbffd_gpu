@@ -182,6 +182,7 @@ void RBFFD_CL::updateWeights(bool forceFinish) {
 
         if ((nb_stencils * max_stencil_size) != gpu_stencil_size) {
             // Critical error between allocate and update
+            std::cout << "nb_stencils*max_stencil_size != gpu_stencil_size" << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -249,6 +250,7 @@ void RBFFD_CL::updateFunction(size_t nb_nodes, double* u, bool forceFinish) {
 
     // There is a bug fi this works
     if (function_mem_bytes != nb_nodes*sizeof(FLOAT)) {
+        std::cout << "function_mem_bytes != nb_nodes*sizeof(FLOAT)" << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -264,13 +266,13 @@ void RBFFD_CL::updateFunction(size_t nb_nodes, double* u, bool forceFinish) {
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDeriv(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
-        this->updateFunction(npts, u, false); 
+        this->updateFunction(nb_nodes, u, false); 
     }
 
     // Will only update if necessary
@@ -292,7 +294,7 @@ void RBFFD_CL::applyWeightsForDeriv(DerType which, int npts, double* u, double* 
     }
 
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange, 
-            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(npts), 
+            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils), 
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
     err = queue.finish();
@@ -304,9 +306,10 @@ void RBFFD_CL::applyWeightsForDeriv(DerType which, int npts, double* u, double* 
     }
 
     //  err = queue.finish();
-    FLOAT* deriv_temp = new FLOAT[npts]; 
+    FLOAT* deriv_temp = new FLOAT[nb_stencils]; 
 
-    if (npts *sizeof(FLOAT) != deriv_mem_bytes) {
+    if (nb_stencils *sizeof(FLOAT) != deriv_mem_bytes) {
+        std::cout << "npts*sizeof(FLOAT) [" << nb_stencils*sizeof(FLOAT) << "] != deriv_mem_bytes [" << deriv_mem_bytes << "]" << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -323,7 +326,7 @@ void RBFFD_CL::applyWeightsForDeriv(DerType which, int npts, double* u, double* 
         std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
     }
 
-    for (int i = 0; i < npts; i++) {
+    for (int i = 0; i < nb_stencils; i++) {
 
 #if 0
         std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;

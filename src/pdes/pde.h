@@ -30,14 +30,9 @@ class PDE : public MPISendable
         // recvFinal will populate this and then we can call (TODO) getFinal()
         // to get the values as a vector.
         // SOLUTION of all nodes in global domain (valid only on master)
-        std::map<int,double> global_U_G;
+        std::map<int,double> global_U_G;    
 
 #if 0
-        void printSolution(std::string label) {
-            printVector(this->U_G, label); 
-        }
-
-
         std::vector<double>& getU() { return U_G; };
 
         virtual void getFinal(std::vector<double>* final);
@@ -61,6 +56,10 @@ class PDE : public MPISendable
         virtual void assemble() =0; 
         // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
         virtual void solve() = 0;
+
+
+        // Print the current solution to STDOUT
+        void printSolution(std::string label="Solution");
 
         // Document the solutions on disk
         void writeLocalSolutionToFile(std::string filename); 

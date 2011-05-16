@@ -253,6 +253,24 @@ int PDE::initFinal() {
     }
 }
 
+
+void PDE::printSolution(std::string set_label) {
+    cout << set_label << " = {" << endl;
+    int i = 0;
+    for (vector<SolutionType>::const_iterator setiter = U_G.begin(); setiter
+            != U_G.end(); setiter++, i++) {
+        // True -> stencil[i][j] is in center set
+        if (grid_ref.loc_to_glob.size() > 0) {
+            cout << "\t[" << i << " (global:" << grid_ref.l2g(i) << ")] = " << *setiter
+                << endl;
+        } else {
+            cout << "\t[" << i << " (" << i << ")] = " << *setiter << endl;
+        }
+    }
+    cout << "}" << endl;
+}
+
+
 #if 0
 void PDE::getFinal(std::vector<double> *final) {
     map<int, double>::iterator it;

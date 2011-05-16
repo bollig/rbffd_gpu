@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
     }
 
     // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
-//    Derivative* der; 
+    //    Derivative* der; 
     RBFFD* der;
     if (use_gpu) {
         der = new RBFFD_CL(subdomain, dim, comm_unit->getRank()); 
@@ -275,18 +275,18 @@ int main(int argc, char** argv) {
 
     pde->fillInitialConditions(exact);
     pde->writeLocalSolutionToFile(0); 
-    
+
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
     tm["updates"]->start(); 
     comm_unit->broadcastObjectUpdates(pde);
     comm_unit->barrier();
     tm["updates"]->stop();
-    
+
     tm["heat_init"]->stop(); 
 
     pde->writeLocalSolutionToFile(-1); 
 
-//TODO:    pde->setRelErrTol(max_global_rel_error); 
+    //TODO:    pde->setRelErrTol(max_global_rel_error); 
 
     // Setup a logging class that will monitor our iteration and dump intermediate files
 #if USE_VTK
@@ -308,24 +308,29 @@ int main(int argc, char** argv) {
         std::cout << "*********** Solve Heat (Iteration: " << iter << ") *************" << endl;
 
         char label[256]; 
-#if 0
-            sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
-            subdomain->printSolution(label); 
+#if 1
+        sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
+        pde->printSolution(label); 
 #endif 
+
         tm["timestep"]->start(); 
         pde->advance(TimeDependentPDE::FIRST_EULER, dt);
         tm["timestep"]->stop(); 
 
-#if 0
-            sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
-            subdomain->printSolution(label); 
-#endif 
-        //        double nrm = pde->maxNorm();
-        // TODO : Need to add a "comm_unit->sendTerminate()" to
-        // break all processes when problem is encountered
-        //        if (nrm > 1.)
-        //            break;
+        // This just double checks that all procs have ghost node info.
+        // pde->advance(..) should broadcast intermediate updates as needed,
+        // but updated solution. 
+        tm["updates"]->start(); 
+        comm_unit->broadcastObjectUpdates(pde);
+        comm_unit->barrier();
+        tm["updates"]->stop();
 
+#if 1
+        sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
+        pde->printSolution(label); 
+#endif 
+
+        //        double nrm = pde->maxNorm();
         if (prompt_to_continue && comm_unit->isMaster()) {
             std::string buf; 
             cout << "Press [Enter] to continue" << std::endl;
@@ -372,24 +377,24 @@ int main(int argc, char** argv) {
     }
 
 
-cout.flush();
-printf("Cleaning up objects\n");
+    cout.flush();
+    printf("Cleaning up objects\n");
 
-// Writer first so we can dump final solution
-delete(writer);
-delete(heat);
+    // Writer first so we can dump final solution
+    delete(writer);
+    delete(heat);
 #endif 
-delete(subdomain);
-delete(settings);
-delete(comm_unit); 
+    delete(subdomain);
+    delete(settings);
+    delete(comm_unit); 
 
 
-printf("REACHED THE END OF MAIN\n");
+    printf("REACHED THE END OF MAIN\n");
 
-tm["total"]->stop();
-tm["total"]->printAll();
-tm["total"]->writeAllToFile();
+    tm["total"]->stop();
+    tm["total"]->printAll();
+    tm["total"]->writeAllToFile();
 
-exit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------

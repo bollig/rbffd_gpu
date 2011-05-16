@@ -25,7 +25,6 @@ class PDE : public MPISendable
         std::vector<SolutionType> U_G; 
 
 
-
     private:
         // A map for global INDEX=VALUE storage of the final solution
         // recvFinal will populate this and then we can call (TODO) getFinal()

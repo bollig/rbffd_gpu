@@ -125,7 +125,7 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
                 // Elements in O are in global indices 
                 // so we need to first convert to local to index our U_G
                 U_O.push_back(U_G[grid_ref.g2l(*oit)]);
-#if DEBUG
+#if 0
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
                     << " (local index: " << grid_ref.g2l(*oit) << ")"
                     << "]: " << U_G[grid_ref.g2l(*oit)] << endl;
@@ -158,7 +158,7 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
             << R_sub.size() << " centers)" << endl;
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-#if DEBUG
+#if 1 
             cout << "\t(Global Index): " << *rit << "\t (Local Index:" << grid_ref.g2l(
                         *rit) << ")\tOld U_G[" << grid_ref.g2l(*rit) << "]: " << U_G[grid_ref.g2l(
                         *rit)] << "\t New U_G[" << grid_ref.g2l(*rit) << "]: " << U_R[i]

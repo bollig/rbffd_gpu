@@ -344,23 +344,23 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     std::vector<double> sol_vec_int(nb_nodes - bindices.size()); 
     std::vector<double> sol_exact_int(nb_nodes - bindices.size()); 
-
+#if 0
     for (size_t i = 0; i < nb_bnd; i++ ){ 
         // Skim off the boundary
         sol_vec_bnd[i] = sol_vec[bindices[i]]; 
         sol_exact_bnd[i] = sol_exact[bindices[i]]; 
     }
-
+#endif 
     int i = 0;  // Index on boundary
     int k = 0;  // index on interior
     //for (int j = 0; j < sol_vec.size(); j++) {
     for (int j = 0; j < nb_nodes; j++) {
         // Skim off the boundary
         if (j == bindices[i]) {
-     //       sol_vec_bnd[i] = sol_vec[j]; 
-       //     sol_exact_bnd[i] = sol_exact[j]; 
+            sol_vec_bnd[i] = sol_vec[j]; 
+            sol_exact_bnd[i] = sol_exact[j]; 
             i++; 
-            std::cout << "BOUNDARY: " << i << " / " << j << std::endl;
+            //std::cout << "BOUNDARY: " << i << " / " << j << std::endl;
         } else {
             sol_vec_int[k] = sol_vec[j]; 
             sol_exact_int[k] = sol_exact[j]; 

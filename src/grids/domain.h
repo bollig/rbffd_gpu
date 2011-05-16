@@ -118,7 +118,7 @@ class Domain : public Grid, public MPISendable {
 
         // When we move to 3D this should be updated to reflect zmin, zmax
         // We could also make this polar coords, striped subdomains etcs. 
-        bool isInsideSubdomain(NodeType& pt) 
+        bool isOutsideSubdomain(NodeType& pt) 
         {
             // TODO : need to support xmin != xmax && zmin != zmax but ymin==ymax 
             // 		  and other combinations

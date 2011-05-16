@@ -250,7 +250,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // Generate sets Q and D
     for (int i = 0; i < rbf_centers.size(); i++) {
         NodeType& pt = rbf_centers[i];
-        if (this->isInsideSubdomain(pt))
+        if (this->isOutsideSubdomain(pt))
             continue; // Do not add to Q or D
         // If we dont continue then it is a center in Q.
         Q.insert(i);
@@ -259,7 +259,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
         bool depR = false;
         for (int j = 0; j < stencils[i].size(); j++) { // Check all nodes in corresponding stencil
             NodeType& pt2 = rbf_centers[stencils[i][j]];
-            if (this->isInsideSubdomain(pt2)) {
+            if (this->isOutsideSubdomain(pt2)) {
                 depR = true;
             }
         }

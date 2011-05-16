@@ -36,6 +36,7 @@ void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
 //  - computing an update to the current solution (i.e., calling applyWeightsForDerivs(currentSolution)) 
 //  - applying the updates to the current solution (i.e., RK45 weighted summation of intermediate updates).
 void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
+    tm["advance"]->start(); 
     switch (which) 
     {
         case FIRST_EULER: 
@@ -50,10 +51,10 @@ void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
             break; 
     };
     cur_time += delta_t; 
+    tm["advance"]->stop(); 
 }
 
 void TimeDependentPDE::advanceFirstEuler(double dt) {
-    tm["advance"]->start(); 
 
     size_t nb_stencils = grid_ref.getStencilsSize(); 
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
@@ -65,20 +66,12 @@ void TimeDependentPDE::advanceFirstEuler(double dt) {
 
     this->solve(s, &feval1, cur_time); 
 
-    tm["applyDerivsONLY"]->start();  
     // TODO: (ADD) Use 5 point Cartesian formula for the Laplacian
     //lapl_deriv = grid.computeCartLaplacian(s);
-    
-#if 1
-    for (int i = 0; i < feval1.size(); i++) {
-        Vec3& v = nodes[i];
-        printf("(local: %d), lapl(%f,%f,%f)= %f\tUpdated Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
-    }
-#endif
 
     // compute u^* = u^n + dt*lapl(u^n)
     // explicit scheme
-    for (int i = 0; i < feval1.size(); i++) {
+    for (size_t i = 0; i < feval1.size(); i++) {
         // first order
         Vec3& v = nodes[i];
         //printf("dt= %f, time= %f\n", dt, time);
@@ -90,12 +83,12 @@ void TimeDependentPDE::advanceFirstEuler(double dt) {
         // NOTE: f is updated each timestep
         //       lapl_deriv is calculated on GPU (ideally by passing a GPU mem pointer into it) 
         s[i] = s[i] + dt* ( feval1[i] + f);
+        printf("(local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
     }
 
     // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time); 
 
-   tm["applyDerivsONLY"]->stop(); 
 #if 0
     // Now we need to make sure all CPUs have R2 (intermediate part of timestep)
     // Do NOT use Domain as buffer for computation

@@ -347,10 +347,10 @@ int main(int argc, char** argv) {
     //    subdomain->writeGlobalSolutionToFile(-1); 
     std::cout << "Checking Solution on Master\n";
     if (comm_unit->getRank() == 0) {
+        pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
 #if 0
         // NOTE: the final solution is assembled, but we have to use the 
         // GLOBAL node list instead of a local subdomain node list
-        pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
         cout << "FINAL ITER: " << iter << endl;
         std::vector<double> final_sol(grid->getNodeListSize()); 
         ifstream fin; 

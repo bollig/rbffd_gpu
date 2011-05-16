@@ -19,6 +19,7 @@ class TimeDependentPDE : public PDE
         TimeDependentPDE(Domain* grid, RBFFD* der, Communicator* comm) 
             : PDE(grid, der, comm), cur_time(0.) 
         {
+            tm["advance"] = new EB::Timer("[TimeDependentPDE] Advance timestep");
         }
 
         // Fill in the initial conditions of the PDE. (overwrite the solution)

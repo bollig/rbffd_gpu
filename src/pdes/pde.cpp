@@ -130,7 +130,7 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
                 // Elements in O are in global indices 
                 // so we need to first convert to local to index our U_G
                 U_O.push_back(U_G[grid_ref.g2l(*oit)]);
-#if 0
+#if 1
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
                     << " (local index: " << grid_ref.g2l(*oit) << ")"
                     << "]: " << U_G[grid_ref.g2l(*oit)] << endl;

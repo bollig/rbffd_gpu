@@ -153,7 +153,6 @@ class Domain : public Grid, public MPISendable {
 
 
         // fill data variable U
-        void fillVarData(std::vector<NodeType>& rbf_centers);
 
         // ******** BEGIN MPISENDABLE ************
         // The following seven routines are required by MPISendable inheritence.
@@ -176,7 +175,7 @@ class Domain : public Grid, public MPISendable {
         // Generate a set of ALL nodes that are used by the stencils in set s.
         // Uses stencil to lookup nodes required by s.
         // memory for return set is allocoted within stencilSet
-        std::set<int>& stencilSet(std::set<int>& s, std::vector<StencilType>& stencil);
+        void stencilSet(std::set<int>& s, std::vector<StencilType>& stencil, std::set<int>* Sset_out);
 
         // Print all nodes in stencils and show display_char if they are in center_set; '.' otherwise. 
         void printStencilNodesIn(const std::vector<StencilType>& stencils, const std::set<int>& center_set, std::string display_char); 
@@ -184,7 +183,8 @@ class Domain : public Grid, public MPISendable {
         void printVerboseDependencyGraph(); 
 
         // Print contents of a set
-        void printSet(const std::set<int>& center_set, std::string set_label) ; 
+        void printSetL2G(const std::set<int>& center_set, std::string set_label) ; 
+        void printSetG2L(const std::set<int>& center_set, std::string set_label) ; 
 
         // Print contents of a set
         void printVector(const std::vector<double>& stencil_radii, std::string set_label) ; 

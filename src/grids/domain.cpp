@@ -26,7 +26,6 @@ Domain::Domain(const Domain& subdomain) {
 {
     // Forms sets (Q,O,R) and l2g/g2l maps
     fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii()); 
-    fillVarData(grid->getNodeList());
     this->max_st_size = grid->getMaxStencilSize();
 }
 
@@ -84,7 +83,6 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         printf("\n ***************** CPU %d ***************** \n", i);
         // Forms sets (Q,O,R) and l2g/g2l maps
         subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii); 
-        subdomains[i]->fillVarData(this->node_list); // Sets function values in U
     }
 
     for (int i = 0; i < subdomains.size(); i++) {
@@ -119,9 +117,6 @@ int Domain::send(int my_rank, int receiver_rank) {
 
     sendSTL(&node_list, my_rank, receiver_rank); // Q_centers + R_centers = node_list (all nodes necessary on receiver_rank CPU)
 
-#ifndef REMOVE_SOLUTION_FROM_DOMAIN
-    sendSTL(&U_G, my_rank, receiver_rank); // Initial function values of all centers in G
-#endif 
     sendSTL(&avg_stencil_radii, my_rank, receiver_rank); // Average distances (possibly stencil radii)
 
     sendSTL(&loc_to_glob, my_rank, receiver_rank); // l2g
@@ -163,9 +158,6 @@ int Domain::receive(int my_rank, int sender_rank) {
 
     recvSTL(&node_list, my_rank, sender_rank); // Q_centers + R_centers = node_list (all nodes necessary on sender_rank CPU)
 
-#ifndef REMOVE_SOLUTION_FROM_DOMAIN
-    recvSTL(&U_G, my_rank, sender_rank); // Initial Function values of all centers in G
-#endif
     recvSTL(&avg_stencil_radii, my_rank, sender_rank); // Average distances (possibly stencil radii)
 
     recvSTL(&loc_to_glob, my_rank, sender_rank); // l2g
@@ -216,15 +208,20 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
     if (O_by_rank.size() == 0) {
         cout << "RESIZING O_by_rank" << endl;
         O_by_rank.resize(comm_size);
-        printSet(this->O, "Original O");
+        printSetG2L(this->O, "Original O");
     }
 
+        printSetG2L(subdomain_R, "R-by-rank");
+
+#if 0
+    set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end())); 
+#else 
     for (qit = subdomain_R.begin(); qit != subdomain_R.end(); qit++, i++) {
-        std::cout << "R[" << i << "] = " << *qit << std::endl;
         if (isInSet(*qit, this->O)) {
             this->O_by_rank[subdomain_rank].push_back(*qit);
         }
     }
+#endif 
     char label[256];
     sprintf(label, "Rank %d O_by_rank[%d]", id, subdomain_rank);
     printVector(this->O_by_rank[subdomain_rank], label);
@@ -274,13 +271,15 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // Each Q (a set) is, by construction, sorted
 
     //Create set of stencil points of all elements of Q (ineffecient since there are repeats)
-    set<int>& SQ = stencilSet(Q, stencils);
+    set<int> SQ; 
+    stencilSet(Q, stencils, &SQ);
 
     // Set of nodes from stencils that are not in Q (i.e. not on the Domain)
     // compute set R = S(Q) \ Q
-    set_difference(SQ.begin(), SQ.end(), Q.begin(), Q.end(), inserter(R,
-                R.end()));
+    std::cout << "R.size before difference: " << R.size() << std::endl;
+    set_difference(SQ.begin(), SQ.end(), Q.begin(), Q.end(), inserter(R, R.end()));
 
+    std::cout << "R.size after difference: " << R.size() << std::endl;
     // Determine set O = pts in Q that are in stencils on other Domains
     // O: S(A\Q) \ (A\Q) = S(A\Q) intersect Q
 
@@ -296,10 +295,10 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
                 AmQ.end()));
 
     // S(A\Q)
-    set<int>& SAmQ = stencilSet(AmQ, stencils);
+    set<int> SAmQ;
+    stencilSet(AmQ, stencils, &SAmQ);
     // O = S(A\Q) intersect Q
-    set_intersection(SAmQ.begin(), SAmQ.end(), Q.begin(), Q.end(), inserter(O,
-                O.end()));
+    set_intersection(SAmQ.begin(), SAmQ.end(), Q.begin(), Q.end(), inserter(O,O.end()));
 
     // B = O U D, But B\O is NOT_EQUAL to D
     set_union(D.begin(), D.end(), O.begin(), O.end(), inserter(B, B.end()));
@@ -317,9 +316,6 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     printf("QmB.size= %d\n", (int) QmB.size());
     printf("R.size= %d\n", (int) R.size());
     printf("G.size = %d\n", (int) G.size());
-
-    delete &SAmQ;
-    delete &SQ;
 }
 
 //----------------------------------------------------------------------
@@ -397,8 +393,8 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
     printf("avg_stencil_radii size= %d\n", (int) avg_stencil_radii.size());
 }
 //----------------------------------------------------------------------
-set<int>& Domain::stencilSet(set<int>& s, vector<StencilType>& stencil) {
-    set<int>* Sset = new set<int> ;
+void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>* Sset) {
+    //set<int>* Sset = new set<int> ;
     set<int>::iterator qit;
 
     //set<int>::iterator qit;
@@ -410,37 +406,9 @@ set<int>& Domain::stencilSet(set<int>& s, vector<StencilType>& stencil) {
             Sset->insert(si[j]);
         }
     }
-
-    return *Sset;
+    //return *Sset;
 }
-//----------------------------------------------------------------------
-void Domain::fillVarData(vector<NodeType>& rbf_centers) {
-#ifndef REMOVE_SOLUTION_FROM_DOMAIN
-    // Initial condition: linear data: x + 2 y + 3 z
-    // NOTE: the loops here should be structured similar to Domain::fillLocalData
-    // to ensure our l2g and g2l mappings apply correctly.
-    set<int>::iterator qit;
 
-    for (qit = QmB.begin(); qit != QmB.end(); qit++) {
-        NodeType& v = rbf_centers[*qit];
-        double s = *qit; //v.x() + 2.*v.y() + 3.*v.z();
-        U_G.push_back(s);
-    }
-
-    for (qit = B.begin(); qit != B.end(); qit++) {
-        NodeType& v = rbf_centers[*qit];
-        double s = *qit;//v.x() + 2.*v.y() + 3.*v.z();
-        U_G.push_back(s);
-    }
-
-    // Initial R values (these will be updated at each iteration)
-    for (qit = R.begin(); qit != R.end(); qit++) {
-        NodeType& v = rbf_centers[*qit];
-        double s = *qit;//v.x() + 2.*v.y() + 3.*v.z();
-        U_G.push_back(s);
-    }
-#endif 
-}
 //----------------------------------------------------------------------
 
 
@@ -572,7 +540,19 @@ bool Domain::dependsOnSet(const int local_stencil_id, const set<int>& center_set
     return false;
 }
 
-void Domain::printSet(const set<int>& center_set, std::string set_label) {
+void Domain::printSetL2G(const set<int>& center_set, std::string set_label) {
+    cout << set_label << " = {" << endl;
+    for (set<int>::const_iterator setiter = center_set.begin(); setiter
+            != center_set.end(); setiter++) {
+        // True -> stencil[i][j] is in center set
+        int i = *setiter;
+        cout << "\t" << i << " (local:" << l2g(i) << ")" << endl;
+    }
+    cout << "}" << endl;
+}
+
+
+void Domain::printSetG2L(const set<int>& center_set, std::string set_label) {
     cout << set_label << " = {" << endl;
     for (set<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++) {

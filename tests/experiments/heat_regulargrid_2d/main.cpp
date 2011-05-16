@@ -120,7 +120,8 @@ int main(int argc, char** argv) {
         if (grid->loadFromFile()) 
         {
             printf("************** Generating new Grid **************\n"); 
-            grid->setSortBoundaryNodes(true); 
+            //grid->setSortBoundaryNodes(true); 
+            grid->setSortBoundaryNodes(false); 
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 

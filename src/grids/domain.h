@@ -207,8 +207,9 @@ class Domain : public Grid, public MPISendable {
 
         // Print contents of a set
         void printVector(const std::vector<double>& stencil_radii, std::string set_label) ; 
-        void printVector(const std::vector<int>& center_set, std::string set_label) ; 
         void printVector(const std::vector<size_t>& center_set, std::string set_label) ; 
+        void printVectorL2G(const std::vector<int>& center_set, std::string set_label) ; 
+        void printVectorG2L(const std::vector<int>& center_set, std::string set_label) ; 
 
         void printStencil(const StencilType& stencil, std::string stencil_label) ;
 

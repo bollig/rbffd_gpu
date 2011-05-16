@@ -211,10 +211,10 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
     if (O_by_rank.size() == 0) {
         cout << "RESIZING O_by_rank" << endl;
         O_by_rank.resize(comm_size);
-        printSetG2L(this->O, "Original O");
+        printSetL2G(this->O, "Original O");
     }
 
-        printSetG2L(subdomain_R, "R-by-rank");
+//        printSetG2L(subdomain_R, "R-by-rank");
 
 #if 0
     set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end())); 
@@ -227,7 +227,7 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
 #endif 
     char label[256];
     sprintf(label, "Rank %d O_by_rank[%d]", id, subdomain_rank);
-    printVector(this->O_by_rank[subdomain_rank], label);
+    printVectorL2G(this->O_by_rank[subdomain_rank], label);
 
     return;
 }
@@ -260,7 +260,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
         if (!this->isInsideSubdomain(pt)) {
             continue; 
         } 
-
+        std::cout << "DOMAIN " << id << ", ADDED NODE: " << i << std::endl;
         Q.insert(i);
 
         // Now, if the center is in Q but it depends on nodes in R then we need to distinguish
@@ -588,10 +588,10 @@ void Domain::printVector(const vector<double>& stencil_radii, std::string set_la
     cout << "}" << endl;
 }
 
-void Domain::printVector(const vector<int>& center_set, std::string set_label) {
+void Domain::printVector(const vector<size_t>& center_set, std::string set_label) {
     cout << set_label << " = {" << endl;
     int i = 0;
-    for (vector<int>::const_iterator setiter = center_set.begin(); setiter
+    for (vector<size_t>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
         if (loc_to_glob.size() > 0) {
@@ -604,19 +604,25 @@ void Domain::printVector(const vector<int>& center_set, std::string set_label) {
     cout << "}" << endl;
 }
 
-
-void Domain::printVector(const vector<size_t>& center_set, std::string set_label) {
+void Domain::printVectorL2G(const vector<int>& center_set, std::string set_label) {
     cout << set_label << " = {" << endl;
     size_t i = 0;
-    for (vector<size_t>::const_iterator setiter = center_set.begin(); setiter
+    for (vector<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
-        if (loc_to_glob.size() > 0) {
-            cout << "\t[" << i << " (" << loc_to_glob[i] << ")] = " << *setiter
+            cout << "\t[" << i << " (" << l2g(i) << ")] = " << *setiter
                 << endl;
-        } else {
-            cout << "\t[" << i << " (" << i << ")] = " << *setiter << endl;
-        }
+    }
+    cout << "}" << endl;
+}
+void Domain::printVectorG2L(const vector<int>& center_set, std::string set_label) {
+    cout << set_label << " = {" << endl;
+    size_t i = 0;
+    for (vector<int>::const_iterator setiter = center_set.begin(); setiter
+            != center_set.end(); setiter++, i++) {
+        // True -> stencil[i][j] is in center set
+            cout << "\t[" << i << " (" << g2l(i) << ")] = " << *setiter
+                << endl;
     }
     cout << "}" << endl;
 }

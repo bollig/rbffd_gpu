@@ -344,7 +344,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     std::vector<double> sol_vec_int(nb_nodes - bindices.size()); 
     std::vector<double> sol_exact_int(nb_nodes - bindices.size()); 
-#if 1
+#if 0
     for (size_t i = 0; i < nb_bnd; i++ ){ 
         // Skim off the boundary
     //    sol_vec_bnd[i] = sol_vec[bindices[i]]; 
@@ -360,12 +360,12 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
         if (j == bindices[i]) {
             sol_vec_bnd[i] = sol_vec[j]; 
             sol_exact_bnd[i] = sol_exact[j]; 
-            std::cout << "BOUNDARY: " << sol_vec_bnd[i] << std::endl;
+            //std::cout << "BOUNDARY: " << sol_vec_bnd[i] << std::endl;
             i++; 
         } else {
             sol_vec_int[k] = sol_vec[j]; 
             sol_exact_int[k] = sol_exact[j]; 
-            std::cout << "INTERIOR: " << sol_vec_int[k] << std::endl;
+            //std::cout << "INTERIOR: " << sol_vec_int[k] << std::endl;
             k++; 
             // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
         }

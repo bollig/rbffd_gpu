@@ -60,9 +60,7 @@ int main(int argc, char** argv) {
 	int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
 	int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
 
-	double dt = 0.001;
-
-	Domain* original_domain = new Domain(grid, dt, comm_unit->getSize()); 
+	Domain* original_domain = new Domain(grid, comm_unit->getSize()); 
 	//domain_decomp->printVerboseDependencyGraph(); 
 
 	// pre allocate pointers to all of the subdivisions

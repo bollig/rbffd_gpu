@@ -18,11 +18,12 @@ SET(REQUIRED_SOURCE_FILES
     grids/grid_interface.cpp
     grids/domain.cpp
 
-    #   pdes/elliptic/ncar_poisson1.cpp
+
     #    pdes/parabolic/heat.cpp
     pdes/pde.cpp
     pdes/time_dependent_pde.cpp
     pdes/parabolic/heat_pde.cpp
+    pdes/elliptic/ncar_poisson1.cpp
 
     rbffd/rbffd.cpp
     rbffd/derivative_tests.cpp
@@ -53,9 +54,9 @@ SET( REQUIRED_CL_SOURCE_FILES
     # find * -name "*cl.c*"
     #*	pdes/elliptic/ncar_poisson1_cl.cpp
     #P1 pdes/elliptic/ncar_poisson2_cl.cpp
-    #* pdes/elliptic/nonuniform_poisson1_cl.cpp
+    pdes/elliptic/nonuniform_poisson1_cl.cpp
     rbffd/rbffd_cl.cpp
-    )
+)
 
 ###############################################
 # Project Binaries

@@ -250,9 +250,9 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
     printf("Domain %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f\n", id, xmin, xmax,
             ymin, ymax, zmin, zmax);
-    printf("NB_NODES: %d\n", rbf_centers.size());
-    printf("Q_NODES: %d\n", Q.size());
-    printf("NB_STENCILS: %d\n", stencils.size());
+//    printf("NB_NODES: %d\n", rbf_centers.size());
+ //   printf("Q_NODES: %d\n", Q.size());
+ //   printf("NB_STENCILS: %d\n", stencils.size());
 
     // Generate sets Q and D
     for (size_t i = 0; i < rbf_centers.size(); i++) {
@@ -260,7 +260,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
         if (!this->isInsideSubdomain(pt)) {
             continue; 
         } 
-        std::cout << "DOMAIN " << id << ", ADDED NODE: " << i << std::endl;
+//        std::cout << "DOMAIN " << id << ", ADDED NODE: " << i << std::endl;
         Q.insert(i);
 
         // Now, if the center is in Q but it depends on nodes in R then we need to distinguish

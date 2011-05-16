@@ -293,7 +293,7 @@ int main(int argc, char** argv) {
     PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
 #endif 
 
-    subdomain->printCenterMemberships(subdomain->G, "G = " );
+//    subdomain->printCenterMemberships(subdomain->G, "G = " );
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
     int iter;
 

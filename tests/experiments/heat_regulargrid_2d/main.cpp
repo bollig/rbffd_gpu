@@ -367,9 +367,6 @@ int main(int argc, char** argv) {
             }
         }
         fin.close();
-#else 
-        std::vector<SolutionType> final_sol(grid->getNodeListSize()); 
-        pde->getGlobalSolution(&final_sol); 
 #endif 
         std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
         pde->checkGlobalError(exact, grid->getNodeList(), max_global_rel_error); 

@@ -50,7 +50,7 @@ class PDE : public MPISendable
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble() =0; 
         // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
-        virtual void solve() = 0;
+        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out) = 0;
 
 
         // Print the current solution to STDOUT
@@ -63,13 +63,13 @@ class PDE : public MPISendable
         void writeLocalSolutionToFile(int iter=0) { this->writeLocalSolutionToFile(this->getFilename(iter)); }  
         void writeGlobalSolutionToFile(int iter=0) { this->writeGlobalSolutionToFile(this->getFilename(iter)); }
 
-        
+
         // Dump the final solution to a file along with the vector of nodes that
         // the values correspond to.
         // NOTE: the nodes from the GLOBAL grid must be passed here because this class
         //       is only aware of the LOCAL subgrid prior to this point.
         virtual int writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::string filename);
-        
+
         // Fill the passed vector with the global solution
         virtual void getGlobalSolution(std::vector<double>* final);
 
@@ -140,7 +140,7 @@ class PDE : public MPISendable
         // NOTE: replace spaces with '_'
         virtual std::string getFileDetailString(); 
 
-	    virtual std::string className() = 0;
+        virtual std::string className() = 0;
         // =====================================================================
 };
 

@@ -35,6 +35,12 @@ class TimeDependentPDE : public PDE
         //  are required), then archive the original solution and any subsequent
         //  buffers and overwrite the final solution at the end of the routine.
         virtual void advance(TimeScheme which, double delta_t);
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, double t)=0;
+
+        // If we use an explicit scheme we can enforce boundaries here
+        // Else, leave this routine empty for implicit and enforce boundaries
+        // in the assembled matrix L.
+        virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t) = 0;
 
         void setTime(double current_time) { cur_time = current_time; }
         double getTime() { return cur_time; }
@@ -53,6 +59,10 @@ class TimeDependentPDE : public PDE
                 (*exact_vec)[i] = exact->at(*it, cur_time); 
             }
         }
+
+
+        // We'll hide this routine because we want one based on time (see above)
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out) { std::cout << "ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
 
 
 };

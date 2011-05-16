@@ -3,14 +3,17 @@
 
 #include "pdes/time_dependent_pde.h"
 
+// TODO: extend this class and compute diffusion in two terms: lapl(y(t)) = div(y(t)) .dot. grad(y(t))
 class HeatPDE : public TimeDependentPDE
 {
     private: 
         std::vector<SolutionType> boundary_values; 
+        // T/F : are the weights already computed so we can avoid that cost?
+        bool weightsPrecomputed;
 
     public: 
-        HeatPDE(Domain* grid, RBFFD* der, Communicator* comm) 
-            : TimeDependentPDE(grid, der, comm)
+        HeatPDE(Domain* grid, RBFFD* der, Communicator* comm, bool weightsComputed=false) 
+            : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed)
         { ; }
 
         // This should fill the solution vector with our initial conditions. 

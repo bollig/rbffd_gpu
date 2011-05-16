@@ -270,7 +270,7 @@ int main(int argc, char** argv) {
 #endif 
     { 
         // Implies initial conditions are generated
-        pde = new HeatPDE(subdomain, der, comm_unit);
+        pde = new HeatPDE(subdomain, der, comm_unit, true);
     }
 
     pde->fillInitialConditions(exact);

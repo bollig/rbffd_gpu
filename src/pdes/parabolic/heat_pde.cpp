@@ -29,8 +29,9 @@ void HeatPDE::fillInitialConditions(ExactSolution* exact) {
 
 void HeatPDE::assemble() 
 {
-    std::cout << "NEED TO RECOMPUTE WEIGHTS? ";
-    der_ref.computeAllWeightsForAllStencils();
+    if (!weightsPrecomputed) {
+        der_ref.computeAllWeightsForAllStencils();
+    }
 }
 
 // evaluate f_out = f(t,y(t)) so we can use it to compute a 
@@ -46,8 +47,6 @@ void HeatPDE::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f
     // (e.g., DerivativeCL will compute on GPU using OpenCL)
     der_ref.applyWeightsForDeriv(RBFFD::LAPL, y_t, lapl_deriv);
 }
-
-// TODO: extend this class and compute diffusion in two terms: lapl(y(t)) = div(y(t)) .dot. grad(y(t))
 
 
 // Handle the boundary conditions however we want to. 

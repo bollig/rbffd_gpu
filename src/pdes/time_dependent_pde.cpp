@@ -64,26 +64,25 @@ void TimeDependentPDE::advanceFirstEuler(double dt) {
     std::vector<double>& s = this->U_G; 
     std::vector<SolutionType> feval1(nb_stencils);  
 
+    // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
+    // For explicit schemes we can just solve for our weights and have them stored in memory.
+    this->assemble(); 
+
+    // This routine will apply our weights to "s" in however many intermediate steps are required
+    // and store the results in feval1
     this->solve(s, &feval1, cur_time); 
 
     // TODO: (ADD) Use 5 point Cartesian formula for the Laplacian
     //lapl_deriv = grid.computeCartLaplacian(s);
 
     // compute u^* = u^n + dt*lapl(u^n)
-    // explicit scheme
     for (size_t i = 0; i < feval1.size(); i++) {
-        // first order
-        Vec3& v = nodes[i];
+        NodeType& v = nodes[i];
         //printf("dt= %f, time= %f\n", dt, time);
+        // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
-        //double f = 0.;
-        //printf("force (local: %d) = %f\n", i, f);
-        // TODO: offload this to GPU. 
-        // s += alpha * lapl_deriv + f
-        // NOTE: f is updated each timestep
-        //       lapl_deriv is calculated on GPU (ideally by passing a GPU mem pointer into it) 
         s[i] = s[i] + dt* ( feval1[i] + f);
-        printf("(local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
+        //printf("(local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
     }
 
     // reset boundary solution

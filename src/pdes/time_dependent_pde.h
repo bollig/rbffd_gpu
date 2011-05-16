@@ -2,11 +2,14 @@
 #define __TIME_DEPENDENT_PDE_H__
 
 #include "pdes/pde.h"
-#include "exact_solutions/exact_solution.h"
 
 // Interface class
 class TimeDependentPDE : public PDE 
 {
+    protected: 
+        // The current time of our solution (typ. # of iterations * dt)
+        double cur_time;    
+
     // This count should match the number of TimeScheme types
     public:
 #define NUM_TIME_SCHEMES 3
@@ -14,7 +17,7 @@ class TimeDependentPDE : public PDE
 
     public: 
         TimeDependentPDE(Domain* grid, RBFFD* der, Communicator* comm) 
-            : PDE(grid, der, comm) 
+            : PDE(grid, der, comm), cur_time(0.) 
         {
         }
 
@@ -33,9 +36,23 @@ class TimeDependentPDE : public PDE
         //  buffers and overwrite the final solution at the end of the routine.
         virtual void advance(TimeScheme which, double delta_t);
 
+        void setTime(double current_time) { cur_time = current_time; }
+        double getTime() { return cur_time; }
+
     protected: 
         virtual void advanceFirstEuler(double dt);
         virtual void advanceSecondEuler(double dt);
+
+        // Fill vector with exact solution at provided nodes.
+        // NOTE: override in time dependent PDE to leverage time-based solutions
+        virtual void getExactSolution(ExactSolution* exact, std::vector<NodeType>& nodes, std::vector<SolutionType>* exact_vec) {
+            std::vector<NodeType>::iterator it; 
+            exact_vec->resize(nodes.size());
+            size_t i = 0; 
+            for (it = nodes.begin(); it != nodes.end(); it++, i++) {
+                (*exact_vec)[i] = exact->at(*it, cur_time); 
+            }
+        }
 
 
 };

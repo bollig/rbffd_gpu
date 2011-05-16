@@ -347,6 +347,7 @@ int main(int argc, char** argv) {
     //    subdomain->writeGlobalSolutionToFile(-1); 
     std::cout << "Checking Solution on Master\n";
     if (comm_unit->getRank() == 0) {
+#if 0
         // NOTE: the final solution is assembled, but we have to use the 
         // GLOBAL node list instead of a local subdomain node list
         pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
@@ -354,7 +355,7 @@ int main(int argc, char** argv) {
         std::vector<double> final_sol(grid->getNodeListSize()); 
         ifstream fin; 
         fin.open("FINAL_SOLUTION.txt"); 
-#if 0
+
         int count = 0; 
         for (int count = 0; count < final_sol.size(); count++) {
             Vec3 node; 
@@ -366,10 +367,14 @@ int main(int argc, char** argv) {
             }
         }
         fin.close();
-        std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-        pde->checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
-        std::cout << "============== Solution Valid =============\n"; 
+#else 
+        std::vector<SolutionType> final_sol(grid->getNodeListSize()); 
+        pde->getGlobalSolution(&final_sol); 
 #endif 
+        std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
+        pde->checkGlobalError(exact, grid->getNodeList(), max_global_rel_error); 
+        std::cout << "============== Solution Valid =============\n"; 
+
         delete(grid);
     }
 

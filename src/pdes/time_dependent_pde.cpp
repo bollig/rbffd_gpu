@@ -84,6 +84,7 @@ void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
             exit(EXIT_FAILURE); 
             break; 
     };
+    cur_time += delta_t; 
 }
 
 void TimeDependentPDE::advanceFirstEuler(double dt) {;}

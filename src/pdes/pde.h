@@ -6,6 +6,8 @@
 #include "utils/comm/communicator.h"
 #include "utils/comm/mpisendable.h"
 
+#include "exact_solutions/exact_solution.h"
+
 #include "timer_eb.h"
 
 #include "common_typedefs.h"
@@ -34,8 +36,6 @@ class PDE : public MPISendable
 
 #if 0
         std::vector<double>& getU() { return U_G; };
-
-        virtual void getFinal(std::vector<double>* final);
 #endif 
 
 
@@ -62,12 +62,49 @@ class PDE : public MPISendable
 
         void writeLocalSolutionToFile(int iter=0) { this->writeLocalSolutionToFile(this->getFilename(iter)); }  
         void writeGlobalSolutionToFile(int iter=0) { this->writeGlobalSolutionToFile(this->getFilename(iter)); }
+
         
         // Dump the final solution to a file along with the vector of nodes that
         // the values correspond to.
         // NOTE: the nodes from the GLOBAL grid must be passed here because this class
         //       is only aware of the LOCAL subgrid prior to this point.
         virtual int writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::string filename);
+        
+        // Fill the passed vector with the global solution
+        virtual void getGlobalSolution(std::vector<double>* final);
+
+        // Check the error locally
+        void checkLocalError(ExactSolution* exact, double rel_err_max=-1.) { 
+            std::vector<SolutionType> exactSolution;
+            this->getExactSolution(exact, this->grid_ref.getNodeList(), &exactSolution); 
+            this->checkError(exactSolution, this->U_G, this->grid_ref.getNodeList(), rel_err_max); 
+        }
+
+        void checkGlobalError(ExactSolution* exact, std::vector<NodeType>& global_nodes, double rel_err_max=-1.) {
+            std::vector<SolutionType> sol;
+            std::vector<SolutionType> exactSolution;
+            this->getGlobalSolution(&sol);
+            this->getExactSolution(exact, global_nodes, &exactSolution); 
+            this->checkError(exactSolution, sol, global_nodes, rel_err_max); 
+        }
+
+    protected: 
+
+        // Fill vector with exact solution at provided nodes.
+        // NOTE: override in time dependent PDE to leverage time-based solutions
+        virtual void getExactSolution(ExactSolution* exact, std::vector<NodeType>& nodes, std::vector<SolutionType>* exact_vec) {
+            std::vector<NodeType>::iterator it; 
+            exact_vec->resize(nodes.size());
+            size_t i = 0; 
+            for (it = nodes.begin(); it != nodes.end(); it++, i++) {
+                (*exact_vec)[i] = exact->at(*it); 
+            }
+        }
+
+
+        // Check that the error in the solution is 
+        void checkError(std::vector<SolutionType>& exactSolution, std::vector<SolutionType>& solution, std::vector<NodeType>& nodes, double rel_err_max=-1.);
+        void calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max=1.);
 
     protected:
         // ******** BEGIN MPISENDABLE ************

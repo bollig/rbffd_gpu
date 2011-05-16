@@ -334,11 +334,6 @@ int main(int argc, char** argv) {
             cin.get(); 
         }
 
-    comm_unit->consolidateObjects(pde);
-    comm_unit->barrier();
-if (comm_unit->isMaster()) {
-        pde->checkGlobalError(exact, grid, max_global_rel_error); 
-}
     }
 #if 1
     printf("after heat\n");

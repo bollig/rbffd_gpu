@@ -183,7 +183,6 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
 
-
     // ------------------- K1 ------------------------
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in k1 
@@ -206,7 +205,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * k1
-        s[i] = 0.5*dt * ( k1[i] + f);
+        s[i] = original_solution[i] + 0.5*dt * ( k1[i] + f);
     }
 
     // reset boundary solution
@@ -229,7 +228,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * k1
-        s[i] = 0.5*dt * ( k2[i] + f);
+        s[i] = original_solution[i] + 0.5*dt * ( k2[i] + f);
     }
 
     // reset boundary solution
@@ -250,7 +249,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * k1
-        s[i] = dt * ( k3[i] + f);
+        s[i] = original_solution[i] + dt * ( k3[i] + f);
     }
 
     // reset boundary solution

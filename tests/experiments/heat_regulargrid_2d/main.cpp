@@ -195,8 +195,6 @@ int main(int argc, char** argv) {
 
     }
 
-    // TODO: Derivative constructor for Grid& instead of passing subcomps of subdomain
-    //    Derivative* der; 
     RBFFD* der;
     if (use_gpu) {
         der = new RBFFD_CL(subdomain, dim, comm_unit->getRank()); 
@@ -336,6 +334,11 @@ int main(int argc, char** argv) {
             cin.get(); 
         }
 
+    comm_unit->consolidateObjects(pde);
+    comm_unit->barrier();
+if (comm_unit->isMaster()) {
+        pde->checkGlobalError(exact, grid, max_global_rel_error); 
+}
     }
 #if 1
     printf("after heat\n");
@@ -371,7 +374,7 @@ int main(int argc, char** argv) {
         fin.close();
 #endif 
         std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-        pde->checkGlobalError(exact, grid->getNodeList(), max_global_rel_error); 
+        pde->checkGlobalError(exact, grid, max_global_rel_error); 
         std::cout << "============== Solution Valid =============\n"; 
 
         delete(grid);

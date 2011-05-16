@@ -311,12 +311,12 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
     } srtobject; 
 
 
-void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, std::vector<NodeType>& nodes, double rel_err_max)
+void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, std::vector<NodeType>& nodes, std::vector<size_t> boundary_indx, double rel_err_max)
 {
     // Get a COPY of the indices because we want to sort them
-    std::vector<size_t> bindices = grid_ref.getBoundaryIndices(); 
+    std::vector<size_t> bindices = boundary_indx;  
 
-    size_t nb_nodes = grid_ref.getNodeListSize(); 
+    size_t nb_nodes = nodes.size(); 
 #if 0
     if (rel_err_max < 0) { 
         rel_err_max = rel_err_tol; 

@@ -39,7 +39,7 @@ double l1norm(std::vector<double>& v1, std::vector<double>& v2)
 {
     if (v1.size() != v2.size()) {
         std::cout << "Error! in l1norm(...): vectors are not same length. assuming 0's for missing elements" << std::endl;
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
 
 	return l1norm(v1, v2, 0, v1.size());
@@ -123,7 +123,7 @@ double l2norm(std::vector<double>& v1, std::vector<double>& v2)
 {
     if (v1.size() != v2.size()) {
         std::cout << "Error! in l2norm(...): vectors are not same length. assuming 0's for missing elements" << std::endl;
-        exit(EXIT_FAILURE);
+//        exit(EXIT_FAILURE);
     }
 
 	return l2norm(v1, v2, 0, v1.size());
@@ -201,7 +201,7 @@ double linfnorm(std::vector<double>& v1, std::vector<double>& v2)
 {
     if (v1.size() != v2.size()) {
         std::cout << "Error! in linfnorm(...): vectors are not same length. assuming 0's for missing elements" << std::endl;
-        exit(EXIT_FAILURE);
+//        exit(EXIT_FAILURE);
     }
 
 	return linfnorm(v1, v2, 0, v1.size());

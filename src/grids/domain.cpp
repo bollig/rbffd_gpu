@@ -220,6 +220,7 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
     }
 
     for (qit = subdomain_R.begin(); qit != subdomain_R.end(); qit++, i++) {
+        std::cout << "R[" << i << "] = " << *qit << std::endl;
         if (isInSet(*qit, this->O)) {
             this->O_by_rank[subdomain_rank].push_back(*qit);
         }

@@ -196,7 +196,7 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
                 // Elements in Q are in global indices
                 // so we need to first convert to local to index our U_G
                 U_Q.push_back(U_G[grid_ref.g2l(*qit)]);
-#if 0    
+#if 1    
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
                     << "]: " << U_G[grid_ref.g2l(*qit)] << endl;
 #endif 
@@ -344,26 +344,28 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     std::vector<double> sol_vec_int(nb_nodes - bindices.size()); 
     std::vector<double> sol_exact_int(nb_nodes - bindices.size()); 
-#if 0
+#if 1
     for (size_t i = 0; i < nb_bnd; i++ ){ 
         // Skim off the boundary
-        sol_vec_bnd[i] = sol_vec[bindices[i]]; 
-        sol_exact_bnd[i] = sol_exact[bindices[i]]; 
+    //    sol_vec_bnd[i] = sol_vec[bindices[i]]; 
+    //    sol_exact_bnd[i] = sol_exact[bindices[i]]; 
+        std::cout << "BOUNDARY: " << grid_ref.l2g(bindices[i]) << std::endl;
     }
 #endif 
-    int i = 0;  // Index on boundary
-    int k = 0;  // index on interior
+    size_t i = 0;  // Index on boundary
+    size_t k = 0;  // index on interior
     //for (int j = 0; j < sol_vec.size(); j++) {
-    for (int j = 0; j < nb_nodes; j++) {
+    for (size_t j = 0; j < nb_nodes; j++) {
         // Skim off the boundary
         if (j == bindices[i]) {
             sol_vec_bnd[i] = sol_vec[j]; 
             sol_exact_bnd[i] = sol_exact[j]; 
+            std::cout << "BOUNDARY: " << sol_vec_bnd[i] << std::endl;
             i++; 
-            //std::cout << "BOUNDARY: " << i << " / " << j << std::endl;
         } else {
             sol_vec_int[k] = sol_vec[j]; 
             sol_exact_int[k] = sol_exact[j]; 
+            std::cout << "INTERIOR: " << sol_vec_int[k] << std::endl;
             k++; 
             // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
         }
@@ -371,9 +373,11 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     //    writeErrorToFile(sol_error);
 
-    calcSolNorms(sol_vec, sol_exact, "Interior & Boundary", rel_err_max);  // Full domain
-    calcSolNorms(sol_vec_int, sol_exact_int, "Interior", rel_err_max);  // Interior only
     calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Boundary only
+
+    calcSolNorms(sol_vec_int, sol_exact_int, "Interior", rel_err_max);  // Interior only
+
+    calcSolNorms(sol_vec, sol_exact, "Interior & Boundary", rel_err_max);  // Full domain
 }
 
 void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max) {

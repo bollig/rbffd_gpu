@@ -24,6 +24,7 @@ void HeatPDE::fillBoundaryConditions(ExactSolution* exact) {
 void HeatPDE::fillInitialConditions(ExactSolution* exact) {
     this->TimeDependentPDE::fillInitialConditions(exact);
     this->fillBoundaryConditions(exact);
+    exact_ptr = exact;
 }
 
 
@@ -46,6 +47,12 @@ void HeatPDE::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f
     // This is on the CPU or GPU depending on type of Derivative class used
     // (e.g., DerivativeCL will compute on GPU using OpenCL)
     der_ref.applyWeightsForDeriv(RBFFD::LAPL, y_t, lapl_deriv);
+
+# if 0
+    for (int i = 0; i < lapl_deriv.size(); i++) {
+        lapl_deriv[i] = -lapl_deriv[i]; 
+    }
+#endif
 }
 
 
@@ -62,7 +69,8 @@ void HeatPDE::enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t
             // first order
             NodeType& v = nodes[bnd_index[i]];
             //            printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
-            y_t[bnd_index[i]] = boundary_values[i];
+           // y_t[bnd_index[i]] = boundary_values[i];
+           y_t[bnd_index[i]] = exact_ptr->at(v, t); 
         }
 }
 

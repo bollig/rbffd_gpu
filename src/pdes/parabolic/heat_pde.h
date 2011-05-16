@@ -11,6 +11,9 @@ class HeatPDE : public TimeDependentPDE
         // T/F : are the weights already computed so we can avoid that cost?
         bool weightsPrecomputed;
 
+
+        ExactSolution* exact_ptr;
+
     public: 
         HeatPDE(Domain* grid, RBFFD* der, Communicator* comm, bool weightsComputed=false) 
             : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed)

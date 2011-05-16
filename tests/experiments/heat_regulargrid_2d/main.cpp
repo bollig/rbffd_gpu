@@ -261,7 +261,7 @@ int main(int argc, char** argv) {
     ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
 
 #if 1
-    PDE* pde; 
+    TimeDependentPDE* pde; 
     // We need to provide comm_unit to pass ghost node info
 #if 0
     if (use_gpu) {
@@ -273,6 +273,7 @@ int main(int argc, char** argv) {
         pde = new HeatPDE(subdomain, der, comm_unit);
     }
 
+    pde->fillInitialConditions(exact);
     pde->writeLocalSolutionToFile(0); 
     
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 

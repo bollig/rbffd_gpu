@@ -2,7 +2,7 @@
 #define __TIME_DEPENDENT_PDE_H__
 
 #include "pdes/pde.h"
-
+#include "exact_solutions/exact_solution.h"
 
 // Interface class
 class TimeDependentPDE : public PDE 
@@ -14,12 +14,11 @@ class TimeDependentPDE : public PDE
     public: 
     TimeDependentPDE(Domain* grid, RBFFD* der, Communicator* comm) 
         : PDE(grid, der, comm) 
-    { 
-        fillInitialConditions();
+    {
     }
 
     // Fill in the initial conditions of the PDE. (overwrite the solution)
-    virtual void fillInitialConditions();
+    virtual void fillInitialConditions(ExactSolution* exact=NULL);
 
     // Advancing requires: 
     //  - computing an update to the current solution (i.e., calling

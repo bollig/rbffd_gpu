@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-void TimeDependentPDE::fillInitialConditions() {
+void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
     vector<SolutionType>& s = U_G;
 
     std::set<int>& Q = grid_ref.Q;			// All stencil centers in this CPU's QUEUE							
@@ -14,9 +14,19 @@ void TimeDependentPDE::fillInitialConditions() {
 
     std::set<int>::iterator Q_iter; 
 
-    for (Q_iter = Q.begin(); Q_iter != Q.end(); Q_iter++) {
-        NodeType& v = grid_ref.getNode(*Q_iter); 
-        s[grid_ref.g2l(*Q_iter)] = *Q_iter; 
+    // If we dont provide an exact solution, we'll default to 0's
+    if (!exactSolution) {
+        for (Q_iter = Q.begin(); Q_iter != Q.end(); Q_iter++) {
+            NodeType& v = grid_ref.getNode(*Q_iter); 
+            //s[grid_ref.g2l(*Q_iter)] = *Q_iter; 
+            s[grid_ref.g2l(*Q_iter)] = 0; 
+        }
+    } else {
+        for (Q_iter = Q.begin(); Q_iter != Q.end(); Q_iter++) {
+            NodeType& v = grid_ref.getNode(*Q_iter); 
+            // evaluate the exact solution at the node at time 0.
+            s[grid_ref.g2l(*Q_iter)] = exactSolution->at(v, 0.); 
+        }
     }
 
 #if 0

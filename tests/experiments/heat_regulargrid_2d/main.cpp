@@ -262,6 +262,7 @@ int main(int argc, char** argv) {
 
 #if 1
     TimeDependentPDE* pde; 
+    tm["heat_init"]->start(); 
     // We need to provide comm_unit to pass ghost node info
 #if 0
     if (use_gpu) {
@@ -280,19 +281,14 @@ int main(int argc, char** argv) {
     comm_unit->broadcastObjectUpdates(pde);
     comm_unit->barrier();
     
-    pde->writeLocalSolutionToFile(-1); 
-#endif 
-#if 0
-    // TODO: udpate heat to construct on grid
-    tm["heat_init"]->start(); 
-    Heat* heat = new Heat(exact, subdomain, der, comm_unit->getRank());
-    heat->initialConditions(&subdomain->U_G);
     tm["heat_init"]->stop(); 
 
-    // This is HARDCODED because we dont have the ability currently to call
-    // maxEig = der.computeEig() and therefore we have a different timestep than
-    // the original code. I will address this next.
-    //heat->setDt(0.011122);
+    pde->writeLocalSolutionToFile(-1); 
+
+    //    pde->setDt(dt); 
+
+#endif 
+#if 0
     heat->setDt(subdomain->dt);
     heat->setRelErrTol(max_global_rel_error); 
 

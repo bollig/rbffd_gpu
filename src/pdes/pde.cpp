@@ -109,7 +109,7 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
         vector<int>::iterator oit;
         // vector<set<int> > O; gives us the list of (global) indices which we
         // are sending to receiver_rank		
-        
+
         // FIXME: domain should not make these public. hide them behind accessors
         std::vector<std::vector<int> >& O_by_rank = grid_ref.O_by_rank;
 
@@ -158,7 +158,7 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
             << R_sub.size() << " centers)" << endl;
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-#if 1 
+#if 0 
             cout << "\t(Global Index): " << *rit << "\t (Local Index:" << grid_ref.g2l(
                         *rit) << ")\tOld U_G[" << grid_ref.g2l(*rit) << "]: " << U_G[grid_ref.g2l(
                         *rit)] << "\t New U_G[" << grid_ref.g2l(*rit) << "]: " << U_R[i]
@@ -191,7 +191,7 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
                 // Elements in Q are in global indices
                 // so we need to first convert to local to index our U_G
                 U_Q.push_back(U_G[grid_ref.g2l(*qit)]);
-#if DEBUG    
+#if 0    
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
                     << "]: " << U_G[grid_ref.g2l(*qit)] << endl;
 #endif 
@@ -236,11 +236,11 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
 
     cout << "RECEIVED FINAL FROM CPU " << sender_rank << endl;
 #if DEBUG
-        cout << "NEW FINAL_U_G: " << endl;
-        map<int, double>::iterator it;
-        for (it = global_U_G.begin(); it != global_U_G.end(); it++) {
-            cout << "\tU_G[" << (*it).first << "] = " << (*it).second << endl;
-        }
+    cout << "NEW FINAL_U_G: " << endl;
+    map<int, double>::iterator it;
+    for (it = global_U_G.begin(); it != global_U_G.end(); it++) {
+        cout << "\tU_G[" << (*it).first << "] = " << (*it).second << endl;
+    }
 #endif 
 }
 

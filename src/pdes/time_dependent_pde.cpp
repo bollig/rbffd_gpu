@@ -10,7 +10,7 @@ void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
     // Only fill the solution values under this procs control 
     // NOTE: any remaining values will be 0 initially
 
-    printf("=========== Initial Conditions ===========\n");
+    //  printf("=========== Initial Conditions ===========\n");
 
     std::set<int>::iterator Q_iter; 
 
@@ -23,7 +23,8 @@ void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
         }
     } else {
         for (Q_iter = Q.begin(); Q_iter != Q.end(); Q_iter++) {
-            NodeType& v = grid_ref.getNode(*Q_iter); 
+            NodeType& v = grid_ref.getNode(grid_ref.g2l(*Q_iter)); 
+//            std::cout << "NODE ( " << grid_ref.g2l(*Q_iter) << " ) = " << v << std::endl;
             // evaluate the exact solution at the node at time 0.
             s[grid_ref.g2l(*Q_iter)] = exactSolution->at(v, 0.); 
         }
@@ -63,7 +64,7 @@ void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
         }
     }
 #endif 
-    printf("============ End Initial Conditions ===========\n");
+    //    printf("============ End Initial Conditions ===========\n");
 }
 
 // Advancing requires: 

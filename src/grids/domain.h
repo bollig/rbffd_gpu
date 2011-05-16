@@ -49,6 +49,9 @@ class Domain : public Grid, public MPISendable {
         // and receive exactly what is required): 
         // std::vector<std::set<int> > R_by_rank;
 
+    private: 
+        bool inclMX, inclMY, inclMZ;
+
     public: 	// Member Functions: 
 
         // Empty constructor for CPUs that will construct this instance via MPI
@@ -118,18 +121,34 @@ class Domain : public Grid, public MPISendable {
 
         // When we move to 3D this should be updated to reflect zmin, zmax
         // We could also make this polar coords, striped subdomains etcs. 
-        bool isOutsideSubdomain(NodeType& pt) 
+        bool isInsideSubdomain(NodeType& pt) 
         {
             // TODO : need to support xmin != xmax && zmin != zmax but ymin==ymax 
             // 		  and other combinations
             if (ymin == ymax) {
-                return (pt.x() < xmin || pt.x() > xmax);
+                return isInsideRange(pt.x(), xmin, xmax, inclMX); 
             } else if (zmin == zmax) {
-                return (pt.x() < xmin || pt.x() > xmax || pt.y() < ymin || pt.y() > ymax);
+                return isInsideRange(pt.x(), xmin, xmax, inclMX) && isInsideRange(pt.y(), ymin, ymax, inclMY); 
             } else {
-                return (pt.x() < xmin || pt.x() > xmax || pt.y() < ymin || pt.y() > ymax || pt.z() < zmin || pt.z() > zmax);
+                return isInsideRange(pt.x(), xmin, xmax, inclMX) && isInsideRange(pt.y(), ymin, ymax, inclMY) && isInsideRange(pt.z(), zmin, zmax, inclMZ); 
             } 
         }
+
+        bool isInsideRange(double pt_, double rmin, double rmax, bool inclusiveMax) {
+
+            if (inclusiveMax) {
+                return (pt_ >= rmin && pt_ <= rmax);
+            } else {
+                return (pt_ >= rmin && pt_ < rmax); 
+            }
+        }
+
+        void setInclusiveMaxBoundary(bool inclMaxX, bool inclMaxY, bool inclMaxZ) { 
+            inclMX = inclMaxX; 
+            inclMY = inclMaxY; 
+            inclMZ = inclMaxZ; 
+        }
+
 
         // local numbering: {Q\O, O, B}
         // local to global

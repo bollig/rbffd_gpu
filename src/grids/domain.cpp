@@ -20,6 +20,7 @@ Domain::Domain(const Domain& subdomain) {
 
     Domain::Domain(Grid* grid, int _comm_size)
 : comm_size(_comm_size), id(0), 
+    inclMX(true),inclMY(true),inclMZ(true),
     xmin(grid->xmin), xmax(grid->xmax),
     ymin(grid->ymin), ymax(grid->ymax),
     zmin(grid->zmin), zmax(grid->zmax)
@@ -34,6 +35,7 @@ Domain::Domain(const Domain& subdomain) {
 Domain::Domain(double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, 
         int _comm_rank, int _comm_size) :
     xmin(_xmin), xmax(_xmax), ymin(_ymin), ymax(_ymax), zmin(_zmin), zmax(_zmax),
+    inclMX(false),inclMY(false),inclMZ(false),
     id(_comm_rank), comm_size(_comm_size) {
 
     }
@@ -71,9 +73,10 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         double ym = ymin + igy * deltay;
         double zm = zmin + igz * deltaz;
         printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, xm, xm+deltax, ym, ym+deltay, zm, zm+deltaz);
-        printf("Tile (ix, iy, iz) = (%d, %d, %d)\n", igx, igy, igz); 
+        printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
         subdomains[id] = new Domain(xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, id, comm_size);
         subdomains[id]->setMaxStencilSize(this->max_st_size);
+        subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1); 
     }
 
     // Figure out the sets Bi, Oi Qi
@@ -230,6 +233,7 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
 }
 
 // TODO: remove boundary parameter
+// NOTE: should iterate over ALL rbf_centers
 void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& stencils) {
     //********************************
     //  STENCIL MEMBERSHIP SETS
@@ -246,20 +250,24 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
     printf("Domain %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f\n", id, xmin, xmax,
             ymin, ymax, zmin, zmax);
+    printf("NB_NODES: %d\n", rbf_centers.size());
+    printf("Q_NODES: %d\n", Q.size());
+    printf("NB_STENCILS: %d\n", stencils.size());
 
     // Generate sets Q and D
-    for (int i = 0; i < rbf_centers.size(); i++) {
+    for (size_t i = 0; i < rbf_centers.size(); i++) {
         NodeType& pt = rbf_centers[i];
-        if (this->isOutsideSubdomain(pt))
-            continue; // Do not add to Q or D
-        // If we dont continue then it is a center in Q.
+        if (!this->isInsideSubdomain(pt)) {
+            continue; 
+        } 
+
         Q.insert(i);
 
         // Now, if the center is in Q but it depends on nodes in R then we need to distinguish
         bool depR = false;
         for (int j = 0; j < stencils[i].size(); j++) { // Check all nodes in corresponding stencil
             NodeType& pt2 = rbf_centers[stencils[i][j]];
-            if (this->isOutsideSubdomain(pt2)) {
+            if (!this->isInsideSubdomain(pt2)) {
                 depR = true;
             }
         }
@@ -320,6 +328,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
 //----------------------------------------------------------------------
 void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<size_t>& boundary, vector<double>& avg_dist) {
+    
     // Generate stencil membership lists (i.e., which set each stencil center belongs to)
     this->fillCenterSets(rbf_centers, stencil);
 

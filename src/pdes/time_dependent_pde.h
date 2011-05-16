@@ -13,7 +13,7 @@ class TimeDependentPDE : public PDE
     // This count should match the number of TimeScheme types
     public:
 #define NUM_TIME_SCHEMES 3
-        enum TimeScheme {FIRST_EULER=0, SECOND_EULER, RK45};
+        enum TimeScheme {EULER=0, MIDPOINT, RK45};
 
     public: 
         TimeDependentPDE(Domain* grid, RBFFD* der, Communicator* comm) 
@@ -47,8 +47,8 @@ class TimeDependentPDE : public PDE
         double getTime() { return cur_time; }
 
     protected: 
-        virtual void advanceFirstEuler(double dt);
-        virtual void advanceSecondEuler(double dt);
+        virtual void advanceFirstOrderEuler(double dt);
+        virtual void advanceSecondOrderMidpoint(double dt);
 
         // Fill vector with exact solution at provided nodes.
         // NOTE: override in time dependent PDE to leverage time-based solutions

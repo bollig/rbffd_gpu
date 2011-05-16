@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     tm["settings"] = new Timer("[Main] Load settings"); 
     tm["decompose"] = new Timer("[Main] Decompose domain"); 
     tm["consolidate"] = new Timer("[Main] Consolidate subdomain solutions"); 
-    tm["updates"] = new Timer("[Main] Broadcast subdomain update"); 
+    tm["updates"] = new Timer("[Main] Broadcast solution updates"); 
     tm["send"] = new Timer("[Main] Send subdomains to other processors (master only)"); 
     tm["receive"] = new Timer("[Main] Receive subdomain from master (clients only)"); 
     tm["timestep"] = new Timer("[Main] Advance One Timestep"); 
@@ -70,6 +70,7 @@ int main(int argc, char** argv) {
     double start_time = settings->GetSettingAs<double>("START_TIME", ProjectSettings::optional, "0.0"); 
     double end_time = settings->GetSettingAs<double>("END_TIME", ProjectSettings::optional, "1.0"); 
     double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
+    int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
 
     if (comm_unit->isMaster()) {
 
@@ -305,13 +306,13 @@ int main(int argc, char** argv) {
         std::cout << "*********** Solve Heat (Iteration: " << iter << ") *************" << endl;
 
         char label[256]; 
-#if 1
+#if 0
         sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
         pde->printSolution(label); 
 #endif 
 
         tm["timestep"]->start(); 
-        pde->advance(TimeDependentPDE::FIRST_EULER, dt);
+        pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
         tm["timestep"]->stop(); 
 
         // This just double checks that all procs have ghost node info.
@@ -322,7 +323,8 @@ int main(int argc, char** argv) {
         comm_unit->barrier();
         tm["updates"]->stop();
 
-#if 1
+        pde->checkLocalError(exact, max_global_rel_error); 
+#if 0
         sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
         pde->printSolution(label); 
 #endif 

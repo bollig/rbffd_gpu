@@ -274,7 +274,6 @@ int main(int argc, char** argv) {
     }
 
     pde->fillInitialConditions(exact);
-    pde->writeLocalSolutionToFile(0); 
 
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
     tm["updates"]->start(); 
@@ -283,8 +282,6 @@ int main(int argc, char** argv) {
     tm["updates"]->stop();
 
     tm["heat_init"]->stop(); 
-
-    pde->writeLocalSolutionToFile(-1); 
 
     //TODO:    pde->setRelErrTol(max_global_rel_error); 
 
@@ -338,13 +335,13 @@ int main(int argc, char** argv) {
         }
 
     }
-#if 0
+#if 1
     printf("after heat\n");
 
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 
     tm["consolidate"]->start(); 
-    comm_unit->consolidateObjects(subdomain);
+    comm_unit->consolidateObjects(pde);
     comm_unit->barrier();
     tm["consolidate"]->stop(); 
     //    subdomain->writeGlobalSolutionToFile(-1); 
@@ -352,12 +349,12 @@ int main(int argc, char** argv) {
     if (comm_unit->getRank() == 0) {
         // NOTE: the final solution is assembled, but we have to use the 
         // GLOBAL node list instead of a local subdomain node list
-        subdomain->writeFinal(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
+        pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
         cout << "FINAL ITER: " << iter << endl;
         std::vector<double> final_sol(grid->getNodeListSize()); 
         ifstream fin; 
         fin.open("FINAL_SOLUTION.txt"); 
-#if 1
+#if 0
         int count = 0; 
         for (int count = 0; count < final_sol.size(); count++) {
             Vec3 node; 
@@ -370,7 +367,7 @@ int main(int argc, char** argv) {
         }
         fin.close();
         std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-        heat->checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
+        pde->checkError(final_sol, grid->getNodeList(), max_global_rel_error); 
         std::cout << "============== Solution Valid =============\n"; 
 #endif 
         delete(grid);
@@ -382,7 +379,7 @@ int main(int argc, char** argv) {
 
     // Writer first so we can dump final solution
     delete(writer);
-    delete(heat);
+    delete(pde);
 #endif 
     delete(subdomain);
     delete(settings);

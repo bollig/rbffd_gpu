@@ -36,11 +36,6 @@ class PDE : public MPISendable
         std::vector<double>& getU() { return U_G; };
 
         virtual void getFinal(std::vector<double>* final);
-
-        // Dump the final solution to a file along with the vector of nodes that
-        // the values correspond to.
-        virtual int writeFinal(std::vector<NodeType>& nodes, std::string filename);
-
 #endif 
 
 
@@ -67,6 +62,12 @@ class PDE : public MPISendable
 
         void writeLocalSolutionToFile(int iter=0) { this->writeLocalSolutionToFile(this->getFilename(iter)); }  
         void writeGlobalSolutionToFile(int iter=0) { this->writeGlobalSolutionToFile(this->getFilename(iter)); }
+        
+        // Dump the final solution to a file along with the vector of nodes that
+        // the values correspond to.
+        // NOTE: the nodes from the GLOBAL grid must be passed here because this class
+        //       is only aware of the LOCAL subgrid prior to this point.
+        virtual int writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::string filename);
 
     protected:
         // ******** BEGIN MPISENDABLE ************

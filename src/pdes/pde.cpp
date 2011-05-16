@@ -279,9 +279,9 @@ void PDE::getFinal(std::vector<double> *final) {
         final->push_back((*it).second);
     }
 }
+#endif 
 
-
-int PDE::writeFinal(std::vector<NodeType>& nodes, std::string filename) {
+int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::string filename) {
     //ofstream fout;
     //fout.open(filename);
     FILE* fdsol;
@@ -296,4 +296,3 @@ int PDE::writeFinal(std::vector<NodeType>& nodes, std::string filename) {
     //fout.close();
     fclose(fdsol);
 }
-#endif 

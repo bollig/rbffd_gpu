@@ -88,6 +88,9 @@ class PDE : public MPISendable
             this->checkError(exactSolution, sol, global_grid->getNodeList(), global_grid->getBoundaryIndices(), rel_err_max); 
         }
 
+
+        SolutionType getLocalSolution(size_t indx) { return U_G[indx]; }
+
     protected: 
 
         // Fill vector with exact solution at provided nodes.

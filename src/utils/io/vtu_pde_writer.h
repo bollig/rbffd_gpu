@@ -29,7 +29,7 @@ class VtuPDEWriter : public PDEWriter
         vtkCellArray* stns; 
 
     public: 
-        VtuPDEWriter(Domain* subdomain_, Heat* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
+        VtuPDEWriter(Domain* subdomain_, TimeDependentPDE* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
             : PDEWriter(subdomain_, heat_, comm_unit_, local_write_freq_, global_write_freq_) 
         { 
 //            uwriter = vtkUnstructuredGridWriter::New(); 
@@ -130,7 +130,7 @@ class VtuPDEWriter : public PDEWriter
             // Update the solution: 
             vtkFloatArray* s = (vtkFloatArray*)ugrid->GetPointData()->GetScalars(); 
             for (int i = 0; i < s->GetSize(); i++) {
-                s->SetValue(i, subdomain->U_G[i]);
+                s->SetValue(i, heat->getLocalSolution(i));
             }
 
             char fname[FILENAME_MAX]; 
@@ -140,7 +140,7 @@ class VtuPDEWriter : public PDEWriter
 //            uwriter->WriteNextTime(iter);
             uwriter->Write();
 
-            subdomain->writeLocalSolutionToFile(iter);
+            heat->writeLocalSolutionToFile(iter);
         }
 
         void writeGlobalVTU(int iter) {

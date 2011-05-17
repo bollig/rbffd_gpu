@@ -7,7 +7,7 @@
 #include <getopt.h>		// for getopt
 #include <Vec3i.h>
 #include <Vec3.h>
-#include <ArrayT.h>
+//#include <ArrayT.h>
 #include <vector> 
 #include <algorithm> 
 #include <functional> 
@@ -27,6 +27,7 @@
 #include "density.h"
 
 #include "utils/comm/communicator.h"
+#include "utils/conf/projectsettings.h"
 
 // used go generate random seed that changes between runs
 #include <time.h> 
@@ -34,7 +35,7 @@
 using namespace std;
 using namespace arma;
 
-typedef ArrayT<double> AF;
+//typedef ArrayT<double> AF;
 
 // I need a datastructure  (i,x,y)
 
@@ -57,15 +58,19 @@ struct Dist {
 // GLOBAL VARIABLES
 CVT* cvt;
 vector<Vec3> rbf_centers;
-void checkDerivatives(Derivative& der, Grid& grid);
-void checkXDerivatives(Derivative& der, Grid& grid);
+
 double computeBoundaryIntegral(Density& rho, int npts, vector<double>& intg);
 void computeBoundaryPointDistribution(double tot_length, int npts, int nb_bnd,
 		vector<double> intg, vector<Vec3>& bnd);
-double minimum(vector<double>& vec);
+
 double major;
 double minor;
 
+#if 0
+double minimum(vector<double>& vec);
+
+void checkDerivatives(RBFFD& der, Grid& grid);
+void checkXDerivatives(RBFFD& der, Grid& grid);
 vector<double> avgDist;
 
 enum TESTFUN {
@@ -154,6 +159,7 @@ double linfnorm(vector<double>& v1, int n1, int n2) {
 	}
 	return norm;
 }
+
 //----------------------------------------------------------------------
 void testEigen(int stencil_size, int nb_bnd, int tot_nb_pts) {
 	// read input file
@@ -185,7 +191,7 @@ void testEigen(int stencil_size, int nb_bnd, int tot_nb_pts) {
 	rbf_centers = grid.getRbfCenters();
 	int nb_rbf = rbf_centers.size();
 
-	Derivative der(rbf_centers, stencil, grid.getNbBnd());
+	RBFFD der(rbf_centers, stencil, grid.getNbBnd());
 	der.setAvgStencilRadius(avg_stencil_radius);
 
 	// Set things up for variable epsilon
@@ -352,7 +358,7 @@ void testFunction(TESTFUN which, vector<double>& u, vector<double>& dux_ex,
 }
 
 //----------------------------------------------------------------------
-void testDeriv(TESTFUN choice, Derivative& der, Grid& grid) {
+void testDeriv(TESTFUN choice, RBFFD& der, Grid& grid) {
 	printf("================\n");
 	printf("testderiv: choice= %d\n", choice);
 
@@ -376,9 +382,9 @@ void testDeriv(TESTFUN choice, Derivative& der, Grid& grid) {
 
 	for (int n = 0; n < 1; n++) {
 		// perhaps I'll need different (rad,eps) for each. To be determined. 
-		der.computeDeriv(Derivative::X, u, xderiv);
-		der.computeDeriv(Derivative::Y, u, yderiv);
-		der.computeDeriv(Derivative::LAPL, u, lapl_deriv);
+		der.computeDeriv(RBFFD::X, u, xderiv);
+		der.computeDeriv(RBFFD::Y, u, yderiv);
+		der.computeDeriv(RBFFD::LAPL, u, lapl_deriv);
 	}
 
 	vector<int>& boundary = grid.getBoundary();
@@ -500,6 +506,8 @@ double minimum(vector<double>& vec) {
 	}
 	return min;
 }
+#endif
+
 //----------------------------------------------------------------------
 struct mySort {
 	bool operator()(int i, int j) {
@@ -520,6 +528,7 @@ void createSubgrid(int nx, int ny, int nz,
 
 	*subgrid_index_list = new ArrayT<vector<int> > (nx, ny, nz);
 }
+#if 0
 //----------------------------------------------------------------------
 GPU* distributeNodesAcrossGPUs(Grid *grid, Communicator* comm_unit, double dt) {
 #if 1
@@ -599,6 +608,9 @@ GPU* distributeNodesAcrossGPUs(Grid *grid, Communicator* comm_unit, double dt) {
 #endif
 #endif
 }
+
+#endif 
+
 //----------------------------------------------------------------------
 void distributeBoundaryPoints(Density& rho, int npts) {
 	//double bndry = computeBoundaryIntegral(rho, npts);
@@ -761,6 +773,7 @@ void computeBoundaryPointDistribution(double tot_length, int npts, int nb_bnd,
 //----------------------------------------------------------------------
 void createCVT(int N, int nb_bnd, Density& rho, vector<Vec3>& bndry_pts,
 		double dom_intg) {
+#if FIXME
 	//# define N 200
 # define DIM_NUM 2
 	int batch;
@@ -821,6 +834,7 @@ void createCVT(int N, int nb_bnd, Density& rho, vector<Vec3>& bndry_pts,
 
 # undef DIM_NUM
 # undef N
+#endif 
 }
 //----------------------------------------------------------------------
 void computeDistances() {
@@ -887,9 +901,11 @@ void computeDistances() {
 	int nb_stencil = 30;
 #endif
 }
+
+#if 0
 //----------------------------------------------------------------------
-void checkDerivatives(Derivative& der, Grid& grid) {
-	vector<Vec3>& rbf_centers = grid.getRbfCenters();
+void checkDerivatives(RBFFD& der, Grid& grid) {
+	vector<Vec3>& rbf_centers = grid.getNodeList();
 	int nb_rbf = rbf_centers.size();
 
 	// change the classes the variables are located in
@@ -939,9 +955,9 @@ void checkDerivatives(Derivative& der, Grid& grid) {
 	printf("main, u[0]= %f\n", u[0]);
 
 	for (int n = 0; n < 1; n++) {
-		//der.computeDeriv(Derivative::X, u, xderiv);
-		//der.computeDeriv(Derivative::Y, u, yderiv);
-		der.computeDeriv(Derivative::LAPL, u, lapl_deriv);
+		//der.computeDeriv(RBFFD::X, u, xderiv);
+		//der.computeDeriv(RBFFD::Y, u, yderiv);
+		der.computeDeriv(RBFFD::LAPL, u, lapl_deriv);
 	}
 
 #if 0
@@ -990,7 +1006,7 @@ void checkDerivatives(Derivative& der, Grid& grid) {
 }
 
 //----------------------------------------------------------------------
-void checkXDerivatives(Derivative& der, Grid& grid) {
+void checkXDerivatives(RBFFD& der, Grid& grid) {
 	vector<Vec3>& rbf_centers = grid.getRbfCenters();
 	int nb_rbf = rbf_centers.size();
 
@@ -1046,9 +1062,9 @@ void checkXDerivatives(Derivative& der, Grid& grid) {
 
 	for (int n = 0; n < 1; n++) {
 		// perhaps I'll need different (rad,eps) for each. To be determined. 
-		der.computeDeriv(Derivative::X, u, xderiv);
-		der.computeDeriv(Derivative::Y, u, yderiv);
-		der.computeDeriv(Derivative::LAPL, u, lapl_deriv);
+		der.computeDeriv(RBFFD::X, u, xderiv);
+		der.computeDeriv(RBFFD::Y, u, yderiv);
+		der.computeDeriv(RBFFD::LAPL, u, lapl_deriv);
 	}
 	//	der.computeEig(); // needs lapl_weights (full global set), analyzes stability of Laplace operator
 
@@ -1179,7 +1195,7 @@ int parseCommandLineArgs(int argc, char** argv, int my_rank) {
 		case 'd':
 			// 1) copy name into logdir (global) variable = argv/RANK
 			// 2) mkdir logdir if not already made
-			// 3) set logdir in all classes that write files (Heat, Derivative)
+			// 3) set logdir in all classes that write files (Heat, RBFFD)
 			break;
 
 		case '?':
@@ -1218,6 +1234,8 @@ int parseCommandLineArgs(int argc, char** argv, int my_rank) {
 	return 0;
 }
 
+#endif 
+
 //----------------------------------------------------------------------
 int main(int argc, char** argv) {
 	Communicator* comm_unit = new Communicator(argc, argv);
@@ -1225,11 +1243,12 @@ int main(int argc, char** argv) {
 	// An empty GPU object for each CPU. CPU0 (master) will
 	// return this from distributeNodesAcrossGPUs while all
 	// other CPUs get it from comm_unit->receiveObject()
-	GPU* subdomain = NULL;
+	Domain* subdomain = NULL;
 
 	Grid* grid = NULL;
 
-	parseCommandLineArgs(argc, argv, comm_unit->getRank());
+	//parseCommandLineArgs(argc, argv, comm_unit->getRank());
+    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
 	int my_rank = comm_unit->getRank();
 
@@ -1362,16 +1381,16 @@ int main(int argc, char** argv) {
 
 	// To construct the derivative now we need to play tricks:
 	// 1) "Re"-build a Grid object
-	// 2) Build a Derivative object
+	// 2) Build a RBFFD object
 	//	Grid grid(nx, ny, stencil_size);
 
 	// NOTE
 	//EB 1	(COUNTING GRID OCCURRENCES; POTENTIALLY OUTDATED ONCE GPU OBJECTS ARE CONSTRUCTED)
-	//	Derivative der(grid.getRbfCenters(), grid.getStencil(), grid.getNbBnd());
+	//	RBFFD der(grid.getRbfCenters(), grid.getStencil(), grid.getNbBnd());
 	//	der.setAvgStencilRadius(grid.getAvgDist());
 
 	// EB NEED ALL STENCILS TO BE LOCAL INDEX BY THIS POINT
-	Derivative der(subdomain->G_centers, subdomain->Q_stencils,
+	RBFFD der(subdomain->G_centers, subdomain->Q_stencils,
 			subdomain->global_boundary_nodes.size());
 	der.setAvgStencilRadius(subdomain->Q_avg_dists);
 
@@ -1447,7 +1466,7 @@ int main(int argc, char** argv) {
 
 		// Test computing derivatives
 		vector<double> lapl_deriv(subdomain->Q_stencils.size());
-		der.computeDeriv(Derivative::LAPL, subdomain->U_G, lapl_deriv);
+		der.computeDeriv(RBFFD::LAPL, subdomain->U_G, lapl_deriv);
 
 		subdomain->printVector(lapl_deriv, "LAPL_U_G");
 

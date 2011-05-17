@@ -54,6 +54,18 @@ class CVT : public Grid
 
         virtual ~CVT(); 
 
+        void setLockedNodes(std::vector<NodeType>& bndry_pts_) {
+            if (node_list.size() < bndry_pts_.size()) {
+                std::cout << "[CVT] ERROR: node_list.size() is smaller than bndry_pts_. Exiting.\n"; 
+                exit(EXIT_FAILURE);
+            }
+            for (size_t i = 0; i < bndry_pts_.size(); i++) {
+                node_list[i] = bndry_pts_[i]; 
+                boundary_indices[i] = i; 
+                boundary_normals[i] = Vec3(0.f,0.f,0.f);
+            }
+            nb_locked_nodes = bndry_pts_.size();
+        }
 
         /*******************
          * OVERRIDES GRID::

@@ -37,6 +37,7 @@
         #        util/cl_file_loader
         util/matrix_market_io
 
+        incomplete/ellipse_2D
 
 
 		template

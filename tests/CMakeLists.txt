@@ -20,6 +20,8 @@
 		gridgen/square_cvt
 		gridgen/stencil_gen
 		gridgen/subdomain_gen
+        # HIGH PRIORITY: Test Heat on unit disk, then warp into Ellipse
+        #incomplete/ellipse_2D
 		
 		util/3d_octree
 		#		util/binary_cvt_io
@@ -37,7 +39,7 @@
         #        util/cl_file_loader
         util/matrix_market_io
 
-        incomplete/ellipse_2D
+
 
 
 		template

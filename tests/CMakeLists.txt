@@ -21,7 +21,7 @@
 		gridgen/stencil_gen
 		gridgen/subdomain_gen
         # HIGH PRIORITY: Test Heat on unit disk, then warp into Ellipse
-        #incomplete/ellipse_2D
+        incomplete/ellipse_2D
 		
 		util/3d_octree
 		#		util/binary_cvt_io

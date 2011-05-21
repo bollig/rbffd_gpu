@@ -24,3 +24,7 @@ SET (ARGV
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
 add_parallel_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" ${NUM_PROCS} )
+
+
+require_config("test.conf")
+

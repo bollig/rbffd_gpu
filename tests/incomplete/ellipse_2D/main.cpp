@@ -1,10 +1,12 @@
 #include <stdlib.h>
 #include <map> 
 
+#include "density.h"
+
 #include "pdes/parabolic/heat_pde.h"
 #include "pdes/parabolic/heat_pde_cl.h"
 
-#include "grids/regulargrid.h"
+#include "grids/cvt/ellipse_cvt.h"
 
 #include "grids/domain.h"
 #include "rbffd/derivative_tests.h"
@@ -72,23 +74,17 @@ int main(int argc, char** argv) {
     double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
         
-    double major_axis = settings->GetSettingAs<int>("ELLIPSE_MAJOR_AXIS", ProjectSettings::optional, "1.0"); 
-    double minor_axis = settings->GetSettingAs<int>("ELLIPSE_MINOR_AXIS", ProjectSettings::optional, "0.5"); 
+    double major_axis = settings->GetSettingAs<double>("ELLIPSE_MAJOR_AXIS", ProjectSettings::optional, "1.0"); 
+    double minor_axis = settings->GetSettingAs<double>("ELLIPSE_MINOR_AXIS", ProjectSettings::optional, "0.5"); 
 
     if (comm_unit->isMaster()) {
 
 
-        int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
-        int ny = 1; 
-        int nz = 1; 
-        if (dim > 1) {
-            ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
-        }
-        if (dim > 2) {
-            nz = settings->GetSettingAs<int> ("NB_Z", ProjectSettings::required); 
-        } 
-        if (dim > 3) {
-            cout << "ERROR! Dim > 3 Not supported!" << endl;
+        int nb_interior = settings->GetSettingAs<int>("NB_INTERIOR", ProjectSettings::required); 
+        int nb_boundary = settings->GetSettingAs<int>("NB_BOUNDARY", ProjectSettings::required); 
+
+        if (dim != 2) {
+            cout << "ERROR! Dim NOT EQUAL TO 2 Not supported!" << endl;
             exit(EXIT_FAILURE); 
         }
 
@@ -106,19 +102,16 @@ int main(int argc, char** argv) {
         int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
         tm["settings"]->stop(); 
-
+        
+        Grid* grid; 
         // TODO: change to ellipse_cvt2D
-#if 0
-        if (dim == 1) {
-            grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
-        } else if (dim == 2) {
-            grid = new RegularGrid(nx, ny, minX, maxX, minY, maxY); 
-        } else if (dim == 3) {
-            grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
+        if (dim == 2) {
+            Density* density = new Density(); 
+            grid = new EllipseCVT(nb_interior, nb_boundary, dim, density, major_axis, minor_axis, 20000, 60); 
+            grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {
-            cout << "ERROR! Dim > 3 Not Supported!" << endl;
+            cout << "ERROR! Dim != 2 Not Supported!" << endl;
         }
-#endif 
 
         grid->setMaxStencilSize(stencil_size); 
 

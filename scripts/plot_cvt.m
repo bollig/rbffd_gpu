@@ -1,5 +1,6 @@
-% octave program to draw mesh as a series of points
 function [] = plot_cvt(iter, step)
+% PLOT_CVT : octave program to draw mesh as a series of points
+% PLOT_CVT(iter, step)
 % iter => the total number of iterations the CVT ran
 % step => the number of iterations run between intermediate file outputs
 %       (default step == 20)

@@ -1,9 +1,11 @@
 #ifndef _ELLIPSE_CVT_H_
 #define _ELLIPSE_CVT_H_
 
+// FIXME: Need density in the framework dir and not in the test dir
+#include "density.h" 
+
 #include <vector>
-#include "Vec3.h"
-#include "utils/geom/parametric_patch.h"
+//#include "utils/geom/parametric_patch.h"
 #include "density.h"
 #include "grids/cvt/cvt.h"
 
@@ -13,50 +15,43 @@
 
 class EllipseCVT : public CVT {
 protected:
-    // better to pass a grid structure and different types of grids will be represented by
-    // different subclasses, which are accessed by individual samplers (that populate the domain
-    // with random points
     double axis_major;
     double axis_minor;
 
+#if 0
     // TODO: cut these two
     ParametricPatch *outer_geom; // not quite the correct class. In reality, the
     ParametricPatch *geom; // not quite the correct class. In reality, the
     // correct class is Geometry = vector<ParametricPatch>
+#endif 
 
 public:
     //    EllipseCVT(double major_ = 1., double minor_ = 1., int DEBUG = 0);
-    EllipseCVT (size_t nb_nodes, size_t dimension, double major_axis = 1., double minor_axis = 1., size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800)
-        : CVT(nb_nodes, dimension, nb_locked, num_samples, max_num_iters, write_frequency, sample_batch_size), 
-        axis_major(major_axis), axis_minor(minor_axis)
-    { ; }
-    EllipseCVT (std::vector<NodeType>& nodes, size_t dimension, double major_axis=1., double minor_axis = 1., size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800)
-        : CVT(nb_nodes, dimension, nb_locked, num_samples, max_num_iters, write_frequency, sample_batch_size), 
+    EllipseCVT (size_t nb_interior_nodes, size_t nb_boundary_nodes, size_t dimension, Density* density_func, double major_axis = 1., double minor_axis = 1., size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800)
+        : CVT(nb_interior_nodes+nb_boundary_nodes, dimension, nb_boundary_nodes, density_func, num_samples, max_num_iters, write_frequency, sample_batch_size), 
         axis_major(major_axis), axis_minor(minor_axis)
     { ; }
 
-
-    // Custom "sample" routine (sample inside box with rejection outside of the ellipse).
-     virtual void user_sample(int dim_num, size_t n, int *seed, double r[]);
-
-    // custom "user" initialization
-    // NOTE: we should rewrite the base CVT class so there is a separate
-    // custom_init and custom_sample routine (since they CAN be different like in this case).
-    virtual void user_init(int dim_num, size_t n, int *seed, double r[]);
-
+#if 0
     // Gordon Erlebacher, 9/1/2009
     void ellipse(int dim_num, size_t& n, size_t& nb_bnd, int *seed, std::vector<double>& r);
     void ellipse(int dim_num, size_t& n, size_t& nb_bnd, int *seed, double r[]);
     void ellipse_init(int dim_num, size_t& n, size_t& nb_bnd, int *seed, double r[]);
+#endif 
 
-    void rejection2d(int nb_samples, double area, double weighted_area, Density& density, std::vector<Vec3>& samples);
-    Vec3 singleRejection2d(double area, double weighted_area, Density& density);
+    void rejection2d(int nb_samples, double area, double weighted_area, Density& density, std::vector<NodeType>& samples);
+    NodeType singleRejection2d(double area, double weighted_area, Density& density);
+    void fillBoundaryPoints(int nb_boundary_nodes);
+
 
     void setEllipseAxes(double major_, double minor_) {
         this->axis_major = major_;
         this->axis_minor = minor_;
     }
 
+
+    // TODO: add support for parametric patch boundary
+#if 0
     void setGeometry(ParametricPatch* geom_) {
         geom = geom_;
     }
@@ -64,6 +59,30 @@ public:
     void setOuterGeometry(ParametricPatch* geom_) {
         outer_geom = geom_;
     }
+#endif 
+
+    /*******************
+     * OVERRIDES GRID:: and CVT::
+     *******************/
+    // Overrides Grid::generate()
+    virtual void generate(); 
+
+    virtual std::string className() {return "ellipse_cvt";}
+
+
+    /***********************
+     * OVERRIDES CVT.h ROUTINES:
+     ***********************/
+    // Customized initial sampling of domain could be redirected to the user_sample
+    // so both node initialization and cvt sampling are the same
+    //
+
+    // For CVT:: this samples randomly in unit circle
+// TODO:     virtual void user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
+
+    // For CVT:: this samples randomly in unit circle
+    virtual void user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
+
 };
 
 #endif //_ELLIPSE_CVT_H_

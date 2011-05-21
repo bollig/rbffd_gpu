@@ -49,8 +49,8 @@ class CVT : public Grid
         // the number of dimensions for the CVT. Dimension allows us to generate
         // a CVT in lower dimensions than the nodes (e.g., 3D node cloud with a
         // cvt on each xy plane) 
-        CVT (size_t nb_nodes, size_t dimension, size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800); 
-        CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800); 
+        CVT (size_t nb_nodes, size_t dimension, size_t nb_locked=0, Density* density_function=NULL, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800); 
+        CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked=0, Density* density_function=NULL, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800); 
 
         virtual ~CVT(); 
 
@@ -111,6 +111,11 @@ class CVT : public Grid
         void tuple_next_fast(int m, int n, int rank, int x[]);
         void initTimers();
         int get_seed(void);
+
+        void setDensity(Density* rho_) {
+            this->rho = rho_;
+        }
+
 
 #if 0	
 

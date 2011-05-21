@@ -20,8 +20,9 @@
 
 using namespace std;
 
-    CVT::CVT(size_t nb_generators, size_t dimension, size_t nb_locked, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size) 
+    CVT::CVT(size_t nb_generators, size_t dimension, size_t nb_locked, Density* density_function, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size) 
 : Grid(nb_generators), 
+    rho(density_function),
     kdtree(NULL), cvt_iter(0),
     generatorsInitialized(false), 
     dim_num(dimension), nb_locked_nodes(nb_locked), nb_samples(num_samples),
@@ -30,8 +31,9 @@ using namespace std;
     initTimers(); 
 }
 
-    CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size)
+    CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked, Density* density_function, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size)
 : Grid(nodes), 
+    rho(density_function),
     kdtree(NULL), cvt_iter(0),
     generatorsInitialized(true), 
     dim_num(dimension), nb_locked_nodes(nb_locked), nb_samples(num_samples),

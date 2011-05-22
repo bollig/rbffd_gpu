@@ -8,6 +8,7 @@
 
 //#include <math.h>
 #include <vector>
+#include <sstream>
 
 #include "ellipse_cvt.h"
 #include "utils/random.h" 
@@ -391,7 +392,18 @@ void EllipseCVT::computeBoundaryPointDistribution(double tot_length, int npts, i
 }
 
 //----------------------------------------------------------------------
+//
+std::string EllipseCVT::getFileDetailString()
+{
+    std::stringstream ss(std::stringstream::out); 
+    ss << this->nb_nodes << "generators_" << rho->className() << "_density_" << dim_num << "d"; 
+    return ss.str();	
+}
+
+
 //----------------------------------------------------------------------
+
+
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------

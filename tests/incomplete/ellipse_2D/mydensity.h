@@ -17,6 +17,8 @@ public:
 		rho = .05 + exp(-15.*e); // maxrho = 1.05
 		return rho;
 	}
+
+    virtual std::string className() { return "my"; }
 };
 
 #endif

@@ -46,6 +46,9 @@ public:
     double computeDomainIntegral(size_t npts, Density& rho);
     void computeBoundaryPointDistribution(double tot_length, int npts, int nb_bnd, std::vector<double> intg, std::vector<NodeType>& bnd);
 
+
+    virtual std::string getFileDetailString(); 
+   
     // TODO: add support for parametric patch boundary
 #if 0
     void setGeometry(ParametricPatch* geom_) {

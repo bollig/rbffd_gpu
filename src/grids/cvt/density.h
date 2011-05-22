@@ -1,5 +1,6 @@
 #ifndef _DENSITY_H_
 #define _DENSITY_H_
+#include <string>
 
 class Density
 {
@@ -34,6 +35,8 @@ public:
 	{
 		return max_rho;
 	}
+
+    virtual std::string className() {return "uniform";}
 };
 
 #endif

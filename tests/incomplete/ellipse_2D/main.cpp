@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <map> 
 
-#include "density.h"
+#include "mydensity.h"
 
 #include "pdes/parabolic/heat_pde.h"
 #include "pdes/parabolic/heat_pde_cl.h"
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
         Grid* grid; 
         // TODO: change to ellipse_cvt2D
         if (dim == 2) {
-            Density* density = new Density(); 
+            Density* density = new MyDensity(); 
             grid = new EllipseCVT(nb_interior, nb_boundary, dim, density, major_axis, minor_axis, 20000, 60); 
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {

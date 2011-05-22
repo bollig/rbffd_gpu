@@ -3,7 +3,7 @@
 
 class Density
 {
-private:
+protected:
 	double xc;
 	double yc;
 	double rho;
@@ -12,14 +12,15 @@ private:
 
 public:
 	Density()
-	{
-		xc = 0.;
-		yc = .4;
-		//max_rho = 1.05;
-		max_rho = 1.0;
-	}
+    : xc(0.), yc(0.), max_rho(1.0)
+    {;}
 
-	double operator()(double x, double y, double z=0.) {
+    Density(double xc_, double yc_, double max_rho_)
+    : xc(xc_), yc(yc_), max_rho(max_rho_)
+    {;}
+
+
+	virtual double operator()(double x, double y, double z=0.) {
 		#if 0
 		e = (x-xc)*(x-xc)+(y-yc)*(y-yc);
 		rho = .05 + exp(-15.*e); // maxrho = 1.05

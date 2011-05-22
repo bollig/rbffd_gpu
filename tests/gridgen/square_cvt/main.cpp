@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 
 	// Generate a CVT with nx*ny*nz nodes, in 1, 2 or 3D with 0 locked boundary nodes, 
 	// 20000 samples per iteration for 30 iterations
-    Grid* grid = new CVT(nx * ny * nz, dim, 0, 20000, 60); 
+    Grid* grid = new CVT(nx * ny * nz, dim, 0, NULL, 20000, 60); 
     grid->setDebug(debug);
     grid->generate(); 
     grid->writeToFile(); 

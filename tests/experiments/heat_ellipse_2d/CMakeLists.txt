@@ -1,5 +1,5 @@
 # 1) Change the PROJECT (<NAME>) to your test name
-PROJECT (ellipse_2D)
+PROJECT (heat_ellipse_2d)
 
 # Provided in RBF.framework/common directory 
 include(FrameworkMacros)

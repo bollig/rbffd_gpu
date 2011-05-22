@@ -13,6 +13,7 @@
 		#P2		experiments/regular_square2D_heat
 		#P2		experiments/regulargrid3D_heat
 		experiments/heat_regulargrid_2d
+        experiments/heat_ellipse_2d
         experiments/ncar_poisson1_vcl
 
 		gridgen/nested_spheres_ccvt
@@ -21,7 +22,6 @@
 		gridgen/stencil_gen
 		gridgen/subdomain_gen
         # HIGH PRIORITY: Test Heat on unit disk, then warp into Ellipse
-        incomplete/ellipse_2D
 		
 		util/3d_octree
 		#		util/binary_cvt_io

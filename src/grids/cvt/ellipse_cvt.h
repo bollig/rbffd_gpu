@@ -71,7 +71,7 @@ public:
     //
 
     // For CVT:: this samples randomly in unit circle
-// TODO:     virtual void user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
+    virtual void user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
 
     // For CVT:: this samples randomly in unit circle
     virtual void user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 

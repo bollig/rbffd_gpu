@@ -70,6 +70,37 @@ void EllipseCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start
 
     return;
 }
+
+//----------------------------------------------------------------------
+//
+//  Purpose:
+//
+//    USER samples points within an ellipse, given the boundary points
+//    Grid points are uniform. For each point, compute r and theta. Remove the points outside the ellipse
+//
+//  Modified:
+//    1 September 2009
+//
+//  Author:
+//    Gordon Erlebacher
+//
+//  Parameters:
+//    Input, integer DIM_NUM, the spatial dimension.
+//    Input, integer N, the number of sample points desired.
+//    Input/output, int *SEED, the "seed" value.  On output, SEED has
+//       been updated.
+//    Output, double R[DIM_NUM*N], the sample values.
+//
+// Ellipse:
+//   x= a*cos(theta)
+//   y= b*sin(theta)
+void EllipseCVT::user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) 
+{
+    // We just use the same sampling method as user_init
+    this->user_init(user_node_list, indx_start, n_now, init_rand);
+    return;
+}
+
 //----------------------------------------------------------------------
 
 void EllipseCVT::rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples)

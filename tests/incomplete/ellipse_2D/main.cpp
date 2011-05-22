@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
         Grid* grid; 
         // TODO: change to ellipse_cvt2D
         if (dim == 2) {
-            Density* density = new MyDensity(); 
+            Density* density = new Density(); 
             grid = new EllipseCVT(nb_nodes, dim, density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {

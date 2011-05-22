@@ -42,6 +42,8 @@ public:
         this->axis_minor = minor_;
     }
 
+    double computeBoundaryIntegral(Density& rho, size_t npts, std::vector<double>& intg);
+    double computeDomainIntegral(size_t npts, Density& rho);
 
     // TODO: add support for parametric patch boundary
 #if 0

@@ -12,6 +12,7 @@
 #include "ellipse_cvt.h"
 #include "utils/random.h" 
 
+//----------------------------------------------------------------------
 
 void EllipseCVT::generate() {
 
@@ -40,33 +41,11 @@ void EllipseCVT::generate() {
 //----------------------------------------------------------------------
 //
 void EllipseCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) { 
-
-    size_t n = n_now; 
     size_t nb_bnd = nb_locked_nodes; 
-    double dtheta = 1. * M_PI / nb_bnd; // periodic in theta
 
-    // boundary points
+    // Take care of boundary points, then finish by sampling the same as a general iteration
     this->fillBoundaryPoints(nb_bnd);
-
-    //void EllipseCVT::rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples)
-    std::vector<NodeType> samples;
-    samples.resize(n - nb_bnd);
-
-    // We lock our nb_bnd seeds in place and generate an additional set of
-    // random seeds with rejection2d.
-    if (rho) {
-//        std::cout << "[EllipseCVT] using density function to sample " << n - nb_bnd << " nodes\n";
-        rejection2d(n - nb_bnd, 0., 1., *rho, samples);
-    } else {
-        std::cout << "[EllipseCVT] Error! Rho is not set. Exiting...\n"; 
-        exit(EXIT_FAILURE);
-    }
-
-    // Fill the non-locked nodes (i.e., interior) with initial samples 
-    // within the ellipse
-    for (int j = nb_bnd; j < n; j++) {
-        user_node_list[j] = samples[j - nb_bnd];
-    }
+    this->user_sample(user_node_list, indx_start, n_now, init_rand);
 
     return;
 }
@@ -96,8 +75,30 @@ void EllipseCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start
 //   y= b*sin(theta)
 void EllipseCVT::user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) 
 {
-    // We just use the same sampling method as user_init
-    this->user_init(user_node_list, indx_start, n_now, init_rand);
+    size_t n = n_now; 
+    size_t nb_bnd = nb_locked_nodes; 
+    double dtheta = 1. * M_PI / nb_bnd; // periodic in theta
+
+    //void EllipseCVT::rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples)
+    std::vector<NodeType> samples;
+    samples.resize(n - nb_bnd);
+
+    // We lock our nb_bnd seeds in place and generate an additional set of
+    // random seeds with rejection2d.
+    if (rho) {
+//        std::cout << "[EllipseCVT] using density function to sample " << n - nb_bnd << " nodes\n";
+        rejection2d(n - nb_bnd, 0., 1., *rho, samples);
+    } else {
+        std::cout << "[EllipseCVT] Error! Rho is not set. Exiting...\n"; 
+        exit(EXIT_FAILURE);
+    }
+
+    // Fill the non-locked nodes (i.e., interior) with initial samples 
+    // within the ellipse
+    for (int j = nb_bnd; j < n; j++) {
+        user_node_list[j] = samples[j - nb_bnd];
+    }
+
     return;
 }
 
@@ -180,13 +181,17 @@ void EllipseCVT::fillBoundaryPoints(int nb_boundary_nodes)
 		//printf("rho.getMax() = %f\n", rho.getMax());
 		//exit(0);
 
-		vector<Vec3> bndry_pts;
-		vector<double> intg;
+#endif 
 
-		int high_nb_pts = 200;
-		double bnd_intg = computeBoundaryIntegral(rho, high_nb_pts, intg);
-		double dom_intg = computeDomainIntegral(high_nb_pts, rho);
+        std::vector<NodeType> bndry_pts;
+        std::vector<double> intg;
 
+		size_t high_nb_pts = 200;
+		double bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg);
+		double dom_intg = computeDomainIntegral(high_nb_pts, *rho);
+
+
+#if 0
 		// total nb points used to compute Voronoi mesh. 
 		// Only (nb_interior_pts-nb_bnd) will be able to move freely
 		int tot_nb_pts = 500;
@@ -215,6 +220,95 @@ void EllipseCVT::fillBoundaryPoints(int nb_boundary_nodes)
 #endif 
 }
 
+//----------------------------------------------------------------------
+// npts: number of boundary points (first and last points are the same for closed intervals)
+// rho: functor computing point density (= 1 + some function(x,y))
+// bnd: list of boundary points
+// return: value of boundary integral
+//
+// NOTE: number of points should be large. Ideally, I should be integrating with respect to theta for 
+// more accuracy. 
+double EllipseCVT::computeBoundaryIntegral(Density& rho, size_t npts, vector<double>& intg)
+{
+    double major = axis_major; 
+    double minor = axis_minor;
+
+
+
+	double pi = acos(-1.);
+	double dtheta = 2. * pi / (npts - 1.);
+
+	//npts = 2000;
+	//vector<double> intg;
+	intg.resize(npts);
+
+	intg[0] = 0.;
+
+	// npts-1 is the number of intervals
+
+	for (int i = 0; i < (npts - 1); i++) {
+		double t1 = i * dtheta;
+		double t2 = (i + 1) * dtheta;
+		//printf("t1,t2= %f, %f\n", t1, t2);
+		double tm = 0.5 * (t1 + t2);
+		double x1 = major * cos(t1);
+		double x2 = major * cos(t2);
+		double xm = major * cos(tm);
+		double y1 = minor * sin(t1);
+		double y2 = minor * sin(t2);
+		double ym = minor * sin(tm);
+		double dl = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+		double rhom = rho(xm, ym);
+		intg[i + 1] = intg[i] + pow(rhom, 0.25) * dl;
+	}
+
+	// new boundary will have n points (n << npts)
+	// divide into (n-1) equal length intervals
+	double tot_length = intg[npts - 1];
+
+	printf("boundary integral: %f\n", tot_length);
+
+	return tot_length;
+}
+
+//----------------------------------------------------------------------
+
+double EllipseCVT::computeDomainIntegral(size_t npts, Density& rho) {
+	// what is the surface element?
+	// Ellipse: 
+	// y1 = b*sqrt[1. - x^2 / a^2]  
+	// integration limit: -y1 to y1. x limits: [-a,a]. 
+	// area element: dx*dy
+
+	// use 500 x 500 points across the ellipse
+
+    double major = axis_major; 
+    double minor = axis_minor;
+
+	double dx = 2. * major / (npts - 1);
+	double integ = 0.;
+
+	for (int i = 0; i < (npts - 1); i++) {
+		double xa = -1. + (i + 0.5) * dx / major;
+		double y1 = -minor * sqrt(1. - xa * xa);
+		double dy = 2. * fabs(y1) / (npts - 1);
+		for (int j = 0; j < (npts - 1); j++) {
+			double x = xa * major;
+			double y = y1 + (j + 0.5) * dy;
+			integ += sqrt(rho(x, y)) * dx * dy;
+		}
+	}
+
+	return integ;
+}
+
+//----------------------------------------------------------------------
+//----------------------------------------------------------------------
+//----------------------------------------------------------------------
+//----------------------------------------------------------------------
+//----------------------------------------------------------------------
+//----------------------------------------------------------------------
+//----------------------------------------------------------------------
 
 //using namespace std;
 

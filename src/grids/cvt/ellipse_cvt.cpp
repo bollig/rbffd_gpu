@@ -344,7 +344,7 @@ void EllipseCVT::computeBoundaryPointDistribution(double tot_length, int npts, i
     theta[0] = 0.;
     for (int i = 1; i < (n - 1); i++) {
         theta[i] = -1.;
-        printf("-----i= %d------\n", i);
+//        printf("-----i= %d------\n", i);
         for (int j = 1; j < npts; j++) { // npts >> n
             // find interval that contains equ_dist[i]
             // intg[j] <= equ_dist[i] <= intg[j]
@@ -376,7 +376,7 @@ void EllipseCVT::computeBoundaryPointDistribution(double tot_length, int npts, i
         //printf("(%d) x,y= %f, %f, theta= %f\n", i, x[i], y[i], theta[i]);
     }
 
-    printf("print length intervals: should be equal\n");
+//    printf("print length intervals: should be equal\n");
 
 #if 0
     for (int i=0; i < (n-1); i++) {
@@ -387,7 +387,7 @@ void EllipseCVT::computeBoundaryPointDistribution(double tot_length, int npts, i
     }
 #endif
 
-    printf("Weighted ellipse perimeter: %f\n", tot_length);
+ //   printf("Weighted ellipse perimeter: %f\n", tot_length);
 }
 
 //----------------------------------------------------------------------

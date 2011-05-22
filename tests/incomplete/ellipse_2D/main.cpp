@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
         Grid* grid; 
         // TODO: change to ellipse_cvt2D
         if (dim == 2) {
-            Density* density = new Density(); 
+            Density* density = new MyDensity(); 
             grid = new EllipseCVT(nb_nodes, dim, density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {
@@ -118,7 +118,9 @@ int main(int argc, char** argv) {
         grid->setMaxStencilSize(stencil_size); 
 
         std::cout << "Attempting to load Grid from files\n"; 
-        if (grid->loadFromFile()) 
+        
+        Grid::GridLoadErrType err = grid->loadFromFile(); 
+        if (err == Grid::NO_GRID_FILES) 
         {
             printf("************** Generating new Grid **************\n"); 
             //grid->setSortBoundaryNodes(true); 
@@ -127,6 +129,8 @@ int main(int argc, char** argv) {
             grid->generate();
             tm["grid"]->stop(); 
             grid->writeToFile(); 
+        } 
+        if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
             std::cout << "Generating stencils using Grid::ST_HASH\n";
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);

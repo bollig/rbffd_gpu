@@ -160,14 +160,14 @@ void Grid::writeExtraToFile(std::string filename) {
 
 
 
-int Grid::loadFromFile(int iter) {
+Grid::GridLoadErrType Grid::loadFromFile(int iter) {
     return this->loadFromFile(this->getFilename(iter)); 
 }
 
 
 //----------------------------------------------------------------------------
 
-int Grid::loadFromFile(std::string filename) {
+Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
     std::cout << "[" << this->className() << "] \treading file: " << filename << std::endl;
     std::ifstream fin(filename.c_str());
 
@@ -185,7 +185,7 @@ int Grid::loadFromFile(std::string filename) {
         }
     } else {
         printf("Error opening node file to read\n"); 
-        return -1;
+        return NO_GRID_FILES;
         //		exit(EXIT_FAILURE);
     }
     fin.close(); 
@@ -194,34 +194,34 @@ int Grid::loadFromFile(std::string filename) {
 
     if (this->loadBoundaryFromFile(filename)) {
         printf("Error loading boundary nodes\n"); 
-        return -2;
+        return NO_GRID_FILES;
     }
 
     if (this->loadNormalsFromFile(filename)) {
         printf("Error loading normals\n"); 
-        return -3;
+        return NO_GRID_FILES;
     }
 
     if (this->loadAvgRadiiFromFile(filename)) {
         printf("Error loading avg dists\n"); 
         stencilsComputed = false; 
-        return -4;
+        return NO_STENCIL_FILES;
     }
 
     if (this->loadStencilsFromFile(filename)) {
         printf("Error loading stencils\n"); 
         stencilsComputed = false; 
-        return -4;
+        return NO_STENCIL_FILES;
     } else {
         stencilsComputed = true;
     }
 
     if (this->loadExtraFromFile(filename)) {
         printf("Error loading additional data\n"); 
-        return -5;
+        return NO_EXTRA_FILES;
     }
 
-    return 0;
+    return GRID_AND_STENCILS_LOADED;
 }
 
 //----------------------------------------------------------------------------

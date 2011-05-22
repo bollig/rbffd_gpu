@@ -32,13 +32,6 @@ public:
         axis_major(major_axis), axis_minor(minor_axis)
     { ; }
 
-#if 0
-    // Gordon Erlebacher, 9/1/2009
-    void ellipse(int dim_num, size_t& n, size_t& nb_bnd, int *seed, std::vector<double>& r);
-    void ellipse(int dim_num, size_t& n, size_t& nb_bnd, int *seed, double r[]);
-    void ellipse_init(int dim_num, size_t& n, size_t& nb_bnd, int *seed, double r[]);
-#endif 
-
     void rejection2d(int nb_samples, double area, double weighted_area, Density& density, std::vector<NodeType>& samples);
     NodeType singleRejection2d(double area, double weighted_area, Density& density);
     void fillBoundaryPoints(int nb_boundary_nodes);

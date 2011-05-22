@@ -55,7 +55,7 @@ void EllipseCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start
     // We lock our nb_bnd seeds in place and generate an additional set of
     // random seeds with rejection2d.
     if (rho) {
-        std::cout << "[EllipseCVT] using density function to sample " << n - nb_bnd << " nodes\n";
+//        std::cout << "[EllipseCVT] using density function to sample " << n - nb_bnd << " nodes\n";
         rejection2d(n - nb_bnd, 0., 1., *rho, samples);
     } else {
         std::cout << "[EllipseCVT] Error! Rho is not set. Exiting...\n"; 
@@ -65,8 +65,7 @@ void EllipseCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start
     // Fill the non-locked nodes (i.e., interior) with initial samples 
     // within the ellipse
     for (int j = nb_bnd; j < n; j++) {
-        user_node_list[j][0] = samples[j - nb_bnd].x();
-        user_node_list[j][1] = samples[j - nb_bnd].y();
+        user_node_list[j] = samples[j - nb_bnd];
     }
 
     return;
@@ -99,7 +98,7 @@ void EllipseCVT::rejection2d(int nb_samples, double area, double weighted_area, 
 
     for (int i = 0; i < nb_samples; i++) {
         samples[i] = singleRejection2d(area, weighted_area, density);
-        samples[i].print("rnd");
+        //samples[i].print("rnd");
     }
     //printf("nb_samples= %d\n", nb_samples);
 
@@ -118,18 +117,18 @@ NodeType EllipseCVT::singleRejection2d(double area, double weighted_area, Densit
     double u;
     double r2;
     double maxrhoi = 1. / rho->getMax();
-    printf("maxrhoi= %f\n", maxrhoi);
-    printf("axis_major = %f\naxis_minor = %f\n", axis_major, axis_minor);
+    //printf("maxrhoi= %f\n", maxrhoi);
+
     double maj2i = 1. / axis_major / axis_major;
     double min2i = 1. / axis_minor / axis_minor;
-    printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
+    //printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
 
     while (1) {
         xs = randf(-axis_major, axis_major);
         ys = randf(-axis_major, axis_major); // to make sure that cells are all same size
-      //  printf("xs,ys= %f, %f\n", xs, ys);
+        //printf("xs,ys= %f, %f\n", xs, ys);
         r2 = xs * xs * maj2i + ys * ys*min2i;
-    //    printf("r2= %f\n", r2);
+        //printf("r2= %f\n", r2);
         if (r2 >= 1.) continue; // inside the ellipse
 
         // rejection part if non-uniform distribution
@@ -144,6 +143,7 @@ NodeType EllipseCVT::singleRejection2d(double area, double weighted_area, Densit
 
 void EllipseCVT::fillBoundaryPoints(int nb_boundary_nodes)
 {
+    this->resizeBoundary(nb_boundary_nodes);
 #if 0
 		Density rho;
 		//printf("rho.getMax() = %f\n", rho.getMax());

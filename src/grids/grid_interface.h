@@ -258,6 +258,14 @@ class Grid
         // NOTE: this grid does not have details of node connectivity. We could
         // add this in a subclass if we wanted like a TriangularGrid or
         // RectilinearGrid. 
+        
+    protected: 
+        void resizeBoundary(size_t nb_boundary_nodes)
+        {
+            this->boundary_indices.resize(nb_boundary_nodes);
+            this->boundary_normals.resize(nb_boundary_nodes);
+        }
+
 }; 
 
 // A small class that allows us to sort stencil nodes by their distance to to

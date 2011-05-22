@@ -44,7 +44,7 @@ void EllipseCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start
     size_t nb_bnd = nb_locked_nodes; 
 
     // Take care of boundary points, then finish by sampling the same as a general iteration
-    this->fillBoundaryPoints(nb_bnd);
+    this->fillBoundaryPoints(this->getNodeListSize());
     this->user_sample(user_node_list, indx_start, n_now, init_rand);
 
     return;
@@ -173,16 +173,8 @@ NodeType EllipseCVT::singleRejection2d(double area, double weighted_area, Densit
 
 //----------------------------------------------------------------------
 
-void EllipseCVT::fillBoundaryPoints(int nb_boundary_nodes)
+void EllipseCVT::fillBoundaryPoints(int nb_nodes)
 {
-    this->resizeBoundary(nb_boundary_nodes);
-#if 0
-		Density rho;
-		//printf("rho.getMax() = %f\n", rho.getMax());
-		//exit(0);
-
-#endif 
-
         std::vector<NodeType> bndry_pts;
         std::vector<double> intg;
 
@@ -190,44 +182,56 @@ void EllipseCVT::fillBoundaryPoints(int nb_boundary_nodes)
 		double bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg);
 		double dom_intg = computeDomainIntegral(high_nb_pts, *rho);
 
-
-#if 0
 		// total nb points used to compute Voronoi mesh. 
 		// Only (nb_interior_pts-nb_bnd) will be able to move freely
-		int tot_nb_pts = 500;
+		size_t tot_nb_pts = nb_nodes;
 		// number of boundary points, automatically calculated
 		printf("tot_nb_pts= %d\n", tot_nb_pts);
-		printf("dom_intg= %f\n", dom_intg);
-		printf("bnd_intg= %f\n", bnd_intg);
+		printf("domain integral = %f\n", dom_intg);
+		printf("boundary integral = %f\n", bnd_intg);
 
-		int nb_bnd = bnd_intg * sqrt(tot_nb_pts / dom_intg);
-		int nb_bnd_1 = 1. + 16. * tot_nb_pts * dom_intg / (bnd_intg * bnd_intg);
+		size_t nb_bnd = bnd_intg * sqrt(tot_nb_pts / dom_intg);
+		size_t nb_bnd_1 = 1. + 16. * tot_nb_pts * dom_intg / (bnd_intg * bnd_intg);
 		nb_bnd_1 = -bnd_intg * bnd_intg / (4. * dom_intg) * (1.
 				- sqrt(nb_bnd_1));
 		nb_bnd = nb_bnd_1; // more accurate formula
 		printf("calculated nb boundary pts: %d\n", nb_bnd);
 		printf("improved nb boundary pts: %d\n", nb_bnd_1);
 
-		computeBoundaryPointDistribution(bnd_intg, high_nb_pts, nb_bnd, intg,
-				bndry_pts);
-		printf("domain integral = %f\n", dom_intg);
-		printf("boundary integral = %f\n", bnd_intg);
+        // Now that we know how many boundary nodes we want out of the total
+        // number of nodes in the domain, resize to that value
+        this->resizeBoundary(nb_bnd);
+        this->nb_locked_nodes = nb_bnd;
+        bndry_pts.resize(nb_bnd);
 
-		printf("nb_bnd= %d, bndry_pts.size= %d\n", nb_bnd,
-				(int) bndry_pts.size());
+        // Now compute the actual boundary nodes: 
+		this->computeBoundaryPointDistribution(bnd_intg, high_nb_pts, nb_bnd, intg, bndry_pts);
 
-
-#endif 
+        // Verify that things match
+//		printf("nb_bnd= %d, bndry_pts.size= %d\n", nb_bnd, (int) bndry_pts.size());
+//        printf("node_list.size= %d\n" , this->node_list.size());
+//
+        for (size_t i = 0; i < nb_bnd; i++) {
+            this->setNode(i, bndry_pts[i]);
+            this->setBoundaryIndex(i, i);
+        // TODO: boundary normals
+//            this->getBoundaryNormal(i) = computeBoundaryNormal(bndry_pts[i]);
+        }
+        
 }
 
 //----------------------------------------------------------------------
-// npts: number of boundary points (first and last points are the same for closed intervals)
+// Compute the line integral of the boundary using npts number of samples/divisions
+//
+// npts: number of sample points (first and last points are the same for closed intervals)
 // rho: functor computing point density (= 1 + some function(x,y))
 // bnd: list of boundary points
 // return: value of boundary integral
 //
-// NOTE: number of points should be large. Ideally, I should be integrating with respect to theta for 
-// more accuracy. 
+// NOTE: npts should be large! At least 200. 
+//
+// GORDONs comment: Ideally, I should be integrating with respect to theta for 
+// more accuracy.
 double EllipseCVT::computeBoundaryIntegral(Density& rho, size_t npts, vector<double>& intg)
 {
     double major = axis_major; 
@@ -303,6 +307,90 @@ double EllipseCVT::computeDomainIntegral(size_t npts, Density& rho) {
 }
 
 //----------------------------------------------------------------------
+// NOTE: fills the first nb_bnd elements of bnd with boundary node information. 
+//
+void EllipseCVT::computeBoundaryPointDistribution(double tot_length, int npts, int nb_bnd, std::vector<double> intg, std::vector<NodeType>& bnd) {
+
+    double major = axis_major; 
+    double minor = axis_minor;
+    
+	double tot_intv = tot_length / (npts - 1.);
+	vector<double> equ_dist, theta;
+	bnd.resize(0);
+
+	int n = nb_bnd + 1; // space so that first and last point are the same
+	double pi = acos(-1.);
+	double dtheta = 2. * pi / (npts - 1.);
+	printf("npts= %d, n= %d\n", npts, n);
+
+	equ_dist.resize(n);
+	theta.resize(n);
+
+	double intv_length = tot_length / (n - 1);
+	for (int i = 0; i < (n - 1); i++) {
+		equ_dist[i] = i * intv_length;
+		//theta[i] = i*dtheta;
+	}
+	equ_dist[n - 1] = tot_length;
+
+	printf("tot_length= %f, intg[npts-1]= %f\n", tot_length, intg[npts - 1]);
+
+	// Compute theta distribution of new points 
+
+	// Brute force O(n*npts)
+	// Should rewrite to be O(npts)
+	//double dthetaj = 2.*pi / (n-1);
+
+
+	theta[0] = 0.;
+	for (int i = 1; i < (n - 1); i++) {
+		theta[i] = -1.;
+		printf("-----i= %d------\n", i);
+		for (int j = 1; j < npts; j++) { // npts >> n
+			// find interval that contains equ_dist[i]
+			// intg[j] <= equ_dist[i] <= intg[j]
+			if ((equ_dist[i] <= intg[j]) && equ_dist[i] >= intg[j - 1]) {
+				//printf("i=%d, j/npts= %d/%d, equ_dist[%d]= %f, intg= %f, %f\n", i, j, npts, i, equ_dist[i], intg[j-1], intg[j]);
+				double th = (j - 1) * dtheta;
+				double dth = dtheta * (equ_dist[i] - intg[j - 1]) / (intg[j] - intg[j - 1]);
+				//printf("dtheta= %f, th= %f, dth= %f\n", dtheta, th, dth);
+				theta[i] = th + dth;
+				break;
+			}
+		}
+	}
+	theta[n - 1] = 2. * pi;
+	//exit(0);
+
+	vector<double> x, y;
+	x.resize(nb_bnd);
+	y.resize(nb_bnd);
+
+	for (int i = 0; i < nb_bnd; i++) {
+		if (theta[i] < 0.) {
+			printf("Equipartitioning of boundary is incomplete\n");
+			exit(0);
+		}
+		x[i] = major * cos(theta[i]);
+		y[i] = minor * sin(theta[i]);
+		bnd[i] = Vec3(x[i], y[i]);
+		//printf("(%d) x,y= %f, %f, theta= %f\n", i, x[i], y[i], theta[i]);
+	}
+
+	printf("print length intervals: should be equal\n");
+
+#if 0
+	for (int i=0; i < (n-1); i++) {
+		double dx = (x[i+1]-x[i]);
+		double dy = (y[i+1]-y[i]);
+		double dl = sqrt(dx*dx + dy*dy);
+		//printf("dl[%d]= %f\n", i, dl);
+	}
+#endif
+
+	printf("Weighted ellipse perimeter: %f\n", tot_length);
+}
+
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------

@@ -80,8 +80,7 @@ int main(int argc, char** argv) {
     if (comm_unit->isMaster()) {
 
 
-        int nb_interior = settings->GetSettingAs<int>("NB_INTERIOR", ProjectSettings::required); 
-        int nb_boundary = settings->GetSettingAs<int>("NB_BOUNDARY", ProjectSettings::required); 
+        int nb_nodes = settings->GetSettingAs<int>("NB_NODES", ProjectSettings::required); 
 
         if (dim != 2) {
             cout << "ERROR! Dim NOT EQUAL TO 2 Not supported!" << endl;
@@ -106,8 +105,8 @@ int main(int argc, char** argv) {
         Grid* grid; 
         // TODO: change to ellipse_cvt2D
         if (dim == 2) {
-            Density* density = new MyDensity(); 
-            grid = new EllipseCVT(nb_interior, nb_boundary, dim, density, major_axis, minor_axis, 20000, 60); 
+            Density* density = new Density(); 
+            grid = new EllipseCVT(nb_nodes, dim, density, major_axis, minor_axis, 20000, 60); 
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {
             cout << "ERROR! Dim != 2 Not Supported!" << endl;

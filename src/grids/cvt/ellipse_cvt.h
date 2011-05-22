@@ -27,8 +27,8 @@ protected:
 
 public:
     //    EllipseCVT(double major_ = 1., double minor_ = 1., int DEBUG = 0);
-    EllipseCVT (size_t nb_interior_nodes, size_t nb_boundary_nodes, size_t dimension, Density* density_func, double major_axis = 1., double minor_axis = 1., size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800)
-        : CVT(nb_interior_nodes+nb_boundary_nodes, dimension, nb_boundary_nodes, density_func, num_samples, max_num_iters, write_frequency, sample_batch_size), 
+    EllipseCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis = 1., double minor_axis = 1., size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800)
+        : CVT(nb_generators, dimension, 0, density_func, num_samples, max_num_iters, write_frequency, sample_batch_size), 
         axis_major(major_axis), axis_minor(minor_axis)
     { ; }
 
@@ -44,6 +44,7 @@ public:
 
     double computeBoundaryIntegral(Density& rho, size_t npts, std::vector<double>& intg);
     double computeDomainIntegral(size_t npts, Density& rho);
+    void computeBoundaryPointDistribution(double tot_length, int npts, int nb_bnd, std::vector<double> intg, std::vector<NodeType>& bnd);
 
     // TODO: add support for parametric patch boundary
 #if 0

@@ -176,15 +176,26 @@ class Grid
 
         NodeType& getNode(size_t indx) 	
         { return node_list[indx]; }
+        void setNode(size_t indx, NodeType& node)
+        { node_list[indx] = node; }
 
         size_t getBoundaryIndicesSize() 
         { return boundary_indices.size();} 
         std::vector<size_t>& getBoundaryIndices() 
         { return boundary_indices; } 
-        size_t getBoundaryIndex(size_t indx) 
+
+        size_t& getBoundaryIndex(size_t indx) 
         { return boundary_indices[indx]; } 
+        void setBoundaryIndex(size_t indx, size_t& boundary_indx)
+        { boundary_indices[indx] = boundary_indx; }
+
         std::vector<Vec3>& getBoundaryNormals() 
         { return boundary_normals; }
+
+        Vec3& getBoundaryNormal(size_t indx) 
+        { return boundary_normals[indx]; }
+        void setBoundaryNormal(size_t indx, Vec3& normal) 
+        { boundary_normals[indx] = normal; }
 
         size_t getStencilsSize() 
         { return stencil_map.size(); }

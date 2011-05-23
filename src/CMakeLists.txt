@@ -55,6 +55,8 @@ SET( REQUIRED_CL_SOURCE_FILES
     #*	pdes/elliptic/ncar_poisson1_cl.cpp
     #P1 pdes/elliptic/ncar_poisson2_cl.cpp
     pdes/elliptic/nonuniform_poisson1_cl.cpp
+    pdes/parabolic/heat_pde_cl.cpp
+    pdes/time_dependent_pde_cl.cpp
     rbffd/rbffd_cl.cpp
 )
 

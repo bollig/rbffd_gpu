@@ -2,7 +2,7 @@
 
 void HeatPDE::setupTimers()
 {
-;
+    ;
 }
 
 void HeatPDE::fillBoundaryConditions(ExactSolution* exact) {
@@ -61,16 +61,16 @@ void HeatPDE::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f
 // FIXME: the PDE is not 0 on the boundary for a regular grid. 
 void HeatPDE::enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t)
 {
-        size_t nb_bnd = grid_ref.getBoundaryIndicesSize(); 
-        std::vector<size_t>& bnd_index = grid_ref.getBoundaryIndices();
-        std::vector<NodeType>& nodes = grid_ref.getNodeList(); 
+    size_t nb_bnd = grid_ref.getBoundaryIndicesSize(); 
+    std::vector<size_t>& bnd_index = grid_ref.getBoundaryIndices();
+    std::vector<NodeType>& nodes = grid_ref.getNodeList(); 
 
-        for (int i = 0; i < nb_bnd; i++) {
-            // first order
-            NodeType& v = nodes[bnd_index[i]];
-            //            printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
-           // y_t[bnd_index[i]] = boundary_values[i];
-           y_t[bnd_index[i]] = exact_ptr->at(v, t); 
-        }
+    for (int i = 0; i < nb_bnd; i++) {
+        // first order
+        NodeType& v = nodes[bnd_index[i]];
+        //            printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
+        // y_t[bnd_index[i]] = boundary_values[i];
+        y_t[bnd_index[i]] = exact_ptr->at(v, t); 
+    }
 }
 

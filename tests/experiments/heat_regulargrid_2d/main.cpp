@@ -263,12 +263,9 @@ int main(int argc, char** argv) {
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
     // We need to provide comm_unit to pass ghost node info
-#if 0
     if (use_gpu) {
-        pde = new HeatPDE_CL(subdomain, der, comm_unit); 
-    } else 
-#endif 
-    { 
+        pde = new HeatPDE_CL(subdomain, der, comm_unit, true); 
+    } else { 
         // Implies initial conditions are generated
         pde = new HeatPDE(subdomain, der, comm_unit, true);
     }

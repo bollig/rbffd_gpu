@@ -1,5 +1,7 @@
 #include "heat_pde_cl.h"
 
+#include "rbffd/rbffd_cl.h"
+
 void HeatPDE_CL::setupTimers()
 {
 ;
@@ -32,7 +34,7 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
 void HeatPDE_CL::assemble() 
 {
     if (!weightsPrecomputed) {
-        der_ref.computeAllWeightsForAllStencils();
+        ((RBFFD_CL&)der_ref).computeAllWeightsForAllStencils();
     }
 }
 
@@ -42,10 +44,9 @@ void HeatPDE_CL::assemble()
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
 void HeatPDE_CL::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, double t)
 {
-    // 1) Update solution at ghost nodes
-    // 2) apply weights to solution: 
-    der_ref.applyWeightsForDeriv(RBFFD::LAPL, y_t_gpu, lapl_deriv_gpu, true);
-
+    // 1) Update solution on gpu with ghost nodes
+    // 2) apply weights to solution /
+    //der_ref.applyWeightsForDeriv(RBFFD::LAPL, y_t_gpu, lapl_deriv_gpu, true);
 
 # if 0
     for (int i = 0; i < lapl_deriv.size(); i++) {

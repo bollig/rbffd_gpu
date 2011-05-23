@@ -7,8 +7,6 @@
 class HeatPDE_CL : TimeDependentPDE_CL
 {
     public: 
-        virtual void advance(); 
-
 }; 
 #endif 
 

@@ -219,10 +219,20 @@ int main(int argc, char** argv) {
         der->setEpsilon(epsilon);
     }
 
-    int err = der->loadFromFile(RBFFD::X, "x_weights.mtx");
-    err += der->loadFromFile(RBFFD::Y, "y_weights.mtx"); 
-    err += der->loadFromFile(RBFFD::Z, "z_weights.mtx"); 
-    err += der->loadFromFile(RBFFD::LAPL, "lapl_weights.mtx"); 
+    // We specify a rank on the filename because we compute these weights independently within subdomains
+    char weight_name[256]; 
+    int err;
+
+    // If we want to try a bunch of epsilons now, we need to remove these *mtx
+    // files to force recomputing
+    sprintf(weight_name, "x_weights_rank%d.mtx", comm_unit->getRank()); 
+    err = der->loadFromFile(RBFFD::X, weight_name);
+    sprintf(weight_name, "y_weights_rank%d.mtx", comm_unit->getRank()); 
+    err += der->loadFromFile(RBFFD::Y, weight_name); 
+    sprintf(weight_name, "z_weights_rank%d.mtx", comm_unit->getRank()); 
+    err += der->loadFromFile(RBFFD::Z, weight_name); 
+    sprintf(weight_name, "lapl_weights_rank%d.mtx", comm_unit->getRank()); 
+    err += der->loadFromFile(RBFFD::LAPL, weight_name); 
 
     if (err) { 
         printf("start computing weights\n");
@@ -233,10 +243,14 @@ int main(int argc, char** argv) {
 
         cout << "end computing weights" << endl;
 
-        der->writeToFile(RBFFD::X, "x_weights.mtx"); 
-        der->writeToFile(RBFFD::Y, "y_weights.mtx"); 
-        der->writeToFile(RBFFD::Z, "z_weights.mtx"); 
-        der->writeToFile(RBFFD::LAPL, "lapl_weights.mtx"); 
+        sprintf(weight_name, "x_weights_rank%d.mtx", comm_unit->getRank()); 
+        der->writeToFile(RBFFD::X, weight_name); 
+        sprintf(weight_name, "y_weights_rank%d.mtx", comm_unit->getRank()); 
+        der->writeToFile(RBFFD::Y, weight_name); 
+        sprintf(weight_name, "z_weights_rank%d.mtx", comm_unit->getRank()); 
+        der->writeToFile(RBFFD::Z, weight_name); 
+        sprintf(weight_name, "lapl_weights_rank%d.mtx", comm_unit->getRank()); 
+        der->writeToFile(RBFFD::LAPL, weight_name); 
         
         cout << "end write weights to file" << endl;
     }

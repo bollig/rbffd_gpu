@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
         }
 
         grid->setMaxStencilSize(stencil_size); 
-
+#if 0
         std::cout << "Attempting to load Grid from files\n"; 
         if (grid->loadFromFile()) 
         {
@@ -134,6 +134,29 @@ int main(int argc, char** argv) {
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 
         }
+#endif 
+        Grid::GridLoadErrType err = grid->loadFromFile(); 
+        if (err == Grid::NO_GRID_FILES) 
+        {
+            printf("************** Generating new Grid **************\n"); 
+            //grid->setSortBoundaryNodes(true); 
+            grid->setSortBoundaryNodes(false); 
+            tm["grid"]->start(); 
+            grid->generate();
+            tm["grid"]->stop(); 
+            grid->writeToFile(); 
+        } 
+        if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
+            std::cout << "Generating stencils using Grid::ST_HASH\n";
+            tm["stencils"]->start(); 
+            grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
+            grid->generateStencils(Grid::ST_HASH);   
+            tm["stencils"]->stop();
+            grid->writeToFile(); 
+            tm.writeToFile("gridgen_timer_log"); 
+        }
+
+ 
 
         int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
         int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
@@ -214,19 +237,37 @@ int main(int argc, char** argv) {
         der->setEpsilon(epsilon);
     }
 
-    printf("start computing weights\n");
-    tm["weights"]->start(); 
-    der->computeAllWeightsForAllStencils();
-    tm["weights"]->stop(); 
+    // We specify a rank on the filename because we compute these weights independently within subdomains
+    char weight_name[256]; 
+    sprintf(weight_name, "x_weights_rank%d.mtx", comm_unit->getRank()); 
+    int err = der->loadFromFile(RBFFD::X, weight_name);
+    sprintf(weight_name, "y_weights_rank%d.mtx", comm_unit->getRank()); 
+    err += der->loadFromFile(RBFFD::Y, weight_name); 
+    sprintf(weight_name, "z_weights_rank%d.mtx", comm_unit->getRank()); 
+    err += der->loadFromFile(RBFFD::Z, weight_name); 
+    sprintf(weight_name, "lapl_weights_rank%d.mtx", comm_unit->getRank()); 
+    err += der->loadFromFile(RBFFD::LAPL, weight_name); 
 
-    cout << "end computing weights" << endl;
+    if (err) { 
+        printf("start computing weights\n");
+        tm["weights"]->start(); 
+        der->setWeightType(RBFFD::ContourSVD);
+        der->computeAllWeightsForAllStencils();
+        tm["weights"]->stop(); 
 
-    der->writeToFile(RBFFD::X, "x_weights.mtx"); 
-    der->writeToFile(RBFFD::Y, "y_weights.mtx"); 
-    der->writeToFile(RBFFD::Z, "z_weights.mtx"); 
-    der->writeToFile(RBFFD::LAPL, "lapl_weights.mtx"); 
+        cout << "end computing weights" << endl;
 
-    cout << "end write weights to file" << endl;
+        sprintf(weight_name, "x_weights_rank%d.mtx", comm_unit->getRank()); 
+        der->writeToFile(RBFFD::X, weight_name); 
+        sprintf(weight_name, "y_weights_rank%d.mtx", comm_unit->getRank()); 
+        der->writeToFile(RBFFD::Y, weight_name); 
+        sprintf(weight_name, "z_weights_rank%d.mtx", comm_unit->getRank()); 
+        der->writeToFile(RBFFD::Z, weight_name); 
+        sprintf(weight_name, "lapl_weights_rank%d.mtx", comm_unit->getRank()); 
+        der->writeToFile(RBFFD::LAPL, weight_name); 
+        
+        cout << "end write weights to file" << endl;
+    }
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
         bool weightsPreComputed = true; 

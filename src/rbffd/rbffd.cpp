@@ -617,7 +617,7 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
     for (size_t i = 0; i < stencil.size(); i++) {
         expected_nz += stencil[i].size();
     }
-    fprintf(stdout, "Attempting to read %lu weights from %s\n", nz, filename.c_str()); 
+    fprintf(stdout, "Attempting to read %lu weights (%lu, %lu) from %s\n", nz, M, N, filename.c_str()); 
 
     if (M != expected_M) {
         std::cout << "Error! not enough stencils in the file" << std::endl;
@@ -649,14 +649,19 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
     if (f !=stdin) fclose(f);
     
     // Convert to our weights: 
-    this->weights[which].resize(M); 
-    for (size_t irbf = 0; irbf < M; irbf++) {
-        if (this->weights[which][irbf] == NULL) {
-            this->weights[which][irbf] = new double[N];
+    for (size_t irbf = 0; irbf < N; irbf++) {
+        this->weights[which][irbf] = new double[M]; 
+    }
+    size_t j = 0; 
+    size_t local_i = 0; 
+    for (i = 0; i < nz; i++) {
+        if (local_i != I[i]) {
+            j = 0; 
+            local_i = I[i]; 
         }
-        for (int j = 0; j < N; j++) {
-            this->weights[which][irbf][j] = val[ irbf*N + j ];
-        }
+        this->weights[which][local_i][j] = val[i];
+        //std::cout << "Placing: weights[" << which << "][ " << local_i << "(" << I[i] << ") ][ " << j << "(" << J[i] << ") ] = " << val[i] << std::endl;;
+        j++;
     }
 
     delete [] I; 

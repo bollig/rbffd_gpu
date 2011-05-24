@@ -1,5 +1,7 @@
 #define ONE_MONOMIAL 1
 
+#include "rbffd/stencils.h"
+
 #include "rbffd.h"
 // For writing weights in (sparse) matrix market format
 #include "mmio.h"
@@ -8,7 +10,7 @@
 // (up to 3 right now) 
     RBFFD::RBFFD(Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
 : grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
-    weightsModified(false), weightMethod(RBFFD::Direct)
+    weightsModified(false), weightMethod(RBFFD::ContourSVD)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
@@ -48,7 +50,7 @@ void RBFFD::computeAllWeightsForAllStencils() {
     for (size_t i = 0; i < nb_st; i++) {
         this->computeAllWeightsForStencil(i); 
     }
-    
+
     weightsModified = true;
 }
 
@@ -116,12 +118,17 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
         case RBFFD::Direct:
             this->computeAllWeightsForStencil_Direct(st_indx);
             break;
+        case RBFFD::ContourSVD: 
+            for (int i = 0; i < NUM_DERIV_TYPES; i++) {
+                this->computeWeightsForStencil_ContourSVD((RBFFD::DerType)i, st_indx);
+            }
+            break;
         default:
             std::cout << "Unknown method for computing weights" << std::endl;
             exit(EXIT_FAILURE);
     }
 }
-    
+
 void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
     tm["computeAllWeightsOne"]->start(); 
@@ -373,7 +380,7 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
 #endif // DEBUG
 
     tm["computeOneWeights"]->end();
-    
+
     weightsModified = true;
 }
 
@@ -477,7 +484,7 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
         printf("\n[RBFFD] ****** Error: Number unstable eigenvalues: %d *******\n\n", count);
         exit(EXIT_FAILURE);
     }
-    
+
     printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
     printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);
 
@@ -685,6 +692,146 @@ void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, d
 
 
 
-void RBFFD::computeWeightsForStencil_ContourSVD(DerType, int st_indx) {
+void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
+    //----------------------------------------------------------------------
+    //void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, const char* choice)
+    {
+        size_t irbf = st_indx;
+        StencilType& stencil = grid_ref.getStencil(st_indx); 
+
+        std::vector<NodeType>& rbf_centers = grid_ref.getNodeList();
+
+        printf("Computing Weights for Stencil %d Using ContourSVD\n", st_indx);
+
+        int st_center = -1;
+        // which stencil point is irbf
+        for (int i=0; i < stencil.size(); i++) {
+            if (st_indx == stencil[i]) {
+                st_center = i;
+                break;
+            }
+        }
+        if (st_center == -1) {
+            printf("inconsistency with global rbf map (stencil should contain center: %d)\n", st_indx);
+            exit(0);
+        }
+
+        //printf("st_center= %d\n", st_center);
+        if (st_center != 0) {
+            printf("st_center should be the first element of the stencil!\n");
+            exit(0);
+        }
+
+        // estimate radius for contour-svd method
+        // distance matrix: each entry is the square of the internode distance
+        arma::mat xd(stencil.size(), 3);
+        for (int i=0; i < stencil.size(); i++) {
+            Vec3& rc = rbf_centers[stencil[i]];
+            xd(i,0) = rc[0];
+            xd(i,1) = rc[1];
+            xd(i,2) = rc[2];
+        }
+
+#if 0
+        vector<double> epsv(nb_rbfs);
+        for (int i=0; i < nb_rbfs; i++) {
+            var_eps[i] = 1. / avg_stencil_radius[i];
+            //printf("avg rad(%d) = %f\n", i, avg_stencil_radius[i]);
+        }
+        double mm = minimum(avg_stencil_radius);
+        printf("min avg_stencil_radius= %f\n", mm);
+        //exit(0);
+#endif
+
+#if 0
+        var_eps[irbf] = 1.; // works
+        var_eps[irbf] *= .07; // TEMP Does not work
+#endif
+
+#if 0
+        double rad = 1.1;              // rad should also be proportional to (1/avg_stencil_radius)
+        double eps = 1.0; // * var_eps[irbf]; // variable epsilon (for 300 pts)
+        //double eps = 1.1; // * var_eps[irbf]; // variable epsilon (for 300 pts)
+        //double eps = 1.5 * var_eps[irbf]; // variable epsilon (for 1000 pts)
+#else 
+        // FIXME: Gordons comments above indicate a desire to vary the rad with avg_stencil_radii. 
+        //
+        // Rad is the Radius for ContourSVD method. (???) No paper on ContourSVD yet.
+        double rad = 1.1;   // Works with 300 nodes
+        double eps = var_epsilon[st_indx]; 
+#endif 
+        //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
+        //cout << "CHOICE: " << choice << endl;
+
+        // NOTE: this was 3 and caused the original heat problem to fail. WHY? 
+        // Answer: the laplacian is not dimensionless. It increases as the
+        // dimension changes. Problem fixed 
+        IRBF rbf(eps, dim_num);
+
+        char* choice; 
+        switch(which) {
+            case X:
+                choice = "x"; 
+                break; 
+            case Y: 
+                choice = "y"; 
+                break; 
+            case Z:
+                choice = "z";
+                break;
+            case LAPL: 
+                choice = "lapl";
+                break; 
+            default: 
+                std::cout << "ERROR! unknown choice for ContourSVD" << std::endl;
+        }
+
+
+        // This is a 
+        Stencils sten(&rbf, rad, eps, &xd, choice);
+        //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);
+
+        int N = 128; // Why can't I increase N?
+        arma::mat weights_new = sten.execute(N);
+
+#if 0
+        char label[256];
+        sprintf(label, "%s Derivative Coefficients =", choice);
+        fd_coeffs.print(label);
+#endif
+        //exit(0);
+
+        // There should be a better way of doing this
+
+        //printf("choice= %s\n", choice);
+
+        if (this->weights[which][irbf] == NULL) {
+            this->weights[which][irbf] = new double[stencil.size()];
+        }
+        for (int j = 0; j < stencil.size(); j++) {
+            this->weights[which][irbf][j] = weights_new[j];
+        }
+
+#if DEBUG
+        double sum_nodes_only = 0.;
+        double sum_nodes_and_monomials = 0.;
+        for (int j = 0; j < n; j++) {
+            sum_nodes_only += weights_new[j];
+        }
+        sum_nodes_and_monomials = sum_nodes_only;
+        for (int j = n; j < n+np; j++) {
+            sum_nodes_and_monomials += weights_new[j];
+        }
+
+        cout << "(" << irbf << ") ";
+        weights_new.print("lapl_weights");
+        cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
+        cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
+        if (sum_nodes_only > 1e-7) {
+            cout << "WARNING! SUM OF WEIGHTS FOR LAPL NODES IS NOT ZERO: " << sum_nodes_only << endl;
+            exit(EXIT_FAILURE);
+        }
+#endif // DEBUG
+    }
     ;
 }

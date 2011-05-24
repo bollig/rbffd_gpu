@@ -1,3 +1,5 @@
+#define ONE_MONOMIAL 1
+
 #include "rbffd.h"
 // For writing weights in (sparse) matrix market format
 #include "mmio.h"
@@ -112,8 +114,11 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
     tm["computeAllWeightsOne"]->start(); 
     StencilType& stencil = grid_ref.getStencil(st_indx); 
     int n = stencil.size();
+#if ONE_MONOMIAL
+    int np = 1;//+dim_num; // +3 for the x,y,z monomials
+#else 
     int np = 1+dim_num; // +3 for the x,y,z monomials
-
+#endif 
     std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
 
     // Stencil center
@@ -277,7 +282,12 @@ void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
     StencilType stencil = grid_ref.getStencil(st_indx); 
     std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
 
+#if ONE_MONOMIAL
+    int np = 1;//+dim_num; // +3 for the x,y,z monomials
+#else 
     int np = 1+dim_num; // +3 for the x,y,z monomials
+#endif 
+
     int n = stencil.size();
 
     // Stencil center

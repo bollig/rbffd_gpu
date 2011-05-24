@@ -69,15 +69,16 @@ class RBF_MQ : public RBF{
         // f  = (1+eps2*r^2)^{1/2}
         // fx = (1/2) (1+(eps*r)^2))^{-1/2} * 2*eps2 (x-x_center)
         //    = eps2*(x-x_center)/f 
+        //
         // fxx = eps2/f - eps2*(x-x_center)*f^{-2}*eps2(x-x_center)*f^{-1}
         //     = eps2*f^{-1} * (1 - eps2*(x-x_center)^2*f^{-2})
+        //
         // fxx+fyy 
         //     = eps2*f^{-1} * (2 - eps2*R^2*f^{-2})
         //  where R^2 = (x-x_center)^2 + (y-yi)^2
         virtual double xderiv(const Vec3& xvec, const Vec3& x_center) {
             Vec3 r = (xvec-x_center);
-            double f = eval(r);
-            return(eps2*(r.x())/f);
+            return this->xderiv(r); 
         }
 
         virtual double xderiv(const Vec3& xvec) {
@@ -108,14 +109,12 @@ class RBF_MQ : public RBF{
 
         virtual double yderiv(const Vec3& xvec, const Vec3& x_center) {
             Vec3 r = (xvec-x_center);
-            double f = eval(r);
-            return(eps2*(r.y())/f);
+            return this->yderiv(r);
         }
 
         virtual double zderiv(const Vec3& xvec, const Vec3& x_center) {
             Vec3 r = (xvec-x_center);
-            double f = eval(r);
-            return(eps2*(r.z())/f);
+            this->zderiv(r);
         }
 
         virtual double zderiv(const Vec3& zvec) {
@@ -132,46 +131,6 @@ class RBF_MQ : public RBF{
             return((ceps2*xvec.z())/f);
         }
 
-#if 0
-        // First derivative:  d Phi(r) / dr
-        virtual double first_deriv(const Vec3& x) {
-            double r = x.magnitude();
-
-            // first derivative is: eps^2 r/sqrt(1+eps^2 r^2)
-            return (eps2 * r) / eval(x);
-        }
-
-        // First derivative:  d Phi(r) / dr
-        virtual double second_deriv(const Vec3& x) {
-            double r = x.magnitude();
-
-            // second derivative is: eps^2 / (1+eps^2 r^2)^3/2
-            double f = eval(x);
-            double ff = f*f*f;
-            return eps2 / ff;
-        }
-
-
-        // radial derivative dPhi/dr(x,y,z) = x/r * d/dx  + y/r * d/dy + z/r * d/dz
-        // xj is the center; x/r above is center.x() / center.magnitude()
-        double radialderiv(const Vec3& xvec, const Vec3& xj) {
-
-            // Allow easy swap of center in our equation below
-            const Vec3& center = xvec;
-            const Vec3& node = xj;
-
-            const Vec3& r_d = xvec - xj;
-            double r = center.magnitude();
-            double f = sqrt(1. + eps2 * r_d.square());
-
-            double top = (center.x()*center.x() - center.x()*node.x() + center.y()*center.y() - center.y()*node.y() + center.z()*center.z() - center.z()*node.z())*eps2;
-            double bottom = sqrt(center.x()*center.x() + center.y()*center.y() + center.z()*center.z())*sqrt(1. + eps2 * (r_d.magnitude()));
-            //return top/bottom;
-
-            return eps2*(center.x()*r_d.x() + center.y()*r_d.y() + center.z()*r_d.z())/(r*f);
-            //return eps2*((r*r) - (center.x()*node.x() + center.y()*node.y() + center.z()*node.z())) / (r * f);
-        }
-#endif 
         virtual double xxderiv(const Vec3& xvec, const Vec3& x_center) {
             return(0.);
         }

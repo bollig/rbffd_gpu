@@ -179,7 +179,7 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     der->applyWeightsForDeriv(RBFFD::Y, u, yderiv, false);
     der->applyWeightsForDeriv(RBFFD::LAPL, u, lapl_deriv, false);
 
-    vector<size_t>& boundary = grid->getBoundaryIndices();
+    vector<size_t> boundary = grid->getBoundaryIndices();
     int nb_bnd = grid->getBoundaryIndicesSize();
 
     //TODO:
@@ -191,7 +191,7 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     //  we perform for the domain decomposition pushes some boundary nodes to the bottom of the list. 
     //  This bug shows itself when we subdivide the domain into multiple subdomains. 
 
-    int nb_int = nb_stencils - nb_bnd;
+    size_t nb_int = nb_stencils - nb_bnd;
 
     std::vector<double> dux_ex_bnd(nb_bnd); 
     std::vector<double> xderiv_bnd(nb_bnd); 
@@ -213,7 +213,6 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
 
     std::vector<double> avgDist_bnd(nb_bnd); 
     std::vector<double> avgDist_int(nb_int); 
-
 
     // Sort the boundary indices for easier partitioning
     std::vector<size_t> bindices = grid->getBoundaryIndices(); 

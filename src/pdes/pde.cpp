@@ -344,6 +344,9 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     std::vector<double> sol_vec_int(nb_nodes - bindices.size()); 
     std::vector<double> sol_exact_int(nb_nodes - bindices.size()); 
+    
+    std::vector<double> sol_vec_int_no_bnd;
+    std::vector<double> sol_exact_int_no_bnd;
 #if 0
     for (size_t i = 0; i < nb_bnd; i++ ){ 
         // Skim off the boundary
@@ -354,6 +357,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 #endif 
     size_t i = 0;  // Index on boundary
     size_t k = 0;  // index on interior
+    size_t l = 0;  // index on interior
     //for (int j = 0; j < sol_vec.size(); j++) {
     for (size_t j = 0; j < nb_nodes; j++) {
         // Skim off the boundary
@@ -368,14 +372,37 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
             //std::cout << "INTERIOR: " << sol_vec_int[k] << std::endl;
             k++; 
             // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
+
+            // Now, what if the stencil contains boundary nodes? Most error
+            // accumulates where stencils are unbalanced 
+            StencilType& st = grid_ref.getStencil(j); 
+            // does the stencil contain any nodes that are on the boundary?
+            bool dep_boundary = false; 
+            for (size_t sz = 0; sz < st.size(); sz ++) {
+                for (size_t sz_bnd = 0; sz_bnd < bindices.size(); sz_bnd++) {
+                    if (st[sz] == bindices[sz_bnd]) {
+                        dep_boundary=true;
+                        break;
+                    }
+                }
+            }
+            if (!dep_boundary) {
+                sol_vec_int_no_bnd.push_back(sol_vec[j]); 
+                sol_exact_int_no_bnd.push_back(sol_exact[j]); 
+                l++;
+            }
         }
     }
+
+    std::cout << sol_exact_int_no_bnd.size() << std::endl;
 
     //    writeErrorToFile(sol_error);
 
     calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Boundary only
 
     calcSolNorms(sol_vec_int, sol_exact_int, "Interior", rel_err_max);  // Interior only
+    
+    calcSolNorms(sol_vec_int_no_bnd, sol_exact_int_no_bnd, "Interior without Boundary", rel_err_max);  // Interior only (excludes unbalanced stencils)
 
     calcSolNorms(sol_vec, sol_exact, "Interior & Boundary", rel_err_max);  // Full domain
 }

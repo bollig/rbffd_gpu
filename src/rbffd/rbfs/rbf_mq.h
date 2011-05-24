@@ -205,7 +205,7 @@ class RBF_MQ : public RBF{
             double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
 #if 0
             double lapl2 = ((dim * eps2) / f) - ((eps2 * eps2 * r2) / (f*f*f));
-            if (lapl != lapl2) {
+            if (lapl - lapl2  > 1e-6) {
                 std::cout << "ERROR: " << lapl << " != " << lapl2 << std::endl;
                 exit(EXIT_FAILURE);
             }

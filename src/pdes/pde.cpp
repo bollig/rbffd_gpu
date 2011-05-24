@@ -402,18 +402,21 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
     printf("%s l2 error : Absolute = %f, Relative = %f\n", label.c_str(), l2fabs, l2rel );
     printf("%s linf error : Absolute = %f, Relative = %f\n", label.c_str(), lifabs, lirel);
 
+#if 0
     if (l1rel > rel_err_max) {
         printf("[PDE] Error! l1 relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*l1rel, 100.*rel_err_max); 
         exit(EXIT_FAILURE);
     }
+#endif 
     if (l2rel > rel_err_max) {
         printf("[PDE] Error! l2 relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*l2rel, 100.*rel_err_max); 
         exit(EXIT_FAILURE);
     }
+#if 0
     if (lirel > rel_err_max) {
         printf("[PDE] Error! linf relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*lirel, 100.*rel_err_max); 
         exit(EXIT_FAILURE);
     }
-
+#endif 
 
 }

@@ -31,6 +31,7 @@ double l1norm(std::vector<double>& v1, std::vector<double>& v2, int n1, int n2)
 	for (int i=n1; i < n2; i++) {
 		err = fabs(v1[i] - v2[i]);
 		norm += err;  
+//        std::cout << "approx: " << v1[i] << "    exact: " << v2[i] << std::endl;
 	}
 	return norm;
 }

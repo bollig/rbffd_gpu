@@ -48,7 +48,7 @@ void HeatPDE::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f
     // (e.g., DerivativeCL will compute on GPU using OpenCL)
     der_ref.applyWeightsForDeriv(RBFFD::LAPL, y_t, lapl_deriv);
 
-# if 1
+# if 0
     for (int i = 0; i < lapl_deriv.size(); i++) {
         lapl_deriv[i] = -lapl_deriv[i]; 
     }

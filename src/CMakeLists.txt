@@ -8,6 +8,7 @@ SET(REQUIRED_SOURCE_FILES
     exact_solutions/exact_ncar_poisson1.cpp
     exact_solutions/exact_ncar_poisson2.cpp
     exact_solutions/exact_regulargrid.cpp
+    exact_solutions/exact_regulargrid_shu2006.cpp
 
     grids/cvt/cvt.cpp
     #grids/cvt/constrained_cvt.cpp

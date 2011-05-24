@@ -253,6 +253,8 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     double norm[3][3][2]; // norm[DERIV][NORM][BNDRY]
     double normder[3][3][2]; // norm[DERIV][NORM][BNDRY]
 
+#if 0
+    // These norms are weighted by the avgDist elements
     // These norms are || Lu_exact - Lu_approx ||_? 
     // where Lu_* are differential operator L applied to solution u_* 
     // and the || . ||_? is the 1, 2, or inf-norms
@@ -305,7 +307,61 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     normder[LAPL][L1][INT]   = l1normWeighted(dulapl_ex_int, avgDist_int, 0, nb_int);
     normder[LAPL][L2][INT]   = l2normWeighted(dulapl_ex_int, avgDist_int, 0, nb_int);
     normder[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, 0, nb_int);
+#else 
+    // These norms are || Lu_exact - Lu_approx ||_? 
+    // where Lu_* are differential operator L applied to solution u_* 
+    // and the || . ||_? is the 1, 2, or inf-norms
+    norm[X][L1][BNDRY]   = l1norm(dux_ex_bnd,   xderiv_bnd, 0, nb_bnd);
+    norm[X][L2][BNDRY]   = l2norm(dux_ex_bnd,   xderiv_bnd, 0, nb_bnd);
+    norm[X][LINF][BNDRY] = linfnorm(dux_ex_bnd, xderiv_bnd, 0, nb_bnd);
 
+    norm[Y][L1][BNDRY]   = l1norm(duy_ex_bnd,   yderiv_bnd, 0, nb_bnd);
+    norm[Y][L2][BNDRY]   = l2norm(duy_ex_bnd,   yderiv_bnd, 0, nb_bnd);
+    norm[Y][LINF][BNDRY] = linfnorm(duy_ex_bnd, yderiv_bnd, 0, nb_bnd);
+
+    norm[LAPL][L1][BNDRY]   = l1norm(dulapl_ex_bnd,   lapl_deriv_bnd, 0, nb_bnd);
+    norm[LAPL][L2][BNDRY]   = l2norm(dulapl_ex_bnd,   lapl_deriv_bnd, 0, nb_bnd);
+    norm[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, lapl_deriv_bnd, 0, nb_bnd);
+
+    norm[X][L1][INT]   = l1norm(dux_ex_int,   xderiv_int, 0, nb_int);
+    norm[X][L2][INT]   = l2norm(dux_ex_int,   xderiv_int, 0, nb_int);
+    norm[X][LINF][INT] = linfnorm(dux_ex_int, xderiv_int, 0, nb_int);
+
+    norm[Y][L1][INT]   = l1norm(duy_ex_int,   yderiv_int, 0, nb_int);
+    norm[Y][L2][INT]   = l2norm(duy_ex_int,   yderiv_int, 0, nb_int);
+    norm[Y][LINF][INT] = linfnorm(duy_ex_int, yderiv_int, 0, nb_int);
+
+    norm[LAPL][L1][INT]   = l1norm(dulapl_ex_int,   lapl_deriv_int, 0, nb_int);
+    norm[LAPL][L2][INT]   = l2norm(dulapl_ex_int,   lapl_deriv_int, 0, nb_int);
+    norm[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, lapl_deriv_int, 0, nb_int);
+
+    // --- Normalization factors (to get denom for relative error: ||u-u_approx|| / || u || )
+
+    normder[X][L1][BNDRY]   = l1norm(dux_ex_bnd, 0, nb_bnd);
+    normder[X][L2][BNDRY]   = l2norm(dux_ex_bnd, 0, nb_bnd);
+    normder[X][LINF][BNDRY] = linfnorm(dux_ex_bnd, 0, nb_bnd);
+
+    normder[Y][L1][BNDRY]   = l1norm(duy_ex_bnd, 0, nb_bnd);
+    normder[Y][L2][BNDRY]   = l2norm(duy_ex_bnd, 0, nb_bnd);
+    normder[Y][LINF][BNDRY] = linfnorm(duy_ex_bnd, 0, nb_bnd);
+
+    normder[LAPL][L1][BNDRY]   = l1norm(dulapl_ex_bnd, 0, nb_bnd);
+    normder[LAPL][L2][BNDRY]   = l2norm(dulapl_ex_bnd, 0, nb_bnd);
+    normder[LAPL][LINF][BNDRY] = linfnorm(dulapl_ex_bnd, 0, nb_bnd);
+
+    normder[X][L1][INT]   = l1norm(dux_ex_int, 0, nb_int);
+    normder[X][L2][INT]   = l2norm(dux_ex_int, 0, nb_int);
+    normder[X][LINF][INT] = linfnorm(dux_ex_int, 0, nb_int);
+
+    normder[Y][L1][INT]   = l1norm(duy_ex_int, 0, nb_int);
+    normder[Y][L2][INT]   = l2norm(duy_ex_int, 0, nb_int);
+    normder[Y][LINF][INT] = linfnorm(duy_ex_int, 0, nb_int);
+
+    normder[LAPL][L1][INT]   = l1norm(dulapl_ex_int, 0, nb_int);
+    normder[LAPL][L2][INT]   = l2norm(dulapl_ex_int, 0, nb_int);
+    normder[LAPL][LINF][INT] = linfnorm(dulapl_ex_int, 0, nb_int);
+
+#endif 
 
     printf("----- RESULTS: %d bnd, %d centers, %d stencils\n",  nb_bnd, nb_centers, nb_stencils); 
 
@@ -349,7 +405,7 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     double l2_int = sqrt(inter_error);
     printf("avg l2_interior_error= %14.7e\n", l2_int);
     // NaN is the only number not equal to itself
-    if ((l2_int > 1.e-1) || (l2_int != l2_int)) {
+    if ((l2_int > 1.e-2) || (l2_int != l2_int)) {
         printf ("ERROR! Interior l2 error is too high to continue\n");
         exit(EXIT_FAILURE);
     }

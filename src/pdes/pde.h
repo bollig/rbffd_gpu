@@ -75,14 +75,12 @@ class PDE : public MPISendable
 
         // Check the error locally
         void checkLocalError(ExactSolution* exact, double rel_err_max=-1.) { 
-            std::cout << "Local: " << std::endl;
             std::vector<SolutionType> exactSolution;
             this->getExactSolution(exact, this->grid_ref.getNodeList(), &exactSolution); 
             this->checkError(exactSolution, this->U_G, this->grid_ref.getNodeList(), this->grid_ref.getBoundaryIndices(), rel_err_max); 
         }
 
         void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1.) {
-            std::cout << "Global: " << std::endl;
             std::vector<SolutionType> sol;
             std::vector<SolutionType> exactSolution;
             this->getGlobalSolution(&sol);
@@ -99,13 +97,13 @@ class PDE : public MPISendable
         // NOTE: override in time dependent PDE to leverage time-based solutions
         virtual void getExactSolution(ExactSolution* exact, std::vector<NodeType>& nodes, std::vector<SolutionType>* exact_vec) {
             std::vector<NodeType>::iterator it; 
-            std::vector<SolutionType>& e = *exact_vec; 
-            e.resize(nodes.size());
+            exact_vec->resize(nodes.size());
             size_t i = 0; 
             for (it = nodes.begin(); it != nodes.end(); it++, i++) {
-                e[i] = exact->at(*it); 
+                (*exact_vec)[i] = exact->at(*it); 
             }
         }
+
 
         // Check that the error in the solution is 
         void checkError(std::vector<SolutionType>& exactSolution, std::vector<SolutionType>& solution, std::vector<NodeType>& nodes, std::vector<size_t> boundary_indx, double rel_err_max=-1.);

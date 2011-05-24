@@ -218,7 +218,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 rhs(j,0) = rbf.yderiv(x0v, xjv);
                 break; 
             case Z:
-                rhs(j,0) = rbf.zderiv(x0v, xjv);
+                rhs(j,0) = rbf(x0v, xjv);
                 break; 
             case LAPL: 
                 rhs(j,0) = rbf.lapl_deriv(x0v, xjv);

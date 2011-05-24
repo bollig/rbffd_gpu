@@ -8,7 +8,7 @@
 // (up to 3 right now) 
     RBFFD::RBFFD(Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
 : grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
-    weightsModified(false)
+    weightsModified(false), weightMethod(RBFFD::Direct)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
@@ -110,6 +110,19 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 
 // Compute the full set of weights for a derivative type
 void RBFFD::computeAllWeightsForStencil(int st_indx) {
+
+    switch (weightMethod)
+    {
+        case RBFFD::Direct:
+            this->computeAllWeightsForStencil_Direct(st_indx);
+            break;
+        default:
+            std::cout << "Unknown method for computing weights" << std::endl;
+            exit(EXIT_FAILURE);
+    }
+}
+    
+void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
     tm["computeAllWeightsOne"]->start(); 
     StencilType& stencil = grid_ref.getStencil(st_indx); 
@@ -276,6 +289,20 @@ void RBFFD::computeWeightsForAllStencils(DerType which) {
 //--------------------------------------------------------------------
 //
 void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
+    switch (weightMethod) {
+        case RBFFD::Direct:
+            this->computeWeightsForStencil_Direct(which, st_indx);
+            break; 
+        case RBFFD::ContourSVD:
+            this->computeWeightsForStencil_ContourSVD(which, st_indx);
+            break;
+        default: 
+            std::cout << "Unknown method to compute weights for single stencil" << std::endl;
+            exit(EXIT_FAILURE);
+    }
+}
+
+void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
     tm["computeOneWeights"]->start(); 
 
@@ -656,3 +683,8 @@ void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, d
     }
 }
 
+
+
+void RBFFD::computeWeightsForStencil_ContourSVD(DerType, int st_indx) {
+    ;
+}

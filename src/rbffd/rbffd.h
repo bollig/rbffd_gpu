@@ -27,6 +27,7 @@ class RBFFD
 {
     public:
         enum DerType {X, Y, Z, LAPL};
+        enum WeightType {Direct=0, ContourSVD};
 
         typedef struct e_val_output {
             double max_neg_eig; 
@@ -37,6 +38,8 @@ class RBFFD
         EB::TimerList tm; 
 
         std::string DerTypeSTR[10];
+
+        WeightType weightMethod; 
 
         Grid& grid_ref;
 
@@ -87,8 +90,23 @@ class RBFFD
         //
         void computeAllWeightsForAllStencils();
         void computeAllWeightsForStencil(int st_indx);
-        void computeWeightsForStencil(DerType, int st_indx);
-        void computeWeightsForAllStencils(DerType);
+        void computeWeightsForStencil(DerType deriv_type, int st_indx);
+        void computeWeightsForAllStencils(DerType deriv_type);
+
+        // Compute Multiple RHS Direct
+        void computeAllWeightsForStencil_Direct(int st_indx);
+        // Single RHS Direct
+        void computeWeightsForStencil_Direct(DerType, int st_indx);
+
+        // Single RHS ContourSVD
+        void computeWeightsForStencil_ContourSVD(DerType, int st_indx);
+
+
+
+        void setWeightType(RBFFD::WeightType type) {
+            weightMethod = type;
+        }
+
 
         // Apply weights to an input solution vector and get the corresponding derivatives out
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 

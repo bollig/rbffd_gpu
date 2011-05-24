@@ -20,6 +20,7 @@ public:
     : xc(xc_), yc(yc_), max_rho(max_rho_)
     {;}
 
+    ~Density() { ; }
 
 	virtual double operator()(double x, double y, double z=0.) {
 		#if 0

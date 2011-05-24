@@ -427,12 +427,13 @@ int main(int argc, char** argv) {
     delete(comm_unit); 
 
 
-    printf("REACHED THE END OF MAIN\n");
 
     tm["total"]->stop();
     tm["total"]->printAll();
     tm["total"]->writeAllToFile();
 
+    printf("REACHED THE END OF MAIN\n");
+    
     exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------

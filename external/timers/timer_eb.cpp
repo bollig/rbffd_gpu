@@ -208,8 +208,9 @@ void Timer::writeAllToFile(std::string filename)
             label_width = tim.name.length(); 
         }
     }
-
+   // fprintf(stdout, "Opening file\n"); 
     FILE* fd = fopen(filename.c_str(), "w"); 
     printAll(fd, label_width); 
+   // fprintf(stdout, "Closing file\n"); 
     fclose(fd); 
 }

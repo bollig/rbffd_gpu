@@ -83,9 +83,11 @@ class PDE : public MPISendable
         void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1.) {
             std::vector<SolutionType> sol;
             std::vector<SolutionType> exactSolution;
+            std::vector<NodeType>& nodes = global_grid->getNodeList();
+            std::vector<size_t>& bounds = global_grid->getBoundaryIndices();
             this->getGlobalSolution(&sol);
-            //this->getExactSolution(exact, global_grid->getNodeList(), &exactSolution); 
-            this->checkError(exactSolution, sol, global_grid->getNodeList(), global_grid->getBoundaryIndices(), rel_err_max); 
+            this->getExactSolution(exact, nodes, &exactSolution); 
+            this->checkError(exactSolution, sol, nodes, bounds, rel_err_max); 
         }
 
 
@@ -97,10 +99,11 @@ class PDE : public MPISendable
         // NOTE: override in time dependent PDE to leverage time-based solutions
         virtual void getExactSolution(ExactSolution* exact, std::vector<NodeType>& nodes, std::vector<SolutionType>* exact_vec) {
             std::vector<NodeType>::iterator it; 
-            exact_vec->resize(nodes.size());
+            (*exact_vec).resize(nodes.size());
             size_t i = 0; 
             for (it = nodes.begin(); it != nodes.end(); it++, i++) {
                 (*exact_vec)[i] = exact->at(*it); 
+
             }
         }
 

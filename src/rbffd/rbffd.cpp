@@ -646,7 +646,8 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
         J[i]--;
     }
     
-    if (f !=stdin) fclose(f);
+    //if (f !=stdin) 
+        fclose(f);
     
     // Convert to our weights: 
     for (size_t irbf = 0; irbf < N; irbf++) {

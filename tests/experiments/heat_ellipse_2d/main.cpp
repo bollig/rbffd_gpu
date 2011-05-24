@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
     // grid should only be valid instance for MASTER
     Grid* grid; 
     Domain* subdomain; 
+    Density* density = new Density(); 
 
     tm["total"]->start(); 
 
@@ -108,7 +109,6 @@ int main(int argc, char** argv) {
         Grid* grid; 
         // TODO: change to ellipse_cvt2D
         if (dim == 2) {
-            Density* density = new Density(); 
             grid = new EllipseCVT(nb_nodes, dim, density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {
@@ -350,7 +350,7 @@ int main(int argc, char** argv) {
         comm_unit->barrier();
         tm["updates"]->stop();
 
-        pde->checkLocalError(exact, max_global_rel_error); 
+//        pde->checkLocalError(exact, max_global_rel_error); 
 #if 0
         sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
         pde->printSolution(label); 
@@ -409,11 +409,14 @@ int main(int argc, char** argv) {
 
     // Writer first so we can dump final solution
     delete(writer);
+    delete(exact);
     delete(pde);
 #endif 
+    delete(density);
     delete(subdomain);
     delete(settings);
     delete(comm_unit); 
+
 
 
     printf("REACHED THE END OF MAIN\n");

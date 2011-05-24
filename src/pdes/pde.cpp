@@ -306,9 +306,9 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
 
 //----------------------------------------------------------------------
 
-    struct ltclass {
-        bool operator() (size_t i, size_t j) { return (i<j); }
-    } srtobject; 
+struct ltclass {
+    bool operator() (size_t i, size_t j) { return (i<j); }
+} srtobject; 
 
 
 void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, std::vector<NodeType>& nodes, std::vector<size_t> boundary_indx, double rel_err_max)
@@ -318,6 +318,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     size_t nb_nodes = nodes.size(); 
     size_t nb_bnd =  bindices.size(); 
+
 #if 0
     if (rel_err_max < 0) { 
         rel_err_max = rel_err_tol; 
@@ -337,21 +338,25 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 #endif 
     //std::sort(bindices.begin(), bindices.end(), srtobject); 
 
+    std::cout << "NB_BND = " << nb_bnd << std::endl;
+
     std::sort(bindices.begin(), bindices.end(), srtobject); 
+    std::cout << "NB_BND = " << nb_bnd << std::endl;
 
     std::vector<double> sol_vec_bnd(bindices.size()); 
     std::vector<double> sol_exact_bnd(bindices.size()); 
 
     std::vector<double> sol_vec_int(nb_nodes - bindices.size()); 
     std::vector<double> sol_exact_int(nb_nodes - bindices.size()); 
-    
+
     std::vector<double> sol_vec_int_no_bnd;
     std::vector<double> sol_exact_int_no_bnd;
 #if 0
+
     for (size_t i = 0; i < nb_bnd; i++ ){ 
         // Skim off the boundary
-    //    sol_vec_bnd[i] = sol_vec[bindices[i]]; 
-    //    sol_exact_bnd[i] = sol_exact[bindices[i]]; 
+        //    sol_vec_bnd[i] = sol_vec[bindices[i]]; 
+        //    sol_exact_bnd[i] = sol_exact[bindices[i]]; 
         std::cout << "BOUNDARY: " << grid_ref.l2g(bindices[i]) << std::endl;
     }
 #endif 
@@ -401,7 +406,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
     calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Boundary only
 
     calcSolNorms(sol_vec_int, sol_exact_int, "Interior", rel_err_max);  // Interior only
-    
+
     calcSolNorms(sol_vec_int_no_bnd, sol_exact_int_no_bnd, "Interior without Boundary", rel_err_max);  // Interior only (excludes unbalanced stencils)
 
     calcSolNorms(sol_vec, sol_exact, "Interior & Boundary", rel_err_max);  // Full domain

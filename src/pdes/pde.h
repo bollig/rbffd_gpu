@@ -84,7 +84,7 @@ class PDE : public MPISendable
             std::vector<SolutionType> sol;
             std::vector<SolutionType> exactSolution;
             this->getGlobalSolution(&sol);
-            this->getExactSolution(exact, global_grid->getNodeList(), &exactSolution); 
+            //this->getExactSolution(exact, global_grid->getNodeList(), &exactSolution); 
             this->checkError(exactSolution, sol, global_grid->getNodeList(), global_grid->getBoundaryIndices(), rel_err_max); 
         }
 

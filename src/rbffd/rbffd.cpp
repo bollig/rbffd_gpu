@@ -10,7 +10,7 @@
 // (up to 3 right now) 
     RBFFD::RBFFD(Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
 : grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
-    weightsModified(false), weightMethod(RBFFD::ContourSVD)
+    weightsModified(false), weightMethod(RBFFD::Direct)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
@@ -243,7 +243,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 rhs(j,0) = rbf.yderiv(x0v, xjv);
                 break; 
             case Z:
-                rhs(j,0) = rbf(x0v, xjv);
+                rhs(j,0) = rbf.zderiv(x0v, xjv);
                 break; 
             case LAPL: 
                 rhs(j,0) = rbf.lapl_deriv(x0v, xjv);
@@ -580,6 +580,94 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
 
 //--------------------------------------------------------------------
 
+int RBFFD::loadFromFile(DerType which, std::string filename) {
+    int ret_code; 
+    MM_typecode matcode;
+    FILE *f;
+    int M, N, nz;   
+    int i, *I, *J;
+    double *val;    
+    int err; 
+
+    if ((f = fopen(filename.c_str(), "r")) == NULL)
+    {
+        std::cout << "File not found: " << filename << std::endl;
+        return 1; 
+    }
+    if (mm_read_banner(f, &matcode) != 0) 
+    {
+        std::cout << "Could not process MatrixMarket Banner in " << filename << std::endl;
+        return 2; 
+    }
+
+    if ((ret_code = mm_read_mtx_crd_size(f, &M, &N, &nz)) != 0)
+    {
+        std::cout << "Error! failed to parse file contents" << std::endl;
+        return 4; 
+    }
+
+    std::vector<StencilType>& stencil = grid_ref.getStencils(); 
+    std::vector<double*>* deriv_choice_ptr = &(weights[which]); 
+    // number of non-zeros (should be close to max_st_size*num_stencils)
+    size_t expected_nz = 0;
+    // Num stencils (x_weights.size())
+    const size_t expected_M = (*deriv_choice_ptr).size();
+
+  
+    for (size_t i = 0; i < stencil.size(); i++) {
+        expected_nz += stencil[i].size();
+    }
+    fprintf(stdout, "Attempting to read %lu weights from %s\n", nz, filename.c_str()); 
+
+    if (M != expected_M) {
+        std::cout << "Error! not enough stencils in the file" << std::endl;
+        return 5;
+    }
+ 
+    if (nz != expected_nz) {
+        std::cout << "Error! not enough weights in the file" << std::endl;
+        return 5;
+    }
+    
+    /* reseve memory for matrices */
+
+    I = new int[nz]; 
+    J = new int[nz];
+    val = new double[nz];
+
+    /* NOTE: when reading in doubles, ANSI C requires the use of the "l"  */
+    /*   specifier as in "%lg", "%lf", "%le", otherwise errors will occur */
+    /*  (ANSI C X3.159-1989, Sec. 4.9.6.2, p. 136 lines 13-15)            */
+
+    for (i=0; i<nz; i++)
+    {
+        fscanf(f, "%d %d %lg\n", &I[i], &J[i], &val[i]);
+        I[i]--;  /* adjust from 1-based to 0-based */
+        J[i]--;
+    }
+    
+    if (f !=stdin) fclose(f);
+    
+    // Convert to our weights: 
+    this->weights[which].resize(M); 
+    for (size_t irbf = 0; irbf < M; irbf++) {
+        if (this->weights[which][irbf] == NULL) {
+            this->weights[which][irbf] = new double[N];
+        }
+        for (int j = 0; j < N; j++) {
+            this->weights[which][irbf][j] = val[ irbf*N + j ];
+        }
+    }
+
+    delete [] I; 
+    delete [] J; 
+    delete [] val;
+
+    return 0;
+
+}
+//--------------------------------------------------------------------
+
 void RBFFD::writeToFile(DerType which, std::string filename) {
 
     // number of non-zeros (should be close to max_st_size*num_stencils)
@@ -701,7 +789,7 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
 
         std::vector<NodeType>& rbf_centers = grid_ref.getNodeList();
 
-        printf("Computing Weights for Stencil %d Using ContourSVD\n", st_indx);
+        //printf("Computing Weights for Stencil %d Using ContourSVD\n", st_indx);
 
         int st_center = -1;
         // which stencil point is irbf
@@ -786,7 +874,6 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
                 std::cout << "ERROR! unknown choice for ContourSVD" << std::endl;
         }
 
-
         // This is a 
         Stencils sten(&rbf, rad, eps, &xd, choice);
         //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);
@@ -802,17 +889,18 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         //exit(0);
 
         // There should be a better way of doing this
-
-        //printf("choice= %s\n", choice);
+        size_t n = weights_new.n_rows;
+      //printf("choice= %s, outsize: %d\n", choice, n);
+        size_t np = 0;
 
         if (this->weights[which][irbf] == NULL) {
-            this->weights[which][irbf] = new double[stencil.size()];
+            this->weights[which][irbf] = new double[n+np];
         }
-        for (int j = 0; j < stencil.size(); j++) {
+        for (int j = 0; j < n+np; j++) {
             this->weights[which][irbf][j] = weights_new[j];
         }
 
-#if DEBUG
+#if 0
         double sum_nodes_only = 0.;
         double sum_nodes_and_monomials = 0.;
         for (int j = 0; j < n; j++) {

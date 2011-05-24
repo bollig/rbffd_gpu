@@ -171,8 +171,7 @@ class RBFFD
         double*& getStencilWeights(DerType choice, int st_indx) { return weights[choice][st_indx]; } 
 
         void writeToFile(DerType which, std::string filename="weights.mtx");
-        void loadWeightsFromFile(std::string filename) {;} 
-
+        int  loadFromFile(DerType which, std::string filename="weights.mtx");
 
     protected: 
         void setupTimers(); 

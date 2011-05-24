@@ -219,19 +219,27 @@ int main(int argc, char** argv) {
         der->setEpsilon(epsilon);
     }
 
-    printf("start computing weights\n");
-    tm["weights"]->start(); 
-    der->computeAllWeightsForAllStencils();
-    tm["weights"]->stop(); 
+    int err = der->loadFromFile(RBFFD::X, "x_weights.mtx");
+    err += der->loadFromFile(RBFFD::Y, "y_weights.mtx"); 
+    err += der->loadFromFile(RBFFD::Z, "z_weights.mtx"); 
+    err += der->loadFromFile(RBFFD::LAPL, "lapl_weights.mtx"); 
 
-    cout << "end computing weights" << endl;
+    if (err) { 
+        printf("start computing weights\n");
+        tm["weights"]->start(); 
+        der->setWeightType(RBFFD::ContourSVD);
+        der->computeAllWeightsForAllStencils();
+        tm["weights"]->stop(); 
 
-    der->writeToFile(RBFFD::X, "x_weights.mtx"); 
-    der->writeToFile(RBFFD::Y, "y_weights.mtx"); 
-    der->writeToFile(RBFFD::Z, "z_weights.mtx"); 
-    der->writeToFile(RBFFD::LAPL, "lapl_weights.mtx"); 
+        cout << "end computing weights" << endl;
 
-    cout << "end write weights to file" << endl;
+        der->writeToFile(RBFFD::X, "x_weights.mtx"); 
+        der->writeToFile(RBFFD::Y, "y_weights.mtx"); 
+        der->writeToFile(RBFFD::Z, "z_weights.mtx"); 
+        der->writeToFile(RBFFD::LAPL, "lapl_weights.mtx"); 
+        
+        cout << "end write weights to file" << endl;
+    }
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
         bool weightsPreComputed = true; 

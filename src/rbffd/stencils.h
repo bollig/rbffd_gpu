@@ -98,7 +98,10 @@ class Stencils
             arma::mat coefs = svd->getFDCoeffs();                 
             // the only 2nd order operator
             if (strcmp(choice, "lapl") == 0) { 
-                //printf("RAD= %f\n", rad);
+                // EFB052311: I think this should be scaled by 1/25 for stencil
+                // size 5. Perhaps 1/(n*n)? where n is the stencil size?
+                // Regardless, I get much better accuracy when I dont divide by
+                // rad here. 
                 return coefs*rad*rad;
             } else {
                 return coefs*rad;

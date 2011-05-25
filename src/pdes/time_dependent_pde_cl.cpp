@@ -113,6 +113,8 @@ void TimeDependentPDE_CL::advanceSecondOrderMidpoint(double dt)
 
 void TimeDependentPDE_CL::advanceRungeKutta4(double dt) 
 {
+    std::cout << "ERR! Not implemented yet (RK4 GPU)" << std::endl;
+exit(EXIT_FAILURE);
     size_t nb_stencils = grid_ref.getStencilsSize(); 
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 

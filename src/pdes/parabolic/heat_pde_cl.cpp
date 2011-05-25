@@ -47,6 +47,13 @@ void HeatPDE_CL::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>
     // 1) Update solution on gpu with ghost nodes
     // 2) apply weights to solution /
     //der_ref.applyWeightsForDeriv(RBFFD::LAPL, y_t_gpu, lapl_deriv_gpu, true);
+    std::vector<SolutionType>& lapl_deriv = *f_out;
+    lapl_deriv.resize(y_t.size()); 
+
+    // This is on the CPU or GPU depending on type of Derivative class used
+    // (e.g., DerivativeCL will compute on GPU using OpenCL)
+    der_ref.applyWeightsForDeriv(RBFFD::LAPL, y_t, lapl_deriv);
+
 
 # if 0
     for (int i = 0; i < lapl_deriv.size(); i++) {

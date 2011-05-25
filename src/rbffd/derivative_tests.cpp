@@ -122,7 +122,7 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 
     if (abs_error > 1e-5) 
     {
-        std::cout << "\nERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. TRY A DIFFERENT SUPPORT PARAMETER!\n";
+        std::cout << "\nERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. FIND A DOUBLE PRECISION GPU!\n";
         std::cout << "Test failed on" << std::endl;
         std::cout << label << "[" << indx << "] = " << abs_error << "    (GPU: " 
             << deriv_gpu << " CPU: " << deriv_cpu << ")"

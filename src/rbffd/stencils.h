@@ -92,6 +92,7 @@ public:
 		arma::mat coefs = svd->getFDCoeffs();                 
 		// the only 2nd order operator
 		if (strcmp(choice, "lapl") == 0) { 
+            printf("RAD= %f\n", rad);
 			return coefs*rad*rad;
 		} else {
 			return coefs*rad;

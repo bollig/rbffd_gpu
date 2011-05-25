@@ -118,7 +118,7 @@ void ContourSVD::execute(int N_)
 
     numCoeffs = N/4+1;   // Actual number of Laurent coefficients
 
-   // printf("inside execute\n");
+    // printf("inside execute\n");
 
     // mg, mc: ize of array returned by matlab
     // I need complex arithmetic for contour integration. More complications
@@ -159,10 +159,10 @@ void ContourSVD::execute(int N_)
     }
 
     /*
-% Extract every other circle value of C. These values will be used to 
-% determine whether any singularities of C are enclosed within the contour.
-testC = C(:,:,1:2:numCoeffs);
-*/
+       % Extract every other circle value of C. These values will be used to 
+       % determine whether any singularities of C are enclosed within the contour.
+       testC = C(:,:,1:2:numCoeffs);
+       */
     vector<cx_mat*> testC;
     for (int i=0; i < numCoeffs; i+= 2) {
         testC.push_back(C[i]);
@@ -170,10 +170,10 @@ testC = C(:,:,1:2:numCoeffs);
     //printf("testC size: %d\n", testC.size());
 
     /*
-% Compute the Laurent coefficients for entries of C and testC.
-[negPows,posPows] = computeLaurentCoeffs(C,rad);
-negPowsTest = computeLaurentCoeffs(testC,rad);
-*/
+       % Compute the Laurent coefficients for entries of C and testC.
+       [negPows,posPows] = computeLaurentCoeffs(C,rad);
+       negPowsTest = computeLaurentCoeffs(testC,rad);
+       */
 
     //printf("before computeLaurent\n");
     int M = C.size() - 1;
@@ -192,35 +192,35 @@ negPowsTest = computeLaurentCoeffs(testC,rad);
 
 
     /*
-% testC is no longer used in the program.
-clear testC;
-*/
+       % testC is no longer used in the program.
+       clear testC;
+       */
 
     /*
-% Set N to be N/2, since we have reduced the number of laurent coeffs by 1/2.
-% Remember only the even terms are present in the expansion of C due to the 
-% 4 fold symmetry.
-N = N/2;
-*/
+       % Set N to be N/2, since we have reduced the number of laurent coeffs by 1/2.
+       % Remember only the even terms are present in the expansion of C due to the 
+       % 4 fold symmetry.
+       N = N/2;
+       */
 
     N = N / 2;
     //printf("orig_N/2 = %d\n", N);
     //exit(0);
 
     /*
-% Compare the first non-zero negative power Laurent coefficient for each
-% column of the C and testC matrices to see if they agree. If they do agree
-% then there are singularities enclosed within the circle of radius rad.
-% To determine if they agree, sum up the number of non zero coefficients
-% that agree for each column of C. If this number is greater than 1 for a
-% particular column then we need to compute a denominator for the column.
+       % Compare the first non-zero negative power Laurent coefficient for each
+       % column of the C and testC matrices to see if they agree. If they do agree
+       % then there are singularities enclosed within the circle of radius rad.
+       % To determine if they agree, sum up the number of non zero coefficients
+       % that agree for each column of C. If this number is greater than 1 for a
+       % particular column then we need to compute a denominator for the column.
 
-% Row vector containing the number of coefficients that agree in each
-% column
-% sum over rows ==> row vector
-columnCoeffsCounter = sum(valsAgree(negPows(:,:,1),...
-      negPowsTest(:,:,1),COEFF_COMPARISON_TOL) & ...
-      abs(negPows(:,:,1)) > COEFF_MAGNITUDE_TOL,1);
+       % Row vector containing the number of coefficients that agree in each
+       % column
+       % sum over rows ==> row vector
+       columnCoeffsCounter = sum(valsAgree(negPows(:,:,1),...
+       negPowsTest(:,:,1),COEFF_COMPARISON_TOL) & ...
+       abs(negPows(:,:,1)) > COEFF_MAGNITUDE_TOL,1);
 
 */
 
@@ -247,12 +247,12 @@ columnCoeffsCounter = sum(valsAgree(negPows(:,:,1),...
     //print(columnCoeffsCounter, "columnCoeffsCounter");
 
     /*
-% Row vector indicating which columns of the C matrix need to have a 
-% polynomial denominator computed
-computeDenomFlag = (columnCoeffsCounter >= NUM_AGREEING_COEFFS);
-% find: returns column indices
-columnsToComputeDenom = find( computeDenomFlag == 1 );
-*/
+       % Row vector indicating which columns of the C matrix need to have a 
+       % polynomial denominator computed
+       computeDenomFlag = (columnCoeffsCounter >= NUM_AGREEING_COEFFS);
+       % find: returns column indices
+       columnsToComputeDenom = find( computeDenomFlag == 1 );
+       */
     urowvec computeDenomFlag(mc);
     for (int i=0; i < mc; i++) {
         computeDenomFlag(i) = (columnCoeffsCounter[i] >= NUM_AGREEING_COEFFS) ? TRUE : FALSE;
@@ -266,8 +266,8 @@ columnsToComputeDenom = find( computeDenomFlag == 1 );
     }
 
     /*
-numColsComputeDenom = length(columnsToComputeDenom);
-*/
+       numColsComputeDenom = length(columnsToComputeDenom);
+       */
     int numColsComputeDenom = columnsToComputeDenom.size();
 
     vector<int> id1;
@@ -319,56 +319,56 @@ numColsComputeDenom = length(columnsToComputeDenom);
 
 #if 0
         % Starting at the upper right corner of the Htilde matrix, extract
-   		% larger and large square submatrices and compute their SVD.  Stop doing
-   		% this once a "near zero" singular value has been detected.  When this
-   		% happens we have found the correct degree of the denominator.
-   		while rnk < N/2-1
-      		S = svd(Htilde(1:rnk,1:rnk))/mx2;
+            % larger and large square submatrices and compute their SVD.  Stop doing
+            % this once a "near zero" singular value has been detected.  When this
+            % happens we have found the correct degree of the denominator.
+            while rnk < N/2-1
+                S = svd(Htilde(1:rnk,1:rnk))/mx2;
         if S(rnk) < 1e-5
-                break
-      		end
-      		rnk = rnk + 1;
+            break
+                end
+                rnk = rnk + 1;
         end
 #endif
 
-        while (rnk < (N/2-1)) {
-            colvec s = svd(Htilde.submat(0,0,rnk-1,rnk-1)) / mx2;
-            if (s(rnk-1) < 1.e-5) {
-                break;
+            while (rnk < (N/2-1)) {
+                colvec s = svd(Htilde.submat(0,0,rnk-1,rnk-1)) / mx2;
+                if (s(rnk-1) < 1.e-5) {
+                    break;
+                }
+                rnk = rnk + 1;
             }
-            rnk = rnk + 1;
-        }
 
 #if 0
         if rnk == N/2-1
-      		warning('Rational part of expansion, most likely not calculated correctly');
+            warning('Rational part of expansion, most likely not calculated correctly');
         end
 #endif
 
-        if (rnk == (N/2-1)) {
-            printf("Rational part of expansion, most likely not calculated correctly\n");
-        }
+            if (rnk == (N/2-1)) {
+                printf("Rational part of expansion, most likely not calculated correctly\n");
+            }
 
 #if 0
         % Now take the SVD of the H matrix to determine the right null vector and
-                % the coefficients for the denominator of the rational function.
-                [U,S,V] = svd(Htilde(1:rnk,1:rnk-1));
+            % the coefficients for the denominator of the rational function.
+            [U,S,V] = svd(Htilde(1:rnk,1:rnk-1));
         svdcoefs = U(1:rnk,rnk);
         % Denominator of the rational function
-                denom = polyval2(svdcoefs,ep); // ep is epsilon
-        else
-            denom = 1;
+            denom = polyval2(svdcoefs,ep); // ep is epsilon
+            else
+                denom = 1;
         end
 #endif
 
-		mat U, V;
+            mat U, V;
         colvec S;
         mat hsub = Htilde.submat(0,0,rnk-1,rnk-2);
         svd(U,S,V, hsub);
         mat svdcoefs = U.submat(0,rnk-1,rnk-1,rnk-1);
-	
+
         //printSize(svdcoefs, "svdcoefs");
-	
+
         for (int i=0; i < svdcoefs.n_elem; i++) {
             vcoefs.push_back(svdcoefs(i));
         }
@@ -399,7 +399,7 @@ numColsComputeDenom = length(columnsToComputeDenom);
         //printf("numCoeffs= %d\n", numCoeffs);
         //printSize(*(C[0]), "size(*C)");
 
-	//vector<cx_mat*> C(numCoeffs);
+        //vector<cx_mat*> C(numCoeffs);
         //printf("size(C) = %d\n", C.size());
         //printSize(*(C[0]), "*C[0].size");
 
@@ -410,17 +410,17 @@ numColsComputeDenom = length(columnsToComputeDenom);
                 for (int k=0; k < numCoeffs; k++) {
                     //coeffs(i,j,k) = (*C[k])(i,j)*res[k];
                     (*C[k])(i,j) = (*C[k])(i,j)*res[k];
-		}
+                }
             }}
-	//coeffs.printcx("coeffs"); // OK
+        //coeffs.printcx("coeffs"); // OK
         //exit(0);
 
 
-	// I expected M and numCoefss to be equal) (numCoefs = N/4+1)
+        // I expected M and numCoefss to be equal) (numCoefs = N/4+1)
 
-	M = C.size()-1;
-	ArrayT<double> negPows2(mg,mc,M-1);
-	ArrayT<double> posPows2(mg,mc,M+1);
+        M = C.size()-1;
+        ArrayT<double> negPows2(mg,mc,M-1);
+        ArrayT<double> posPows2(mg,mc,M+1);
         computeLaurentCoeffs(C,rad, negPows2, posPows2);
 
         // I'd like: posPows.resize(n,m,k)
@@ -428,6 +428,7 @@ numColsComputeDenom = length(columnsToComputeDenom);
         ArrayT<double> posPows3(mg,mc,2*(numCoeffs-1));
         //posPows.print("before posPows");
         posPows.resize(mg,mc,2*(numCoeffs-1));
+        posPows3.setTo(0.); // EFB
         //posPows.print("posPows");
         //exit(0);
 
@@ -436,9 +437,9 @@ numColsComputeDenom = length(columnsToComputeDenom);
 
         for (int j=0; j < mc; j++) {
             for (int i=0; i < mg; i++) {
-   		for (int k=0; k < numCoeffs; k++) {
+                for (int k=0; k < numCoeffs; k++) {
                     posPows(i,j,k) = posPows2(i,j,k);
-		}
+                }
             }}
         //for (int i=0; i < numCoeffs; i++) {}
         //for (int i=0; i < numCoeffs; i++) {}
@@ -448,22 +449,22 @@ numColsComputeDenom = length(columnsToComputeDenom);
         //negPows2.print("negPows2"); // OK
         //posPows2.print("posPows2"); // OK
         //exit(0);
-	//ArrayT<double> negPows(mg,mc,M-1);
-	//ArrayT<double> posPows(mg,mc,M+1);
+        //ArrayT<double> negPows(mg,mc,M-1);
+        //ArrayT<double> posPows(mg,mc,M+1);
 
         //GE (error somewhere in these lines
 #if 1
 
-	//const int* ineg2 = negPows2.getDims();
-	//const int* ipos = posPows.getDims();
-	//printf("ineg2= %d, %d, %d\n", ineg2[0], ineg2[1], ineg2[2]);
-	//printf("ipos= %d, %d, %d\n", ipos[0], ipos[1], ipos[2]);
-	//printf("numCoeffs= %d\n", numCoeffs); // 33 as expected
-	// 2*(numCoeffs-1) = 2*(32) = 64 (too high in problematic line!!)
+        //const int* ineg2 = negPows2.getDims();
+        //const int* ipos = posPows.getDims();
+        //printf("ineg2= %d, %d, %d\n", ineg2[0], ineg2[1], ineg2[2]);
+        //printf("ipos= %d, %d, %d\n", ipos[0], ipos[1], ipos[2]);
+        //printf("numCoeffs= %d\n", numCoeffs); // 33 as expected
+        // 2*(numCoeffs-1) = 2*(32) = 64 (too high in problematic line!!)
 
-	for (int j=0; j < mc; j++) {
+        for (int j=0; j < mc; j++) {
             for (int i=0; i < mg; i++) {
-		for (int k=numCoeffs; k < 2*(numCoeffs-1); k++) {
+                for (int k=numCoeffs; k < 2*(numCoeffs-1); k++) {
 #if 0
                     // MUST IMPLEMENT THIS LINE. Last line I believe
                     posPows(:,:,numCoeffs+1:end) = flipdim(negPows2,3);
@@ -474,13 +475,13 @@ numColsComputeDenom = length(columnsToComputeDenom);
                     //printf("k=%d, l2= %d\n", k, l2);
                     // I must increase the size of posPows
                     posPows(i,j,k) = negPows2(i,j,l2);   // PROBLEM WITH THIS LINE
-		}
+                }
             }}
-	// Replace posPows by posPows3
+        // Replace posPows by posPows3
 
 
-	//posPows.print("gordon last stage\n");
-	// ALMOST DONE: Aug. 21, 2009
+        //posPows.print("gordon last stage\n");
+        // ALMOST DONE: Aug. 21, 2009
         //GE
 #endif
     }
@@ -500,15 +501,15 @@ numColsComputeDenom = length(columnsToComputeDenom);
 
 #if 0
     % Loop through each entry in the C matrix computing the results of the
-            % Contour-SVD method.
-            for jj = 1:mc
-                     for ii = 1:mg
-                              C(ii,jj,:) = polyval2(squeeze(posPows(ii,jj,:)),epsilon)./denom;
+        % Contour-SVD method.
+        for jj = 1:mc
+            for ii = 1:mg
+                C(ii,jj,:) = polyval2(squeeze(posPows(ii,jj,:)),epsilon)./denom;
     end
-            end
+        end
 #endif
 
-            vector<double> vpospows;
+        vector<double> vpospows;
     const int* sz = posPows.getDims();
     //printf("3rd dim of posPows = %d\n", sz[2]);
     vpospows.resize(sz[2]);
@@ -550,20 +551,20 @@ numColsComputeDenom = length(columnsToComputeDenom);
 
 #if 0
     % If there are any poles then compute there locations.
-            if ( numColsComputeDenom > 0 )
-                degreeDenom = 2*(rnk-1);
+        if ( numColsComputeDenom > 0 )
+            degreeDenom = 2*(rnk-1);
     temp = zeros(1,degreeDenom+1);
     temp(degreeDenom+1:-2:1) = svdcoefs;
     poles = sort(roots(temp));
-    else
-        poles = [];
+        else
+            poles = [];
     end
 #endif
 
-            if (numColsComputeDenom > 0) {
-	// Calculate the poles
-	// I need a routine to calculate the roots of a polynomial
-    }
+        if (numColsComputeDenom > 0) {
+            // Calculate the poles
+            // I need a routine to calculate the roots of a polynomial
+        }
 
     //% End contourSVD
 
@@ -571,7 +572,7 @@ numColsComputeDenom = length(columnsToComputeDenom);
 }
 //----------------------------------------------------------------------
 mat ContourSVD::rbffdapp(double eps, mat& rd, mat& re)
-        // relates to computation of derivative coefficients
+    // relates to computation of derivative coefficients
 {
     //rd.print("rd");
     //re.print("re");
@@ -622,7 +623,7 @@ mat ContourSVD::rbffdapp(double eps, mat& rd, mat& re)
 }
 //----------------------------------------------------------------------
 cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, cx_mat& re)
-        // relates to computation of derivative coefficients
+    // relates to computation of derivative coefficients
 {
     //printf("------------------------\n");
     //printf("inside complex rbff\n");
@@ -658,7 +659,7 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, cx_mat& re)
 //----------------------------------------------------------------------
 
 mat ContourSVD::rbffdapp(double eps, mat& rd, ArrayT<Vec3>& re, const char* choice)
-        // relates to computation of derivative coefficients
+    // relates to computation of derivative coefficients
 {
     //rd.print("rd");
     //re.print("re");
@@ -723,8 +724,8 @@ mat ContourSVD::rbffdapp(double eps, mat& rd, ArrayT<Vec3>& re, const char* choi
 }
 //----------------------------------------------------------------------
 cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char* choice)
-        // relates to computation of derivative coefficients
-        // choice: 'x', 'y', 'lapl'
+    // relates to computation of derivative coefficients
+    // choice: 'x', 'y', 'lapl'
 {
     //printf("CMPLX: rbffdapp::eps= %f, %f, choice= %s\n", real(eps), imag(eps), choice);
     //exit(0);
@@ -753,9 +754,9 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
         exit(1);
     }
 
-   // re.printcx("RE = ");
-   // rd.print("RD = ");
-   // vald.print("VALD = ");
+    // re.printcx("RE = ");
+    // rd.print("RD = ");
+    // vald.print("VALD = ");
     // Add constraint: derivative of a constant = 0
 
     int nr = rd.n_rows;
@@ -775,21 +776,21 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
     // stencil centers
     cx_rowvec valrow = fds;
 
-	// TODO (EVAN): accelerate this solve. its many small solves
-	// But we could do many small solves at the same time on a GPU
-	// Or change this to an iterative solver or something
+    // TODO (EVAN): accelerate this solve. its many small solves
+    // But we could do many small solves at the same time on a GPU
+    // Or change this to an iterative solver or something
 
     // A is the distance matrix of all stencil nodes versus each other
     cx_rowvec row = solver(valrow, a);
 
-   // valrow.print("VAL ROW = ");
-   // a.print("a = ");
+    // valrow.print("VAL ROW = ");
+    // a.print("a = ");
 
     return row.cols(0,nc-1);
 }
 //----------------------------------------------------------------------
 rowvec ContourSVD::solver(rowvec& A, mat& B)
-        // right / operator:  A * inv(B)
+    // right / operator:  A * inv(B)
 {
 
     mat c = solve(B, trans(A));
@@ -804,7 +805,7 @@ rowvec ContourSVD::solver(rowvec& A, mat& B)
 }
 //----------------------------------------------------------------------
 cx_rowvec ContourSVD::solver(cx_rowvec& A, cx_mat& B)
-        // right / operator:  A * inv(B)
+    // right / operator:  A * inv(B)
 {
     cx_mat ac = htrans(A); // htrans?
 
@@ -825,15 +826,15 @@ cx_rowvec ContourSVD::solver(cx_rowvec& A, cx_mat& B)
     return htrans(c); // htrans?
 }
 //----------------------------------------------------------------------
-template <class T>
-        void ContourSVD::getSize(T& matr, int& nr, int& nc)
+    template <class T>
+void ContourSVD::getSize(T& matr, int& nr, int& nc)
 {
     nr = matr.n_rows;
     nc = matr.n_cols;
 }
 //----------------------------------------------------------------------
-template <class T>
-        void ContourSVD::printSize(T& matr, char* msg)
+    template <class T>
+void ContourSVD::printSize(T& matr, char* msg)
 {
     int nr = matr.n_rows;
     int nc = matr.n_cols;
@@ -845,7 +846,7 @@ template <class T>
 }
 //----------------------------------------------------------------------
 void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<double>& negPows, ArrayT<double>& posPows)
-        // Should erad be complex or real? ****
+    // Should erad be complex or real? ****
 {
     int mg,mc,M;
     M = C.size();
@@ -869,16 +870,16 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
     }
 
     for (int k=0; k < M;  k++) {
-	for (int j=0; j < mc; j++) {
+        for (int j=0; j < mc; j++) {
             for (int i=0; i < mg; i++) {
-		temp(i,j,k) = mval[k];
+                temp(i,j,k) = mval[k];
             }}}
 
     // Multiply temp (element by element) by C
     for (int k=0; k < M;  k++) {
-	for (int j=0; j < mc; j++) {
+        for (int j=0; j < mc; j++) {
             for (int i=0; i < mg; i++) {
-		temp(i,j,k) *= (*C[k])(i,j);
+                temp(i,j,k) *= (*C[k])(i,j);
             }}}
 
     //temp.printcx("temp");exit(0); // OK
@@ -886,10 +887,10 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
 
 #if 0
     % Prepare the matrix for the inverse FFT calculation.
-            sC = zeros(mg,mc,M);
+        sC = zeros(mg,mc,M);
     sC(:,:,1) = 0.5*(real(C(:,:,1)) + 1i*real(C(:,:,1)));
     sC(:,:,2:M) = 0.5*(C(:,:,2:M)+conj(flipdim(C(:,:,2:M),3)) + ...
-    1i*(temp(:,:,2:M)+conj(flipdim(temp(:,:,2:M),3))));
+            1i*(temp(:,:,2:M)+conj(flipdim(temp(:,:,2:M),3))));
 #endif
 
     ArrayT<CMPLX> sC(mg,mc,M);
@@ -899,145 +900,145 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
     ArrayT<CMPLX> tempflip = flipdim3(temp, 1, M);
 
     for (int j=0; j < mc; j++) {
-	for (int i=0; i < mg; i++) {
+        for (int i=0; i < mg; i++) {
             sC(i,j,0) = 0.5*(real((*C[0])(i,j)) + iota*real((*C[0])(i,j)));
             for (int k=1; k < M; k++) {
                 // WHY IS C zero everywhere
                 // 2nd term in first line is not correct!!! DO NOT FOLLOW.
                 sC(i,j,k) = 0.5*((*C[k])(i,j) + conj((*Cflip[k-1])(i,j)))
-                            + 0.5*iota*(temp(i,j,k) + conj(tempflip(i,j,k-1)));
+                    + 0.5*iota*(temp(i,j,k) + conj(tempflip(i,j,k-1)));
             }}}
 
-    //sC.printcx("sC");
+            //sC.printcx("sC");
 
-    // ifft of sC along 3rd dimension
+            // ifft of sC along 3rd dimension
 
-    /*
-temp = ifft(sC,[],3);
-*/
+            /*
+               temp = ifft(sC,[],3);
+               */
 
-    // Slow way of doing it
-    fftw_plan p;
-    for (int j=0; j < mc; j++) {
-	for (int i=0; i < mg; i++) {
-            CMPLX si[M];
-            CMPLX so[M];
-            for (int k=0; k < M; k++) {
-                si[k] = sC(i,j,k);
-            }
-            p = fftw_plan_dft_1d(M, reinterpret_cast<fftw_complex*>(&si[0]), reinterpret_cast<fftw_complex*>(&so[0]), FFTW_BACKWARD, FFTW_ESTIMATE);
-            // GRADY: with M=32, you can probably do matrix-vector multiplication much faster than FFT,
-            // especially on the GPU
-            fftw_execute(p);
-            double minv = 1. / M;
-            for (int k=0; k < M; k++) {
-                //printf("temp(0,0,%d)= (%f,%f)\n", k, real(so[k]), imag(so[k]));
-                temp(i,j,k) = so[k] * minv;
-            }
-	}}
+            // Slow way of doing it
+            fftw_plan p;
+            for (int j=0; j < mc; j++) {
+                for (int i=0; i < mg; i++) {
+                    CMPLX si[M];
+                    CMPLX so[M];
+                    for (int k=0; k < M; k++) {
+                        si[k] = sC(i,j,k);
+                    }
+                    p = fftw_plan_dft_1d(M, reinterpret_cast<fftw_complex*>(&si[0]), reinterpret_cast<fftw_complex*>(&so[0]), FFTW_BACKWARD, FFTW_ESTIMATE);
+                    // GRADY: with M=32, you can probably do matrix-vector multiplication much faster than FFT,
+                    // especially on the GPU
+                    fftw_execute(p);
+                    double minv = 1. / M;
+                    for (int k=0; k < M; k++) {
+                        //printf("temp(0,0,%d)= (%f,%f)\n", k, real(so[k]), imag(so[k]));
+                        temp(i,j,k) = so[k] * minv;
+                    }
+                }}
 
-    // ifft is 10-11 significant digit accurate with respect to Octave
-    //temp.printcx("temp");
+            // ifft is 10-11 significant digit accurate with respect to Octave
+            //temp.printcx("temp");
 
-    //p = fftw_plan_dft_1d(N, reinterpret_cast<fftw_complex*>(sC), reinterpret_cast<fftw_complex*>(sCo), FFTW_BACKWARD, FFTW_ESTIMATE);
-    // end result must be multiplied by (-1) to get the result that Grady gets
-    fftw_destroy_plan(p);
+            //p = fftw_plan_dft_1d(N, reinterpret_cast<fftw_complex*>(sC), reinterpret_cast<fftw_complex*>(sCo), FFTW_BACKWARD, FFTW_ESTIMATE);
+            // end result must be multiplied by (-1) to get the result that Grady gets
+            fftw_destroy_plan(p);
 
-    // check values of temp() array compared to what Grady gets at (i,j) = (0,0)
+            // check values of temp() array compared to what Grady gets at (i,j) = (0,0)
 
 #if 0
-    printf("M = %d, N = %d\n", M, N);
-    for (int k=0; k < M; k++) {
-        printf("temp(0,0,%d)= (%f,%f)\n", k, real(temp(0,0,k)), imag(temp(0,0,k)));
-    }
-    exit(0);
+            printf("M = %d, N = %d\n", M, N);
+            for (int k=0; k < M; k++) {
+                printf("temp(0,0,%d)= (%f,%f)\n", k, real(temp(0,0,k)), imag(temp(0,0,k)));
+            }
+            exit(0);
 #endif
 
-    /*
-temp2 = repmat(real(1/2/M*C(:,:,M+1)),[1 1 M]);
-*/
-    ArrayT<double> temp2(mg,mc,M);
-    for (int k=0; k < M; k++) {
-	for (int j=0; j < mc; j++) {
+            /*
+               temp2 = repmat(real(1/2/M*C(:,:,M+1)),[1 1 M]);
+               */
+            ArrayT<double> temp2(mg,mc,M);
+            for (int k=0; k < M; k++) {
+                for (int j=0; j < mc; j++) {
+                    for (int i=0; i < mg; i++) {
+                        // off by 1024 = 32*32 from results from matlab *SVD*.m
+                        // Check values of C[M] (and C[M-1] . Something is wrong.  Fixed. 
+                        temp2(i,j,k) = (1./(2.*M))*real((*C[M])(i,j));
+                        //if (i == 0 && j == 0) { printf("temp2(0,0,%d)= %f\n", k, temp2(0,0,k)); }
+                    }}}
+
+            //temp2.print("temp2");
+
+            /*
+               % Extract the Laurent coefficients from the FFT results.
+
+               coeffs(:,:,1:2:2*M) = real(temp) + temp2;
+               coeffs(:,:,2:2:2*M) = imag(temp) - temp2;
+               */
+            ArrayT<double> coeffs = ArrayT<double>(mg,mc,2*M);
+            coeffs.setTo(0.);
+
+            // SOMETHING IS WRONG!!! Fixed.
+            // temp is correct on its own
+            //  temp2 is ok on its own. temp2 appears to be constant
+            for (int k=0; k < M; k++) {
+                for (int j=0; j < mc; j++) {
+                    for (int i=0; i < mg; i++) {
+                        coeffs(i,j,2*k)   = real(temp(i,j,k)) + temp2(i,j,k);
+                        coeffs(i,j,2*k+1) = imag(temp(i,j,k)) - temp2(i,j,k);
+                    }}}
+            //	coeffs.print("coeffs"); // accurate to 10 signif. digits
+
+
+            /*
+               % To get the actual Laurent coefficients we need to scale the values
+               % from the inverse fft by the appropriate power of the radius
+               % used to compute the function values around the circle in the 
+               % complex epsilon plane.
+               negPows = coeffs(:,:,2:M).*...
+               repmat(reshape(erad.^(2*(1:M-1)),[1 1 M-1]),[mg mc 1]);
+               posPows = coeffs(:,:,[1 2*M:-1:M+1]).*...
+               repmat(reshape(1./erad.^(2*(0:M)),[1 1 M+1]),[mg mc 1]);
+               end
+               */
+
+            // ADD print of COMPLEX NUMBERS to ArrayT?
+            vector<double> neg_pow, pos_pow;
+
+            for (int k=0; k < M-1; k++) {
+                neg_pow.push_back( pow(erad, 2.*(k+1)) );
+            }
+
+            for (int k=0; k < M+1; k++) {
+                pos_pow.push_back( pow(erad, -2.*k) );
+            }
+
+            for (int k=0; k < M-1; k++) {
+                for (int i=0; i < mg; i++) {
+                    for (int j=0; j < mc; j++) {
+                        negPows(i,j,k) = coeffs(i,j,k+1)*neg_pow[k]; 
+                    }}}
+
+            //for (int k=0; k < M+1; k++) {
+            int k=0;
             for (int i=0; i < mg; i++) {
-		// off by 1024 = 32*32 from results from matlab *SVD*.m
-		// Check values of C[M] (and C[M-1] . Something is wrong.  Fixed. 
-		temp2(i,j,k) = (1./(2.*M))*real((*C[M])(i,j));
-		//if (i == 0 && j == 0) { printf("temp2(0,0,%d)= %f\n", k, temp2(0,0,k)); }
-            }}}
+                for (int j=0; j < mc; j++) {
+                    posPows(i,j,k) = coeffs(i,j,0)*pos_pow[0];
+                }} //}
 
-    //temp2.print("temp2");
+            for (int k=1; k < M+1; k++) {
+                for (int i=0; i < mg; i++) {
+                    for (int j=0; j < mc; j++) {
+                        posPows(i,j,k) = coeffs(i,j,2*M-k)*pos_pow[k]; // WRONG?
+                    }}}
 
-    /*
-% Extract the Laurent coefficients from the FFT results.
+            //posPows.print("posPows");
 
-coeffs(:,:,1:2:2*M) = real(temp) + temp2;
-coeffs(:,:,2:2:2*M) = imag(temp) - temp2;
-*/
-    ArrayT<double> coeffs = ArrayT<double>(mg,mc,2*M);
-    coeffs.setTo(0.);
-
-    // SOMETHING IS WRONG!!! Fixed.
-    // temp is correct on its own
-    //  temp2 is ok on its own. temp2 appears to be constant
-    for (int k=0; k < M; k++) {
-	for (int j=0; j < mc; j++) {
-            for (int i=0; i < mg; i++) {
-		coeffs(i,j,2*k)   = real(temp(i,j,k)) + temp2(i,j,k);
-		coeffs(i,j,2*k+1) = imag(temp(i,j,k)) - temp2(i,j,k);
-            }}}
-    //	coeffs.print("coeffs"); // accurate to 10 signif. digits
-
-
-    /*
-% To get the actual Laurent coefficients we need to scale the values
-% from the inverse fft by the appropriate power of the radius
-% used to compute the function values around the circle in the 
-% complex epsilon plane.
-negPows = coeffs(:,:,2:M).*...
-      repmat(reshape(erad.^(2*(1:M-1)),[1 1 M-1]),[mg mc 1]);
-posPows = coeffs(:,:,[1 2*M:-1:M+1]).*...
-      repmat(reshape(1./erad.^(2*(0:M)),[1 1 M+1]),[mg mc 1]);
-end
-*/
-
-    // ADD print of COMPLEX NUMBERS to ArrayT?
-    vector<double> neg_pow, pos_pow;
-
-    for (int k=0; k < M-1; k++) {
-        neg_pow.push_back( pow(erad, 2.*(k+1)) );
-    }
-
-    for (int k=0; k < M+1; k++) {
-        pos_pow.push_back( pow(erad, -2.*k) );
-    }
-
-    for (int k=0; k < M-1; k++) {
-	for (int i=0; i < mg; i++) {
-            for (int j=0; j < mc; j++) {
-		negPows(i,j,k) = coeffs(i,j,k+1)*neg_pow[k]; 
-            }}}
-
-    //for (int k=0; k < M+1; k++) {
-    int k=0;
-    for (int i=0; i < mg; i++) {
-	for (int j=0; j < mc; j++) {
-            posPows(i,j,k) = coeffs(i,j,0)*pos_pow[0];
-	}} //}
-
-    for (int k=1; k < M+1; k++) {
-	for (int i=0; i < mg; i++) {
-            for (int j=0; j < mc; j++) {
-		posPows(i,j,k) = coeffs(i,j,2*M-k)*pos_pow[k]; // WRONG?
-            }}}
-
-    //posPows.print("posPows");
-
-    // FINISH THIS PART
+            // FINISH THIS PART
 }
 //----------------------------------------------------------------------
-template <class T>
-        vector<T*> ContourSVD::flipdim3(vector<T*>& C, int i1, int i2)
+    template <class T>
+vector<T*> ContourSVD::flipdim3(vector<T*>& C, int i1, int i2)
 {
     //printf("enter flipdim3(vector)\n");
     int sz = C.size();
@@ -1061,8 +1062,8 @@ template <class T>
     return v;
 }
 //----------------------------------------------------------------------
-template <class T>
-        ArrayT<T> ContourSVD::flipdim3(ArrayT<T>& C, int i1, int i2)
+    template <class T>
+ArrayT<T> ContourSVD::flipdim3(ArrayT<T>& C, int i1, int i2)
 {
     const int* sz = C.getDims();
     //printf("flipdim::sz= %d, %d, %d\n", sz[0], sz[1],sz[2]);
@@ -1076,38 +1077,38 @@ template <class T>
     int count=0;
     for (int k=k1; k < k2; k++) {
         count++;
-	for (int j=0; j < sz[1]; j++) {
+        for (int j=0; j < sz[1]; j++) {
             for (int i=0; i < sz[0]; i++) {
-		//printf("i,j,k= %d, %d, %d\n", i, j, k);
-		v(i,j,k-k1) = C(i,j,k1+k2-k-1);
+                //printf("i,j,k= %d, %d, %d\n", i, j, k);
+                v(i,j,k-k1) = C(i,j,k1+k2-k-1);
             }}}
-    //printf("nb times in k loop: %d\n", count);
+        //printf("nb times in k loop: %d\n", count);
 
-    return v;
+        return v;
 }
 //----------------------------------------------------------------------
-template <class T>
-        ArrayT<double> ContourSVD::valsAgree(ArrayT<T>& val1, ArrayT<T>& val2, double relError)
+    template <class T>
+ArrayT<double> ContourSVD::valsAgree(ArrayT<T>& val1, ArrayT<T>& val2, double relError)
 {
     //val1.print("val1");
     //val2.print("val2");
     /*
-function result = valsAgree(val1,val2,relError)
+       function result = valsAgree(val1,val2,relError)
 
-[mv1 nv1] = size(val1);
-[mv2 nv2] = size(val2);
+       [mv1 nv1] = size(val1);
+       [mv2 nv2] = size(val2);
 
-% GE: WHAT IF BOTH ARE SCALARS? 
+       % GE: WHAT IF BOTH ARE SCALARS? 
 
-% Check to see if either val1 or val2 is a scalar.
-if ( (mv1 == 1) & (nv1 == 1) )
-   val1 = repmat(val1,mv2,nv2);
-end
+       % Check to see if either val1 or val2 is a scalar.
+       if ( (mv1 == 1) & (nv1 == 1) )
+       val1 = repmat(val1,mv2,nv2);
+       end
 
-if ( (mv2 == 1) & (nv2 == 1) )
-   val2 = repmat(val2,mv1,nv1);
-end
-*/
+       if ( (mv2 == 1) & (nv2 == 1) )
+       val2 = repmat(val2,mv1,nv1);
+       end
+       */
     int mv1, nv1, mv2, nv2;
     const int* sz1;
     const int* sz2;
@@ -1136,11 +1137,11 @@ end
     }
 
     /*
-% Compute the relative error.
-% max(2D array) returns a row vector (max over each column)
-result = abs(val1-val2)./max(abs(val1),abs(val2));
-// ERROR unless val1 and val2 are 1D arrays (ASK GRADY)
-*/
+       % Compute the relative error.
+       % max(2D array) returns a row vector (max over each column)
+       result = abs(val1-val2)./max(abs(val1),abs(val2));
+    // ERROR unless val1 and val2 are 1D arrays (ASK GRADY)
+    */
 
     //val1.print("val1");
     //val2.print("val2");
@@ -1148,52 +1149,52 @@ result = abs(val1-val2)./max(abs(val1),abs(val2));
 
     ArrayT<double> result(mv1, nv1);
     for (int j=0; j < nv1; j++) {
-	for (int i=0; i < mv1; i++) {
+        for (int i=0; i < mv1; i++) {
             //double tmp = abs(val1(i,j)-val2(i,j)) / max(abs(val1(i,j)),abs(val2(i,j)));
             double tmp = fabs(val1(i,j)-val2(i,j)) / max(fabs(val1(i,j)),fabs(val2(i,j)));
             result(i,j) = tmp;
-	}}
+        }}
 
     //result.print("gordon_result");
 
     /*
-% Remove any NaN's since these correpond to an entry in val1 and val2 being
-% both zero or at least one equal to inf.
-nanIndex = find(isnan(result));
+       % Remove any NaN's since these correpond to an entry in val1 and val2 being
+       % both zero or at least one equal to inf.
+       nanIndex = find(isnan(result));
 
-% Make all the NaN entries result matrix equal to zero if they come from two
-% corresponding entries being equal to zero.
-if ( length(nanIndex) > 0 )
-   result(nanIndex(find( (val1(nanIndex) == 0) & (val2(nanIndex) == 0) ))) = 0;
-end
-*/
+       % Make all the NaN entries result matrix equal to zero if they come from two
+       % corresponding entries being equal to zero.
+       if ( length(nanIndex) > 0 )
+       result(nanIndex(find( (val1(nanIndex) == 0) & (val2(nanIndex) == 0) ))) = 0;
+       end
+       */
 
     /*
-result = result < relError;
-end
-end
-*/
+       result = result < relError;
+       end
+       end
+       */
 
     //printf("relError= %g\n", relError);
 
     for (int j=0; j < nv1; j++) {
-	for (int i=0; i < mv1; i++) {
+        for (int i=0; i < mv1; i++) {
             result(i,j) = (result(i,j) < relError) ? TRUE : FALSE; // TRUE == 1
-	}}
+        }}
 
     return result;
 }
 //----------------------------------------------------------------------
-template <class T>
-        void  repmat(ArrayT<T>& a, int mv1, int mv2)
-        //val2 = repmat(val2,mv1,nv1);
+    template <class T>
+void  repmat(ArrayT<T>& a, int mv1, int mv2)
+    //val2 = repmat(val2,mv1,nv1);
 {
 }
 //----------------------------------------------------------------------
 #if 0
-template <class T>
-        vector<int> ContourSVD::find(T in)
-        // return indices of umat that are non-zero
+    template <class T>
+vector<int> ContourSVD::find(T in)
+    // return indices of umat that are non-zero
 {
     // should check that matrix is 1D (1 column)
 
@@ -1210,211 +1211,211 @@ template <class T>
 //----------------------------------------------------------------------
 #if 0
 -- Built-in Function:  squeeze (X)
-        Remove singleton dimensions from X and return the result.  Note
-        that for compatibility with MATLAB, all objects have a minimum of
-        two dimensions and row vectors are left unchanged.
+    Remove singleton dimensions from X and return the result.  Note
+    that for compatibility with MATLAB, all objects have a minimum of
+    two dimensions and row vectors are left unchanged.
 
-        squeeze is a built-in function
+    squeeze is a built-in function
 
 #endif
 #if 0
-        template <class T>
-        void ContourSVD::squeeze(Arrayt<T> arr)
+    template <class T>
+void ContourSVD::squeeze(Arrayt<T> arr)
 {
     const int* sz = arr.getDims();
 
     if (sz[0] == 1 && sz[1] == 1) {
     } else if (sz[0] == 1 && sz[1] != 1) {
-	else if (sz[0] != 1 && sz[1] == 1) 
-	}
-        }
+        else if (sz[0] != 1 && sz[1] == 1) 
+    }
+}
 #endif
-            //----------------------------------------------------------------------
-            vector<double> ContourSVD::twoNorm(ArrayT<double>& negPows, vector<int>& max_index)
-            {
-                //printf("enter twoNorm, N = %d\n", N);
-                //% Two-norm of the negative power coefficients for each column
-                //[mx1,id1] = max(sqrt(sum(negPows(:,:,1:N/2-1).^2,3)),[],1);
+//----------------------------------------------------------------------
+vector<double> ContourSVD::twoNorm(ArrayT<double>& negPows, vector<int>& max_index)
+{
+    //printf("enter twoNorm, N = %d\n", N);
+    //% Two-norm of the negative power coefficients for each column
+    //[mx1,id1] = max(sqrt(sum(negPows(:,:,1:N/2-1).^2,3)),[],1);
 
-                int nr, nc;
-                const int* sz = negPows.getDims();
-                nr = sz[0];
-                nc = sz[1];
-                //printf("nr,nc= %d, %d\n", nr, nc);
-                ArrayT<double> res(nr, nc);
+    int nr, nc;
+    const int* sz = negPows.getDims();
+    nr = sz[0];
+    nc = sz[1];
+    //printf("nr,nc= %d, %d\n", nr, nc);
+    ArrayT<double> res(nr, nc);
 
-                max_index.resize(nc);
-                vector<double> mx;
-                mx.resize(nc);
+    max_index.resize(nc);
+    vector<double> mx;
+    mx.resize(nc);
 
-                double sum;
-                //printf("N/2-1 = %d\n", N/2-1);
+    double sum;
+    //printf("N/2-1 = %d\n", N/2-1);
 
-                //negPows.print("twoNorm::netPows"); // OK
+    //negPows.print("twoNorm::netPows"); // OK
 
-                // ATTENTION!!! negPows should not be CMPLX, but probably real or integer?
+    // ATTENTION!!! negPows should not be CMPLX, but probably real or integer?
 
-                for (int j=0; j < nc; j++) {
-                    for (int i=0; i < nr; i++) {
-                        sum = 0.;
-                        for (int k=0; k < N/2-1; k++) {
-                            double nn = negPows(i,j,k); // CHECK THIS
-                            //printf("k=%d, negPows= %f\n", k, nn);
-                            sum += nn*nn;
-                        }
-                        res(i,j) = sqrt(sum);
-                        //printf("i,j= %d,%d, sum= %f\n", i,j, sum);
-                        //exit(0);
-                    }}
-
-                for (int j=0; j < nc; j++) {
-                    mx[j] = 0.;
-                    for (int i=0; i < nr; i++) {
-                        if (res(i,j) > mx[j]) {
-                            mx[j] = res(i,j);
-                            max_index[j] = i;
-                        }
-                    }}
-
-                return mx;
+    for (int j=0; j < nc; j++) {
+        for (int i=0; i < nr; i++) {
+            sum = 0.;
+            for (int k=0; k < N/2-1; k++) {
+                double nn = negPows(i,j,k); // CHECK THIS
+                //printf("k=%d, negPows= %f\n", k, nn);
+                sum += nn*nn;
             }
-            //----------------------------------------------------------------------
-            template<class T>
-            ArrayT<T> ContourSVD::hankel(vector<T> v)
-            {
-                int sz = v.size();
-                ArrayT<T> hank(sz, sz);
+            res(i,j) = sqrt(sum);
+            //printf("i,j= %d,%d, sum= %f\n", i,j, sum);
+            //exit(0);
+        }}
 
-                for (int j=0; j < sz; j++) {
-                    for (int i=0; i < sz; i++) {
-                        if ((i+j) < sz) {
-                            hank(i,j) = (i+j) < sz ? v[i+j] : 0.;
-                        }
-                    }}
-
-                return hank;
+    for (int j=0; j < nc; j++) {
+        mx[j] = 0.;
+        for (int i=0; i < nr; i++) {
+            if (res(i,j) > mx[j]) {
+                mx[j] = res(i,j);
+                max_index[j] = i;
             }
-            //----------------------------------------------------------------------
-            mat ContourSVD::hankel(vector<double> v)
-            {
-                int sz = v.size();
-                mat hank(sz, sz);
+        }}
 
-                for (int j=0; j < sz; j++) {
-                    for (int i=0; i < sz; i++) {
-                        if ((i+j) < sz) {
-                            hank(i,j) = (i+j) < sz ? v[i+j] : 0.;
-                        }
-                    }}
+        return mx;
+}
+//----------------------------------------------------------------------
+    template<class T>
+ArrayT<T> ContourSVD::hankel(vector<T> v)
+{
+    int sz = v.size();
+    ArrayT<T> hank(sz, sz);
 
-                return hank;
+    for (int j=0; j < sz; j++) {
+        for (int i=0; i < sz; i++) {
+            if ((i+j) < sz) {
+                hank(i,j) = (i+j) < sz ? v[i+j] : 0.;
             }
-            //----------------------------------------------------------------------
-            template <class T>
-                    Mat<T> ContourSVD::polyval2(vector<T> p, Mat<T> x)
-                    // x: usually array of epsilon (\phi(||\epsilon r||))
-            {
+        }}
+
+    return hank;
+}
+//----------------------------------------------------------------------
+mat ContourSVD::hankel(vector<double> v)
+{
+    int sz = v.size();
+    mat hank(sz, sz);
+
+    for (int j=0; j < sz; j++) {
+        for (int i=0; i < sz; i++) {
+            if ((i+j) < sz) {
+                hank(i,j) = (i+j) < sz ? v[i+j] : 0.;
+            }
+        }}
+
+    return hank;
+}
+//----------------------------------------------------------------------
+    template <class T>
+Mat<T> ContourSVD::polyval2(vector<T> p, Mat<T> x)
+    // x: usually array of epsilon (\phi(||\epsilon r||))
+{
 #if 0
-                function y = polyval2(p,x)
-                             [m n] = size(x);
-                % Do the computation for general case where x is an array
-                        y = zeros(m,n);
-                x = x.^2;
-                for j=length(p):-1:1
-                      y = x.*y + p(j);
-                end
-                        end
-                        % End polyval2
+    function y = polyval2(p,x)
+        [m n] = size(x);
+    % Do the computation for general case where x is an array
+        y = zeros(m,n);
+    x = x.^2;
+    for j=length(p):-1:1
+                     y = x.*y + p(j);
+    end
+        end
+        % End polyval2
 #endif
 
-                        int m, n;
-		getSize(x, m, n);
-		//printSize(x, "polyval2, size(x)");
+        int m, n;
+    getSize(x, m, n);
+    //printSize(x, "polyval2, size(x)");
 
-		Mat<T> y = zeros<Mat<T> >(m,n); // WRONG???
-		x = x % x; // elementwise multiplication
+    Mat<T> y = zeros<Mat<T> >(m,n); // WRONG???
+    x = x % x; // elementwise multiplication
 
-		//x.print("polyval2 x");
-		//print(p, "polyval2_p"); exit(0);
+    //x.print("polyval2 x");
+    //print(p, "polyval2_p"); exit(0);
 
-		for (int j=p.size(); j > 0; j--) {
-		    //printf("p[%d]= %f\n", j, p[j-1]);
-                    y = x % y + p[j-1];
-		}
+    for (int j=p.size(); j > 0; j--) {
+        //printf("p[%d]= %f\n", j, p[j-1]);
+        y = x % y + p[j-1];
+    }
 
-		//y.print("polyval2::y");
+    //y.print("polyval2::y");
 
-		return y;
-            }
-            //----------------------------------------------------------------------
-            template <class T>
-                    vector<T> ContourSVD::polyval2(vector<T> p, vector<T> x)
-            {
-		int m;
-		m = x.size();
+    return y;
+}
+//----------------------------------------------------------------------
+    template <class T>
+vector<T> ContourSVD::polyval2(vector<T> p, vector<T> x)
+{
+    int m;
+    m = x.size();
 
-		vector<T> y;
-		y.resize(m);
+    vector<T> y;
+    y.resize(m);
 
-		for (int i=0; i < m; i++) {
-                    y[i] = 0.0;
-		}
+    for (int i=0; i < m; i++) {
+        y[i] = 0.0;
+    }
 
-		for (int i=0; i < x.size(); i++) {
-                    x[i] = x[i] * x[i]; // elementwise multiplication
-		}
+    for (int i=0; i < x.size(); i++) {
+        x[i] = x[i] * x[i]; // elementwise multiplication
+    }
 
-		for (int j=p.size(); j > 0; j--) {
-                    for (int s=0; s < m; s++) {
-                        y[s] = x[s]*y[s] + p[j-1];
-                    }
-		}
+    for (int j=p.size(); j > 0; j--) {
+        for (int s=0; s < m; s++) {
+            y[s] = x[s]*y[s] + p[j-1];
+        }
+    }
 
-		return y;
-            }
-            //----------------------------------------------------------------------
-            template <class T>
-                    void ContourSVD::print(vector<T> v, const char* msg)
-            {
-                const char *txt = (msg == 0) ? "" : msg;
-                for (int i=0; i < v.size(); i++) {
-                    printf("%s, vec[%d]= %g\n", msg, i, (double) v[i]);
-                }
-            }
-            //----------------------------------------------------------------------
-            void ContourSVD::print(vector<CMPLX> v, const char* msg)
-            {
-                const char *txt = (msg == 0) ? "" : msg;
-                for (int i=0; i < v.size(); i++) {
-                    printf("%s, vec[%d]= (%g,%g)\n", msg, i, real(v[i]), imag(v[i]));
-                }
-            }
-            //----------------------------------------------------------------------
-            void ContourSVD::print(cx_mat& v, const char* msg)
-            {
-                const char *txt = (msg == 0) ? "" : msg;
-                for (int j=0; j < v.n_cols; j++) {
-                    for (int i=0; i < v.n_rows; i++) {
-                        printf("%s(%d,%d)= (%21.14g,%21.14g)\n", msg, i, j, real(v(i,j)), imag(v(i,j)));
-                    }}
-            }
-            //----------------------------------------------------------------------
-            void ContourSVD::print(mat& v, const char* msg)
-            {
-                const char *txt = (msg == 0) ? "" : msg;
-                for (int j=0; j < v.n_cols; j++) {
-                    for (int i=0; i < v.n_rows; i++) {
-                        printf("%s(%d,%d)= %21.14g\n", msg, i, j, (double) v(i,j));
-                    }}
-            }
-            //----------------------------------------------------------------------
-            template <class T>
-                    void ContourSVD::print(Mat<T>& v, const char* msg)
-            {
-                const char *txt = (msg == 0) ? "" : msg;
-                for (int j=0; j < v.n_cols; j++) {
-                    for (int i=0; i < v.n_rows; i++) {
-                        printf("%s(%d,%d)= %21.14g\n", msg, i, j, (double) v(i,j));
-                    }}
-            }
-            //----------------------------------------------------------------------
+    return y;
+}
+//----------------------------------------------------------------------
+    template <class T>
+void ContourSVD::print(vector<T> v, const char* msg)
+{
+    const char *txt = (msg == 0) ? "" : msg;
+    for (int i=0; i < v.size(); i++) {
+        printf("%s, vec[%d]= %g\n", msg, i, (double) v[i]);
+    }
+}
+//----------------------------------------------------------------------
+void ContourSVD::print(vector<CMPLX> v, const char* msg)
+{
+    const char *txt = (msg == 0) ? "" : msg;
+    for (int i=0; i < v.size(); i++) {
+        printf("%s, vec[%d]= (%g,%g)\n", msg, i, real(v[i]), imag(v[i]));
+    }
+}
+//----------------------------------------------------------------------
+void ContourSVD::print(cx_mat& v, const char* msg)
+{
+    const char *txt = (msg == 0) ? "" : msg;
+    for (int j=0; j < v.n_cols; j++) {
+        for (int i=0; i < v.n_rows; i++) {
+            printf("%s(%d,%d)= (%21.14g,%21.14g)\n", msg, i, j, real(v(i,j)), imag(v(i,j)));
+        }}
+}
+//----------------------------------------------------------------------
+void ContourSVD::print(mat& v, const char* msg)
+{
+    const char *txt = (msg == 0) ? "" : msg;
+    for (int j=0; j < v.n_cols; j++) {
+        for (int i=0; i < v.n_rows; i++) {
+            printf("%s(%d,%d)= %21.14g\n", msg, i, j, (double) v(i,j));
+        }}
+}
+//----------------------------------------------------------------------
+    template <class T>
+void ContourSVD::print(Mat<T>& v, const char* msg)
+{
+    const char *txt = (msg == 0) ? "" : msg;
+    for (int j=0; j < v.n_cols; j++) {
+        for (int i=0; i < v.n_rows; i++) {
+            printf("%s(%d,%d)= %21.14g\n", msg, i, j, (double) v(i,j));
+        }}
+}
+//----------------------------------------------------------------------

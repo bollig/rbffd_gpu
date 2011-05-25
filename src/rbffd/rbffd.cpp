@@ -886,7 +886,7 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
 
         int N = 128; // Why can't I increase N?
         arma::mat weights_new = sten.execute(N);
-
+        weights_new * rad*rad;
 #if 0
         char label[256];
         sprintf(label, "%s Derivative Coefficients =", choice);

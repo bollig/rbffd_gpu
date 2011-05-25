@@ -98,10 +98,16 @@ class Stencils
             arma::mat coefs = svd->getFDCoeffs();                 
             // the only 2nd order operator
             if (strcmp(choice, "lapl") == 0) { 
-                // EFB052311: I think this should be scaled by 1/25 for stencil
-                // size 5. Perhaps 1/(n*n)? where n is the stencil size?
-                // Regardless, I get much better accuracy when I dont divide by
-                // rad here. 
+                // EFB052311:
+                // I talked to gordon about this scaling. The weights SHOULD be (-4, 1, 1, 1, 1) 
+                // but they also need to be scaled by 1/h^2 (i.e., second centered formula). 
+                // Now, if rad == 1/avg_stencil_radius ~= 1/h  (~= is approx.
+                // equal) then this is correct. Just double check that RAD is
+                // ALWAYS 1/h! If we choose rad too small then we might
+                // underscale the weights. Not sure how much impact that will
+                // have. If we over scale, since h is small we end up
+                // increasing the magnitude of our weights very high and then
+                // our derivs become inaccurate.: 
                 return coefs*rad*rad;
             } else {
                 return coefs*rad;

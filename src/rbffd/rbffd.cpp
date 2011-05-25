@@ -851,7 +851,7 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         // FIXME: Gordons comments above indicate a desire to vary the rad with avg_stencil_radii. 
         //
         // Rad is the Radius for ContourSVD method. (???) No paper on ContourSVD yet.
-        double rad = 1.1;   // Works with 300 nodes
+        double rad = 4;   // Works with 300 nodes
         double eps = var_epsilon[st_indx]; 
 #endif 
         //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);

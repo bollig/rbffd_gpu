@@ -11,8 +11,8 @@ using namespace std;
 // I might create subclass for different rbf functions
 
 // Gaussian RBF_MQ
-// Theorically positive definite
-
+// Theorically positive definite? 
+#if 1
 class RBF_MQ : public RBF{
     private:
 
@@ -236,5 +236,158 @@ class RBF_MQ : public RBF{
         }
 
 };
+#else 
+
+// EFB052311 (from original grady conversion)
+// Might not support 3D: 
+
+
+class RBF_MQ : public RBF {
+    private:
+
+    public:
+        RBF_MQ(double epsilon, int dim_num) : RBF(epsilon, dim_num) {
+        }
+
+        RBF_MQ(CMPLX epsilon, int dim_num) : RBF(epsilon, dim_num) {
+        }
+
+        virtual ~RBF_MQ() {};
+
+        //double operator()(const Vec3& x, const Vec3& xi) {
+        //return eval(x,xi);
+        //}
+
+        // added Aug. 15, 2009
+        //double operator()(const Vec3& x) {
+        //return eval(x);
+        //}
+
+        // added Aug. 15, 2009
+        //double operator()(double x) {
+        //return eval(x);
+        //}
+
+        // f = (1+eps2*r^2)^{1/2}
+        // added Aug. 15, 2009
+        virtual double eval(const Vec3& x) {
+            double r2 = x.square();
+            return sqrt(1+(eps2*r2));
+        }
+        virtual CMPLX eval(const CVec3& x) {
+            CMPLX r2 = x.square();
+            return sqrt(1.+(ceps2*r2));
+        }
+
+
+
+        // added Aug. 15, 2009
+        virtual double eval(double x) {
+            //printf("eval, x= %f, eps2= %f, rbf= %21.14e\n", x, eps2, sqrt(1.+eps2*x*x));
+            return sqrt(1+(eps2*x*x));
+        }
+
+        // added Aug. 16, 2009
+        virtual CMPLX eval(CMPLX x) {
+            CMPLX dd = sqrt(1.+(ceps2*x*x));
+            //printf("cmplx eval, x= %f,%f, eps= %f,%f, rbf= %21.14e,%21.14e\n", real(x),imag(x), real(ceps), imag(ceps), real(dd), imag(dd));
+            return sqrt(1.+(ceps2*x*x));
+        }
+
+
+        // fx = (1/2) (1+(eps*r)^2))^{-1/2} * 2*eps2 (x-xi)
+        //    = eps2*(x-xi)/f 
+        // fxx = eps2/f - eps2*(x-xi)*f^{-2}*eps2(x-xi)*f^{-1}
+        //     = eps2*f^{-1} * (1 - eps2*(x-xi)^2*f^{-2})
+        // fxx+fyy 
+        //     = eps2*f^{-1} * (2 - eps2*R^2*f^{-2})
+        //  where R^2 = (x-xi)^2 + (y-yi)^2
+        virtual double xderiv(const Vec3& xvec) {
+            double f = eval(xvec);
+            return(eps2*(xvec.x())/(f*f));
+        }
+        virtual CMPLX xderiv(const CVec3& xvec) {
+            CMPLX f = eval(xvec);
+            return((ceps2*xvec.x())/f);
+        }
+
+
+        virtual double yderiv(const Vec3& xvec) {
+            double f = eval(xvec);
+            return(eps2*(xvec.y())/(f*f));
+        }
+        virtual CMPLX yderiv(const CVec3& xvec) {
+            CMPLX f = eval(xvec);
+            return((ceps2*xvec.y())/f);
+        }
+
+
+        virtual double zderiv(const Vec3& xvec) {
+            double f = eval(xvec);
+            return(eps2*(xvec.z())/(f*f));
+        }
+        virtual CMPLX zderiv(const CVec3& xvec) {
+            CMPLX f = eval(xvec);
+            return((ceps2*xvec.z())/f);
+        }
+
+
+        virtual double xxderiv(const Vec3& xvec, const Vec3& xi) {
+            return(0.);
+        }
+
+        virtual double yyderiv(const Vec3& xvec, const Vec3& xi) {
+            return(0.);
+        }
+
+        virtual double xyderiv(const Vec3& xvec, const Vec3& xi) {
+            return(0.);
+        }
+
+        // fxx+fyy 
+        //     = eps2*f^{-1} * (2 - eps2*R^2*f^{-2})
+        //  where R^2 = (x-xi)^2 + (y-yi)^2
+        //  lapl(f) = eps2*f^{-1}*(2.-(r*eps)^2*f^{-2})
+
+        // added Aug. 15, 2009
+        virtual double lapl_deriv(const Vec3& xvec) {
+            double f = eval(xvec);
+            double f2 = 1./(f);
+            double f3 = 1./(f*f);
+            double r2e = xvec.square() * eps2;
+            double d = eps2*f2*(2.-r2e*f3);
+            return d;
+        }
+
+        // added Aug. 15, 2009
+        virtual double lapl_deriv(const double x) {
+            double f = eval(x);
+            double f2 = 1./(f);
+            double f3 = 1./(f*f);
+            double r2e = x*x*eps2; 
+            double d = eps2*f2*(2.-r2e*f3);
+            return d;
+        }
+
+        // added Aug. 16, 2009
+        virtual CMPLX lapl_deriv(const CMPLX x) {
+            CMPLX f = eval(x);
+            CMPLX f2 = 1./(f);
+            CMPLX f3 = 1./(f*f);
+            CMPLX r2e = x*x*ceps2; 
+            CMPLX d = ceps2*f2*(2.-r2e*f3);
+            return d;
+        }
+
+
+        // EFB052311: dont know why these are not inherited. Probably due to parameter polymorph
+        // maybe because of const'ness?
+        double xderiv(const Vec3& xvec, const Vec3& x_center) { this->xderiv(xvec-x_center); }
+        double yderiv(const Vec3& xvec, const Vec3& x_center) { this->yderiv(xvec-x_center); }
+        double zderiv(const Vec3& xvec, const Vec3& x_center) { this->zderiv(xvec-x_center); }
+        double lapl_deriv(const Vec3& xvec, const Vec3& x_center) { this->zderiv(xvec-x_center); }
+};
+
+#endif 
 
 #endif

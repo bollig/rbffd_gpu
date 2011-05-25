@@ -731,6 +731,10 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
     //exit(0);
     rbf->setEpsilon(eps);
 
+    //EFB 052311
+ //   rd.print("USING RD=");
+ //   re.printcx("RE=");
+    
     // Generate matrix Phi. This is \Phi(distanceMatrix). in other words,
     // the rbf evaluted for all distances in the distance matrix.
     cx_mat vals = (*rbf)(rd);

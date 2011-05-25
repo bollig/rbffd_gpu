@@ -251,6 +251,10 @@ int main(int argc, char** argv) {
     if (err) { 
         printf("start computing weights\n");
         tm["weights"]->start(); 
+
+        // NOTE: good test for Direct vs Contour
+        // Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
+        // 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
         der->setWeightType(RBFFD::ContourSVD);
         der->computeAllWeightsForAllStencils();
         tm["weights"]->stop(); 

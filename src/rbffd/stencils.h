@@ -31,17 +31,20 @@ class Stencils
             this->eps = eps_; // I should not require epsilon at this stage
             this->rad = rad_; // will be overwritten
             this->rbf = rbf_;
+            // XD are the SAMPLE points (physical coordinates)
             this->xd = xd_;
             //this->xd->print("Stencil::xd = ");
             // printf("Stencil::rad = %f\t Stencil::eps = %f\n", this->rad, this->eps);
             this->choice = choice;
             //rd2 = new arma::mat(xd->n_rows, xd->n_cols);
             //if (strcmp(choice, "lapl") == 0) {
+            // RD2 is a DISTANCE Matrix (without RBF evaluation)
             rd2 = computeDistMatrix2(*xd, *xd); // unnormalized
             double maxStencilDist = sqrt(matMax(rd2));
             //} else {
+            // RDVEC is the partial DISTANCE matrix where each entry is a Vec3(x-x_0, y-y0, z-z0)
             rdvec = computeDistMatrixVec(*xd, *xd); // unnormalized
-//rdvec.printcx("RDVEC");
+            //rdvec.printcx("RDVEC");
             const int* dims = rdvec.getDims();
             //printf("before rdvec size: %d, %d, %d\n", dims[0], dims[1], dims[2]);
             rdvec.resize(1,dims[1]); // only keep first row
@@ -50,7 +53,7 @@ class Stencils
             //}
 
             if (rad > 1/maxStencilDist) {
-                printf("Error: The radius is too large, it needs to be < %1.3e\n", 1./maxStencilDist);
+                printf("Error: The radius (%1.3e) is too large, it needs to be < %1.3e\n", rad, 1./maxStencilDist);
                 printf("Setting radius to 0.9*%1.3e (= %1.3e)\n", 1./maxStencilDist,  0.9/maxStencilDist);
                 this->rad = 0.9 / maxStencilDist;
             }
@@ -58,6 +61,7 @@ class Stencils
 
             arma::rowvec eps_norm(1); 
             eps_norm(0) = eps / rad;  // normalized
+//            eps_norm.print("EPS");
             //printf("rad, eps= %f, %f\n", this->rad, eps);
 
             arma::mat matr = rd2.row(0); 
@@ -74,16 +78,21 @@ class Stencils
             // td2 = this.rd2 = Squared distance matrix (||x-xi||^2)
             // ep = this.eps_norm = RBF support parameter divided by stencil radius (eps/rad)
             // rr0 = this.rr0_norm = Squared distance matrix scaled by the radius squared
-            // rrd = this.rrd_norm = Squared distance vector for separation between stencil nodes and stencil center Vec(||x-xi||^2)
-            // rrdvec_ = this.rdvec_norm = Vec3 vectors representing separation between stencil nodes and the stencil center (x-xi) and scaled by the radius
-            //              NOTE: this is NOT the same as rrd_norm (as in Vec(||x-xi||^2)); it is Vec(Vec3(x-xi));
-            // rad = this.rad/this.rad = 1. (presumably because all other parameters were scaled by radius) {????}
+            // rrd = this.rrd_norm = Squared distance vector for separation
+            //          between stencil nodes and stencil center Vec(||x-xi||^2)
+            // rrdvec_ = this.rdvec_norm = Vec3 vectors representing separation
+            //      between stencil nodes and the stencil center (x-xi) and scaled
+            //      by the radius
+            //      NOTE: this is NOT the same as rrd_norm (as in
+            //      Vec(||x-xi||^2)); it is Vec(Vec3(x-xi));
+            // rad = this.rad/this.rad = 1. (presumably because all other
+            //      parameters were scaled by radius) {????}
             //svd = new ContourSVD(rbf, rd2, eps_norm, rr0_norm, rrd_norm, rad/rad);
-//EFB (original): 052311
+            //EFB (original): 052311
 
-    //rdvec_norm.printcx("RDVEC_NORM: ");
-        svd = new ContourSVD(rbf, rd2, eps_norm, rr0_norm, rrd_norm, rdvec_norm, rad/rad);
-        //    svd = new ContourSVD(rbf, rd2, eps_norm, rr0_norm, rrd_norm, rdvec_norm, rad/rad);
+            //rdvec_norm.printcx("RDVEC_NORM: ");
+            svd = new ContourSVD(rbf, rd2, eps_norm, rr0_norm, rrd_norm, rdvec_norm, rad/rad);
+            //    svd = new ContourSVD(rbf, rd2, eps_norm, rr0_norm, rrd_norm, rdvec_norm, rad/rad);
         }
 
         void setRad(double rad) { this->rad = rad; }
@@ -108,6 +117,7 @@ class Stencils
                 // have. If we over scale, since h is small we end up
                 // increasing the magnitude of our weights very high and then
                 // our derivs become inaccurate.: 
+                // EFB052411 (want to play with rad)
                 return coefs*rad*rad;
             } else {
                 return coefs*rad;

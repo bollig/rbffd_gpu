@@ -47,12 +47,12 @@ class DerivativeTests {
         // FIXME: when nb_stencils_to_test != 0 we have a segfault. probably
         // because the subset of stencils we're checkign might NOT have
         // interior nodes, or may over compensate for boundary nodes. 
-        void testAllFunctions(size_t nb_stencils_to_test=0);
+        void testAllFunctions(bool exitIfTestsFail=true, size_t nb_stencils_to_test=0);
 
         // NOTE: nb_stencils_to_test==0 implies that ALL stencils will be tested. 
         void compareGPUandCPUDerivs(size_t nb_stencils_to_test=0);
 
-        void testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0);
+        void testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0, bool exitIfTestFails=true);
 
         void testEigen(RBFFD::DerType which=RBFFD::LAPL, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
 

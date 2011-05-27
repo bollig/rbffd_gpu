@@ -159,10 +159,10 @@ class RBF_MQ : public RBF{
             // however, if r is 0 then we have issues with that and need the simplified equation.
             // This is the simplified equation:
             double r = xvec.magnitude();
-            double r2 = xvec.square();
             double f = eval(xvec);
             double lapl = (dim*eps2 + (dim-1)*eps2*eps2*r*r) / (f*f*f);
 #if 0
+            double r2 = xvec.square();
             double lapl2 = ((dim * eps2) / f) - ((eps2 * eps2 * r2) / (f*f*f));
             if (lapl - lapl2  > 1e-6) {
                 std::cout << "ERROR: " << lapl << " != " << lapl2 << std::endl;
@@ -239,7 +239,7 @@ class RBF_MQ : public RBF{
 #else 
 
 // EFB052311 (from original grady conversion)
-// Might not support 3D: 
+// Might not support 3D. Also, im not sure .square() is the proper way to get [(x-x0)^2 + (y-y0)^2]
 
 
 class RBF_MQ : public RBF {

@@ -49,6 +49,7 @@ void Grid::writeToFile(std::string filename) {
     this->writeNormalsToFile(filename); 
     if (stencilsComputed) {
         this->writeAvgRadiiToFile(filename); 
+        this->writeMaxRadiiToFile(filename); 
         this->writeStencilsToFile(filename); 
     }
     this->writeExtraToFile(filename); 
@@ -95,30 +96,41 @@ void Grid::writeNormalsToFile(std::string filename) {
 
 //----------------------------------------------------------------------------
 
-void Grid::writeAvgRadiiToFile(std::string filename) {
-    std::string fname = "avg_radii_"; 
-    fname.append(filename); 
+void Grid::writeVecToFile(std::string filename_prefix, std::string filename_suffix, std::vector<double> vec_to_write) {
+    std::string fname = filename_prefix; 
+    fname.append(filename_suffix); 
     std::ofstream fout(fname.c_str()); 
 
     // NOTE: we keep the precision extension here because our radii are double precision (nodes are single and only need 8 digits)
 #if 1
     // Increase our precision when writing to disk: 
-    fout.setf(ios::fixed, ios::floatfield); 
-    fout.setf(ios::showpoint); 
-    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
+    fout.setf(ios::fixed);
+    fout.setf(ios::floatfield); 
+//    fout.setf(ios::showpoint); 
+//    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
 #endif 
     if (fout.is_open()) {
         for (size_t i = 0; i < avg_stencil_radii.size(); i++) {
-            fout << avg_stencil_radii[i] << std::endl; 
+            fout << vec_to_write[i] << std::endl; 
         }
     } else {
         printf("Error opening file to write\n"); 
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[" << this->className() << "] \tWrote " << avg_stencil_radii.size() << " average stencil radii to \t" << fname << std::endl;
+    std::cout << "[" << this->className() << "] \tWrote " << vec_to_write.size() << " doubles to \t" << fname << std::endl;
+}
+//----------------------------------------------------------------------------
+void Grid::writeMaxRadiiToFile(std::string filename) {
+    std::string fname = "max_radii_"; 
+    this->writeVecToFile(fname, filename, max_stencil_radii); 
 }
 
+//----------------------------------------------------------------------------
+void Grid::writeAvgRadiiToFile(std::string filename) {
+    std::string fname = "avg_radii_"; 
+    this->writeVecToFile(fname, filename, avg_stencil_radii); 
+}
 //----------------------------------------------------------------------------
 
 void Grid::writeStencilsToFile(std::string filename) {
@@ -201,12 +213,13 @@ Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
         printf("Error loading normals\n"); 
         return NO_GRID_FILES;
     }
-
+#if 0
     if (this->loadAvgRadiiFromFile(filename)) {
         printf("Error loading avg dists\n"); 
         stencilsComputed = false; 
         return NO_STENCIL_FILES;
     }
+#endif 
 
     if (this->loadStencilsFromFile(filename)) {
         printf("Error loading stencils\n"); 
@@ -221,6 +234,9 @@ Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
         return NO_EXTRA_FILES;
     }
 
+    // Since we avoid loading stencil radii from disk, lets recompute them: 
+    this->computeStencilRadii();
+    
     return GRID_AND_STENCILS_LOADED;
 }
 
@@ -499,11 +515,11 @@ void Grid::computeStencilRadii() {
 
         //        std::cout << "st.size() = " << st.size() << std::endl;
 
-        double dmin = (rbf_centers[st[1]] - rbf_centers[st[0]]).square(); 
-        min_stencil_radii[i] = sqrt(dmin); 
+        double dmin = (rbf_centers[st[1]] - rbf_centers[st[0]]).magnitude(); 
+        min_stencil_radii[i] = dmin; 
 
-        double dmax = (rbf_centers[st[st.size()-1]] - rbf_centers[st[0]]).square(); 
-        max_stencil_radii[i] = sqrt(dmax); 
+        double dmax = (rbf_centers[st[st.size()-1]] - rbf_centers[st[0]]).magnitude(); 
+        max_stencil_radii[i] = dmin; 
 
         //        std::cout << "st.max_dist = " << max_stencil_radii[i] << std::endl;
 
@@ -516,8 +532,7 @@ void Grid::computeStencilRadii() {
 
         // Now iterate over the ith stencil and query distance to neighbors
         for (int k = 1; k < st.size(); k++) {
-            double d = (rbf_centers[st[k]] - rbf_centers[st[0]]).square();
-            double ss = sqrt(d);
+            double ss = (rbf_centers[st[k]] - rbf_centers[st[0]]).magnitude();
 
             avg_stencil_radii[i] += ss;
             if (i < nb_bnd) {
@@ -612,8 +627,7 @@ void Grid::generateStencilsBruteForce() {
 
         // stencil_size = max stencil_size
         for (int k = 0; k < max_st_size; k++) {
-            double d = (rbf_centers[*sei] - rbf_centers[i]).square();
-            double ss = sqrt(d);
+            double ss = (rbf_centers[*sei] - rbf_centers[i]).magnitude();
 
             if (ss < max_st_radius) {
                 st.push_back(*sei);

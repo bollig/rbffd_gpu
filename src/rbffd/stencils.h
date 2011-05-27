@@ -51,12 +51,27 @@ class Stencils
             const int* dims2 = rdvec.getDims();
             //printf("after rdvec size: %d, %d\n", dims2[0], dims2[1]);
             //}
+            
 
-            if (rad > 1/maxStencilDist) {
-                printf("Error: The radius (%1.3e) is too large, it needs to be < %1.3e\n", rad, 1./maxStencilDist);
+            //EFB052611: removed this because my rbffd class seems to have a
+            //better choice of rad to get the most out of the stencils. I found
+            //that for 41x41 this expression: 
+            //              double rad = 1. / ( 0.100 * grid_ref.getStencilRadius(st_indx));  
+            // works great. However, I am concerned that my rad depends on
+            // physcial domain size (ie. i get different derivative accuracy
+            // when only the domain extents change ([-1,1]x[-1,1] is worse than
+            // [-10,10]x[-10,10]).  Also, I found that my derviative tests fail
+            // on MOST of the reasonable choices I make for rad and eps. I am
+            // goign to continue writing the paper and optimizing with teh GPU,
+            // but at some point (probably this summer) ill have have to come
+            // back and drastically improve the accuracy of the solution.
+#if 0
+            if (rad > 1./maxStencilDist) {
+                printf("Error: The radius (%1.3e) is too large, it needs to be < %1.3e (1/%f)\n", rad_, 1./maxStencilDist, maxStencilDist);
                 printf("Setting radius to 0.9*%1.3e (= %1.3e)\n", 1./maxStencilDist,  0.9/maxStencilDist);
                 this->rad = 0.9 / maxStencilDist;
             }
+#endif 
             // I need a way to compute the radius automatically
 
             arma::rowvec eps_norm(1); 

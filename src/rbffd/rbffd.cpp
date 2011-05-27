@@ -641,6 +641,7 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
 
     for (i=0; i<nz; i++)
     {
+//        fscanf(f, "%d %d %24le\n", &I[i], &J[i], &val[i]);
         fscanf(f, "%d %d %lg\n", &I[i], &J[i], &val[i]);
         I[i]--;  /* adjust from 1-based to 0-based */
         J[i]--;
@@ -669,6 +670,9 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
     delete [] J; 
     delete [] val;
 
+    // let routines like RBFFD_CL::updateWeights(..) know that its time for
+    // them to do some work
+    weightsModified = true;
     return 0;
 
 }
@@ -736,8 +740,7 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
         for (size_t j = 0; j < stencil[i].size(); j++) {
             // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
             fprintf(f, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
-            // fprintf(stdout, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
-            //fprintf(stdout, "%d %d %lg\n", i, j, (*deriv_choice_ptr)[i][j]); 
+           // fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
         }
     }
 
@@ -851,8 +854,21 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         // FIXME: Gordons comments above indicate a desire to vary the rad with avg_stencil_radii. 
         //
         // Rad is the Radius for ContourSVD method. (???) No paper on ContourSVD yet.
-//        double rad = 1./ (sqrt(stencil.size()) * grid_ref.getStencilRadius(st_indx));   // Works with 300 nodes
-        double rad = 1.;
+        // For both options below, a grid 41x41 over [-10,10] x [-10,10]
+        // Up to 933 for st=13 and eps = 0.01
+        // double rad = 1. / ( 0.185 * grid_ref.getMaxStencilRadius(st_indx));  
+        //      -- better: --
+        // up to 1063 for st=13 and eps=0.01 (eps=0.1 gives 1061)
+        double rad = 1. / ( 0.100 * grid_ref.getStencilRadius(st_indx));  
+        //NOTE: the 1063 above is reduced to 178 when grid is 41x41 [-1,1]x[-1,1]
+        //NOTE: the 1063 above is reduced to 1059 when grid is 41x41 [-100,100]x[-100,100]
+        // That leads me to believe out [-1,1]x[-1,1] domain may have been
+        // causing things to die a lot easier. perhaps related to conditioning?
+        // Stencil size 9 gives 850 iters (eps=0.01)
+        // Stencil size 28 gives 800 iters (eps=0.01); 799 iters (eps=0.1)
+        
+
+//        double rad = 1.;
         double eps = var_epsilon[st_indx]; 
 #endif 
         //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
@@ -888,16 +904,10 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         int N = 128; // Why can't I increase N?
         arma::mat weights_new = sten.execute(N);
         weights_new * rad*rad;
-#if 0
-        char label[256];
-        sprintf(label, "%s Derivative Coefficients =", choice);
-        fd_coeffs.print(label);
-#endif
-        //exit(0);
 
         // There should be a better way of doing this
         size_t n = weights_new.n_rows;
-      //printf("choice= %s, outsize: %d\n", choice, n);
+        //printf("choice= %s, outsize: %d\n", choice, n);
         size_t np = 0;
 
         if (this->weights[which][irbf] == NULL) {

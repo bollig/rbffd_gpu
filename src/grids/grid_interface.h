@@ -140,6 +140,7 @@ class Grid
         void writeBoundaryToFile(std::string filename); 
         void writeNormalsToFile(std::string filename); 
         void writeAvgRadiiToFile(std::string filename); 
+        void writeMaxRadiiToFile(std::string filename); 
         void writeStencilsToFile(std::string filename); 
         virtual void writeExtraToFile(std::string filename); 
 
@@ -207,10 +208,16 @@ class Grid
         { return stencil_map; }
         StencilType& getStencil(int indx)
         { return stencil_map[indx]; }
+
         std::vector<double>& getStencilRadii()
         { return avg_stencil_radii; }
         double getStencilRadius(int indx) 
         { return avg_stencil_radii[indx]; }
+        
+        std::vector<double>& getMaxStencilRadii()
+        { return max_stencil_radii; }
+        double getMaxStencilRadius(int indx) 
+        { return max_stencil_radii[indx]; }
 
 
 
@@ -273,6 +280,7 @@ class Grid
         // RectilinearGrid. 
         
     protected: 
+        void writeVecToFile(std::string prefix, std::string suffix, std::vector<double> vals);
         void resizeBoundary(size_t nb_boundary_nodes)
         {
             this->boundary_indices.resize(nb_boundary_nodes);

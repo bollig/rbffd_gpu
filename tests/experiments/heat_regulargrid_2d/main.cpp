@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
         {
             printf("************** Generating new Grid **************\n"); 
             //grid->setSortBoundaryNodes(true); 
-            grid->setSortBoundaryNodes(false); 
+            grid->setSortBoundaryNodes(true); 
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
@@ -275,6 +275,7 @@ int main(int argc, char** argv) {
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
         bool weightsPreComputed = true; 
+        bool exitIfTestFailed = settings->GetSettingAs<int>("BREAK_ON_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
         tm["tests"]->start(); 
         // The test class only computes weights if they havent been done already
         DerivativeTests* der_test = new DerivativeTests(der, subdomain, weightsPreComputed);
@@ -283,7 +284,7 @@ int main(int argc, char** argv) {
             der_test->compareGPUandCPUDerivs(10);
         }
         // Test approximations to derivatives of functions f(x,y,z) = 0, x, y, xy, etc. etc.
-        der_test->testAllFunctions();
+        der_test->testAllFunctions(exitIfTestFailed);
         // For now we can only test eigenvalues on an MPI size of 1 (we could distribute with Par-Eiegen solver)
         if (comm_unit->getSize() == 1) {
             if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) 
@@ -308,10 +309,14 @@ int main(int argc, char** argv) {
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
     // We need to provide comm_unit to pass ghost node info
+#if 0
     if (use_gpu) {
         pde = new HeatPDE(subdomain, der, comm_unit, true); 
-    } else { 
+    } else 
+#endif
+    { 
         // Implies initial conditions are generated
+        // true here indicates the weights are computed. 
         pde = new HeatPDE(subdomain, der, comm_unit, true);
     }
 

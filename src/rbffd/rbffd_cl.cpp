@@ -276,6 +276,7 @@ void RBFFD_CL::applyWeightsForDeriv(DerType which, size_t nb_nodes, size_t nb_st
     }
 
     // Will only update if necessary
+    // false here implies that we should not block on the update to finish
     this->updateWeights(false);
 
     try {

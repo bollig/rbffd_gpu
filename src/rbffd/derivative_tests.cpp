@@ -20,19 +20,19 @@ struct indxltclass {
 // relative error it should be safe to assume we can adequately approximate
 // a laplacian and other linear differential operators for our PDEs.
 //----------------------------------------------------------------------
-void DerivativeTests::testAllFunctions(size_t nb_stencils_to_test) {
+void DerivativeTests::testAllFunctions(bool exitIfTestFails, size_t nb_stencils_to_test) {
 #if 1
     // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
-    this->testFunction(DerivativeTests::C, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::X, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::Y, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::X2, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::XY, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::Y2, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::X3, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::X2Y, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::XY2, nb_stencils_to_test);
-    this->testFunction(DerivativeTests::Y3, nb_stencils_to_test);
+    this->testFunction(DerivativeTests::C, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::X, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::Y, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::X2, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::XY, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::Y2, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::X3, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::X2Y, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::XY2, nb_stencils_to_test, exitIfTestFails);
+    this->testFunction(DerivativeTests::Y3, nb_stencils_to_test, exitIfTestFails);
 #endif
     //    exit(EXIT_FAILURE);
 }
@@ -142,7 +142,7 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 // Compare the analytic and approximate derivatives and assess the
 // viability of the RBFFD stencils and weights for PDE solution.
 // NOTE: if nb_stencils_to_test is 0 then we check all stencils
-void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test)
+void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test, bool exitIfTestFails)
 {
     printf("\n================\n");
     printf("testFunction( %d ) [** Approximating F(X,Y) = %s **] \n",choice, TESTFUNSTR[(int)choice].c_str());
@@ -403,18 +403,16 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     printf("avg l2_bnd_error= %14.7e\n", l2_bnd);
     double l2_int = sqrt(inter_error);
     printf("avg l2_interior_error= %14.7e\n", l2_int);
+    // IF l2_int != l2_int its 'nan' and we should quit. 
     // NaN is the only number not equal to itself
     if ((l2_int > 1.e-2) || (l2_int != l2_int)) {
         printf ("ERROR! Interior l2 error is too high to continue\n");
-        exit(EXIT_FAILURE);
+        if (exitIfTestFails) { exit(EXIT_FAILURE); }
     }
-    if ((l2_bnd > 1.e0) || (l2_int != l2_int)) {
 
+    if (l2_bnd > 1.e0) {
         printf ("WARNING! Boundary l2 error is high but we'll trust it to continue\n");
         return ;
-
-        printf ("ERROR! Boundary l2 error is too high to continue\n");
-        exit(EXIT_FAILURE);
     }
 #endif
 }

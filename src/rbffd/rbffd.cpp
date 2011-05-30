@@ -1,4 +1,5 @@
 #define ONE_MONOMIAL 1
+#define SCALE_BY_H 0 
 
 #include "rbffd/stencils.h"
 
@@ -169,11 +170,28 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 
     // FIXME: do not save the extra NP coeffs
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
+        // X,Y,Z weights should scale by 1/h
+        // FIXME: for 3D, h^2
+        double scale = grid_ref.getStencilRadius(irbf);
+
+        // LAPL should scale by 1/h^2
+        if (i == LAPL) {
+            for (int i = 1; i < dim_num; i++) {
+                scale *= scale; 
+            }
+        }
+#if SCALE_BY_H
+        // DO NOTHING
+#else
+       scale = 1.;
+#endif 
         if (this->weights[i][irbf] == NULL) {
             this->weights[i][irbf] = new double[n+np];
         }
+
         for (int j = 0; j < n+np; j++) {
-            this->weights[i][irbf][j] = weights_new(j, i);
+            this->weights[i][irbf][j] = weights_new(j, i) / scale;
+//            this->weights[i][irbf][j] = scale;
         }
 
 #if DEBUG
@@ -350,12 +368,27 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     rhs.print(buf); 
     weights_new.print("weights");
 #endif 
+    
+    // X,Y,Z weights should scale by 1/h
+    double scale = 1./ grid_ref.getStencilRadius(irbf);
+
+    // LAPL should scale by 1/h^2
+    if (which == LAPL) {
+        for (int i = 1; i < dim_num; i++) {
+            scale *= scale; 
+        }
+    }
+#if SCALE_BY_H
+    // DO NOTHING
+#else
+    scale = 1.;
+#endif 
 
     if (this->weights[which][irbf] == NULL) {
         this->weights[which][irbf] = new double[n+np];
     }
     for (int j = 0; j < n+np; j++) {
-        this->weights[which][irbf][j] = weights_new[j];
+        this->weights[which][irbf][j] = weights_new[j] * scale;
     }
 
 #if DEBUG

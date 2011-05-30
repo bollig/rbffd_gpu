@@ -50,6 +50,7 @@ void Grid::writeToFile(std::string filename) {
     if (stencilsComputed) {
         this->writeAvgRadiiToFile(filename); 
         this->writeMaxRadiiToFile(filename); 
+        this->writeMinRadiiToFile(filename); 
         this->writeStencilsToFile(filename); 
     }
     this->writeExtraToFile(filename); 
@@ -125,6 +126,12 @@ void Grid::writeMaxRadiiToFile(std::string filename) {
     std::string fname = "max_radii_"; 
     this->writeVecToFile(fname, filename, max_stencil_radii); 
 }
+//----------------------------------------------------------------------------
+void Grid::writeMinRadiiToFile(std::string filename) {
+    std::string fname = "min_radii_"; 
+    this->writeVecToFile(fname, filename, min_stencil_radii); 
+}
+
 
 //----------------------------------------------------------------------------
 void Grid::writeAvgRadiiToFile(std::string filename) {

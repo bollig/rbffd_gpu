@@ -26,7 +26,7 @@ Domain::Domain(const Domain& subdomain) {
     zmin(grid->zmin), zmax(grid->zmax)
 {
     // Forms sets (Q,O,R) and l2g/g2l maps
-    fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii()); 
+    fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii()); 
     this->max_st_size = grid->getMaxStencilSize();
 }
 
@@ -85,7 +85,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
     for (int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** CPU %d ***************** \n", i);
         // Forms sets (Q,O,R) and l2g/g2l maps
-        subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii); 
+        subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii); 
     }
 
     for (int i = 0; i < subdomains.size(); i++) {
@@ -122,6 +122,7 @@ int Domain::send(int my_rank, int receiver_rank) {
 
     sendSTL(&avg_stencil_radii, my_rank, receiver_rank); // Average distances (possibly stencil radii)
     sendSTL(&max_stencil_radii, my_rank, receiver_rank); // Average distances (possibly stencil radii)
+    sendSTL(&min_stencil_radii, my_rank, receiver_rank); // Average distances (possibly stencil radii)
 
     sendSTL(&loc_to_glob, my_rank, receiver_rank); // l2g
     sendSTL(&glob_to_loc, my_rank, receiver_rank); // g2l
@@ -164,6 +165,7 @@ int Domain::receive(int my_rank, int sender_rank) {
 
     recvSTL(&avg_stencil_radii, my_rank, sender_rank); // Average distances (possibly stencil radii)
     recvSTL(&max_stencil_radii, my_rank, sender_rank); // Average distances (possibly stencil radii)
+    recvSTL(&min_stencil_radii, my_rank, sender_rank); // Average distances (possibly stencil radii)
 
     recvSTL(&loc_to_glob, my_rank, sender_rank); // l2g
     recvSTL(&glob_to_loc, my_rank, sender_rank); // g2l
@@ -329,7 +331,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 }
 
 //----------------------------------------------------------------------
-void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<size_t>& boundary, vector<double>& avg_dist, vector<double>& max_dist) {
+void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<size_t>& boundary, vector<double>& avg_dist, vector<double>& max_dist, vector<double>& min_dist) {
     
     // Generate stencil membership lists (i.e., which set each stencil center belongs to)
     this->fillCenterSets(rbf_centers, stencil);
@@ -352,6 +354,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         stencil_map.push_back(stencil[*qit]); // We also need to push the connectivity to evaluate stencils
         avg_stencil_radii.push_back(avg_dist[*qit]);
         max_stencil_radii.push_back(max_dist[*qit]);
+        min_stencil_radii.push_back(min_dist[*qit]);
     }
     for (qit = B.begin(); qit != B.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);
@@ -359,6 +362,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         stencil_map.push_back(stencil[*qit]);
         avg_stencil_radii.push_back(avg_dist[*qit]);
         max_stencil_radii.push_back(max_dist[*qit]);
+        min_stencil_radii.push_back(min_dist[*qit]);
     }
     for (qit = R.begin(); qit != R.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);
@@ -366,6 +370,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         // HOWEVER, NO CONNECTIVITY REQUIRED FOR R (THESE ARE ON OTHER CPUs)
         avg_stencil_radii.push_back(avg_dist[*qit]);
         max_stencil_radii.push_back(max_dist[*qit]);
+        min_stencil_radii.push_back(min_dist[*qit]);
     }
 
     // global to local map
@@ -406,6 +411,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
     printf("node_list size= %d (nb_nodes=%d)\n", (int) node_list.size(), (int) nb_nodes);
     printf("avg_stencil_radii size= %d\n", (int) avg_stencil_radii.size());
     printf("max_stencil_radii size= %d\n", (int) max_stencil_radii.size());
+    printf("min_stencil_radii size= %d\n", (int) min_stencil_radii.size());
 }
 //----------------------------------------------------------------------
 void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>* Sset) {

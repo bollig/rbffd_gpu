@@ -141,6 +141,7 @@ class Grid
         void writeNormalsToFile(std::string filename); 
         void writeAvgRadiiToFile(std::string filename); 
         void writeMaxRadiiToFile(std::string filename); 
+        void writeMinRadiiToFile(std::string filename); 
         void writeStencilsToFile(std::string filename); 
         virtual void writeExtraToFile(std::string filename); 
 
@@ -218,6 +219,11 @@ class Grid
         { return max_stencil_radii; }
         double getMaxStencilRadius(int indx) 
         { return max_stencil_radii[indx]; }
+
+        std::vector<double>& getMinStencilRadii()
+        { return min_stencil_radii; }
+        double getMinStencilRadius(int indx) 
+        { return min_stencil_radii[indx]; }
 
 
 

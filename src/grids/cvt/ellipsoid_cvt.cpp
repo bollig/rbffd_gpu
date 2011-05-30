@@ -13,6 +13,7 @@
 
 using namespace std;
 
+#if 0
 //****************************************************************************80
 EllipsoidCVT::EllipsoidCVT(double major_, double minor_, double midax_, int DEBUG_)
 : CVT(DEBUG_) 
@@ -20,6 +21,7 @@ EllipsoidCVT::EllipsoidCVT(double major_, double minor_, double midax_, int DEBU
 	nb_bnd = 0;
 }
 //****************************************************************************80
+#endif 
 
 //----------------------------------------------------------------------
 void EllipsoidCVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
@@ -139,6 +141,7 @@ Vec3 EllipsoidCVT::singleRejection3d(Density& density)
 // Apparently not used in this file
 // 3D version should be written though, but the ellipse is a special case
 // (no hurry)
+    double major = axis_major;
 
 	double xs, ys, zs;
 	double u;

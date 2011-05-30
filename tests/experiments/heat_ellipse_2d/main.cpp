@@ -7,6 +7,7 @@
 #include "pdes/parabolic/heat_pde_cl.h"
 
 #include "grids/cvt/ellipse_cvt.h"
+#include "grids/cvt/ellipsoid_cvt.h"
 
 #include "grids/domain.h"
 #include "rbffd/derivative_tests.h"
@@ -107,10 +108,12 @@ int main(int argc, char** argv) {
         tm["settings"]->stop(); 
         
         // TODO: change to ellipse_cvt2D
-        if (dim == 2) {
+        if ((dim == 2) && false){
             grid = new EllipseCVT(nb_nodes, dim, density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {
+            grid = new EllipsoidCVT(nb_nodes, dim, density, 1.0, 0.5, 0.5, nb_cvt_samples, nb_cvt_iters);
+            grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
             cout << "ERROR! Dim != 2 Not Supported!" << endl;
         }
 

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <vector>
 #include "Vec3.h"
-#include "parametric_patch.h"
+#include "utils/geom/parametric_patch.h"
 #include "density.h"
 #include "cvt.h"
 
@@ -17,9 +17,9 @@ protected:
     // better to pass a grid structure and different types of grids will be represented by
     // different subclasses, which are accessed by individual samplers (that populate the domain
     // with random points
-    double major;
-    double minor;
-    double midax; // good for 3D case
+    double axis_major;
+    double axis_minor;
+    double axis_midax; // good for 3D case
 
     // TODO: cut these two
     ParametricPatch *outer_geom; // not quite the correct class. In reality, the
@@ -27,7 +27,12 @@ protected:
     // correct class is Geometry = vector<ParametricPatch>
 
 public:
-    EllipsoidCVT(double major_ = 1., double minor_ = 1., double midax_ = 1., int DEBUG_ = 0);
+//    EllipsoidCVT(double major_ = 1., double minor_ = 1., double midax_ = 1., int DEBUG_ = 0);
+    EllipsoidCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis, double minor_axis, double midax_axis, size_t num_samples=2000, size_t max_num_iters=10, size_t write_freq=100, size_t sample_batch_size=1000)
+            : CVT(nb_generators, dimension, 0, density_func, num_samples, max_num_iters, write_freq, sample_batch_size), 
+            axis_major(major_axis), axis_minor(minor_axis), axis_midax(midax_axis)
+    { ; }
+ 
 
     // Custom "sample" routine (sample inside box with rejection outside of the ellipse).
     virtual void user_sample(int dim_num, int n, int *seed, double r[]);
@@ -39,9 +44,9 @@ public:
 
 
     void setEllipsoidAxes(double major_, double minor_, double midax_ = 1.) {
-        this->major = major_;
-        this->minor = minor_;
-        this->midax = midax_;
+        this->axis_major = major_;
+        this->axis_minor = minor_;
+        this->axis_midax = midax_;
     }
 
     // Gordon Erlebacher: March 14, 2010

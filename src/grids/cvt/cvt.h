@@ -33,7 +33,8 @@ class CVT : public Grid
         // NOTE: we dont have support for changing "init","sample" and their
         // corresponding strings. 
         int init, sample;
-        int sample_num, it_max; 
+        size_t sample_num, it_max; 
+        size_t writeFreq;
 
     public:
         /*******************
@@ -54,7 +55,7 @@ class CVT : public Grid
         // a CVT in lower dimensions than the nodes (e.g., 3D node cloud with a
         // cvt on each xy plane) 
         CVT (size_t nb_nodes, size_t dimension, size_t nb_locked=0, Density* density_function=NULL, size_t num_samples=10000, size_t max_num_iters=1000, size_t write_frequency=20, size_t sample_batch_size=1000); 
-        CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked=0, Density* density_function=NULL, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800); 
+        CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked=0, Density* density_function=NULL, size_t num_samples=10000, size_t max_num_iters=1000, size_t write_frequency=20, size_t sample_batch_size=1000); 
 
         virtual ~CVT() {
 #if USE_KDTREE
@@ -62,6 +63,26 @@ class CVT : public Grid
 #endif
             delete [] generators;
             timers["total"]->printAll();
+        }
+
+        void syncCVTandGrid() {
+            for (size_t i = 0; i < nb_bnd; i++) {
+                Vec3 nd;
+                for (int j = 0; j < dim_num; j++) {
+                    nd[j] = generators[i*dim_num + j];
+                }
+                this->setNode(i, nd);
+                this->setBoundaryIndex(i, i);
+                // TODO: boundary normals
+                //            this->getBoundaryNormal(i) = computeBoundaryNormal(bndry_pts[i]);
+            }
+            for (size_t i = nb_bnd; i < nb_nodes; i++) {
+                Vec3 nd;
+                for (int j = 0; j < dim_num; j++) {
+                    nd[j] = generators[i*dim_num + j];
+                }
+                this->setNode(i, nd);
+            }
         }
 
         KDTree* getKDTree() {

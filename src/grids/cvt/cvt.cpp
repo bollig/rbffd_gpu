@@ -38,6 +38,7 @@ CVT::CVT (size_t nb_nodes_, size_t dimension, size_t nb_locked, Density* density
     batch(sample_batch_size),
     it_max(max_num_iters), 
     it_fixed(1), 
+    writeFreq(write_frequency),
     rho(density_function)
 { 
     setupTimers(); 
@@ -63,6 +64,7 @@ CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked, Dens
     batch(sample_batch_size),
     it_max(max_num_iters), 
     it_fixed(1),
+    writeFreq(write_frequency),
     rho(density_function)
 { 
     std::cout << "[CVT] FIXME: THIS CONStRUCTOR IS BROKEN!\n";
@@ -322,12 +324,6 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         exit(1);
     }
 
-#if DEBUG
-    cout << "\n";
-    cout << "  Step       SEED          L2-Change        Energy\n";
-    cout << "\n";
-#endif 
-
     *it_num = 0;
     *it_diff = 0.0;
     *energy = 0.0;
@@ -339,8 +335,6 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         initialize = true;
         cvt_init(dim_num, nb_pts, nb_pts, init, initialize, &seed, r);
     }
-
-    std::cout << "MARK\n"; exit(EXIT_FAILURE);
 
 #if USE_KDTREE
     // Construct a kdtree for range_query
@@ -372,8 +366,18 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         //        it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r,
         //        intermediate_file, false);
         //        this->cvt_checkpoint(-2);
-        this->writeToFile(-1);
     }
+        
+    this->syncCVTandGrid();
+    this->writeToFile(0);
+
+#if 1
+    cout << "\n";
+    cout << "  Step       SEED          L2-Change        Energy\n";
+    cout << "\n";
+#endif 
+
+
     //
     //  Carry out the iteration.
     //
@@ -398,7 +402,7 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
 
         initialize = false;
 
-#if DEBUG
+#if 0
         cout << "  "
             << setw(4) << *it_num << "  "
             << setw(12) << seed_init << "  "
@@ -409,7 +413,8 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         // BOLLIG:
         // TODO: only do this if a boolean is set for intermediate writes
         // 	not the same as DEBUG
-        if ((*it_num) % 20 == 0) {
+
+        if ((*it_num) % 5 == 0) {
             char intermediate_file[80];
             //sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", *it_num);
 
@@ -418,17 +423,16 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
                 << setw(12) << seed_init << "  "
                 << setw(14) << *it_diff << "  "
                 << setw(14) << *energy << "\n";
-
+        }
             //cout << "Writing intermediate voronoi to file (from CVT::cvt())\n";
 
-            //cvt_write(dim_num, nb_pts, batch, seed_init, *seed, "none",
-            //        it_max, it_fixed, *it_num, *it_diff, *energy, "none", sample_num, r,
-            //        intermediate_file, false);
-            // cvt_checkpoint(*it_num);
+        if ((*it_num) % writeFreq == 0) {
+            this->syncCVTandGrid();
             this->writeToFile(*it_num);
             //exit(0);
         }
     }
+    this->syncCVTandGrid();
     timers["total"]->end();
     return;
 }
@@ -695,7 +699,7 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
     //		constraining points to the surface (so only nb_bnd
     // 		end up exactly on the surface; all others are interior)
     //
-    //printf("Computing CVT for %d points with %d presets on the boundary\n", n, nb_bnd);
+    printf("Computing CVT for %d points with %d presets on the boundary\n", n, nb_bnd);
     for (j = nb_bnd; j < n; j++) {
         for (i = 0; i < dim_num; i++) {
             r2[i + j * dim_num] = r2[i + j * dim_num] / (double) (count[j]);
@@ -3256,7 +3260,7 @@ void CVT::user_init(int dim_num, int n, int *seed, double r[])
         }
     }
 
-    this->user_sample(dim_num, n-nb_bnd, seed, r+nb_bnd);
+    this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
 
 //    printf(" -----  end initial seeds --------------------\n");
 

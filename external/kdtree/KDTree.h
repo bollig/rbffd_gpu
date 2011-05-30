@@ -161,7 +161,7 @@ class KDTree {
             t5("[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)"),
             t6("[kdtree_t6] Nearest N-neighbors query")
     {
-        cout << "BUILDING NEW KDTREE" << endl;
+        cout << "BUILDING NEW KDTREE : " << nbpts << "pts " << dim_num << "d" << endl;
         vector<Point> vector_points;
         for (int i = 0; i < nbpts; i++) {
             Point p(dim_num);
@@ -171,8 +171,10 @@ class KDTree {
             vector_points.push_back(p);
         }
 
+        std::cout << "VECTOR_POINTS.size = " << vector_points.size() << std::endl;;
+
         this -> npoints = vector_points.size();
-        this -> ndim = vector_points[0].size();
+        this -> ndim = dim_num; //vector_points[0].size();
         this -> points = vector_points;
 
         t3.start();
@@ -268,10 +270,12 @@ class KDTree {
 
             if (nbpts != this->npoints) {
                 cout << "ERROR! Tree can only be updated with the same number of nodes!\n";
+                cout << "NBPTS: " << nbpts << ", NPOINTS: " << this->npoints << std::endl;
                 exit(EXIT_FAILURE);
             }
             if (dim_num != this->ndim) {
                 cout << "ERROR! Tree can only be updated with the same dimension!\n";
+                cout << "DIM_NUM: " << dim_num << ", NDIM: " << this->ndim << std::endl;
                 exit(EXIT_FAILURE);
             }
 

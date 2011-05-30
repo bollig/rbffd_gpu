@@ -92,17 +92,6 @@ void EllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double
     //		printf("nb_bnd= %d, bndry_pts.size= %d\n", nb_bnd, (int) bndry_pts.size());
     //        printf("node_list.size= %d\n" , this->node_list.size());
     //
-    for (size_t i = 0; i < nb_bnd; i++) {
-        Vec3 nd;
-        for (int j = 0; j < dim_num; j++) {
-            nd[j] = bndry_nodes[i*dim_num + j];
-        }
-        this->setNode(i, nd);
-        this->setBoundaryIndex(i, i);
-        // TODO: boundary normals
-        //            this->getBoundaryNormal(i) = computeBoundaryNormal(bndry_pts[i]);
-    }
-
 }
 
 //----------------------------------------------------------------------
@@ -203,7 +192,7 @@ void EllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length
     vector<double> equ_dist, theta;
     //bnd.resize(0);
 
-    int n = nb_bnd + 1; // space so that first and last point are the same
+    size_t n = nb_bnd + 1; // space so that first and last point are the same
     double pi = acos(-1.);
     double dtheta = 2. * pi / (npts - 1.);
     printf("npts= %d, n= %d\n", npts, n);

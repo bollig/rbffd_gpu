@@ -21,8 +21,8 @@ class EllipseCVT : public CVT {
 
     public:
         //EllipseCVT(double major_ = 1., double minor_ = 1., int DEBUG = 0);
-        EllipseCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis = 1., double minor_axis = 1., size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800)
-            : CVT(nb_generators, dimension, 0, density_func, num_samples, max_num_iters, write_frequency, sample_batch_size), 
+        EllipseCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis, double minor_axis, size_t num_samples=2000, size_t max_num_iters=10, size_t write_freq=20, size_t sample_batch_size=800)
+            : CVT(nb_generators, dimension, 0, density_func, num_samples, max_num_iters, write_freq, sample_batch_size), 
             axis_major(major_axis), axis_minor(minor_axis)
     { ; }
 

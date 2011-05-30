@@ -8,12 +8,11 @@ class Density
     protected:
         double max_rho;
     public: 
-        Density(double rho_max) : max_rho(rho_max) {;}
+        Density(double rho_max=1.05) : max_rho(rho_max) {;}
 
         virtual ~Density() { ; }
 
         double operator()(double x, double y, double z) { 
-            std::cout << "HERE" << std::endl;    
             return this->eval(x,y,z); 
         }
 
@@ -31,7 +30,7 @@ class Density
 class UniformDensity : public Density
 {
     public:
-        UniformDensity(double rho)
+        UniformDensity(double rho=1.05)
             : Density(rho)
         {;}
 

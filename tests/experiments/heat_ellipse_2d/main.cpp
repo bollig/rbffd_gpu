@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
     // grid should only be valid instance for MASTER
     Grid* grid; 
     Domain* subdomain; 
-    Density* density = new ExpDensity();
+    Density* density = new UniformDensity();
 
     tm["total"]->start(); 
 
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
         double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
         int nb_cvt_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::optional, "10000"); 	
-        int nb_cvt_iters = settings->GetSettingAs<int>("NB_CVT_ITERS", ProjectSettings::optional, "60"); 
+        int nb_cvt_iters = settings->GetSettingAs<int>("NB_CVT_ITERS", ProjectSettings::optional, "1000"); 
 
         int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 

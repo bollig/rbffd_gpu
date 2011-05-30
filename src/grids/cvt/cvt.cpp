@@ -333,7 +333,7 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
     //
     if (init != 4) {
         initialize = true;
-        cvt_init(dim_num, nb_pts, nb_pts, init, initialize, &seed, r);
+        cvt_init(dim_num, nb_pts, nb_pts, init, true, &seed, r);
     }
 
 #if USE_KDTREE
@@ -396,11 +396,11 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
 
         *it_num = *it_num + 1;
         seed_init = seed;
+    
+    std::cout << dim_num << "  " << nb_pts << "  " << batch << "  " << sample << "  " << initialize << "  " << sample_num << "  " << seed << "  " << *it_diff << "  " << *energy << std::endl;
 
         cvt_iterate(dim_num, nb_pts, batch, sample, initialize, sample_num, &seed,
                 r, it_diff, energy);
-
-        initialize = false;
 
 #if 0
         cout << "  "
@@ -414,7 +414,7 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         // TODO: only do this if a boolean is set for intermediate writes
         // 	not the same as DEBUG
 
-        if ((*it_num) % 5 == 0) {
+        if ((*it_num) % 20 == 0) {
             char intermediate_file[80];
             //sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", *it_num);
 
@@ -3256,15 +3256,15 @@ void CVT::user_init(int dim_num, int n, int *seed, double r[])
     //
 {
     // 1) Assume that the boundary points are in bndry_pts
-
+#if 0
     // boundary points
     for (int i = 0; i < nb_bnd; i++) {
         for (int j = 0; j < dim_num; j++) {
             r[j + i * dim_num] = bndry_pts[i][j];
         }
     }
-
-    this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
+#endif 
+    this->user_sample(dim_num, n, seed, &r[0]);
 
 //    printf(" -----  end initial seeds --------------------\n");
 
@@ -3413,9 +3413,9 @@ std::string CVT::getFileDetailString()
 {
     std::stringstream ss(std::stringstream::out); 
     if (rho) {
-//        ss << this->nb_nodes << "generators_" << rho->className() << "_density_" << dim_num << "d"; 
+        ss << this->nb_nodes << "generators_" << rho->className() << "_density_" << dim_num << "d"; 
     } else {
-        ss << this->nb_nodes << "generators_" << "UNKNOWN" << "_density_" << dim_num << "d"; 
+        ss << this->nb_nodes << "generators_" << dim_num << "d"; 
     }
     return ss.str();	
 }

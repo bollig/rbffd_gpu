@@ -1,43 +1,70 @@
 #ifndef _DENSITY_H_
 #define _DENSITY_H_
 #include <string>
-
+#include <iostream>
+#include <math.h>
 class Density
 {
-protected:
-	double xc;
-	double yc;
-	double rho;
-	double max_rho;
-	double e;
+    protected:
+        double max_rho;
+    public: 
+        Density(double rho_max) : max_rho(rho_max) {;}
 
-public:
-	Density()
-    : xc(0.), yc(0.), max_rho(1.0)
-    {;}
+        virtual ~Density() { ; }
 
-    Density(double xc_, double yc_, double max_rho_)
-    : xc(xc_), yc(yc_), max_rho(max_rho_)
-    {;}
+        double operator()(double x, double y, double z) { 
+            std::cout << "HERE" << std::endl;    
+            return this->eval(x,y,z); 
+        }
 
-    ~Density() { ; }
+        virtual double eval(double x, double y, double z) = 0;
 
-	virtual double operator()(double x, double y, double z=0.) {
-		#if 0
-		e = (x-xc)*(x-xc)+(y-yc)*(y-yc);
-		rho = .05 + exp(-15.*e); // maxrho = 1.05
-		return rho;
-		#endif
+        double getMax()
+        {
+            return max_rho;
+        }
 
-		return 1.; // maxrho = 1.
-	}
+       virtual std::string className() { return "density";} 
+};
 
-	double getMax()
-	{
-		return max_rho;
-	}
 
-    virtual std::string className() {return "uniform";}
+class UniformDensity : public Density
+{
+    public:
+        UniformDensity(double rho)
+            : Density(rho)
+        {;}
+
+
+        virtual double eval(double x, double y, double z)
+        {
+            return 1.; // maxrho = 1.
+        }
+
+        virtual std::string className() {return "uniform";}
+};
+
+class ExpDensity : public Density
+{
+    double xc;
+    double yc;
+
+    public: 
+        ExpDensity() : Density(1.05), xc(0.), yc(0.4) {;}
+        ExpDensity(double center_x, double center_y, double rho_max=1.0)
+        : Density(rho_max),
+        xc(center_x), yc(center_y)
+    { ; }
+
+        virtual double eval(double x, double y, double z)
+        {
+            double e, rho;
+            e = (x-xc)*(x-xc)+(y-yc)*(y-yc);
+            rho = 0.05 + exp(-15.*e); // maxrho = 1.05
+            return rho;
+        }
+    
+        virtual std::string className() {return "exp";}
 };
 
 #endif

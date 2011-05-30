@@ -13,6 +13,42 @@
 
 using namespace std;
 
+
+void EllipseCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]) {
+    double major = axis_major; 
+    double minor = axis_minor;
+    double dtheta;
+	double theta;
+
+	//for (j=0; j < nb_bnd; j++) {
+	for (int j=0; j < 0; j++) {
+		double oldx = r[0+j*dim_num];
+		double oldy = r[1+j*dim_num];
+		theta = atan2(oldy, oldx);
+		double newx = r[0+j*dim_num];
+		double newy = r[1+j*dim_num];
+        double newz = 0.;
+		double ctheta =  oldx/major;
+		double stheta =  oldy/minor;
+		if (ctheta > stheta) {
+			dtheta = (newy-oldy) / (minor*ctheta);
+		} else {
+			dtheta = -(newx-oldx) / (major*ctheta);
+		}
+		theta += dtheta;
+
+		newx = major*cos(theta);
+		newy = minor*sin(theta);
+		r[0+j*dim_num] = newx;
+		r[1+j*dim_num] = newy;
+        // This class only allows 2D
+        if (dim_num > 2) {
+            r[0+j*dim_num] = 0.; 
+        }
+	}
+
+}
+
 //****************************************************************************80
 
 Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& density) {
@@ -41,7 +77,7 @@ Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& d
         // rejection part if non-uniform distribution
         u = random(0., 1.);
         //printf("rho= %f\n", density(xs,ys));
-        if (u < (density(xs, ys)) * maxrhoi) break;
+        if (u < (density(xs, ys, 0.)) * maxrhoi) break;
     }
     return Vec3(xs, ys);
 }
@@ -111,14 +147,14 @@ double EllipseCVT::computeBoundaryIntegral(Density& rho, size_t npts, vector<dou
     double major = axis_major; 
     double minor = axis_minor;
 
-
-
     double pi = acos(-1.);
     double dtheta = 2. * pi / (npts - 1.);
 
     //npts = 2000;
     //vector<double> intg;
     intg.resize(npts);
+
+//    std::cout << "Computing Boundary Integral with " << rho.className() << std::endl;
 
     intg[0] = 0.;
 
@@ -132,11 +168,13 @@ double EllipseCVT::computeBoundaryIntegral(Density& rho, size_t npts, vector<dou
         double x1 = major * cos(t1);
         double x2 = major * cos(t2);
         double xm = major * cos(tm);
+
         double y1 = minor * sin(t1);
         double y2 = minor * sin(t2);
         double ym = minor * sin(tm);
         double dl = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-        double rhom = rho(xm, ym);
+        double rhom = rho(xm, ym, 0.);
+        std::cout << "RHOM: " << rhom << std::endl;
         intg[i + 1] = intg[i] + pow(rhom, 0.25) * dl;
     }
 
@@ -173,7 +211,7 @@ double EllipseCVT::computeDomainIntegral(size_t npts, Density& rho) {
         for (int j = 0; j < (npts - 1); j++) {
             double x = xa * major;
             double y = y1 + (j + 0.5) * dy;
-            integ += sqrt(rho(x, y)) * dx * dy;
+            integ += sqrt(rho(x, y, 0.)) * dx * dy;
         }
     }
 

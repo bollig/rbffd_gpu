@@ -57,8 +57,8 @@ CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked, Dens
     : Grid(nodes.size()),
       nb_pts(nodes.size()),
     dim_num(dimension), 
-    init(4),        // Choose USER_INIT 
-    sample(4),      // Choose USER_SAMPLE
+    init(3),        // Choose USER_INIT 
+    sample(3),      // Choose USER_SAMPLE
     seed(123456789), 
     sample_num(num_samples),
     batch(sample_batch_size),
@@ -521,8 +521,8 @@ double CVT::cvt_energy(int dim_num, int n, int batch, int sample, bool initializ
 
         for (j = 0; j < get; j++) {
             for (i = 0; i < dim_num; i++) {
-                energy = energy + (s[i + j * dim_num] - r[i + nearest[j] * dim_num])
-                    * (s[i + j * dim_num] - r[i + nearest[j] * dim_num]);
+                energy = energy + ((s[i + j * dim_num] - r[i + nearest[j] * dim_num])
+                                   * (s[i + j * dim_num] - r[i + nearest[j] * dim_num]));
             }
         }
 
@@ -699,7 +699,7 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
     //		constraining points to the surface (so only nb_bnd
     // 		end up exactly on the surface; all others are interior)
     //
-    printf("Computing CVT for %d points with %d presets on the boundary\n", n, nb_bnd);
+    //    printf("Computing CVT for %d points with %d presets on the boundary\n", n, nb_bnd);
     for (j = nb_bnd; j < n; j++) {
         for (i = 0; i < dim_num; i++) {
             r2[i + j * dim_num] = r2[i + j * dim_num] / (double) (count[j]);
@@ -724,6 +724,10 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
     // Gordon Erlebacher (9/9/2009)
     // Leaving boundary points fixed does not always appear to work, e.g. when
     // axes are 1 and 0.3 .
+   
+    this->displaceBoundaryNodes(dim_num, nb_bnd, r2); 
+    
+    //
     // Below: Displace the interior points
     for (j = nb_bnd; j < n; j++) {
         for (i = 0; i < dim_num; i++) {
@@ -1105,7 +1109,7 @@ void CVT::cvt_init(int dim_num, int n, int n_now, int sample, bool initialize,
     }
 
     // print seeds
-#if 1    
+#if 1 
     printf("Initial seed positions\n");
     for (int i = 0; i < n_now; i++) {
         printf("(%d): \n", i);
@@ -3323,7 +3327,7 @@ void CVT::user_sample(int dim_num, int n, int *seed, double r[])
     // random seeds with rejection2d.
     rejection2d(n, 0., 1., *rho, samples);
 
-    for (int j = 0 /*nb_bnd*/; j < n; j++) {
+    for (int j = 0; j < n; j++) {
         for (int i = 0; i < dim_num; i++) {
             r[i + j * dim_num] = samples[j][i];
         }
@@ -3394,12 +3398,12 @@ Vec3 CVT::singleRejection2d(double area, double weighted_area, Density& density)
     while (1) {
         xs = random(xmin, xmax);
         ys = random(ymin, ymax);
-        ys = random(zmin, zmax);
+        zs = random(zmin, zmax);
 
         // rejection part if non-uniform distribution
         u = random(0.,1.);
         //printf("rho= %f\n", density(xs,ys));
-        if (u < (density(xs,ys))*maxrhoi) break;
+        if (u < (density(xs,ys,zs))*maxrhoi) break;
     }
     return Vec3(xs,ys, zs);
 }
@@ -3408,7 +3412,11 @@ Vec3 CVT::singleRejection2d(double area, double weighted_area, Density& density)
 std::string CVT::getFileDetailString()
 {
     std::stringstream ss(std::stringstream::out); 
-    ss << this->nb_nodes << "generators_" << rho->className() << "_density_" << dim_num << "d"; 
+    if (rho) {
+//        ss << this->nb_nodes << "generators_" << rho->className() << "_density_" << dim_num << "d"; 
+    } else {
+        ss << this->nb_nodes << "generators_" << "UNKNOWN" << "_density_" << dim_num << "d"; 
+    }
     return ss.str();	
 }
 

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <map> 
 
-#include "mydensity.h"
+#include "grids/cvt/density.h"
 
 #include "pdes/parabolic/heat_pde.h"
 #include "pdes/parabolic/heat_pde_cl.h"
@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
     // grid should only be valid instance for MASTER
     Grid* grid; 
     Domain* subdomain; 
+    Density* density = new ExpDensity();
 
     tm["total"]->start(); 
 
@@ -98,7 +99,7 @@ int main(int argc, char** argv) {
         double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
         double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
-        int nb_cvt_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::optional, "50000"); 	
+        int nb_cvt_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::optional, "10000"); 	
         int nb_cvt_iters = settings->GetSettingAs<int>("NB_CVT_ITERS", ProjectSettings::optional, "60"); 
 
         int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
@@ -107,8 +108,7 @@ int main(int argc, char** argv) {
         
         // TODO: change to ellipse_cvt2D
         if (dim == 2) {
-            Density density;
-            grid = new EllipseCVT(nb_nodes, dim, &density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
+            grid = new EllipseCVT(nb_nodes, dim, density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {
             cout << "ERROR! Dim != 2 Not Supported!" << endl;

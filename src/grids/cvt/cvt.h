@@ -1,6 +1,9 @@
 #ifndef _BURKARDT_CVT_H_
 #define _BURKARDT_CVT_H_
 
+#undef USE_KDTREE
+#define USE_KDTREE 0
+
 #include <vector>
 #include "Vec3.h"
 #include "density.h"
@@ -64,6 +67,10 @@ class CVT : public Grid
             delete [] generators;
             timers["total"]->printAll();
         }
+
+        // Override this if we want to project boundary nodes back to the boundary: 
+        // Basic CVT can ignore this: 
+        virtual void displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]) {;}
 
         void syncCVTandGrid() {
             for (size_t i = 0; i < nb_bnd; i++) {

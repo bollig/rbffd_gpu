@@ -1108,7 +1108,7 @@ void CVT::cvt_init(int dim_num, int n, int n_now, int sample, bool initialize,
     }
 
     // print seeds
-#if 1 
+#if 0 
     printf("Initial seed positions\n");
     for (int i = 0; i < n_now; i++) {
         printf("(%d): \n", i);

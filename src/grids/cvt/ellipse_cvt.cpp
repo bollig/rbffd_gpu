@@ -5,7 +5,6 @@
 #include <iomanip>
 #include <fstream>
 #include <string.h>
-#include <sstream>
 
 #include <math.h>
 #include <vector>
@@ -15,15 +14,6 @@
 using namespace std;
 
 //****************************************************************************80
-
-EllipseCVT::EllipseCVT(double major_, double minor_, int DEBUG_) : CVT(DEBUG_) {
-    this->axis_major = major_;
-    this->axis_minor = minor_;
-    nb_bnd = 0;
-}
-//****************************************************************************80
-
-//----------------------------------------------------------------------
 
 Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& density) {
     // Apparently not used in this file
@@ -58,9 +48,10 @@ Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& d
 
 void EllipseCVT::user_init(int dim_num, int n, int *seed, double r[]) {
     // Fill our initial boundary points
-    this->fillBoundaryPoints(dim_num, nb_bnd, seed, r);
+    this->fillBoundaryPoints(dim_num, n, seed, &r[0]);
+    std::cout << "NOW NB_BND = " << nb_bnd << std::endl;
     // Then sample the interior using our singleRejection2d defined routine
-    this->user_sample(dim_num, n-nb_bnd, seed, r+nb_bnd);
+    this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
 }
 
 //----------------------------------------------------------------------
@@ -102,7 +93,10 @@ void EllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double
     //        printf("node_list.size= %d\n" , this->node_list.size());
     //
     for (size_t i = 0; i < nb_bnd; i++) {
-        Vec3 nd(bndry_nodes[i*dim_num + 0], bndry_nodes[i*dim_num + 1], bndry_nodes[i*dim_num+2]);
+        Vec3 nd;
+        for (int j = 0; j < dim_num; j++) {
+            nd[j] = bndry_nodes[i*dim_num + j];
+        }
         this->setNode(i, nd);
         this->setBoundaryIndex(i, i);
         // TODO: boundary normals
@@ -261,8 +255,11 @@ void EllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length
         }
         bnd[i*dim_num + 0] = major * cos(theta[i]);
         bnd[i*dim_num + 1] = minor * sin(theta[i]);
-        bnd[i*dim_num + 2] = 0.;
-        //printf("(%d) x,y= %f, %f, theta= %f\n", i, x[i], y[i], theta[i]);
+        // We are limited to 2D in this class
+        if (dim_num > 2) {
+            bnd[i*dim_num + 2] = 0.;
+        }
+ //       printf("(%d) x,y= %f, %f, theta= %f\n", i, bnd[i*dim_num+0], bnd[i*dim_num + 1], theta[i]);
     }
 
     //    printf("print length intervals: should be equal\n");
@@ -278,16 +275,6 @@ void EllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length
 
     //   printf("Weighted ellipse perimeter: %f\n", tot_length);
 }
-
-//----------------------------------------------------------------------
-//
-std::string EllipseCVT::getFileDetailString()
-{
-    std::stringstream ss(std::stringstream::out); 
-    ss << this->nb_nodes << "generators_" << rho->className() << "_density_" << dim_num << "d"; 
-    return ss.str();	
-}
-
 
 //----------------------------------------------------------------------
 

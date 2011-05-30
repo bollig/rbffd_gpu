@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <fstream>
 #include <string.h>
+#include <sstream>
 
 #include <math.h>
 #include <vector>
@@ -25,25 +26,65 @@ void CVT::setupTimers() {
     timers["neighbor"] = new Timer("[CVT] nearest neighbor search");
 }
 //****************************************************************************80
+CVT::CVT (size_t nb_nodes_, size_t dimension, size_t nb_locked, Density* density_function, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size) 
+    : Grid(nb_nodes_),
+    nb_pts(nb_nodes_),
+    nb_bnd(nb_locked),
+    dim_num(dimension), 
+    init(3),        // Choose USER_INIT 
+    sample(3),      // Choose USER_SAMPLE
+    seed(123456789), 
+    sample_num(num_samples),
+    batch(sample_batch_size),
+    it_max(max_num_iters), 
+    it_fixed(1), 
+    rho(density_function)
+{ 
+    setupTimers(); 
 
-CVT::CVT(int num_generators, int dimension_, const char* filename, int init_, int sample_, int sample_num_, int seed_, int batch_, int it_max_, int it_fixed_, int DEBUG_)
-    : nb_pts(num_generators),
-    dim_num(dimension_),
-    cvt_file_name(filename),
-    init(init_), sample(sample_),
-    seed(seed_), batch(batch_),
-    sample_num(sample_num_),
-    it_max(it_max_),
-    it_fixed(it_fixed_), DEBUG(DEBUG_) {
+    kdtree = NULL;
+    generators = new double[nb_pts * dim_num];
 
-        setupTimers(); 
+    PI = acos(-1.);
 
-        kdtree = NULL;
-        generators = new double[num_generators * dim_num];
+    // TODO: 
+    // 1) resize node list and boundary list when generating.
+    // 2) generate in generators and copy to node_list
+}
 
-        nb_bnd = 0;
-        PI = acos(-1.);
-    }
+CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked, Density* density_function, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size)
+    : Grid(nodes.size()),
+      nb_pts(nodes.size()),
+    dim_num(dimension), 
+    init(4),        // Choose USER_INIT 
+    sample(4),      // Choose USER_SAMPLE
+    seed(123456789), 
+    sample_num(num_samples),
+    batch(sample_batch_size),
+    it_max(max_num_iters), 
+    it_fixed(1),
+    rho(density_function)
+{ 
+    std::cout << "[CVT] FIXME: THIS CONStRUCTOR IS BROKEN!\n";
+    exit(EXIT_FAILURE);
+    setupTimers(); 
+
+    kdtree = NULL;
+    generators = new double[nodes.size() * dim_num];
+
+    nb_bnd = 0;
+    PI = acos(-1.);
+}
+//****************************************************************************80
+void CVT::generate() {
+    double energy;
+    int it_num;
+    double it_diff; 
+    this->resizeNodeList(nb_pts);
+    this->cvt(&it_num, &it_diff, &energy);
+}
+
+
 //****************************************************************************80
 
 char CVT::ch_cap(char c)
@@ -281,11 +322,11 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         exit(1);
     }
 
-    if (DEBUG) {
-        cout << "\n";
-        cout << "  Step       SEED          L2-Change        Energy\n";
-        cout << "\n";
-    }
+#if DEBUG
+    cout << "\n";
+    cout << "  Step       SEED          L2-Change        Energy\n";
+    cout << "\n";
+#endif 
 
     *it_num = 0;
     *it_diff = 0.0;
@@ -299,16 +340,18 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         cvt_init(dim_num, nb_pts, nb_pts, init, initialize, &seed, r);
     }
 
+    std::cout << "MARK\n"; exit(EXIT_FAILURE);
+
 #if USE_KDTREE
     // Construct a kdtree for range_query
     kdtree = new KDTree(r, nb_pts, dim_num);
 #endif
 
-    if (DEBUG) {
-        cout << "  "
-            << setw(4) << *it_num << "  "
-            << setw(12) << seed_init << "\n";
-    }
+#if DEBUG    
+    cout << "  "
+        << setw(4) << *it_num << "  "
+        << setw(12) << seed_init << "\n";
+#endif 
     //
     //  If the initialization and sampling steps use the same random number
     //  scheme, then the sampling scheme does not have to be initialized.
@@ -355,13 +398,13 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
 
         initialize = false;
 
-        if (DEBUG) {
-            cout << "  "
-                << setw(4) << *it_num << "  "
-                << setw(12) << seed_init << "  "
-                << setw(14) << *it_diff << "  "
-                << setw(14) << *energy << "\n";
-        }
+#if DEBUG
+        cout << "  "
+            << setw(4) << *it_num << "  "
+            << setw(12) << seed_init << "  "
+            << setw(14) << *it_diff << "  "
+            << setw(14) << *energy << "\n";
+#endif 
 
         // BOLLIG:
         // TODO: only do this if a boolean is set for intermediate writes
@@ -675,7 +718,8 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
     //  Replace the generators by the centroids.
     //
     // Gordon Erlebacher (9/9/2009)
-    // Leaving boundary points fixed does not always appear to work, e.g. when axes are 1 and 0.3 .
+    // Leaving boundary points fixed does not always appear to work, e.g. when
+    // axes are 1 and 0.3 .
     // Below: Displace the interior points
     for (j = nb_bnd; j < n; j++) {
         for (i = 0; i < dim_num; i++) {
@@ -879,17 +923,18 @@ void CVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize,
     }
 
     // print seeds
-    if (DEBUG) {
-        printf("Initial seed positions\n");
-        for (int i = 0; i < n_now; i++) {
-            printf("(%d): \n", i);
-            for (int j = 0; j < dim_num; j++) {
-                printf("%f ", r[j + i * dim_num]);
-            }
-            printf("\n");
+#if DEBUG
+    printf("Sample seed positions\n");
+    for (int i = 0; i < n_now; i++) {
+        printf("(%d): \n", i);
+        for (int j = 0; j < dim_num; j++) {
+            printf("%f ", r[j + i * dim_num]);
         }
-        printf("  -  end initial seeds --------------------\n");
+        printf("\n");
     }
+    printf("  -  end initial seeds --------------------\n");
+#endif 
+
     timers["sample"]->end();
     return;
 }
@@ -1056,17 +1101,17 @@ void CVT::cvt_init(int dim_num, int n, int n_now, int sample, bool initialize,
     }
 
     // print seeds
-    if (DEBUG) {
-        printf("Initial seed positions\n");
-        for (int i = 0; i < n_now; i++) {
-            printf("(%d): \n", i);
-            for (int j = 0; j < dim_num; j++) {
-                printf("%f ", r[j + i * dim_num]);
-            }
-            printf("\n");
+#if 1    
+    printf("Initial seed positions\n");
+    for (int i = 0; i < n_now; i++) {
+        printf("(%d): \n", i);
+        for (int j = 0; j < dim_num; j++) {
+            printf("%f ", r[j + i * dim_num]);
         }
-        printf("  -  end initial seeds --------------------\n");
+        printf("\n");
     }
+    printf("  -  end initial seeds --------------------\n");
+#endif 
     timers["sample"]->end();
     return;
 }
@@ -2508,18 +2553,18 @@ unsigned long CVT::random_initialize(int seed)
     unsigned long ul_seed;
 
     if (seed != 0) {
-        if (DEBUG) {
-            cout << "\n";
-            cout << "RANDOM_INITIALIZE\n";
-            cout << "  Initialize RANDOM with user SEED = " << seed << "\n";
-        }
+#if DEBUG    
+        cout << "\n";
+        cout << "RANDOM_INITIALIZE\n";
+        cout << "  Initialize RANDOM with user SEED = " << seed << "\n";
+#endif 
     } else {
         seed = get_seed();
-        if (DEBUG) {
-            cout << "\n";
-            cout << "RANDOM_INITIALIZE\n";
-            cout << "  Initialize RAND with arbitrary SEED = " << seed << "\n";
-        }
+#if DEBUG
+        cout << "\n";
+        cout << "RANDOM_INITIALIZE\n";
+        cout << "  Initialize RAND with arbitrary SEED = " << seed << "\n";
+#endif 
     }
     //
     //  Now set the seed.
@@ -3206,14 +3251,14 @@ void CVT::user_init(int dim_num, int n, int *seed, double r[])
 
     // boundary points
     for (int i = 0; i < nb_bnd; i++) {
-        r[0 + i * 2] = bndry_pts[i].x();
-        r[1 + i * 2] = bndry_pts[i].y();
-        r[1 + i * 2] = bndry_pts[i].z();
+        for (int j = 0; j < dim_num; j++) {
+            r[j + i * dim_num] = bndry_pts[i][j];
+        }
     }
 
     this->user_sample(dim_num, n-nb_bnd, seed, r+nb_bnd);
 
-    printf(" -----  end initial seeds --------------------\n");
+//    printf(" -----  end initial seeds --------------------\n");
 
     return;
 }
@@ -3274,12 +3319,12 @@ void CVT::user_sample(int dim_num, int n, int *seed, double r[])
     // random seeds with rejection2d.
     rejection2d(n, 0., 1., *rho, samples);
 
-    for (int j = nb_bnd; j < n; j++) {
-        r[0 + j * 2] = samples[j].x();
-        r[1 + j * 2] = samples[j].y();
-        r[1 + j * 2] = samples[j].z();
+    for (int j = 0 /*nb_bnd*/; j < n; j++) {
+        for (int i = 0; i < dim_num; i++) {
+            r[i + j * dim_num] = samples[j][i];
+        }
     }
-
+#if 0
     // print initial seeds
     printf("Initial seed positions, %d seeds\n", n);
     for (int i = 0; i < n; i++) {
@@ -3289,7 +3334,7 @@ void CVT::user_sample(int dim_num, int n, int *seed, double r[])
         }
         printf("\n");
     }
-
+#endif 
     return;
 }
 
@@ -3355,515 +3400,12 @@ Vec3 CVT::singleRejection2d(double area, double weighted_area, Density& density)
     return Vec3(xs,ys, zs);
 }
 //----------------------------------------------------------------------
-
-//****************************************************************************80
-#if 0
-
-// Load the output file for specified iteration
-//  INPUT:
-//  -1 = "final"
-//  -2 = "initial"
-//  0->inf = that specific iteration number.
-//  OUTPUT:
-//   0 = Everything loaded ok
-//   nonzero = ERRORS loading file (most likely file does not exist
-int CVT::cvt_load(int iter) {
-
-    char intermediate_file[80];
-
-    cvt_get_filename(iter, intermediate_file);
-
-    int error = data_read(intermediate_file, dim_num, nb_pts, generators);
-
-    if (!error) {
-        printf("Finished loading generators\n");
-    } else {
-        printf("ERRORS encountered loading file for specified iteration\n");
-    }
-    return error;
-}
-
-// Write the output file for a specified iteration (should call to
-// cvt_write(...)
-
-void CVT::cvt_checkpoint(int iter) {
-
-    char intermediate_file[80];
-
-    cvt_get_filename(iter, intermediate_file);
-
-    // Checkpoint with essential information only. When we load with cvt_load,
-    // the non-essential information is ignored. That is, the non-essential info
-    // is part of the comment section in the file. And by passing false as the
-    // last parameter we prevent the comments from writing to file anyway. 
-    cvt_write(dim_num, nb_pts, 0, 0, 0, "none",
-            0, 0, iter, 0, 0, "none", 0, generators,
-            intermediate_file, false);
-}
-
-void CVT::cvt_get_file_prefix(char* filename_buffer) {
-    sprintf(filename_buffer, "%s", cvt_file_name);
-}
-
-void CVT::cvt_get_filename(int iter, char *filename_buffer) {
-    if (iter < -2) {
-        printf("ERROR! UNKNOWN iter FLAG IN %s!", __FILE__);
-        exit(EXIT_FAILURE);
-    }
-    char prefix[80];
-    this->cvt_get_file_prefix(prefix);
-
-    if (iter == -2) {
-        sprintf(filename_buffer, "%s_initial", prefix);
-    } else if (iter == -1) {
-        sprintf(filename_buffer, "%s_final", prefix);
-    } else {
-        sprintf(filename_buffer, "%s_%.5d", prefix, iter);
-    }
-}
-
-
-void CVT::cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
-        const char *init_string, int it_max, int it_fixed, int it_num,
-        double it_diff, double energy, const char *sample_string, int sample_num,
-        double r[], const char *file_out_name, bool comment)
-
-//****************************************************************************80
 //
-//  Purpose:
-//
-//    CVT_WRITE writes a CVT dataset to a file.
-//
-//  Discussion:
-//
-//    The initial lines of the file are comments, which begin with a
-//    "#" character.
-//
-//    Thereafter, each line of the file contains the M-dimensional
-//    components of the next entry of the dataset.
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license. 
-//
-//  Modified:
-//
-//    04 July 2005
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//
-//    Input, int N, the number of points.
-//
-//    Input, int BATCH, sets the maximum number of sample points
-//    generated at one time.  It is inefficient to generate the sample
-//    points 1 at a time, but memory intensive to generate them all
-//    at once.  You might set BATCH to min ( SAMPLE_NUM, 10000 ), for instance.
-//
-//    Input, int SEED_INIT, the initial random number seed.
-//
-//    Input, int SEED, the current random number seed.
-//
-//    Input, char *INIT_STRING, specifies how the initial
-//    generators are chosen:
-//    filename, by reading data from a file;
-//    'GRID', picking points from a grid;
-//    'HALTON', from a Halton sequence;
-//    'RANDOM', using the C++ RANDOM function;
-//    'UNIFORM', using a simple uniform RNG;
-//    'USER', call "user" routine.
-//
-//    Input, int IT_MAX, the maximum number of iterations allowed.
-//
-//    Input, int IT_FIXED, the number of iterations to take with a
-//    fixed set of sample points.
-//
-//    Input, int IT_NUM, the actual number of iterations taken.
-//
-//    Input, double IT_DIFF, the L2 norm of the change 
-//    in the CVT coordinates on the last iteration.
-//
-//    Input, double *ENERGY,  the discrete "energy", divided
-//    by the number of sample points.
-//
-//    Input, char *SAMPLE_STRING, specifies how the region is sampled:
-//    'GRID', picking points from a grid;
-//    'HALTON', from a Halton sequence;
-//    'RANDOM', using the C++ RANDOM function;
-//    'UNIFORM', using a simple uniform RNG;
-//    'USER', call "user" routine.
-//
-//    Input, int SAMPLE_NUM, the number of sampling points used on
-//    each iteration.
-//
-//    Input, double R(DIM_NUM,N), the points.
-//
-//    Input, char *FILE_OUT_NAME, the name of the output file. NOTE: this routine automatically adds
-//                                          an extension to the filename (*.ascii)
-//
-//    Input, bool COMMENT, is true if comments may be included in the file.
-//
+std::string CVT::getFileDetailString()
 {
-    ofstream file_out;
-    int i;
-    int j;
-    char *s;
-
-    char dim_string[80];
-    sprintf(dim_string, "_%dD", dim_num);
-
-    // No need for header if we use file extensions instead.
-    string file_out_name_with_extension(file_out_name);
-    file_out_name_with_extension.append(dim_string);
-    file_out_name_with_extension.append(".ascii");
-    file_out.open(file_out_name_with_extension.c_str());
-
-    if (!file_out) {
-        cout << "\n";
-        cout << "CVT_WRITE - Fatal error!\n";
-        cout << "  Could not open the output file.\n";
-        exit(1);
-    } else {
-        printf(" --> Writing generators to: %s\n", file_out_name);
-    }
-
-    s = timestring();
-
-    if (comment) {
-        file_out << "#  " << file_out_name << "\n";
-        file_out << "#  created by routine CVT_WRITE.C" << "\n";
-        file_out << "#  at " << s << "\n";
-        file_out << "#\n";
-
-        file_out << "#  Dimension DIM_NUM =        " << dim_num << "\n";
-        file_out << "#  Number of points N =       " << n << "\n";
-        file_out << "#  Initial SEED_INIT =        " << seed_init << "\n";
-        file_out << "#  Current SEED =             " << seed << "\n";
-        file_out << "#  INIT =                    \"" << init_string << "\".\n";
-        file_out << "#  Max iterations IT_MAX =    " << it_max << "\n";
-        file_out << "#  IT_FIXED (fixed samples) = " << it_fixed << "\n";
-        file_out << "#  Iterations IT_NUM =        " << it_num << "\n";
-        file_out << "#  Difference IT_DIFF =       " << it_diff << "\n";
-        file_out << "#  CVT ENERGY =               " << energy << "\n";
-        file_out << "#  SAMPLE =                  \"" << sample_string << "\".\n";
-        file_out << "#  Samples SAMPLE_NUM =       " << sample_num << "\n";
-        file_out << "#  Sampling BATCH size =      " << batch << "\n";
-        file_out << "#  EPSILON (unit roundoff) =  " << r8_epsilon() << "\n";
-        file_out << "#\n";
-    }
-
-    for (j = 0; j < n; j++) {
-        for (i = 0; i < dim_num; i++) {
-            file_out << setw(10) << r[i + j * dim_num] << "  ";
-        }
-        file_out << "\n";
-    }
-
-    file_out.close();
-
-    delete [] s;
-
-    return;
+    std::stringstream ss(std::stringstream::out); 
+    ss << this->nb_nodes << "generators_" << rho->className() << "_density_" << dim_num << "d"; 
+    return ss.str();	
 }
-//****************************************************************************80
-
-void CVT::cvt_write_binary(int dim_num, int n, int batch, int seed_init, int seed,
-        const char *init_string, int it_max, int it_fixed, int it_num,
-        double it_diff, double energy, const char *sample_string, int sample_num,
-        double r[], const char *file_out_name, bool comment)
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    CVT_WRITE_BINARY writes a CVT dataset to a binary file. Based on
-//    John Burkardts "CVT_WRITE"
-//
-//  Discussion:
-//
-//    The initial lines of the file are comments, which begin with a
-//    "#" character.
-//
-//    Thereafter, each line of the file contains the M-dimensional
-//    components of the next entry of the dataset.
-//
-//  Licensing:
-//
-//    This code is distributed with no license. Cite me, and acknowledge
-//    the origin of the source code.
-//
-//  Modified:
-//
-//    6/21/2010
-//
-//  Author:
-//
-//    Evan Bollig
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//
-//    Input, int N, the number of points.
-//
-//    Input, int BATCH, sets the maximum number of sample points
-//    generated at one time.  It is inefficient to generate the sample
-//    points 1 at a time, but memory intensive to generate them all
-//    at once.  You might set BATCH to min ( SAMPLE_NUM, 10000 ), for instance.
-//
-//    Input, int SEED_INIT, the initial random number seed.
-//
-//    Input, int SEED, the current random number seed.
-//
-//    Input, char *INIT_STRING, specifies how the initial
-//    generators are chosen:
-//    filename, by reading data from a file;
-//    'GRID', picking points from a grid;
-//    'HALTON', from a Halton sequence;
-//    'RANDOM', using the C++ RANDOM function;
-//    'UNIFORM', using a simple uniform RNG;
-//    'USER', call "user" routine.
-//
-//    Input, int IT_MAX, the maximum number of iterations allowed.
-//
-//    Input, int IT_FIXED, the number of iterations to take with a
-//    fixed set of sample points.
-//
-//    Input, int IT_NUM, the actual number of iterations taken.
-//
-//    Input, double IT_DIFF, the L2 norm of the change
-//    in the CVT coordinates on the last iteration.
-//
-//    Input, double *ENERGY,  the discrete "energy", divided
-//    by the number of sample points.
-//
-//    Input, char *SAMPLE_STRING, specifies how the region is sampled:
-//    'GRID', picking points from a grid;
-//    'HALTON', from a Halton sequence;
-//    'RANDOM', using the C++ RANDOM function;
-//    'UNIFORM', using a simple uniform RNG;
-//    'USER', call "user" routine.
-//
-//    Input, int SAMPLE_NUM, the number of sampling points used on
-//    each iteration.
-//
-//    Input, double R(DIM_NUM,N), the points.
-//
-//    Input, char *FILE_OUT_NAME, the name of the output file. NOTE: routine auto appends ".bin" as file extension to FILE_OUT_NAME
-//
-//    Input, bool COMMENT, is true if comments may be included in the file.
-//
-{
-    ofstream file_out;
-    int i;
-    int j;
-    char *s;
-
-
-    char dim_string[80];
-    sprintf(dim_string, "_%dD", dim_num);
-
-    // No need for header if we use file extensions instead.
-    string file_out_name_with_extension(file_out_name);
-    file_out_name_with_extension.append(dim_string);
-    file_out_name_with_extension.append(".bin");
-    file_out.open(file_out_name_with_extension.c_str());
-
-    if (!file_out) {
-        cout << "\n";
-        cout << "CVT_WRITE - Fatal error!\n";
-        cout << "  Could not open the output file.\n";
-        exit(1);
-    }
-
-    s = timestring();
-
-    if (comment) {
-        file_out << "#  " << file_out_name << "\n";
-        file_out << "#  created by routine CVT_WRITE.C" << "\n";
-        file_out << "#  at " << s << "\n";
-        file_out << "#\n";
-
-        file_out << "#  Dimension DIM_NUM =        " << dim_num << "\n";
-        file_out << "#  Number of points N =       " << n << "\n";
-        file_out << "#  Initial SEED_INIT =        " << seed_init << "\n";
-        file_out << "#  Current SEED =             " << seed << "\n";
-        file_out << "#  INIT =                    \"" << init_string << "\".\n";
-        file_out << "#  Max iterations IT_MAX =    " << it_max << "\n";
-        file_out << "#  IT_FIXED (fixed samples) = " << it_fixed << "\n";
-        file_out << "#  Iterations IT_NUM =        " << it_num << "\n";
-        file_out << "#  Difference IT_DIFF =       " << it_diff << "\n";
-        file_out << "#  CVT ENERGY =               " << energy << "\n";
-        file_out << "#  SAMPLE =                  \"" << sample_string << "\".\n";
-        file_out << "#  Samples SAMPLE_NUM =       " << sample_num << "\n";
-        file_out << "#  Sampling BATCH size =      " << batch << "\n";
-        file_out << "#  EPSILON (unit roundoff) =  " << r8_epsilon() << "\n";
-        file_out << "#\n";
-    }
-
-    file_out.write((char*) r, n * dim_num * sizeof (double));
-
-    /*for ( j = 0; j < n; j++ )
-      {
-      for ( i = 0; i < dim_num; i++ )
-      {
-      file_out << setw(10) << r[i+j*dim_num] << "  ";
-      }
-      file_out << "\n";
-      }
-      */
-    file_out << "\n";
-
-    file_out.close();
-
-    delete [] s;
-
-    return;
-}
-//****************************************************************************80
-
-int CVT::data_read(const char *file_in_name, int dim_num, int n, double r[])
-
-    //****************************************************************************80
-    //
-    //  Purpose:
-    //
-    //    DATA_READ reads generator coordinate data from a file.
-    //
-    //  Discussion:
-    //
-    //    The file is assumed to contain one record per line if ascii.
-    //
-    //    Records beginning with the '#' character are comments, and are ignored.
-    //    Blank lines are also ignored.
-    //
-    //    The first line of the file must specify "ASCII" or "BINARY" to distinguish
-    //    how the data is read. Binary format can have a header with # delimited
-    //    lines, but they must ALL be at the top of the file below the format specification
-    //    and before the binary data.
-    //
-    //    Each line in ascii format that is not ignored is assumed to contain exactly (or at least)
-    //    M real numbers, representing the coordinates of a point.
-    //
-    //    There are assumed to be exactly (or at least) N such records.
-    //
-    //  Licensing:
-    //
-    //    This code is distributed under the GNU LGPL license. 
-    //
-    //  Modified:
-    //
-    //    6/21/2010
-    //
-    //  Author:
-    //
-    //    John Burkardt (Modified by Evan Bollig)
-    //
-    //  Parameters:
-    //
-    //    Input, char *FILE_IN_NAME, the name of the input file.
-    //
-    //    Input, int DIM_NUM, the number of spatial dimensions.
-    //
-    //    Input, int N, the number of points.  The program
-    //    will stop reading data once N values have been read.
-    //
-    //    Output, double R[DIM_NUM*N], the point coordinates.
-    //
-    //  RETURNS:
-    //     0 if file exists and was read
-    //     nonzero if the file does not exist or the read is incomplete due to other errors
-{
-    bool error;
-    ifstream file_in;
-    int i;
-    int j;
-    char line[255];
-    double *x;
-    bool ascii = false;
-
-
-    char dim_string[80];
-    sprintf(dim_string, "_%dD", dim_num);
-
-    string file_in_name_ascii(file_in_name);
-    file_in_name_ascii.append(dim_string);
-    file_in_name_ascii.append(".ascii");
-
-    string file_in_name_binary(file_in_name);
-    file_in_name_binary.append(dim_string);
-    file_in_name_binary.append(".bin");
-
-    file_in.open(file_in_name_ascii.c_str());
-
-    if (!file_in) {
-        file_in.open(file_in_name_binary.c_str());
-        if (!file_in) {
-            cout << "\n";
-            cout << "DATA_READ - Fatal error!\n";
-            cout << "  Could not open the input file: \"" << file_in_name << "\"\n";
-            return 1;
-        } else {
-            cout << "FOUND BINARY FILE: " << file_in_name_binary << endl;
-            ascii = false;
-        }
-    } else {
-        cout << "FOUND ASCII FILE: " << file_in_name_ascii << endl;
-        ascii = true;
-    }
-
-    if (ascii) {
-        x = new double[dim_num];
-
-        j = 0;
-
-        while (j < n) {
-            file_in.getline(line, sizeof ( line));
-
-            if (file_in.eof()) {
-                break;
-            }
-
-            if (line[0] == '#' || s_len_trim(line) == 0) {
-                continue;
-            }
-
-            error = s_to_r8vec(line, dim_num, x);
-
-            if (error) {
-                continue;
-            }
-
-            for (i = 0; i < dim_num; i++) {
-                r[i + j * dim_num] = x[i];
-            }
-            j = j + 1;
-
-        }
-        delete [] x;
-    } else {
-        while (file_in.peek() == '#') {
-            file_in.getline(line, sizeof (line));
-            //  cout << "Comment" << line << "\n";
-        }
-        //cout << "TRYING TO READ DATA: " << endl;
-        file_in.read((char*) &r[0], n * dim_num * sizeof (double));
-        //cout << " DONE\n";
-    }
-
-    file_in.close();
-
-    cout << "\n";
-    cout << "DATA_READ:\n";
-    cout << "  Read coordinate data from file.\n";
-
-    return 0;
-}
-#endif 
 
 

@@ -13,31 +13,26 @@
 
 class EllipseCVT : public CVT {
     protected:
-        // better to pass a grid structure and different types of grids will be represented by
-        // different subclasses, which are accessed by individual samplers (that populate the domain
-        // with random points
+        // better to pass a grid structure and different types of grids will be
+        // represented by different subclasses, which are accessed by
+        // individual samplers (that populate the domain with random points
         double axis_major;
         double axis_minor;
 
-        // TODO: cut these two
-#if 0
-        ParametricPatch *outer_geom; // not quite the correct class. In reality, the
-        ParametricPatch *geom; // not quite the correct class. In reality, the
-        // correct class is Geometry = vector<ParametricPatch>
-#endif 
-
     public:
-        EllipseCVT(double major_ = 1., double minor_ = 1., int DEBUG = 0);
-
-        // Custom "sample" routine (sample inside box with rejection outside of the ellipse).
-        virtual void user_sample(int dim_num, int n, int *seed, double r[]);
+        //EllipseCVT(double major_ = 1., double minor_ = 1., int DEBUG = 0);
+        EllipseCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis = 1., double minor_axis = 1., size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800)
+            : CVT(nb_generators, dimension, 0, density_func, num_samples, max_num_iters, write_frequency, sample_batch_size), 
+            axis_major(major_axis), axis_minor(minor_axis)
+    { ; }
 
         // custom "user" initialization
         // NOTE: we should rewrite the base CVT class so there is a separate
-        // custom_init and custom_sample routine (since they CAN be different like in this case).
+        // custom_init and custom_sample routine (since they CAN be different
+        // like in this case).
         virtual void user_init(int dim_num, int n, int *seed, double r[]);
 
-        Vec3 singleRejection2d(double area, double weighted_area, Density& density);
+        virtual Vec3 singleRejection2d(double area, double weighted_area, Density& density);
 
         void setEllipseAxes(double major_, double minor_) {
             this->axis_major = major_;
@@ -52,26 +47,7 @@ class EllipseCVT : public CVT {
 
         /*** FOR FILE NAMES: ***/ 
 
-        virtual std::string getFileDetailString(); 
-
         virtual std::string className() {return "ellipse_cvt";}
-
-
-
-#if 0
-        // Gordon Erlebacher, 9/1/2009
-        void ellipse(int dim_num, int& n, int& nb_bnd, int *seed, std::vector<double>& r);
-        void ellipse(int dim_num, int& n, int& nb_bnd, int *seed, double r[]);
-        void ellipse_init(int dim_num, int& n, int& nb_bnd, int *seed, double r[]);
-
-        void setGeometry(ParametricPatch* geom_) {
-            geom = geom_;
-        }
-
-        void setOuterGeometry(ParametricPatch* geom_) {
-            outer_geom = geom_;
-        }
-#endif 
 };
 
 #endif //_ELLIPSE_CVT_H_

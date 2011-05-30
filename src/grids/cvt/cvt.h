@@ -30,32 +30,33 @@ class CVT : public Grid
 
         // These correspond to John Burkardts CVT implementation parameters
         int seed, batch, it_fixed;
-        // NOTE: we dont have support for changing "init","sample" and their corresponding strings.
-        //      ONLY random sampling is supported in this class.
+        // NOTE: we dont have support for changing "init","sample" and their
+        // corresponding strings. 
         int init, sample;
         int sample_num, it_max; 
-        const char* cvt_file_name;
 
     public:
-
-
         /*******************
          * OVERRIDES GRID::
          *******************/
         // Overrides Grid::generate()
-        virtual void generate(); 
+        virtual void generate();
 
-        virtual std::string className() {return "ellipse_cvt";}
+        virtual std::string className() {return "cvt";}
 
         virtual std::string getFileDetailString(); 
 
         /*******************
          *  CVT:: Only:
          *******************/
+        // Construct a CVT given the total number of nodes in the domain and 
+        // the number of dimensions for the CVT. Dimension allows us to generate
+        // a CVT in lower dimensions than the nodes (e.g., 3D node cloud with a
+        // cvt on each xy plane) 
+        CVT (size_t nb_nodes, size_t dimension, size_t nb_locked=0, Density* density_function=NULL, size_t num_samples=10000, size_t max_num_iters=1000, size_t write_frequency=20, size_t sample_batch_size=1000); 
+        CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked=0, Density* density_function=NULL, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800); 
 
-        CVT(int num_generators = 10, int dimension_=2, const char* filename = "cvt", int init=-1, int sample=-1, int sample_num_=100, int seed=123456789, int batch=1000, int it_max_=100, int it_fixed=1, int DEBUG_ = 0);
-
-        ~CVT() {
+        virtual ~CVT() {
 #if USE_KDTREE
             delete(kdtree);
 #endif
@@ -116,14 +117,14 @@ class CVT : public Grid
 
         // Override this routine for a custom sampling routine
         // over your desired region. THIS IS FOR INITIALIZATION ONLY
-        virtual void user_init(int dim_num, int n, int *seed, double r[]) = 0;
+        virtual void user_init(int dim_num, int n, int *seed, double r[]);
 
         // Override this routine for custom sampling for user defined sampling
         // (perhaps sampling with rejection outside your domain?)
-        virtual void user_sample(int dim_num, int n, int *seed, double r[]) = 0;
+        virtual void user_sample(int dim_num, int n, int *seed, double r[]);
 
         void rejection2d(int nb_samples, double area, double weighted_area, Density& density, vector<Vec3>& samples);
-        Vec3 singleRejection2d(double area, double weighted_area, Density& density);
+        virtual Vec3 singleRejection2d(double area, double weighted_area, Density& density);
 
         // Override this routine to change initialization and execution details
         // (e.g., if you want to project as part of the initialization)
@@ -175,55 +176,6 @@ class CVT : public Grid
         }
 
         void setupTimers();
-
-#if 0
-        void setNbBnd(int nb_bnd_) {
-            this->nb_bnd = nb_bnd_;
-        }
-
-        int getNbBnd() {
-            return nb_bnd;
-        }
-
-        void setNbPts(int nb_pts_) {
-            this->nb_pts = nb_pts_;
-        }
-
-        int getNbPts() {
-            return nb_pts;
-        }
-
-        void setBoundaryPts(std::vector<Vec3>& bndry_pts_) {
-            this->bndry_pts = bndry_pts_;
-        }
-        // Load the output file for specified iteration
-        //  -1 = "final"
-        //  -2 = "initial"
-        //  0->inf = that specific iteration number.
-        virtual int cvt_load(int iter = -1);
-
-        // Write the output file for a specified iteration (should call to
-        // cvt_write(...) 
-        virtual void cvt_checkpoint(int iter);
-
-        // Override this to change the prefix of the filename
-        virtual void cvt_get_file_prefix(char* filename_buffer);
-
-        // Override this to change suffix (iteration detail) format for the cvt output files
-        virtual void cvt_get_filename(int iter, char *filename_buffer);
-
-
-        void cvt_write(int dim_num, int n, int batch, int seed_init, int seed,
-                const char *init_string, int it_max, int it_fixed, int it_num,
-                double it_diff, double energy, const char *sample_string, int
-                sample_num, double r[], const char *file_out_name, bool comment);
-        void cvt_write_binary(int dim_num, int n, int batch, int seed_init, int seed,
-                const char *init_string, int it_max, int it_fixed, int it_num,
-                double it_diff, double energy, const char *sample_string, int
-                sample_num, double r[], const char *file_out_name, bool comment);
-        int data_read(const char *file_in_name, int dim_num, int n, double r[]);
-
-#endif 
 
 };
 

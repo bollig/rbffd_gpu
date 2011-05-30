@@ -180,7 +180,7 @@ class Grid
 
         NodeType& getNode(size_t indx) 	
         { return node_list[indx]; }
-        void setNode(size_t indx, NodeType& node)
+        void setNode(size_t indx, NodeType node)
         { node_list[indx] = node; }
 
         size_t getBoundaryIndicesSize() 
@@ -190,7 +190,7 @@ class Grid
 
         size_t& getBoundaryIndex(size_t indx) 
         { return boundary_indices[indx]; } 
-        void setBoundaryIndex(size_t indx, size_t& boundary_indx)
+        void setBoundaryIndex(size_t indx, size_t boundary_indx)
         { boundary_indices[indx] = boundary_indx; }
 
         std::vector<Vec3>& getBoundaryNormals() 
@@ -291,6 +291,10 @@ class Grid
         {
             this->boundary_indices.resize(nb_boundary_nodes);
             this->boundary_normals.resize(nb_boundary_nodes);
+        }
+        void resizeNodeList(size_t nb_pts)
+        {
+            this->node_list.resize(nb_pts);
         }
 
 }; 

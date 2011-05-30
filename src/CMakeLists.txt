@@ -13,8 +13,8 @@ SET(REQUIRED_SOURCE_FILES
     grids/cvt/cvt.cpp
     #grids/cvt/constrained_cvt.cpp
     grids/cvt/ellipse_cvt.cpp
-    grids/cvt/ellipsoid_cvt.cpp
-    grids/cvt/nested_sphere_cvt.cpp
+    #    grids/cvt/ellipsoid_cvt.cpp
+    #    grids/cvt/nested_sphere_cvt.cpp
     grids/regulargrid.cpp
     grids/grid_interface.cpp
     grids/domain.cpp

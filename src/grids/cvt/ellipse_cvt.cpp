@@ -20,8 +20,7 @@ void EllipseCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]
     ;
 }
 //****************************************************************************80
-
-Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& density) {
+Vec3 EllipseCVT::singleRejection2d_EllipseMinusCircle(double area, double weighted_area, Density& density) {
     // Apparently not used in this file
     // 3D version should be written though, but the ellipse is a special case
     // (no hurry)
@@ -29,6 +28,7 @@ Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& d
     double xs, ys;
     double u;
     double r2;
+    double r_inner;
     double maxrhoi = 1. / rho->getMax();
     //printf("maxrhoi= %f\n", maxrhoi);
 
@@ -36,13 +36,21 @@ Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& d
     double min2i = 1. / axis_minor / axis_minor;
     //printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
 
+    double xc = 0.1; 
+    double yc = 0.1; 
+    double inner_cir_radius = 0.15;
+
     while (1) {
         xs = random(-axis_major, axis_major);
         ys = random(-axis_major, axis_major); // to make sure that cells are all same size
         //printf("xs,ys= %f, %f\n", xs, ys);
         r2 = xs * xs * maj2i + ys * ys*min2i;
+        
+        r_inner = sqrt((xs-xc)*(xs-xc) + (ys - yc)*(ys-yc));
+
         //printf("r2= %f\n", r2);
-        if (r2 >= 1.) continue; // inside the ellipse
+        if (r2 > 1.) continue; // outside outer boundary
+        if (r_inner < inner_cir_radius) continue; // inside inner boundary
 
         // rejection part if non-uniform distribution
         u = random(0., 1.);
@@ -51,6 +59,48 @@ Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& d
     }
     return Vec3(xs, ys);
 }
+//****************************************************************************80
+Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& density) {
+    // Apparently not used in this file
+    // 3D version should be written though, but the ellipse is a special case
+    // (no hurry)
+
+    double xs, ys;
+    double u;
+    double r2;
+    double r_inner;
+    double maxrhoi = 1. / rho->getMax();
+    //printf("maxrhoi= %f\n", maxrhoi);
+
+    double maj2i = 1. / axis_major / axis_major;
+    double min2i = 1. / axis_minor / axis_minor;
+    //printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
+
+    double xc = 0.1; 
+    double yc = 0.1; 
+    double inner_cir_radius = 0.15;
+
+    while (1) {
+        xs = random(-axis_major, axis_major);
+        ys = random(-axis_major, axis_major); // to make sure that cells are all same size
+        //printf("xs,ys= %f, %f\n", xs, ys);
+        r2 = xs * xs * maj2i + ys * ys*min2i;
+        
+        r_inner = sqrt((xs-xc)*(xs-xc) + (ys - yc)*(ys-yc));
+
+        //printf("r2= %f\n", r2);
+        if (r2 > 1.) continue; // outside outer boundary
+        if (r_inner < inner_cir_radius) continue; // inside inner boundary
+
+        // rejection part if non-uniform distribution
+        u = random(0., 1.);
+        //printf("rho= %f\n", density(xs,ys));
+        if (u < (density(xs, ys, 0.)) * maxrhoi) break;
+    }
+    return Vec3(xs, ys);
+}
+
+
 
 void EllipseCVT::user_init(int dim_num, int n, int *seed, double r[]) {
     // Fill our initial boundary points

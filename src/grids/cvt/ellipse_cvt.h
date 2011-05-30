@@ -35,11 +35,14 @@ class EllipseCVT : public CVT {
         virtual void user_init(int dim_num, int n, int *seed, double r[]);
 
         virtual Vec3 singleRejection2d(double area, double weighted_area, Density& density);
+        virtual Vec3 singleRejection2d_EllipseMinusCircle(double area, double weighted_area, Density& density);
 
         void setEllipseAxes(double major_, double minor_) {
             this->axis_major = major_;
             this->axis_minor = minor_;
         }
+
+//        void setSubtractCircle(double xc, double yc, double cir_radius, double inner_axis_1, double inner_axis_2); 
 
         /*** FOR THE BOUNDARY ***/ 
         void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);

@@ -55,7 +55,6 @@ Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& d
 void EllipseCVT::user_init(int dim_num, int n, int *seed, double r[]) {
     // Fill our initial boundary points
     this->fillBoundaryPoints(dim_num, n, seed, &r[0]);
-    std::cout << "NOW NB_BND = " << nb_bnd << std::endl;
     // Then sample the interior using our singleRejection2d defined routine
     this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
 }

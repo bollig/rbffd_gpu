@@ -397,7 +397,6 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         *it_num = *it_num + 1;
         seed_init = seed;
     
-    std::cout << dim_num << "  " << nb_pts << "  " << batch << "  " << sample << "  " << initialize << "  " << sample_num << "  " << seed << "  " << *it_diff << "  " << *energy << std::endl;
 
         cvt_iterate(dim_num, nb_pts, batch, sample, initialize, sample_num, &seed,
                 r, it_diff, energy);

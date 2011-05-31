@@ -132,7 +132,7 @@ void EllipsoidCVT::rejection3d(int nb_samples, Density& density, vector<Vec3>& s
 		samples[i] = singleRejection3d(density);
 		samples[i].print("samples3d");
 		Vec3& s = samples[i];
-		//printf("dist=%f\n", outer_geom->how_far(s.x(), s.y(), s.z()));
+		printf("dist=%f\n", outer_geom->how_far(s.x(), s.y(), s.z()));
 	}
 }
 //----------------------------------------------------------------------
@@ -257,6 +257,7 @@ void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool
 //    by the number of sample points.
 //
 {
+    std::cout << "HERE" << std::endl; exit(-1);
   int *count;
   int get;
   int have;

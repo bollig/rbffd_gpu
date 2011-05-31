@@ -94,14 +94,17 @@ Vec3 ParametricPatch::project(Vec3 pt_off_surface)
 		Vec3 pt_on_surface = nearest(pt_off_surface);
 		Vec3 pt_on_surface1;
 
+#if 0
 		pt_off_surface.print("original seed");
 		pt_on_surface.print("nearest point from original");
-
+#endif 
 		// Outer iteration
 		double err;
 		int nb_outer = 4;
 
+#if 0
 			printf("****** before outer iterations ****\n");
+#endif 
 			Vec3 diff = pt_off_surface - pt_on_surface;
 			Vec3& p = pt_on_surface;
 			Vec3 grad = gradient(p.x(), p.y(), p.z());
@@ -119,7 +122,7 @@ Vec3 ParametricPatch::project(Vec3 pt_off_surface)
 			//printf("err= %f\n", err);
 			if (err < tolerance) break;
 			if (err > 1000.) {
-				printf("max tolerance exceeded. Cannot continumUe.\n");
+				printf("[ParametricPatch] project point: max tolerance exceeded. Cannot continumUe.\n");
 				exit(0);
 			}
 			//printf("===========================\n");
@@ -136,7 +139,7 @@ Vec3 ParametricPatch::project(Vec3 pt_off_surface)
 		}
 
 		if (err > tolerance) {
-			printf("*** project: NOT COnumUmVERGED ***\n");
+		//	printf("[ParametricPatch] Warning: *** project point on surface: NOT CONVERGED ***\n");
 		}
 
 		// pt is new point on the surface
@@ -154,7 +157,9 @@ Vec3 ParametricPatch::singleIteration(Vec3& pt_off_surface, Vec3& pt_on_surface)
 		Vec3& dir = grad;
 		Vec3& pt = pt_on_surface;
 		Vec3 normal = gradient(pt.x(), pt.y(), pt.z());
+#if 0
 		normal.print("normal");
+#endif 
 		Vec3 pti = planeIntersect(rsd, dir, pt, normal);
 
 		double dist = pti.distance2(rsd);

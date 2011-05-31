@@ -23,6 +23,78 @@ EllipsoidCVT::EllipsoidCVT(double major_, double minor_, double midax_, int DEBU
 //****************************************************************************80
 #endif 
 
+void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]) 
+{
+    // FIXME: we should only project boundary nodes
+    int n = nb_pts;
+    
+    // TODO: this should happen in USER_SAMPLE
+    // GE: track whether Voronoi cell "intersects the boundary
+	int* intersect_bnd = new int [n]; // n seeds
+	//printf("n= %d\n", n); exit(0);
+
+	for (int i=0; i < n; i++) {
+		intersect_bnd[i] = 0;
+	}
+#if 0
+   // TODO: track which samples returned by user_sample intersect the boundary geometry 
+    Vec3 inside;
+
+    // s is the validated sample
+      inside.setValue(s[0+j*dim_num],s[1+j*dim_num],s[2+j*dim_num]);
+	  double dist = geom->how_far(inside); // use actual geometry
+	  if (dist > 0.) { // outside
+		//printf("** dist= %f, j2= %d\n", dist, j2);
+		//inside.print("inside vec");
+		intersect_bnd[j2] += 1; // j2 is the seed
+	  } else {
+		intersect_bnd[j2] -= 1;
+	  }
+	  //printf("dist (< 0 if inside) = %f\n", dist);
+#endif 
+
+  int* count = new int [n]; // n seeds
+  int cnt = 0;
+  Vec3 pt, ptc;
+  for (int j=0; j < n; j++) {
+    // if count == abs(intersect_bnd), then there is no intersection
+	if (count[j] != abs(intersect_bnd[j])) {
+		cnt++;
+
+		//printf("intersect with bndry\n");
+		ptc.setValue(r[0+j*dim_num],r[1+j*dim_num],r[2+j*dim_num]);
+		//pt = geom->projectToBoundary(ptc);
+		pt = geom->project(ptc);
+		//ptc.print("pt off bnd (ptc)");
+		//pt.print("pt on bnd");
+
+		double howfar = geom->how_far(pt);
+		Vec3 slope = (pt-ptc);
+		slope.normalize();
+		Vec3 grad = geom->gradient(pt.x(), pt.y(), pt.z());
+		Vec3 gradptc = geom->gradient(ptc.x(), ptc.y(), ptc.z());
+		grad.normalize();
+		gradptc.normalize();
+#if 0
+		printf("===========================\n");
+		ptc.print("ptc");
+		pt.print("pt");
+		grad.print("grad(@pt)");
+		gradptc.print("grad(@ptc)");
+		slope.print("slope (pt-ptc)");
+		grad.print("grad(pt)");
+#endif 
+	}
+  	//printf("count: %d, intersect: %d, diff= %d\n", count[j], intersect_bnd[j],
+	     //count[j]-abs(intersect_bnd[j]));
+	// project points with intersect == 1
+  }
+  printf("nb intersections: %d\n", cnt);
+
+}
+
+
+
 //----------------------------------------------------------------------
 void EllipsoidCVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
 {
@@ -169,7 +241,7 @@ Vec3 EllipsoidCVT::singleRejection3d(Density& density)
 //----------------------------------------------------------------------
 
 //****************************************************************************
-
+#if 0
 void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool initialize,
   int sample_num, int *seed, double r[], double *it_diff, double *energy )
 
@@ -257,7 +329,6 @@ void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool
 //    by the number of sample points.
 //
 {
-    std::cout << "HERE" << std::endl; exit(-1);
   int *count;
   int get;
   int have;
@@ -426,9 +497,10 @@ void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool
   }
   printf("nb intersections: %d\n", cnt);
 
+#if 0
   printf("(%s, Line: %d) EXIT_FAILURE\n", __FILE__, __LINE__);
   exit(EXIT_FAILURE);
-
+#endif 
 
   //printf("r2: %f, %f\n", r2[0+nb_bnd*dim_num], r2[1+nb_bnd*dim_num]);
   //exit(0);
@@ -446,6 +518,7 @@ void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool
 
   return;
 }
+#endif 
 
 
 void EllipsoidCVT::user_sample(int dim_num, int n, int *seed, double r[]) {

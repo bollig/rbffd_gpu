@@ -70,7 +70,12 @@ class CVT : public Grid
 
         // Override this if we want to project boundary nodes back to the boundary: 
         // Basic CVT can ignore this: 
-        virtual void displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]) {;}
+        // r_computed is IN => computed centroids for voronoi regions
+        // r_updated is IN/OUT. IN => generating points; OUT => updated centroids
+        // If we want to project nodes to the boundary, assume r_computed are
+        // the input centroids and r_updated will contain PROJECTED points on exit
+        // form this routine. 
+        virtual void displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r_computed[], double r_updated[]) {;}
 
         void syncCVTandGrid() {
             for (size_t i = 0; i < nb_bnd; i++) {

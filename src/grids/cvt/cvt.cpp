@@ -690,22 +690,16 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
     }
     //
     //  Estimate the centroids.
-    //  NOTE: this leaves the first nb_bnd points unchanged ( n = nb centroids)
-    // 	since we want to manually specify them elsewhere and then generate
-    // 	the interior points only with the CVT algorithm.
-    // 	If nb_bnd = 0, then we peform a CCVT on all points.
-    // 	If nb_bnd > 0, then we should perform a CVT without
-    //		constraining points to the surface (so only nb_bnd
-    // 		end up exactly on the surface; all others are interior)
-    //
+    //  NOTE: we ALSO compute new centroids for nb_bnd points ( n = nb centroids)
+    // 	since we might want them to move along boundary and be reprojected 
     //    printf("Computing CVT for %d points with %d presets on the boundary\n", n, nb_bnd);
-    for (j = nb_bnd; j < n; j++) {
+    for (j = 0; j < n; j++) {
         for (i = 0; i < dim_num; i++) {
             r2[i + j * dim_num] = r2[i + j * dim_num] / (double) (count[j]);
         }
     }
     //
-    //  Determine the sum of the distances between generators and centroids.
+    //  Determine the sum of the distances between generators and centroids for interior nodes.
     //
     *it_diff = 0.0;
 
@@ -724,7 +718,7 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
     // Leaving boundary points fixed does not always appear to work, e.g. when
     // axes are 1 and 0.3 .
    
-    this->displaceBoundaryNodes(dim_num, nb_bnd, r2); 
+    this->displaceBoundaryNodes(dim_num, nb_bnd, r2, r); 
     
     //
     // Below: Displace the interior points

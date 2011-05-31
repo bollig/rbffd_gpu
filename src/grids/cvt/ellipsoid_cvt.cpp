@@ -27,7 +27,7 @@ EllipsoidCVT::EllipsoidCVT(double major_, double minor_, double midax_, int DEBU
 //****************************************************************************80
 #endif 
 
-void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]) 
+void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r_computed[], double r_updated[]) 
 {
     // FIXME: we should only project boundary nodes
     int n = nb_pts;
@@ -40,6 +40,17 @@ void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r
 	for (int i=0; i < n; i++) {
 		intersect_bnd[i] = 0;
 	}
+
+    for (int i = 0; i < nb_bnd; i++) {
+        Vec3 pt; 
+        for (int j = 0; j < dim_num; j++) {
+            pt[j] = r_computed[i*dim_num + j];
+        }
+        Vec3 projected = geom->projectToBoundary(pt);
+        for (int j = 0; j < dim_num; j++) {
+            r_updated[i*dim_num + j] = projected[j];
+        }
+    }
 
     // TODO: fix
 #if 0
@@ -518,7 +529,7 @@ void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool
 
 void EllipsoidCVT::user_sample(int dim_num, int n, int *seed, double r[]) {
     // The guts and glory (this is the user defined ellipse sampling)
-    ellipsoid(dim_num, n, seed, r);
+    ellipsoid(dim_num, nb_bnd, seed, r);
 
 #if 0
    // TODO: track which samples returned by user_sample intersect the boundary geometry 
@@ -546,7 +557,8 @@ void EllipsoidCVT::user_init(int dim_num, int n, int *seed, double r[]) {
     this->fillBoundaryPoints(dim_num, nb_nodes, seed, r);
 
     // This is the user defined initialization
-//    ellipsoid_init(dim_num, n, seed, r);
+    //ellipsoid_init(dim_num, n, seed, r);
+//    this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
 }
 
 
@@ -711,7 +723,6 @@ void EllipsoidCVT::computeBoundaryPointDistribution(int dim_num, double tot_leng
     equ_dist.resize(n);
 	theta.resize(n);
 	phi.resize(n);
-
 
 #if 0
 

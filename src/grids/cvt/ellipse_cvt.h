@@ -26,7 +26,7 @@ class EllipseCVT : public CVT {
             axis_major(major_axis), axis_minor(minor_axis)
     { ; }
         
-        virtual void displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]);
+        virtual void displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r_computed[], double r_updated[]);
 
         // custom "user" initialization
         // NOTE: we should rewrite the base CVT class so there is a separate

@@ -15,7 +15,7 @@ using namespace std;
 
 //****************************************************************************80
 
-void EllipseCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[])
+void EllipseCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r_in[], double r[])
 {
     ;
 }

@@ -33,15 +33,16 @@ public:
 	// v in [0,pi]
 	virtual double x(double u, double v) 
 	{
-		return a*cos(u)*cos(v);
+		return a*cos(u)*sin(v);
 	}
 	virtual double y(double u, double v)
 	{
-		return b*cos(u)*sin(v);
+		return b*sin(u)*sin(v);
 	}
 	virtual double z(double u, double v)
 	{
-		return c*sin(u);
+		//return c*sin(u);
+		return c*cos(v);
 	}
 
 	// Tangent space 
@@ -81,7 +82,7 @@ public:
 		//pt.print("pt: project_to_boundary");
 		grad = gradient(pt.x(), pt.y(), pt.z());
 		grad.normalize();
-		grad.print("grad: project_to_boundary");
+//		grad.print("grad: project_to_boundary");
 		double ma = (grad.x()/a)*(grad.x()/a) + 
 		            (grad.y()/b)*(grad.y()/b) + 
 		            (grad.z()/c)*(grad.z()/c);

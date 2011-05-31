@@ -22,7 +22,7 @@ class EllipsoidCVT : public CVT {
         double axis_midax; // good for 3D case
 
         // TODO: cut these two
-        ParametricPatch *outer_geom; // not quite the correct class. In reality, the
+       // ParametricPatch *outer_geom; // not quite the correct class. In reality, the
         ParametricPatch *geom; // not quite the correct class. In reality, the
         // correct class is Geometry = vector<ParametricPatch>
 
@@ -39,7 +39,7 @@ class EllipsoidCVT : public CVT {
         // Outer ellipse
         geom = new EllipsoidPatch(0., pi, 0., 2.*pi, n1, n2, axis_major, axis_minor, axis_midax);
         // Inner ellipse
-        outer_geom = new EllipsoidPatch(0., pi, 0., 2.*pi, n1, n2, axis_major+1.0, axis_minor+1.0, axis_midax+1.);
+      //  outer_geom = new EllipsoidPatch(0., pi, 0., 2.*pi, n1, n2, axis_major+1.0, axis_minor+1.0, axis_midax+1.);
     }
 
 
@@ -69,7 +69,7 @@ class EllipsoidCVT : public CVT {
       //  virtual void cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize, int sample_num, int *seed, double r[], double *it_diff, double *energy);
 
         // Use parametric points to project samples to boundary 
-        virtual void displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]);
+        virtual void displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r_computed[], double r_updated[]);
 
         /*** FOR THE BOUNDARY ***/ 
         void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
@@ -80,12 +80,12 @@ class EllipsoidCVT : public CVT {
         void setGeometry(ParametricPatch* geom_) {
             geom = geom_;
         }
-
+#if 0
         void setOuterGeometry(ParametricPatch* geom_) {
             outer_geom = geom_;
         }
 
-
+#endif 
         /*** FOR FILE NAMES: ***/ 
 
         virtual std::string className() {return "ellipsoid_cvt";}

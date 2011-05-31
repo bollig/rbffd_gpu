@@ -33,8 +33,8 @@ class EllipsoidCVT : public CVT {
             axis_major(major_axis), axis_minor(minor_axis), axis_midax(midax_axis)
     {
         // FIXME: understand the parameters here.
-        int n1 = 30; // not really need here
-        int n2 = 30;
+        int n1 = 10; // not really need here
+        int n2 = 10;
         double pi = acos(-1.0);
         // Outer ellipse
         geom = new EllipsoidPatch(0., pi, 0., 2.*pi, n1, n2, axis_major, axis_minor, axis_midax);

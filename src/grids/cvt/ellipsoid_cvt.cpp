@@ -48,7 +48,7 @@ void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r
         }
 
 //EFB052611
-#if 0 
+#if 1 
         // Use iterative projection (slow)
         Vec3 projected = geom->project(pt);
 #else 

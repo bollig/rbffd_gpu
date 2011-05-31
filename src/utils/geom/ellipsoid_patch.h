@@ -82,7 +82,10 @@ public:
 		//pt.print("pt: project_to_boundary");
 		grad = gradient(pt.x(), pt.y(), pt.z());
 		grad.normalize();
+        //EFB052611: This works well initially, then the nodes start to cluster in the poles.
     Vec3 pt_new = this->singleProjectStep(pt, grad);
+    printf("[EllipsoidPatch] ERROR: projectToBoundary() does not work\n");
+    exit(-1);
 #if 0
         // EFB052611
         // This is buggy: 

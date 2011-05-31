@@ -38,9 +38,9 @@ void EllipsoidCVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
 	//exit(0);
 
   	for ( int j = 0; j < n; j++ ) {
-    	r[0+j*3] = samples[j].x();
-    	r[1+j*3] = samples[j].y();
-    	r[2+j*3] = samples[j].z();
+    	for (int i = 0; i < dim_num; i++) {
+            r[i+j*dim_num] = samples[j][i];
+        }
   	}
 
   // print initial seeds

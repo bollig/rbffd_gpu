@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <vector>
 #include "Vec3.h"
-#include "utils/geom/parametric_patch.h"
+#include "utils/geom/ellipsoid_patch.h"
 #include "density.h"
 #include "cvt.h"
 
@@ -29,9 +29,16 @@ protected:
 public:
 //    EllipsoidCVT(double major_ = 1., double minor_ = 1., double midax_ = 1., int DEBUG_ = 0);
     EllipsoidCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis, double minor_axis, double midax_axis, size_t num_samples=2000, size_t max_num_iters=10, size_t write_freq=100, size_t sample_batch_size=1000)
-            : CVT(nb_generators, dimension, 0, density_func, num_samples, max_num_iters, write_freq, sample_batch_size), 
+            : CVT(nb_generators, 3, 0, density_func, num_samples, max_num_iters, write_freq, sample_batch_size), 
             axis_major(major_axis), axis_minor(minor_axis), axis_midax(midax_axis)
-    { ; }
+    {
+        // FIXME: understand the parameters here.
+        int n1 = 30; // not really need here
+        int n2 = 30;
+        double pi = acos(-1.0);
+        geom = new EllipsoidPatch(0., pi, 0., 2.*pi, n1, n2, axis_major, axis_minor, axis_midax);
+        outer_geom = new EllipsoidPatch(0., pi, 0., 2.*pi, n1, n2, axis_major+1.0, axis_minor+1.0, axis_midax+1.);
+    }
  
 
     // Custom "sample" routine (sample inside box with rejection outside of the ellipse).

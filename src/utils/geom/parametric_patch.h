@@ -35,6 +35,9 @@ protected:
 	Vec3 grad;
 
 public:
+    // Parametric patch defined over domain [minU, maxU]x[minV, maxV] with 
+    // numU_ : the number of subdivisions in parameter u for patch (patch defined as f(u,v)
+    // numV_ : number of subdivisions in parameter v
 	ParametricPatch(double minU_, double maxU_, double minV_, double maxV_, 
 	   int numU_, int numV_) : minU(minU_), maxU(maxU_), minV(minV_), maxV(maxV_), 
 	   numU(numU_), numV(numV_)  {

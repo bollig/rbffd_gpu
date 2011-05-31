@@ -36,7 +36,9 @@ class EllipsoidCVT : public CVT {
         int n1 = 30; // not really need here
         int n2 = 30;
         double pi = acos(-1.0);
+        // Outer ellipse
         geom = new EllipsoidPatch(0., pi, 0., 2.*pi, n1, n2, axis_major, axis_minor, axis_midax);
+        // Inner ellipse
         outer_geom = new EllipsoidPatch(0., pi, 0., 2.*pi, n1, n2, axis_major+1.0, axis_minor+1.0, axis_midax+1.);
     }
 
@@ -68,6 +70,12 @@ class EllipsoidCVT : public CVT {
 
         // Use parametric points to project samples to boundary 
         virtual void displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r[]);
+
+        /*** FOR THE BOUNDARY ***/ 
+        void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
+        double computeBoundaryIntegral(Density& rho, size_t npts, std::vector<double>& intg);
+        double computeDomainIntegral(size_t npts, Density& rho);
+        void computeBoundaryPointDistribution(int dim_num, double tot_length, int npts, int nb_bnd, std::vector<double> intg, double bndry_pts[]);
 
         void setGeometry(ParametricPatch* geom_) {
             geom = geom_;

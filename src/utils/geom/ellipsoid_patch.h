@@ -82,6 +82,10 @@ public:
 		//pt.print("pt: project_to_boundary");
 		grad = gradient(pt.x(), pt.y(), pt.z());
 		grad.normalize();
+    Vec3 pt_new = this->singleProjectStep(pt, grad);
+#if 0
+        // EFB052611
+        // This is buggy: 
 //		grad.print("grad: project_to_boundary");
 		double ma = (grad.x()/a)*(grad.x()/a) + 
 		            (grad.y()/b)*(grad.y()/b) + 
@@ -95,6 +99,7 @@ public:
 		double lam = (fabs(lam1) < fabs(lam2)) ? lam1 : lam2;
 		//printf("lam= %f, lam1, lam2= %f, %f\n", lam, lam1, lam2);
 		Vec3 pt_new = pt + lam*grad;
+#endif 
 		return pt_new;
 	}
 	#endif

@@ -72,6 +72,20 @@ public:
 		return gradient(r.x(), r.y(), r.z());
 	}
 
+    double random(double a, double b) {
+        double r = ::random() / (double) RAND_MAX;
+        return a + r * (b - a);
+    }
+
+// Generate a random U in [minU_, maxU_]
+    double randomU() {
+        return random(minU, maxU); 
+    }
+
+    double randomV() {
+        return random(minV, maxV); 
+    }
+
 	virtual double surfaceElement(double u, double v) {
 		double xx = x(u,v);
 		double yy = y(u,v);

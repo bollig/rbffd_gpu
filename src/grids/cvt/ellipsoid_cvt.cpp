@@ -1,5 +1,6 @@
 //EFB052611: 
 //TODO: - NEEd to add inner geometry (ie nested ellipsoid)
+//      - Handle NON-uniform density with our boundary node placement
 
 # include <cstdlib>
 # include <cmath>
@@ -555,11 +556,9 @@ void EllipsoidCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, doub
 {
     std::vector<double> intg;
 
-#if 1
     size_t high_nb_pts = 200;
     double bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg);
     double dom_intg = computeDomainIntegral(high_nb_pts, *rho);
-#endif 
 
     // total nb points used to compute Voronoi mesh. 
     // Only (nb_interior_pts-nb_bnd) will be able to move freely
@@ -606,6 +605,7 @@ void EllipsoidCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, doub
 // more accuracy.
 double EllipsoidCVT::computeBoundaryIntegral(Density& rho, size_t npts, vector<double>& intg)
 {
+    intg.resize(npts);
 #if 0
     double major = axis_major; 
     double minor = axis_minor;
@@ -683,6 +683,8 @@ double EllipsoidCVT::computeDomainIntegral(size_t npts, Density& rho) {
     }
 
 #endif 
+    // FIXME: we are assuming UNIFORM density for simplicity to start placing boundary nodes. 
+    // The CVT can move them around according to density later, but we might not have ENOUGH!
     double exact_integ = (4./3.)*M_PI*major*minor*midax;
     double integ = exact_integ;
     if ((integ - exact_integ) > 1e-4) {
@@ -706,15 +708,18 @@ void EllipsoidCVT::computeBoundaryPointDistribution(int dim_num, double tot_leng
 	vector<double> equ_dist, theta, phi;
 
 	int n = nb_bnd + 1; // space so that first and last point are the same
+    equ_dist.resize(n);
+	theta.resize(n);
+	phi.resize(n);
+
+
+#if 0
+
 	double pi = acos(-1.);
 	double dtheta = 2. * pi / (npts - 1.);
 	printf("npts= %d, n= %d, nb_bnd = %d\n", npts, n, nb_bnd);
 
-	equ_dist.resize(n);
-	theta.resize(n);
-	phi.resize(n);
-
-	double intv_length = tot_length / (n - 1);
+		double intv_length = tot_length / (n - 1);
 	for (int i = 0; i < (n - 1); i++) {
 		equ_dist[i] = i * intv_length;
 		//theta[i] = i*dtheta;
@@ -729,8 +734,6 @@ void EllipsoidCVT::computeBoundaryPointDistribution(int dim_num, double tot_leng
 	// Brute force O(n*npts)
 	// Should rewrite to be O(npts)
 	//double dthetaj = 2.*pi / (n-1);
-
-	// EVAN : fill phi
 	theta[0] = 0.;
 	for (int i = 1; i < (n - 1); i++) {
 		theta[i] = -1.;
@@ -749,12 +752,12 @@ void EllipsoidCVT::computeBoundaryPointDistribution(int dim_num, double tot_leng
 		}
 	}
 	theta[n - 1] = 2. * pi;
+#endif 
 
+	printf("print length intervals: should be equal\n");
 	for (int i = 0; i < nb_bnd; i++) {
-		if (theta[i] < 0.) {
-			printf("Equipartitioning of boundary is incomplete\n");
-			exit(0);
-		}
+        theta[i] = geom->randomU();
+        phi[i] = geom->randomV();
             
 #if 0
         bnd[i*dim_num + 0] = major * sin(phi[i]) * cos(theta[i]);     

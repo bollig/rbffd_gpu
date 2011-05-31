@@ -31,37 +31,37 @@ public:
 	// Surface definition
 	// u in [0,2 pi]
 	// v in [0,pi]
-	double x(double u, double v) 
+	virtual double x(double u, double v) 
 	{
 		return a*cos(u)*cos(v);
 	}
-	double y(double u, double v)
+	virtual double y(double u, double v)
 	{
 		return b*cos(u)*sin(v);
 	}
-	double z(double u, double v)
+	virtual double z(double u, double v)
 	{
 		return c*sin(u);
 	}
 
 	// Tangent space 
 	// derivative of x(u,v) wrt u
-	double xu(double u, double v) {
+	virtual double xu(double u, double v) {
 		return (-a*sin(u)*cos(v));
 	}
-	double yu(double u, double v) {
+	virtual double yu(double u, double v) {
 		return (-b*sin(u)*sin(v));
 	}
-	double zu(double u, double v) {
+	virtual double zu(double u, double v) {
 		return c*cos(u);
 	}
-	double xv(double u, double v) {
+	virtual double xv(double u, double v) {
 		return (-a*cos(u)*sin(v));
 	}
-	double yv(double u, double v) {
+	virtual double yv(double u, double v) {
 		return (b*cos(u)*cos(v));
 	}
-	double zv(double u, double v) {
+	virtual double zv(double u, double v) {
 		return 0.;
 	}
 
@@ -99,7 +99,7 @@ public:
 	#endif
 
 	//----------------------------------------------------------------------
-	Vec3 singleProjectStep(Vec3& pt, Vec3& dir)
+	virtual Vec3 singleProjectStep(Vec3& pt, Vec3& dir)
 	{
 		dir.normalize();
 		double F = how_far(pt);

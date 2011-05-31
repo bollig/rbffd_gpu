@@ -36,24 +36,11 @@ void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r
 	for (int i=0; i < n; i++) {
 		intersect_bnd[i] = 0;
 	}
+
+    // TODO: fix
 #if 0
-   // TODO: track which samples returned by user_sample intersect the boundary geometry 
-    Vec3 inside;
 
-    // s is the validated sample
-      inside.setValue(s[0+j*dim_num],s[1+j*dim_num],s[2+j*dim_num]);
-	  double dist = geom->how_far(inside); // use actual geometry
-	  if (dist > 0.) { // outside
-		//printf("** dist= %f, j2= %d\n", dist, j2);
-		//inside.print("inside vec");
-		intersect_bnd[j2] += 1; // j2 is the seed
-	  } else {
-		intersect_bnd[j2] -= 1;
-	  }
-	  //printf("dist (< 0 if inside) = %f\n", dist);
-#endif 
-
-  int* count = new int [n]; // n seeds
+    int* count = new int [n]; // n seeds
   int cnt = 0;
   Vec3 pt, ptc;
   for (int j=0; j < n; j++) {
@@ -90,7 +77,7 @@ void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r
 	// project points with intersect == 1
   }
   printf("nb intersections: %d\n", cnt);
-
+#endif 
 }
 
 
@@ -112,9 +99,23 @@ void EllipsoidCVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
   	for ( int j = 0; j < n; j++ ) {
     	for (int i = 0; i < dim_num; i++) {
             r[i+j*dim_num] = samples[j][i];
+#if 0
+            // TODO: track which samples returned by user_sample intersect the boundary geometry 
+            Vec3 inside = samples[j][i]; 
+            double dist = geom->how_far(inside); // use actual geometry
+            if (dist > 0.) { // outside
+                //printf("** dist= %f, j2= %d\n", dist, j2);
+                //inside.print("inside vec");
+                intersect_bnd[j2] += 1; // j2 is the seed
+            } else {
+                intersect_bnd[j2] -= 1;
+            }
+            //printf("dist (< 0 if inside) = %f\n", dist);
+#endif 
         }
   	}
 
+#if 0
   // print initial seeds
   printf("Initial seed positions, %d seeds\n", n);
   for (int i=0; i < n; i++) {
@@ -125,7 +126,7 @@ void EllipsoidCVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
 	printf("\n");
   }
   printf(" -----  end initial seeds --------------------\n");
-
+#endif 
   return;
 }
 //----------------------------------------------------------------------
@@ -164,16 +165,14 @@ void EllipsoidCVT::ellipsoid ( int dim_num, int& n, int *seed, double r[] )
 // nb : is the number of points along the minor axis
 // nc : is the number of points along the middle axis
 
-	printf("enter ellipsoid\n");
-
 	vector<Vec3> samples;
 	samples.resize(n);
 	rejection3d(n, *rho, samples);
 
 	for (int i=0; i < n; i++) {
-		r[0+i*3] = samples[i].x();
-		r[1+i*3] = samples[i].y();
-		r[2+i*3] = samples[i].z();
+        for (int j = 0; j < dim_num; j++) {
+            r[j + i*dim_num] = samples[i][j];
+        }
   	}
 
   return;
@@ -198,13 +197,13 @@ void EllipsoidCVT::rejection3d(int nb_samples, Density& density, vector<Vec3>& s
 // (no hurry)
 {
 	samples.resize(nb_samples);
-	printf("nb_samples= %d\n", nb_samples);
+//	printf("nb_samples= %d\n", nb_samples);
 
 	for (int i=0; i < nb_samples; i++) {
 		samples[i] = singleRejection3d(density);
-		samples[i].print("samples3d");
+//		samples[i].print("samples3d");
 		Vec3& s = samples[i];
-		printf("dist=%f\n", outer_geom->how_far(s.x(), s.y(), s.z()));
+//		printf("dist=%f\n", outer_geom->how_far(s.x(), s.y(), s.z()));
 	}
 }
 //----------------------------------------------------------------------
@@ -346,8 +345,6 @@ void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool
 //  algorithm by guaranteeing that no region is completely missed
 //  by the sampling.
 //
-
-	printf("enter cvt_iterate_3d\n");
 
   *energy = 0.0;
   r2 = new double[dim_num*n];
@@ -524,6 +521,26 @@ void EllipsoidCVT::cvt_iterate ( int dim_num, int n, int batch, int sample, bool
 void EllipsoidCVT::user_sample(int dim_num, int n, int *seed, double r[]) {
     // The guts and glory (this is the user defined ellipse sampling)
     ellipsoid(dim_num, n, seed, r);
+
+#if 0
+   // TODO: track which samples returned by user_sample intersect the boundary geometry 
+    Vec3 inside;
+    for (int j = 0; j < n; j++) {
+    // s is the validated sample
+      inside.setValue(j[0+j*dim_num],s[1+j*dim_num],s[2+j*dim_num]);
+	  double dist = geom->how_far(inside); // use actual geometry
+	  if (dist > 0.) { // outside
+		//printf("** dist= %f, j2= %d\n", dist, j2);
+		//inside.print("inside vec");
+		intersect_bnd[j2] += 1; // j2 is the seed
+	  } else {
+		intersect_bnd[j2] -= 1;
+	  }
+	  //printf("dist (< 0 if inside) = %f\n", dist);
+    }
+#endif 
+
+
 }
 
 void EllipsoidCVT::user_init(int dim_num, int n, int *seed, double r[]) {

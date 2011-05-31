@@ -46,11 +46,14 @@ void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r
         for (int j = 0; j < dim_num; j++) {
             pt[j] = r_computed[i*dim_num + j];
         }
+
+//EFB052611
 #if 0 
         // Use iterative projection (slow)
         Vec3 projected = geom->project(pt);
 #else 
-        // exact projection (buggy)
+        // exact projection (original was buggy, modified 052611 to wrap
+        // singleProjectStep() and now it clusters in the ellipsoid end-caps 
         Vec3 projected = geom->projectToBoundary(pt);
 #endif 
         for (int j = 0; j < dim_num; j++) {

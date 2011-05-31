@@ -28,7 +28,7 @@ class EllipsoidCVT : public CVT {
 
     public:
         //    EllipsoidCVT(double major_ = 1., double minor_ = 1., double midax_ = 1., int DEBUG_ = 0);
-        EllipsoidCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis, double minor_axis, double midax_axis, size_t num_samples=2000, size_t max_num_iters=10, size_t write_freq=1, size_t sample_batch_size=1000)
+        EllipsoidCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis, double minor_axis, double midax_axis, size_t num_samples=2000, size_t max_num_iters=10, size_t write_freq=100, size_t sample_batch_size=1000)
             : CVT(nb_generators, 3, 0, density_func, num_samples, max_num_iters, write_freq, sample_batch_size), 
             axis_major(major_axis), axis_minor(minor_axis), axis_midax(midax_axis)
     {

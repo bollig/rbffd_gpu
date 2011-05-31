@@ -163,7 +163,7 @@ public:
 	virtual Vec3& send_to_boundary(Vec3& pt, Vec3& grad)
 	{
 		double f = how_far(pt);
-		//printf("before: how_far= %f\n", f);
+		printf("before: how_far= %f\n", f);
 		// assumes that grad() is never zero (no singularity)
 		double lam = -f / (grad.x() + grad.y() + grad.z());
 		pt = pt + lam * grad;

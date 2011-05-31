@@ -1,3 +1,5 @@
+// EFB052611:  For reference, the original ParametricPatch, ELlipsoidPatch and Octree codes came from SVN:rev279 
+
 #ifndef _ELLIPSOID_PARAMETRIC_PATCH_H
 #define _ELLIPSOID_PARAMETRIC_PATCH_H
 
@@ -29,8 +31,8 @@ public:
 	~EllipsoidPatch() {;}
 
 	// Surface definition
-	// u in [0,2 pi]
-	// v in [0,pi]
+	// u in [0,pi]
+	// v in [0,2pi]
 	virtual double x(double u, double v) 
 	{
 		return a*cos(u)*sin(v);
@@ -46,24 +48,42 @@ public:
 	}
 
 	// Tangent space 
-	// derivative of x(u,v) wrt u
+	// derivative of x(u,v) wrt u  => dx/du
+    // (f*g)' = f'g + fg'
 	virtual double xu(double u, double v) {
-		return (-a*sin(u)*cos(v));
+        // wrt u
+        // f = cos(u); g = sin(v)
+        // f' = -sin(u); g' = 0
+        // f'g = -sin(u)*sin(v)
+		return (-a*sin(u)*sin(v));
 	}
 	virtual double yu(double u, double v) {
-		return (-b*sin(u)*sin(v));
+        // wrt u
+        // f = sin(u); g = sin(v)
+        // f' = cos(u); g' = 0
+        // f'g = cos(u)*sin(v)
+		return (b*cos(u)*sin(v));
 	}
 	virtual double zu(double u, double v) {
-		return c*cos(u);
+		return 0.;
 	}
+
 	virtual double xv(double u, double v) {
-		return (-a*cos(u)*sin(v));
+        // wrt v
+        // f = cos(u); g = sin(v)
+        // f' = 0; g' = cos(v)
+        // f'g + fg' = 0 + cos(u)*cos(v)
+		return (a*cos(u)*cos(v));
 	}
 	virtual double yv(double u, double v) {
-		return (b*cos(u)*cos(v));
+        // wrt v
+        // f = sin(u); g = sin(v)
+        // f' = 0; g' = cos(v)
+        // f'g + fg' = 0 + sin(u)*cos(v)
+		return (b*sin(u)*cos(v));
 	}
 	virtual double zv(double u, double v) {
-		return 0.;
+		return -c*cos(v);
 	}
 
 	virtual Vec3& gradient(double x, double y, double z) {
@@ -81,12 +101,13 @@ public:
 	virtual Vec3 projectToBoundary(Vec3& pt) {
 		//pt.print("pt: project_to_boundary");
 		grad = gradient(pt.x(), pt.y(), pt.z());
-		grad.normalize();
+	//	grad.normalize();
+#if 1
         //EFB052611: This works well initially, then the nodes start to cluster in the poles.
     Vec3 pt_new = this->singleProjectStep(pt, grad);
-    printf("[EllipsoidPatch] ERROR: projectToBoundary() does not work\n");
-    exit(-1);
-#if 0
+//    printf("[EllipsoidPatch] ERROR: projectToBoundary() does not work\n");
+ //   exit(-1);
+#else 
         // EFB052611
         // This is buggy: 
 //		grad.print("grad: project_to_boundary");

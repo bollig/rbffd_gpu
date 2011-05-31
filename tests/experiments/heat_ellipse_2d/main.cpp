@@ -76,16 +76,17 @@ int main(int argc, char** argv) {
     double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
         
-    double major_axis = settings->GetSettingAs<double>("ELLIPSE_MAJOR_AXIS", ProjectSettings::optional, "1.0"); 
-    double minor_axis = settings->GetSettingAs<double>("ELLIPSE_MINOR_AXIS", ProjectSettings::optional, "0.5"); 
+    double major_axis = settings->GetSettingAs<double>("MAJOR_AXIS", ProjectSettings::optional, "1.0"); 
+    double minor_axis = settings->GetSettingAs<double>("MINOR_AXIS", ProjectSettings::optional, "0.5"); 
+    double midax_axis = settings->GetSettingAs<double>("MIDAX_AXIS", ProjectSettings::optional, "0.5"); 
 
     if (comm_unit->isMaster()) {
 
 
         int nb_nodes = settings->GetSettingAs<int>("NB_NODES", ProjectSettings::required); 
 
-        if (dim != 2) {
-            cout << "ERROR! Dim NOT EQUAL TO 2 Not supported!" << endl;
+        if (dim == 1) {
+            cout << "ERROR! Only DIM = 2 and 3 supported in this test" << endl;
             exit(EXIT_FAILURE); 
         }
 
@@ -108,11 +109,11 @@ int main(int argc, char** argv) {
         tm["settings"]->stop(); 
         
         // TODO: change to ellipse_cvt2D
-        if ((dim == 2) && false){
+        if (dim == 2) {
             grid = new EllipseCVT(nb_nodes, dim, density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         } else {
-            grid = new EllipsoidCVT(nb_nodes, dim, density, 1.0, 0.5, 0.5, nb_cvt_samples, nb_cvt_iters);
+            grid = new EllipsoidCVT(nb_nodes, dim, density, major_axis, minor_axis, midax_axis, nb_cvt_samples, nb_cvt_iters);
             grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
             cout << "ERROR! Dim != 2 Not Supported!" << endl;
         }
@@ -287,7 +288,12 @@ int main(int argc, char** argv) {
 
     // Exact Solution ( freq, decay )
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
-    ExactSolution* exact = new ExactEllipse(acos(-1.) / 2., 1., major_axis, minor_axis);
+    ExactSolution* exact;
+    if (dim < 3) {
+        exact = new ExactEllipse(acos(-1.) / 2., 1., major_axis, minor_axis);
+    } else {
+        exact = new ExactEllipsoid(acos(-1.) / 2., 1., major_axis, minor_axis, midax_axis);
+    }
 
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 

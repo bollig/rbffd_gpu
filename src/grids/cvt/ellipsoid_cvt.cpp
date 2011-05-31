@@ -566,12 +566,9 @@ void EllipsoidCVT::user_init(int dim_num, int n, int *seed, double r[]) {
 
     this->fillBoundaryPoints(dim_num, nb_nodes, seed, r);
 
-    this->resizeNodeList(nb_bnd);
-    //this->nb_nodes = nb_bnd;
-
     // This is the user defined initialization
     //ellipsoid_init(dim_num, n, seed, r);
-    //    this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
+    this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
 }
 
 

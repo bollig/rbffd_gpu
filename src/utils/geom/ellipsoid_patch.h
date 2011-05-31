@@ -101,7 +101,7 @@ public:
 	virtual Vec3 projectToBoundary(Vec3& pt) {
 		//pt.print("pt: project_to_boundary");
 		grad = gradient(pt.x(), pt.y(), pt.z());
-	//	grad.normalize();
+		grad.normalize();
 #if 1
         //EFB052611: This works well initially, then the nodes start to cluster in the poles.
     Vec3 pt_new = this->singleProjectStep(pt, grad);

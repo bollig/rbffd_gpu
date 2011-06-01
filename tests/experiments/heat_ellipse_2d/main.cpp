@@ -24,8 +24,70 @@
 #include "utils/io/vtu_pde_writer.h"
 #endif 
 
+//***********  GLOBAL PROJECT SETTINGS (Specific to Test Case) ******
+
+Density* density;
+double major_axis; 
+double minor_axis; 
+double midax_axis; 
+
+int nb_cvt_samples; 
+int nb_cvt_iters; 
+int nb_nodes;
+
+// Get specific settings for this test case
+void fillGlobalProjectSettings(ProjectSettings* settings) {
+    density =  new UniformDensity(); 
+
+    nb_nodes = settings->GetSettingAs<int>("NB_NODES", ProjectSettings::required); 
+
+    major_axis = settings->GetSettingAs<double>("MAJOR_AXIS", ProjectSettings::optional, "1.0"); 
+    minor_axis = settings->GetSettingAs<double>("MINOR_AXIS", ProjectSettings::optional, "0.5"); 
+    midax_axis = settings->GetSettingAs<double>("MIDAX_AXIS", ProjectSettings::optional, "0.5"); 
+    nb_cvt_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::optional, "10000"); 	
+    nb_cvt_iters = settings->GetSettingAs<int>("NB_CVT_ITERS", ProjectSettings::optional, "1000"); 
+}
+
+
+// Choose a specific Solution to this test case
+ExactSolution* getExactSolution(int dim_num) {
+    switch (dim_num) {
+        case 2: 
+            return new ExactEllipse(acos(-1.) / 2., 1., major_axis, minor_axis);
+            break; 
+        case 3: 
+            return new ExactEllipsoid(acos(-1.) / 2., 1., major_axis, minor_axis, midax_axis);
+            break;
+        default:
+            std::cout << "ERROR! unsupported dimension\n";
+            exit(EXIT_FAILURE);
+    };
+}
+
+// Choose a specific type of Grid for the test case
+Grid* getGrid(int dim_num) {
+    Grid* grid;
+    switch (dim_num) {
+        case 2: 
+            grid = new EllipseCVT(nb_nodes, dim_num, density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
+            break; 
+        case 3: 
+            grid = new EllipsoidCVT(nb_nodes, dim_num, density, major_axis, minor_axis, midax_axis, nb_cvt_samples, nb_cvt_iters);
+            break; 
+        default:
+            std::cout << "ERROR! unsupported dimension\n";
+            exit(EXIT_FAILURE);
+    }
+    return grid;
+}
+
+
+
 using namespace std;
 using namespace EB;
+
+//----------------------------------------------------------------------
+//NOTE: EVERYTHING BELOW IN MAIN WAS COPIED FROM heat_regulargrid_2d/main.cpp
 //----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
@@ -48,7 +110,6 @@ int main(int argc, char** argv) {
     // grid should only be valid instance for MASTER
     Grid* grid; 
     Domain* subdomain; 
-    Density* density = new UniformDensity();
 
     tm["total"]->start(); 
 
@@ -61,10 +122,13 @@ int main(int argc, char** argv) {
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
+    fillGlobalProjectSettings(settings);
+
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
+    int uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "0"); 
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
 
@@ -75,20 +139,8 @@ int main(int argc, char** argv) {
     double end_time = settings->GetSettingAs<double>("END_TIME", ProjectSettings::optional, "1.0"); 
     double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
-        
-    double major_axis = settings->GetSettingAs<double>("MAJOR_AXIS", ProjectSettings::optional, "1.0"); 
-    double minor_axis = settings->GetSettingAs<double>("MINOR_AXIS", ProjectSettings::optional, "0.5"); 
-    double midax_axis = settings->GetSettingAs<double>("MIDAX_AXIS", ProjectSettings::optional, "0.5"); 
 
     if (comm_unit->isMaster()) {
-
-
-        int nb_nodes = settings->GetSettingAs<int>("NB_NODES", ProjectSettings::required); 
-
-        if (dim == 1) {
-            cout << "ERROR! Only DIM = 2 and 3 supported in this test" << endl;
-            exit(EXIT_FAILURE); 
-        }
 
         int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
         int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
@@ -101,33 +153,21 @@ int main(int argc, char** argv) {
         double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
         double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
-        int nb_cvt_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::optional, "10000"); 	
-        int nb_cvt_iters = settings->GetSettingAs<int>("NB_CVT_ITERS", ProjectSettings::optional, "1000"); 
-
         int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
         tm["settings"]->stop(); 
-        
-        // TODO: change to ellipse_cvt2D
-        if (dim == 2) {
-            grid = new EllipseCVT(nb_nodes, dim, density, major_axis, minor_axis, nb_cvt_samples, nb_cvt_iters); 
-            grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
-        } else {
-            grid = new EllipsoidCVT(nb_nodes, dim, density, major_axis, minor_axis, midax_axis, nb_cvt_samples, nb_cvt_iters);
-            grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
-            cout << "ERROR! Dim != 2 Not Supported!" << endl;
-        }
 
+        grid = getGrid(dim);
+
+        grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         grid->setMaxStencilSize(stencil_size); 
 
-        std::cout << "Attempting to load Grid from files\n"; 
-        
         Grid::GridLoadErrType err = grid->loadFromFile(); 
         if (err == Grid::NO_GRID_FILES) 
         {
             printf("************** Generating new Grid **************\n"); 
             //grid->setSortBoundaryNodes(true); 
-            grid->setSortBoundaryNodes(false); 
+            grid->setSortBoundaryNodes(true); 
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
@@ -142,6 +182,8 @@ int main(int argc, char** argv) {
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 
         }
+
+
 
         int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
         int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
@@ -224,12 +266,8 @@ int main(int argc, char** argv) {
 
     // We specify a rank on the filename because we compute these weights independently within subdomains
     char weight_name[256]; 
-    int err;
-
-    // If we want to try a bunch of epsilons now, we need to remove these *mtx
-    // files to force recomputing
     sprintf(weight_name, "x_weights_rank%d.mtx", comm_unit->getRank()); 
-    err = der->loadFromFile(RBFFD::X, weight_name);
+    int err = der->loadFromFile(RBFFD::X, weight_name);
     sprintf(weight_name, "y_weights_rank%d.mtx", comm_unit->getRank()); 
     err += der->loadFromFile(RBFFD::Y, weight_name); 
     sprintf(weight_name, "z_weights_rank%d.mtx", comm_unit->getRank()); 
@@ -240,7 +278,15 @@ int main(int argc, char** argv) {
     if (err) { 
         printf("start computing weights\n");
         tm["weights"]->start(); 
+
+        // NOTE: good test for Direct vs Contour
+        // Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
+        // 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
+#if 1
         der->setWeightType(RBFFD::ContourSVD);
+#else 
+        der->setWeightType(RBFFD::Direct);
+#endif 
         der->computeAllWeightsForAllStencils();
         tm["weights"]->stop(); 
 
@@ -254,12 +300,13 @@ int main(int argc, char** argv) {
         der->writeToFile(RBFFD::Z, weight_name); 
         sprintf(weight_name, "lapl_weights_rank%d.mtx", comm_unit->getRank()); 
         der->writeToFile(RBFFD::LAPL, weight_name); 
-        
+
         cout << "end write weights to file" << endl;
     }
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
         bool weightsPreComputed = true; 
+        bool exitIfTestFailed = settings->GetSettingAs<int>("BREAK_ON_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
         tm["tests"]->start(); 
         // The test class only computes weights if they havent been done already
         DerivativeTests* der_test = new DerivativeTests(der, subdomain, weightsPreComputed);
@@ -268,7 +315,7 @@ int main(int argc, char** argv) {
             der_test->compareGPUandCPUDerivs(10);
         }
         // Test approximations to derivatives of functions f(x,y,z) = 0, x, y, xy, etc. etc.
-        der_test->testAllFunctions();
+        der_test->testAllFunctions(exitIfTestFailed);
         // For now we can only test eigenvalues on an MPI size of 1 (we could distribute with Par-Eiegen solver)
         if (comm_unit->getSize() == 1) {
             if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) 
@@ -286,26 +333,20 @@ int main(int argc, char** argv) {
 
     // SOLVE HEAT EQUATION
 
-    // Exact Solution ( freq, decay )
-    //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
-    ExactSolution* exact;
-    if (dim < 3) {
-        exact = new ExactEllipse(acos(-1.) / 2., 1., major_axis, minor_axis);
-    } else {
-        exact = new ExactEllipsoid(acos(-1.) / 2., 1., major_axis, minor_axis, midax_axis);
-    }
+    ExactSolution* exact = getExactSolution(dim); 
 
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
     // We need to provide comm_unit to pass ghost node info
 #if 0
     if (use_gpu) {
-        pde = new HeatPDE_CL(subdomain, der, comm_unit, true); 
+        pde = new HeatPDE(subdomain, der, comm_unit, true); 
     } else 
-#endif 
+#endif
     { 
         // Implies initial conditions are generated
-        pde = new HeatPDE(subdomain, der, comm_unit, true);
+        // true here indicates the weights are computed. 
+        pde = new HeatPDE(subdomain, der, comm_unit, uniformDiffusion, true);
     }
 
     pde->fillInitialConditions(exact);
@@ -328,7 +369,7 @@ int main(int argc, char** argv) {
     PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
 #endif 
 
-//    subdomain->printCenterMemberships(subdomain->G, "G = " );
+    //    subdomain->printCenterMemberships(subdomain->G, "G = " );
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
     int iter;
 
@@ -424,12 +465,14 @@ int main(int argc, char** argv) {
     delete(comm_unit); 
 
 
-    printf("REACHED THE END OF MAIN\n");
 
     tm["total"]->stop();
     tm["total"]->printAll();
     tm["total"]->writeAllToFile();
 
-    exit(EXIT_SUCCESS);
+    printf("REACHED THE END OF MAIN\n");
+
+    //exit(EXIT_SUCCESS);
+    return 0;
 }
 //----------------------------------------------------------------------

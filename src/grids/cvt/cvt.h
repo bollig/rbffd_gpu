@@ -1,8 +1,8 @@
 #ifndef _BURKARDT_CVT_H_
 #define _BURKARDT_CVT_H_
 
-#undef USE_KDTREE
-#define USE_KDTREE 0
+//#undef USE_KDTREE
+//#define USE_KDTREE 0
 
 #include <vector>
 #include "Vec3.h"

@@ -29,6 +29,7 @@ using namespace std;
 
 void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r_computed[], double r_updated[]) 
 {
+#if 0
     // FIXME: we should only project boundary nodes
     int n = nb_pts;
 
@@ -40,8 +41,9 @@ void EllipsoidCVT::displaceBoundaryNodes(int dim_num, int nb_bnd_nodes, double r
     for (int i=0; i < n; i++) {
         intersect_bnd[i] = 0;
     }
+#endif
 
-    for (int i = 0; i < nb_bnd; i++) {
+    for (int i = 0; i < nb_bnd_nodes; i++) {
         Vec3 pt; 
         for (int j = 0; j < dim_num; j++) {
             pt[j] = r_computed[i*dim_num + j];

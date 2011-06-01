@@ -2,10 +2,8 @@ function [] = plot_grid(filename, dim, n_stop)
 
 nodes = load(filename); 
 if nargin > 2
-    nodes = nodes(1:n_stop, :);
+    %nodes = nodes(1:n_stop, :);
 end
-
-%nodes = nodes(find(nodes(:,1) > 0),:);
 
 if dim == 1
     y = zeros(1,length(nodes(:,1))); 
@@ -13,13 +11,35 @@ if dim == 1
 elseif dim == 2
     plot(nodes(:,1), nodes(:,2), '.'); 
 elseif dim == 3
-    subplot(2,2,1); 
-    plot_3d_shell(nodes);
+    subplot(2,2,1);
+    plot_3d_subgrid(nodes, dim, 0);
+
     subplot(2,2,2); 
-    plot3(nodes(:,1), nodes(:,2), nodes(:,3), '.');
+    plot_3d_subgrid(nodes,dim, 1);
+    
+    nodes = nodes(find(nodes(:,2) <= 0),:);
+
     subplot(2,2,3); 
-    plot_3d_hull(nodes); 
+    plot_3d_subgrid(nodes,dim, 0);
+    
+    subplot(2,2,4); 
+    plot_3d_subgrid(nodes,dim, 1);
 end
+end
+
+function [] = plot_3d_subgrid(nodes, dim, type)
+    if nargin < 3
+        type = 0
+    end 
+
+    if type == 0
+        plot_3d_shell(nodes);
+        %plot_3d_hull(nodes); 
+    else 
+        plot3(nodes(:,1), nodes(:,2), nodes(:,3), '.');
+    end
+    pbaspect([1 0.5 0.5]);
+    axis tight
 
 end
 
@@ -35,11 +55,11 @@ lcol = [255 0 204]/255;
     
 hold off
 % Set the properties of the patches.
-set(hW,'facecolor',icol,'edgelighting','phong','facelighting','phong','LineStyle','none','marker','.','markeredgecolor','b','markersize',15);
+set(hW,'facecolor',icol,'FaceAlpha',0.75,'edgelighting','phong','facelighting','phong','LineStyle','none','marker','.','markeredgecolor','b','markersize',15);
 axis equal
 view([40.5 10])
 % Add a light
-camlight
+camlight headlight
 % Plot line around sphere where it will be cut in half.
 hold on;
 %thc = linspace(-pi/2,pi/2,101)';
@@ -47,7 +67,8 @@ hold on;
 %plot3(xc,yc,zc,'--','LineWidth',2,'Color',lcol)
 %[xc,yc,zc] = sph2cart(0*thc+pi,thc,0*thc+Ro);
 %plot3(xc,yc,zc,'--','LineWidth',2,'Color',lcol)
-plot3(p(:,1), p(:,2), p(:,3),'--','LineWidth',2,'Color',lcol)
+%plot3(p(:,1), p(:,2), p(:,3),'--','LineWidth',2,'Color',lcol)
+%plot3(p(:,1), p(:,2), p(:,3),'.','Color',lcol)
 % axis off
 hold off;
 
@@ -77,11 +98,11 @@ hW = tetramesh(t, p);
 
 hold off
 % Set the properties of the patches.
-set(hW,'facecolor',icol,'edgelighting','phong','facelighting','phong','LineStyle','none','marker','.','markeredgecolor','b','markersize',15);
+set(hW,'facecolor',icol,'FaceAlpha',0.75,'edgelighting','phong','facelighting','phong','LineStyle','none','marker','.','markeredgecolor','b','markersize',15);
 axis equal
 view([40.5 10])
 % Add a light
-camlight
+camlight headlight
 % Plot line around sphere where it will be cut in half.
 hold on;
 %thc = linspace(-pi/2,pi/2,101)';
@@ -89,7 +110,7 @@ hold on;
 %plot3(xc,yc,zc,'--','LineWidth',2,'Color',lcol)
 %[xc,yc,zc] = sph2cart(0*thc+pi,thc,0*thc+Ro);
 %plot3(xc,yc,zc,'--','LineWidth',2,'Color',lcol)
-plot3(p(:,1), p(:,2), p(:,3),'--','LineWidth',2,'Color',lcol)
+%plot3(p(:,1), p(:,2), p(:,3),'--','LineWidth',2,'Color',lcol)
 % axis off
 hold off;
 

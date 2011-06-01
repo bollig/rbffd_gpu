@@ -935,7 +935,8 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
                 std::cout << "ERROR! unknown choice for ContourSVD" << std::endl;
         }
 
-        double h = grid_ref.getMinStencilRadius(st_indx);
+        // This is the AVG stencil radius
+        double h = grid_ref.getStencilRadius(st_indx);
 
         // This is a 
         Stencils sten(&rbf, rad, h, eps, &xd, choice);

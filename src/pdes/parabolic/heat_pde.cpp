@@ -74,7 +74,12 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 
     if (uniformDiffusion) {
         for (size_t i = 0; i < n; i++) {
-            std::cout << "computed K_dot_lapl_U[" << i << "] = " << K_dot_lapl_U[i] << ", EXACT= " << exact_ptr->laplacian(grid_ref.getNode(i),t) << std::endl;
+            SolutionType exact = exact_ptr->laplacian(grid_ref.getNode(i),t);
+            double error = fabs(K_dot_lapl_U[i] - exact)/fabs(exact); 
+            
+            std::cout << "computed K_dot_lapl_U[" << i << "] = " << K_dot_lapl_U[i] << ", EXACT= " << exact; 
+            std::cout << ((error > 1e-1) ? "***************" : ""); 
+            std::cout << std::endl;
             (*f_out)[i] = K_dot_lapl_U[i];
         }
     } else {

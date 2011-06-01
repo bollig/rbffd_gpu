@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
     int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
+    int uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "0"); 
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
 
@@ -305,7 +306,13 @@ int main(int argc, char** argv) {
 
     // Exact Solution ( freq, decay )
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
-    ExactSolution* exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
+    ExactSolution* exact; 
+    if (uniformDiffusion) {
+        exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
+    } else {
+        // FIXME: have a non-uniform diffusion exact solution
+        exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
+    }
 
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
@@ -318,7 +325,7 @@ int main(int argc, char** argv) {
     { 
         // Implies initial conditions are generated
         // true here indicates the weights are computed. 
-        pde = new HeatPDE(subdomain, der, comm_unit, true);
+        pde = new HeatPDE(subdomain, der, comm_unit, uniformDiffusion, true);
     }
 
     pde->fillInitialConditions(exact);

@@ -21,10 +21,21 @@ void HeatPDE::fillBoundaryConditions(ExactSolution* exact) {
 }
 
 
+// We want the initial conditions to be filled using the exact solution
+// as well as the boundary conditions to be exact
 void HeatPDE::fillInitialConditions(ExactSolution* exact) {
     this->TimeDependentPDE::fillInitialConditions(exact);
     this->fillBoundaryConditions(exact);
     exact_ptr = exact;
+}
+
+
+// Get the time dependent diffusion coeffs 
+void HeatPDE::fillDiffusion(std::vector<SolutionType>& diff, double t) {
+    for(size_t i = 0; i < diff.size(); i++) {
+        NodeType& pt = grid_ref.getNode(i); 
+        diff[i] = exact_ptr->diffuseCoefficient(pt, t);
+    }
 }
 
 
@@ -35,24 +46,71 @@ void HeatPDE::assemble()
     }
 }
 
-// evaluate f_out = f(t,y(t)) so we can use it to compute a 
-// timestep: y(t+h) = y(t) + h*f(t,y(t))
-// For the diffusion equation this is f(t,y(t)) = laplacian(y(t))
+// evaluate f_out = f(t,u(t)) so we can use it to compute a 
+// timestep: u(t+h) = u(t) + h*f(t,u(t))
+// For the diffusion equation this is f(t,u(t)) = laplacian(u(t))
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
-void HeatPDE::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, double t)
+void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, double t)
 {
-    std::vector<SolutionType>& lapl_deriv = *f_out;
-    lapl_deriv.resize(y_t.size()); 
+    size_t n = u_t.size(); 
+    std::vector<SolutionType> du_dt(n);
 
-    // This is on the CPU or GPU depending on type of Derivative class used
-    // (e.g., DerivativeCL will compute on GPU using OpenCL)
-    der_ref.applyWeightsForDeriv(RBFFD::LAPL, y_t, lapl_deriv);
+    if (uniformDiffusion) {
+        if (splitLaplacian) {
+            std::cout << "[HeatPDE] todo: finish split laplacian. analytic derivs of RBFs need to be updated, plus new RHS types for RBFFD created.\n";
+            exit(EXIT_FAILURE); 
+        } else {
+            // This is on the CPU or GPU depending on type of Derivative class used
+            // (e.g., DerivativeCL will compute on GPU using OpenCL)
+            der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, du_dt);
+        }
+    } else {
+        std::vector<SolutionType> u_x_deriv(n); 
+        std::vector<SolutionType> u_y_deriv(n); 
+        std::vector<SolutionType> u_z_deriv(n); 
+        std::vector<SolutionType> u_lapl_deriv(n); 
+        
+        std::vector<SolutionType> diffusion(n);  
 
-# if 0
-    for (int i = 0; i < lapl_deriv.size(); i++) {
-        lapl_deriv[i] = -lapl_deriv[i]; 
+        std::vector<SolutionType> diff_x_deriv(n); 
+        std::vector<SolutionType> diff_y_deriv(n); 
+        std::vector<SolutionType> diff_z_deriv(n); 
+ 
+        der_ref.applyWeightsForDeriv(RBFFD::X, u_t, u_x_deriv); 
+        der_ref.applyWeightsForDeriv(RBFFD::Y, u_t, u_y_deriv); 
+        der_ref.applyWeightsForDeriv(RBFFD::Z, u_t, u_z_deriv); 
+
+        // Get the diffusivity of the domain for at the current time
+        this->fillDiffusion(diffusion, t);
+
+        der_ref.applyWeightsForDeriv(RBFFD::X, diffusion, diff_x_deriv); 
+        der_ref.applyWeightsForDeriv(RBFFD::Y, diffusion, diff_y_deriv); 
+        der_ref.applyWeightsForDeriv(RBFFD::Z, diffusion, diff_z_deriv); 
+
+        if (splitLaplacian) {
+            std::cout << "[HeatPDE] todo: finish split laplacian. analytic derivs of RBFs need to be updated, plus new RHS types for RBFFD created.\n";
+            exit(EXIT_FAILURE); 
+        } else {
+            der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, u_lapl_deriv); 
+        }
+
+        for (size_t i = 0; i < n; i++) {
+            SolutionType grad_K[3] = { diff_x_deriv[i], diff_y_deriv[i], diff_z_deriv[i] }; 
+            SolutionType grad_U[3] = { u_x_deriv[i], u_y_deriv[i], u_z_deriv[i] }; 
+
+            SolutionType grad_K_dot_grad_U = grad_K[0] * grad_U[0] + grad_K[1] * grad_U[1] + grad_K[2] * grad_U[2];
+
+            SolutionType K_dot_lapl_U = diffusion[i] * u_lapl_deriv[i];
+
+            du_dt[i] = grad_K_dot_grad_U + K_dot_lapl_U;
+        }
     }
-#endif
+
+    // Copy into OUT buffer
+    for (int i = 0; i < n; i++) {
+        // du/dt = lapl(u)
+        (*f_out)[i] = du_dt[i];
+    }
 }
 
 

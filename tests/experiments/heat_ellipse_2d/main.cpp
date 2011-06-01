@@ -470,9 +470,8 @@ int main(int argc, char** argv) {
     tm["total"]->printAll();
     tm["total"]->writeAllToFile();
 
-    printf("REACHED THE END OF MAIN\n");
+    printf("\n\nREACHED THE END OF MAIN\n\n");
 
-    //exit(EXIT_SUCCESS);
     return 0;
 }
 //----------------------------------------------------------------------

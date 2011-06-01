@@ -42,7 +42,7 @@ void HeatPDE_CL::assemble()
 // timestep: y(t+h) = y(t) + h*f(t,y(t))
 // For the diffusion equation this is f(t,y(t)) = laplacian(y(t))
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
-void HeatPDE_CL::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, double t)
+void HeatPDE_CL::solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n, double t)
 {
     // 1) Update solution on gpu with ghost nodes
     // 2) apply weights to solution /

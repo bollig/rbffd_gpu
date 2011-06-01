@@ -590,13 +590,26 @@ void EllipsoidCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, doub
     printf("domain integral = %f\n", dom_intg);
     printf("boundary integral = %f\n", bnd_intg);
 
-    // These are heuristic as far as I know. Perhaps Gordon can elaborate their origin.
+    // These are heuristic.
+    // Assume an Ellipsoid has volume 4/3 * pi * a * b *c
+    // Divide that by the total number of nodes and we get an average voronoi volume 
+    // Its not exact, but we can imagine the volume is approximately cube. Thus taking
+    // the cube root gives us an average separation between nodes. 
+    // The number of nodes on the boundary is then our surface integral divided
+    // by the separation squared. 
+    double avg_vol = dom_intg / nb_nodes; 
+    double avg_sep = pow(avg_vol, 1./3.); 
+    double nb_computed_bnd = bnd_intg / (avg_sep * avg_sep);
+
+#if 0
+    //EFB052611: This is the ellipse
     size_t nb_computed_bnd = bnd_intg * sqrt(tot_nb_pts / dom_intg);
     size_t nb_bnd_1 = 1. + 16. * tot_nb_pts * dom_intg / (bnd_intg * bnd_intg);
     nb_bnd_1 = -bnd_intg * bnd_intg / (4. * dom_intg) * (1. - sqrt(nb_bnd_1));
     nb_computed_bnd = nb_bnd_1; // more accurate formula
     printf("calculated nb boundary pts: %d\n", nb_computed_bnd);
     printf("improved nb boundary pts: %d\n", nb_bnd_1);
+#endif 
 
     // Now that we know how many boundary nodes we want out of the total
     // number of nodes in the domain, resize to that value

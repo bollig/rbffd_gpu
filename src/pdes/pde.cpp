@@ -130,20 +130,20 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
                 // Elements in O are in global indices 
                 // so we need to first convert to local to index our U_G
                 U_O.push_back(U_G[grid_ref.g2l(*oit)]);
-#if 1
+#if 0
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
                     << " (local index: " << grid_ref.g2l(*oit) << ")"
                     << "]: " << U_G[grid_ref.g2l(*oit)] << endl;
 #endif 
             }
         }
-
+#if 0
         cout << "O_by_rank[" << receiver_rank << "].size = "
             << O_by_rank[receiver_rank].size() << endl;
-
+#endif 
         sendSTL(&O_by_rank[receiver_rank], my_rank, receiver_rank);
         sendSTL(&U_O, my_rank, receiver_rank);
-        cout << "RANK " << my_rank << " REPORTS: sent update" << endl;
+//        cout << "RANK " << my_rank << " REPORTS: sent update to RANK " << receiver_rank << endl;
     }
 }
 
@@ -159,8 +159,7 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
         recvSTL(&R_sub, my_rank, sender_rank);
         recvSTL(&U_R, my_rank, sender_rank);
 
-        cout << endl << "Received Update from CPU" << sender_rank << " ("
-            << R_sub.size() << " centers)" << endl;
+        cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
 #if 0 
@@ -173,7 +172,7 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
             U_G[grid_ref.g2l(*rit)] = U_R[i]; // Overwrite with new values
         }
 
-        cout << "RANK " << my_rank << " REPORTS: received update" << endl;
+//        cout << "RANK " << my_rank << " REPORTS: received update from RANK " << sender_rank << endl;
     }
 }
 
@@ -196,7 +195,7 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
                 // Elements in Q are in global indices
                 // so we need to first convert to local to index our U_G
                 U_Q.push_back(U_G[grid_ref.g2l(*qit)]);
-#if 1    
+#if 0    
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
                     << "]: " << U_G[grid_ref.g2l(*qit)] << endl;
 #endif 
@@ -205,7 +204,7 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
 
         sendSTL(&grid_ref.Q, my_rank, receiver_rank);
         sendSTL(&U_Q, my_rank, receiver_rank);
-        cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
+    //    cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
     }
 }
 
@@ -391,7 +390,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
                     for (size_t sz_bnd = 0; sz_bnd < bindices.size(); sz_bnd++) {
                         if (st[sz] == bindices[sz_bnd]) {
                             dep_boundary=true;
-                            break;
+                            //break;
                         }
                     }
                 }
@@ -404,7 +403,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
         }
     }
 
-    std::cout << sol_exact_int_no_bnd.size() << std::endl;
+    //std::cout << sol_exact_int_no_bnd.size() << std::endl;
 
     //    writeErrorToFile(sol_error);
 
@@ -421,12 +420,13 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
     // We want: || x_exact - x_approx ||_{1,2,inf} 
     // and  || x_exact - x_approx ||_{1,2,inf} / || x_exact ||_{1,2,inf}
 
-    double l1fabs = l1norm(sol_vec, sol_exact); 
-    double l1rel = (l1norm(sol_exact) > 1e-10) ? l1fabs/l1norm(sol_exact) : 0.;
-    double l2fabs = l2norm(sol_vec, sol_exact); 
-    double l2rel = (l2norm(sol_exact) > 1e-10) ? l2fabs/l2norm(sol_exact) : 0.;
-    double lifabs = linfnorm(sol_vec, sol_exact); 
-    double lirel = (linfnorm(sol_exact) > 1e-10) ? lifabs/linfnorm(sol_exact) : 0.;
+    int nb_pts = sol_vec.size();
+    double l1fabs = l1norm(sol_vec, sol_exact, 0, nb_pts); 
+    double l1rel = (l1norm(sol_exact) > 1e-10) ? l1fabs/l1norm(sol_exact, 0, nb_pts) : 0.;
+    double l2fabs = l2norm(sol_vec, sol_exact, 0, nb_pts); 
+    double l2rel = (l2norm(sol_exact) > 1e-10) ? l2fabs/l2norm(sol_exact, 0, nb_pts) : 0.;
+    double lifabs = linfnorm(sol_vec, sol_exact, 0, nb_pts); 
+    double lirel = (linfnorm(sol_exact) > 1e-10) ? lifabs/linfnorm(sol_exact, 0, nb_pts) : 0.;
 
     // Only print this when we're looking at the global norms
     if (!label.compare("")) {
@@ -435,9 +435,9 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
         printf("Relative =>  || x_exact - x_approx ||_p / || x_exact ||_p  ,  where p={1,2,inf}\n"); 
     }
 
-    printf("%s l1 error : Absolute = %f, Relative = %f\n", label.c_str(), l1fabs, l1rel );
-    printf("%s l2 error : Absolute = %f, Relative = %f\n", label.c_str(), l2fabs, l2rel );
-    printf("%s linf error : Absolute = %f, Relative = %f\n", label.c_str(), lifabs, lirel);
+    printf("%s l1 error (%d nodes):   Absolute = %le,    Relative = %le\n", label.c_str(), nb_pts, l1fabs, l1rel );
+    printf("%s l2 error (%d nodes):   Absolute = %le,    Relative = %le\n", label.c_str(), nb_pts, l2fabs, l2rel );
+    printf("%s linf error (%d nodes): Absolute = %le,    Relative = %le\n", label.c_str(), nb_pts, lifabs, lirel);
 
 #if 0
     if (l1rel > rel_err_max) {

@@ -27,7 +27,7 @@ int MPISendable::sendSTL(const std::vector<double> *origin, int myrank, int recv
         MPI_Send(&buff[0], sz, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
         delete [] buff; 
     }
-    cout << "RANK " << myrank << " REPORTS: finished sending std::vector<double> to RANK " << recv_rank << endl;
+//    cout << "RANK " << myrank << " REPORTS: finished sending std::vector<double> to RANK " << recv_rank << endl;
     return sz; 
 }
 
@@ -48,7 +48,7 @@ int MPISendable::sendSTL(const std::vector<int> *origin, int myrank, int recv_ra
         MPI_Send(&buff[0], sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
         delete [] buff; 
     }
-    cout << "RANK " << myrank << " REPORTS: finished sending std::vector<int> to RANK " << recv_rank << endl;
+//    cout << "RANK " << myrank << " REPORTS: finished sending std::vector<int> to RANK " << recv_rank << endl;
     return sz; 
 }
 
@@ -81,7 +81,7 @@ int MPISendable::sendSTL(const std::vector<size_t> *origin, int myrank, int recv
         MPI_Send(&buff[0], sz, type, recv_rank, TAG, MPI_COMM_WORLD);	
         delete [] buff; 
     }
-    cout << "RANK " << myrank << " REPORTS: finished sending std::vector<int> to RANK " << recv_rank << endl;
+ //   cout << "RANK " << myrank << " REPORTS: finished sending std::vector<int> to RANK " << recv_rank << endl;
     return sz; 
 }
 
@@ -105,9 +105,9 @@ int MPISendable::sendSTL(const std::set<int> *origin, int myrank, int recv_rank)
     // Send stencil set Q (note: no values sent yet)
     MPI_Send(&buff[0], sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
-    cout << "RANK " << myrank << " REPORTS: finished sending std::set<int> to RANK " << recv_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: finished sending std::set<int> to RANK " << recv_rank << endl;
     delete [] buff; 
-    cout << "RANK " << myrank << " buff was freed\n";  
+    //  cout << "RANK " << myrank << " buff was freed\n";  
 }
 
 //----------------------------------------------------------------------------
@@ -131,7 +131,7 @@ int MPISendable::sendSTL(const std::vector<Vec3> *origin, int myrank, int recv_r
 
     // Send stencil set Q (note: no values sent yet)
     MPI_Send(&buff[0], sz*3, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
-    cout << "RANK " << myrank << " REPORTS: finished sending std::set<Vec3> to RANK " << recv_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: finished sending std::set<Vec3> to RANK " << recv_rank << endl;
     delete [] buff; 
 }
 
@@ -157,7 +157,7 @@ int MPISendable::sendSTL(const std::map<int, int> *origin, int myrank, int recv_
 
     // Send stencil set Q (note: no values sent yet)
     MPI_Send(&buff[0], sz*2, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
-    cout << "RANK " << myrank << " REPORTS: finished sending std::map<int,int> to RANK " << recv_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: finished sending std::map<int,int> to RANK " << recv_rank << endl;
     delete [] buff; 
 }
 
@@ -209,8 +209,8 @@ int MPISendable::sendSTL(const std::vector<std::vector<size_t> > *origin, int my
     // Send stencil buffer
     MPI_Send(&buff2[0], totsize, type, recv_rank, TAG, MPI_COMM_WORLD);
 
-    cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<size_t> > to RANK " << recv_rank << endl;
-    cout << "WARNING! size_t passing is not verified YET.\n";
+    //  cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<size_t> > to RANK " << recv_rank << endl;
+    //  cout << "WARNING! size_t passing is not verified YET.\n";
     delete [] buff;
     delete [] buff2;
 }
@@ -251,10 +251,10 @@ int MPISendable::sendSTL(const std::vector<std::vector<int> > *origin, int myran
     // Send stencil buffer
     MPI_Send(&buff2[0], totsize, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
-    cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<int> > to RANK " << recv_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<int> > to RANK " << recv_rank << endl;
     delete [] buff; 
     delete [] buff2; 
-    cout << "RANK " << myrank << " REPORTS: freed buff and buff2\n"; 
+    //  cout << "RANK " << myrank << " REPORTS: freed buff and buff2\n"; 
 }
 
 //----------------------------------------------------------------------------
@@ -287,7 +287,7 @@ int MPISendable::sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank,
             buff2[(offset + i)*3 + 0] = (*vint)[i].x();
             buff2[(offset + i)*3 + 1] = (*vint)[i].y();
             buff2[(offset + i)*3 + 2] = (*vint)[i].z();
-            cout << "COUNTING: " << offset + i << " of " << totsize << endl;
+            //  cout << "COUNTING: " << offset + i << " of " << totsize << endl;
         }
         offset += vint->size(); 
     }
@@ -295,7 +295,7 @@ int MPISendable::sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank,
     // Raw data
     MPI_Send(&buff2[0], totsize * 3, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
 
-    cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<Vec3> > to RANK " << recv_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<Vec3> > to RANK " << recv_rank << endl;
     delete [] buff; 
     delete [] buff2; 
 }
@@ -323,7 +323,7 @@ int MPISendable::sendSTL(const size_t *destination, int myrank, int recv_rank) c
     // Length of set
     MPI_Send(&buf, 1, type, recv_rank, TAG, MPI_COMM_WORLD);
 
-    cout << "RANK " << myrank << " REPORTS: finished sending size_t (size: 1) to RANK " << recv_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: finished sending size_t (size: 1) to RANK " << recv_rank << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -338,7 +338,7 @@ int MPISendable::sendSTL(const int *destination, int myrank, int recv_rank) cons
     // Length of set
     MPI_Send(&buf, 1, type, recv_rank, TAG, MPI_COMM_WORLD);
 
-    cout << "RANK " << myrank << " REPORTS: finished sending int (size: 1) to RANK " << recv_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: finished sending int (size: 1) to RANK " << recv_rank << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -368,7 +368,7 @@ int MPISendable::recvSTL(std::vector<double> *destination, int myrank, int sende
         }	
         delete [] buff; 
     }
-    cout << "RANK " << myrank << " REPORTS: received std::vector<double> (size: " << sz << ") from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received std::vector<double> (size: " << sz << ") from RANK " << sender_rank << endl;
 
     return sz; 
 }
@@ -395,7 +395,7 @@ int MPISendable::recvSTL(std::vector<int> *destination, int myrank, int sender_r
         }	
         delete [] buff; 
     }
-    cout << "RANK " << myrank << " REPORTS: received std::vector<int> (size: " << sz << ") from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received std::vector<int> (size: " << sz << ") from RANK " << sender_rank << endl;
     return sz; 
 }
 
@@ -434,7 +434,7 @@ int MPISendable::recvSTL(std::vector<size_t> *destination, int myrank, int sende
         }	
         delete [] buff; 
     }
-    cout << "RANK " << myrank << " REPORTS: received std::vector<int> (size: " << sz << ") from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received std::vector<int> (size: " << sz << ") from RANK " << sender_rank << endl;
 
     return sz; 
 }
@@ -461,7 +461,7 @@ int MPISendable::recvSTL(std::map<int, int> *destination, int myrank, int sender
         (*destination)[buff[i*2 + 0]] = buff[i*2 + 1];
     }
 
-    cout << "RANK " << myrank << " REPORTS: received std::map<int,int> (size: " << sz << ") from RANK " << sender_rank << endl;	
+    //  cout << "RANK " << myrank << " REPORTS: received std::map<int,int> (size: " << sz << ") from RANK " << sender_rank << endl;	
     delete [] buff; 
 }
 
@@ -484,9 +484,9 @@ int MPISendable::recvSTL(std::set<int> *destination, int myrank, int sender_rank
     for (int i=0; i < sz; i++) {
         destination->insert(buff[i]);
     }	
-    cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;
     delete [] buff; 
-    cout << "RANK " << myrank << " REPORTS: buff freed\n";
+    //  cout << "RANK " << myrank << " REPORTS: buff freed\n";
 }
 
 //----------------------------------------------------------------------------
@@ -509,7 +509,7 @@ int MPISendable::recvSTL(std::vector<Vec3> *destination, int myrank, int sender_
         Vec3 v(buff[i*3 + 0], buff[i*3 + 1], buff[i*3 + 2]);
         destination->push_back(v);
     }	
-    cout << "RANK " << myrank << " REPORTS: received std::set<Vec3> (size: " << sz << ") from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received std::set<Vec3> (size: " << sz << ") from RANK " << sender_rank << endl;
     delete [] buff; 
 }
 
@@ -566,8 +566,8 @@ int MPISendable::recvSTL(std::vector<std::vector<size_t> > *destination, int myr
         destination->push_back(*temp);
         delete(temp);
     }	
-    cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;	
-    cout << "WARNING! size_t sending is not verified YET.\n"; 
+    //  cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;	
+    //  cout << "WARNING! size_t sending is not verified YET.\n"; 
     delete [] buff; 
     delete [] buff2;
 }
@@ -608,10 +608,10 @@ int MPISendable::recvSTL(std::vector<std::vector<int> > *destination, int myrank
         offset += buff[i]; 
         destination->push_back(temp);
     }	
-    cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;	
+    //  cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;	
     delete [] buff; 
     delete [] buff2; 
-    cout << "RANK " << myrank << " REPORTS: freed buff and buff2\n";
+    //  cout << "RANK " << myrank << " REPORTS: freed buff and buff2\n";
 }
 
 //----------------------------------------------------------------------------
@@ -652,7 +652,7 @@ int MPISendable::recvSTL(std::set<std::vector<Vec3> > *destination, int myrank, 
         destination->insert(*temp);
         delete(temp);
     }	
-    cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;
     delete [] buff; 
     delete [] buff2; 
 }
@@ -679,7 +679,7 @@ int MPISendable::recvSTL(size_t *destination, int myrank, int sender_rank)
     // Length of set
     MPI_Recv(destination, 1, type, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
-    cout << "RANK " << myrank << " REPORTS: received size_t (size: 1) from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received size_t (size: 1) from RANK " << sender_rank << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -693,7 +693,7 @@ int MPISendable::recvSTL(int *destination, int myrank, int sender_rank)
     // Length of set
     MPI_Recv(destination, 1, type, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
-    cout << "RANK " << myrank << " REPORTS: received size_t (size: 1) from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received size_t (size: 1) from RANK " << sender_rank << endl;
 }
 
 //----------------------------------------------------------------------------

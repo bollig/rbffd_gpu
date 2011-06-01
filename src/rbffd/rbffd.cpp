@@ -183,7 +183,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 #if SCALE_BY_H
         // DO NOTHING
 #else
-       scale = 1.;
+        scale = 1.;
 #endif 
         if (this->weights[i][irbf] == NULL) {
             this->weights[i][irbf] = new double[n+np];
@@ -191,7 +191,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 
         for (int j = 0; j < n+np; j++) {
             this->weights[i][irbf][j] = weights_new(j, i) / scale;
-//            this->weights[i][irbf][j] = scale;
+            //            this->weights[i][irbf][j] = scale;
         }
 
 #if DEBUG
@@ -368,7 +368,7 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     rhs.print(buf); 
     weights_new.print("weights");
 #endif 
-    
+
     // X,Y,Z weights should scale by 1/h
     double scale = 1./ grid_ref.getStencilRadius(irbf);
 
@@ -646,7 +646,7 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
     // Num stencils (x_weights.size())
     const size_t expected_M = (*deriv_choice_ptr).size();
 
-  
+
     for (size_t i = 0; i < stencil.size(); i++) {
         expected_nz += stencil[i].size();
     }
@@ -656,12 +656,12 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
         std::cout << "Error! not enough stencils in the file" << std::endl;
         return 5;
     }
- 
+
     if (nz != expected_nz) {
         std::cout << "Error! not enough weights in the file" << std::endl;
         return 5;
     }
-    
+
     /* reseve memory for matrices */
 
     I = new int[nz]; 
@@ -674,15 +674,15 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
 
     for (i=0; i<nz; i++)
     {
-//        fscanf(f, "%d %d %24le\n", &I[i], &J[i], &val[i]);
+        //        fscanf(f, "%d %d %24le\n", &I[i], &J[i], &val[i]);
         fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
         I[i]--;  /* adjust from 1-based to 0-based */
         J[i]--;
     }
-    
+
     //if (f !=stdin) 
-        fclose(f);
-    
+    fclose(f);
+
     // Convert to our weights: 
     for (size_t irbf = 0; irbf < N; irbf++) {
         this->weights[which][irbf] = new double[M]; 
@@ -773,7 +773,7 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
         for (size_t j = 0; j < stencil[i].size(); j++) {
             // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
             fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
-           // fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+            // fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
         }
     }
 
@@ -892,23 +892,18 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         // double rad = 1. / ( 0.185 * grid_ref.getMaxStencilRadius(st_indx));  
         //      -- better: --
         // up to 1063 for st=13 and eps=0.01 (eps=0.1 gives 1061)
-        double rad = 1. / ( 0.100 * grid_ref.getStencilRadius(st_indx));  
-
-        // By choosing rad = 1 we are NOT normalizing or scaling any of the inputs to ContourSVD and/or the output coefs
-        rad = 1.;
-//FOR 11x11 
-//rad = 1.1;
-//        rad = 1./grid_ref.getStencilRadius(st_indx);
-
+        //        double rad = 1. / ( 0.100 * grid_ref.getStencilRadius(st_indx));  
         //NOTE: the 1063 above is reduced to 178 when grid is 41x41 [-1,1]x[-1,1]
         //NOTE: the 1063 above is reduced to 1059 when grid is 41x41 [-100,100]x[-100,100]
         // That leads me to believe out [-1,1]x[-1,1] domain may have been
         // causing things to die a lot easier. perhaps related to conditioning?
         // Stencil size 9 gives 850 iters (eps=0.01)
         // Stencil size 28 gives 800 iters (eps=0.01); 799 iters (eps=0.1)
-        
 
-//        double rad = 1.;
+
+        //EFB060111
+        // By choosing rad = 1 we are NOT normalizing or scaling any of the inputs to ContourSVD and/or the output coefs
+        double rad = 1.;
         double eps = var_epsilon[st_indx]; 
 #endif 
         //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
@@ -916,7 +911,8 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
 
         // NOTE: this was 3 and caused the original heat problem to fail. WHY? 
         // Answer: the laplacian is not dimensionless. It increases as the
-        // dimension changes. Problem fixed 
+        // dimension changes. Not only do we need to double check out laplacian
+        // in the RBFs, but also in the ExactSolution 
         IRBF rbf(eps, dim_num);
 
         char* choice; 

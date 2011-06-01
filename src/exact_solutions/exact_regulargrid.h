@@ -34,12 +34,10 @@ class ExactRegularGrid : public ExactSolution
 
         // Return the diffusivity at node v (K=1 by default)
         virtual double diffuseCoefficient(Vec3& v, double t=0.){
-            //            return 1. * v.x();
             return decay;            
         }
 
         virtual double diffuse_xderiv(double x, double y, double z, double t) {
-            //            return 1.;
             return 0.;            
         }
         virtual double diffuse_yderiv(double x, double y, double z, double t) {

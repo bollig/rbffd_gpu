@@ -79,7 +79,8 @@ Grid* getGrid(int dim_num) {
             exit(EXIT_FAILURE);
     }
         
-    grid->setExtents(-major_axis, major_axis, -minor_axis, minor_axis, -midax_axis, midax_axis);
+//    grid->setExtents(-major_axis, major_axis, -minor_axis, minor_axis, -midax_axis, midax_axis);
+    grid->setExtents(-1.,1.,-1.,1.,-1.,1.);
     return grid;
 }
 

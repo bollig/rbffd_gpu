@@ -24,10 +24,16 @@ void closeLogFile(void) {
 void debugExit(void) {
 
     ProjectSettings::tm["total"]->stop();
-    ProjectSettings::tm.printAll();
+    //ProjectSettings::tm.printAll();
     ProjectSettings::tm.writeToFile("atExit_timers.log");
+    
+    std::cout.flush();
+    fflush(stdout);
 
     fprintf(stderr, "EXIT CALLED\n");
+
+    fflush(stderr);
+
 }
 
 void ProjectSettings::default_config() {

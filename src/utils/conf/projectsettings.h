@@ -9,6 +9,7 @@
 #include <sstream>
 //#include <fstream>
 #include <sstream>
+#include "timer_eb.h"
 
 
 /**
@@ -26,6 +27,9 @@ public:
     // the code to terminate. If the setting is optional then when it doesnt exist the typecast value of
     // "0" will be returned by GetSettingAs
     enum settings_priority_t {required = 0, optional};
+
+// Static so we can call in atExit
+    static EB::TimerList tm; 
 
 protected:
     // The map of KEY = VALUE settings
@@ -93,6 +97,8 @@ public:
     int parseCommandLineArgs(int argc, char** argv, int my_rank);
 
 protected:
+    void setupTimers();
+
     // This routine is adapted from post on GameDev:
     // http://www.gamedev.net/community/forums/topic.asp?topic_id=190991
     // Should be safer to use this than atoi. Performs worse, but our

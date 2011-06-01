@@ -36,7 +36,7 @@ int nb_cvt_iters;
 int nb_nodes;
 
 // Get specific settings for this test case
-void fillGlobalProjectSettings(ProjectSettings* settings) {
+void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     density =  new UniformDensity(); 
 
     nb_nodes = settings->GetSettingAs<int>("NB_NODES", ProjectSettings::required); 
@@ -78,6 +78,8 @@ Grid* getGrid(int dim_num) {
             std::cout << "ERROR! unsupported dimension\n";
             exit(EXIT_FAILURE);
     }
+        
+    grid->setExtents(-major_axis, major_axis, -minor_axis, minor_axis, -midax_axis, midax_axis);
     return grid;
 }
 
@@ -121,10 +123,13 @@ int main(int argc, char** argv) {
     tm["settings"]->start(); 
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
-
-    fillGlobalProjectSettings(settings);
-
+    
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
+
+    //-----------------
+    fillGlobalProjectSettings(dim, settings);
+    //-----------------
+
     int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
@@ -146,20 +151,12 @@ int main(int argc, char** argv) {
         int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
         int ns_nz = settings->GetSettingAs<int>("NS_NB_Z", ProjectSettings::optional, "10");
 
-        double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
-        double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
-        double minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
-        double maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
-        double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
-        double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
-
         int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
         tm["settings"]->stop(); 
 
         grid = getGrid(dim);
 
-        grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
         grid->setMaxStencilSize(stencil_size); 
 
         Grid::GridLoadErrType err = grid->loadFromFile(); 
@@ -182,8 +179,6 @@ int main(int argc, char** argv) {
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 
         }
-
-
 
         int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
         int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
@@ -243,7 +238,6 @@ int main(int argc, char** argv) {
             }
         }
         printf("OK\n");
-
     }
 
     RBFFD* der;
@@ -463,8 +457,6 @@ int main(int argc, char** argv) {
     delete(subdomain);
     delete(settings);
     delete(comm_unit); 
-
-
 
     tm["total"]->stop();
     tm["total"]->printAll();

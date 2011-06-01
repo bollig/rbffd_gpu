@@ -22,8 +22,91 @@
 #include "utils/io/vtu_pde_writer.h"
 #endif 
 
+int nx;
+int ny;
+int nz;
+double minX; 
+double maxX; 
+double minY; 
+double maxY; 
+double minZ; 
+double maxZ;
+
+// Get specific settings for this test case
+void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
+    nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
+    ny = 1; 
+    nz = 1; 
+
+    if (dim_num > 1) {
+        ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
+    }
+    if (dim_num > 2) {
+        nz = settings->GetSettingAs<int> ("NB_Z", ProjectSettings::required); 
+    } 
+    if (dim_num > 3) {
+        cout << "ERROR! Dim > 3 Not supported!" << endl;
+        exit(EXIT_FAILURE); 
+    }
+
+    minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
+    maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
+    minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
+    maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
+    minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
+    maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
+}
+
+
+// Choose a specific Solution to this test case
+ExactSolution* getExactSolution(int dim_num) {
+
+    ExactSolution* exact;
+    switch (dim_num) {
+        case 1:
+        case 2: 
+        case 3: 
+            // FIXME: have a non-uniform diffusion exact solution
+#if 0
+            if (uniformDiffusion) {
+            } else {
+            }
+#endif 
+            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 0.1);
+            break;
+        default:
+            std::cout << "ERROR! unsupported dimension\n";
+            exit(EXIT_FAILURE);
+    };
+    return exact;
+}
+
+// Choose a specific type of Grid for the test case
+Grid* getGrid(int dim_num) {
+    Grid* grid;
+    if (dim_num == 1) {
+        grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
+    } else if (dim_num == 2) {
+        grid = new RegularGrid(nx, ny, minX, maxX, minY, maxY); 
+    } else if (dim_num == 3) {
+        grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
+    } else {
+        cout << "ERROR! Dim > 3 Not Supported!" << endl;
+    }
+    // grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
+    return grid; 
+}
+
+
+
+
+
+
 using namespace std;
 using namespace EB;
+
+//----------------------------------------------------------------------
+//NOTE: EVERYTHING BELOW IN MAIN WAS COPIED FROM heat_regulargrid_2d/main.cpp
 //----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
@@ -59,6 +142,11 @@ int main(int argc, char** argv) {
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
+
+    //-----------------
+    fillGlobalProjectSettings(dim, settings);
+    //-----------------
+
     int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
@@ -76,67 +164,18 @@ int main(int argc, char** argv) {
 
     if (comm_unit->isMaster()) {
 
-
-        int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
-        int ny = 1; 
-        int nz = 1; 
-        if (dim > 1) {
-            ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
-        }
-        if (dim > 2) {
-            nz = settings->GetSettingAs<int> ("NB_Z", ProjectSettings::required); 
-        } 
-        if (dim > 3) {
-            cout << "ERROR! Dim > 3 Not supported!" << endl;
-            exit(EXIT_FAILURE); 
-        }
-
         int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
         int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
         int ns_nz = settings->GetSettingAs<int>("NS_NB_Z", ProjectSettings::optional, "10");
-
-        double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
-        double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
-        double minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
-        double maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
-        double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
-        double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
         int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
         tm["settings"]->stop(); 
 
-        if (dim == 1) {
-            grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
-        } else if (dim == 2) {
-            grid = new RegularGrid(nx, ny, minX, maxX, minY, maxY); 
-        } else if (dim == 3) {
-            grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
-        } else {
-            cout << "ERROR! Dim > 3 Not Supported!" << endl;
-        }
+        grid = getGrid(dim);
 
         grid->setMaxStencilSize(stencil_size); 
-#if 0
-        std::cout << "Attempting to load Grid from files\n"; 
-        if (grid->loadFromFile()) 
-        {
-            printf("************** Generating new Grid **************\n"); 
-            //grid->setSortBoundaryNodes(true); 
-            grid->setSortBoundaryNodes(false); 
-            tm["grid"]->start(); 
-            grid->generate();
-            tm["grid"]->stop(); 
-            grid->writeToFile(); 
-            std::cout << "Generating stencils using Grid::ST_HASH\n";
-            tm["stencils"]->start(); 
-            grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
-            grid->generateStencils(Grid::ST_HASH);   
-            tm["stencils"]->stop();
-            grid->writeToFile(); 
-            tm.writeToFile("gridgen_timer_log"); 
-        }
-#endif 
+
         Grid::GridLoadErrType err = grid->loadFromFile(); 
         if (err == Grid::NO_GRID_FILES) 
         {
@@ -157,8 +196,6 @@ int main(int argc, char** argv) {
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 
         }
-
- 
 
         int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
         int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
@@ -218,7 +255,6 @@ int main(int argc, char** argv) {
             }
         }
         printf("OK\n");
-
     }
 
     RBFFD* der;
@@ -275,7 +311,7 @@ int main(int argc, char** argv) {
         der->writeToFile(RBFFD::Z, weight_name); 
         sprintf(weight_name, "lapl_weights_rank%d.mtx", comm_unit->getRank()); 
         der->writeToFile(RBFFD::LAPL, weight_name); 
-        
+
         cout << "end write weights to file" << endl;
     }
 
@@ -308,16 +344,7 @@ int main(int argc, char** argv) {
 
     // SOLVE HEAT EQUATION
 
-    // Exact Solution ( freq, decay )
-    //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
-    ExactSolution* exact; 
-    if (uniformDiffusion) {
-        exact = new ExactRegularGrid(dim, acos(-1.) / 2., 0.1);
-//        exact = new ExactUniformLaplacian(dim);         
-    } else {
-        // FIXME: have a non-uniform diffusion exact solution
-        exact = new ExactRegularGrid(dim, acos(-1.) / 2., 1.);
-    }
+    ExactSolution* exact = getExactSolution(dim); 
 
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
@@ -353,7 +380,7 @@ int main(int argc, char** argv) {
     PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
 #endif 
 
-//    subdomain->printCenterMemberships(subdomain->G, "G = " );
+    //    subdomain->printCenterMemberships(subdomain->G, "G = " );
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
     int iter;
 
@@ -448,15 +475,12 @@ int main(int argc, char** argv) {
     delete(settings);
     delete(comm_unit); 
 
-
-
     tm["total"]->stop();
     tm["total"]->printAll();
     tm["total"]->writeAllToFile();
 
-    printf("REACHED THE END OF MAIN\n");
-    
-    //exit(EXIT_SUCCESS);
+    printf("\n\nREACHED THE END OF MAIN\n\n");
+
     return 0;
 }
 //----------------------------------------------------------------------

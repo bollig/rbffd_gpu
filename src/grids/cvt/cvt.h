@@ -65,7 +65,6 @@ class CVT : public Grid
             delete(kdtree);
 #endif
             delete [] generators;
-            timers["total"]->printAll();
         }
 
         // Override this if we want to project boundary nodes back to the boundary: 

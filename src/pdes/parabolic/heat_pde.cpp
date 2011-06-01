@@ -74,7 +74,7 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 
     if (uniformDiffusion) {
         for (size_t i = 0; i < n; i++) {
-#if 0
+#if 1
             SolutionType exact = exact_ptr->diffuseCoefficient(grid_ref.getNode(i), t) * exact_ptr->laplacian(grid_ref.getNode(i),t);
             double error = fabs(K_dot_lapl_U[i] - exact)/fabs(exact); 
           
@@ -131,7 +131,7 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 // Handle the boundary conditions however we want to. 
 // NOTE: for this PDE we assume there is no influx of heat on the boundary
 // FIXME: the PDE is not 0 on the boundary for a regular grid. 
-void HeatPDE::enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t)
+void HeatPDE::enforceBoundaryConditions(std::vector<SolutionType>& u_t, double t)
 {
     size_t nb_bnd = grid_ref.getBoundaryIndicesSize(); 
     std::vector<size_t>& bnd_index = grid_ref.getBoundaryIndices();
@@ -141,8 +141,8 @@ void HeatPDE::enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t
         // first order
         NodeType& v = nodes[bnd_index[i]];
         //            printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
-        // y_t[bnd_index[i]] = boundary_values[i];
-        y_t[bnd_index[i]] = exact_ptr->at(v, t); 
+        // u_t[bnd_index[i]] = boundary_values[i];
+        u_t[bnd_index[i]] = exact_ptr->at(v, t); 
     }
 }
 

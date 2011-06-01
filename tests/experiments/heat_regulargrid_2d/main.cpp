@@ -312,8 +312,8 @@ int main(int argc, char** argv) {
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
     ExactSolution* exact; 
     if (uniformDiffusion || true) {
-//        exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
-        exact = new ExactUniformLaplacian(dim);         
+        exact = new ExactRegularGrid(dim, acos(-1.) / 2., 1.);
+//        exact = new ExactUniformLaplacian(dim);         
     } else {
         // FIXME: have a non-uniform diffusion exact solution
         exact = new ExactRegularGrid(dim, acos(-1.) / 2., 1.);

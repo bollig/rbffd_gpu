@@ -6,9 +6,6 @@
 ExactRegularGrid::ExactRegularGrid(int dimension, double freq, double decay)
     : ExactSolution(dimension)
 {
-    printf("[ExactRegularGrid] ERROR: need to update the exact solution to handle dim_num. Check the laplacian to ensure that terms for Y and Z are necessary.\n");
-    exit(EXIT_FAILURE); 
-
     this->freq = freq;
     this->decay = decay;
 }
@@ -30,9 +27,39 @@ double ExactRegularGrid::operator()(double x, double y, double z, double t)
     double T = cos(freq * r) * exp(-decay * t);
     return T;
 }
+
+double ExactRegularGrid::laplacian1D(double x, double y, double z, double t)
+{
+    return -exp(-decay * t) * freq * freq * cos(x); 
+}
+
+double ExactRegularGrid::laplacian2D(double x, double y, double z, double t)
+{
+    double r = sqrt(x*x + y*y); 
+    // WARNING! Catch 0 laplacian at the origin. 
+    if (r < 1e-10) {
+        return 0;
+    }
+    return -( exp(-decay * t) * freq * ( r * freq * cos(r * freq) + sin(r * freq) ) ) / r;
+}
+
+double ExactRegularGrid::laplacian3D(double x, double y, double z, double t)
+{
+    double r = sqrt(x*x + y*y + z*z); 
+
+    // WARNING! Catch case when r==0
+    if (r < 1e-10) {
+        return -( exp(-decay * t) * freq * ( freq * cos(r*freq) ) );
+    }
+
+    // Case when r!=0
+    return -( exp(-decay * t) * freq * ( freq * cos(r*freq) + (2.*sin(r*freq) / r)) );
+}
+
 //----------------------------------------------------------------------
 double ExactRegularGrid::laplacian(double x, double y, double z, double t)
 {
+#if 0
     double x_contrib2 = x * x; 
     double y_contrib2 = y * y; 
     double z_contrib2 = z * z;
@@ -99,23 +126,46 @@ double ExactRegularGrid::laplacian(double x, double y, double z, double t)
 
     //	return simpLapl;
     return together;
+#endif 
+    if (dim_num == 1) {
+        return this->laplacian1D(x,y,z,t); 
+    } else if (dim_num == 2) {
+        return this->laplacian2D(x,y,z,t);
+    } else if (dim_num == 3) {
+        return this->laplacian3D(x,y,z,t);
+    } else {
+        printf("[ExactRegularGrid] ERROR: only dimensions 1, 2, and 3 are valid.\n"); 
+        exit(EXIT_FAILURE);
+    }
 }
 //----------------------------------------------------------------------
 double ExactRegularGrid::xderiv(double x, double y, double z, double t)
 {
-    return -1.;
+    double r = sqrt(x*x + y*y + z*z); 
+    if (r < 1e-10) {
+        return 0;
+    }
+    return - ( exp(-t * decay) * x * freq * sin(r*freq) ) / r;
 }
 
 //----------------------------------------------------------------------
 double ExactRegularGrid::yderiv(double x, double y, double z, double t)
 {
-    return -1.;
+    double r = sqrt(x*x + y*y + z*z); 
+    if (r < 1e-10) {
+        return 0;
+    }
+    return - ( exp(-t * decay) * y * freq * sin(r*freq) ) / r;
 }
 
 //----------------------------------------------------------------------
 double ExactRegularGrid::zderiv(double x, double y, double z, double t)
 {
-    return -1.;
+    double r = sqrt(x*x + y*y + z*z); 
+    if (r < 1e-10) {
+        return 0;
+    }
+    return - ( exp(-t * decay) * z * freq * sin(r*freq) ) / r;
 }
 //----------------------------------------------------------------------
 double ExactRegularGrid::tderiv(double x, double y, double z, double t)

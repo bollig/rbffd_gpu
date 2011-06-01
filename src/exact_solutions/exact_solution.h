@@ -79,6 +79,7 @@ class ExactSolution
         virtual double diffuse_zderiv(double x, double y, double z, double t) {
             return 0.;
         }
+        
         double diffuse_xderiv(Vec3& r, double t=0.) {
             return diffuse_xderiv(r.x(), r.y(), r.z(), t);
         }

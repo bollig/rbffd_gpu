@@ -74,7 +74,7 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 
     if (uniformDiffusion) {
         for (size_t i = 0; i < n; i++) {
-#if 1
+#if 0
             SolutionType exact = exact_ptr->diffuseCoefficient(grid_ref.getNode(i), t) * exact_ptr->laplacian(grid_ref.getNode(i),t);
             double error = fabs(K_dot_lapl_U[i] - exact)/fabs(exact); 
           
@@ -108,7 +108,7 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 
             SolutionType grad_K_dot_grad_U = grad_K[0] * grad_U[0] + grad_K[1] * grad_U[1] + grad_K[2] * grad_U[2];
 
-#if 1
+#if 0
             NodeType& pt = grid_ref.getNode(i); 
             SolutionType lapl = grad_K_dot_grad_U + K_dot_lapl_U[i]; 
             Vec3 exact_diff_grad = exact_ptr->diffuseGradient(pt, t); 

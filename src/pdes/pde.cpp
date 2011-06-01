@@ -311,8 +311,10 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
     } srtobject; 
 
 
-void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, std::vector<NodeType>& nodes, std::vector<size_t> boundary_indx, double rel_err_max)
+void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, Grid& grid, double rel_err_max)
 {
+    std::vector<NodeType>& nodes = grid.getNodeList(); 
+    std::vector<size_t>& boundary_indx = grid.getBoundaryIndices();
     // Get a COPY of the indices because we want to sort them
     std::vector<size_t> bindices = boundary_indx;  
 
@@ -375,7 +377,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
             // Now, what if the stencil contains boundary nodes? Most error
             // accumulates where stencils are unbalanced 
-            StencilType& st = grid_ref.getStencil(j); 
+            StencilType& st = grid.getStencil(j); 
             // does the stencil contain any nodes that are on the boundary?
             bool dep_boundary = false; 
             for (size_t sz = 0; sz < st.size(); sz ++) {

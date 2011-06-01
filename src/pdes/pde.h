@@ -77,17 +77,19 @@ class PDE : public MPISendable
         void checkLocalError(ExactSolution* exact, double rel_err_max=-1.) { 
             std::vector<SolutionType> exactSolution;
             this->getExactSolution(exact, this->grid_ref.getNodeList(), &exactSolution); 
-            this->checkError(exactSolution, this->U_G, this->grid_ref.getNodeList(), this->grid_ref.getBoundaryIndices(), rel_err_max); 
+            this->checkError(exactSolution, this->U_G, this->grid_ref, rel_err_max); 
         }
 
         void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1.) {
-            std::vector<SolutionType> sol;
-            std::vector<SolutionType> exactSolution;
             std::vector<NodeType>& nodes = global_grid->getNodeList();
             std::vector<size_t>& bounds = global_grid->getBoundaryIndices();
+
+            std::vector<SolutionType> sol(nodes.size());
+            std::vector<SolutionType> exactSolution(nodes.size());
+
             this->getGlobalSolution(&sol);
             this->getExactSolution(exact, nodes, &exactSolution); 
-            this->checkError(exactSolution, sol, nodes, bounds, rel_err_max); 
+            this->checkError(exactSolution, sol, *global_grid, rel_err_max); 
         }
 
 
@@ -109,7 +111,7 @@ class PDE : public MPISendable
 
 
         // Check that the error in the solution is 
-        void checkError(std::vector<SolutionType>& exactSolution, std::vector<SolutionType>& solution, std::vector<NodeType>& nodes, std::vector<size_t> boundary_indx, double rel_err_max=-1.);
+        void checkError(std::vector<SolutionType>& exactSolution, std::vector<SolutionType>& solution, Grid& grid, double rel_err_max=-1.);
         void calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max=1.);
 
     protected:

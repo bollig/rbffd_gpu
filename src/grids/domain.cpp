@@ -215,7 +215,7 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
     if (O_by_rank.size() == 0) {
         cout << "RESIZING O_by_rank" << endl;
         O_by_rank.resize(comm_size);
-        printSetL2G(this->O, "Original O");
+        printSetG2L(this->O, "Original O");
     }
 
 //        printSetG2L(subdomain_R, "R-by-rank");
@@ -308,9 +308,14 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
     // S(A\Q)
     set<int> SAmQ;
+    std::cout << "SAmQ.size before stencilSet: " << SAmQ.size() << std::endl;
     stencilSet(AmQ, stencils, &SAmQ);
+    std::cout << "SAmQ.size after stencilSet: " << SAmQ.size() << std::endl;
+    
+    std::cout << "O.size before stencilSet: " << O.size() << std::endl;
     // O = S(A\Q) intersect Q
     set_intersection(SAmQ.begin(), SAmQ.end(), Q.begin(), Q.end(), inserter(O,O.end()));
+    std::cout << "O.size after stencilSet: " << O.size() << std::endl;
 
     // B = O U D, But B\O is NOT_EQUAL to D
     set_union(D.begin(), D.end(), O.begin(), O.end(), inserter(B, B.end()));

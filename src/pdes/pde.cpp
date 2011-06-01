@@ -375,23 +375,31 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
             k++; 
             // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
 
-            // Now, what if the stencil contains boundary nodes? Most error
-            // accumulates where stencils are unbalanced 
-            StencilType& st = grid.getStencil(j); 
-            // does the stencil contain any nodes that are on the boundary?
-            bool dep_boundary = false; 
-            for (size_t sz = 0; sz < st.size(); sz ++) {
-                for (size_t sz_bnd = 0; sz_bnd < bindices.size(); sz_bnd++) {
-                    if (st[sz] == bindices[sz_bnd]) {
-                        dep_boundary=true;
-                        break;
+            // Assume that the nodes at the tail of the sol_vec are not part of
+            // the subdomain (i.e., that they're ghost nodes) 
+            if (j < grid.getStencilsSize()) {
+                // Now, what if the stencil contains boundary nodes? Most error
+                // accumulates where stencils are unbalanced 
+                StencilType& st = grid.getStencil(j); 
+#if 0
+                std::cout << "ST[" << j << "].size= " << st.size() << std::endl;
+                std::cout << "bindices.size= " << bindices.size() << std::endl;
+#endif 
+                // does the stencil contain any nodes that are on the boundary?
+                bool dep_boundary = false; 
+                for (size_t sz = 0; sz < st.size(); sz ++) {
+                    for (size_t sz_bnd = 0; sz_bnd < bindices.size(); sz_bnd++) {
+                        if (st[sz] == bindices[sz_bnd]) {
+                            dep_boundary=true;
+                            break;
+                        }
                     }
                 }
-            }
-            if (!dep_boundary) {
-                sol_vec_int_no_bnd.push_back(sol_vec[j]); 
-                sol_exact_int_no_bnd.push_back(sol_exact[j]); 
-                l++;
+                if (!dep_boundary) {
+                    sol_vec_int_no_bnd.push_back(sol_vec[j]); 
+                    sol_exact_int_no_bnd.push_back(sol_exact[j]); 
+                    l++;
+                }
             }
         }
     }

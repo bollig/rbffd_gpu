@@ -41,7 +41,7 @@ class HeatPDE : public TimeDependentPDE
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble(); 
         // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, double t);
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n, double t);
 
         virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t);
 

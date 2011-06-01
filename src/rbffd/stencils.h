@@ -136,9 +136,9 @@ class Stencils
                 // increasing the magnitude of our weights very high and then
                 // our derivs become inaccurate.: 
                 // EFB052411 (want to play with rad)
-                return coefs;///(h*h);
+                return coefs*rad*rad;
             } else {
-                return coefs/(h);
+                return coefs*rad;
             }
         }
         arma::mat computeCoefs(double eps);

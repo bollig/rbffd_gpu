@@ -772,7 +772,7 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
     for (size_t i = 0; i < stencil.size(); i++) {
         for (size_t j = 0; j < stencil[i].size(); j++) {
             // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
-            fprintf(f, "%d %d %lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+            fprintf(f, "%d %d %24.16lg\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
            // fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
         }
     }
@@ -893,6 +893,8 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         //      -- better: --
         // up to 1063 for st=13 and eps=0.01 (eps=0.1 gives 1061)
         double rad = 1. / ( 0.100 * grid_ref.getStencilRadius(st_indx));  
+
+        // By choosing rad = 1 we are NOT normalizing or scaling any of the inputs to ContourSVD and/or the output coefs
         rad = 1.;
 //FOR 11x11 
 //rad = 1.1;

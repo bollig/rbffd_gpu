@@ -50,10 +50,8 @@ void HeatPDE::assemble()
 // timestep: u(t+h) = u(t) + h*f(t,u(t))
 // For the diffusion equation this is f(t,u(t)) = laplacian(u(t))
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
-void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, double t)
+void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
 {
-    size_t n = u_t.size(); 
-
     std::vector<SolutionType> u_lapl_deriv(n); 
     std::vector<SolutionType> K_dot_lapl_U(n); 
     std::vector<SolutionType> diffusion(n);  

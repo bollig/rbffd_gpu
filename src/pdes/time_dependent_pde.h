@@ -36,7 +36,7 @@ class TimeDependentPDE : public PDE
         //  are required), then archive the original solution and any subsequent
         //  buffers and overwrite the final solution at the end of the routine.
         virtual void advance(TimeScheme which, double delta_t);
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, double t)=0;
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n, double t)=0;
 
         // If we use an explicit scheme we can enforce boundaries here
         // Else, leave this routine empty for implicit and enforce boundaries
@@ -64,7 +64,7 @@ class TimeDependentPDE : public PDE
 
 
         // We'll hide this routine because we want one based on time (see above)
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out) { std::cout << "ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n) { std::cout << "ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
 
 
 };

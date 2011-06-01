@@ -50,7 +50,7 @@ class PDE : public MPISendable
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble() =0; 
         // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
-        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out) = 0;
+        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, size_t n) = 0;
 
 
         // Print the current solution to STDOUT

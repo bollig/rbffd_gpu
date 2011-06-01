@@ -73,7 +73,7 @@ void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
 
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in feval1
-    this->solve(s, &feval1, cur_time); 
+    this->solve(s, &feval1, nb_stencils, cur_time); 
 
     // TODO: (ADD) Use 5 point Cartesian formula for the Laplacian
     //lapl_deriv = grid.computeCartLaplacian(s);
@@ -125,7 +125,7 @@ void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
 
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in feval1
-    this->solve(s, &feval1, cur_time); 
+    this->solve(s, &feval1, nb_stencils, cur_time); 
 
     // FIXME: we dont have a way to send updates for general vectors (YET)
     // In the meantime, we overwrite solutions with updates and broadcast the
@@ -147,7 +147,7 @@ void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
 
     // y*(t) = y(t) + h * feval2
     // but feval2 = lapl[ y(t) + h/2 * feval1 ] (content between [..] was computed above)
-    this->solve(s, &feval2, cur_time+0.5*dt); 
+    this->solve(s, &feval2, nb_stencils, cur_time+0.5*dt); 
 
     // Finish step for midpoint method
     for (size_t i = 0; i < feval2.size(); i++) {
@@ -186,7 +186,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // ------------------- K1 ------------------------
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in k1 
-    this->solve(s, &k1, cur_time); 
+    this->solve(s, &k1, nb_stencils, cur_time); 
 
     // FIXME: we dont have a way to send updates for general vectors (YET)
     // In the meantime, we overwrite solutions with updates and broadcast the
@@ -216,7 +216,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
 
     // y*(t) = y(t) + h * k2
     // but k2 = lapl[ y(t) + h/2 * k1 ] (content between [..] was computed above)
-    this->solve(s, &k2, cur_time+0.5*dt); 
+    this->solve(s, &k2, nb_stencils, cur_time+0.5*dt); 
 
     s = k2;
     comm_ref.broadcastObjectUpdates(this); 
@@ -237,7 +237,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // leverage auto-transmit updates for U_G (because vector s is a reference to U_G
     comm_ref.broadcastObjectUpdates(this);
 
-    this->solve(s, &k3, cur_time+0.5*dt); 
+    this->solve(s, &k3, nb_stencils, cur_time+0.5*dt); 
 
     s = k3;
     comm_ref.broadcastObjectUpdates(this); 
@@ -258,7 +258,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // leverage auto-transmit updates for U_G (because vector s is a reference to U_G
     comm_ref.broadcastObjectUpdates(this);
 
-    this->solve(s, &k4, cur_time+dt); 
+    this->solve(s, &k4, nb_stencils, cur_time+dt); 
 
     s = k4;
     comm_ref.broadcastObjectUpdates(this); 

@@ -62,15 +62,18 @@ class ExactUniformLaplacian : public ExactSolution
 
         // Return the diffusivity at node v (K=1 by default)
         virtual double diffuseCoefficient(Vec3& v, double t=0.){
-            return 0.1;
+            return 1. * v.x();
         }
 
-        // Return the gradient of the diffusivity at node v
-        virtual Vec3* diffuseGradient(Vec3& v, double t=0.){
-            return new Vec3(0.,0.,0.);
+        virtual double diffuse_xderiv(double x, double y, double z, double t) {
+            return 1.;
         }
-
-
+        virtual double diffuse_yderiv(double x, double y, double z, double t) {
+            return 0.;
+        }
+        virtual double diffuse_zderiv(double x, double y, double z, double t) {
+            return 0.;
+        }
 };
 //----------------------------------------------------------------------
 

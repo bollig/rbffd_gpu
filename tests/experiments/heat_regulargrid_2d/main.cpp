@@ -311,7 +311,7 @@ int main(int argc, char** argv) {
     // Exact Solution ( freq, decay )
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
     ExactSolution* exact; 
-    if (uniformDiffusion) {
+    if (uniformDiffusion || true) {
 //        exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
         exact = new ExactUniformLaplacian(dim);         
     } else {

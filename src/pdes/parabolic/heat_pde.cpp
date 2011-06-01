@@ -74,12 +74,14 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 
     if (uniformDiffusion) {
         for (size_t i = 0; i < n; i++) {
+#if 0
             SolutionType exact = exact_ptr->diffuseCoefficient(grid_ref.getNode(i), t) * exact_ptr->laplacian(grid_ref.getNode(i),t);
             double error = fabs(K_dot_lapl_U[i] - exact)/fabs(exact); 
-            
+          
             std::cout << "computed K_dot_lapl_U[" << i << "] = " << K_dot_lapl_U[i] << ", EXACT= " << exact; 
             std::cout << ((error > 1e-1) ? "***************" : ""); 
             std::cout << std::endl;
+#endif 
             (*f_out)[i] = K_dot_lapl_U[i];
         }
     } else {
@@ -106,7 +108,20 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 
             SolutionType grad_K_dot_grad_U = grad_K[0] * grad_U[0] + grad_K[1] * grad_U[1] + grad_K[2] * grad_U[2];
 
-            std::cout << "computed grad_K_dot_grad_U[" << i << "] = " << grad_K_dot_grad_U << ", K_dot_lapl_U = " << K_dot_lapl_U[i] << ", EXACT LAPL= " << exact_ptr->laplacian(grid_ref.getNode(i),t) << std::endl;
+#if 1
+            NodeType& pt = grid_ref.getNode(i); 
+            SolutionType lapl = grad_K_dot_grad_U + K_dot_lapl_U[i]; 
+            Vec3 exact_diff_grad = exact_ptr->diffuseGradient(pt, t); 
+            Vec3 exact_u_grad = exact_ptr->gradient(pt,t);
+            SolutionType exact_dot = exact_diff_grad[0] * exact_u_grad[0] + exact_diff_grad[1] * exact_u_grad[1] + exact_diff_grad[2] * exact_u_grad[2]; 
+            SolutionType exact = exact_dot + exact_ptr->diffuseCoefficient(pt, t) * exact_ptr->laplacian(pt,t);
+            double error = fabs(lapl - exact)/fabs(exact); 
+         
+            //std::cout << "computed grad_K_dot_grad_U[" << i << "] = " << grad_K_dot_grad_U << ", K_dot_lapl_U = " << K_dot_lapl_U[i] << ", EXACT LAPL= " << exact; 
+            std::cout << "computed lapl[" << i << "] = " << grad_K_dot_grad_U + K_dot_lapl_U[i] << ", EXACT LAPL= " << exact; 
+            std::cout << ((error > 1e-1) ? "***************" : ""); 
+            std::cout << std::endl;
+#endif 
             (*f_out)[i] = grad_K_dot_grad_U + K_dot_lapl_U[i];
         }
     }

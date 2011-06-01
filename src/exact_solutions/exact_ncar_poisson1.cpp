@@ -3,8 +3,10 @@
 #include "exact_ncar_poisson1.h"
 
 //----------------------------------------------------------------------
-ExactNCARPoisson1::ExactNCARPoisson1() : ExactSolution()
+ExactNCARPoisson1::ExactNCARPoisson1() : ExactSolution(3)
 {
+    printf("[ExactNCARPoisson1] ERROR: need to update the exact solution to handle dim_num. Check the laplacian to ensure that terms for Y and Z are necessary.\n");
+    exit(EXIT_FAILURE); 
 
 }
 //----------------------------------------------------------------------

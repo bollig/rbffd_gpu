@@ -12,6 +12,7 @@
 #include "rbffd/rbffd_cl.h"
 
 #include "exact_solutions/exact_regulargrid.h"
+#include "exact_solutions/exact_uniform_laplacian.h"
 
 #include "timer_eb.h"
 #include "utils/comm/communicator.h"
@@ -256,8 +257,11 @@ int main(int argc, char** argv) {
         // NOTE: good test for Direct vs Contour
         // Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
         // 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
+#if 1
         der->setWeightType(RBFFD::ContourSVD);
-        //der->setWeightType(RBFFD::Direct);
+#else 
+        der->setWeightType(RBFFD::Direct);
+#endif 
         der->computeAllWeightsForAllStencils();
         tm["weights"]->stop(); 
 
@@ -308,10 +312,11 @@ int main(int argc, char** argv) {
     //ExactSolution* exact = new ExactRegularGrid(1.0, 1.0);
     ExactSolution* exact; 
     if (uniformDiffusion) {
-        exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
+//        exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
+        exact = new ExactUniformLaplacian(dim);         
     } else {
         // FIXME: have a non-uniform diffusion exact solution
-        exact = new ExactRegularGrid(acos(-1.) / 2., 1.);
+        exact = new ExactRegularGrid(dim, acos(-1.) / 2., 1.);
     }
 
     TimeDependentPDE* pde; 

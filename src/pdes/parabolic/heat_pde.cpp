@@ -53,46 +53,47 @@ void HeatPDE::assemble()
 void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, double t)
 {
     size_t n = u_t.size(); 
-    std::vector<SolutionType> du_dt(n);
+
+    std::vector<SolutionType> u_lapl_deriv(n); 
+    std::vector<SolutionType> K_dot_lapl_U(n); 
+    std::vector<SolutionType> diffusion(n);  
+
+    if (splitLaplacian) {
+        std::cout << "[HeatPDE] todo: finish split laplacian. analytic derivs of RBFs need to be updated, plus new RHS types for RBFFD created.\n";
+        exit(EXIT_FAILURE); 
+    } else {
+        der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, u_lapl_deriv); 
+    }
+
+    // Get the diffusivity of the domain for at the current time
+    this->fillDiffusion(diffusion, t);
+
+    for (size_t i = 0; i < n; i++) {
+        K_dot_lapl_U[i] = diffusion[i] * u_lapl_deriv[i]; 
+    }
 
     if (uniformDiffusion) {
-        if (splitLaplacian) {
-            std::cout << "[HeatPDE] todo: finish split laplacian. analytic derivs of RBFs need to be updated, plus new RHS types for RBFFD created.\n";
-            exit(EXIT_FAILURE); 
-        } else {
-            // This is on the CPU or GPU depending on type of Derivative class used
-            // (e.g., DerivativeCL will compute on GPU using OpenCL)
-            der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, du_dt);
+        for (size_t i = 0; i < n; i++) {
+            std::cout << "computed K_dot_lapl_U[" << i << "] = " << K_dot_lapl_U[i] << ", EXACT= " << exact_ptr->laplacian(grid_ref.getNode(i),t) << std::endl;
+            (*f_out)[i] = K_dot_lapl_U[i];
         }
     } else {
+        // If we have non-uniform diffusion, more derivatives are requried
         std::vector<SolutionType> u_x_deriv(n); 
         std::vector<SolutionType> u_y_deriv(n); 
         std::vector<SolutionType> u_z_deriv(n); 
-        std::vector<SolutionType> u_lapl_deriv(n); 
-        
-        std::vector<SolutionType> diffusion(n);  
 
         std::vector<SolutionType> diff_x_deriv(n); 
         std::vector<SolutionType> diff_y_deriv(n); 
         std::vector<SolutionType> diff_z_deriv(n); 
- 
+
         der_ref.applyWeightsForDeriv(RBFFD::X, u_t, u_x_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Y, u_t, u_y_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Z, u_t, u_z_deriv); 
 
-        // Get the diffusivity of the domain for at the current time
-        this->fillDiffusion(diffusion, t);
-
         der_ref.applyWeightsForDeriv(RBFFD::X, diffusion, diff_x_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Y, diffusion, diff_y_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Z, diffusion, diff_z_deriv); 
-
-        if (splitLaplacian) {
-            std::cout << "[HeatPDE] todo: finish split laplacian. analytic derivs of RBFs need to be updated, plus new RHS types for RBFFD created.\n";
-            exit(EXIT_FAILURE); 
-        } else {
-            der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, u_lapl_deriv); 
-        }
 
         for (size_t i = 0; i < n; i++) {
             SolutionType grad_K[3] = { diff_x_deriv[i], diff_y_deriv[i], diff_z_deriv[i] }; 
@@ -100,16 +101,9 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 
             SolutionType grad_K_dot_grad_U = grad_K[0] * grad_U[0] + grad_K[1] * grad_U[1] + grad_K[2] * grad_U[2];
 
-            SolutionType K_dot_lapl_U = diffusion[i] * u_lapl_deriv[i];
-
-            du_dt[i] = grad_K_dot_grad_U + K_dot_lapl_U;
+            std::cout << "computed grad_K_dot_grad_U[" << i << "] = " << grad_K_dot_grad_U << ", K_dot_lapl_U = " << K_dot_lapl_U[i] << ", EXACT LAPL= " << exact_ptr->laplacian(grid_ref.getNode(i),t) << std::endl;
+            (*f_out)[i] = grad_K_dot_grad_U + K_dot_lapl_U[i];
         }
-    }
-
-    // Copy into OUT buffer
-    for (int i = 0; i < n; i++) {
-        // du/dt = lapl(u)
-        (*f_out)[i] = du_dt[i];
     }
 }
 

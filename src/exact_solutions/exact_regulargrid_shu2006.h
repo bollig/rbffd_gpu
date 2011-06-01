@@ -14,7 +14,7 @@ private:
 
 public:
 	//ExactEllipsoid();
-	ExactRegularGrid_Shu2006() {;}
+	ExactRegularGrid_Shu2006() : ExactSolution(2) {;}
 	~ExactRegularGrid_Shu2006() {;}
 
 	double operator()(double x, double y, double z, double t);

@@ -4,6 +4,8 @@
 
 //----------------------------------------------------------------------
 ExactEllipsoid::ExactEllipsoid(double freq, double decay, double axis1, double axis2, double axis3) 
+    // Operate under the assumption that this test case can only appear in 3D
+    : ExactSolution(3)
 {
 	this->freq = freq;
 	this->decay = decay;

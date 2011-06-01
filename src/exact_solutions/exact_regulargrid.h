@@ -20,7 +20,7 @@ private:
 
 public:
 	//ExactEllipsoid();
-	ExactRegularGrid(double freq, double decay);
+	ExactRegularGrid(int dimension, double freq, double decay);
 	~ExactRegularGrid();
 
 	double operator()(double x, double y, double z, double t);

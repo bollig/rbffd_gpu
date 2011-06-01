@@ -15,6 +15,7 @@ class Stencils
 {
     private:
         double rad;
+        double h;   // The separation between nodes (usually stencil's avg radius)
         double eps;
         arma::mat rd2; // distance matrix(xd.n_rows,xd.n_rows);
         ArrayT<Vec3> rdvec; // distance matrix(xd.n_rows,xd.n_rows);
@@ -25,11 +26,12 @@ class Stencils
 
     public:
         /// choice : "lapl", "x", "y", "z"
-        Stencils(RBF* rbf_, double rad_, double eps_, arma::mat* xd_, 
+        Stencils(RBF* rbf_, double rad_, double h_, double eps_, arma::mat* xd_, 
                 const char* choice_) {
             this->choice = choice_;
             this->eps = eps_; // I should not require epsilon at this stage
             this->rad = rad_; // will be overwritten
+            this->h = h_;
             this->rbf = rbf_;
             // XD are the SAMPLE points (physical coordinates)
             this->xd = xd_;
@@ -120,6 +122,7 @@ class Stencils
             svd->setChoice(choice);
             svd->execute(N); 
             arma::mat coefs = svd->getFDCoeffs();                 
+            //coefs /= coefs(1);
             // the only 2nd order operator
             if (strcmp(choice, "lapl") == 0) { 
                 // EFB052311:
@@ -133,9 +136,9 @@ class Stencils
                 // increasing the magnitude of our weights very high and then
                 // our derivs become inaccurate.: 
                 // EFB052411 (want to play with rad)
-                return coefs*rad*rad;
+                return coefs;///(h*h);
             } else {
-                return coefs*rad;
+                return coefs/(h);
             }
         }
         arma::mat computeCoefs(double eps);

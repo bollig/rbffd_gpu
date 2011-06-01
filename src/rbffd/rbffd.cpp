@@ -893,6 +893,11 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         //      -- better: --
         // up to 1063 for st=13 and eps=0.01 (eps=0.1 gives 1061)
         double rad = 1. / ( 0.100 * grid_ref.getStencilRadius(st_indx));  
+        rad = 1.;
+//FOR 11x11 
+//rad = 1.1;
+//        rad = 1./grid_ref.getStencilRadius(st_indx);
+
         //NOTE: the 1063 above is reduced to 178 when grid is 41x41 [-1,1]x[-1,1]
         //NOTE: the 1063 above is reduced to 1059 when grid is 41x41 [-100,100]x[-100,100]
         // That leads me to believe out [-1,1]x[-1,1] domain may have been
@@ -930,8 +935,10 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
                 std::cout << "ERROR! unknown choice for ContourSVD" << std::endl;
         }
 
+        double h = grid_ref.getMinStencilRadius(st_indx);
+
         // This is a 
-        Stencils sten(&rbf, rad, eps, &xd, choice);
+        Stencils sten(&rbf, rad, h, eps, &xd, choice);
         //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);
 
         int N = 128; // Why can't I increase N?

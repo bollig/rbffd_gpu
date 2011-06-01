@@ -27,8 +27,9 @@ class HeatPDE : public TimeDependentPDE
         ExactSolution* exact_ptr;
 
     public: 
-        HeatPDE(Domain* grid, RBFFD* der, Communicator* comm, bool uniformDiffusion, bool weightsComputed=false) 
-            : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed)
+        HeatPDE(Domain* grid, RBFFD* der, Communicator* comm, bool useUniformDiffusion, bool weightsComputed=false) 
+            : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed),
+              splitLaplacian(false), uniformDiffusion(useUniformDiffusion)
         { ; }
 
         // This should fill the solution vector with our initial conditions. 

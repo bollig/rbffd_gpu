@@ -3,8 +3,12 @@
 #include "exact_regulargrid.h"
 
 //----------------------------------------------------------------------
-ExactRegularGrid::ExactRegularGrid(double freq, double decay)
+ExactRegularGrid::ExactRegularGrid(int dimension, double freq, double decay)
+    : ExactSolution(dimension)
 {
+    printf("[ExactRegularGrid] ERROR: need to update the exact solution to handle dim_num. Check the laplacian to ensure that terms for Y and Z are necessary.\n");
+    exit(EXIT_FAILURE); 
+
     this->freq = freq;
     this->decay = decay;
 }

@@ -9,10 +9,13 @@ class ExactSolution
 {
 protected:
 	double Pi; 
+    
+    // NOTE: our laplacian terms might depend on knowledge of the dimensionality (see e.g., ExactUniformLaplacian)
+    int dim_num; 
 
 public:
 
-        ExactSolution() : Pi(acos(-1.)) {};
+        ExactSolution(int dimension) : dim_num(dimension), Pi(acos(-1.)) {};
 //	~ExactSolution() {}; 
  
         virtual double operator()(double x, double y, double z, double t=0.) = 0;

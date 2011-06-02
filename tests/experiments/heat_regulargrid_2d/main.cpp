@@ -72,7 +72,7 @@ ExactSolution* getExactSolution(int dim_num) {
             } else {
             }
 #endif 
-            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 0.1);
+            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 1.0);
             break;
         default:
             std::cout << "ERROR! unsupported dimension\n";

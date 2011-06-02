@@ -26,7 +26,7 @@ class VtuPDEWriter : public PDEWriter
         vtkUnstructuredGridWriter* uwriter;
         vtkUnstructuredGrid* ugrid; 
         vtkPoints* pts; 
-        vtkCellArray* stns; 
+        //vtkCellArray* stns; 
 
         vtkFloatArray* sol;
         vtkFloatArray* abs_err;
@@ -94,8 +94,10 @@ class VtuPDEWriter : public PDEWriter
                     cell->GetPointIds()->SetId(0,i);
                     cell->GetPointIds()->SetId(1, st[j]); 
                     ugrid->InsertNextCell(cell->GetCellType(), cell->GetPointIds());
-                    // DONT KNOW IF THIS WILL REMOVE FROM ugrid...
-                   // cell->Delete();
+
+                    // This deletes the local copy, but not the copy that was
+                    // instantiated inside ugrid
+                    cell->Delete();
                 }
 #endif 
 #endif 
@@ -141,7 +143,7 @@ class VtuPDEWriter : public PDEWriter
             uwriter->Delete();
             ugrid->Delete();
             pts->Delete();
-            stns->Delete();
+            //stns->Delete();
             sol->Delete();
             abs_err->Delete();
             rel_err->Delete();

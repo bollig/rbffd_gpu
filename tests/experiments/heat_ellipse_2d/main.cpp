@@ -35,6 +35,8 @@ int nb_cvt_samples;
 int nb_cvt_iters; 
 int nb_nodes;
 
+int uniformDiffusion; 
+
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     density =  new UniformDensity(); 
@@ -46,6 +48,7 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     midax_axis = settings->GetSettingAs<double>("MIDAX_AXIS", ProjectSettings::optional, "0.5"); 
     nb_cvt_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::optional, "10000"); 	
     nb_cvt_iters = settings->GetSettingAs<int>("NB_CVT_ITERS", ProjectSettings::optional, "1000"); 
+    uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
 }
 
 
@@ -53,7 +56,7 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
 ExactSolution* getExactSolution(int dim_num) {
     switch (dim_num) {
         case 2: 
-            return new ExactEllipse(acos(-1.) / 2., 1., major_axis, minor_axis);
+            return new ExactEllipse(acos(-1.) / 2., 10., major_axis, minor_axis);
             break; 
         case 3: 
             return new ExactEllipsoid(acos(-1.) / 2., 1., major_axis, minor_axis, midax_axis);
@@ -79,12 +82,10 @@ Grid* getGrid(int dim_num) {
             exit(EXIT_FAILURE);
     }
         
-//    grid->setExtents(-major_axis, major_axis, -minor_axis, minor_axis, -midax_axis, midax_axis);
-    grid->setExtents(-1.,1.,-1.,1.,-1.,1.);
+    grid->setExtents(-major_axis, major_axis, -minor_axis, minor_axis, -midax_axis, midax_axis);
+//    grid->setExtents(-1.,1.,-1.,1.,-1.,1.);
     return grid;
 }
-
-
 
 using namespace std;
 using namespace EB;
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
     tm["settings"]->start(); 
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
-    
+
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
 
     //-----------------
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
     int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
-    int uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "0"); 
+    
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
 
@@ -468,3 +469,4 @@ int main(int argc, char** argv) {
     return 0;
 }
 //----------------------------------------------------------------------
+

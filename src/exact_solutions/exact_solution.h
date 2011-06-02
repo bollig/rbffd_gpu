@@ -66,7 +66,7 @@ class ExactSolution
         }
 
         virtual double diffuseCoefficient(double x, double y, double z, double t) {
-            return 0.;
+            return 1.;
         }
         virtual double diffuse_xderiv(double x, double y, double z, double t) {
             return 0.;

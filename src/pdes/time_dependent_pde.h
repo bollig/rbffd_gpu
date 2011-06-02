@@ -48,6 +48,12 @@ class TimeDependentPDE : public PDE
         void setTime(double current_time) { cur_time = current_time; }
         double getTime() { return cur_time; }
 
+        virtual SolutionType getExactSolution(size_t indx) {
+            NodeType& pt = grid_ref.getNode(indx); 
+            SolutionType ex = exact_ptr->at(pt, cur_time); 
+            return ex;
+        }
+
         virtual SolutionType getAbsoluteError(size_t indx) {
             NodeType& pt = grid_ref.getNode(indx); 
             SolutionType ex = exact_ptr->at(pt, cur_time); 

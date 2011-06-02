@@ -30,10 +30,12 @@ class VtuPDEWriter : public PDEWriter
         //vtkCellArray* stns; 
 
         vtkDoubleArray* sol;
+        vtkDoubleArray* exact;
         vtkDoubleArray* abs_err;
         vtkDoubleArray* rel_err;
  
         char* sol_name;
+        char* exact_name;
         char* abs_err_name;
         char* rel_err_name;
 
@@ -105,10 +107,17 @@ class VtuPDEWriter : public PDEWriter
             }
 
             sol = vtkDoubleArray::New();
-            sol_name = "Solution";
+            sol_name = "Computed Solution";
             sol->SetName(sol_name); 
             sol->SetNumberOfComponents(1);
             sol->SetNumberOfValues(subdomain->getNodeListSize());
+
+            exact = vtkDoubleArray::New();
+            exact_name = "Exact Solution";
+            exact->SetName(exact_name); 
+            exact->SetNumberOfComponents(1);
+            exact->SetNumberOfValues(subdomain->getNodeListSize());
+
 
             abs_err = vtkDoubleArray::New();
             abs_err_name = "Absolute Error";
@@ -126,6 +135,7 @@ class VtuPDEWriter : public PDEWriter
             // This sets the primary: 
             ugrid->GetPointData()->SetScalars(sol);
             // These expand with secondary arrays
+            ugrid->GetPointData()->AddArray(exact);
             ugrid->GetPointData()->AddArray(abs_err);
             ugrid->GetPointData()->AddArray(rel_err);
 
@@ -146,6 +156,7 @@ class VtuPDEWriter : public PDEWriter
             pts->Delete();
             //stns->Delete();
             sol->Delete();
+            exact->Delete();
             abs_err->Delete();
             rel_err->Delete();
         }
@@ -164,6 +175,11 @@ class VtuPDEWriter : public PDEWriter
             vtkDoubleArray* s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(sol_name); 
             for (int i = 0; i < s->GetSize(); i++) {
                 s->SetValue(i, heat->getLocalSolution(i));
+            }
+
+            s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(exact_name); 
+            for (int i = 0; i < s->GetSize(); i++) {
+                s->SetValue(i, heat->getExactSolution(i));
             }
 
 #if 1

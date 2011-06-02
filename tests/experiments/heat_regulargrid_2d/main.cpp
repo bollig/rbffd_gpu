@@ -12,6 +12,7 @@
 #include "rbffd/rbffd_cl.h"
 
 #include "exact_solutions/exact_regulargrid.h"
+#include "exact_solutions/exact_regulargrid_nonuniform.h"
 #include "exact_solutions/exact_uniform_laplacian.h"
 
 #include "timer_eb.h"
@@ -31,6 +32,8 @@ double minY;
 double maxY; 
 double minZ; 
 double maxZ;
+
+int uniformDiffusion;
 
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
@@ -54,7 +57,9 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
     maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
     minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
-    maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
+    maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1.");
+
+    uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "0"); 
 }
 
 
@@ -67,12 +72,11 @@ ExactSolution* getExactSolution(int dim_num) {
         case 2: 
         case 3: 
             // FIXME: have a non-uniform diffusion exact solution
-#if 0
             if (uniformDiffusion) {
-            } else {
-            }
-#endif 
             exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 1.0);
+            } else {
+            exact = new ExactRegularGridNonUniform(dim_num, acos(-1.) / 2.);
+            }
             break;
         default:
             std::cout << "ERROR! unsupported dimension\n";
@@ -150,7 +154,7 @@ int main(int argc, char** argv) {
     int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
-    int uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "0"); 
+    
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
 

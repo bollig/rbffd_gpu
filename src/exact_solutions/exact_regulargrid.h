@@ -54,6 +54,7 @@ class ExactRegularGrid : public ExactSolution
         double laplacian3D(double x, double y, double z, double t);
 
 };
+
 //----------------------------------------------------------------------
 
 #endif // _EXACT_REGULAR_GRID_H_

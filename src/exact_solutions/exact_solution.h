@@ -65,11 +65,9 @@ class ExactSolution
             return *grad;
         }
 
-        // Return the diffusivity at node v (K=1 by default)
-        virtual double diffuseCoefficient(Vec3& v, double t=0.){
-            return 1.;
+        virtual double diffuseCoefficient(double x, double y, double z, double t) {
+            return 0.;
         }
-
         virtual double diffuse_xderiv(double x, double y, double z, double t) {
             return 0.;
         }
@@ -79,7 +77,10 @@ class ExactSolution
         virtual double diffuse_zderiv(double x, double y, double z, double t) {
             return 0.;
         }
-        
+        virtual double diffuse_tderiv(double x, double y, double z, double t) {
+            return 0.;
+        }
+
         double diffuse_xderiv(Vec3& r, double t=0.) {
             return diffuse_xderiv(r.x(), r.y(), r.z(), t);
         }
@@ -90,6 +91,16 @@ class ExactSolution
 
         double diffuse_zderiv(Vec3& r, double t=0.) {
             return diffuse_zderiv(r.x(), r.y(), r.z(), t);
+        }
+
+        double diffuse_tderiv(Vec3& r, double t=0.) {
+            return diffuse_zderiv(r.x(), r.y(), r.z(), t);
+        }
+
+
+        // Return the diffusivity at node v (K=1 by default)
+        virtual double diffuseCoefficient(Vec3& v, double t=0.){
+            return this->diffuseCoefficient(v.x(), v.y(), v.z(), t);
         }
 
         // Return the gradient of the diffusivity at node v

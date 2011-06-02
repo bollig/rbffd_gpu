@@ -2,7 +2,9 @@ function [] = plot_grid(filename, dim, n_stop)
 
 nodes = load(filename); 
 if nargin > 2
-    %nodes = nodes(1:n_stop, :);
+    boundary = nodes(1:n_stop, :);
+else
+    boundary = ndoes;
 end
 
 if dim == 1
@@ -11,19 +13,19 @@ if dim == 1
 elseif dim == 2
     plot(nodes(:,1), nodes(:,2), '.'); 
 elseif dim == 3
-    subplot(2,2,1);
-    plot_3d_subgrid(nodes, dim, 0);
-
-    subplot(2,2,2); 
-    plot_3d_subgrid(nodes,dim, 1);
+    subplot(2,1,1);
+    plot_3d_subgrid(boundary, dim, 0);
     
-    nodes = nodes(find(nodes(:,2) <= 0),:);
+    boundary = nodes(find(boundary(:,2) <= 0),:);
 
-    subplot(2,2,3); 
-    plot_3d_subgrid(nodes,dim, 0);
+    subplot(2,1,2); 
+    plot_3d_subgrid(boundary,dim, 0);
     
-    subplot(2,2,4); 
-    plot_3d_subgrid(nodes,dim, 1);
+%    subplot(1,2,2); 
+%    plot_3d_subgrid(nodes,dim, 1);
+   
+%    subplot(1,2,4); 
+%    plot_3d_subgrid(boundary,dim, 1);
 end
 end
 
@@ -33,8 +35,8 @@ function [] = plot_3d_subgrid(nodes, dim, type)
     end 
 
     if type == 0
-        plot_3d_shell(nodes);
-        %plot_3d_hull(nodes); 
+        %plot_3d_shell(nodes);
+        plot_3d_hull(nodes); 
     else 
         plot3(nodes(:,1), nodes(:,2), nodes(:,3), '.');
     end

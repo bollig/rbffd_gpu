@@ -28,11 +28,18 @@ class VtuPDEWriter : public PDEWriter
         vtkPoints* pts; 
         vtkCellArray* stns; 
 
+        vtkFloatArray* sol;
+        vtkFloatArray* abs_err;
+        vtkFloatArray* rel_err;
+ 
+        char* sol_name;
+        char* abs_err_name;
+        char* rel_err_name;
+
     public: 
         VtuPDEWriter(Domain* subdomain_, TimeDependentPDE* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
             : PDEWriter(subdomain_, heat_, comm_unit_, local_write_freq_, global_write_freq_) 
         { 
-//            uwriter = vtkUnstructuredGridWriter::New(); 
             uwriter = vtkUnstructuredGridWriter::New();
             ugrid = vtkUnstructuredGrid::New(); 
 
@@ -80,7 +87,6 @@ class VtuPDEWriter : public PDEWriter
             }
 #endif
 
-
                 for (int j = 0; j < ssize; j++) {
                     vtkLine* cell = vtkLine::New();
                     cell->GetPointIds()->SetNumberOfIds(2);
@@ -88,20 +94,37 @@ class VtuPDEWriter : public PDEWriter
                     cell->GetPointIds()->SetId(0,i);
                     cell->GetPointIds()->SetId(1, st[j]); 
                     ugrid->InsertNextCell(cell->GetCellType(), cell->GetPointIds());
-//                    cell->Delete();
+                    // DONT KNOW IF THIS WILL REMOVE FROM ugrid...
+                   // cell->Delete();
                 }
 #endif 
 #endif 
-
-
             }
 
-            vtkFloatArray* sol = vtkFloatArray::New();
-            sol->SetName("Solution"); 
+            sol = vtkFloatArray::New();
+            sol_name = "Solution";
+            sol->SetName(sol_name); 
+            sol->SetNumberOfComponents(1);
             sol->SetNumberOfValues(subdomain->getNodeListSize());
 
+            abs_err = vtkFloatArray::New();
+            abs_err_name = "Absolute Error";
+            abs_err->SetName(abs_err_name); 
+            abs_err->SetNumberOfComponents(1);
+            abs_err->SetNumberOfValues(subdomain->getNodeListSize());
+
+            rel_err = vtkFloatArray::New();
+            rel_err_name = "Relative Error";
+            rel_err->SetName(rel_err_name); 
+            rel_err->SetNumberOfComponents(1);
+            rel_err->SetNumberOfValues(subdomain->getNodeListSize());
+
             ugrid->SetPoints(pts);
+            // This sets the primary: 
             ugrid->GetPointData()->SetScalars(sol);
+            // These expand with secondary arrays
+            ugrid->GetPointData()->AddArray(abs_err);
+            ugrid->GetPointData()->AddArray(rel_err);
 
             uwriter->SetInput(ugrid);
 
@@ -115,6 +138,13 @@ class VtuPDEWriter : public PDEWriter
         virtual ~VtuPDEWriter() {
             this->writeFinal(); 
           //  uwriter->Stop();
+            uwriter->Delete();
+            ugrid->Delete();
+            pts->Delete();
+            stns->Delete();
+            sol->Delete();
+            abs_err->Delete();
+            rel_err->Delete();
         }
 
         // MASTER process only!
@@ -128,11 +158,25 @@ class VtuPDEWriter : public PDEWriter
             // write to file
 
             // Update the solution: 
-            vtkFloatArray* s = (vtkFloatArray*)ugrid->GetPointData()->GetScalars(); 
+            vtkFloatArray* s = (vtkFloatArray*)ugrid->GetPointData()->GetArray(sol_name); 
             for (int i = 0; i < s->GetSize(); i++) {
                 s->SetValue(i, heat->getLocalSolution(i));
             }
 
+#if 1
+            // Update the abs_error: 
+            s = (vtkFloatArray*)ugrid->GetPointData()->GetArray(abs_err_name); 
+            for (int i = 0; i < s->GetSize(); i++) {
+                s->SetValue(i,/* heat->getLocalAbsoluteError(i)*/ -1.);
+            }
+
+            // Update the abs_error: 
+            s = (vtkFloatArray*)ugrid->GetPointData()->GetArray(rel_err_name); 
+            for (int i = 0; i < s->GetSize(); i++) {
+                s->SetValue(i, /*heat->getLocalRelativeError(i)*/0.);
+            }
+
+#endif 
             char fname[FILENAME_MAX]; 
             sprintf(fname, "subdomain_rank%d-%04d.vtk", comm_unit->getRank(), iter);
  //           sprintf(fname, "subdomain_%d.vtk", comm_unit->getRank(), iter);

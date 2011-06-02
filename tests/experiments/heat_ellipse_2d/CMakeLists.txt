@@ -20,11 +20,17 @@ SET (ARGV
 # 	"--file=out.txt"
 )
 
+
+require_framework_vtk()
+IF(VTK_FOUND) 
+	ADD_DEFINITIONS("-DUSE_VTK=1")
+ENDIF(VTK_FOUND)
+
+
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
 add_parallel_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" ${NUM_PROCS} )
-
 
 require_config("test.conf")
 

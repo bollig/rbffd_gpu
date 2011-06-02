@@ -56,10 +56,10 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
 ExactSolution* getExactSolution(int dim_num) {
     switch (dim_num) {
         case 2: 
-            return new ExactEllipse(acos(-1.) / 2., 10., major_axis, minor_axis);
+            return new ExactEllipse(acos(-1.) / 2., 0.5, major_axis, minor_axis);
             break; 
         case 3: 
-            return new ExactEllipsoid(acos(-1.) / 2., 1., major_axis, minor_axis, midax_axis);
+            return new ExactEllipsoid(acos(-1.) / 2., 0.5, major_axis, minor_axis, midax_axis);
             break;
         default:
             std::cout << "ERROR! unsupported dimension\n";
@@ -82,8 +82,11 @@ Grid* getGrid(int dim_num) {
             exit(EXIT_FAILURE);
     }
         
-    grid->setExtents(-major_axis, major_axis, -minor_axis, minor_axis, -midax_axis, midax_axis);
-//    grid->setExtents(-1.,1.,-1.,1.,-1.,1.);
+//    grid->setExtents(-major_axis, major_axis, -minor_axis, minor_axis, -midax_axis, midax_axis);
+//  It seems after projection some of the nodes "on" the boundary lie outside
+//  of [-major,major]. this is a hack to keep them inside the domain extents: 
+    grid->setExtents(-1.1*major_axis,1.1*major_axis,-1.1*minor_axis,1.1*minor_axis,-1.1*midax_axis,1.1*midax_axis);
+    //grid->setExtents(-1.,1.,-1.,1.,-1.,1.);
     return grid;
 }
 

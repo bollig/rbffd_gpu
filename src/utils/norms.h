@@ -5,7 +5,7 @@
 
 #include <vector>
 #include "utils/random.h"
-
+#include "Vec3.h"
 
 //----------------------------------------------------------------------
 //  UTILITIES
@@ -38,6 +38,8 @@ double l2norm(std::vector<double>& v1, std::vector<double>& v2, int n1, int n2);
 double l2norm(std::vector<double>& v1, std::vector<double>& v2);
 double l2norm(std::vector<double>& v1, int n1, int n2);
 double l2norm(std::vector<double>& v1);
+double l2norm(double v1);
+double l2norm(Vec3& v1);
 //----------------------------------------------------------------------
 
 

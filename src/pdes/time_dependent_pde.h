@@ -3,6 +3,8 @@
 
 #include "pdes/pde.h"
 
+#include "utils/norms.h"
+
 // Interface class
 class TimeDependentPDE : public PDE 
 {
@@ -46,6 +48,21 @@ class TimeDependentPDE : public PDE
         void setTime(double current_time) { cur_time = current_time; }
         double getTime() { return cur_time; }
 
+        virtual SolutionType getAbsoluteError(size_t indx) {
+            NodeType& pt = grid_ref.getNode(indx); 
+            SolutionType ex = exact_ptr->at(pt, cur_time); 
+            SolutionType app = this->getLocalSolution(indx);
+
+            return l2norm(ex - app);
+        }
+
+        virtual SolutionType getRelativeError(size_t indx) {
+            NodeType& pt = grid_ref.getNode(indx); 
+            SolutionType ex = exact_ptr->at(pt, cur_time); 
+            SolutionType app = this->getLocalSolution(indx);
+            return l2norm(ex - app) / l2norm(ex);
+        }
+ 
     protected: 
         virtual void advanceFirstOrderEuler(double dt);
         virtual void advanceSecondOrderMidpoint(double dt);
@@ -62,8 +79,7 @@ class TimeDependentPDE : public PDE
             }
         }
 
-
-        // We'll hide this routine because we want one based on time (see above)
+       // We'll hide this routine because we want one based on time (see above)
         virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n) { std::cout << "ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
 
 

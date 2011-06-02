@@ -15,7 +15,7 @@ class PDEWriter
         int local_write_freq; 
         int global_write_freq; 
         Domain* subdomain; 
-        PDE* heat; 
+        TimeDependentPDE* heat; 
         Communicator* comm_unit;
         EB::TimerList tm; 
 

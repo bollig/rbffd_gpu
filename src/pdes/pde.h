@@ -22,6 +22,8 @@ class PDE : public MPISendable
         RBFFD& der_ref; 
         Communicator& comm_ref; 
 
+        ExactSolution* exact_ptr;
+
         // The solution for our PDE. Might be spatial and/or temporal 
         // Each solution type could be a scalar or vector
         std::vector<SolutionType> U_G; 
@@ -75,12 +77,14 @@ class PDE : public MPISendable
 
         // Check the error locally
         void checkLocalError(ExactSolution* exact, double rel_err_max=-1.) { 
+            exact_ptr = exact;
             std::vector<SolutionType> exactSolution;
             this->getExactSolution(exact, this->grid_ref.getNodeList(), &exactSolution); 
             this->checkError(exactSolution, this->U_G, this->grid_ref, rel_err_max); 
         }
 
         void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1.) {
+            exact_ptr = exact;
             std::vector<NodeType>& nodes = global_grid->getNodeList();
             std::vector<size_t>& bounds = global_grid->getBoundaryIndices();
 

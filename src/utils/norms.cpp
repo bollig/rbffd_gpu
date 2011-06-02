@@ -147,6 +147,19 @@ double l2norm(std::vector<double>& v1)
 }
 //----------------------------------------------------------------------
 
+double l2norm(double v1) {
+    return fabs(v1);
+}
+
+//----------------------------------------------------------------------
+double l2norm(Vec3& v1) {
+    double norm =0.;
+    for (int i = 0; i < 3; i++) {
+        norm += v1[i] * v1[i]; 
+    }
+    return sqrt(norm);
+}
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // Weighted L2 Norms (weighted by average distance between nodes

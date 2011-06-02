@@ -8,6 +8,7 @@
 #include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkPoints.h> 
 #include <vtkPointData.h>
+#include <vtkDoubleArray.h>  // scalars
 #include <vtkFloatArray.h>  // scalars
 #include <vtkCellArray.h>
 #include <vtkPolyVertex.h>
@@ -28,9 +29,9 @@ class VtuPDEWriter : public PDEWriter
         vtkPoints* pts; 
         //vtkCellArray* stns; 
 
-        vtkFloatArray* sol;
-        vtkFloatArray* abs_err;
-        vtkFloatArray* rel_err;
+        vtkDoubleArray* sol;
+        vtkDoubleArray* abs_err;
+        vtkDoubleArray* rel_err;
  
         char* sol_name;
         char* abs_err_name;
@@ -103,19 +104,19 @@ class VtuPDEWriter : public PDEWriter
 #endif 
             }
 
-            sol = vtkFloatArray::New();
+            sol = vtkDoubleArray::New();
             sol_name = "Solution";
             sol->SetName(sol_name); 
             sol->SetNumberOfComponents(1);
             sol->SetNumberOfValues(subdomain->getNodeListSize());
 
-            abs_err = vtkFloatArray::New();
+            abs_err = vtkDoubleArray::New();
             abs_err_name = "Absolute Error";
             abs_err->SetName(abs_err_name); 
             abs_err->SetNumberOfComponents(1);
             abs_err->SetNumberOfValues(subdomain->getNodeListSize());
 
-            rel_err = vtkFloatArray::New();
+            rel_err = vtkDoubleArray::New();
             rel_err_name = "Relative Error";
             rel_err->SetName(rel_err_name); 
             rel_err->SetNumberOfComponents(1);
@@ -160,22 +161,22 @@ class VtuPDEWriter : public PDEWriter
             // write to file
 
             // Update the solution: 
-            vtkFloatArray* s = (vtkFloatArray*)ugrid->GetPointData()->GetArray(sol_name); 
+            vtkDoubleArray* s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(sol_name); 
             for (int i = 0; i < s->GetSize(); i++) {
                 s->SetValue(i, heat->getLocalSolution(i));
             }
 
 #if 1
             // Update the abs_error: 
-            s = (vtkFloatArray*)ugrid->GetPointData()->GetArray(abs_err_name); 
+            s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(abs_err_name); 
             for (int i = 0; i < s->GetSize(); i++) {
-                s->SetValue(i,/* heat->getLocalAbsoluteError(i)*/ -1.);
+                s->SetValue(i, heat->getAbsoluteError(i));
             }
 
             // Update the abs_error: 
-            s = (vtkFloatArray*)ugrid->GetPointData()->GetArray(rel_err_name); 
+            s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(rel_err_name); 
             for (int i = 0; i < s->GetSize(); i++) {
-                s->SetValue(i, /*heat->getLocalRelativeError(i)*/0.);
+                s->SetValue(i, heat->getRelativeError(i));
             }
 
 #endif 

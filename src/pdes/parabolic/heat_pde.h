@@ -24,8 +24,6 @@ class HeatPDE : public TimeDependentPDE
         // weights to the the second derivatives independently?
         bool splitLaplacian; 
 
-        ExactSolution* exact_ptr;
-
     public: 
         HeatPDE(Domain* grid, RBFFD* der, Communicator* comm, bool useUniformDiffusion, bool weightsComputed=false) 
             : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed),

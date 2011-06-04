@@ -311,7 +311,7 @@ int main(int argc, char** argv) {
         DerivativeTests* der_test = new DerivativeTests(der, subdomain, weightsPreComputed);
         if (use_gpu) {
             // Applies weights on both GPU and CPU and compares results for the first 10 stencils
-            der_test->compareGPUandCPUDerivs(10);
+            der_test->compareGPUandCPUDerivs();
         }
         // Test approximations to derivatives of functions f(x,y,z) = 0, x, y, xy, etc. etc.
         der_test->testAllFunctions(exitIfTestFailed);

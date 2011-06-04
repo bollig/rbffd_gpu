@@ -10,6 +10,9 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
     protected: 
         // Weight buffers matching number of weights we have in super class
         cl::Buffer gpu_weights[NUM_DERIV_TYPES]; 
+        double* cpu_weights_d[NUM_DERIV_TYPES]; 
+        float* cpu_weights_f[NUM_DERIV_TYPES]; 
+        bool deleteCPUWeightsBuffer;
 
         cl::Buffer gpu_stencils; 
         int*    cpu_stencils;
@@ -36,6 +39,8 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // Is a double precision extension available on the unit? 
         bool useDouble; 
 
+
+
     public: 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives        
         // (up to 3 right now) 
@@ -45,7 +50,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         RBFFD_CL(Grid* grid, int dim_num, int rank=0);
 
-        virtual ~RBFFD_CL() { /*noop*/ }; 
+        virtual ~RBFFD_CL() { if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} }; 
 
         // FIXME: assumes size of buffers does not change (should check if it
         // does and resize accordingly on the GPU. 
@@ -72,19 +77,44 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             deriv.resize(nb_stencils); 
             applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
         }
-        virtual void applyWeightsForDeriv(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDeriv(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true) {
+            if (useDouble) {
+                this->applyWeightsForDerivDouble(which, nb_nodes, nb_stencils, u, deriv, isChangedU);
+            } else {
+                this->applyWeightsForDerivSingle(which, nb_nodes, nb_stencils, u, deriv, isChangedU);
+            }
+        }
 
+        virtual void applyWeightsForDerivDouble(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true);
+
+        virtual void applyWeightsForDerivSingle(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
     protected: 
         void setupTimers(); 
         void loadKernel(); 
         void allocateGPUMem(); 
+
+        void clearCPUWeights();
+
         // forceFinish ==> should we fire a queue.finish() and make sure all
         // tasks are completed (synchronously) before returning
         void updateStencils(bool forceFinish);
-        void updateWeights(bool forceFinish);
-        void updateFunction(size_t nb_nodes, double* u, bool forceFinish);
+        
+        void updateWeights(bool forceFinish)
+        { 
+            if (useDouble) { updateWeightsDouble(forceFinish); 
+            } else { updateWeightsSingle(forceFinish); }
+        }
+        void updateFunction(size_t nb_nodes, double* u, bool forceFinish)
+        { 
+            if (useDouble) { updateFunctionDouble(nb_nodes, u, forceFinish); 
+            } else { updateFunctionSingle(nb_nodes, u, forceFinish); }
+        }
 
+        void updateWeightsDouble(bool forceFinish);
+        void updateWeightsSingle(bool forceFinish);
+        void updateFunctionDouble(size_t nb_nodes, double* u, bool forceFinish);
+        void updateFunctionSingle(size_t nb_nodes, double* u, bool forceFinish);
 };
 
 #endif 

@@ -13,7 +13,7 @@ std::string kernel_source = STRINGIFY_WITH_SUBS(
 __kernel void           \n
 computeDerivKernelFLOAT(       \n
          __global int* stencils,    \n
-         __global float* weights,   \n
+         __global double* weights,   \n
          __global float* solution,  \n
          __global float* derivative,    \n
    int nb_stencils, \n
@@ -33,9 +33,11 @@ computeDerivKernelFLOAT(       \n
    }    \n
 }
 
+
+
+
 // Assuming that our stencils are uniform in size for now
-__kernel void           \n
-computeDerivKernelDOUBLE(       \n
+__kernel void computeDerivKernelDOUBLE(       \n
          __global int* stencils,    \n
          __global double* weights,   \n
          __global double* solution,  \n

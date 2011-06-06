@@ -276,6 +276,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // REQUIRE at least np = 1 (will ERR out if not valid)
         rhs(n) = 0.0; 
 
+        // Analytic derivs of monomial terms
         switch (which) {
             case X: 
                 if (np > 1) {

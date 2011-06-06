@@ -1,0 +1,217 @@
+function[]=interpolate2D_mq(gen_rand)
+
+if nargin < 1
+    gen_rand = 0;
+end
+%close all; 
+
+evalRBF = @(mymatrix, myepsilon) MQ(mymatrix, myepsilon);
+
+epsilon = 5.;
+
+N = 100;
+M = N;
+
+a = -2; 
+b = 2;
+
+%[x,y] = meshgrid(linspace(a,b,N),linspace(a,b,M));
+
+%centers = load('FINAL_SOLUTION.txt'); 
+%centers = (0.75*a) + 0.75*(b-a).* rand(NUM_CENTERS,2)
+centers = [ 0.0 0.0; 
+            1.0 0.0;
+            0.0 1.0; 
+            1.0 1.0;
+            -1.0 0.0;
+            0.0 -1.0;
+            -1.0 -1.0;
+            -1.0 1.0;
+            1.0 -1.0;];
+% randomly displace regular grid       
+if (gen_rand)
+centers = centers + (0.375 - (0.75).*rand(size(centers)));
+NUM_CENTERS = size(centers,1);
+centers
+solution = ones(NUM_CENTERS,1) + 2*rand(NUM_CENTERS,1)+1;
+solution
+else 
+    centers = [
+
+    0.2586   -0.2254
+    1.3745   -0.3134
+    0.1623    1.2720
+    0.9619    0.9965
+   -1.2782    0.0713
+    0.3433   -0.7552
+   -1.3035   -1.0564
+   -0.7232    0.9203
+    0.7497   -0.7858];
+
+
+solution = [
+   3.0399
+    3.9784
+    2.9798
+    3.3897
+    2.8228
+    2.0696
+    2.5857
+    3.6029
+    2.6930];
+NUM_CENTERS = size(centers,1);
+end
+
+local_x = zeros(NUM_CENTERS,M,N);
+local_y = zeros(NUM_CENTERS,M,N);
+distMatrix = zeros(NUM_CENTERS,N,M);
+for k = 1:NUM_CENTERS
+    c_x1 = centers(k,1)-0.25; 
+    c_x2 = centers(k,1)+0.25;
+    c_y1 = centers(k,2)-0.25; 
+    c_y2 = centers(k,2)+0.25;
+    
+    % Show local support only
+    [lx,ly] = meshgrid(linspace(c_x1,c_x2,N),linspace(c_y1,c_y2,M));
+    local_x(k,:,:) = lx;
+    local_y(k,:,:) = ly;
+    for i = 1:N
+      for j = 1:M
+            distMatrix(k,i,j) = sqrt(((lx(i,j) - centers(k,1)).^2) + ((ly(i,j) - centers(k,2)).^2));
+        end
+    end
+end
+RBFs = evalRBF(distMatrix,epsilon);
+RBFs(isnan(RBFs)) = 0;
+
+linewidth = 1;
+fontsize = 20;
+
+figure;
+set(gcf, 'Position', [100, 900, 1024, 480]);
+% Plot RBFs under solution point stems
+subplot(1,2,1);
+%figure(1)
+stem3(centers(1:NUM_CENTERS,1),centers(1:NUM_CENTERS,2),solution,'fill','ro','LineWidth',linewidth,'MarkerEdgeColor',[1.0 0.0 1.0],'MarkerFaceColor', [0.0 1.0 0.0],'MarkerSize',7);
+hold on;
+for i = 1:NUM_CENTERS 
+    lx(:,:) = local_x(i,:,:);
+    ly(:,:) = local_y(i,:,:);
+    p1=surf(lx,ly,squeeze(RBFs(i,:,:)), 'LineWidth', linewidth);
+    set(p1, 'FaceColor', 'interp','EdgeColor','None');
+end
+hold off;
+set(gca,'FontSize',fontsize);
+%shading interp;
+colormap(bone); %winter
+invgray = flipud(get(gcf,'colormap'));
+set(gcf,'colormap',invgray);
+% Turn off the 3D bounding box so we can see things easier
+set(gca,'Box','off');
+%axis([-2 2 -2 2 1 3.0]);
+%title('');
+xlabel('x');
+ylabel('y');
+zlab = sprintf('%s,  (%s = %g)', '$\phi (r)=\sqrt{1+(\epsilon r)^2} $', '$\epsilon$', epsilon);
+title(zlab, 'Interpreter', 'latex','FontSize',24);
+axis tight
+grid on; 
+view(3);
+pbaspect([1 1 0.65])
+
+
+% Plot interpolant connecting stems
+% Form real distance matrix
+realDistMatrix = zeros(NUM_CENTERS,NUM_CENTERS);
+for i = 1:NUM_CENTERS
+    for j = 1:NUM_CENTERS
+        % Dist matrix for center to center interaction
+        if (i == j) 
+            realDistMatrix(i,i) = 0;
+        else    
+            realDistMatrix(i,j) = sqrt(((centers(i,1) - centers(j,1)).^2) + ((centers(i,2) - centers(j,2)).^2));
+        end
+    end
+end
+
+% Here we have 3x1 zero vector for a_0 + a_1 * x + a_2 * y;
+RHS = [solution; zeros(3,1)];
+% P = [1 X Y]
+P = [ones(NUM_CENTERS, 1) centers(1:NUM_CENTERS, 1) centers(1:NUM_CENTERS, 2)];
+
+Phi = evalRBF(realDistMatrix, epsilon);
+Phi(isnan(Phi)) = 0; 
+
+
+A = [Phi  P; 
+    P'  zeros(3,3)];
+
+coeffs = A\RHS;
+
+% Reconstruct surface
+reconstrMatrix = zeros(N*M, NUM_CENTERS);
+% Reconstruct over full domain.
+[x,y] = meshgrid(linspace(a,b,N),linspace(a,b,M));
+for k = 1:NUM_CENTERS
+for i = 1:N
+    for j = 1:M
+            reconstrMatrix((j-1)*M + i,k) = sqrt(((x(i,j) - centers(k,1)).^2) + ((y(i,j) - centers(k,2)).^2));
+        end
+    end
+end
+
+%C = coeffs(1:size(coeffs,1)-3);
+EM = evalRBF(reconstrMatrix, epsilon);
+EM(isnan(EM)) = 0; 
+EvalMatrix = [EM ones(N*M,1) reshape(x, [N*M 1]) reshape(y, [N*M 1])];
+
+z = reshape( (EvalMatrix * coeffs), N, M);
+%figure(2)
+subplot(1,2,2);
+stem3(centers(1:NUM_CENTERS,1),centers(1:NUM_CENTERS,2),solution,'fill','ro','LineWidth',linewidth,'MarkerEdgeColor',[1.0 0.0 0.0],'MarkerFaceColor', [0.0 1.0 0.0],'MarkerSize',7);
+%for i = 1:NUM_CENTERS 
+%    p1=surf(x,y,squeeze(RBFs(i,:,:)), 'LineWidth', linewidth);
+%    set(p1, 'FaceColor', 'interp','EdgeColor','None');
+%end
+hold on;
+p1 = surfc(x, y, z);
+set(p1, 'FaceColor', 'interp','EdgeColor','None');
+hold off;
+set(gca,'FontSize',fontsize);
+% Turn off the 3D bounding box so we can see things easier
+set(gca,'Box','off');
+%shading interp;
+colormap(bone); %winter
+invgray = flipud(get(gcf,'colormap'));
+set(gcf,'colormap',invgray);
+%axis([-2 2 -2 2 1 3.0]);
+%title('');
+xlabel('x');
+ylabel('y');
+title('$\hat{f}_N(x,y)$', 'Interpreter', 'latex','FontSize',24);
+axis tight
+grid on; 
+view(3);
+pbaspect([1 1 0.65])
+end
+
+
+function[phi] = MQ(r,eps)
+    phi=sqrt(1+(eps*r).^2);
+end
+
+function[phi] = IMQ(r,eps)
+    phi=1./(sqrt(1.+(eps.*r).^2));
+end
+
+function[phi] = GA(r,eps)
+    phi=exp(-(eps.*r).^2);
+end
+
+function[phi] = TPS(r,eps)
+    phi=((eps.*r).^2) .* log(eps.*r);
+end
+
+function[phi] = W2(r,eps)
+    phi=((1-eps.*r).^4) .* (4.*eps.*r + 1);
+end

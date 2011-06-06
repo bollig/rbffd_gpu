@@ -22,18 +22,18 @@ class ExactRegularGridNonUniform : public ExactSolution
         double tderiv(double x, double y, double z, double t); 
 
         // Return the diffusivity at node v (K=1 by default)
-        virtual double diffuseCoefficient(double x, double y, double z, double t=0.){
+        virtual double diffuseCoefficient(double x, double y, double z, double sol, double t=0.){
             double diff = (x - 0.5)*(x-0.5); 
             return diff;
         }
 
-        virtual double diffuse_xderiv(double x, double y, double z, double t) {
+        virtual double diffuse_xderiv(double x, double y, double z, double sol, double t) {
             return 2.*(x-0.5);            
         }
-        virtual double diffuse_yderiv(double x, double y, double z, double t) {
+        virtual double diffuse_yderiv(double x, double y, double z, double sol, double t) {
             return 0.;
         }
-        virtual double diffuse_zderiv(double x, double y, double z, double t) {
+        virtual double diffuse_zderiv(double x, double y, double z, double sol, double t) {
             return 0.;
         }
 

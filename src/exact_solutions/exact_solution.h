@@ -65,47 +65,50 @@ class ExactSolution
             return *grad;
         }
 
-        virtual double diffuseCoefficient(double x, double y, double z, double t) {
+        // The param sol here should be the SOLUTION at pt(x,y,z) at time t.
+        // This allows us to vary diffusion based on the current temperature of
+        // the domain for example.
+        virtual double diffuseCoefficient(double x, double y, double z, double sol=0., double t=0.) {
             return 1.;
         }
-        virtual double diffuse_xderiv(double x, double y, double z, double t) {
+        virtual double diffuse_xderiv(double x, double y, double z, double sol, double t) {
             return 0.;
         }
-        virtual double diffuse_yderiv(double x, double y, double z, double t) {
+        virtual double diffuse_yderiv(double x, double y, double z, double sol, double t) {
             return 0.;
         }
-        virtual double diffuse_zderiv(double x, double y, double z, double t) {
+        virtual double diffuse_zderiv(double x, double y, double z, double sol, double t) {
             return 0.;
         }
-        virtual double diffuse_tderiv(double x, double y, double z, double t) {
+        virtual double diffuse_tderiv(double x, double y, double z, double sol, double t) {
             return 0.;
         }
 
-        double diffuse_xderiv(Vec3& r, double t=0.) {
-            return diffuse_xderiv(r.x(), r.y(), r.z(), t);
+        double diffuse_xderiv(Vec3& r, double sol, double t=0.) {
+            return diffuse_xderiv(r.x(), r.y(), r.z(), sol, t);
         }
 
-        double diffuse_yderiv(Vec3& r, double t=0.) {
-            return diffuse_yderiv(r.x(), r.y(), r.z(), t);
+        double diffuse_yderiv(Vec3& r, double sol, double t=0.) {
+            return diffuse_yderiv(r.x(), r.y(), r.z(), sol, t);
         }
 
-        double diffuse_zderiv(Vec3& r, double t=0.) {
-            return diffuse_zderiv(r.x(), r.y(), r.z(), t);
+        double diffuse_zderiv(Vec3& r, double sol, double t=0.) {
+            return diffuse_zderiv(r.x(), r.y(), r.z(), sol, t);
         }
 
-        double diffuse_tderiv(Vec3& r, double t=0.) {
-            return diffuse_zderiv(r.x(), r.y(), r.z(), t);
+        double diffuse_tderiv(Vec3& r, double sol, double t=0.) {
+            return diffuse_zderiv(r.x(), r.y(), r.z(), sol, t);
         }
 
 
         // Return the diffusivity at node v (K=1 by default)
-        virtual double diffuseCoefficient(Vec3& v, double t=0.){
-            return this->diffuseCoefficient(v.x(), v.y(), v.z(), t);
+        virtual double diffuseCoefficient(Vec3& v, double sol=0., double t=0.){
+            return this->diffuseCoefficient(v.x(), v.y(), v.z(), sol, t);
         }
 
         // Return the gradient of the diffusivity at node v
-        virtual Vec3 diffuseGradient(Vec3& v, double t=0.){
-            Vec3 diff_grad(this->diffuse_xderiv(v,t), this->diffuse_yderiv(v,t), this->diffuse_zderiv(v,t));
+        virtual Vec3 diffuseGradient(Vec3& v, double sol=0., double t=0.){
+            Vec3 diff_grad(this->diffuse_xderiv(v,sol,t), this->diffuse_yderiv(v,sol,t), this->diffuse_zderiv(v,sol,t));
             return diff_grad;
         }
 

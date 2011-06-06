@@ -31,10 +31,10 @@ void HeatPDE::fillInitialConditions(ExactSolution* exact) {
 
 
 // Get the time dependent diffusion coeffs 
-void HeatPDE::fillDiffusion(std::vector<SolutionType>& diff, double t) {
+void HeatPDE::fillDiffusion(std::vector<SolutionType>& diff, std::vector<SolutionType>& sol, double t) {
     for(size_t i = 0; i < diff.size(); i++) {
         NodeType& pt = grid_ref.getNode(i); 
-        diff[i] = exact_ptr->diffuseCoefficient(pt, t);
+        diff[i] = exact_ptr->diffuseCoefficient(pt, sol[i], t);
     }
 }
 
@@ -64,7 +64,7 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
     }
 
     // Get the diffusivity of the domain for at the current time
-    this->fillDiffusion(diffusion, t);
+    this->fillDiffusion(diffusion, u_t, t);
 
     for (size_t i = 0; i < n; i++) {
         K_dot_lapl_U[i] = diffusion[i] * u_lapl_deriv[i]; 

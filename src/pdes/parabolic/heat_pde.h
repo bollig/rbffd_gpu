@@ -34,7 +34,7 @@ class HeatPDE : public TimeDependentPDE
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
         virtual void fillBoundaryConditions(ExactSolution* exact=NULL);
 
-        virtual void fillDiffusion(std::vector<SolutionType>& diff, double t);
+        virtual void fillDiffusion(std::vector<SolutionType>& diff, std::vector<SolutionType>& sol, double t);
 
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble(); 

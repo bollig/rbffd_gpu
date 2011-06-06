@@ -2,7 +2,7 @@
 #define _EXACT_REGULAR_GRID_NON_UNIFORM_H_
 
 
-#define SOL_BASED_DIFF 1
+#define SOL_BASED_DIFF 0
 
 #include "exact_solution.h"
 

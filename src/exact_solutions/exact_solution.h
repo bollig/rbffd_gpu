@@ -110,6 +110,48 @@ class ExactSolution
         }
 
 
+        virtual double convectionCoefficient(double x, double y, double z, double t) {
+            return 1.;
+        }
+        virtual double convection_xderiv(double x, double y, double z, double t) {
+            return 0.;
+        }
+        virtual double convection_yderiv(double x, double y, double z, double t) {
+            return 0.;
+        }
+        virtual double convection_zderiv(double x, double y, double z, double t) {
+            return 0.;
+        }
+        virtual double convection_tderiv(double x, double y, double z, double t) {
+            return 0.;
+        }
+
+        double convection_xderiv(Vec3& r, double t=0.) {
+            return convection_xderiv(r.x(), r.y(), r.z(), t);
+        }
+
+        double convection_yderiv(Vec3& r, double t=0.) {
+            return convection_yderiv(r.x(), r.y(), r.z(), t);
+        }
+
+        double convection_zderiv(Vec3& r, double t=0.) {
+            return convection_zderiv(r.x(), r.y(), r.z(), t);
+        }
+
+        double convection_tderiv(Vec3& r, double t=0.) {
+            return convection_zderiv(r.x(), r.y(), r.z(), t);
+        }
+
+        virtual double convectionCoefficient(Vec3& v, double t=0.){
+            return this->convectionCoefficient(v.x(), v.y(), v.z(), t);
+        }
+
+        virtual Vec3 convectionGradient(Vec3& v, double t=0.){
+            Vec3 conv_grad(this->convection_xderiv(v,t), this->convection_yderiv(v,t), this->convection_zderiv(v,t));
+            return conv_grad;
+        }
+
+
     protected:
         inline double Power(double a, double b) { return pow(a, b); }
         inline double Sqrt(double a) { return sqrt(a); }

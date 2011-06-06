@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     grid->writeToFile(); 
 
     // 0: 2D problem; 1: 3D problem
-    ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(1.0, 1.0);
+    ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
 
     RBFFD* der;
     if (use_gpu) {

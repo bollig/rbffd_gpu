@@ -47,7 +47,7 @@ class HeatPDE : public TimeDependentPDE
         void setUseUniformDiffusion(bool isUniform) { uniformDiffusion = isUniform; }
 
     protected: 
-        virtual void setupTimers(); 
+        void setupTimers(); 
 
         virtual std::string className() {return "heat";}
 }; 

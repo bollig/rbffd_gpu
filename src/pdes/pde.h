@@ -131,8 +131,6 @@ class PDE : public MPISendable
         virtual int initFinal();
         // ******** END MPISENDABLE ************
 
-        virtual void setupTimers() = 0;
-
     protected: 
         // FIXME: put these in another pure virtual interface class
 

@@ -68,7 +68,7 @@ class ExactSolution
         // The param sol here should be the SOLUTION at pt(x,y,z) at time t.
         // This allows us to vary diffusion based on the current temperature of
         // the domain for example.
-        virtual double diffuseCoefficient(double x, double y, double z, double sol=0., double t=0.) {
+        virtual double diffuseCoefficient(double x, double y, double z, double sol, double t) {
             return 1.;
         }
         virtual double diffuse_xderiv(double x, double y, double z, double sol, double t) {

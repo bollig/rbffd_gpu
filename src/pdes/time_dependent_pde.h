@@ -69,6 +69,12 @@ class TimeDependentPDE : public PDE
             return l2norm(ex - app) / l2norm(ex);
         }
  
+        virtual SolutionType getDiffusivityAtNode(size_t indx) {
+            NodeType& pt = grid_ref.getNode(indx); 
+            SolutionType app = this->getLocalSolution(indx);
+
+            return exact_ptr->diffuseCoefficient(pt, app, cur_time);
+        }
     protected: 
         virtual void advanceFirstOrderEuler(double dt);
         virtual void advanceSecondOrderMidpoint(double dt);

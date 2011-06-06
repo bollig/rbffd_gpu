@@ -49,11 +49,13 @@ class VtuPDEWriter : public PDEWriter
         vtkDoubleArray* exact;
         vtkDoubleArray* abs_err;
         vtkDoubleArray* rel_err;
+        vtkDoubleArray* diff;
  
         char* sol_name;
         char* exact_name;
         char* abs_err_name;
         char* rel_err_name;
+        char* diff_name;
 
     public: 
         VtuPDEWriter(Domain* subdomain_, TimeDependentPDE* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
@@ -163,6 +165,13 @@ class VtuPDEWriter : public PDEWriter
             rel_err->SetNumberOfComponents(1);
             rel_err->SetNumberOfValues(subdomain->getNodeListSize());
 
+            diff = vtkDoubleArray::New();
+            diff_name = "Diffusivity";
+            diff->SetName(diff_name); 
+            diff->SetNumberOfComponents(1);
+            diff->SetNumberOfValues(subdomain->getNodeListSize());
+
+
             ugrid->SetPoints(pts);
             // This sets the primary: 
             ugrid->GetPointData()->SetScalars(sol);
@@ -170,6 +179,7 @@ class VtuPDEWriter : public PDEWriter
             ugrid->GetPointData()->AddArray(exact);
             ugrid->GetPointData()->AddArray(abs_err);
             ugrid->GetPointData()->AddArray(rel_err);
+            ugrid->GetPointData()->AddArray(diff);
 
             uwriter->SetInput(ugrid);
 
@@ -227,6 +237,11 @@ class VtuPDEWriter : public PDEWriter
                 s->SetValue(i, heat->getRelativeError(i));
             }
 
+            // Update the abs_error: 
+            s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(diff_name); 
+            for (int i = 0; i < s->GetSize(); i++) {
+                s->SetValue(i, heat->getDiffusivityAtNode(i));
+            }
 #endif 
             char fname[FILENAME_MAX]; 
             sprintf(fname, "subdomain_rank%d-%04d.vtk", comm_unit->getRank(), iter);

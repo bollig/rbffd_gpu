@@ -20,7 +20,8 @@ ExactRegularGridNonUniform::~ExactRegularGridNonUniform()
 //----------------------------------------------------------------------
 double ExactRegularGridNonUniform::operator()(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    // FIXME: assumes linear diffusion
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double x_contrib = x * x; 
     double y_contrib = y * y; 
     double z_contrib = z * z; 
@@ -35,13 +36,13 @@ double ExactRegularGridNonUniform::operator()(double x, double y, double z, doub
 
 double ExactRegularGridNonUniform::laplacian1D(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     return -exp(-decay * t) * freq * freq * cos(x); 
 }
 
 double ExactRegularGridNonUniform::laplacian2D(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double r = sqrt(x*x + y*y); 
     // WARNING! Catch 0 laplacian at the origin. 
     if (r < 1e-10) {
@@ -53,7 +54,7 @@ double ExactRegularGridNonUniform::laplacian2D(double x, double y, double z, dou
 
 double ExactRegularGridNonUniform::laplacian3D(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double r = sqrt(x*x + y*y + z*z); 
 
     // WARNING! Catch case when r==0
@@ -82,7 +83,7 @@ double ExactRegularGridNonUniform::laplacian(double x, double y, double z, doubl
 //----------------------------------------------------------------------
 double ExactRegularGridNonUniform::xderiv(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double r = sqrt(x*x + y*y + z*z); 
     if (r < 1e-10) {
         return 0;
@@ -93,7 +94,7 @@ double ExactRegularGridNonUniform::xderiv(double x, double y, double z, double t
 //----------------------------------------------------------------------
 double ExactRegularGridNonUniform::yderiv(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double r = sqrt(x*x + y*y + z*z); 
     if (r < 1e-10) {
         return 0;
@@ -104,7 +105,7 @@ double ExactRegularGridNonUniform::yderiv(double x, double y, double z, double t
 //----------------------------------------------------------------------
 double ExactRegularGridNonUniform::zderiv(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double r = sqrt(x*x + y*y + z*z); 
     if (r < 1e-10) {
         return 0;
@@ -114,7 +115,7 @@ double ExactRegularGridNonUniform::zderiv(double x, double y, double z, double t
 //----------------------------------------------------------------------
 double ExactRegularGridNonUniform::tderiv(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double x_contrib2 = x * x; 
     double y_contrib2 = y * y; 
     double z_contrib2 = z * z;
@@ -143,7 +144,7 @@ double ExactRegularGridNonUniform::operator()(double x, double y, double z, doub
 
     // if temporal decay is too large, time step will have to decrease
 
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
 
     double T = cos(freq * r) * exp(-decay* t);
     return T;
@@ -152,9 +153,9 @@ double ExactRegularGridNonUniform::operator()(double x, double y, double z, doub
 double ExactRegularGridNonUniform::laplacian1D(double x, double y, double z, double t)
 {
     // NOTE: not sure this is a time dependent laplacian
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double lapl_u = -exp(-decay * t) * freq * freq * cos(x); 
-    double grad_K_dot_grad_U = this->diffuse_xderiv(x,y,z,t) * this->xderiv(x,y,z,t); 
+    double grad_K_dot_grad_U = this->diffuse_xderiv(x,y,z,0.,t) * this->xderiv(x,y,z,t); 
     return grad_K_dot_grad_U + decay * lapl_u;
 }
 
@@ -166,9 +167,9 @@ double ExactRegularGridNonUniform::laplacian2D(double x, double y, double z, dou
         /* exp(..) * ( 0 * cos(..) + 0 ) / 0 */
         return 0;
     }
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double lapl_u = -( exp(-decay * t) * freq * ( r * freq * cos(r * freq) + sin(r * freq) ) ) / r;
-    double grad_K_dot_grad_U = this->diffuse_xderiv(x,y,z,t) * this->xderiv(x,y,z,t) +  this->diffuse_yderiv(x,y,z,t) * this->yderiv(x,y,z,t); 
+    double grad_K_dot_grad_U = this->diffuse_xderiv(x,y,z,0.,t) * this->xderiv(x,y,z,0.,t) +  this->diffuse_yderiv(x,y,z,0.,t) * this->yderiv(x,y,z,0.,t); 
     return grad_K_dot_grad_U + decay * lapl_u;
 }
 
@@ -179,8 +180,8 @@ double ExactRegularGridNonUniform::laplacian3D(double x, double y, double z, dou
     // We take the lapl_u from ExactRegularGrid; 
     double r = sqrt(x*x + y*y + z*z); 
 
-    double decay = this->diffuseCoefficient(x,y,z,t);
-    double grad_K_dot_grad_U = this->diffuse_xderiv(x,y,z,t) * this->xderiv(x,y,z,t) +  this->diffuse_yderiv(x,y,z,t) * this->yderiv(x,y,z,t) + this->diffuse_zderiv(x,y,z,t) * this->zderiv(x,y,z,t); 
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
+    double grad_K_dot_grad_U = this->diffuse_xderiv(x,y,z,0.,t) * this->xderiv(x,y,z,0.,t) +  this->diffuse_yderiv(x,y,z,0.,t) * this->yderiv(x,y,z,0.,t) + this->diffuse_zderiv(x,y,z,0.,t) * this->zderiv(x,y,z,0.,t); 
 
     double lapl_u; 
     
@@ -216,7 +217,7 @@ double ExactRegularGridNonUniform::laplacian(double x, double y, double z, doubl
 //----------------------------------------------------------------------
 double ExactRegularGridNonUniform::xderiv(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double r = sqrt(x*x + y*y + z*z); 
     if (r < 1e-10) {
         return 0;
@@ -225,14 +226,14 @@ double ExactRegularGridNonUniform::xderiv(double x, double y, double z, double t
     // Derivative holding K constant
     double dU_with_K_const = - ( exp(-t * decay) * x * freq * sin(r*freq) ) / r;
     // Derivative of K holding U constant
-    double dK_with_U_const = this->diffuse_xderiv(x,y,z,t) * (*this)(x,y,z,t); 
+    double dK_with_U_const = this->diffuse_xderiv(x,y,z,0.,t) * (*this)(x,y,z,t); 
     return -t * dK_with_U_const + dU_with_K_const;
 }
 
 //----------------------------------------------------------------------
 double ExactRegularGridNonUniform::yderiv(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double r = sqrt(x*x + y*y + z*z); 
     if (r < 1e-10) {
         return 0;
@@ -240,14 +241,14 @@ double ExactRegularGridNonUniform::yderiv(double x, double y, double z, double t
     // Derivative holding K constant
     double dU_with_K_const = - ( exp(-t * decay) * y * freq * sin(r*freq) ) / r;
     // Derivative of K holding U constant
-    double dK_with_U_const = this->diffuse_yderiv(x,y,z,t) * (*this)(x,y,z,t); 
+    double dK_with_U_const = this->diffuse_yderiv(x,y,z,0.,t) * (*this)(x,y,z,t); 
     return -t * dK_with_U_const + dU_with_K_const;
 }
 
 //----------------------------------------------------------------------
 double ExactRegularGridNonUniform::zderiv(double x, double y, double z, double t)
 {
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
     double r = sqrt(x*x + y*y + z*z); 
     if (r < 1e-10) {
         return 0;
@@ -256,7 +257,7 @@ double ExactRegularGridNonUniform::zderiv(double x, double y, double z, double t
     double dU_with_K_const = - ( exp(-t * decay) * z * freq * sin(r*freq) ) / r;
     // Derivative of K holding U constant (e^(-Kt) * Cos(r a)) * dk/dx
     // dk/dx = 0.3t^2;
-    double dK_with_U_const = this->diffuse_zderiv(x,y,z,t) * (*this)(x,y,z,t); 
+    double dK_with_U_const = this->diffuse_zderiv(x,y,z,0.,t) * (*this)(x,y,z,t); 
     // The -t here is from our e^{-t * K}; d/dx(-t x) 
     return -t * dK_with_U_const + dU_with_K_const;
 }
@@ -264,11 +265,11 @@ double ExactRegularGridNonUniform::zderiv(double x, double y, double z, double t
 double ExactRegularGridNonUniform::tderiv(double x, double y, double z, double t)
 {
     double r = sqrt(x*x + y*y + z*z); 
-    double decay = this->diffuseCoefficient(x,y,z,t);
+    double decay = this->diffuseCoefficient(x,y,z,0.,t);
 
     // From mathematica time derivative of exact solution
     double dudt_with_K_const = - exp(-t*decay) * cos(freq * r);  // -e^(-Kt) ( Cos(r alpha)
-    double dKdt_with_U_const = this->diffuse_tderiv(x,y,z,t);   // 0.6 * t * X
+    double dKdt_with_U_const = this->diffuse_tderiv(x,y,z,0.,t);   // 0.6 * t * X
     return dKdt_with_U_const * dudt_with_K_const; 
 }
 #endif 

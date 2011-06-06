@@ -1,6 +1,9 @@
 #ifndef _EXACT_REGULAR_GRID_NON_UNIFORM_H_
 #define _EXACT_REGULAR_GRID_NON_UNIFORM_H_
 
+
+#define SOL_BASED_DIFF 1
+
 #include "exact_solution.h"
 
 class ExactRegularGridNonUniform : public ExactSolution
@@ -22,13 +25,28 @@ class ExactRegularGridNonUniform : public ExactSolution
         double tderiv(double x, double y, double z, double t); 
 
         // Return the diffusivity at node v (K=1 by default)
-        virtual double diffuseCoefficient(double x, double y, double z, double sol, double t=0.){
-            double diff = (x - 0.5)*(x-0.5); 
+        virtual double diffuseCoefficient(double x, double y, double z, double sol, double t){
+#if SOL_BASED_DIFF
+// Test:low temps have high diffusivity.
+if (x > 0) {
+    return 0;
+} else {
+   return exp(-sol);
+}
+double diff = exp(-sol);
+#else 
+double diff = (x - 0.5)*(x-0.5); 
+#endif 
             return diff;
         }
 
         virtual double diffuse_xderiv(double x, double y, double z, double sol, double t) {
+#if SOL_BASED_DIFF
+            // WRONG: means our exact solution will be wrong!
+            return 0.;
+#else 
             return 2.*(x-0.5);            
+#endif 
         }
         virtual double diffuse_yderiv(double x, double y, double z, double sol, double t) {
             return 0.;

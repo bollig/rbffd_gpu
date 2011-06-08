@@ -98,7 +98,8 @@ Grid* getGrid(int dim_num) {
     } else {
         cout << "ERROR! Dim > 3 Not Supported!" << endl;
     }
-    // grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
+    // Very important. otherwise we might not distribute work properly across CPUs
+//    grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
     return grid; 
 }
 
@@ -212,7 +213,7 @@ int main(int argc, char** argv) {
 
         // Construct a new domain given a grid. 
         // TODO: avoid filling sets Q, B, etc; just think of it as a copy constructor for a grid
-        Domain* original_domain = new Domain(grid, comm_unit->getSize()); 
+        Domain* original_domain = new Domain(dim, grid, comm_unit->getSize()); 
         // pre allocate pointers to all of the subdivisions
         std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
         // allocate and fill in details on subdivisions
@@ -385,9 +386,9 @@ int main(int argc, char** argv) {
     // Test DT: 
     // 1) get the minimum avg stencil radius (for stencil area--i.e., dx^2)
     double avgdx = 1000.;
-    std::vector<StencilType>& sten = grid->getStencils();
+    std::vector<StencilType>& sten = subdomain->getStencils();
     for (size_t i=0; i < sten.size(); i++) {
-        double dx = grid->getStencilRadius(i);
+        double dx = subdomain->getStencilRadius(i);
         if (dx < avgdx) {
             avgdx = dx; 
         }
@@ -403,18 +404,21 @@ int main(int argc, char** argv) {
 	printf("dt = %f (max_dt = %f; 0.5dx^2 = %f)\n", dt, max_dt, 0.5*sten_area);
     // This appears to be consistent with Chinchipatnam2006 (Thesis)
     // TODO: get more details on CFL for RBFFD
-    if (compute_eigenvalues) {
+    // note: checking stability only works if we have all weights for all
+    // nodes, so we dont do it in parallel
+    if (compute_eigenvalues && (comm_unit->getSize() == 1)) {
         RBFFD::EigenvalueOutput eigs = der->getEigenvalues();
         max_dt = 2. / eigs.max_neg_eig;
         printf("Suggested max_dt based on eigenvalues (2/lambda_max)= %f\n", max_dt);
-    } 
-    // CFL condition:
-    if (dt > max_dt) {
-        std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. According to eigenvalues, it must be less than " << max_dt << std::endl;
-        if (use_eigen_dt) {
-            dt = max_dt;
-        } else {
-            //exit(EXIT_FAILURE);
+        
+        // CFL condition:
+        if (dt > max_dt) {
+            std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. According to eigenvalues, it must be less than " << max_dt << std::endl;
+            if (use_eigen_dt) {
+                dt = max_dt;
+            } else {
+                //exit(EXIT_FAILURE);
+            }
         }
     }
 
@@ -429,8 +433,6 @@ int main(int argc, char** argv) {
 
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
-
-        std::cout << "\n*********** Solve Heat [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
 
         char label[256]; 
 #if 0
@@ -450,7 +452,21 @@ int main(int argc, char** argv) {
         comm_unit->barrier();
         tm["updates"]->stop();
 
-        pde->checkLocalError(exact, max_global_rel_error); 
+        if (!(iter % local_sol_dump_frequency)) {
+
+            std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+            pde->checkLocalError(exact, max_global_rel_error); 
+        }
+        if (!(iter % global_sol_dump_frequency)) {
+            tm["consolidate"]->start(); 
+            comm_unit->consolidateObjects(pde);
+            comm_unit->barrier();
+            tm["consolidate"]->stop(); 
+            if (comm_unit->isMaster()) {
+                std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+                pde->checkGlobalError(exact, grid, max_global_rel_error); 
+            }
+        }
 #if 0
         sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
         pde->printSolution(label); 

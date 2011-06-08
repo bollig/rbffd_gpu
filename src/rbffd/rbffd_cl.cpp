@@ -500,7 +500,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, size_t nb_nodes, size_t
 
     err = queue.finish();
 
-    std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
+//    std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
 
     for (int i = 0; i < nb_stencils; i++) {
 

@@ -14,6 +14,7 @@ class Domain : public Grid, public MPISendable {
     public: 		// Member Properties
         int id; 		// which Domain
         int comm_size; 	// Total number of Domains
+        int dim_num;
 
         double xmin;
         double xmax;
@@ -21,6 +22,13 @@ class Domain : public Grid, public MPISendable {
         double ymax;
         double zmin;
         double zmax;
+
+        // Sets in GLOBAL INDEXING: 
+        //   G, Q, D, O, B, QmB, R 
+        //
+        // Sets in LOCAL INDEXING: 
+        //   node_list, boundary_indices, boundary_normals
+
 
         // 1) These are the sets of stencil centers
         std::set<int> G; 			// All nodes required for computation
@@ -59,10 +67,10 @@ class Domain : public Grid, public MPISendable {
         Domain(const Domain& subdomain); // Copy constructor
 
         // Requires communicator to pass messages. This must be preconstructed comm_unit 
-        Domain(double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, int _comm_rank, int _comm_size);
+        Domain(int dim_num, double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, int _comm_rank, int _comm_size);
 
 
-        Domain(Grid* _grid, int _comm_size);
+        Domain(int dim_num, Grid* _grid, int _comm_size);
 
 
         //--------------------------
@@ -125,17 +133,22 @@ class Domain : public Grid, public MPISendable {
         {
             // TODO : need to support xmin != xmax && zmin != zmax but ymin==ymax 
             // 		  and other combinations
-            if (ymin == ymax) {
-                return isInsideRange(pt.x(), xmin, xmax, inclMX); 
-            } else if (zmin == zmax) {
-                return isInsideRange(pt.x(), xmin, xmax, inclMX) && isInsideRange(pt.y(), ymin, ymax, inclMY); 
-            } else {
-                return isInsideRange(pt.x(), xmin, xmax, inclMX) && isInsideRange(pt.y(), ymin, ymax, inclMY) && isInsideRange(pt.z(), zmin, zmax, inclMZ); 
-            } 
+
+//            std::cout << pt << "in [" << xmin << ", " << xmax << "]";
+            bool inside = isInsideRange(pt.x(), xmin, xmax, inclMX); 
+            if (dim_num > 1) {
+              //  std::cout << "x[" << ymin << ", " << ymax << "]"; 
+                inside &= isInsideRange(pt.y(), ymin, ymax, inclMY); 
+            }
+            if (dim_num > 2) { 
+                //std::cout << "x[" << zmin << ", " << zmax << "]";
+                inside &= isInsideRange(pt.z(), zmin, zmax, inclMZ); 
+            }
+//            std::cout << "==> " << inside << std::endl;
+            return inside; 
         }
 
         bool isInsideRange(double pt_, double rmin, double rmax, bool inclusiveMax) {
-
             if (inclusiveMax) {
                 return (pt_ >= rmin && pt_ <= rmax);
             } else {

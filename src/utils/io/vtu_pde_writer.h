@@ -154,13 +154,13 @@ class VtuPDEWriter : public PDEWriter
 
 
             abs_err = vtkDoubleArray::New();
-            abs_err_name = "Absolute Error";
+            abs_err_name = "Absolute Error By Node";
             abs_err->SetName(abs_err_name); 
             abs_err->SetNumberOfComponents(1);
             abs_err->SetNumberOfValues(subdomain->getNodeListSize());
 
             rel_err = vtkDoubleArray::New();
-            rel_err_name = "Relative Error";
+            rel_err_name = "Relative Error By Node";
             rel_err->SetName(rel_err_name); 
             rel_err->SetNumberOfComponents(1);
             rel_err->SetNumberOfValues(subdomain->getNodeListSize());
@@ -213,34 +213,50 @@ class VtuPDEWriter : public PDEWriter
             // construct unstructured grid by getting data from classes
             // write to file
 
+            std::vector<SolutionType> exact_solution(400); 
+
             // Update the solution: 
-            vtkDoubleArray* s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(sol_name); 
-            for (int i = 0; i < s->GetSize(); i++) {
-                s->SetValue(i, heat->getLocalSolution(i));
+            vtkDoubleArray* s0 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(sol_name); 
+            for (int i = 0; i < s0->GetSize(); i++) {
+                s0->SetValue(i, heat->getLocalSolution(i));
             }
 
-            s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(exact_name); 
-            for (int i = 0; i < s->GetSize(); i++) {
-                s->SetValue(i, heat->getExactSolution(i));
+            vtkDoubleArray* s1 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(exact_name); 
+            for (int i = 0; i < s1->GetSize(); i++) {
+                s1->SetValue(i, heat->getExactSolution(i));
             }
 
 #if 1
+#define USE_PDE_ERR 0
             // Update the abs_error: 
-            s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(abs_err_name); 
-            for (int i = 0; i < s->GetSize(); i++) {
-                s->SetValue(i, heat->getAbsoluteError(i));
+            vtkDoubleArray* s2 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(abs_err_name); 
+            for (int i = 0; i < s2->GetSize(); i++) {
+#if USE_PDE_ERR
+                s2->SetValue(i, heat->getAbsoluteError(i));
+#else 
+                double absval = fabs(s1->GetValue(i) - s0->GetValue(i)); 
+                s2->SetValue(i, absval);
+#endif 
             }
 
             // Update the abs_error: 
-            s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(rel_err_name); 
-            for (int i = 0; i < s->GetSize(); i++) {
-                s->SetValue(i, heat->getRelativeError(i));
+            vtkDoubleArray* s3 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(rel_err_name); 
+            for (int i = 0; i < s3->GetSize(); i++) {
+#if USE_PDE_ERR
+                s3->SetValue(i, heat->getRelativeError(i));
+#else 
+                 if (fabs(s1->GetValue(i)) > 1e-10) {
+                    s3->SetValue(i, s2->GetValue(i) / fabs( s1->GetValue(i)));
+                 } else {
+                    s3->SetValue(i, 0.);
+                 }
+#endif 
             }
 
             // Update the abs_error: 
-            s = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(diff_name); 
-            for (int i = 0; i < s->GetSize(); i++) {
-                s->SetValue(i, heat->getDiffusivityAtNode(i));
+            vtkDoubleArray* s4 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(diff_name); 
+            for (int i = 0; i < s4->GetSize(); i++) {
+                s4->SetValue(i, heat->getDiffusivityAtNode(i));
             }
 #endif 
             char fname[FILENAME_MAX]; 
@@ -250,6 +266,7 @@ class VtuPDEWriter : public PDEWriter
 //            uwriter->WriteNextTime(iter);
             uwriter->Write();
 
+            std::cout << "VTU FILE WRITTEN" << std::endl;
             //heat->writeLocalSolutionToFile(iter);
         }
 

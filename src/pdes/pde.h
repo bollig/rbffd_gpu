@@ -108,6 +108,7 @@ class PDE : public MPISendable
             (*exact_vec).resize(nodes.size());
             size_t i = 0; 
             for (it = nodes.begin(); it != nodes.end(); it++, i++) {
+                //exit(-1);
                 (*exact_vec)[i] = exact->at(*it); 
 
             }

@@ -375,7 +375,7 @@ void RBFFD_CL::updateFunctionSingle(size_t nb_nodes, double* u, bool forceFinish
 //
 void RBFFD_CL::applyWeightsForDerivDouble(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU)
 {
-    cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
+    //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
@@ -445,7 +445,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, size_t nb_nodes, size_t
 //
 void RBFFD_CL::applyWeightsForDerivSingle(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU)
 {
-    cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
+    //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {

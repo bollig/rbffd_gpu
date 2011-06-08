@@ -117,7 +117,7 @@ class RBFFD
 
         // Apply weights to an input solution vector and get the corresponding derivatives out
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
-            std::cout << "CPU: ";
+//            std::cout << "CPU: ";
             deriv.resize(u.size()); 
             RBFFD::applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0], isChangedU);
         }

@@ -73,7 +73,7 @@ ExactSolution* getExactSolution(int dim_num) {
         case 3: 
             // FIXME: have a non-uniform diffusion exact solution
             if (uniformDiffusion) {
-            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 0.5);
+            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 0.1);
             } else {
             exact = new ExactRegularGridNonUniform(dim_num, acos(-1.) / 2.);
             }
@@ -426,7 +426,7 @@ int main(int argc, char** argv) {
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
-        std::cout << "*********** Solve Heat [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+        std::cout << "\n*********** Solve Heat [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
 
         char label[256]; 
 #if 0

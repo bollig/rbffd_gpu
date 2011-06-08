@@ -428,7 +428,7 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
 //--------------------------------------------------------------------
 // NOTE: ignore isChangedU because we are on the CPU
 void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
-    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
+//    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyAll"]->start(); 
     size_t nb_stencils = grid_ref.getStencilsSize(); 
     double der;
@@ -464,16 +464,32 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
     size_t sz = weights_r.size();
     size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
 
+    std::vector<size_t>& boundary_indx = grid_ref.getBoundaryIndices();
+
+    // Use a std::set because it auto sorts as we insert
+    std::set<size_t> b_indices;
+    for (size_t i = 0; i < nb_bnd; i++) {
+        b_indices.insert(boundary_indx[i]);  
+    }
+
+    std::set<size_t> all_indices; 
+    for (size_t i = 0; i < sz; i++) {
+        all_indices.insert(i);  
+    }
+
+    std::set<size_t> i_indices; 
+    std::set_difference(all_indices.begin(), all_indices.end(), b_indices.begin(), b_indices.end(), std::inserter(i_indices, i_indices.end()));
+
 #if 0
     printf("sz= %lu\n", sz);
     printf("weights.size= %d\n", (int) weights_r.size());
 #endif 
 
-    printf("Generating matrix of weights for interior nodes\n");
+    printf("Generating matrix of weights for interior nodes ONLY\n");
     arma::mat eigmat(sz, sz);
     eigmat.zeros();
 
-#define BND_UPDATE 1
+#define BND_UPDATE 0
 #if BND_UPDATE
     for (int i=nb_bnd; i < sz; i++) {
         double* w = weights_r[i];
@@ -490,6 +506,25 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
 
 
     printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
+#else 
+    // Boundary nodes first with diagonal 1's.
+    for (int i=0; i < nb_bnd; i++) {
+        eigmat(i,i) = 1.0;
+    }
+   
+    // We put our interior nodes after the boundary nodes in matrix
+    std::set<size_t>::iterator it; 
+    int i = nb_bnd;
+    for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
+        double* w = weights_r[*it];
+        StencilType& st = grid_ref.getStencil(*it);
+        for (int j=0; j < st.size(); j++) {
+            eigmat(i,st[j])  = w[j];
+            // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
+        }
+    }
+
+    printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
 #endif 
     arma::cx_colvec eigval;
     arma::cx_mat eigvec;
@@ -497,15 +532,12 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
     eig_gen(eigval, eigvec, eigmat);
     //eigval.print("eigval");
 
-
     int count=0;
     double max_neg_eig = fabs(real(eigval(0)));
     double min_neg_eig = fabs(real(eigval(0)));
 
-
     // Compute number of unstable modes
     // Also compute the largest and smallest (in magnitude) eigenvalue
-#if BND_UPDATE
     for (int i=0; i < (sz-nb_bnd); i++) {
         double e = real(eigval(i));
         if (e > 0.) {
@@ -519,7 +551,6 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
             }
         }
     }
-#endif 
 
     if (count > 0) {
         printf("\n[RBFFD] ****** Error: Number unstable eigenvalues: %d *******\n\n", count);

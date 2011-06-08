@@ -427,6 +427,18 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
     double l2rel = (l2norm(sol_exact) > 1e-10) ? l2fabs/l2norm(sol_exact, 0, nb_pts) : 0.;
     double lifabs = linfnorm(sol_vec, sol_exact, 0, nb_pts); 
     double lirel = (linfnorm(sol_exact) > 1e-10) ? lifabs/linfnorm(sol_exact, 0, nb_pts) : 0.;
+#define COMPONENTWISE_ERR 0
+#if COMPONENTWISE_ERR
+    double comp_sum; 
+    for (size_t i=0; i < nb_pts; i++) {
+        double abserr = fabs(sol_vec[i] - sol_exact[i]); 
+        double relerr = (fabs(sol_exact[i]) > 1e-10) ? abserr / fabs(sol_exact[i]) : 0.;
+        std::cout <<  "AbsErr[" << i << "] = " << abserr << "\t" << sol_exact[i] << "\t";
+        std::cout <<  "RelErr[" << i << "] = " << relerr << std::endl;
+        comp_sum += abserr; 
+    }
+    std::cout << "SUM OF ABS ERR: " << comp_sum << std::endl;
+#endif 
 
     // Only print this when we're looking at the global norms
     if (!label.compare("")) {

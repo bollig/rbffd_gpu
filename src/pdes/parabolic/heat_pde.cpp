@@ -52,7 +52,7 @@ void HeatPDE::assemble()
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
 void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
 {   
-#define SOLVE_DIV_GRAD 1
+#define SOLVE_DIV_GRAD 0
 #if SOLVE_DIV_GRAD
     this->solveDivGrad(u_t, f_out, n, t);
 #else 

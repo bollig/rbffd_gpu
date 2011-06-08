@@ -201,8 +201,8 @@ double l2normWeighted(std::vector<double>& v1, std::vector<double>& avgDist, int
 //----------------------------------------------------------------------
 double linfnorm(std::vector<double>& v1, std::vector<double>& v2, int n1, int n2)
 {
-	double norm = -1.e10;
-	double err;
+	double norm = 0.0;
+	double err = 1000;
 
 	for (int i=n1; i < n2; i++) {
 		err = fabs(v1[i] - v2[i]);

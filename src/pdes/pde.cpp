@@ -159,10 +159,10 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
         recvSTL(&R_sub, my_rank, sender_rank);
         recvSTL(&U_R, my_rank, sender_rank);
 
-        cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
+       // cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-#if 0 
+#if 1 
             cout << "\t(Global Index): " << *rit << "\t (Local Index:" << grid_ref.g2l(
                         *rit) << ")\tOld U_G[" << grid_ref.g2l(*rit) << "]: " << U_G[grid_ref.g2l(
                         *rit)] << "\t New U_G[" << grid_ref.g2l(*rit) << "]: " << U_R[i]
@@ -202,6 +202,7 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
             }
         }
 
+        // This Q is already in global indexing
         sendSTL(&grid_ref.Q, my_rank, receiver_rank);
         sendSTL(&U_Q, my_rank, receiver_rank);
     //    cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
@@ -235,10 +236,12 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
     set<int>::iterator qit;
     int i = 0;
     for (qit = remoteQ.begin(); qit != remoteQ.end(); qit++, i++) {
-        global_U_G.insert(pair<int, double> (*qit, remoteU_Q[i]));
+        size_t l_indx = i; 
+        size_t g_indx = *qit;
+        global_U_G[g_indx] = remoteU_Q[l_indx]; 
     }
 
-    cout << "RECEIVED FINAL FROM CPU " << sender_rank << endl;
+    cout << "RECEIVED FINAL (size=" << remoteQ.size() << " FROM CPU " << sender_rank << endl;
 #if DEBUG
     cout << "NEW FINAL_U_G: " << endl;
     map<int, double>::iterator it;
@@ -253,7 +256,9 @@ int PDE::initFinal() {
     set<int>::iterator qit;
     int i = 0;
     for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
-        global_U_G.insert(pair<int, double> (*qit, U_G[grid_ref.g2l(*qit)]));
+        size_t l_indx = grid_ref.g2l(*qit); 
+        size_t g_indx = *qit;
+        global_U_G[g_indx] = U_G[l_indx]; 
     }
 }
 
@@ -266,6 +271,7 @@ int PDE::updateFinal() {
         size_t g_indx = *qit;
         global_U_G[g_indx] = U_G[l_indx]; 
     }
+    std::cout << "GLOBAL_U_G.size() = " << global_U_G.size() << std::endl;
 }
 
 void PDE::printSolution(std::string set_label) {

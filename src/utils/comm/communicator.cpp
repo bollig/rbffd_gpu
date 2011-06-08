@@ -96,6 +96,7 @@ void Communicator::consolidateObjects(MPISendable* object)
         static int initCount=0; 
         if (!initCount) {
             object->initFinal();
+            initCount ++;
         }
 
         // Add master CPU contribution to the final solution

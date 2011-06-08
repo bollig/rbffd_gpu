@@ -73,7 +73,8 @@ ExactSolution* getExactSolution(int dim_num) {
         case 3: 
             // FIXME: have a non-uniform diffusion exact solution
             if (uniformDiffusion) {
-            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 0.1);
+                // last parameter is diffusivity (remember K = 1/Re)
+            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 1.0);
             } else {
             exact = new ExactRegularGridNonUniform(dim_num, acos(-1.) / 2.);
             }
@@ -165,6 +166,7 @@ int main(int argc, char** argv) {
     double end_time = settings->GetSettingAs<double>("END_TIME", ProjectSettings::optional, "1.0"); 
     double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
+    int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "1"); 
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
     int use_eigen_dt = settings->GetSettingAs<int>("USE_EIGEN_DT", ProjectSettings::optional, "1");
 
@@ -281,6 +283,13 @@ int main(int argc, char** argv) {
         der->setEpsilon(epsilon);
     }
 
+#if 0
+        der->setWeightType(RBFFD::ContourSVD);
+        der->setWeightType(RBFFD::Direct);
+#else 
+        der->setWeightType((RBFFD::WeightType)weight_method);
+#endif 
+ 
     // Try loading all the weight files
     int err = der->loadFromFile(RBFFD::X); 
     err += der->loadFromFile(RBFFD::Y); 
@@ -294,11 +303,6 @@ int main(int argc, char** argv) {
         // NOTE: good test for Direct vs Contour
         // Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
         // 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
-#if 1
-        der->setWeightType(RBFFD::ContourSVD);
-#else 
-        der->setWeightType(RBFFD::Direct);
-#endif 
         der->computeAllWeightsForAllStencils();
         tm["weights"]->stop(); 
 
@@ -410,7 +414,7 @@ int main(int argc, char** argv) {
         if (use_eigen_dt) {
             dt = max_dt;
         } else {
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
         }
     }
 

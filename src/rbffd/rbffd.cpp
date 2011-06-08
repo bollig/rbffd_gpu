@@ -27,6 +27,9 @@
     derTypeStr[2] = "z";
     derTypeStr[3] = "lapl";
 
+    weightTypeStr[0] = "direct"; 
+    weightTypeStr[1] = "contoursvd"; 
+
     // each stencil has a support specified at its center
     // but more importantly, the stencil nodes (neighbors) 
     // also have their own supports 
@@ -504,7 +507,6 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
         eigmat(i,i) = 1.0;
     }
 
-
     printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
 #else 
     // Boundary nodes first with diagonal 1's.
@@ -538,7 +540,8 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
 
     // Compute number of unstable modes
     // Also compute the largest and smallest (in magnitude) eigenvalue
-    for (int i=0; i < (sz-nb_bnd); i++) {
+    //for (int i=0; i < (sz-nb_bnd); i++) {
+    for (int i=0; i < sz; i++) {
         double e = real(eigval(i));
         if (e > 0.) {
             count++;
@@ -551,6 +554,7 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
             }
         }
     }
+    count -= nb_bnd; // since we know at least nb_bnd eigenvalues are are (1+0i)
 
     if (count > 0) {
         printf("\n[RBFFD] ****** Error: Number unstable eigenvalues: %d *******\n\n", count);
@@ -834,7 +838,8 @@ void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, d
     size_t nb_radii = avg_stencil_radius.size(); 
 
     std::cout << "NB_STENCILS: " << nb_stencils << ", NB_RADII: " << nb_radii << std::endl;
-
+// Types: 0 : Mine. 1 : Sarler2006 
+#define VARIABLE_EPS_TYPE 1
     var_epsilon.resize(nb_stencils);
     for (int i=0; i < nb_stencils; i++) {
         StencilType& stencil = grid_ref.getStencil(i);
@@ -857,8 +862,14 @@ void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, d
         // we use stencils[i][0] to get the index for the stencil center and its corresponding "avg_radius" 
         //std::cout << "var_epsilon[" << i << "] = " << alpha << " * sqrt( " << stencils[i].size() << " / avg_radius_[ " << stencils[i][0] << " ] " << std::endl; 
         // the indx on var_epsilon should be linear 0->stencils.size(), but just in case we have random access based on stencil center index
+#if (VARIABLE_EPS_TYPE == 0)
         var_epsilon[stencil[0]] = (alpha * sqrt(stencil.size())) / avg_radius_[stencil[0]] ;
-
+#else 
+        // alpha = c. Sarler2006 (Meshfree Explicit Local Radial Basis Function ...) 
+        // cr = c * max(r_i) where r_i is the distance to each node in the stencil
+        // Of course we have eps = 1/(cr)
+        var_epsilon[stencil[0]] = 1./ ( alpha * grid_ref.getMaxStencilRadius(i) ); 
+#endif 
         //printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
     }
     std::stringstream ss(std::stringstream::out); 
@@ -988,7 +999,7 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
 
         int N = 128; // Why can't I increase N?
         arma::mat weights_new = sten.execute(N);
-        weights_new * rad*rad;
+        //weights_new * rad*rad;
 
         // There should be a better way of doing this
         size_t n = weights_new.n_rows;
@@ -1030,7 +1041,7 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
 //----------------------------------------------------------------------------
 std::string RBFFD::getFileDetailString(DerType which) {
     std::stringstream ss(std::stringstream::out); 
-    ss << derTypeStr[which] << "_weights_" << this->getEpsString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();  
+    ss << derTypeStr[which] << "_weights_" << weightTypeStr[weightMethod] << "_" << this->getEpsString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();  
     return ss.str();
 }
 

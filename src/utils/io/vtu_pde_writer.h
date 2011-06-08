@@ -213,8 +213,6 @@ class VtuPDEWriter : public PDEWriter
             // construct unstructured grid by getting data from classes
             // write to file
 
-            std::vector<SolutionType> exact_solution(400); 
-
             // Update the solution: 
             vtkDoubleArray* s0 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(sol_name); 
             for (int i = 0; i < s0->GetSize(); i++) {
@@ -227,7 +225,7 @@ class VtuPDEWriter : public PDEWriter
             }
 
 #if 1
-#define USE_PDE_ERR 0
+#define USE_PDE_ERR 1
             // Update the abs_error: 
             vtkDoubleArray* s2 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(abs_err_name); 
             for (int i = 0; i < s2->GetSize(); i++) {

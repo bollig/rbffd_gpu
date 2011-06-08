@@ -29,7 +29,8 @@ class RBFFD
         enum DerType {X, Y, Z, LAPL};
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 
-        enum WeightType {Direct=0, ContourSVD};
+        enum WeightType {Direct, ContourSVD};
+        std::string weightTypeStr[2]; 
 
         typedef struct e_val_output {
             double max_neg_eig; 
@@ -107,7 +108,6 @@ class RBFFD
 
         // Single RHS ContourSVD
         void computeWeightsForStencil_ContourSVD(DerType, int st_indx);
-
 
 
         void setWeightType(RBFFD::WeightType type) {

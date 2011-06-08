@@ -1,0 +1,27 @@
+A = self.GetInputDataObject(0, 0)
+s0 = A.GetPointData().GetScalars('Computed Solution')
+s1 = A.GetPointData().GetScalars('Exact Solution')
+out = vtk.vtkDoubleArray()
+out.SetName('Set Signed Err')
+out2 = vtk.vtkDoubleArray()
+out2.SetName('Set Rel Err')
+out3 = vtk.vtkDoubleArray()
+out3.SetName('Set Rel Err')
+for i in xrange(A.GetNumberOfPoints()):
+    val1 = s0.GetValue(i)
+    val2 = s1.GetValue(i)
+    val_err = val1 - val2
+    out.InsertNextValue(val_err)
+    out2.InsertNextValue(abs(val_err))
+    if val1 > 1e-10:
+        out3.InsertNextValue(abs(val_err)/abs(val1))
+    else: 
+        out3.InsertNextValue(0)
+
+
+# Initialize the output and add the labels array
+output = self.GetOutput()
+output.ShallowCopy(A)
+output.GetPointData().AddArray(out)
+output.GetPointData().AddArray(out2)
+output.GetPointData().AddArray(out3)

@@ -73,7 +73,9 @@ class TimeDependentPDE : public PDE
             NodeType& pt = grid_ref.getNode(indx); 
             SolutionType ex = exact_ptr->at(pt, cur_time); 
             SolutionType app = this->getLocalSolution(indx);
-            return l2norm(ex - app) / l2norm(ex);
+            double l2fabs = l2norm(ex - app);
+            double rel = (l2norm(ex) > 1e-10) ? l2fabs/l2norm(ex) : 0.;
+            return rel;
         }
  
         virtual SolutionType getDiffusivityAtNode(size_t indx) {

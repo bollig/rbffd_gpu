@@ -250,7 +250,7 @@ class VtuPDEWriter : public PDEWriter
 //            uwriter->WriteNextTime(iter);
             uwriter->Write();
 
-            heat->writeLocalSolutionToFile(iter);
+            //heat->writeLocalSolutionToFile(iter);
         }
 
         void writeGlobalVTU(int iter) {
@@ -265,8 +265,7 @@ class VtuPDEWriter : public PDEWriter
          * this to only write METADATA once at initialization. 
          */
         virtual void writeInitial() { 
-            subdomain->writeToFile();
-
+//            subdomain->writeToFile();
             if (comm_unit->isMaster()) 
                 this->writeMetaData(); 
         }

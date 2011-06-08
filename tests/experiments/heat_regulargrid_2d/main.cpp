@@ -384,6 +384,39 @@ int main(int argc, char** argv) {
     PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
 #endif 
 
+    // Test DT: 
+    // 1) get the minimum avg stencil radius (for stencil area--i.e., dx^2)
+    double avgdx = 1000.;
+    std::vector<StencilType>& sten = grid->getStencils();
+    for (size_t i=0; i < sten.size(); i++) {
+        double dx = grid->getStencilRadius(i);
+        if (dx < avgdx) {
+            avgdx = dx; 
+        }
+    }
+    // Laplacian = d^2/dx^2
+    double sten_area = avgdx*avgdx;
+    // Not sure where Gordon came up with this parameter.
+    double nu = 0.2;
+    double max_dt = nu*(sten_area);
+	printf("dt = %f (max_dt = %f\n", dt, max_dt);
+    // This appears to be consistent with Chinchipatnam2006 (Thesis)
+    // TODO: get more details on CFL for RBFFD
+    RBFFD::EigenvalueOutput eigs = der->getEigenvalues();
+	max_dt = 2. / eigs.max_neg_eig;
+	printf("dt (2/lambda_max)= %f\n", max_dt);
+    // CFL condition:
+    //      c dt < dx 
+    // c is a constant dependent on the methods chosen for the solution. 
+    // For example, in an Euler timescheme we have c = 
+    //
+    // dt <= 1/h
+    if (dt > max_dt) {
+        std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. Adjusting it to: " << max_dt << std::endl;
+        dt = max_dt;
+        exit(EXIT_FAILURE);
+    }
+
     //    subdomain->printCenterMemberships(subdomain->G, "G = " );
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
     int iter;

@@ -11,7 +11,8 @@
 // (up to 3 right now) 
     RBFFD::RBFFD(Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
 : grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
-    weightsModified(false), weightMethod(RBFFD::Direct)
+    weightsModified(false), weightMethod(RBFFD::Direct), 
+    eigenvalues_computed(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
@@ -526,6 +527,10 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
         output->max_neg_eig = max_neg_eig; 
         output->min_neg_eig = min_neg_eig; 
     }
+
+    eigenvalues_computed = true;
+    cachedEigenvalues.max_neg_eig = max_neg_eig; 
+    cachedEigenvalues.min_neg_eig = min_neg_eig;
 
     return max_neg_eig;
 }

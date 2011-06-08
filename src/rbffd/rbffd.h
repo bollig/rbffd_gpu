@@ -34,6 +34,7 @@ class RBFFD
             double min_neg_eig;
         } EigenvalueOutput;
 
+
     protected: 
         EB::TimerList tm; 
 
@@ -72,6 +73,10 @@ class RBFFD
         // Have any parameters been modified?
         int modified; 
         bool weightsModified;
+
+
+        EigenvalueOutput cachedEigenvalues;
+        bool eigenvalues_computed;
 
         //TODO: add choice for RBF (only one option at the moment)
 
@@ -172,6 +177,13 @@ class RBFFD
 
         void writeToFile(DerType which, std::string filename="weights.mtx");
         int  loadFromFile(DerType which, std::string filename="weights.mtx");
+
+        EigenvalueOutput getEigenvalues() {
+            if (!eigenvalues_computed) {
+                this->computeEigenvalues(LAPL); 
+            }
+            return cachedEigenvalues;
+        }
 
     protected: 
         void setupTimers(); 

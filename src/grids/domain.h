@@ -134,6 +134,7 @@ class Domain : public Grid, public MPISendable {
             // TODO : need to support xmin != xmax && zmin != zmax but ymin==ymax 
             // 		  and other combinations
 
+#if 0
 //            std::cout << pt << "in [" << xmin << ", " << xmax << "]";
             bool inside = isInsideRange(pt.x(), xmin, xmax, inclMX); 
             if (dim_num > 1) {
@@ -146,6 +147,16 @@ class Domain : public Grid, public MPISendable {
             }
 //            std::cout << "==> " << inside << std::endl;
             return inside; 
+#else 
+            if (ymin == ymax) {
+                return isInsideRange(pt.x(), xmin, xmax, inclMX); 
+            } else if (zmin == zmax) {
+                return isInsideRange(pt.x(), xmin, xmax, inclMX) && isInsideRange(pt.y(), ymin, ymax, inclMY); 
+            } else {
+                return isInsideRange(pt.x(), xmin, xmax, inclMX) && isInsideRange(pt.y(), ymin, ymax, inclMY) && isInsideRange(pt.z(), zmin, zmax, inclMZ); 
+            } 
+            
+#endif 
         }
 
         bool isInsideRange(double pt_, double rmin, double rmax, bool inclusiveMax) {

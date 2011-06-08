@@ -87,6 +87,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
     for (int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** CPU %d ***************** \n", i);
         // Forms sets (Q,O,R) and l2g/g2l maps
+        std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
         subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii); 
     }
 
@@ -254,8 +255,8 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     //
     set<int>::iterator qit;
 
-    printf("Domain %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f\n", id, xmin, xmax,
-            ymin, ymax, zmin, zmax);
+    printf("Domain %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f (Checking %dD)\n", id, xmin, xmax,
+            ymin, ymax, zmin, zmax, dim_num);
 //    printf("NB_NODES: %d\n", rbf_centers.size());
  //   printf("Q_NODES: %d\n", Q.size());
  //   printf("NB_STENCILS: %d\n", stencils.size());
@@ -295,6 +296,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     //Create set of stencil points of all elements of Q (ineffecient since there are repeats)
     set<int> SQ; 
     stencilSet(Q, stencils, &SQ);
+    std::cout << "SQ.size before difference: " << SQ.size() << std::endl;
 
     // Set of nodes from stencils that are not in Q (i.e. not on the Domain)
     // compute set R = S(Q) \ Q

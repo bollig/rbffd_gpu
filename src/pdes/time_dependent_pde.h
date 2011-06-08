@@ -11,6 +11,8 @@ class TimeDependentPDE : public PDE
     protected: 
         // The current time of our solution (typ. # of iterations * dt)
         double cur_time;    
+        double start_time;    
+        double end_time;    
 
     // This count should match the number of TimeScheme types
     public:
@@ -47,6 +49,11 @@ class TimeDependentPDE : public PDE
 
         void setTime(double current_time) { cur_time = current_time; }
         double getTime() { return cur_time; }
+        void setStartEndTime(double start, double end) { 
+            start_time = start;
+            cur_time = start_time; 
+            end_time = end;
+        } 
 
         virtual SolutionType getExactSolution(size_t indx) {
             NodeType& pt = grid_ref.getNode(indx); 

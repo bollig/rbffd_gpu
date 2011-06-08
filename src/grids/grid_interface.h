@@ -3,6 +3,7 @@
 
 #include <vector> 
 #include <string>
+#include <sstream>
 #include "Vec3.h"
 #include "KDTree.h"
 
@@ -251,6 +252,12 @@ class Grid
         // expandFilename(...)) 
         // NOTE: replace spaces with '_'
         virtual std::string getFileDetailString(); 
+        
+        std::string getStencilDetailString() { 
+            std::stringstream ss(std::stringstream::out);
+            ss << "stsize_" << this->getMaxStencilSize(); 
+            return ss.str();
+        }
 
         virtual std::string className() { return "grid"; }
 

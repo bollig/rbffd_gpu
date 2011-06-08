@@ -165,6 +165,8 @@ int main(int argc, char** argv) {
     double end_time = settings->GetSettingAs<double>("END_TIME", ProjectSettings::optional, "1.0"); 
     double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
+    int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
+    int use_eigen_dt = settings->GetSettingAs<int>("USE_EIGEN_DT", ProjectSettings::optional, "1");
 
     if (comm_unit->isMaster()) {
 
@@ -279,16 +281,11 @@ int main(int argc, char** argv) {
         der->setEpsilon(epsilon);
     }
 
-    // We specify a rank on the filename because we compute these weights independently within subdomains
-    char weight_name[256]; 
-    sprintf(weight_name, "x_weights_rank%d.mtx", comm_unit->getRank()); 
-    int err = der->loadFromFile(RBFFD::X, weight_name);
-    sprintf(weight_name, "y_weights_rank%d.mtx", comm_unit->getRank()); 
-    err += der->loadFromFile(RBFFD::Y, weight_name); 
-    sprintf(weight_name, "z_weights_rank%d.mtx", comm_unit->getRank()); 
-    err += der->loadFromFile(RBFFD::Z, weight_name); 
-    sprintf(weight_name, "lapl_weights_rank%d.mtx", comm_unit->getRank()); 
-    err += der->loadFromFile(RBFFD::LAPL, weight_name); 
+    // Try loading all the weight files
+    int err = der->loadFromFile(RBFFD::X); 
+    err += der->loadFromFile(RBFFD::Y); 
+    err += der->loadFromFile(RBFFD::Z); 
+    err += der->loadFromFile(RBFFD::LAPL); 
 
     if (err) { 
         printf("start computing weights\n");
@@ -307,14 +304,10 @@ int main(int argc, char** argv) {
 
         cout << "end computing weights" << endl;
 
-        sprintf(weight_name, "x_weights_rank%d.mtx", comm_unit->getRank()); 
-        der->writeToFile(RBFFD::X, weight_name); 
-        sprintf(weight_name, "y_weights_rank%d.mtx", comm_unit->getRank()); 
-        der->writeToFile(RBFFD::Y, weight_name); 
-        sprintf(weight_name, "z_weights_rank%d.mtx", comm_unit->getRank()); 
-        der->writeToFile(RBFFD::Z, weight_name); 
-        sprintf(weight_name, "lapl_weights_rank%d.mtx", comm_unit->getRank()); 
-        der->writeToFile(RBFFD::LAPL, weight_name); 
+        der->writeToFile(RBFFD::X);
+        der->writeToFile(RBFFD::Y);
+        der->writeToFile(RBFFD::Z);
+        der->writeToFile(RBFFD::LAPL);
 
         cout << "end write weights to file" << endl;
     }
@@ -333,7 +326,7 @@ int main(int argc, char** argv) {
         der_test->testAllFunctions(exitIfTestFailed);
         // For now we can only test eigenvalues on an MPI size of 1 (we could distribute with Par-Eiegen solver)
         if (comm_unit->getSize() == 1) {
-            if (settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0")) 
+            if (compute_eigenvalues) 
             {
                 // FIXME: why does this happen? Perhaps because X Y and Z are unidirectional? 
                 // Test X and 4 eigenvalues are > 0
@@ -363,6 +356,7 @@ int main(int argc, char** argv) {
         // true here indicates the weights are computed. 
         pde = new HeatPDE(subdomain, der, comm_unit, uniformDiffusion, true);
     }
+    pde->setStartEndTime(start_time, end_time);
 
     pde->fillInitialConditions(exact);
 
@@ -397,25 +391,30 @@ int main(int argc, char** argv) {
     // Laplacian = d^2/dx^2
     double sten_area = avgdx*avgdx;
     // Not sure where Gordon came up with this parameter.
-    double nu = 0.2;
+    // for second centered difference and euler time we have nu = 0.5
+    double nu = 0.1;
+    //          dt <= nu/dx^2 
+    // is valid for stability in some FD schemes. 
     double max_dt = nu*(sten_area);
-	printf("dt = %f (max_dt = %f\n", dt, max_dt);
+	printf("dt = %f (max_dt = %f; 0.5dx^2 = %f)\n", dt, max_dt, 0.5*sten_area);
     // This appears to be consistent with Chinchipatnam2006 (Thesis)
     // TODO: get more details on CFL for RBFFD
-    RBFFD::EigenvalueOutput eigs = der->getEigenvalues();
-	max_dt = 2. / eigs.max_neg_eig;
-	printf("dt (2/lambda_max)= %f\n", max_dt);
+    if (compute_eigenvalues) {
+        RBFFD::EigenvalueOutput eigs = der->getEigenvalues();
+        max_dt = 2. / eigs.max_neg_eig;
+        printf("Suggested max_dt based on eigenvalues (2/lambda_max)= %f\n", max_dt);
+    } 
     // CFL condition:
-    //      c dt < dx 
-    // c is a constant dependent on the methods chosen for the solution. 
-    // For example, in an Euler timescheme we have c = 
-    //
-    // dt <= 1/h
     if (dt > max_dt) {
-        std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. Adjusting it to: " << max_dt << std::endl;
-        dt = max_dt;
-        exit(EXIT_FAILURE);
+        std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. According to eigenvalues, it must be less than " << max_dt << std::endl;
+        if (use_eigen_dt) {
+            dt = max_dt;
+        } else {
+            exit(EXIT_FAILURE);
+        }
     }
+
+    std::cout << "[MAIN] ********* USING TIMESTEP dt=" << dt << " ********** " << std::endl;
 
     //    subdomain->printCenterMemberships(subdomain->G, "G = " );
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
@@ -427,7 +426,7 @@ int main(int argc, char** argv) {
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
-        std::cout << "*********** Solve Heat (Iteration: " << iter << ") *************" << endl;
+        std::cout << "*********** Solve Heat [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
 
         char label[256]; 
 #if 0

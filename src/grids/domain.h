@@ -72,9 +72,9 @@ class Domain : public Grid, public MPISendable {
 
         virtual std::string getFileDetailString() {
             char prefix[256]; 
-            sprintf(prefix, "rank%d_", this->id); 
-            std::string s = prefix; 
-            s.append(Grid::getFileDetailString()); 
+            sprintf(prefix, "_rank%d", this->id); 
+            std::string s = Grid::getFileDetailString(); 
+            s.append(prefix); 
             return s;
         }
         virtual void printNodeList(std::string label) { 

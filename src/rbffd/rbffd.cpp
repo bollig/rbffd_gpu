@@ -22,6 +22,11 @@
         this->weights[i].resize(nb_rbfs, NULL); 
     }
 
+    derTypeStr[0] = "x";
+    derTypeStr[1] = "y";
+    derTypeStr[2] = "z";
+    derTypeStr[3] = "lapl";
+
     // each stencil has a support specified at its center
     // but more importantly, the stencil nodes (neighbors) 
     // also have their own supports 
@@ -41,6 +46,7 @@ RBFFD::~RBFFD() {
         }
     }
 }
+
 //--------------------------------------------------------------------
 
 // Compute the full set of derivative weights for all stencils 
@@ -656,7 +662,7 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
     for (size_t i = 0; i < stencil.size(); i++) {
         expected_nz += stencil[i].size();
     }
-    fprintf(stdout, "Attempting to read %lu weights (%lu, %lu) from %s\n", nz, M, N, filename.c_str()); 
+    fprintf(stdout, "Attempting to read %lu weights (%lu, %lu) from %s\n", expected_nz, M, N, filename.c_str()); 
 
     if (M != expected_M) {
         std::cout << "Error! not enough stencils in the file" << std::endl;
@@ -824,6 +830,9 @@ void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, d
 
         //printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
     }
+    std::stringstream ss(std::stringstream::out); 
+    ss << "variable_epsilon_" << alpha << "_" << beta;
+    eps_string = ss.str();
 }
 
 
@@ -985,3 +994,27 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
     }
     ;
 }
+
+
+//----------------------------------------------------------------------------
+std::string RBFFD::getFileDetailString(DerType which) {
+    std::stringstream ss(std::stringstream::out); 
+    ss << derTypeStr[which] << "_weights_" << this->getEpsString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();  
+    return ss.str();
+}
+
+//----------------------------------------------------------------------------
+std::string RBFFD::getFilename(DerType which, std::string base_filename) {
+    std::stringstream ss(std::stringstream::out);
+    ss << this->getFileDetailString(which) << ".mtx";
+    std::string filename = ss.str();
+    return filename;
+}
+
+//----------------------------------------------------------------------------
+std::string RBFFD::getFilename(DerType which) {
+    std::stringstream ss(std::stringstream::out); 
+    ss << "weights_" << this->className();
+    return this->getFilename(which, ss.str()); 
+}
+

@@ -27,6 +27,8 @@ class RBFFD
 {
     public:
         enum DerType {X, Y, Z, LAPL};
+        std::string derTypeStr[NUM_DERIV_TYPES]; 
+
         enum WeightType {Direct=0, ContourSVD};
 
         typedef struct e_val_output {
@@ -38,11 +40,11 @@ class RBFFD
     protected: 
         EB::TimerList tm; 
 
-        std::string DerTypeSTR[10];
-
         WeightType weightMethod; 
 
         Grid& grid_ref;
+
+        std::string eps_string;
 
         // Weight array. Each element is associated with one DerType (see above). 
         std::vector<double*> weights[NUM_DERIV_TYPES]; 
@@ -142,6 +144,9 @@ class RBFFD
             for (int i = 0; i < var_epsilon.size(); i++) {
                 this->var_epsilon[i] = eps; 
             }
+            std::stringstream ss(std::stringstream::out); 
+            ss << "uniform_epsilon_" << eps;
+            eps_string = ss.str();
         }
 
         void setEpsilon(std::vector<double>& lst_of_epsilon) {
@@ -154,6 +159,7 @@ class RBFFD
             for (int i = 0; i < var_epsilon.size(); i++) {
                 this->var_epsilon[i] = lst_of_epsilon[i]; 
             }
+            eps_string = "manual_epsilon";
         }
 
         void setVariableEpsilon(double alpha=1.0f, double beta=1.0f) {
@@ -175,8 +181,10 @@ class RBFFD
         std::vector<double*>& getWeights(DerType choice) { return weights[choice]; }
         double*& getStencilWeights(DerType choice, int st_indx) { return weights[choice][st_indx]; } 
 
-        void writeToFile(DerType which, std::string filename="weights.mtx");
-        int  loadFromFile(DerType which, std::string filename="weights.mtx");
+        void writeToFile(DerType which, std::string filename);
+        void writeToFile(DerType which) { this->writeToFile(which, this->getFilename(which)); }
+        int  loadFromFile(DerType which, std::string filename);
+        int  loadFromFile(DerType which){ return this->loadFromFile(which, this->getFilename(which)); }
 
         EigenvalueOutput getEigenvalues() {
             if (!eigenvalues_computed) {
@@ -193,6 +201,30 @@ class RBFFD
         void getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs);
         void getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs);
         void getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& lhs);
+
+        // =====================================================================
+        // Convert a basic filename like "output_file" to something more
+        // descriptive and appropriate to the pde like
+        // "output_file_ncar_poisson1_iteration_10.ascii" 
+        std::string getFilename(DerType which, std::string base_filename);
+
+        // Get a filename appropriate for output from this class
+        // same as getFilename(std::string, int) however it uses 
+        // the class's internal name instead of a user specified string. 
+        std::string getFilename(DerType which); 
+
+        // Get a string that gives some detail about the grid (used by
+        // expandFilename(...)) 
+        // NOTE: replace spaces with '_'
+        virtual std::string getFileDetailString(DerType which); 
+
+        virtual std::string getEpsString() {
+            return eps_string; 
+        }
+
+        virtual std::string className() { return "rbffd"; }
+        // =====================================================================
+
 };
 
 #endif 

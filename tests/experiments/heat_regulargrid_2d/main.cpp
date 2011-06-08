@@ -73,7 +73,7 @@ ExactSolution* getExactSolution(int dim_num) {
         case 3: 
             // FIXME: have a non-uniform diffusion exact solution
             if (uniformDiffusion) {
-            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 1.0);
+            exact = new ExactRegularGrid(dim_num, acos(-1.) / 2., 0.5);
             } else {
             exact = new ExactRegularGridNonUniform(dim_num, acos(-1.) / 2.);
             }

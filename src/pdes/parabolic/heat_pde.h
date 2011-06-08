@@ -49,6 +49,9 @@ class HeatPDE : public TimeDependentPDE
     protected: 
         void setupTimers(); 
 
+        void solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t);
+        void solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t);
+
         virtual std::string className() {return "heat";}
 }; 
 #endif 

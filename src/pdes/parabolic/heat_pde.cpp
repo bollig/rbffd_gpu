@@ -51,15 +51,75 @@ void HeatPDE::assemble()
 // For the diffusion equation this is f(t,u(t)) = laplacian(u(t))
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
 void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
+{   
+#define SOLVE_DIV_GRAD 1
+#if SOLVE_DIV_GRAD
+    this->solveDivGrad(u_t, f_out, n, t);
+#else 
+    this->solveRewrittenLaplacian(u_t, f_out, n, t);
+#endif 
+}
+
+void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
+{
+    // x,y,z components of the gradient of u_t
+    std::vector<SolutionType> grad_x(n); 
+    std::vector<SolutionType> grad_y(n);
+    std::vector<SolutionType> grad_z(n);
+
+    // diffusion coeffs 
+    std::vector<SolutionType> diffusion(n);  
+    
+    // Equation is \div{K \cdot \grad{u}}
+    std::vector<SolutionType> K_dot_grad_u(n);  
+
+    // x,y,z components of divergence of (K \cdot \grad{u_t})
+    std::vector<SolutionType> div_x(n); 
+    std::vector<SolutionType> div_y(n);
+    std::vector<SolutionType> div_z(n);
+
+    der_ref.applyWeightsForDeriv(RBFFD::X, u_t, grad_x, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::Y, u_t, grad_y, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::Z, u_t, grad_z, true); 
+
+    // Get the diffusivity of the domain for at the current time
+    this->fillDiffusion(diffusion, u_t, t);
+
+    // Compute K dot grad{u}
+    // FIXME: we assume scalar diffusion, make this 
+    for (size_t i = 0; i < n; i++) {
+        grad_x[i] *= diffusion[i];
+        grad_y[i] *= diffusion[i];
+        grad_z[i] *= diffusion[i];
+    }
+
+    // Get divergence of quanity (K dot grad{u})
+    der_ref.applyWeightsForDeriv(RBFFD::X, grad_x, div_x, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::Y, grad_y, div_y, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::Z, grad_z, div_z, true); 
+
+    // Finish computing divergence
+    for (size_t i = 0; i < n; i++) {
+        (*f_out)[i] = div_x[i] + div_y[i] + div_z[i]; 
+    }
+}
+
+
+void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
 {
     std::vector<SolutionType> u_lapl_deriv(n); 
     std::vector<SolutionType> K_dot_lapl_U(n); 
     std::vector<SolutionType> diffusion(n);  
 
+#if 0
+    // EFB06012011: need to add this test for splitting the lapl(u) into
+    // separate d/dx(d/dx(u)), d/dy(d/dy) ops
     if (splitLaplacian) {
         std::cout << "[HeatPDE] todo: finish split laplacian. analytic derivs of RBFs need to be updated, plus new RHS types for RBFFD created.\n";
         exit(EXIT_FAILURE); 
-    } else {
+    } else 
+#endif 
+    {
         der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, u_lapl_deriv); 
     }
 
@@ -70,6 +130,9 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
         K_dot_lapl_U[i] = diffusion[i] * u_lapl_deriv[i]; 
     }
 
+#if 0
+    // EFB06012011
+    // To compare with the div_grad version we want to avoid shortcuts
     if (uniformDiffusion) {
         for (size_t i = 0; i < n; i++) {
 #if 0
@@ -82,7 +145,9 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 #endif 
             (*f_out)[i] = K_dot_lapl_U[i];
         }
-    } else {
+    } else 
+#endif 
+    {
         // If we have non-uniform diffusion, more derivatives are requried
         std::vector<SolutionType> u_x_deriv(n); 
         std::vector<SolutionType> u_y_deriv(n); 

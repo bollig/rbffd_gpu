@@ -93,8 +93,13 @@ void Communicator::consolidateObjects(MPISendable* object)
 	// further consolidating the local masters into the global master to reduce
 	// communication overhead.
 	if (this->getRank() == 0) {			// TODO Make this a constant for MASTER_CPU
-		// Add master CPU contribution to the final solution
-		object->initFinal();
+        static int initCount=0; 
+        if (!initCount) {
+            object->initFinal();
+        }
+
+        // Add master CPU contribution to the final solution
+		object->updateFinal();
 		for (int i = 1; i < this->getSize(); i++) {
 			object->receiveFinal(0, i);
 		}

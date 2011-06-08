@@ -257,6 +257,16 @@ int PDE::initFinal() {
     }
 }
 
+int PDE::updateFinal() {
+    //pair<map<char,int>::iterator,bool> ret;
+    set<int>::iterator qit;
+    int i = 0;
+    for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
+        size_t l_indx = grid_ref.g2l(*qit); 
+        size_t g_indx = *qit;
+        global_U_G[g_indx] = U_G[l_indx]; 
+    }
+}
 
 void PDE::printSolution(std::string set_label) {
     cout << set_label << " = {" << endl;

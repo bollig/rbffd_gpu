@@ -130,6 +130,7 @@ class PDE : public MPISendable
         virtual int sendFinal(int my_rank, int receiver_rank);
         virtual int receiveFinal(int my_rank, int sender_rank);
         virtual int initFinal();
+        virtual int updateFinal();
         // ******** END MPISENDABLE ************
 
     protected: 

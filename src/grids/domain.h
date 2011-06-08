@@ -198,6 +198,7 @@ class Domain : public Grid, public MPISendable {
         virtual int receiveFinal(int my_rank, int sender_rank) { std::cout << "[Domain] nothing final to receive\n"; }
 
         virtual int initFinal() { ; }
+        virtual int updateFinal() { ; }
         // ******** END MPISENDABLE ************
         
         //public: 	// Member Functions

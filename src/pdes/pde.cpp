@@ -159,7 +159,7 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
         recvSTL(&R_sub, my_rank, sender_rank);
         recvSTL(&U_R, my_rank, sender_rank);
 
-       // cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
+        cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
 #if 1 

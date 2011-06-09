@@ -689,7 +689,7 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
 #endif 
         }
     }
-    std::cout << "H = " << h << std::endl;
+//    std::cout << "H = " << h << std::endl;
 //       ar.print("INSIDE DMATRIX");
 
 }

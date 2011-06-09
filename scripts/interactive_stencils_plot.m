@@ -19,7 +19,7 @@ for j = 1:size(stencils, 1);
     end
     axis square;
     hold off;
-    pause
+    pause(0.5)  % sleep 0.5 seconds to show stencil
 end
        
 

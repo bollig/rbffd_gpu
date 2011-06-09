@@ -904,7 +904,7 @@ void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, d
         // alpha = c. Sarler2006 (Meshfree Explicit Local Radial Basis Function ...) 
         // cr = c * max(r_i) where r_i is the distance to each node in the stencil
         // Of course we have eps = 1/(cr)
-        var_epsilon[stencil[0]] = 1./ ( alpha * grid_ref.getMaxStencilRadius(i) ); 
+        var_epsilon[stencil[0]] = 1./ ( alpha * grid_ref.getMaxStencilRadius(stencil[0]) ); 
 #endif 
         //printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
     }

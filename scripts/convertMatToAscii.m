@@ -1,4 +1,4 @@
-%% convertMatToMtx.m  --- Evan Bollig, 2010
+%% convertMatToAscii.m  --- Evan Bollig, 2010
 % Converts .mat format files to a directory of .mtx files. 
 % The .mtx format is plain ascii tuples separated by '\n' with tuple
 % elements separated by spaces
@@ -8,7 +8,7 @@
 %
 % Argument matFilename specifies the full/absolute path to a file to
 % convert
-function [] = convertMatToMtx(matFilename)
+function [] = convertMatToAscii(matFilename)
     if (nargin < 1)
         % The path is in pth
         [filename,pth] = uigetfile('*.mat', 'Pick one or more MAT-files', 'MultiSelect', 'on');
@@ -44,7 +44,7 @@ if (isstruct(data))
     % Write each field to a separate file.
     names = fieldnames(data);
     for i = 1:length(names)
-        writeToFile(getfield(data, char(names(i))), char(strcat(file_no_ext, '/', names(i), '.mtx')));
+        writeToFile(getfield(data, char(names(i))), char(strcat(file_no_ext, '/', names(i), '.ascii')));
     end
 else
     fprintf('NOT SUPPORTED YET (See Evan Bollig)\n');

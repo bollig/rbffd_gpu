@@ -44,11 +44,27 @@ if (isstruct(data))
     % Write each field to a separate file.
     names = fieldnames(data);
     for i = 1:length(names)
-        writeToFile(getfield(data, char(names(i))), char(strcat(file_no_ext, '/', names(i), '.ascii')));
+        d = getfield(data, char(names(i)));
+        % If data is > 3 dimensions we assume its a full matrix. We write
+        % this to matrix market format
+        if size(d,2) > 3
+            writeToMMFile(d, char(strcat(file_no_ext, '/', names(i), '.mtx')));
+        else 
+           writeToFile(d, char(strcat(file_no_ext, '/', names(i), '.ascii')));
+        end
     end
 else
     fprintf('NOT SUPPORTED YET (See Evan Bollig)\n');
 end
+end
+
+function [] = writeToMMFile(data, filename)
+    fprintf('.....Writing ''%s''\n', filename);
+    A = sparse(data);
+    figure
+    spy(A);
+    comment = str2mat('Auto-Converted Matrix From convertMatToAscii (Evan Bollig)',[' ',date]);
+    mmwrite(filename,A,comment);
 end
 
 function [] = writeToFile(data, filename)

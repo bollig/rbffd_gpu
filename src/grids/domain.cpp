@@ -179,7 +179,6 @@ int Domain::receive(int my_rank, int sender_rank) {
 
     this->nb_nodes = node_list.size();
 
-    // cout << "EVAN YOURE WRONG HERE!" <<endl;
     set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
 
     cout << "RANK " << my_rank << " REPORTS: received Domain object" << endl;
@@ -235,6 +234,7 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
     char label[256];
     sprintf(label, "Rank %d O_by_rank[%d]", id, subdomain_rank);
     // O_by_rank is still in global indices, but the g2l wont be able to map it 
+    //printVectorG2L(this->O_by_rank[subdomain_rank], label);
     printVectorG2L(this->O_by_rank[subdomain_rank], label);
 
     return;
@@ -265,27 +265,29 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // Generate sets Q and D
     for (size_t i = 0; i < rbf_centers.size(); i++) {
         NodeType& pt = rbf_centers[i];
-        if (!this->isInsideSubdomain(pt)) {
-            continue; 
-        } 
-//        std::cout << "DOMAIN " << id << ", ADDED NODE: " << i << std::endl;
-        Q.insert(i);
-
-        StencilType& st = stencils[i]; 
+        if (this->isInsideSubdomain(pt)) {
+            Q.insert(i);
+        }
+    } 
+    int depR = 0; 
+    for (qit = Q.begin(); qit != Q.end(); qit++) {
+        StencilType& st = stencils[*qit]; 
 
         // Now, if the center is in Q but it depends on nodes in R then we need to distinguish
-        bool depR = false;
+        depR = 0;
 //        std::cout << "begin stencil" << std::endl;
         for (int j = 1; j < st.size(); j++) { // Check all nodes in corresponding stencil
-            NodeType& pt2 = rbf_centers[st[j]];
+            size_t indx = st[j];
+            NodeType& pt2 = rbf_centers[indx];
+//            std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2) << std::endl;
             // If any stencil node is outside the domain, then set this to true
             if (!this->isInsideSubdomain(pt2)) {
-                depR = true;
-            } 
+                depR = 1;  
+            }
         }
 //        std::cout << "end stencil" << std::endl;
         if (depR) {
-            D.insert(i);
+            D.insert(*qit);
         }
     }
 
@@ -321,7 +323,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     set_difference(A.begin(), A.end(), Q.begin(), Q.end(), inserter(AmQ,
                 AmQ.end()));
 
-    std::cout << "SQ.size after difference: " << AmQ.size() << std::endl;
+    std::cout << "AmQ.size after difference: " << AmQ.size() << std::endl;
     // S(A\Q)
     set<int> SAmQ;
     std::cout << "SAmQ.size before stencilSet: " << SAmQ.size() << std::endl;
@@ -399,6 +401,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         glob_to_loc[l2g(i)] = i;
     }
 
+    std::cout << "Domain stencils size = " << stencil_map.size() << std::endl;
     // Convert all stencils to local indexing.
     for (int i = 0; i < stencil_map.size(); i++) {
         for (int j = 0; j < stencil_map[i].size(); j++) {
@@ -443,10 +446,12 @@ void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>& Sse
     for (qit = s.begin(); qit != s.end(); qit++) {
         int qi = *qit;
         StencilType& si = stencil[qi];
-
+//        std::cout << "Working on stencil: " << qi << std::endl;
         for (int j = 0; j < si.size(); j++) {
+   //         std::cout << si[j] << " "; 
             Sset.insert(si[j]);
         }
+ //       std::cout << std::endl;
     }
     //return *Sset;
 }

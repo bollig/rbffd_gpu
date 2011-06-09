@@ -4,7 +4,7 @@ nodes = load(filename);
 if nargin > 2
     boundary = nodes(1:n_stop, :);
 else
-    boundary = ndoes;
+    boundary = nodes;
 end
 
 if dim == 1

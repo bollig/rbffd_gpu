@@ -111,12 +111,14 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
 int PDE::sendUpdate(int my_rank, int receiver_rank) {
 
     if (my_rank != receiver_rank) {
-        vector<int>::iterator oit;
+        //vector<int>::iterator oit;
         // vector<set<int> > O; gives us the list of (global) indices which we
         // are sending to receiver_rank		
 
         // FIXME: domain should not make these public. hide them behind accessors
+//        std::vector<std::vector<int> >& O_by_rank = grid_ref.O_by_rank;
         std::vector<std::vector<int> >& O_by_rank = grid_ref.O_by_rank;
+        std::vector<int>::iterator oit;
 
         // We send a list of node values 
         vector<double> U_O;

@@ -99,7 +99,8 @@ Grid* getGrid(int dim_num) {
         cout << "ERROR! Dim > 3 Not Supported!" << endl;
     }
     // Very important. otherwise we might not distribute work properly across CPUs
-//    grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
+    grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
+    //grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
     return grid; 
 }
 
@@ -190,16 +191,17 @@ int main(int argc, char** argv) {
         {
             printf("************** Generating new Grid **************\n"); 
             //grid->setSortBoundaryNodes(true); 
-            grid->setSortBoundaryNodes(true); 
+//            grid->setSortBoundaryNodes(true); 
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
             grid->writeToFile(); 
         } 
         if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
-            std::cout << "Generating stencils using Grid::ST_HASH\n";
+            std::cout << "Generating stencils files\n";
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
+//            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
             grid->generateStencils(Grid::ST_KDTREE);   
 //            grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();

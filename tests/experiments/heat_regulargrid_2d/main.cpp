@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
             std::cout << "Generating stencils using Grid::ST_HASH\n";
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
-            grid->generateStencils(Grid::ST_HASH);   
+            grid->generateStencils(Grid::ST_KDTREE);   
             tm["stencils"]->stop();
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 

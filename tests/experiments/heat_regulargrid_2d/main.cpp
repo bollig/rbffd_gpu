@@ -155,7 +155,9 @@ int main(int argc, char** argv) {
     //-----------------
 
     int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
-    double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-2"); 
+    double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
+    double max_local_rel_error = settings->GetSettingAs<double>("MAX_LOCAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
+
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
     
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
@@ -458,7 +460,7 @@ int main(int argc, char** argv) {
         if (!(iter % local_sol_dump_frequency)) {
 
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
-            pde->checkLocalError(exact, max_global_rel_error); 
+            pde->checkLocalError(exact, max_local_rel_error); 
         }
         if (!(iter % global_sol_dump_frequency)) {
             tm["consolidate"]->start(); 

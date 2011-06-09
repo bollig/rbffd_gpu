@@ -337,7 +337,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
         }
     }
-        rhs.print("RHS before");
+//        rhs.print("RHS before");
 }
 
 //--------------------------------------------------------------------
@@ -690,7 +690,7 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
         }
     }
     std::cout << "H = " << h << std::endl;
-       ar.print("INSIDE DMATRIX");
+//       ar.print("INSIDE DMATRIX");
 
 }
 

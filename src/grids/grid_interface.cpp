@@ -787,10 +787,10 @@ void Grid::generateStencilsHash()
         int level = 0; 
         // TODO: cut-off search if (max_st_radius+cdx) is execeeded
         //          (requires a working impl of max_st_radius)o
-        // BUGFIX: this (level < 1) guarantees we searching neighboring cells
+        // BUGFIX: this (level < 2) guarantees we searching neighboring cells
         // in the event that we're near the boundary of a cell and the current
         // cell has more than enough nodes to exceed max_st_size. 
-        while (nb_neighbor_nodes_to_check < max_st_size && level < 1) {
+        while (nb_neighbor_nodes_to_check < max_st_size || level < 2) {
             int xlevel = level;
             int ylevel = (hny > 1) ? level : 0;
             int zlevel = (hnz > 1) ? level : 0; 

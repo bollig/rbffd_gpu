@@ -159,10 +159,15 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
         recvSTL(&R_sub, my_rank, sender_rank);
         recvSTL(&U_R, my_rank, sender_rank);
 
-        cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
+        //cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
+        if (!(R_sub.size() > 0)) {
+            std::cout << "[PDE] error. did not receive any updates\n";
+            exit(EXIT_FAILURE);
+        }
+
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-#if 1 
+#if 0 
             cout << "\t(Global Index): " << *rit << "\t (Local Index:" << grid_ref.g2l(
                         *rit) << ")\tOld U_G[" << grid_ref.g2l(*rit) << "]: " << U_G[grid_ref.g2l(
                         *rit)] << "\t New U_G[" << grid_ref.g2l(*rit) << "]: " << U_R[i]

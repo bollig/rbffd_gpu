@@ -727,6 +727,7 @@ void Grid::generateStencilsHash()
         // to select the CELL_ID (do we really need an optimization like that
         // though?)
         size_t xc = floor((node.x() - xmin) / cdx); 
+
         // This logic saves us when our nodes lie on xmax, ymax, or zmax
         // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
         xc = (xc == hnx) ? xc-1 : xc; 
@@ -764,6 +765,7 @@ void Grid::generateStencilsHash()
         size_t xc = floor((node.x() - xmin) / cdx); 
         // This logic saves us when our nodes lie on xmax, ymax, or zmax
         // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
+        //
         xc = (xc == hnx) ? xc-1 : xc; 
         size_t yc = floor((node.y() - ymin) / cdy); 
         yc = (yc == hny) ? yc-1 : yc; 
@@ -784,8 +786,11 @@ void Grid::generateStencilsHash()
         size_t nb_neighbor_nodes_to_check = 0; 
         int level = 0; 
         // TODO: cut-off search if (max_st_radius+cdx) is execeeded
-        //          (requires a working impl of max_st_radius)
-        while (nb_neighbor_nodes_to_check < max_st_size) {
+        //          (requires a working impl of max_st_radius)o
+        // BUGFIX: this (level < 1) guarantees we searching neighboring cells
+        // in the event that we're near the boundary of a cell and the current
+        // cell has more than enough nodes to exceed max_st_size. 
+        while (nb_neighbor_nodes_to_check < max_st_size && level < 1) {
             int xlevel = level;
             int ylevel = (hny > 1) ? level : 0;
             int zlevel = (hnz > 1) ? level : 0; 

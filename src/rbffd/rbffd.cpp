@@ -66,12 +66,12 @@ void RBFFD::computeAllWeightsForAllStencils() {
 }
 
 //--------------------------------------------------------------------
-void RBFFD::getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs) {
+void RBFFD::getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h) {
     size_t nn = stencil.size()+num_monomials; 
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
         arma::mat col(nn,1); 
         // Fill by column
-        this->getStencilRHS((DerType)i, rbf_centers, stencil, num_monomials, col); 
+        this->getStencilRHS((DerType)i, rbf_centers, stencil, num_monomials, col, h); 
         // we want a( : , i ) where : is a vec of length nn
         rhs.submat(0,i,nn-1,i) = col; 
     }
@@ -80,7 +80,7 @@ void RBFFD::getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& 
 //--------------------------------------------------------------------
 
 
-void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& d_matrix) {
+void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& d_matrix, double h) {
 
     int n = stencil.size();
     int np = num_monomials;
@@ -92,7 +92,7 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 
     // value 0 => stencil center is at index 0 in "stencil"
     // dim_num required for RBF
-    this->distanceMatrix(rbf_centers, stencil, dim_num, d_matrix);
+    this->distanceMatrix(rbf_centers, stencil, dim_num, d_matrix, h);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -158,8 +158,14 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     arma::mat rhs = arma::mat(n+np, NUM_DERIV_TYPES); 
     arma::mat lhs = arma::mat(n+np, n+np); 
 
-    this->getStencilMultiRHS(rbf_centers, stencil, np, rhs);
-    this->getStencilLHS(rbf_centers, stencil, np, lhs);
+    // We pass h (the minimum dist to nearest node) so we can potentially factor it out
+    double h = 1.;
+#if SCALE_BY_H
+    h = grid_ref.getMinStencilRadius(st_indx); 
+#endif 
+
+    this->getStencilMultiRHS(rbf_centers, stencil, np, rhs, h);
+    this->getStencilLHS(rbf_centers, stencil, np, lhs, h);
 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
@@ -182,25 +188,23 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
         // X,Y,Z weights should scale by 1/h
         // FIXME: for 3D, h^2
-        double scale = grid_ref.getStencilRadius(irbf);
-
+        double scale = 1.;// grid_ref.getStencilRadius(irbf);
+ 
+#if SCALE_BY_H
+        scale = 1./h;
         // LAPL should scale by 1/h^2
         if (i == LAPL) {
-            for (int i = 1; i < dim_num; i++) {
-                scale *= scale; 
-            }
+            //for (int i = 1; i < dim_num; i++) {
+            scale *= scale; 
+            //}
         }
-#if SCALE_BY_H
-        // DO NOTHING
-#else
-        scale = 1.;
 #endif 
         if (this->weights[i][irbf] == NULL) {
             this->weights[i][irbf] = new double[n+np];
         }
 
         for (int j = 0; j < n+np; j++) {
-            this->weights[i][irbf][j] = weights_new(j, i) / scale;
+            this->weights[i][irbf][j] = weights_new(j, i) * scale;
             //            this->weights[i][irbf][j] = scale;
         }
 
@@ -233,7 +237,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 
 //--------------------------------------------------------------------
 
-void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs) { 
+void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h) { 
 
     int np = num_monomials; 
     int n = stencil.size(); 
@@ -261,7 +265,29 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         IRBF rbf(var_epsilon[stencil[0]], dim_num); 
 
         // printf("%d\t%d\n", j, stencil[j]);
-        Vec3& xjv = rbf_centers[stencil[j]];
+        Vec3 xjv = rbf_centers[stencil[j]];
+
+#if SCALE_BY_H
+        //xjv.print("xjv = ");
+        Vec3 diff = (x0v - xjv) * (1./h);
+        switch (which) {
+            case X:
+                rhs(j,0) = rbf.xderiv(diff);
+                break; 
+            case Y: 
+                rhs(j,0) = rbf.yderiv(diff);
+                break; 
+            case Z:
+                rhs(j,0) = rbf.zderiv(diff);
+                break; 
+            case LAPL: 
+                rhs(j,0) = rbf.lapl_deriv(diff);
+                break; 
+            default:
+                std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
+                exit(EXIT_FAILURE); 
+        }
+#else 
         //xjv.print("xjv = ");
         switch (which) {
             case X:
@@ -280,6 +306,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
                 exit(EXIT_FAILURE); 
         }
+#endif 
     }
 
     if (np > 0) {
@@ -310,7 +337,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
         }
     }
-    //    rhs.print("RHS before");
+        rhs.print("RHS before");
 }
 
 //--------------------------------------------------------------------
@@ -361,8 +388,13 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     arma::mat lhs(n+np, n+np); 
     lhs.zeros();
 
-    this->getStencilRHS(which, rbf_centers, stencil, np, rhs);
-    this->getStencilLHS(rbf_centers, stencil, np, lhs); 
+    double h = 1.;
+#if SCALE_BY_H
+    h = grid_ref.getMinStencilRadius(st_indx);
+#endif 
+
+    this->getStencilRHS(which, rbf_centers, stencil, np, rhs, h);
+    this->getStencilLHS(rbf_centers, stencil, np, lhs, h); 
 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
@@ -381,18 +413,17 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
 #endif 
 
     // X,Y,Z weights should scale by 1/h
-    double scale = 1./ grid_ref.getStencilRadius(irbf);
+    double scale = 1.;
 
+#if SCALE_BY_H
+    scale = 1./h;
     // LAPL should scale by 1/h^2
     if (which == LAPL) {
         for (int i = 1; i < dim_num; i++) {
             scale *= scale; 
         }
     }
-#if SCALE_BY_H
-    // DO NOTHING
-#else
-    scale = 1.;
+   // DO NOTHING
 #endif 
 
     if (this->weights[which][irbf] == NULL) {
@@ -589,7 +620,7 @@ void RBFFD::setupTimers() {
 
 //--------------------------------------------------------------------
 
-void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, int dim_num, arma::mat& ar) {
+void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, int dim_num, arma::mat& ar, double h) {
     // We assume that all stencils are centered around the first node in the Stencil node list.
     size_t irbf = stencil[0]; 
     Vec3& c = rbf_centers[irbf];
@@ -648,13 +679,18 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
         Vec3& xjv = rbf_centers[stencil[j]];
         for (int i=0; i < n; i++) {
             // by row
-            Vec3& xiv = rbf_centers[stencil[i]];
+            Vec3 xiv = rbf_centers[stencil[i]]; 
+#if SCALE_BY_H
             // Center is on right:
+            Vec3 diff = (xiv - xjv) * (1./h);
+            ar(j,i) = rbf(diff);
+#else 
             ar(j,i) = rbf(xiv, xjv);
+#endif 
         }
     }
-
-    //    ar.print("INSIDE DMATRIX");
+    std::cout << "H = " << h << std::endl;
+       ar.print("INSIDE DMATRIX");
 
 }
 

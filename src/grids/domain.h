@@ -162,6 +162,7 @@ class Domain : public Grid, public MPISendable {
         bool isInsideRange(double pt_, double rmin, double rmax, bool inclusiveMax) {
             double d1 = pt_ - rmin; 
             double d2 = rmax - pt_; 
+#if 0
             if (fabs(d2) < 1e-5) {
                 std::cout << "+"; 
             } else if (fabs(d1) < 1e-5) {
@@ -169,6 +170,7 @@ class Domain : public Grid, public MPISendable {
             } else { 
                 std::cout << ".";
             }
+#endif
             if (inclusiveMax) {
                 // Use subtraction here to guarantee all nodes are accounted for
                 return (d1 >= 0. && d2 >= 0.);

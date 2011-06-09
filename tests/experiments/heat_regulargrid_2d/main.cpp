@@ -265,6 +265,7 @@ int main(int argc, char** argv) {
         }
         printf("OK\n");
     }
+    exit(-1);
 
     RBFFD* der;
     if (use_gpu) {

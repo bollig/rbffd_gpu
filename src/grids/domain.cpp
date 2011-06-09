@@ -223,7 +223,7 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
 
 //        printSetG2L(subdomain_R, "R-by-rank");
 
-#if 0
+#if 1
     set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end())); 
 #else 
     for (qit = subdomain_R.begin(); qit != subdomain_R.end(); qit++, i++) {
@@ -234,7 +234,8 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
 #endif 
     char label[256];
     sprintf(label, "Rank %d O_by_rank[%d]", id, subdomain_rank);
-    printVectorL2G(this->O_by_rank[subdomain_rank], label);
+    // O_by_rank is still in global indices, but the g2l wont be able to map it 
+    printVectorG2L(this->O_by_rank[subdomain_rank], label);
 
     return;
 }
@@ -295,7 +296,8 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
     //Create set of stencil points of all elements of Q (ineffecient since there are repeats)
     set<int> SQ; 
-    stencilSet(Q, stencils, &SQ);
+    std::cout << "SQ.size before difference: " << SQ.size() << std::endl;
+    stencilSet(Q, stencils, SQ);
     std::cout << "SQ.size before difference: " << SQ.size() << std::endl;
 
     // Set of nodes from stencils that are not in Q (i.e. not on the Domain)
@@ -308,20 +310,22 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // O: S(A\Q) \ (A\Q) = S(A\Q) intersect Q
 
     // ALL STENCILS "set A"
-    vector<int> A;
+    std::set<int> A;
     for (int i = 0; i < rbf_centers.size(); i++) {
-        A.push_back(i);
+        A.insert(i);
     }
+    std::cout << "A.size after difference: " << A.size() << std::endl;
 
     // A\Q
     set<int> AmQ;
     set_difference(A.begin(), A.end(), Q.begin(), Q.end(), inserter(AmQ,
                 AmQ.end()));
 
+    std::cout << "SQ.size after difference: " << AmQ.size() << std::endl;
     // S(A\Q)
     set<int> SAmQ;
     std::cout << "SAmQ.size before stencilSet: " << SAmQ.size() << std::endl;
-    stencilSet(AmQ, stencils, &SAmQ);
+    stencilSet(AmQ, stencils, SAmQ);
     std::cout << "SAmQ.size after stencilSet: " << SAmQ.size() << std::endl;
     
     std::cout << "O.size before stencilSet: " << O.size() << std::endl;
@@ -431,7 +435,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
     printf("min_stencil_radii size= %d\n", (int) min_stencil_radii.size());
 }
 //----------------------------------------------------------------------
-void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>* Sset) {
+void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>& Sset) {
     //set<int>* Sset = new set<int> ;
     set<int>::iterator qit;
 
@@ -441,7 +445,7 @@ void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>* Sse
         StencilType& si = stencil[qi];
 
         for (int j = 0; j < si.size(); j++) {
-            Sset->insert(si[j]);
+            Sset.insert(si[j]);
         }
     }
     //return *Sset;
@@ -584,7 +588,7 @@ void Domain::printSetL2G(const set<int>& center_set, std::string set_label) {
             != center_set.end(); setiter++) {
         // True -> stencil[i][j] is in center set
         int i = *setiter;
-        cout << "\t" << i << " (local:" << l2g(i) << ")" << endl;
+        cout << "\tindx:" << i << " (l2g: " << l2g(i) << ")" << endl;
     }
     cout << "}" << endl;
 }
@@ -596,7 +600,7 @@ void Domain::printSetG2L(const set<int>& center_set, std::string set_label) {
             != center_set.end(); setiter++) {
         // True -> stencil[i][j] is in center set
         int i = *setiter;
-        cout << "\t" << i << " (global:" << g2l(i) << ")" << endl;
+        cout << "\t" << i /*<< " (l2g: " << l2g(i) << ")"*/ << " (g2l: " << g2l(i) << ")" << endl;
     }
     cout << "}" << endl;
 }
@@ -639,8 +643,7 @@ void Domain::printVectorL2G(const vector<int>& center_set, std::string set_label
     for (vector<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
-            cout << "\t[" << i << " (" << l2g(i) << ")] = " << *setiter
-                << endl;
+            cout << "\t" << *setiter << " (l2g=" << l2g(*setiter) << ") " << endl;
     }
     cout << "}" << endl;
 }
@@ -650,8 +653,7 @@ void Domain::printVectorG2L(const vector<int>& center_set, std::string set_label
     for (vector<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
-            cout << "\t[" << i << " (" << g2l(i) << ")] = " << *setiter
-                << endl;
+            cout << "\t" << *setiter << " (g2l=" << g2l(*setiter) << ") " << endl;
     }
     cout << "}" << endl;
 }

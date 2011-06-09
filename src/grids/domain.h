@@ -219,7 +219,7 @@ class Domain : public Grid, public MPISendable {
         // Generate a set of ALL nodes that are used by the stencils in set s.
         // Uses stencil to lookup nodes required by s.
         // memory for return set is allocoted within stencilSet
-        void stencilSet(std::set<int>& s, std::vector<StencilType>& stencil, std::set<int>* Sset_out);
+        void stencilSet(std::set<int>& s, std::vector<StencilType>& stencil, std::set<int>& Sset_out);
 
         // Print all nodes in stencils and show display_char if they are in center_set; '.' otherwise. 
         void printStencilNodesIn(const std::vector<StencilType>& stencils, const std::set<int>& center_set, std::string display_char); 

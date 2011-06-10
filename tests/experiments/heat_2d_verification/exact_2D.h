@@ -13,7 +13,7 @@ class Exact2D : public ExactSolution
         double n;
         double m;
         double B;
-        double decay; 
+        double diffuseConst; 
         // maxX
         double L; 
         // maxY
@@ -22,9 +22,9 @@ class Exact2D : public ExactSolution
         Exact2D(double maxX, double maxY, double alpha)
             // 2D
             : ExactSolution(2), 
-            n(2),m(3),B(10),
+            n(2),m(3),B(2.),
             L(maxX),H(maxY),
-            decay(alpha)
+            diffuseConst(alpha)
     {;}
         ~Exact2D();
 
@@ -102,7 +102,7 @@ class Exact2D : public ExactSolution
 
         // Return the diffusivity at node v (K=1 by default)
         virtual double diffuseCoefficient(double x, double y, double z, double sol, double t) {
-            return 0.1;            
+            return diffuseConst;            
         }
         virtual double diffuse_xderiv(double x, double y, double z, double sol, double t) {
             return 0.;

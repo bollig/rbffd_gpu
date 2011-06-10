@@ -35,8 +35,8 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     decay = settings->GetSettingAs<double>("DECAY", ProjectSettings::required); 
     //maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
     //maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
-    maxX = 1.;
-    maxY = 1.;
+    maxX = 10.;
+    maxY = 10.;
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
 }
 

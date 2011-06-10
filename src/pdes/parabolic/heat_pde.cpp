@@ -52,6 +52,9 @@ void HeatPDE::assemble()
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
 void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
 {   
+    // EFB06092011: div_grad is noticeably faster and it works. Gordon keeps
+    // saying his didnt. I need to get a non-uniform test case with known exact
+    // solution to verify that statement.
 #define SOLVE_DIV_GRAD 1
 #if SOLVE_DIV_GRAD
     this->solveDivGrad(u_t, f_out, n, t);

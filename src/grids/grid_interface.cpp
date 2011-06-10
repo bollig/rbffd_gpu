@@ -445,7 +445,7 @@ std::string Grid::getFilename(int iter) {
 
 
 //----------------------------------------------------------------------------
-void Grid::perturbNodes(double perturb_amount) {
+void Grid::perturbNodes(float perturb_amount) {
     pert = perturb_amount; 
     for (size_t i = 0 ; i < node_list.size(); i ++) {
         node_list[i][0] += randf(-pert, pert); 
@@ -705,10 +705,10 @@ void Grid::generateStencilsHash()
     // list of lists 
     cell_hash.resize(hnx * hny * hnz);  
 
-    double cdx = (xmax - xmin) / hnx;
-    //double cdx = (hnx > 1) ? (xmax - xmin) / (hnx - 1.) : (xmax - xmin) / hnx;
-    double cdy = (ymax - ymin) / hny;
-    double cdz = (zmax - zmin) / hnz;
+    float cdx = (xmax - xmin) / hnx;
+    //float cdx = (hnx > 1) ? (xmax - xmin) / (hnx - 1.) : (xmax - xmin) / hnx;
+    float cdy = (ymax - ymin) / hny;
+    float cdz = (zmax - zmin) / hnz;
 
     NodeType cell_start(xmin, ymin, zmin); 
     NodeType cell_end(xmax, ymax, zmax); 

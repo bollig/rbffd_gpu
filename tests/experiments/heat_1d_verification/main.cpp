@@ -30,8 +30,7 @@ int uniformDiffusion;
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
-    minX = 0.;
-    //minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
+    minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "0."); 	
     maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "10."); 	
     decay = settings->GetSettingAs<double>("DECAY", ProjectSettings::optional, "1."); 	
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
@@ -42,8 +41,8 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
 ExactSolution* getExactSolution(int dim_num) {
 //    double Re = 10;
 //    decay = 1.0/Re;
-    double L = maxX; 
-    ExactSolution* exact = new Exact1D(L, decay);
+    double L = maxX - minX; 
+    ExactSolution* exact = new Exact1D(minX, maxX, decay);
     return exact;
 }
 
@@ -199,6 +198,7 @@ int main(int argc, char** argv) {
         subdomain = new Domain(); // EMPTY object that will be filled by MPI
         int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
         tm["receive"]->stop(); 
+        //subdomain->writeToFile();
     }
 
     comm_unit->barrier();
@@ -326,6 +326,7 @@ int main(int argc, char** argv) {
     tm["updates"]->start(); 
     comm_unit->broadcastObjectUpdates(pde);
     comm_unit->barrier();
+    pde->printExpectedReceive();
     tm["updates"]->stop();
 
     tm["heat_init"]->stop(); 

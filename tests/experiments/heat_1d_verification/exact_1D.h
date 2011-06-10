@@ -14,11 +14,12 @@ class Exact1D : public ExactSolution
         double B;
         double decay; 
         double L;
+        double xmin;
     public:
-        Exact1D(double maxX, double alpha)
+        Exact1D(double minX, double maxX, double alpha)
             : ExactSolution(1), 
-            n(8),B(1),
-            L(maxX), decay(alpha)
+            n(8),B(1),xmin(minX),
+            L(maxX-minX), decay(alpha)
     {;}
         ~Exact1D();
 
@@ -26,19 +27,19 @@ class Exact1D : public ExactSolution
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
             // See Haberman p48 for details
             // B is the coefficient we choose for the problem. It could even be another function
-            double val = B * sin((n * M_PI * x)/L) * exp(-alpha * t * (n * n * M_PI * M_PI)/(L*L)); 
+            double val = B * sin((n * M_PI * (x-xmin))/L) * exp(-alpha * t * (n * n * M_PI * M_PI)/(L*L)); 
             return val;
         }
 
         virtual double laplacian(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
-            double val = -B*((n*n * M_PI * M_PI * sin((n * M_PI * x)/L)) * exp(-alpha * t * (n * n * M_PI * M_PI)/(L*L))) / (L*L);
+            double val = -B*((n*n * M_PI * M_PI * sin((n * M_PI * (x-xmin))/L)) * exp(-alpha * t * (n * n * M_PI * M_PI)/(L*L))) / (L*L);
             return val;
         }
 
         virtual double xderiv(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
-            double val =  (B * n * M_PI * cos((n * M_PI * x)/L)/L) * exp(-alpha * t * ((n * n * M_PI * M_PI)/(L*L))); 
+            double val =  (B * n * M_PI * cos((n * M_PI * (x-xmin))/L)/L) * exp(-alpha * t * ((n * n * M_PI * M_PI)/(L*L))); 
             return val;
         }
         virtual double yderiv(double x, double y, double z, double t) {
@@ -50,7 +51,7 @@ class Exact1D : public ExactSolution
 
         virtual double tderiv(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t);             
-            double val = (B * n*n * M_PI*M_PI * sin((n * M_PI * x)/L)/(L*L)) * exp(-alpha * t * ((n * n * M_PI * M_PI)/(L*L))); 
+            double val = (B * n*n * M_PI*M_PI * sin((n * M_PI * (x-xmin))/L)/(L*L)) * exp(-alpha * t * ((n * n * M_PI * M_PI)/(L*L))); 
 
             return val; 
         }

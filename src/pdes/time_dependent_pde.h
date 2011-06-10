@@ -84,6 +84,19 @@ class TimeDependentPDE : public PDE
 
             return exact_ptr->diffuseCoefficient(pt, app, cur_time);
         }
+
+
+        void printExpectedReceive() {
+            std::set<int>::iterator rit; 
+            for (rit = grid_ref.R.begin(); rit != grid_ref.R.end(); rit++) {
+                int indx = grid_ref.g2l(*rit);
+                SolutionType recv = this->getLocalSolution(indx);
+                SolutionType ex = this->getExactSolution(indx);
+                std::cout << "Expected to receive: U[" << *rit << "] = " << ex << ", got: " << recv << std::endl;
+            }
+
+        }
+
     protected: 
         virtual void advanceFirstOrderEuler(double dt);
         virtual void advanceSecondOrderMidpoint(double dt);

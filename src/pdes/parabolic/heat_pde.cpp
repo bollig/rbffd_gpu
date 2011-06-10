@@ -206,7 +206,7 @@ void HeatPDE::enforceBoundaryConditions(std::vector<SolutionType>& u_t, double t
     for (int i = 0; i < nb_bnd; i++) {
         // first order
         NodeType& v = nodes[bnd_index[i]];
-        //            printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
+       // printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
         // u_t[bnd_index[i]] = boundary_values[i];
         u_t[bnd_index[i]] = exact_ptr->at(v, t); 
     }

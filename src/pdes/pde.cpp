@@ -129,13 +129,13 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
 
             for (oit = O_by_rank[receiver_rank].begin(); oit
                     != O_by_rank[receiver_rank].end(); oit++, i++) {
+                int g_indx = *oit; 
+                int l_indx = grid_ref.g2l(g_indx);
                 // Elements in O are in global indices 
                 // so we need to first convert to local to index our U_G
-                U_O.push_back(U_G[grid_ref.g2l(*oit)]);
-#if 0
-                cout << "SENDING CPU" << receiver_rank << " U_G[" << *oit
-                    << " (local index: " << grid_ref.g2l(*oit) << ")"
-                    << "]: " << U_G[grid_ref.g2l(*oit)] << endl;
+                U_O.push_back(U_G[l_indx]);
+#if 1
+                cout << "SENDING CPU" << receiver_rank << " U_G[" << l_indx << "] = " << U_G[l_indx] << "\tU_O[" << i << "] = " << U_O[i] << "\t(Targeting Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")" << std::endl;
 #endif 
             }
         }
@@ -169,11 +169,10 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
 
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-#if 0 
-            cout << "\t(Global Index): " << *rit << "\t (Local Index:" << grid_ref.g2l(
-                        *rit) << ")\tOld U_G[" << grid_ref.g2l(*rit) << "]: " << U_G[grid_ref.g2l(
-                        *rit)] << "\t New U_G[" << grid_ref.g2l(*rit) << "]: " << U_R[i]
-                                             << endl;
+#if 1 
+            int g_indx = *rit; 
+            int l_indx = grid_ref.g2l(*rit);
+            cout << "\t(Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")\tOld U_G[" << l_indx << "]: " << U_G[l_indx] << "\t New U_G[" << l_indx << "]: " << U_R[i] << endl;
 #endif 
             // Global to local mapping required
             U_G[grid_ref.g2l(*rit)] = U_R[i]; // Overwrite with new values

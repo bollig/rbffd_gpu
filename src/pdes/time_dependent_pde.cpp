@@ -99,6 +99,7 @@ void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
     }
 #endif 
     comm_ref.broadcastObjectUpdates(this);
+    this->printExpectedReceive();
 }
 
 

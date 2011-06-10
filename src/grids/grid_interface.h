@@ -14,9 +14,9 @@ class Grid
     public: 
         // Bounding box of domain (should contain ALL points regardless of
         // geom)
-        double xmin, xmax; 
-        double ymin, ymax; 
-        double zmin, zmax; 
+        float xmin, xmax; 
+        float ymin, ymax; 
+        float zmin, zmax; 
 
         // Number of subdivisions in domain bounding box to use in each
         // direction for the cell overlay in the hash neighbor qeury 
@@ -265,7 +265,7 @@ class Grid
         // Select a random number [randf(-pert, pert)] for each node dimension
         // and add to randomly perturb nodes in space; store perturb_percent in
         // pert to maintain limited history of node perturbation
-        virtual void perturbNodes(double perturb_amount);
+        virtual void perturbNodes(float perturb_amount);
 
         void setExtents( double minX, double maxX, double minY, double maxY, double minZ, double maxZ ) {
             xmin = minX;
@@ -274,6 +274,31 @@ class Grid
             ymax = maxY; 
             zmin = minZ; 
             zmax = maxZ;
+        }
+
+        void refreshExtents() {
+            std::cout << "Updating extents" << std::endl;
+            for (size_t i = 0; i < this->getNodeListSize(); i++) {
+                NodeType& n = this->getNode(i);
+                if (n.x() < xmin) {
+                    xmin = n.x(); 
+                }
+                if (n.x() > xmax) {
+                    xmax = n.x(); 
+                }  
+                if (n.y() < ymin) {
+                    ymin = n.y(); 
+                }
+                if (n.y() > ymax) {
+                    ymax = n.y(); 
+                }   
+                if (n.z() < zmin) {
+                    zmin = n.z(); 
+                }
+                if (n.z() > zmax) {
+                    zmax = n.z(); 
+                }  
+            }
         }
 
         void setNSHashDims(size_t overlay_nbx, size_t overlay_nby, size_t overlay_nbz) {

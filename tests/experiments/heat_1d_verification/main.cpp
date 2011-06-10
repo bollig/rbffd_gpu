@@ -32,8 +32,7 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
     minX = 0.;
     //minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
-    //maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
-    maxX = 10.;
+    maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "10."); 	
     decay = settings->GetSettingAs<double>("DECAY", ProjectSettings::optional, "1."); 	
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
 }
@@ -50,9 +49,9 @@ ExactSolution* getExactSolution(int dim_num) {
 
 // Choose a specific type of Grid for the test case
 Grid* getGrid(int dim_num) {
-    Grid* grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
+    Grid* grid = new RegularGrid(nx, minX, maxX); 
     // Very important. otherwise we might not distribute work properly across CPUs
-    grid->setExtents(0., maxX, 0., 0., 0., 0.);
+    //grid->setExtents(0., maxX, 0., 0., 0., 0.);
     return grid; 
 }
 

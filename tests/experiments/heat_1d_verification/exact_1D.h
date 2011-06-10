@@ -15,30 +15,30 @@ class Exact1D : public ExactSolution
         double decay; 
         double L;
     public:
-        Exact1D(double maxX, double k)
+        Exact1D(double maxX, double alpha)
             : ExactSolution(1), 
-            n(8),B(maxX),
-            L(maxX), decay(k)
+            n(8),B(1),
+            L(maxX), decay(alpha)
     {;}
         ~Exact1D();
 
         virtual double operator()(double x, double y, double z, double t) {
-            double k = this->diffuseCoefficient(x,y,z,0.,t); 
+            double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
             // See Haberman p48 for details
             // B is the coefficient we choose for the problem. It could even be another function
-            double val = B * sin((n * M_PI * x)/L) * exp(-k * t * ((n * n * M_PI * M_PI)/(L*L))); 
+            double val = B * sin((n * M_PI * x)/L) * exp(-alpha * t * (n * n * M_PI * M_PI)/(L*L)); 
             return val;
         }
 
         virtual double laplacian(double x, double y, double z, double t) {
-            double k = this->diffuseCoefficient(x,y,z,0.,t); 
-            double val = -B*((n*n * M_PI * M_PI * sin((n * M_PI * x)/L)) * exp(-k * t * ((n * n * M_PI * M_PI)/(L*L)))) / (L*L);
+            double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
+            double val = -B*((n*n * M_PI * M_PI * sin((n * M_PI * x)/L)) * exp(-alpha * t * (n * n * M_PI * M_PI)/(L*L))) / (L*L);
             return val;
         }
 
         virtual double xderiv(double x, double y, double z, double t) {
-            double k = this->diffuseCoefficient(x,y,z,0.,t); 
-            double val =  (B * n * M_PI * cos((n * M_PI * x)/L)/L) * exp(-k * t * ((n * n * M_PI * M_PI)/(L*L))); 
+            double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
+            double val =  (B * n * M_PI * cos((n * M_PI * x)/L)/L) * exp(-alpha * t * ((n * n * M_PI * M_PI)/(L*L))); 
             return val;
         }
         virtual double yderiv(double x, double y, double z, double t) {
@@ -49,8 +49,8 @@ class Exact1D : public ExactSolution
         }
 
         virtual double tderiv(double x, double y, double z, double t) {
-            double k = this->diffuseCoefficient(x,y,z,0.,t);             
-            double val = (B * n*n * M_PI*M_PI * sin((n * M_PI * x)/L)/(L*L)) * exp(-k * t * ((n * n * M_PI * M_PI)/(L*L))); 
+            double alpha = this->diffuseCoefficient(x,y,z,0.,t);             
+            double val = (B * n*n * M_PI*M_PI * sin((n * M_PI * x)/L)/(L*L)) * exp(-alpha * t * ((n * n * M_PI * M_PI)/(L*L))); 
 
             return val; 
         }

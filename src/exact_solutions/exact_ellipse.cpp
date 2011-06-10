@@ -24,7 +24,16 @@ double ExactEllipse::operator()(double x, double y, double z, double t) {
     double r = sqrt(x_contrib + y_contrib);
 
     // if temporal decay is too large, time step will have to decrease
-
+    
+    
+    // for 2D grid
+    //  lambda = [(n*pi*x)/L]^2 + [(m*pi*y)/H]^2
+    //  exp(t * decay * lambda) makes sure our decay 0's out on the square's half width.
+    //
+    //  if we have an ellipse with axes a,b: 
+    //        lambda = [(n*pi*(x/a))/L]^2 + [(m*pi*(y/b))/H]^2
+    //
+    //
     double T = cos(freq * r) * exp(-decay * t);
     return T;
 }

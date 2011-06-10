@@ -9,29 +9,36 @@
 class Exact1D : public ExactSolution
 {
     private:
+            // See Haberman p47,48 for details
+        double n;
+        double B;
         double decay; 
         double L;
     public:
         Exact1D(double maxX, double alpha)
             : ExactSolution(1), 
+            n(8),B(maxX),
             L(maxX), decay(alpha)
     {;}
         ~Exact1D();
 
         virtual double operator()(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
-            double val = sin((M_PI * x)/L) * exp(-(alpha * M_PI * M_PI * t)/(L*L)); 
+            // See Haberman p48 for details
+            // B is the coefficient we choose for the problem. It could even be another function
+            double val = B * sin((n * M_PI * x)/L) * exp(-(alpha * n * M_PI * M_PI * t)/(L*L)); 
             return val;
         }
+
         virtual double laplacian(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
-            double val = -((M_PI * M_PI * sin((M_PI*x)/L)) * exp(-(M_PI * M_PI * t * alpha)/(L*L))) / (L*L);
+            double val = -B*((n * M_PI * M_PI * sin((n * M_PI * x)/L)) * exp(-(n * M_PI * M_PI * t * alpha)/(L*L))) / (L*L);
             return val;
         }
 
         virtual double xderiv(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
-            double val = M_PI * cos((M_PI * x)/L) * ( L *exp( - M_PI * M_PI * t * alpha)/(L*L));
+            double val = B*n*M_PI * cos((n*M_PI * x)/L) * ( L *exp( - n*M_PI * M_PI * t * alpha)/(L*L));
             return val;
         }
         virtual double yderiv(double x, double y, double z, double t) {
@@ -43,7 +50,7 @@ class Exact1D : public ExactSolution
 
         virtual double tderiv(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
-            double val = -(((M_PI*M_PI)*alpha * sin((M_PI*x)/L)) * exp((M_PI*M_PI*t*alpha)/(L*L))) / (L*L);
+            double val = -B*(((n * M_PI*M_PI)*alpha * sin((n*M_PI*x)/L)) * exp((n*M_PI*M_PI*t*alpha)/(L*L))) / (L*L);
             return val; 
         }
 

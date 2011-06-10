@@ -32,16 +32,18 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
     minX = 0.;
     //minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
-    maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
+    //maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
+    maxX = 10.;
+    decay = settings->GetSettingAs<double>("DECAY", ProjectSettings::optional, "1."); 	
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
 }
 
 
 // Choose a specific Solution to this test case
 ExactSolution* getExactSolution(int dim_num) {
-    double L = (double)nx;
-    double Re = 10;
-    decay = 1.0/Re;
+//    double Re = 10;
+//    decay = 1.0/Re;
+    double L = maxX; 
     ExactSolution* exact = new Exact1D(L, decay);
     return exact;
 }
@@ -154,8 +156,8 @@ int main(int argc, char** argv) {
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
 //            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
-//            grid->generateStencils(Grid::ST_KDTREE);   
-            grid->generateStencils(Grid::ST_HASH);   
+            grid->generateStencils(Grid::ST_KDTREE);   
+//            grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 
@@ -316,6 +318,7 @@ int main(int argc, char** argv) {
         // true here indicates the weights are computed. 
         pde = new HeatPDE(subdomain, der, comm_unit, uniformDiffusion, true);
     }
+    // This should not influence anything. 
     pde->setStartEndTime(start_time, end_time);
 
     pde->fillInitialConditions(exact);

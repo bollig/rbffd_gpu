@@ -171,12 +171,20 @@ class Domain : public Grid, public MPISendable {
                 std::cout << ".";
             }
 #endif
+#if 0
             if (inclusiveMax) {
                 // Use subtraction here to guarantee all nodes are accounted for
                 return (d1 >= 0. && d2 >= 0.);
             } else {
-                return (d1 >= 0. && d2 > 0.);
+                return (d1 >= 0. && d2 > 0.));
             }
+#else
+            if (inclusiveMax) {
+                return ((pt_ >= rmin) && (pt_ <= rmax));
+            } else {
+                return ((pt_ >= rmin) && (pt_ < rmax));
+            }
+#endif 
         }
 
         void setInclusiveMaxBoundary(bool inclMaxX, bool inclMaxY, bool inclMaxZ) { 

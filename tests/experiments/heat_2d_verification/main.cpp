@@ -11,7 +11,7 @@
 #include "rbffd/rbffd.h"
 #include "rbffd/rbffd_cl.h"
 
-#include "./exact_1D.h"
+#include "./exact_2D.h"
 
 #include "timer_eb.h"
 #include "utils/comm/communicator.h"
@@ -22,37 +22,40 @@
 #endif 
 
 int nx;
-double minX; 
+int ny;
 double maxX; 
+double maxY; 
 double decay;
 int uniformDiffusion;
 
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
-    minX = 0.;
-    //minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
+    ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
+    decay = settings->GetSettingAs<double>("DECAY", ProjectSettings::required); 
     //maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
+    //maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
     maxX = 1.;
-    decay = settings->GetSettingAs<double>("DECAY", ProjectSettings::optional, "1."); 	
+    maxY = 1.;
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
 }
 
 
 // Choose a specific Solution to this test case
 ExactSolution* getExactSolution(int dim_num) {
-//    double Re = 10;
-//    decay = 1.0/Re;
-    double L = maxX; 
-    ExactSolution* exact = new Exact1D(L, decay);
+    double L1 = maxX;
+    double L2 = maxX;
+    //double Re = 2.;
+    //decay = 1.0/Re;
+    ExactSolution* exact = new Exact2D(L1,L2,decay);
     return exact;
 }
 
 // Choose a specific type of Grid for the test case
 Grid* getGrid(int dim_num) {
-    Grid* grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
+    Grid* grid = new RegularGrid(nx, ny, 0., maxX, 0., maxY); 
     // Very important. otherwise we might not distribute work properly across CPUs
-    grid->setExtents(0., maxX, 0., 0., 0., 0.);
+    grid->setExtents(0., maxX, 0., maxY, 0., 0.);
     return grid; 
 }
 
@@ -318,8 +321,8 @@ int main(int argc, char** argv) {
         // true here indicates the weights are computed. 
         pde = new HeatPDE(subdomain, der, comm_unit, uniformDiffusion, true);
     }
-    // This should not influence anything. 
-    pde->setStartEndTime(start_time, end_time);
+    // has no effect
+//    pde->setStartEndTime(start_time, end_time);
 
     pde->fillInitialConditions(exact);
 
@@ -361,7 +364,7 @@ int main(int argc, char** argv) {
     //          dt <= nu/dx^2 
     // is valid for stability in some FD schemes. 
    // double max_dt = 0.2*(sten_area);
-	printf("dt = %f (FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", dt, max_dt, 0.5*sten_area);
+	printf("dt = %f (FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f, 1/K = %f)\n", dt, max_dt, 0.5*sten_area, 1./decay);
     // This appears to be consistent with Chinchipatnam2006 (Thesis)
     // TODO: get more details on CFL for RBFFD
     // note: checking stability only works if we have all weights for all

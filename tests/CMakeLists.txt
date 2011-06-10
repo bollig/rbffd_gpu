@@ -15,6 +15,7 @@
         #TODO        experiments/convection_regulargrid
 		experiments/heat_regulargrid_2d
 		experiments/heat_1D_verification
+		experiments/heat_2D_verification
         experiments/heat_ellipse_2d
         #****        experiments/ncar_poisson1_vcl
 

@@ -432,9 +432,9 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Boundary only
 
-    calcSolNorms(sol_vec_int, sol_exact_int, "Interior", rel_err_max);  // Interior only
-    
-    calcSolNorms(sol_vec_int_no_bnd, sol_exact_int_no_bnd, "Interior without Boundary", rel_err_max);  // Interior only (excludes unbalanced stencils)
+    calcSolNorms(sol_vec_int_no_bnd, sol_exact_int_no_bnd, "Interior Stencils w/o Boundary", rel_err_max);  // Interior only (excludes unbalanced stencils)
+
+    calcSolNorms(sol_vec_int, sol_exact_int, "All Interior", rel_err_max);  // Interior only
 
     calcSolNorms(sol_vec, sol_exact, "Interior & Boundary", rel_err_max);  // Full domain
 }
@@ -490,5 +490,19 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
         exit(EXIT_FAILURE);
     }
 #endif 
+
+#define CATCH_NANS 1
+#if CATCH_NANS
+    if ((l1fabs != l1fabs) ||
+        (l2fabs != l2fabs) || 
+            (lifabs != lifabs)) {
+        std::cout << "Caught NaNs in error!\n";
+        exit(EXIT_FAILURE);
+    }
+
+#endif 
+
+
+
 
 }

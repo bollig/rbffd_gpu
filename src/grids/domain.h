@@ -80,7 +80,7 @@ class Domain : public Grid, public MPISendable {
 
         virtual std::string getFileDetailString() {
             char prefix[256]; 
-            sprintf(prefix, "_rank%d", this->id); 
+            sprintf(prefix, "_rank%d_of_%d", this->id, this->comm_size); 
             std::string s = Grid::getFileDetailString(); 
             s.append(prefix); 
             return s;

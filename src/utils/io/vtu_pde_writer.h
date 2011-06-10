@@ -258,7 +258,7 @@ class VtuPDEWriter : public PDEWriter
             }
 #endif 
             char fname[FILENAME_MAX]; 
-            sprintf(fname, "subdomain_rank%d-%04d.vtk", comm_unit->getRank(), iter);
+            sprintf(fname, "subdomain_rank%d_of%d-%04d.vtk", comm_unit->getRank(),comm_unit->getSize(), iter);
  //           sprintf(fname, "subdomain_%d.vtk", comm_unit->getRank(), iter);
             uwriter->SetFileName(fname);
 //            uwriter->WriteNextTime(iter);

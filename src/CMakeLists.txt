@@ -9,7 +9,7 @@ SET(REQUIRED_SOURCE_FILES
     exact_solutions/exact_ncar_poisson2.cpp
     exact_solutions/exact_regulargrid.cpp
     exact_solutions/exact_regulargrid_nonuniform.cpp
-    exact_solutions/exact_regulargrid_convection.cpp
+    #TODO    exact_solutions/exact_regulargrid_convection.cpp
     exact_solutions/exact_regulargrid_shu2006.cpp
 
     grids/cvt/cvt.cpp
@@ -27,7 +27,7 @@ SET(REQUIRED_SOURCE_FILES
     pdes/pde.cpp
     pdes/time_dependent_pde.cpp
     pdes/parabolic/heat_pde.cpp
-    pdes/parabolic/convection_diffusion_pde.cpp
+    #TODO    pdes/parabolic/convection_diffusion_pde.cpp
     pdes/elliptic/ncar_poisson1.cpp
 
     rbffd/rbffd.cpp

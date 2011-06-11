@@ -60,6 +60,7 @@ void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
 void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
 
     size_t nb_stencils = grid_ref.getStencilsSize(); 
+    size_t nb_nodes = grid_ref.getNodeListSize(); 
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
     // backup the current solution so we can perform intermediate steps
@@ -67,37 +68,36 @@ void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
     std::vector<double>& s = this->U_G; 
     std::vector<SolutionType> feval1(nb_stencils);  
 
+    
+    for (size_t i = grid_ref.QmB.size(); i < s.size(); i++) {
+        NodeType& v = nodes[i];
+//        printf("In to advance: (local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
+    }
+
+
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
 
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in feval1
-    this->solve(s, &feval1, nb_stencils, cur_time); 
-
-    // TODO: (ADD) Use 5 point Cartesian formula for the Laplacian
-    //lapl_deriv = grid.computeCartLaplacian(s);
+    this->solve(s, &feval1, nb_stencils, nb_nodes, cur_time); 
 
     // compute u^* = u^n + dt*lapl(u^n)
-    for (size_t i = 0; i < feval1.size(); i++) {
+    for (size_t i = 0; i < nb_nodes; i++) {
         NodeType& v = nodes[i];
         //printf("dt= %f, time= %f\n", dt, time);
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         s[i] = s[i] + dt* ( feval1[i] + f);
-        //printf("(local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
+        if (i > grid_ref.QmB.size()) {
+            printf("Adjusting (local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
+        }
     }
 
     // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time); 
 
-#if 0
-    // Now we need to make sure all CPUs have R2 (intermediate part of timestep)
-    // Do NOT use Domain as buffer for computation
-    for (int i = 0; i < s1.size(); i++) {
-        subdomain->U_G[i] = s1[i];
-    }
-#endif 
     comm_ref.broadcastObjectUpdates(this);
     this->printExpectedReceive();
 }

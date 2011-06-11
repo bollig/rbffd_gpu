@@ -31,8 +31,8 @@ void HeatPDE::fillInitialConditions(ExactSolution* exact) {
 
 
 // Get the time dependent diffusion coeffs 
-void HeatPDE::fillDiffusion(std::vector<SolutionType>& diff, std::vector<SolutionType>& sol, double t) {
-    for(size_t i = 0; i < diff.size(); i++) {
+void HeatPDE::fillDiffusion(std::vector<SolutionType>& diff, std::vector<SolutionType>& sol, double t, size_t n_nodes) {
+    for(size_t i = 0; i < n_nodes; i++) {
         NodeType& pt = grid_ref.getNode(i); 
         diff[i] = exact_ptr->diffuseCoefficient(pt, sol[i], t);
     }
@@ -50,47 +50,55 @@ void HeatPDE::assemble()
 // timestep: u(t+h) = u(t) + h*f(t,u(t))
 // For the diffusion equation this is f(t,u(t)) = laplacian(u(t))
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
-void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
+void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t)
 {   
     // EFB06092011: div_grad is noticeably faster and it works. Gordon keeps
     // saying his didnt. I need to get a non-uniform test case with known exact
     // solution to verify that statement.
 #define SOLVE_DIV_GRAD 1
 #if SOLVE_DIV_GRAD
-    this->solveDivGrad(u_t, f_out, n, t);
+    this->solveDivGrad(u_t, f_out, n_stencils, n_nodes, t);
 #else 
-    this->solveRewrittenLaplacian(u_t, f_out, n, t);
+    this->solveRewrittenLaplacian(u_t, f_out, n_stencils, n_nodes, t);
 #endif 
 }
 
-void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
+void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t)
 {
     // x,y,z components of the gradient of u_t
-    std::vector<SolutionType> grad_x(n); 
-    std::vector<SolutionType> grad_y(n);
-    std::vector<SolutionType> grad_z(n);
+    std::vector<SolutionType> grad_x(n_nodes); 
+    std::vector<SolutionType> grad_y(n_nodes);
+    std::vector<SolutionType> grad_z(n_nodes);
 
     // diffusion coeffs 
-    std::vector<SolutionType> diffusion(n);  
+    std::vector<SolutionType> diffusion(n_nodes);  
     
     // Equation is \div{K \cdot \grad{u}}
-    std::vector<SolutionType> K_dot_grad_u(n);  
+    std::vector<SolutionType> K_dot_grad_u(n_stencils);  
 
     // x,y,z components of divergence of (K \cdot \grad{u_t})
-    std::vector<SolutionType> div_x(n); 
-    std::vector<SolutionType> div_y(n);
-    std::vector<SolutionType> div_z(n);
+    std::vector<SolutionType> div_x(n_stencils); 
+    std::vector<SolutionType> div_y(n_stencils);
+    std::vector<SolutionType> div_z(n_stencils);
+
+    // ApplyWeights Parameters: type, input (size n_nodes), output (size n_stencils), update on gpu?
 
     der_ref.applyWeightsForDeriv(RBFFD::X, u_t, grad_x, true); 
     der_ref.applyWeightsForDeriv(RBFFD::Y, u_t, grad_y, true); 
     der_ref.applyWeightsForDeriv(RBFFD::Z, u_t, grad_z, true); 
 
     // Get the diffusivity of the domain for at the current time
-    this->fillDiffusion(diffusion, u_t, t);
+    this->fillDiffusion(diffusion, u_t, t, n_nodes);
+
+    // NEED TO GET GRAD and diffusion for ghost nodes here: 
+    this->sendrecvUpdates(grad_x, "grad_x"); 
+    this->sendrecvUpdates(grad_y, "grad_y"); 
+    this->sendrecvUpdates(grad_z, "grad_z"); 
+//Filled n_nodes above:    this->sendrecvUpdates(diffusion, "diffusion"); 
 
     // Compute K dot grad{u}
     // FIXME: we assume scalar diffusion, make this 
-    for (size_t i = 0; i < n; i++) {
+    for (size_t i = 0; i < n_nodes; i++) {
         grad_x[i] *= diffusion[i];
         grad_y[i] *= diffusion[i];
         grad_z[i] *= diffusion[i];
@@ -102,14 +110,15 @@ void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionT
     der_ref.applyWeightsForDeriv(RBFFD::Z, grad_z, div_z, true); 
 
     // Finish computing divergence
-    for (size_t i = 0; i < n; i++) {
+    for (size_t i = 0; i < n_stencils; i++) {
         (*f_out)[i] = div_x[i] + div_y[i] + div_z[i]; 
     }
 }
 
 
-void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
+void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes,  double t)
 {
+    size_t n = n_stencils;
     std::vector<SolutionType> u_lapl_deriv(n); 
     std::vector<SolutionType> K_dot_lapl_U(n); 
     std::vector<SolutionType> diffusion(n);  
@@ -127,7 +136,7 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
     }
 
     // Get the diffusivity of the domain for at the current time
-    this->fillDiffusion(diffusion, u_t, t);
+    this->fillDiffusion(diffusion, u_t, t, n);
 
     for (size_t i = 0; i < n; i++) {
         K_dot_lapl_U[i] = diffusion[i] * u_lapl_deriv[i]; 

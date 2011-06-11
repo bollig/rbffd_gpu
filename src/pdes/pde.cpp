@@ -107,8 +107,14 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
     }
 }
 
-
+// By default we send updates for the SOLUTION of our PDE. 
 int PDE::sendUpdate(int my_rank, int receiver_rank) {
+    this->sendUpdate(this->U_G, my_rank, receiver_rank, "U_G");
+}
+
+// Alternatively we can specify a vector to update
+// NOTE: the vector we update MUST be of size n_nodes and NOT of size n_stencils
+int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_rank, std::string label) {
 
     if (my_rank != receiver_rank) {
         //vector<int>::iterator oit;
@@ -116,16 +122,15 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
         // are sending to receiver_rank		
 
         // FIXME: domain should not make these public. hide them behind accessors
-//        std::vector<std::vector<int> >& O_by_rank = grid_ref.O_by_rank;
         std::vector<std::vector<int> >& O_by_rank = grid_ref.O_by_rank;
         std::vector<int>::iterator oit;
 
         // We send a list of node values 
-        vector<double> U_O;
+        vector<double> U_O(O_by_rank.size());
 
         if (O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
             //	cout << "O_by_rank is NOT size(0)" << endl;
-            int i;
+            int i=0;
 
             for (oit = O_by_rank[receiver_rank].begin(); oit
                     != O_by_rank[receiver_rank].end(); oit++, i++) {
@@ -133,12 +138,18 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
                 int l_indx = grid_ref.g2l(g_indx);
                 // Elements in O are in global indices 
                 // so we need to first convert to local to index our U_G
-                U_O.push_back(U_G[l_indx]);
+                U_O[i] = vec[l_indx];
 #if 1
-                cout << "SENDING CPU" << receiver_rank << " U_G[" << l_indx << "] = " << U_G[l_indx] << "\tU_O[" << i << "] = " << U_O[i] << "\t(Targeting Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")" << std::endl;
+                cout << "SEND "<< label << "\t(Targeting Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")" << std::endl;
+                cout << receiver_rank << " vec[" << l_indx << "] = " << vec[l_indx] << "\tU_O[" << i << "] = " << U_O[i] << std::endl;
+
 #endif 
             }
+        } else {
+            cout << "O_BY_RANK for " << receiver_rank << " is 0" << std::endl;
+            exit(-1);
         }
+
 #if 0
         cout << "O_by_rank[" << receiver_rank << "].size = "
             << O_by_rank[receiver_rank].size() << endl;
@@ -150,6 +161,10 @@ int PDE::sendUpdate(int my_rank, int receiver_rank) {
 }
 
 int PDE::receiveUpdate(int my_rank, int sender_rank) {
+    this->receiveUpdate(this->U_G, my_rank, sender_rank, "U_G");
+}
+
+int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label) {
     if (my_rank != sender_rank) {
         vector<int>::iterator rit;
         int i = 0;
@@ -169,17 +184,41 @@ int PDE::receiveUpdate(int my_rank, int sender_rank) {
 
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-#if 1 
             int g_indx = *rit; 
             int l_indx = grid_ref.g2l(*rit);
-            cout << "\t(Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")\tOld U_G[" << l_indx << "]: " << U_G[l_indx] << "\t New U_G[" << l_indx << "]: " << U_R[i] << endl;
+#if 1 
+            cout << label << "\t(Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")\tOld vec[" << l_indx << "]: " << vec[l_indx] << "\t New U_G[" << l_indx << "]: " << U_R[i] << endl;
 #endif 
             // Global to local mapping required
-            U_G[grid_ref.g2l(*rit)] = U_R[i]; // Overwrite with new values
+            vec[l_indx] = U_R[i]; // Overwrite with new values
         }
 
 //        cout << "RANK " << my_rank << " REPORTS: received update from RANK " << sender_rank << endl;
     }
+}
+
+int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label) 
+{
+	vector<int> receiver_list; 
+	
+	// This is BAD: we should only send to CPUs in need. 
+	for (int i = 0; i < comm_ref.getSize(); i++) {
+		if (i != comm_ref.getRank()) 
+		{
+				receiver_list.push_back(i); 	
+		}
+	}
+	
+	// Round robin: each CPU takes a turn at sending message to CPUs that need nodes
+	for (int j = 0; j < comm_ref.getSize(); j++) {
+		if (comm_ref.getRank() == j) {		// My turn
+			for (int i = 0; i < receiver_list.size(); i++) {
+				this->sendUpdate(vec, comm_ref.getRank(), receiver_list[i], label);
+			}
+		} else {						// All CPUs listen
+			this->receiveUpdate(vec, comm_ref.getRank(), j, label);
+		}
+	}
 }
 
 int PDE::sendFinal(int my_rank, int receiver_rank) {

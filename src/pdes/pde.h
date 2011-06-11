@@ -52,7 +52,7 @@ class PDE : public MPISendable
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble() =0; 
         // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
-        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, size_t n) = 0;
+        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes) = 0;
 
 
         // Print the current solution to STDOUT
@@ -132,6 +132,12 @@ class PDE : public MPISendable
         virtual int initFinal();
         virtual int updateFinal();
         // ******** END MPISENDABLE ************
+
+        // By default (send/recvUpdate above) we send elements from U_G. These
+        // two routines allow us to specify a mat/vector to transmit
+        int receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
+        int sendUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
+        int sendrecvUpdates(std::vector<SolutionType>& vec, std::string label=""); 
 
     protected: 
         // FIXME: put these in another pure virtual interface class

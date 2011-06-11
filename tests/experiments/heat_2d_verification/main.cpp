@@ -351,7 +351,7 @@ int main(int argc, char** argv) {
             avgdx = dx; 
         }
     }
-    // Laplacian = d^2/dx^2
+    // Laplacian = d^2/dx^2 + d^2/dy^2
     double sten_area = avgdx*avgdx;
 
     double max_dt = (0.5*sten_area)/decay;

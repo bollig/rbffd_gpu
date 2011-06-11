@@ -24,7 +24,7 @@ class Exact2D : public ExactSolution
         Exact2D(double minX, double maxX, double minY, double maxY, double alpha)
             // 2D
             : ExactSolution(2), 
-            n(2),m(3),B(2.),
+            n(8),m(5),B(2.),
             xmin(minX), ymin(minY),
             L(maxX-minX),H(maxY-minY),
             diffuseConst(alpha)
@@ -47,13 +47,13 @@ class Exact2D : public ExactSolution
         virtual double laplacian(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
             double initialConst = B; 
-            double spatial_x = sin((n * M_PI * (x-xmin))/L);
-            double spatial_y = sin((m * M_PI * (y-ymin))/H);
+            double d2_spatial_xx = -sin((n * M_PI * (x-xmin))/L) * (n*n*M_PI*M_PI) / L*L;
+            double d2_spatial_yy = -sin((m * M_PI * (y-ymin))/H) * (m*m*M_PI*M_PI) / H*H;
             double lambda = ((n * n * M_PI * M_PI)/(L*L)) + ((m * m * M_PI * M_PI)/(H*H));
             double temporal = exp(-alpha * t * lambda);
 
             //changed from operator()
-            double val = (initialConst * spatial_x * spatial_y * temporal * (L*L * m*m + H*H * n*n)*M_PI*M_PI) / (H*H*L*L);
+            double val = initialConst * d2_spatial_xx * d2_spatial_yy * temporal;
             
             return val;
         }

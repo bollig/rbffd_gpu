@@ -265,7 +265,8 @@ class VtuPDEWriter : public PDEWriter
             uwriter->Write();
 
             std::cout << "VTU FILE WRITTEN" << std::endl;
-            heat->writeLocalSolutionToFile(iter);
+            //Write ASCII files: 
+            //heat->writeLocalSolutionToFile(iter);
         }
 
         void writeGlobalVTU(int iter) {

@@ -139,7 +139,7 @@ int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_ra
                 // Elements in O are in global indices 
                 // so we need to first convert to local to index our U_G
                 U_O[i] = vec[l_indx];
-#if 1
+#if 0
                 cout << "SEND "<< label << "\t(Targeting Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")" << std::endl;
                 cout << receiver_rank << " vec[" << l_indx << "] = " << vec[l_indx] << "\tU_O[" << i << "] = " << U_O[i] << std::endl;
 
@@ -186,7 +186,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
             int g_indx = *rit; 
             int l_indx = grid_ref.g2l(*rit);
-#if 1 
+#if 0 
             cout << label << "\t(Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")\tOld vec[" << l_indx << "]: " << vec[l_indx] << "\t New U_G[" << l_indx << "]: " << U_R[i] << endl;
 #endif 
             // Global to local mapping required

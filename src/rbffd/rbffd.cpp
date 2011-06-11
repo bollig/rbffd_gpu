@@ -493,26 +493,17 @@ void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* der
 double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output) 
 {
     std::vector<double*>& weights_r = this->weights[which];
+  
+    // Use a std::set because it auto sorts as we insert
+    std::set<size_t>& b_indices = grid_ref.getSortedBoundarySet();
+    std::set<size_t>& i_indices = grid_ref.getSortedInteriorSet(); 
+    size_t nb_bnd = b_indices.size();
+    size_t nb_int = i_indices.size();
+    int nb_centers = grid_ref.getNodeListSize();
+    int nb_stencils = grid_ref.getStencilsSize();
 
     // compute eigenvalues of derivative operator
     size_t sz = weights_r.size();
-    size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
-
-    std::vector<size_t>& boundary_indx = grid_ref.getBoundaryIndices();
-
-    // Use a std::set because it auto sorts as we insert
-    std::set<size_t> b_indices;
-    for (size_t i = 0; i < nb_bnd; i++) {
-        b_indices.insert(boundary_indx[i]);  
-    }
-
-    std::set<size_t> all_indices; 
-    for (size_t i = 0; i < sz; i++) {
-        all_indices.insert(i);  
-    }
-
-    std::set<size_t> i_indices; 
-    std::set_difference(all_indices.begin(), all_indices.end(), b_indices.begin(), b_indices.end(), std::inserter(i_indices, i_indices.end()));
 
 #if 0
     printf("sz= %lu\n", sz);
@@ -523,23 +514,6 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
     arma::mat eigmat(sz, sz);
     eigmat.zeros();
 
-#define BND_UPDATE 0
-#if BND_UPDATE
-    for (int i=nb_bnd; i < sz; i++) {
-        double* w = weights_r[i];
-        StencilType& st = grid_ref.getStencil(i);
-        for (int j=0; j < st.size(); j++) {
-            eigmat(i,st[j])  = w[j];
-            // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
-        }
-    }
-
-    for (int i=0; i < nb_bnd; i++) {
-        eigmat(i,i) = 1.0;
-    }
-
-    printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
-#else 
     // Boundary nodes first with diagonal 1's.
     for (int i=0; i < nb_bnd; i++) {
         eigmat(i,i) = 1.0;
@@ -558,7 +532,7 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
     }
 
     printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
-#endif 
+
     arma::cx_colvec eigval;
     arma::cx_mat eigvec;
     printf("Computing Eigenvalues of Laplacian Operator on Interior Nodes\n");

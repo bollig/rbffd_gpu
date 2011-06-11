@@ -153,8 +153,8 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     int nb_centers = grid->getNodeListSize();
     int nb_stencils = grid->getStencilsSize();
 
-    std::cout << "BINDICES.size= " << b_indices.size();
-    std::cout << "IINDICES.size= " << i_indices.size();
+   // std::cout << "BINDICES.size= " << b_indices.size();
+   // std::cout << "IINDICES.size= " << i_indices.size();
 
     printf("\n================\n");
     printf("testFunction( %d ) [** Approximating F(X,Y) = %s **] \n",choice, TESTFUNSTR[(int)choice].c_str());

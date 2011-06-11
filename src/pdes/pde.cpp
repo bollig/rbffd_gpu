@@ -176,11 +176,16 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
         recvSTL(&R_sub, my_rank, sender_rank);
         recvSTL(&U_R, my_rank, sender_rank);
 
-        //cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
+        // EFB06112011: 
+        // FIXME: we need to improve communication so we are not making
+        // connections for 0 transfers
+#if 0
+        cout << "Received Update from CPU" << sender_rank << " (" << R_sub.size() << " centers)" << endl;
         if (!(R_sub.size() > 0)) {
             std::cout << "[PDE] error. did not receive any updates\n";
             exit(EXIT_FAILURE);
         }
+#endif 
 
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
@@ -203,6 +208,9 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
 	
 	// This is BAD: we should only send to CPUs in need. 
 	for (int i = 0; i < comm_ref.getSize(); i++) {
+        // FIXME: we need an R_by_rank to knwo when to receive from another CPU
+        // unless we use some sort of BCAST mechanism in MPI and MPI determines the details. 
+        // For now we allow 0 byte transfers but this should be improved
 		if (i != comm_ref.getRank()) 
 		{
 				receiver_list.push_back(i); 	
@@ -373,100 +381,72 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
 
 void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, Grid& grid, double rel_err_max)
 {
-    std::vector<NodeType>& nodes = grid.getNodeList(); 
-    std::vector<size_t>& boundary_indx = grid.getBoundaryIndices();
-    // Get a COPY of the indices because we want to sort them
-    std::vector<size_t> bindices = boundary_indx;  
+    std::set<size_t>& b_indices = grid.getSortedBoundarySet();
+    std::set<size_t>& i_indices = grid.getSortedInteriorSet(); 
+    size_t nb_bnd = b_indices.size();
+    size_t nb_int = i_indices.size();
+    int nb_centers = grid.getNodeListSize();
+    int nb_stencils = grid.getStencilsSize();
 
-    size_t nb_nodes = nodes.size(); 
-    size_t nb_bnd =  bindices.size(); 
+
 #if 0
     if (rel_err_max < 0) { 
         rel_err_max = rel_err_tol; 
     }
 #endif 
-    vector<double> sol_error(sol_vec.size());
-#if 0
-    vector<double> sol_exact(sol_vec.size());
+    vector<double> sol_error(nb_stencils);
 
-    //std::cout << "======= TIME: " << cur_time << " =======\n"; 
-    for (int i = 0; i < sol_vec.size(); i++) {
-        Vec3& v = nodes[i];
-        sol_exact[i] = exactSolution->at(v, cur_time);
-        //  sol_error[i] = sol_exact[i] - sol_vec[i];
-        //  printf("sol_error[%d] = %f\n", i, sol_error[i]); 
-    }
-#endif 
-    //std::sort(bindices.begin(), bindices.end(), srtobject); 
+    std::vector<double> sol_vec_bnd(nb_bnd);
+    std::vector<double> sol_exact_bnd(nb_bnd); 
 
-    std::sort(bindices.begin(), bindices.end(), srtobject); 
-
-    std::vector<double> sol_vec_bnd(bindices.size()); 
-    std::vector<double> sol_exact_bnd(bindices.size()); 
-
-    std::vector<double> sol_vec_int(nb_nodes - bindices.size()); 
-    std::vector<double> sol_exact_int(nb_nodes - bindices.size()); 
+    std::vector<double> sol_vec_int(nb_int);
+    std::vector<double> sol_exact_int(nb_int);
     
     std::vector<double> sol_vec_int_no_bnd;
     std::vector<double> sol_exact_int_no_bnd;
-#if 0
-    for (size_t i = 0; i < nb_bnd; i++ ){ 
-        // Skim off the boundary
-    //    sol_vec_bnd[i] = sol_vec[bindices[i]]; 
-    //    sol_exact_bnd[i] = sol_exact[bindices[i]]; 
-        std::cout << "BOUNDARY: " << grid_ref.l2g(bindices[i]) << std::endl;
-    }
-#endif 
-    size_t i = 0;  // Index on boundary
-    size_t k = 0;  // index on interior
-    size_t l = 0;  // index on interior
-    //for (int j = 0; j < sol_vec.size(); j++) {
-    for (size_t j = 0; j < nb_nodes; j++) {
-        // Skim off the boundary
-        if (j == bindices[i]) {
-            sol_vec_bnd[i] = sol_vec[j]; 
-            sol_exact_bnd[i] = sol_exact[j]; 
-            //std::cout << "BOUNDARY: " << sol_vec_bnd[i] << std::endl;
-            i++; 
-        } else {
-            sol_vec_int[k] = sol_vec[j]; 
-            sol_exact_int[k] = sol_exact[j]; 
-            //std::cout << "INTERIOR: " << sol_vec_int[k] << std::endl;
-            k++; 
-            // std::cout << "INTERIOR: " << k << " / " << j <<  std::endl;
 
-            // Assume that the nodes at the tail of the sol_vec are not part of
-            // the subdomain (i.e., that they're ghost nodes) 
-            if (j < grid.getStencilsSize()) {
-                // Now, what if the stencil contains boundary nodes? Most error
-                // accumulates where stencils are unbalanced 
-                StencilType& st = grid.getStencil(j); 
+    std::set<size_t>::iterator it;
+    int i = 0;
+    for (it = b_indices.begin(); it != b_indices.end(); it++, i++) { 
+        int j = *it;
+        sol_vec_bnd[i] = sol_vec[j]; 
+        sol_exact_bnd[i] = sol_exact[j]; 
+    }
+    int k = 0;
+    int l = 0;
+    for (it = i_indices.begin(); it != i_indices.end(); it++, k++) { 
+        int j = *it;
+        sol_vec_int[k] = sol_vec[j]; 
+        sol_exact_int[k] = sol_exact[j]; 
+
+        // Assume that the nodes at the tail of the sol_vec are not part of
+        // the subdomain (i.e., that they're ghost nodes) 
+        if (j < nb_stencils) {
+            // Now, what if the stencil contains boundary nodes? Most error
+            // accumulates where stencils are unbalanced 
+            StencilType& st = grid.getStencil(j); 
 #if 0
-                std::cout << "ST[" << j << "].size= " << st.size() << std::endl;
-                std::cout << "bindices.size= " << bindices.size() << std::endl;
+            std::cout << "ST[" << j << "].size= " << st.size() << std::endl;
+            std::cout << "bindices.size= " << bindices.size() << std::endl;
 #endif 
-                // does the stencil contain any nodes that are on the boundary?
-                bool dep_boundary = false; 
-                for (size_t sz = 0; sz < st.size(); sz ++) {
-                    for (size_t sz_bnd = 0; sz_bnd < bindices.size(); sz_bnd++) {
-                        if (st[sz] == bindices[sz_bnd]) {
-                            dep_boundary=true;
-                            //break;
-                        }
+            // does the stencil contain any nodes that are on the boundary?
+            bool dep_boundary = false; 
+            for (size_t sz = 0; sz < st.size(); sz ++) {
+                for(std::set<size_t>::iterator bit = b_indices.begin(); bit != b_indices.end(); bit++) 
+                {
+                    if (st[sz] == *bit){
+                        dep_boundary=true;
+                        //break;
                     }
                 }
-                if (!dep_boundary) {
-                    sol_vec_int_no_bnd.push_back(sol_vec[j]); 
-                    sol_exact_int_no_bnd.push_back(sol_exact[j]); 
-                    l++;
-                }
+            }
+            if (!dep_boundary) {
+                sol_vec_int_no_bnd.push_back(sol_vec[j]); 
+                sol_exact_int_no_bnd.push_back(sol_exact[j]); 
+                l++;
             }
         }
     }
-
-    //std::cout << sol_exact_int_no_bnd.size() << std::endl;
-
-    //    writeErrorToFile(sol_error);
 
     calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Boundary only
 

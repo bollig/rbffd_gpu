@@ -326,7 +326,6 @@ int main(int argc, char** argv) {
     tm["updates"]->start(); 
     comm_unit->broadcastObjectUpdates(pde);
     comm_unit->barrier();
-    pde->printExpectedReceive();
     tm["updates"]->stop();
 
     tm["heat_init"]->stop(); 

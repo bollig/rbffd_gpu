@@ -215,9 +215,6 @@ class Domain : public Grid, public MPISendable
             return *local_stencil;
         }
 
-
-        // fill data variable U
-
         // ******** BEGIN MPISENDABLE ************
         // The following seven routines are required by MPISendable inheritence.
         virtual int send(int my_rank, int receiver_rank); 

@@ -145,13 +145,20 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 // NOTE: if nb_stencils_to_test is 0 then we check all stencils
 void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test, bool exitIfTestFails)
 {
+    // Use a std::set because it auto sorts as we insert
+    std::set<size_t>& b_indices = grid->getSortedBoundarySet();
+    std::set<size_t>& i_indices = grid->getSortedInteriorSet(); 
+    size_t nb_bnd = b_indices.size();
+    size_t nb_int = i_indices.size();
+    int nb_centers = grid->getNodeListSize();
+    int nb_stencils = grid->getStencilsSize();
+
+    std::cout << "BINDICES.size= " << b_indices.size();
+    std::cout << "IINDICES.size= " << i_indices.size();
+
     printf("\n================\n");
     printf("testFunction( %d ) [** Approximating F(X,Y) = %s **] \n",choice, TESTFUNSTR[(int)choice].c_str());
     printf("================\n");
-
-    vector<NodeType>& rbf_centers = grid->getNodeList();
-    int nb_centers = grid->getNodeListSize();
-    int nb_stencils = grid->getStencilsSize();
 
     if (nb_stencils_to_test) {
         nb_stencils = (nb_stencils > nb_stencils_to_test) ? nb_stencils_to_test : nb_stencils;
@@ -172,27 +179,13 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     }
 
     // Fill the test case based on our choice
-    fillTestFunction(choice, nb_stencils, u, dux_ex, duy_ex, dulapl_ex);
+    fillTestFunction(choice, nb_centers, u, dux_ex, duy_ex, dulapl_ex);
 
     std::vector<double>& avgDist = grid->getStencilRadii();
 
     der->applyWeightsForDeriv(RBFFD::X, u, xderiv, true);
     der->applyWeightsForDeriv(RBFFD::Y, u, yderiv, false);
     der->applyWeightsForDeriv(RBFFD::LAPL, u, lapl_deriv, false);
-
-    vector<size_t> boundary = grid->getBoundaryIndices();
-    int nb_bnd = grid->getBoundaryIndicesSize();
-
-    //TODO:
-    // - sort boundary indices
-    // - create partitions: interior, boundary 
-    // - compute norms from independent sets
-    // WHY?
-    //  because we cannot assume that boundary nodes appear first in the node lists. The partitioning
-    //  we perform for the domain decomposition pushes some boundary nodes to the bottom of the list. 
-    //  This bug shows itself when we subdivide the domain into multiple subdomains. 
-
-    size_t nb_int = nb_stencils - nb_bnd;
 
     std::vector<double> dux_ex_bnd(nb_bnd); 
     std::vector<double> xderiv_bnd(nb_bnd); 
@@ -214,37 +207,29 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
 
     std::vector<double> avgDist_bnd(nb_bnd); 
     std::vector<double> avgDist_int(nb_int); 
-
-    // Sort the boundary indices for easier partitioning
-    std::vector<size_t> bindices = grid->getBoundaryIndices(); 
-    std::sort(bindices.begin(), bindices.end(), srter); 
-    {
-        int i = 0;  // Index on boundary
-        int k = 0;  // index on interior
-        for (int j = 0; j < nb_stencils; j++) {
-            // Skim off the boundary
-            if (j == bindices[i]) {
-                dux_ex_bnd[i] = dux_ex[j]; 
-                xderiv_bnd[i] = xderiv[j]; 
-                duy_ex_bnd[i] = duy_ex[j]; 
-                yderiv_bnd[i] = yderiv[j]; 
-                dulapl_ex_bnd[i] = dulapl_ex[j]; 
-                lapl_deriv_bnd[i] = lapl_deriv[j]; 
-                avgDist_bnd[i] = avgDist[j]; 
-                //                std::cout << "BOUNDARY: " << i << " / " << j << ", " << avgDist_bnd[i] << std::endl;
-                i++; 
-            } else {
-                dux_ex_int[k] = dux_ex[j]; 
-                xderiv_int[k] = xderiv[j]; 
-                duy_ex_int[k] = duy_ex[j]; 
-                yderiv_int[k] = yderiv[j]; 
-                dulapl_ex_int[k] = dulapl_ex[j]; 
-                lapl_deriv_int[k] = lapl_deriv[j]; 
-                avgDist_int[k] = avgDist[j]; 
-                //              std::cout << "INTERIOR: " << k << " / " << j << ", " << avgDist_int[k] << std::endl;
-                k++; 
-            }
-        } 
+   
+    std::set<size_t>::iterator it;
+    int i = 0;
+    for (it = b_indices.begin(); it != b_indices.end(); it++, i++) { 
+        int j = *it;
+        dux_ex_bnd[i] = dux_ex[j]; 
+        xderiv_bnd[i] = xderiv[j]; 
+        duy_ex_bnd[i] = duy_ex[j]; 
+        yderiv_bnd[i] = yderiv[j]; 
+        dulapl_ex_bnd[i] = dulapl_ex[j]; 
+        lapl_deriv_bnd[i] = lapl_deriv[j]; 
+        avgDist_bnd[i] = avgDist[j]; 
+    }
+    int k = 0;
+    for (it = i_indices.begin(); it != i_indices.end(); it++, k++) { 
+        int j = *it;
+        dux_ex_int[k] = dux_ex[j]; 
+        xderiv_int[k] = xderiv[j]; 
+        duy_ex_int[k] = duy_ex[j]; 
+        yderiv_int[k] = yderiv[j]; 
+        dulapl_ex_int[k] = dulapl_ex[j]; 
+        lapl_deriv_int[k] = lapl_deriv[j]; 
+        avgDist_int[k] = avgDist[j]; 
     }
 
     enum DERIV {X=0, Y, LAPL};

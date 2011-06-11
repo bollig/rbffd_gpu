@@ -47,7 +47,6 @@ Domain::Domain(int dimension, float _xmin, float _xmax, float _ymin, float _ymax
         ymax = _ymax;
         zmin = _zmin;
         zmax = _zmax;
-
     }
 
 

@@ -910,3 +910,35 @@ void Grid::checkStencilSize() {
         stencil_map.resize(nb_rbf);
     }
 }
+
+
+
+// Partition the interior and boundary indices into sorted sets. This helps us
+// when we want access only interior nodes
+void Grid::partitionIndices() {
+
+    std::cout << "CALLED PartitionIndices\n";
+    std::vector<NodeType>& nodes = this->getNodeList(); 
+    std::vector<size_t>& boundary_indx = this->getBoundaryIndices();
+    size_t nb_bnd = boundary_indx.size();
+    size_t nb_stencils = this->getStencilsSize();
+    size_t nb_nodes = nodes.size();
+
+    b_indices.clear();
+    // Use a std::set because it auto sorts as we insert
+    for (size_t i = 0; i < nb_bnd; i++) {
+        b_indices.insert(boundary_indx[i]);  
+    }
+
+    std::set<size_t> all_indices; 
+    for (size_t i = 0; i < nb_nodes; i++) {
+        all_indices.insert(i);  
+    }
+
+    i_indices.clear();
+    std::set_difference(all_indices.begin(), all_indices.end(), b_indices.begin(), b_indices.end(), std::inserter(i_indices, i_indices.end()));
+
+    partitioned_indices = true;
+}
+
+

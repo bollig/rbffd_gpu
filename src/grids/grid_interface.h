@@ -2,6 +2,7 @@
 #define __GRID_H__
 
 #include <vector> 
+#include <set> 
 #include <string>
 #include <sstream>
 #include "Vec3.h"
@@ -83,6 +84,14 @@ class Grid
         KDTree* node_list_kdtree; 
 
 
+        // Sorted list of indices on the boundary and interior. This helps when
+        // we dont have nodes sorted boundary first and want to access
+        // boundary/interior only nodes. By default these are EMPTY. fill them
+        // by calling partitionIndices()
+        std::set<size_t> b_indices;
+        std::set<size_t> i_indices; 
+        bool partitioned_indices;
+
         bool stencilsComputed;
 
     public:
@@ -95,6 +104,7 @@ class Grid
             pert(0.), nb_nodes(0),
             node_list_kdtree(NULL),
             stencilsComputed(false),
+            partitioned_indices(false),
             boundary_nodes_first(false), DEBUG(0)
     {}
         Grid(size_t num_nodes) : 
@@ -106,6 +116,7 @@ class Grid
             pert(0), nb_nodes(num_nodes), 
             node_list_kdtree(NULL),
             stencilsComputed(false),
+            partitioned_indices(false),
             boundary_nodes_first(false), DEBUG(0) 
     {}
         Grid(std::vector<NodeType>& nodes) : 
@@ -117,6 +128,7 @@ class Grid
             pert(0), nb_nodes(nodes.size()), 
             node_list_kdtree(NULL), 
             stencilsComputed(false),
+            partitioned_indices(false),
             boundary_nodes_first(false), DEBUG(0), node_list(nodes) 
     {} 
 
@@ -161,6 +173,22 @@ class Grid
 
         // Sort the nodes so boundary nodes are first in the lists
         virtual void sortNodes(); 
+
+        void partitionIndices(); 
+        // Return the sorted set of interior and boundary nodes
+        std::set<size_t>& getSortedBoundarySet() { 
+            if(!partitioned_indices) { 
+                this->partitionIndices();
+            }
+            return b_indices; 
+        } 
+        std::set<size_t>& getSortedInteriorSet() {  
+            if(!partitioned_indices) { 
+                this->partitionIndices();
+            }
+            return i_indices; 
+        }
+
 
         // Enable or disable node sorting (if a grid generator obeys the order)
         // so boundary nodes appear first in the node_list

@@ -270,6 +270,9 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 #if SCALE_BY_H
         //xjv.print("xjv = ");
         Vec3 diff = (x0v - xjv) * (1./h);
+#else 
+        Vec3 diff = (x0v - xjv);
+#endif 
         switch (which) {
             case X:
                 rhs(j,0) = rbf.xderiv(diff);
@@ -283,31 +286,14 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             case LAPL: 
                 rhs(j,0) = rbf.lapl_deriv(diff);
                 break; 
-            default:
-                std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
-                exit(EXIT_FAILURE); 
-        }
-#else 
-        //xjv.print("xjv = ");
-        switch (which) {
-            case X:
-                rhs(j,0) = rbf.xderiv(x0v, xjv);
-                break; 
-            case Y: 
-                rhs(j,0) = rbf.yderiv(x0v, xjv);
-                break; 
-            case Z:
-                rhs(j,0) = rbf.zderiv(x0v, xjv);
-                break; 
-            case LAPL: 
-                rhs(j,0) = rbf.lapl_deriv(x0v, xjv);
+            case INTERP: 
+                rhs(j,0) = rbf.eval(diff);
                 break; 
             default:
                 std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
                 exit(EXIT_FAILURE); 
         }
-#endif 
-    }
+   }
 
     if (np > 0) {
         // REQUIRE at least np = 1 (will ERR out if not valid)
@@ -606,13 +592,20 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     cachedEigenvalues.max_neg_eig = max_neg_eig; 
     cachedEigenvalues.min_neg_eig = min_neg_eig;
 
+    if ((neg_count - nb_bnd > 0) && (pos_count - nb_bnd > 0)){
+        std::cout << "[RBFFD] Error: we expect either all positive or all negative eigenvalues (except for the number of boundary nodes).\n";
+        if (exit_on_fail) {
+            exit(EXIT_FAILURE);
+        }
+    }
+#if 0
     if ((neg_count > 0) && (pos_count > 0)) {
         std::cout << "[RBFFD] Error: parabolic PDEs have either all positive or all negative eigenvalues (except one that is zero).\n";
         if (exit_on_fail) {
             exit(EXIT_FAILURE);
         }
     }
-
+#endif 
     if (zero_count > 1) {
         std::cout << "[RBFFD] Error: parabolic PDEs have either all positive or all negative eigenvalues (except one that is zero).\n";
         if (exit_on_fail) {

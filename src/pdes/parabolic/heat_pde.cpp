@@ -135,14 +135,15 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
     }
 
     // Get the diffusivity of the domain for at the current time
-    this->fillDiffusion(diffusion, u_t, t, n_stencils);
+    // NOTE: if we assume that diffusion is a known across all subdomains then
+    // we can bypass the partial fill and synchronization point (below, see
+    // LABEL:DIFF_SYNC) and get the diffusion for all n_nodes here. 
+    this->fillDiffusion(diffusion, u_t, t, n_nodes); //n_stencils);
 
     for (size_t i = 0; i < n_stencils; i++) {
         K_dot_lapl_U[i] = diffusion[i] * u_lapl_deriv[i]; 
     }
     
-    this->sendrecvUpdates(K_dot_lapl_U, "K_dot_lapl_U"); 
-
 #if 0
     // EFB06012011
     // To compare with the div_grad version we want to avoid shortcuts
@@ -174,7 +175,8 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
         der_ref.applyWeightsForDeriv(RBFFD::Y, u_t, u_y_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Z, u_t, u_z_deriv); 
 
-        this->sendrecvUpdates(diffusion, "diffusion"); 
+        // LABEL:DIFF_SYNC
+        //this->sendrecvUpdates(diffusion, "diffusion"); 
 
         der_ref.applyWeightsForDeriv(RBFFD::X, diffusion, diff_x_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Y, diffusion, diff_y_deriv); 

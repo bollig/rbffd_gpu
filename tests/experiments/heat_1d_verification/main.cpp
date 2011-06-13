@@ -294,7 +294,7 @@ int main(int argc, char** argv) {
                 // Test Y and 30 are > 0
                 // Test Z and 36 are > 0
                 // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
-                der_test->testEigen(RBFFD::LAPL, 0);
+                der_test->testEigen(RBFFD::LAPL, exitIfTestFailed, 0);
             }
         }
         tm["tests"]->stop();

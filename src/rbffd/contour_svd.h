@@ -52,12 +52,15 @@ class ContourSVD
         void execute(int N);
         void getPoles();
 
+#if 0
         arma::mat    rbffdapp(double eps, arma::mat& rd, arma::mat& re);
         arma::cx_mat rbffdapp(arma::cx_double eps, arma::cx_mat& rd, arma::cx_mat& re);
         arma::mat    rbffdapp(double eps, arma::mat& rd, ArrayT<Vec3>& re, const char* choice);
 
         arma::cx_mat rbffdapp(CMPLX eps, arma::cx_mat& rd, arma::cx_mat& re, const char* choice);
+#endif 
         arma::cx_mat rbffdapp(CMPLX eps, arma::cx_mat& rd, ArrayT<CVec3>& re, const char* choice);
+
 
         arma::rowvec solver(arma::rowvec& A, arma::mat& B);
         arma::cx_rowvec solver(arma::cx_rowvec& A, arma::cx_mat& B);

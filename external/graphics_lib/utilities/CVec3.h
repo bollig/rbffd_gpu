@@ -70,10 +70,10 @@ class CVec3
         double magnitude();
         double magnitude() const;
 		CMPLX square() {
-			return (vec[0]*vec[0]+vec[1]*vec[1]+vec[2]*vec[2]);
+			return scalprod(*this,*this); 
 		}
 		const CMPLX square() const {
-			return (vec[0]*vec[0]+vec[1]*vec[1]+vec[2]*vec[2]);
+			return scalprod(*this,*this);
 		}
         void print(const char *msg=0) const;
         //void printcx(const char *msg=0) const;

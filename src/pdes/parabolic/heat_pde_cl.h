@@ -4,7 +4,7 @@
 #include "pdes/time_dependent_pde_cl.h"
 #include "pdes/parabolic/heat_pde.h"
 
-class HeatPDE_CL : public TimeDependentPDE_CL
+class HeatPDE_CL : public TimeDependentPDE
 {
     private: 
         std::vector<SolutionType> boundary_values; 
@@ -16,7 +16,7 @@ class HeatPDE_CL : public TimeDependentPDE_CL
 
     public: 
         HeatPDE_CL(Domain* grid, RBFFD* der, Communicator* comm, bool weightsComputed=false)
-            : TimeDependentPDE_CL(grid, der, comm), weightsPrecomputed(weightsComputed)
+            : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed)
         { ; }
 
         // This should fill the solution vector with our initial conditions. 

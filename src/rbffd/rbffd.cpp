@@ -520,18 +520,18 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     eigmat.zeros();
 
     // Boundary nodes first with diagonal 1's.
-    for (int i=0; i < nb_bnd; i++) {
-        eigmat(i,i) = 1.0;
+    std::set<size_t>::iterator it; 
+    int i = 0;
+    for (it = b_indices.begin(); it != b_indices.end(); it++, i++) {
+        eigmat(*it,*it) = 1.0;
     }
    
     // We put our interior nodes after the boundary nodes in matrix
-    std::set<size_t>::iterator it; 
-    int i = nb_bnd;
     for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
         double* w = weights_r[*it];
         StencilType& st = grid_ref.getStencil(*it);
         for (int j=0; j < st.size(); j++) {
-            eigmat(i,st[j])  = w[j];
+            eigmat(*it,st[j])  = w[j];
             // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
         }
     }

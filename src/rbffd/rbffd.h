@@ -7,7 +7,8 @@
 #include <cmath>
 #include "Vec3.h"
 #include "rbffd/rbfs/rbf_gaussian.h"
-#include "rbffd/rbfs/rbf_mq.h"
+#include "rbffd/rbfs/rbf_multiquadric.h"
+
 #include "utils/conf/projectsettings.h"
 #include "timer_eb.h"
 #include "common_typedefs.h"
@@ -15,8 +16,12 @@
 
 #include "grids/domain.h"
 
-//typedef RBF_Gaussian IRBF;
-typedef RBF_MQ IRBF;
+#if 0
+typedef RBF_Gaussian IRBF;
+#else 
+typedef RBF_Multiquadric IRBF;
+#endif 
+
 // TODO: put this in rbf.h and have all rbf types available
 //enum RBF_Type {MQ=0, GA, IMQ, TPS, W2};
 

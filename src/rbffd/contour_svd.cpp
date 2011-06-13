@@ -571,6 +571,7 @@ void ContourSVD::execute(int N_)
     //exit(0);
 }
 //----------------------------------------------------------------------
+#if 0
 mat ContourSVD::rbffdapp(double eps, mat& rd, mat& re)
     // relates to computation of derivative coefficients
 {
@@ -621,6 +622,7 @@ mat ContourSVD::rbffdapp(double eps, mat& rd, mat& re)
 
     return fds;
 }
+
 //----------------------------------------------------------------------
 cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, cx_mat& re)
     // relates to computation of derivative coefficients
@@ -722,6 +724,7 @@ mat ContourSVD::rbffdapp(double eps, mat& rd, ArrayT<Vec3>& re, const char* choi
 
     return fds;
 }
+#endif 
 //----------------------------------------------------------------------
 cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char* choice)
     // relates to computation of derivative coefficients

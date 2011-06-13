@@ -54,7 +54,14 @@ class DerivativeTests {
         // NOTE: nb_stencils_to_test==0 implies that ALL stencils will be tested. 
         void compareGPUandCPUDerivs(size_t nb_stencils_to_test=0);
 
-        void testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0, bool exitIfTestFails=true);
+        void testDerivativeOfFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0, bool exitIfTestFails=true);
+        
+        // Test our interpolation to Franke's test function: 
+        //  f(x,y) = (3/4) e^(-(1/4) * ((9x-2)^2 + (9y-2)^2))  
+        //            +  (3/4) e^(-(1/49)(9x+1)^2 - (1/10)(9y+1)^2)  
+        //            +  (1/2) e^(-(1/4) * ((9x-7)^2 + (9y-3)^2))  
+        //            -  (1/5) e^(-(9x-4)^2 - (9y-7)^2)  
+        void testInterpolation(size_t nb_stencils_to_test=0, bool exitIfTestFails=true);
 
         void testEigen(RBFFD::DerType which=RBFFD::LAPL, bool exitIfTestFails=true, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
 

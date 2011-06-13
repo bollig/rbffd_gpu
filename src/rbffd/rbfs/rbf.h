@@ -78,7 +78,8 @@ class RBF {
                 for (int i=0; i < nr; i++) {
                     //printf("sqrt= %f\n", sqrt(arr(i,j)));
                     values(i,j) = eval( sqrt(arr(i,j)) );
-                }}
+                }
+            }
             return values;
         }
 
@@ -98,6 +99,7 @@ class RBF {
 
         // aug 15, 2009, input: 2D array of distances squared, output: 2D array
         // Distances squared for compatibility with Grady's SVD program. I might change this later
+#if 0
         arma::mat lapl_deriv(const arma::mat& arr) {
             int nr = arr.n_rows;
             int nc = arr.n_cols;
@@ -108,14 +110,18 @@ class RBF {
                 }}
             return values;
         }
+#endif 
 
+        // These Vec3 are actually (x-xj)
+        // NOTE: not magnitude, but actually directional separation
         arma::mat lapl_deriv(const ArrayT<Vec3>& arr) {
             const int* dims = arr.getDims();
             arma::mat values(dims[0], dims[1]);
             for (int j=0; j < dims[1]; j++) {
                 for (int i=0; i < dims[0]; i++) {
-                    values(i,j) = lapl_deriv(sqrt(arr(i,j).square()));
-                }}
+                    values(i,j) = lapl_deriv(arr(i,j));
+                }
+            }
             return values;
         }
 
@@ -124,12 +130,13 @@ class RBF {
             arma::cx_mat values(dims[0], dims[1]);
             for (int j=0; j < dims[1]; j++) {
                 for (int i=0; i < dims[0]; i++) {
-                    values(i,j) = lapl_deriv(CMPLX(arr(i,j).magnitude()));
-                }}
+                    values(i,j) = lapl_deriv(arr(i,j));
+                }
+            }
             return values;
         }
 
-
+#if 0
         // array of square of distances
         arma::cx_mat lapl_deriv(const arma::cx_mat& arr) {
             int nr = arr.n_rows;
@@ -137,11 +144,11 @@ class RBF {
             arma::cx_mat values(nr, nc);
             for (int j=0; j < nc; j++) {
                 for (int i=0; i < nr; i++) {
-                    values(i,j) = lapl_deriv(CMPLX(sqrt(arr(i,j))));
+                    values(i,j) = lapl_deriv(arr(i,j));
                 }}
             return values;
         }
-
+#endif 
         //------------------------------------------------------------------
 
         arma::mat xderiv(const ArrayT<Vec3>& arr) {
@@ -259,9 +266,11 @@ class RBF {
 
         //------------------------------------------------------------------
         // First Derivatives: 
-        double xderiv(const Vec3& xvec, const Vec3& x_center) { this->xderiv(xvec-x_center); }
         double yderiv(const Vec3& xvec, const Vec3& x_center) { this->yderiv(xvec-x_center); }
         double zderiv(const Vec3& xvec, const Vec3& x_center) { this->zderiv(xvec-x_center); }
+        
+        double xderiv(Vec3& xvec, Vec3& x_center) { this->xderiv(xvec-x_center); }
+        CMPLX  xderiv(CVec3& xvec, CVec3& x_center ) { this->xderiv(xvec-x_center); }
         //------------------------------------------------------------------
         virtual double xderiv(const Vec3& xvec)  = 0;
         virtual CMPLX  xderiv(const CVec3& xvec) = 0;
@@ -274,16 +283,59 @@ class RBF {
 
         //------------------------------------------------------------------
         // Second derivatives
+#if 0
         virtual double xxderiv(const Vec3& xvec, const Vec3& x_center) = 0;
         virtual double yyderiv(const Vec3& xvec, const Vec3& x_center) = 0;
         virtual double xyderiv(const Vec3& xvec, const Vec3& x_center) = 0;
-        
+#endif    
         //------------------------------------------------------------------
         // Laplacians:
         virtual double lapl_deriv(const Vec3& xvec, const Vec3& x_center) { this->lapl_deriv(xvec-x_center); }
-        virtual double lapl_deriv(const Vec3& xvec) = 0;
-        virtual double lapl_deriv(const double x)   = 0;
-        virtual CMPLX  lapl_deriv(const CMPLX x)    = 0;
+        virtual double lapl_deriv(const Vec3& xvec) {
+            switch (dim) 
+            {
+                case 1: 
+                    return this->lapl_deriv1D(xvec);
+                    break; 
+                case 2: 
+                    return this->lapl_deriv2D(xvec);
+                    break;
+                case 3: 
+                    return this->lapl_deriv3D(xvec);
+                    break; 
+                default: 
+                    printf("error: unsupported rbf.lapl_deriv dimension\n");
+                    exit(EXIT_FAILURE); 
+            }
+            return -1;
+        }
+
+        virtual double lapl_deriv1D(const Vec3& xvec) = 0;
+        virtual double lapl_deriv2D(const Vec3& xvec) = 0;
+        virtual double lapl_deriv3D(const Vec3& xvec) = 0;
+
+        virtual CMPLX  lapl_deriv(const CVec3& x) {
+            switch (dim) 
+            {
+                case 1: 
+                    return this->lapl_deriv1D(x);
+                    break; 
+                case 2: 
+                    return this->lapl_deriv2D(x);
+                    break;
+                case 3: 
+                    return this->lapl_deriv3D(x);
+                    break; 
+                default: 
+                    printf("error: unsupported rbf.lapl_deriv dimension\n");
+                    exit(EXIT_FAILURE); 
+            }
+            return -1;
+        }
+        
+        virtual CMPLX  lapl_deriv1D(const CVec3& x) = 0;
+        virtual CMPLX  lapl_deriv2D(const CVec3& x) = 0;
+        virtual CMPLX  lapl_deriv3D(const CVec3& x) = 0;
 };
 
 #endif

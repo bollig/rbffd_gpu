@@ -21,32 +21,35 @@ struct indxltclass {
 // a laplacian and other linear differential operators for our PDEs.
 //----------------------------------------------------------------------
 void DerivativeTests::testAllFunctions(bool exitIfTestFails, size_t nb_stencils_to_test) {
+
+    this->testInterpolation(nb_stencils_to_test, exitIfTestFails);
+
 #if 1
     // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
-    this->testFunction(DerivativeTests::C, nb_stencils_to_test, exitIfTestFails);
-    this->testFunction(DerivativeTests::X, nb_stencils_to_test, exitIfTestFails);
+    this->testDerivativeOfFunction(DerivativeTests::C, nb_stencils_to_test, exitIfTestFails);
+    this->testDerivativeOfFunction(DerivativeTests::X, nb_stencils_to_test, exitIfTestFails);
 
     if (dim_num > 1) {
-    this->testFunction(DerivativeTests::Y, nb_stencils_to_test, exitIfTestFails);
+    this->testDerivativeOfFunction(DerivativeTests::Y, nb_stencils_to_test, exitIfTestFails);
     } else {
         printf("Skipping tests for XY, Y2 because dim_num < 2\n");
     }
 
-    this->testFunction(DerivativeTests::X2, nb_stencils_to_test, exitIfTestFails);
+    this->testDerivativeOfFunction(DerivativeTests::X2, nb_stencils_to_test, exitIfTestFails);
 
     if (dim_num > 1) {
-        this->testFunction(DerivativeTests::XY, nb_stencils_to_test, exitIfTestFails);
-        this->testFunction(DerivativeTests::Y2, nb_stencils_to_test, exitIfTestFails);
+        this->testDerivativeOfFunction(DerivativeTests::XY, nb_stencils_to_test, exitIfTestFails);
+        this->testDerivativeOfFunction(DerivativeTests::Y2, nb_stencils_to_test, exitIfTestFails);
     } else {
         printf("Skipping tests for XY, Y2 because dim_num < 2\n");
     }
 
-    this->testFunction(DerivativeTests::X3, nb_stencils_to_test, exitIfTestFails);
+    this->testDerivativeOfFunction(DerivativeTests::X3, nb_stencils_to_test, exitIfTestFails);
 
     if (dim_num > 1) {
-        this->testFunction(DerivativeTests::X2Y, nb_stencils_to_test, exitIfTestFails);
-        this->testFunction(DerivativeTests::XY2, nb_stencils_to_test, exitIfTestFails);
-        this->testFunction(DerivativeTests::Y3, nb_stencils_to_test, exitIfTestFails);
+        this->testDerivativeOfFunction(DerivativeTests::X2Y, nb_stencils_to_test, exitIfTestFails);
+        this->testDerivativeOfFunction(DerivativeTests::XY2, nb_stencils_to_test, exitIfTestFails);
+        this->testDerivativeOfFunction(DerivativeTests::Y3, nb_stencils_to_test, exitIfTestFails);
     } else {
         printf("Skipping tests for X2Y, XY2, Y3 because dim_num < 2\n");
     }
@@ -152,6 +155,15 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
     return abs_error;
 }
 
+//----------------------------------------------------------------------
+// Use weights to perform interpolation and determine if the weights are "good
+// enough" for approximation
+void DerivativeTests::testInterpolation(size_t nb_stencils_to_test, bool exitIfTestFails) {
+
+    // 1) Get weights for RBFs :w
+    //
+
+}
 
 //----------------------------------------------------------------------
 //
@@ -160,7 +172,7 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 // Compare the analytic and approximate derivatives and assess the
 // viability of the RBFFD stencils and weights for PDE solution.
 // NOTE: if nb_stencils_to_test is 0 then we check all stencils
-void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test, bool exitIfTestFails)
+void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test, bool exitIfTestFails)
 {
     // Use a std::set because it auto sorts as we insert
     std::set<size_t>& b_indices = grid->getSortedBoundarySet();
@@ -174,7 +186,7 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
    // std::cout << "IINDICES.size= " << i_indices.size();
 
     printf("\n================\n");
-    printf("testFunction( %d ) [** Approximating F(X,Y) = %s **] \n",choice, TESTFUNSTR[(int)choice].c_str());
+    printf("testDerivativeOfFunction( %d ) [** Approximating F(X,Y) = %s **] \n",choice, TESTFUNSTR[(int)choice].c_str());
     printf("================\n");
 
     if (nb_stencils_to_test) {

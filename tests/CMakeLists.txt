@@ -15,6 +15,7 @@
         #TODO        experiments/convection_regulargrid
 		experiments/heat_regulargrid_2d
 		experiments/heat_1d_verification
+		experiments/heat_1d_nonuniform_diffusion
         #TODO		experiments/sarler_vertnick_2006
         experiments/heat_2d_verification
         experiments/heat_ellipse_2d

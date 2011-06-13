@@ -55,7 +55,7 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
     // EFB06092011: div_grad is noticeably faster and it works. Gordon keeps
     // saying his didnt. I need to get a non-uniform test case with known exact
     // solution to verify that statement.
-#define SOLVE_DIV_GRAD 1
+#define SOLVE_DIV_GRAD 0
 #if SOLVE_DIV_GRAD
     this->solveDivGrad(u_t, f_out, n_stencils, n_nodes, t);
 #else 
@@ -118,10 +118,9 @@ void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionT
 
 void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes,  double t)
 {
-    size_t n = n_stencils;
-    std::vector<SolutionType> u_lapl_deriv(n); 
-    std::vector<SolutionType> K_dot_lapl_U(n); 
-    std::vector<SolutionType> diffusion(n);  
+    std::vector<SolutionType> u_lapl_deriv(n_stencils); 
+    std::vector<SolutionType> K_dot_lapl_U(n_stencils); 
+    std::vector<SolutionType> diffusion(n_nodes);  
 
 #if 0
     // EFB06012011: need to add this test for splitting the lapl(u) into
@@ -136,11 +135,13 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
     }
 
     // Get the diffusivity of the domain for at the current time
-    this->fillDiffusion(diffusion, u_t, t, n);
+    this->fillDiffusion(diffusion, u_t, t, n_stencils);
 
-    for (size_t i = 0; i < n; i++) {
+    for (size_t i = 0; i < n_stencils; i++) {
         K_dot_lapl_U[i] = diffusion[i] * u_lapl_deriv[i]; 
     }
+    
+    this->sendrecvUpdates(K_dot_lapl_U, "K_dot_lapl_U"); 
 
 #if 0
     // EFB06012011
@@ -161,23 +162,25 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
 #endif 
     {
         // If we have non-uniform diffusion, more derivatives are requried
-        std::vector<SolutionType> u_x_deriv(n); 
-        std::vector<SolutionType> u_y_deriv(n); 
-        std::vector<SolutionType> u_z_deriv(n); 
+        std::vector<SolutionType> u_x_deriv(n_stencils); 
+        std::vector<SolutionType> u_y_deriv(n_stencils); 
+        std::vector<SolutionType> u_z_deriv(n_stencils); 
 
-        std::vector<SolutionType> diff_x_deriv(n); 
-        std::vector<SolutionType> diff_y_deriv(n); 
-        std::vector<SolutionType> diff_z_deriv(n); 
+        std::vector<SolutionType> diff_x_deriv(n_stencils); 
+        std::vector<SolutionType> diff_y_deriv(n_stencils); 
+        std::vector<SolutionType> diff_z_deriv(n_stencils); 
 
         der_ref.applyWeightsForDeriv(RBFFD::X, u_t, u_x_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Y, u_t, u_y_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Z, u_t, u_z_deriv); 
 
+        this->sendrecvUpdates(diffusion, "diffusion"); 
+
         der_ref.applyWeightsForDeriv(RBFFD::X, diffusion, diff_x_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Y, diffusion, diff_y_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Z, diffusion, diff_z_deriv); 
 
-        for (size_t i = 0; i < n; i++) {
+        for (size_t i = 0; i < n_stencils; i++) {
             SolutionType grad_K[3] = { diff_x_deriv[i], diff_y_deriv[i], diff_z_deriv[i] }; 
             SolutionType grad_U[3] = { u_x_deriv[i], u_y_deriv[i], u_z_deriv[i] }; 
 

@@ -463,11 +463,14 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
 
     int nb_pts = sol_vec.size();
     double l1fabs = l1norm(sol_vec, sol_exact, 0, nb_pts); 
-    double l1rel = (l1norm(sol_exact) > 1e-10) ? l1fabs/l1norm(sol_exact, 0, nb_pts) : 0.;
+    double l1denom = l1norm(sol_exact, 0, nb_pts);
+    double l1rel = (l1denom > 1e-10) ? l1fabs/l1denom : 0.;
     double l2fabs = l2norm(sol_vec, sol_exact, 0, nb_pts); 
-    double l2rel = (l2norm(sol_exact) > 1e-10) ? l2fabs/l2norm(sol_exact, 0, nb_pts) : 0.;
+    double l2denom = l2norm(sol_exact, 0, nb_pts);
+    double l2rel = (l2denom > 1e-10) ? l2fabs/l2denom : 0.;
     double lifabs = linfnorm(sol_vec, sol_exact, 0, nb_pts); 
-    double lirel = (linfnorm(sol_exact) > 1e-10) ? lifabs/linfnorm(sol_exact, 0, nb_pts) : 0.;
+    double linfdenom = linfnorm(sol_exact, 0, nb_pts); 
+    double lirel = (linfdenom > 1e-10) ? lifabs/linfdenom : 0.;
 #define COMPONENTWISE_ERR 0
 #if COMPONENTWISE_ERR
     double comp_sum; 
@@ -488,9 +491,9 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
         printf("Relative =>  || x_exact - x_approx ||_p / || x_exact ||_p  ,  where p={1,2,inf}\n"); 
     }
 
-    printf("%s l1 error (%d nodes):   Absolute = %le,    Relative = %le\n", label.c_str(), nb_pts, l1fabs, l1rel );
-    printf("%s l2 error (%d nodes):   Absolute = %le,    Relative = %le\n", label.c_str(), nb_pts, l2fabs, l2rel );
-    printf("%s linf error (%d nodes): Absolute = %le,    Relative = %le\n", label.c_str(), nb_pts, lifabs, lirel);
+    printf("%s l1 error (%d nodes):   Absolute = %le,    Relative = %le (Denom: %le)\n", label.c_str(), nb_pts, l1fabs, l1rel, l1denom);
+    printf("%s l2 error (%d nodes):   Absolute = %le,    Relative = %le (Denom: %le)\n", label.c_str(), nb_pts, l2fabs, l2rel, l2denom );
+    printf("%s linf error (%d nodes): Absolute = %le,    Relative = %le (Denom: %le)\n", label.c_str(), nb_pts, lifabs, lirel, linfdenom);
 
 #if 0
     if (l1rel > rel_err_max) {

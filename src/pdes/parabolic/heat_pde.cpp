@@ -134,10 +134,13 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
         der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, u_lapl_deriv); 
     }
 
-    // Get the diffusivity of the domain for at the current time
-    // NOTE: if we assume that diffusion is a known across all subdomains then
-    // we can bypass the partial fill and synchronization point (below, see
-    // LABEL:DIFF_SYNC) and get the diffusion for all n_nodes here. 
+    // Get the diffusivity of the domain for at the current time NOTE: if we
+    // assume that diffusion is a known across all subdomains then we can
+    // bypass the partial fill and synchronization point (below, see
+    // LABEL:DIFF_SYNC) and get the diffusion for all n_nodes here. What about
+    // the case when diffusion is a function of the current solution? We assume
+    // that u_t will have all n_nodes solutions synchronized before entering
+    // this.
     this->fillDiffusion(diffusion, u_t, t, n_nodes); //n_stencils);
 
     for (size_t i = 0; i < n_stencils; i++) {

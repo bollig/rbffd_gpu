@@ -33,6 +33,8 @@ class RBFFD
         std::string weightTypeStr[2]; 
 
         typedef struct e_val_output {
+            double max_pos_eig; 
+            double min_pos_eig;
             double max_neg_eig; 
             double min_neg_eig;
         } EigenvalueOutput;
@@ -134,7 +136,7 @@ class RBFFD
 
         // Returns MAXIMUM negative eigenvalue
         // Use output to obtain MINIMUM and MAXIMUM
-        double computeEigenvalues(DerType which, EigenvalueOutput* output=NULL);
+        double computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output=NULL);
 
 
         void setEpsilon(double eps) { 
@@ -188,7 +190,7 @@ class RBFFD
 
         EigenvalueOutput getEigenvalues() {
             if (!eigenvalues_computed) {
-                this->computeEigenvalues(LAPL); 
+                this->computeEigenvalues(LAPL, false); 
             }
             return cachedEigenvalues;
         }

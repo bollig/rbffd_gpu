@@ -25,14 +25,31 @@ void DerivativeTests::testAllFunctions(bool exitIfTestFails, size_t nb_stencils_
     // Test all: C=0,X,Y,X2,XY,Y2,X3,X2Y,XY2,Y3,CUSTOM
     this->testFunction(DerivativeTests::C, nb_stencils_to_test, exitIfTestFails);
     this->testFunction(DerivativeTests::X, nb_stencils_to_test, exitIfTestFails);
+
+    if (dim_num > 1) {
     this->testFunction(DerivativeTests::Y, nb_stencils_to_test, exitIfTestFails);
+    } else {
+        printf("Skipping tests for XY, Y2 because dim_num < 2\n");
+    }
+
     this->testFunction(DerivativeTests::X2, nb_stencils_to_test, exitIfTestFails);
-    this->testFunction(DerivativeTests::XY, nb_stencils_to_test, exitIfTestFails);
-    this->testFunction(DerivativeTests::Y2, nb_stencils_to_test, exitIfTestFails);
+
+    if (dim_num > 1) {
+        this->testFunction(DerivativeTests::XY, nb_stencils_to_test, exitIfTestFails);
+        this->testFunction(DerivativeTests::Y2, nb_stencils_to_test, exitIfTestFails);
+    } else {
+        printf("Skipping tests for XY, Y2 because dim_num < 2\n");
+    }
+
     this->testFunction(DerivativeTests::X3, nb_stencils_to_test, exitIfTestFails);
-    this->testFunction(DerivativeTests::X2Y, nb_stencils_to_test, exitIfTestFails);
-    this->testFunction(DerivativeTests::XY2, nb_stencils_to_test, exitIfTestFails);
-    this->testFunction(DerivativeTests::Y3, nb_stencils_to_test, exitIfTestFails);
+
+    if (dim_num > 1) {
+        this->testFunction(DerivativeTests::X2Y, nb_stencils_to_test, exitIfTestFails);
+        this->testFunction(DerivativeTests::XY2, nb_stencils_to_test, exitIfTestFails);
+        this->testFunction(DerivativeTests::Y3, nb_stencils_to_test, exitIfTestFails);
+    } else {
+        printf("Skipping tests for X2Y, XY2, Y3 because dim_num < 2\n");
+    }
 #endif
     //    exit(EXIT_FAILURE);
 }
@@ -179,7 +196,7 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
     }
 
     // Fill the test case based on our choice
-    fillTestFunction(choice, nb_centers, u, dux_ex, duy_ex, dulapl_ex);
+    fillTestFunction(choice, nb_stencils, nb_centers, u, dux_ex, duy_ex, dulapl_ex);
 
     std::vector<double>& avgDist = grid->getStencilRadii();
 
@@ -362,33 +379,34 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
                         norm[i][0][k]/normder[i][0][k], 
                         norm[i][1][k]/normder[i][1][k], 
                         norm[i][2][k]/normder[i][2][k], normder[i][1][k]); 
-                //printf("   normder[%d][][%d]= %10.3e, %10.3e, %10.3e\n", i, k, 
-                //normder[i][0][k], 
-                //normder[i][1][k], 
-                //normder[i][2][k]); 
+                printf("   normder[%d][][%d]= %10.3e, %10.3e, %10.3e\n", i, k, 
+                normder[i][0][k], 
+                normder[i][1][k], 
+                normder[i][2][k]); 
             }
-        }}
-
+        }
+    }
+#if 1
     double inter_error=0.;
     for (int i= 0; i < nb_int; i++) {
         inter_error += (dulapl_ex_int[i]-lapl_deriv_int[i])*(dulapl_ex_int[i]-lapl_deriv_int[i]);
         //    std::cout << i << "dulapl_ex_int " << dulapl_ex_int[i] << ", " << lapl_deriv_int[i] << std::endl;
         //printf("inter error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
     }
-    inter_error /= nb_int;
+   // inter_error /= nb_int;
 
     double bnd_error=0.;
     for (int i=0; i < nb_bnd; i++) {
         bnd_error += (dulapl_ex_bnd[i]-lapl_deriv_bnd[i])*(dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
         //     printf("bnd error[%d] = %14.7g\n", i, dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
     }
-    bnd_error /= nb_bnd;
-
+  //  bnd_error /= nb_bnd;
+#endif 
 #if 1
-    double l2_bnd = sqrt(bnd_error);
-    printf("avg l2_bnd_error= %14.7e\n", l2_bnd);
-    double l2_int = sqrt(inter_error);
-    printf("avg l2_interior_error= %14.7e\n", l2_int);
+    double l2_bnd = norm[LAPL][L2][BNDRY] / nb_bnd;
+    printf("Average Laplacian L2 Absolute Error (Boundary) = %14.7e (%14.7e)\n", l2_bnd, sqrt(bnd_error)/nb_bnd);
+    double l2_int = norm[LAPL][L2][INT] / nb_int;
+    printf("Average Laplacian L2 Absolute Error (Interior) = %14.7e (%14.7e)\n", l2_int, sqrt(inter_error)/nb_int);
     // IF l2_int != l2_int its 'nan' and we should quit. 
     // NaN is the only number not equal to itself
     if ((l2_int > 1.e-2) || (l2_int != l2_int)) {
@@ -405,138 +423,155 @@ void DerivativeTests::testFunction(DerivativeTests::TESTFUN choice, size_t nb_st
 
 //----------------------------------------------------------------------
 //
-void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
+void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils, size_t nb_centers, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
         vector<double>& dulapl_ex)
 {
-    u.resize(0);
-    dux_ex.resize(0);
-    duy_ex.resize(0);
-    dulapl_ex.resize(0);
+#if 0
+    u.resize(nb_nodes);
+    dux_ex.resize(nb_stencils);
+    duy_ex.resize(nb_stencils);
+    dulapl_ex.resize(nb_stencils);
+#endif 
+    if (u.size() != nb_centers) {
+        std::cout << "fillTestFunction needs u to be nb_centers large" << std::endl;
+        exit(EXIT_FAILURE); 
+    }
+    if (dux_ex.size() != nb_stencils) {
+        std::cout << "fillTestFunction needs dux_ex to be nb_stencils large" << std::endl;
+        exit(EXIT_FAILURE); 
+    }
+    if (duy_ex.size() != nb_stencils) {
+        std::cout << "fillTestFunction needs duy_ex to be nb_stencils large" << std::endl;
+        exit(EXIT_FAILURE); 
+    }
+    if (dulapl_ex.size() != nb_stencils) {
+        std::cout << "fillTestFunction needs lapl_u_ex to be nb_stencils large" << std::endl;
+        exit(EXIT_FAILURE); 
+    }   
 
     vector<NodeType>& rbf_centers = grid->getNodeList();
-    int nb_centers = grid->getNodeList().size(); 
 
     switch(which) {
         case C:
             for (int i=0; i < nb_stencils; i++) {
-                dux_ex.push_back(0.);
-                duy_ex.push_back(0.);
-                dulapl_ex.push_back(0.);
+                dux_ex[i] = 0.;
+                duy_ex[i] = 0.;
+                dulapl_ex[i] = 0.;
             }
 
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(1.);
+                u[i] = 1.;
             }
             break;
         case X:
             printf("nb_stencils= %lu\n", nb_stencils);
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(1.);
-                duy_ex.push_back(0.);
-                dulapl_ex.push_back(0.);
+                dux_ex[i] = 1.;
+                duy_ex[i] = 0.;
+                dulapl_ex[i] = 0.;
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.x());
+                u[i] = v.x();
             }
             printf("u.size= %d\n", (int) u.size());
             break;
         case Y:
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(0.);
-                duy_ex.push_back(1.);
-                dulapl_ex.push_back(0.);
+                dux_ex[i] = 0.;
+                duy_ex[i] = 1.;
+                dulapl_ex[i] = 0.;
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.y());
+                u[i] = v.y();
             }
             break;
         case X2:
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(2.*v.x());
-                duy_ex.push_back(0.);
-                dulapl_ex.push_back(2.);
+                dux_ex[i] = 2.*v.x();
+                duy_ex[i] = 0.;
+                dulapl_ex[i] = 2.;
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.x());
+                u[i] = v.x()*v.x();
             }
             break;
         case XY:
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(v.y());
-                duy_ex.push_back(v.x());
-                dulapl_ex.push_back(0.);
+                dux_ex[i] = v.y();
+                duy_ex[i] = v.x();
+                dulapl_ex[i] = 0.;
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.y());
+                u[i] = v.x()*v.y();
             }
             break;
         case Y2:
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(0.);
-                duy_ex.push_back(2.*v.y());
-                dulapl_ex.push_back(2.);
+                dux_ex[i] = 0.;
+                duy_ex[i] = 2.*v.y();
+                dulapl_ex[i] = 2.;
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.y()*v.y());
+                u[i] = v.y()*v.y();
             }
             break;
         case X3:
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(3.*v.x()*v.x());
-                duy_ex.push_back(0.);
-                dulapl_ex.push_back(6.*v.x());
+                dux_ex[i] = 3.*v.x()*v.x();
+                duy_ex[i] = 0.;
+                dulapl_ex[i] = 6.*v.x();
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.x()*v.x());
+                u[i] = v.x()*v.x()*v.x();
             }
             break;
         case X2Y:
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(2.*v.x()*v.y());
-                duy_ex.push_back(v.x()*v.x());
-                dulapl_ex.push_back(2.*v.y());
+                dux_ex[i] = 2.*v.x()*v.y();
+                duy_ex[i] = v.x()*v.x();
+                dulapl_ex[i] = 2.*v.y();
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.x()*v.y());
+                u[i] = v.x()*v.x()*v.y();
             }
             break;
         case XY2:
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(v.y()*v.y());
-                duy_ex.push_back(2.*v.x()*v.y());
-                dulapl_ex.push_back(2.*v.x());
+                dux_ex[i] = v.y()*v.y();
+                duy_ex[i] = 2.*v.x()*v.y();
+                dulapl_ex[i] = 2.*v.x();
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.x()*v.y()*v.y());
+                u[i] = v.x()*v.y()*v.y();
             }
             break;
         case Y3:
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
-                dux_ex.push_back(0.);
-                duy_ex.push_back(3.*v.y()*v.y());
-                dulapl_ex.push_back(6.*v.y());
+                dux_ex[i] = 0.;
+                duy_ex[i] = 3.*v.y()*v.y();
+                dulapl_ex[i] = 6.*v.y();
             }
             for (int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
-                u.push_back(v.y()*v.y()*v.y());
+                u[i] = v.y()*v.y()*v.y();
             }
             break;
     }
@@ -545,7 +580,7 @@ void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb
 
 //----------------------------------------------------------------------
 //
-void DerivativeTests::testEigen(RBFFD::DerType which, unsigned int maxNumPerturbations, float maxPerturbation)
+void DerivativeTests::testEigen(RBFFD::DerType which, bool exitIfTestFails, unsigned int maxNumPerturbations, float maxPerturbation)
 {
 
     int nb_stencils = grid->getStencilsSize();
@@ -561,7 +596,7 @@ void DerivativeTests::testEigen(RBFFD::DerType which, unsigned int maxNumPerturb
 
     RBFFD::EigenvalueOutput eig_results; 
 
-    double max_eig = der->computeEigenvalues(which, &eig_results); // needs lapl_weights
+    double max_eig = der->computeEigenvalues(which, exitIfTestFails, &eig_results); // needs lapl_weights
 
     printf("zero perturbation: max eig: %f\n", max_eig);
 
@@ -596,7 +631,7 @@ void DerivativeTests::testEigen(RBFFD::DerType which, unsigned int maxNumPerturb
 
         der->computeWeightsForAllStencils(which);
 
-        double max_eig = der->computeEigenvalues(which); 
+        double max_eig = der->computeEigenvalues(which, exitIfTestFails); 
 
         printf("Max Perturbation: %f, max eig: %f\n", percent, max_eig);
     }

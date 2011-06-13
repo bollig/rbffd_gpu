@@ -488,9 +488,14 @@ void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* der
 // and puts 1's on the diagonal for boundary nodes.
 // Then computes the eigenvalue decomposition using Armadillo
 // Then computes the maximum and minimum abs(eigenvalue.real())
-// Then counts the number of eigenvalues > 0 and stops the computation
-// because any eigenvalues > 0 indicate an unstable laplace operator
-double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output) 
+// Then counts the number of eigenvalues > 0, number < 0 and number within a
+// tolerance of 0, and stops the computation if exit_on_fail is true and the
+// number of positive and negative are both > 0 or number of zero is greater
+// than 1. The logic for this break is based on Parabolic PDEs having ALL
+// positive save for one eigenvalue equal to 0, or ALL negative save for one
+// equal to 0. If we have a mix of positive and negative we might have an
+// unstable laplace operator 
+double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output) 
 {
     std::vector<double*>& weights_r = this->weights[which];
   
@@ -539,7 +544,13 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
     eig_gen(eigval, eigvec, eigmat);
     //eigval.print("eigval");
 
-    int count=0;
+    int pos_count=0;
+    int neg_count=0;
+    int zero_count=0;
+
+    double max_pos_eig= fabs(real(eigval(0)));
+    double min_pos_eig = fabs(real(eigval(0)));
+
     double max_neg_eig = fabs(real(eigval(0)));
     double min_neg_eig = fabs(real(eigval(0)));
 
@@ -548,35 +559,66 @@ double RBFFD::computeEigenvalues(DerType which, EigenvalueOutput* output)
     //for (int i=0; i < (sz-nb_bnd); i++) {
     for (int i=0; i < sz; i++) {
         double e = real(eigval(i));
-        if (e > 0.) {
-            count++;
-        } else {
+        if (e > 1.e-8) {
+            pos_count++;
+            if (fabs(e) > max_pos_eig) {
+                max_pos_eig = fabs(e);
+            }
+            if (fabs(e) < min_pos_eig) {
+                min_pos_eig = fabs(e);
+            }
+        } else if (e < -1.e-8) {
+            neg_count++;
             if (fabs(e) > max_neg_eig) {
                 max_neg_eig = fabs(e);
             }
             if (fabs(e) < min_neg_eig) {
                 min_neg_eig = fabs(e);
             }
+        } else {
+            zero_count++;
         }
     }
+#if 0
     count -= nb_bnd; // since we know at least nb_bnd eigenvalues are are (1+0i)
 
-    if (count > 0) {
-        printf("\n[RBFFD] ****** Error: Number unstable eigenvalues: %d *******\n\n", count);
-        exit(EXIT_FAILURE);
-    }
+#endif 
+    printf("\n[RBFFD] ****** Number positive eigenvalues: %d *******\n\n", pos_count);
+    printf("\n[RBFFD] ****** Number negative eigenvalues: %d *******\n\n", neg_count);
+    printf("\n[RBFFD] ****** Number zero (-1e-8 <= eval <= 1e-8) eigenvalues: %d *******\n\n", zero_count);
 
     printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
     printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);
 
+    printf("min abs(real(eig)) (among positive reals): %f\n", min_pos_eig);
+    printf("max abs(real(eig)) (among positive reals): %f\n", max_pos_eig);
+
     if (output) {
+        output->max_pos_eig = max_pos_eig; 
+        output->min_pos_eig = min_pos_eig; 
         output->max_neg_eig = max_neg_eig; 
         output->min_neg_eig = min_neg_eig; 
     }
 
     eigenvalues_computed = true;
+    cachedEigenvalues.max_pos_eig = max_pos_eig; 
+    cachedEigenvalues.min_pos_eig = min_pos_eig;
     cachedEigenvalues.max_neg_eig = max_neg_eig; 
     cachedEigenvalues.min_neg_eig = min_neg_eig;
+
+    if ((neg_count > 0) && (pos_count > 0)) {
+        std::cout << "[RBFFD] Error: parabolic PDEs have either all positive or all negative eigenvalues (except one that is zero).\n";
+        if (exit_on_fail) {
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (zero_count > 1) {
+        std::cout << "[RBFFD] Error: parabolic PDEs have either all positive or all negative eigenvalues (except one that is zero).\n";
+        if (exit_on_fail) {
+            exit(EXIT_FAILURE);
+        }
+    }
 
     return max_neg_eig;
 }

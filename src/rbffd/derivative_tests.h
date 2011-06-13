@@ -17,10 +17,12 @@ class DerivativeTests {
         bool weightsComputed;
         RBFFD* der;
         Grid* grid;
+        int dim_num;
 
     public:
-        DerivativeTests(RBFFD* derivative_ptr, Grid* grid_ptr, bool weightsPreComputed=false)
+        DerivativeTests(int dim, RBFFD* derivative_ptr, Grid* grid_ptr, bool weightsPreComputed=false)
             : weightsComputed(weightsPreComputed), 
+            dim_num(dim),
             der(derivative_ptr), grid(grid_ptr)
         { 
             TESTFUNSTR[0] = "0";
@@ -54,10 +56,10 @@ class DerivativeTests {
 
         void testFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0, bool exitIfTestFails=true);
 
-        void testEigen(RBFFD::DerType which=RBFFD::LAPL, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
+        void testEigen(RBFFD::DerType which=RBFFD::LAPL, bool exitIfTestFails=true, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
 
     protected: 
-        void fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils_to_test, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);
+        void fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils, size_t nb_centers, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);
 
         double compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx);
 

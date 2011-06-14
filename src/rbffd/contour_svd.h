@@ -6,7 +6,6 @@
 #include <armadillo>
 #include <string>
 #include "rbffd/rbfs/rbf.h"
-#include "rbffd/rbfs/rbf_mq.h"
 
 class ContourSVD
 {
@@ -86,7 +85,7 @@ class ContourSVD
 
         template <class T> arma::Mat<T> polyval2(std::vector<T> p, arma::Mat<T> x);
         template <class T> std::vector<T> polyval2(std::vector<T> p, std::vector<T> x);
-        template <class T> void print(vector<T> v, const char* msg=0);
+        template <class T> void print(std::vector<T> v, const char* msg=0);
 
         void print(std::vector<CMPLX> v, const char* msg=0);
         void print(arma::cx_mat& v, const char* msg);

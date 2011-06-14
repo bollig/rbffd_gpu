@@ -65,6 +65,8 @@ class DerivativeTests {
 
         void testEigen(RBFFD::DerType which=RBFFD::LAPL, bool exitIfTestFails=true, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
 
+        void testHyperviscosity();
+
     protected: 
         void fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils, size_t nb_centers, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);
 

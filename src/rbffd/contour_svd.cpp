@@ -756,6 +756,9 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
         //vald.print("vald(z)");
     } else if (strcmp(choice, "lapl") == 0) {
         vald = rbf->lapl_deriv(re);
+    } else if (strcmp(choice, "interp") == 0) {
+        // Just get the interpolation weights
+        vald = (*rbf)(re);
     } else {
         printf("cx_mat rbfdapp:: unknown derivative type\n");
         exit(1);

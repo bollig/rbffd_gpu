@@ -25,7 +25,7 @@ class Stencils
         const char* choice;
 
     public:
-        /// choice : "lapl", "x", "y", "z"
+        /// choice : "interp", "lapl", "x", "y", "z"
         Stencils(RBF* rbf_, double rad_, double h_, double eps_, arma::mat* xd_, 
                 const char* choice_) {
             this->choice = choice_;

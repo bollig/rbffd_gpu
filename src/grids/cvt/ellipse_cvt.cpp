@@ -50,7 +50,7 @@ Vec3 EllipseCVT::singleRejection2d_EllipseMinusCircle(double area, double weight
 
         //printf("r2= %f\n", r2);
         if (r2 > 1.) continue; // outside outer boundary
-        if (r_inner < inner_cir_radius) continue; // inside inner boundary
+       // TODO: inheriting class that adds this feature:  if (r_inner < inner_cir_radius) continue; // inside inner boundary
 
         // rejection part if non-uniform distribution
         u = random(0., 1.);

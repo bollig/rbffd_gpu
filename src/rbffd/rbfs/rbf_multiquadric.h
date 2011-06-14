@@ -49,7 +49,6 @@ class RBF_Multiquadric : public RBF
         virtual double eval(double x) { 
             double r2 = x*x; 
             return sqrt(1.+(r2*eps2));
-            return exp(-(r2*eps2)); 
         }
 
         virtual CMPLX eval(CMPLX x) {

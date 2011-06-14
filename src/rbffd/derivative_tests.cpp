@@ -654,6 +654,48 @@ void DerivativeTests::testEigen(RBFFD::DerType which, bool exitIfTestFails, unsi
     der->computeWeightsForAllStencils(RBFFD::LAPL);
 }
 
+#if 1
+//----------------------------------------------------------------------
+// Test hyperviscosity to see if we can move eigenvalues from right plane to left plane
+//
+void DerivativeTests::testHyperviscosity()
+{
+    // 1) Generate Differentiation Matrix (DM) 
+    // 2) Compute Eigenvalues
+    // LOOP: 
+    //  3) Apply Hyperviscosity to original DM
+    //  4) Compute Eigenvalues
+    //  5) Check planes 
+    //  6) Adjust Hyperviscosity params
+    // REPEAT
+    int nb_stencils = grid->getStencilsSize();
+    int nb_bnd = grid->getBoundaryIndicesSize();
+    int tot_nb_pts = grid->getNodeListSize();
+
+    std::vector<double> u(tot_nb_pts);
+    std::vector<double> deriv(nb_stencils);
+
+    std::vector<StencilType>& stencil = grid->getStencils();
+    std::vector<NodeType>& rbf_centers = grid->getNodeList();
+    std::vector<double>& avg_stencil_radius = grid->getStencilRadii(); // get average stencil radius for each point
+
+    RBFFD::EigenvalueOutput orig_eig_results; 
+
+    der->computeEigenvalues(RBFFD::LAPL, false, &orig_eig_results); 
+
+    RBFFD::EigenvalueOutput eig_results; 
+    int i = 0; 
+    while (eig_results.nb_positive > nb_bnd) {
+        printf("---- iteration %d ------\n", i);
+        int k = 4; 
+        double gamma = 8e-4;
+
+        der->computeHyperviscosityEigenvalues(RBFFD::LAPL, k, gamma, &eig_results); 
+        gamma += 1e-4;
+        i++;
+    }
+}
+#endif 
 
 #if 0
 //----------------------------------------------------------------------

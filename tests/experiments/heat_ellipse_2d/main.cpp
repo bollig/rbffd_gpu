@@ -311,7 +311,7 @@ int main(int argc, char** argv) {
         bool exitIfTestFailed = settings->GetSettingAs<int>("BREAK_ON_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
         tm["tests"]->start(); 
         // The test class only computes weights if they havent been done already
-        DerivativeTests* der_test = new DerivativeTests(der, subdomain, weightsPreComputed);
+        DerivativeTests* der_test = new DerivativeTests(dim, der, subdomain, weightsPreComputed);
         if (use_gpu) {
             // Applies weights on both GPU and CPU and compares results for the first 10 stencils
             der_test->compareGPUandCPUDerivs(10);

@@ -95,6 +95,18 @@ class RBF {
             return values;
         }
 
+        arma::cx_mat operator()(const ArrayT<CVec3>& arr) {
+            const int* dims = arr.getDims();
+            arma::cx_mat values(dims[0], dims[1]);
+            for (int j=0; j < dims[1]; j++) {
+                for (int i=0; i < dims[0]; i++) {
+                    values(i,j) = eval(arr(i,j));
+                }
+            }
+            return values;
+        }
+
+
         //------------------------------------------------------------------
 
         // aug 15, 2009, input: 2D array of distances squared, output: 2D array
@@ -266,11 +278,9 @@ class RBF {
 
         //------------------------------------------------------------------
         // First Derivatives: 
+        double xderiv(const Vec3& xvec, const Vec3& x_center) { this->xderiv(xvec-x_center); }
         double yderiv(const Vec3& xvec, const Vec3& x_center) { this->yderiv(xvec-x_center); }
         double zderiv(const Vec3& xvec, const Vec3& x_center) { this->zderiv(xvec-x_center); }
-        
-        double xderiv(Vec3& xvec, Vec3& x_center) { this->xderiv(xvec-x_center); }
-        CMPLX  xderiv(CVec3& xvec, CVec3& x_center ) { this->xderiv(xvec-x_center); }
         //------------------------------------------------------------------
         virtual double xderiv(const Vec3& xvec)  = 0;
         virtual CMPLX  xderiv(const CVec3& xvec) = 0;

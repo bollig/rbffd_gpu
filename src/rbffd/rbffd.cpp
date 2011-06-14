@@ -26,6 +26,8 @@
     derTypeStr[1] = "y";
     derTypeStr[2] = "z";
     derTypeStr[3] = "lapl";
+    derTypeStr[4] = "interp";
+    derTypeStr[5] = "hv2";
 
     weightTypeStr[0] = "direct"; 
     weightTypeStr[1] = "contoursvd"; 
@@ -93,6 +95,10 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
     // value 0 => stencil center is at index 0 in "stencil"
     // dim_num required for RBF
     this->distanceMatrix(rbf_centers, stencil, dim_num, d_matrix, h);
+ //   d_matrix.print("DMAT=");
+ //   arma::mat re = d_matrix.submat(0,0,n,0);
+//    re.print("RE=");
+//    this->rbf(d_matrix);
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
@@ -245,6 +251,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     // Assume single RHS
     rhs.zeros(n+np,1);
 
+    // RHS we evaluate all RBF translates at the stencil center
     NodeType& x0v = rbf_centers[stencil[0]];
 
     // NOTE: we want to evaluate the analytic derivs of phi at the stencil center point
@@ -288,6 +295,10 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
             case INTERP: 
                 rhs(j,0) = rbf.eval(diff);
+                break; 
+            case HV2: 
+                // FIXME: this is only for 2D right now
+                rhs(j,0) = rbf.lapl2_deriv2D(diff);
                 break; 
             default:
                 std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
@@ -584,6 +595,9 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
         output->min_pos_eig = min_pos_eig; 
         output->max_neg_eig = max_neg_eig; 
         output->min_neg_eig = min_neg_eig; 
+        output->nb_positive = pos_count; 
+        output->nb_negative = neg_count; 
+        output->nb_zero     = zero_count; 
     }
 
     eigenvalues_computed = true;
@@ -591,6 +605,9 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     cachedEigenvalues.min_pos_eig = min_pos_eig;
     cachedEigenvalues.max_neg_eig = max_neg_eig; 
     cachedEigenvalues.min_neg_eig = min_neg_eig;
+    cachedEigenvalues.nb_positive = pos_count; 
+    cachedEigenvalues.nb_negative = neg_count; 
+    cachedEigenvalues.nb_zero     = zero_count; 
 
     if ((neg_count - nb_bnd > 0) && (pos_count - nb_bnd > 0)){
         std::cout << "[RBFFD] Error: we expect either all positive or all negative eigenvalues (except for the number of boundary nodes).\n";
@@ -612,6 +629,128 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
             exit(EXIT_FAILURE);
         }
     }
+
+    return max_neg_eig;
+}
+
+
+double RBFFD::computeHyperviscosityEigenvalues(DerType which, int k, double gamma, EigenvalueOutput* output) 
+{
+
+    std::vector<double*>& weights_r = this->weights[which];
+  
+    // Use a std::set because it auto sorts as we insert
+    std::set<size_t>& b_indices = grid_ref.getSortedBoundarySet();
+    std::set<size_t>& i_indices = grid_ref.getSortedInteriorSet(); 
+    size_t nb_bnd = b_indices.size();
+    size_t nb_int = i_indices.size();
+    int nb_centers = grid_ref.getNodeListSize();
+    int nb_stencils = grid_ref.getStencilsSize();
+
+    // compute eigenvalues of derivative operator
+    size_t sz = weights_r.size();
+
+#if 0
+    printf("sz= %lu\n", sz);
+    printf("weights.size= %d\n", (int) weights_r.size());
+#endif 
+
+    printf("Generating matrix of weights for interior nodes ONLY\n");
+    arma::mat eigmat(sz, sz);
+    eigmat.zeros();
+
+    // Boundary nodes first with diagonal 1's.
+    std::set<size_t>::iterator it; 
+    int i = 0;
+    for (it = b_indices.begin(); it != b_indices.end(); it++, i++) {
+        eigmat(*it,*it) = 1.0;
+    }
+   
+    // We put our interior nodes after the boundary nodes in matrix
+    for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
+        double* w = weights_r[*it];
+        StencilType& st = grid_ref.getStencil(*it);
+        for (int j=0; j < st.size(); j++) {
+            eigmat(*it,st[j])  = w[j];
+            // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
+        }
+    }
+
+    printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
+
+    arma::cx_colvec eigval;
+    arma::cx_mat eigvec;
+    printf("Computing Eigenvalues of Laplacian Operator on Interior Nodes\n");
+    eig_gen(eigval, eigvec, eigmat);
+    //eigval.print("eigval");
+
+    int pos_count=0;
+    int neg_count=0;
+    int zero_count=0;
+
+    double max_pos_eig= fabs(real(eigval(0)));
+    double min_pos_eig = fabs(real(eigval(0)));
+
+    double max_neg_eig = fabs(real(eigval(0)));
+    double min_neg_eig = fabs(real(eigval(0)));
+
+    // Compute number of unstable modes
+    // Also compute the largest and smallest (in magnitude) eigenvalue
+    //for (int i=0; i < (sz-nb_bnd); i++) {
+    for (int i=0; i < sz; i++) {
+        double e = real(eigval(i));
+        if (e > 1.e-8) {
+            pos_count++;
+            if (fabs(e) > max_pos_eig) {
+                max_pos_eig = fabs(e);
+            }
+            if (fabs(e) < min_pos_eig) {
+                min_pos_eig = fabs(e);
+            }
+        } else if (e < -1.e-8) {
+            neg_count++;
+            if (fabs(e) > max_neg_eig) {
+                max_neg_eig = fabs(e);
+            }
+            if (fabs(e) < min_neg_eig) {
+                min_neg_eig = fabs(e);
+            }
+        } else {
+            zero_count++;
+        }
+    }
+#if 0
+    count -= nb_bnd; // since we know at least nb_bnd eigenvalues are are (1+0i)
+
+#endif 
+    printf("\n[RBFFD] ****** Number positive eigenvalues: %d *******\n\n", pos_count);
+    printf("\n[RBFFD] ****** Number negative eigenvalues: %d *******\n\n", neg_count);
+    printf("\n[RBFFD] ****** Number zero (-1e-8 <= eval <= 1e-8) eigenvalues: %d *******\n\n", zero_count);
+
+    printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
+    printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);
+
+    printf("min abs(real(eig)) (among positive reals): %f\n", min_pos_eig);
+    printf("max abs(real(eig)) (among positive reals): %f\n", max_pos_eig);
+
+    if (output) {
+        output->max_pos_eig = max_pos_eig; 
+        output->min_pos_eig = min_pos_eig; 
+        output->max_neg_eig = max_neg_eig; 
+        output->min_neg_eig = min_neg_eig; 
+        output->nb_positive = pos_count; 
+        output->nb_negative = neg_count; 
+        output->nb_zero     = zero_count; 
+    }
+
+    eigenvalues_computed = true;
+    cachedEigenvalues.max_pos_eig = max_pos_eig; 
+    cachedEigenvalues.min_pos_eig = min_pos_eig;
+    cachedEigenvalues.max_neg_eig = max_neg_eig; 
+    cachedEigenvalues.min_neg_eig = min_neg_eig;
+    cachedEigenvalues.nb_positive = pos_count; 
+    cachedEigenvalues.nb_negative = neg_count; 
+    cachedEigenvalues.nb_zero     = zero_count; 
 
     return max_neg_eig;
 }
@@ -1017,29 +1156,13 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         // in the RBFs, but also in the ExactSolution 
         IRBF rbf(eps, dim_num);
 
-        char* choice; 
-        switch(which) {
-            case X:
-                choice = "x"; 
-                break; 
-            case Y: 
-                choice = "y"; 
-                break; 
-            case Z:
-                choice = "z";
-                break;
-            case LAPL: 
-                choice = "lapl";
-                break; 
-            default: 
-                std::cout << "ERROR! unknown choice for ContourSVD" << std::endl;
-        }
-
+        std::string choice = derTypeStr[which];  
+        
         // This is the AVG stencil radius
         double h = grid_ref.getStencilRadius(st_indx);
 
         // This is a 
-        Stencils sten(&rbf, rad, h, eps, &xd, choice);
+        Stencils sten(&rbf, rad, h, eps, &xd, choice.c_str());
         //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);
 
         int N = 128; // Why can't I increase N?

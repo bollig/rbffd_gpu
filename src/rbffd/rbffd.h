@@ -8,6 +8,7 @@
 #include "Vec3.h"
 #include "rbffd/rbfs/rbf_gaussian.h"
 #include "rbffd/rbfs/rbf_multiquadric.h"
+#include "rbffd/rbfs/rbf_inv_multiquadric.h"
 
 #include "utils/conf/projectsettings.h"
 #include "timer_eb.h"
@@ -16,23 +17,27 @@
 
 #include "grids/domain.h"
 
-#if 0
+#if 1
 typedef RBF_Gaussian IRBF;
 #else 
+#if 0
 typedef RBF_Multiquadric IRBF;
+#else 
+typedef RBF_InvMultiquadric IRBF;
+#endif 
 #endif 
 
 // TODO: put this in rbf.h and have all rbf types available
 //enum RBF_Type {MQ=0, GA, IMQ, TPS, W2};
 
 // Should match how many DerTypes we have below
-#define NUM_DERIV_TYPES 5
+#define NUM_DERIV_TYPES 6
 
 class RBFFD
 {
     public:
         // INTERP are for NO derivatives, but for interpolating functions 
-        enum DerType {X, Y, Z, LAPL, INTERP};
+        enum DerType {X, Y, Z, LAPL, INTERP, HV2};
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 
         enum WeightType {Direct, ContourSVD};
@@ -43,6 +48,9 @@ class RBFFD
             double min_pos_eig;
             double max_neg_eig; 
             double min_neg_eig;
+            int nb_positive; 
+            int nb_negative;
+            int nb_zero;
         } EigenvalueOutput;
 
 
@@ -143,6 +151,10 @@ class RBFFD
         // Returns MAXIMUM negative eigenvalue
         // Use output to obtain MINIMUM and MAXIMUM
         double computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output=NULL);
+        
+        // Compute Eigenvalues of DM + Hyperviscosity term. 
+        // hyperviscosity = - gamma * N_nodes^-k * (lapl)^-k
+        double computeHyperviscosityEigenvalues(DerType which, int k, double gamma, EigenvalueOutput* output=NULL);
 
 
         void setEpsilon(double eps) { 

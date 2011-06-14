@@ -16,7 +16,7 @@ using namespace std;
     this->setupTimers(); 
     this->loadKernel(); 
     this->allocateGPUMem();
-    this->updateStencils(false); 
+    this->updateStencilsOnGPU(false); 
 }
 
 
@@ -134,7 +134,7 @@ void RBFFD_CL::allocateGPUMem() {
 
 //----------------------------------------------------------------------
 //
-void RBFFD_CL::updateStencils(bool forceFinish) {
+void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
     std::vector<StencilType>& stencil_map = grid_ref.getStencils();
     size_t nb_stencils = stencil_map.size();
     // TODO: queue a WriteBuffer for each stencil and pass the &vector[0] ptr. CPU should handle that
@@ -197,7 +197,8 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
 
         tm["sendWeights"]->start();
         int weights_mem_size = gpu_stencil_size * sizeof(double);  
-        //        std::cout << "Writing weights to GPU memory\n"; 
+        
+        std::cout << "Writing weights to GPU memory\n"; 
 
         size_t max_stencil_size = grid_ref.getMaxStencilSize();
         size_t nb_stencils = grid_ref.getStencilsSize();
@@ -260,7 +261,8 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
         tm["sendWeights"]->start();
         int weights_mem_size = gpu_stencil_size * sizeof(float);  
-        //        std::cout << "Writing weights to GPU memory\n"; 
+        
+        std::cout << "Writing weights to GPU memory\n"; 
 
         size_t max_stencil_size = grid_ref.getMaxStencilSize();
         size_t nb_stencils = grid_ref.getStencilsSize();
@@ -273,7 +275,8 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
         // Copy the std::vector<std::vector<..> > into a contiguous memory space
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost 
-        for (size_t which = 0; which < NUM_DERIV_TYPES; which++) {
+        // FIXME: we only pass four weights to the GPU
+        for (size_t which = 0; which < 4; which++) {
             cpu_weights_f[which] = new float[gpu_stencil_size]; 
             for (size_t i = 0; i < nb_stencils; i++) {
                 size_t stencil_size = grid_ref.getStencilSize(i); 
@@ -379,12 +382,12 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, size_t nb_nodes, size_t
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
-        this->updateFunction(nb_nodes, u, false); 
+        this->updateFunctionOnGPU(nb_nodes, u, false); 
     }
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    this->updateWeights(false);
+    this->updateWeightsOnGPU(false);
 
     try {
         kernel.setArg(0, gpu_stencils); 
@@ -449,12 +452,12 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, size_t nb_nodes, size_t
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
-        this->updateFunction(nb_nodes, u, false); 
+        this->updateFunctionOnGPU(nb_nodes, u, false); 
     }
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    this->updateWeights(false);
+    this->updateWeightsOnGPU(false);
 
     try {
         kernel.setArg(0, gpu_stencils); 

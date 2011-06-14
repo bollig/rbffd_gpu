@@ -89,27 +89,28 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         virtual void applyWeightsForDerivSingle(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
+        // forceFinish ==> should we fire a queue.finish() and make sure all
+        // tasks are completed (synchronously) before returning
+        void updateStencilsOnGPU(bool forceFinish);
+        
+        void updateWeightsOnGPU(bool forceFinish)
+        { 
+            if (useDouble) { updateWeightsDouble(forceFinish); 
+            } else { updateWeightsSingle(forceFinish); }
+        }
+        void updateFunctionOnGPU(size_t nb_nodes, double* u, bool forceFinish)
+        { 
+            if (useDouble) { updateFunctionDouble(nb_nodes, u, forceFinish); 
+            } else { updateFunctionSingle(nb_nodes, u, forceFinish); }
+        }
+
+
     protected: 
         void setupTimers(); 
         void loadKernel(); 
         void allocateGPUMem(); 
 
         void clearCPUWeights();
-
-        // forceFinish ==> should we fire a queue.finish() and make sure all
-        // tasks are completed (synchronously) before returning
-        void updateStencils(bool forceFinish);
-        
-        void updateWeights(bool forceFinish)
-        { 
-            if (useDouble) { updateWeightsDouble(forceFinish); 
-            } else { updateWeightsSingle(forceFinish); }
-        }
-        void updateFunction(size_t nb_nodes, double* u, bool forceFinish)
-        { 
-            if (useDouble) { updateFunctionDouble(nb_nodes, u, forceFinish); 
-            } else { updateFunctionSingle(nb_nodes, u, forceFinish); }
-        }
 
         void updateWeightsDouble(bool forceFinish);
         void updateWeightsSingle(bool forceFinish);

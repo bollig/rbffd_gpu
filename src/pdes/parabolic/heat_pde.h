@@ -6,7 +6,7 @@
 // TODO: extend this class and compute diffusion in two terms: lapl(y(t)) = div(y(t)) .dot. grad(y(t))
 class HeatPDE : public TimeDependentPDE
 {
-    private: 
+    protected: 
         std::vector<SolutionType> boundary_values; 
         // T/F : are the weights already computed so we can avoid that cost?
         bool weightsPrecomputed;

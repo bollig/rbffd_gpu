@@ -46,9 +46,10 @@ class HeatPDE : public TimeDependentPDE
         void setSplitLaplacian(bool split) { splitLaplacian = split; }
         void setUseUniformDiffusion(bool isUniform) { uniformDiffusion = isUniform; }
 
-    protected: 
+    private: 
         void setupTimers(); 
 
+    protected: 
         void solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t);
         void solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t);
 

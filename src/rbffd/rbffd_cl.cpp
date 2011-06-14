@@ -40,39 +40,35 @@ void RBFFD_CL::loadKernel() {
 
     tm["loadAttach"]->start(); 
 
-    // Defines std::string kernel_source: 
-#include "cl_kernels/derivative_kernels.cl"
-
     // Split the kernels by __kernel keyword and do not discards the keyword.
     // TODO: support extensions declared for kernels (this class can add FP64
     // support)
-    std::vector<std::string> separated_kernels = this->split(kernel_source, "__kernel", true);
+   // std::vector<std::string> separated_kernels = this->split(kernel_source, "__kernel", true);
 
-
-    std::string kernel_name = "computeDerivKernelDOUBLE"; 
+    std::string kernel_name = "computeDerivKernel"; 
 
     if (!this->getDeviceFP64Extension().compare("")){
-        useDouble = false; 
+        useDouble = false;
     }
     if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
-        kernel_name = "computeDerivKernelFLOAT"; 
-
         useDouble = false;
-        // Since double is disabled we need to try and find ONLY the specified
-        // kernel so we dont try to build kernels that would error out because
-        // they contain the keyword double
-        std::vector<std::string>::iterator k; 
-        for (k = separated_kernels.begin(); k!=separated_kernels.end(); k++) {
-            if ((*k).find(kernel_name) != std::string::npos) {
-                this->loadProgram(*k, useDouble);
-            }
-        }
+    } 
 
-    } else {
-        this->loadProgram(kernel_source, useDouble); 
+    std::string my_source; 
+    if(useDouble) {
+#define FLOAT double 
+#include "cl_kernels/derivative_kernels.cl"
+        my_source = kernel_source;
+#undef FLOAT
+    }else {
+#define FLOAT float
+#include "cl_kernels/derivative_kernels.cl"
+        my_source = kernel_source;
+#undef FLOAT
     }
 
-    //   std::cout << "This is my kernel source: ...\n" << kernel_source << "\n...END\n"; 
+    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
+    this->loadProgram(my_source, useDouble); 
 
     try{
         std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n"; 

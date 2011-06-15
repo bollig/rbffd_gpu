@@ -18,6 +18,7 @@ void HeatPDE::fillBoundaryConditions(ExactSolution* exact) {
         boundary_values[i] = exact->at(v, 0.);
         // printf("boundary: %f %f %f ==> %f\n", v.x(), v.y(), v.z(),bnd_sol[i]);
     }
+    std::cout << "[HeatPDE] done with initial conditions.\n";
 }
 
 

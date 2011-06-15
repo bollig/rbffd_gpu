@@ -191,7 +191,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
             int g_indx = *rit; 
             int l_indx = grid_ref.g2l(*rit);
-#if 0 
+#if 1 
             cout << label << "\t(Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")\tOld vec[" << l_indx << "]: " << vec[l_indx] << "\t New U_G[" << l_indx << "]: " << U_R[i] << endl;
 #endif 
             // Global to local mapping required

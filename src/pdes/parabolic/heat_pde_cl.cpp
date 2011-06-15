@@ -17,6 +17,7 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
     size_t nb_nodes = grid_ref.G.size();
     size_t solution_mem_bytes = nb_nodes*this->getFloatSize(); 
    
+    std::cout << "[HeatPDE_CL] Writing initial conditions to GPU\n"; 
     if (useDouble) {
         // Fill GPU mem with initial solution 
         err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
@@ -27,6 +28,7 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
         }
         err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
     }
+    std::cout << "[HeatPDE_CL] Done\n"; 
 }
 
 //----------------------------------------------------------------------
@@ -73,69 +75,77 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
     size_t nb_nodes = grid_ref.getNodeListSize();
     size_t set_G_size = grid_ref.G.size();
-    size_t set_Q_size = grid_ref.Q.size() - 5; 
-    size_t set_R_size = grid_ref.R.size() + 5;
-    size_t set_O_size = grid_ref.R.size() + 3;
+    size_t set_Q_size = grid_ref.Q.size(); 
+    size_t set_R_size = grid_ref.R.size();
+    size_t set_O_size = grid_ref.O.size();
+
     size_t float_size = this->getFloatSize();
-    size_t set_R_bytes = set_R_size * float_size;
-    size_t solution_mem_bytes = set_G_size*float_size; 
+
     // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
     size_t offset_to_set_R = set_Q_size;
     size_t offset_to_set_O = (set_Q_size - set_O_size);
+
+    size_t solution_mem_bytes = set_G_size*float_size; 
+    size_t set_R_bytes = set_R_size * float_size;
     size_t set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
-    std::vector<float> s(nb_nodes,0.); //= this->U_G; 
-    std::vector<float> test_output(nb_nodes,0.);
+    std::vector<float> r_update_f(set_R_size,-1.); //= this->U_G; 
+    std::vector<float> o_update_f(set_O_size,1.);
 
+    std::cout << "Launching First Order Euler\n";
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
 
-    queue.finish();
-
     if (set_R_size > 0) {
 
-    // Update CPU mem with R;
-    std::set<int>::iterator it; 
-    for (it = grid_ref.R.begin(); it != grid_ref.R.end(); it++) {
-       s[*it] = *it; 
+        // Update CPU mem with R; 
+        // NOTE: This is a single precision kernel call so we need to convert
+        // the U_G to single precision
+        for (int i = 0 ; i < set_R_size; i++) {
+            r_update_f[i] = (float)U_G[offset_to_set_R + i]; 
+        }
+
+        // Synchronize just the R part on GPU (CL_FALSE here indicates we dont block on write
+        // NOTE: offset parameter to enqueueWriteBuffer is ONLY for the GPU side offset. The CPU offset needs to be managed directly on the CPU pointer: &U_G[offset_cpu]
+       err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, offset_to_set_R * float_size, set_R_bytes, &r_update_f[0], NULL, &event);
+       
+       // This copies the whole array of s into the input
+       // err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &s[0], NULL, &event);
     }
 
-    // Synchronize just the R part on GPU (CL_FALSE here indicates we dont block on write
-    err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_FALSE, offset_to_set_R * float_size, set_R_bytes, &U_G[0], NULL, &event);
-
-    // readback all of gpu buffer to see 0s and R vals
-    //err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &test_output[0], NULL, &event);
-
-#if  1
     // Launch kernel
     this->launchEulerKernel( ); 
 
-    // TODO: copy set R from GPU solution to CPU solution
+    if (set_O_size > 0) {
+        // Pull only information required for neighboring domains back to the CPU 
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &o_update_f[0], NULL, &event);
+        // This pulls the whole array
+//        err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, 0, solution_mem_bytes, &o_update_f[0], NULL, &event);
+        queue.finish();
 
-    // Pull the computed derivative back to the CPU
-    // enqueueReadBuffer(buffer, blocking, offset, size, host_data, event queue to finish prior, returned_event_for_status_or_queue)
-    err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_FALSE, offset_to_set_O * float_size, set_O_bytes, &test_output[offset_to_set_O], NULL, &event);
-    //err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &test_output[0], NULL, &event);
-
-    queue.finish();
-    // reset boundary solution
-   // this->enforceBoundaryConditions(s, cur_time); 
-
-    // synchronize();
-  //  this->sendrecvUpdates(s, "U_G");
-
-    queue.finish();
-    for (int i = 0; i < nb_nodes; i++) {
-        std::cout << "u[" << i << "] = " << test_output[i] << std::endl;
+        // NOTE: this is only required because we're calling a single precision
+        // kernel 
+        for (size_t i = 0; i < set_O_size; i++) {
+            //std::cout << "u[" << i << "] = " << U_G[offset_to_set_O + i] << "\t" << o_update_f[i] << std::endl;
+            U_G[offset_to_set_O + i] = (double) o_update_f[i];
+        }
     }
+
+    // reset boundary solution
+    // this->enforceBoundaryConditions(s, cur_time); 
+         
+    // synchronize();
+    this->sendrecvUpdates(U_G, "U_G");
+
+    for (int i = 0; i < nb_nodes; i++) {
+        std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
     }
     exit(EXIT_FAILURE);
 
     swap(INDX_IN, INDX_OUT);
-#endif 
 }
 
 void HeatPDE_CL::launchEulerKernel() {

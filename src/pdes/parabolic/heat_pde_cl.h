@@ -8,7 +8,15 @@
 class HeatPDE_CL : public HeatPDE, public CLBaseClass 
 {
     protected: 
-        cl::Buffer gpu_weights[NUM_DERIV_TYPES]; 
+        // Euler needs: 
+        //      solution in
+        //      diffusion
+        //      solution out
+        //      
+        // We use a ping pong buffer scheme here for solution to avoid copying one to the other
+        cl::Buffer solution[2]; 
+        int INDX_IN;
+        int INDX_OUT;
         RBFFD_CL& der_ref_gpu; 
         bool useDouble;
 
@@ -17,6 +25,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         HeatPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool useUniformDiffusion, bool weightsComputed=false) 
             : HeatPDE(grid, der, comm, useUniformDiffusion, weightsComputed), 
             der_ref_gpu(*der), useDouble(true)
+              INDX_IN(0), INDX_OUT(1)
         { 
             this->setupTimers(); 
             this->loadKernels(); 
@@ -44,6 +53,8 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
 
     private: 
         virtual void setupTimers(); 
+
+        void swap(int& a, int& b) { int temp = a; a = b; b = temp; }
 
     protected: 
         virtual std::string className() {return "heat_cl";}

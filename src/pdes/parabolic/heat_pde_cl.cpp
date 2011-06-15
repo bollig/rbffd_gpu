@@ -52,14 +52,8 @@ void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
 //
 void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
-    size_t nb_stencils = grid_ref.getStencilsSize(); 
-    size_t nb_nodes = grid_ref.getNodeListSize(); 
-    std::vector<NodeType>& nodes = grid_ref.getNodeList();
-
     // backup the current solution so we can perform intermediate steps
-    std::vector<double> original_solution = this->U_G; 
     std::vector<double>& s = this->U_G; 
-    std::vector<SolutionType> feval1(nb_stencils);  
 
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
@@ -77,20 +71,23 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
     // synchronize();
     this->sendrecvUpdates(s, "U_G");
+
+    swap(INDX_IN, INDX_OUT);
 }
 
-void HeatPDE_CL::launchEulerKernel() {
+void HeatPDE_CL::launchEulerKernel(cl::Buffer& gpu_function, cl::Buffer& gpu_new_solution) {
+
+    int nb_stencils = (int)grid_ref.getStencilsSize(); 
+    int stencil_size = (int)grid_ref.getMaxStencilSize(); 
+
     try {
-        kernel.setArg(0, gpu_stencils); 
-        kernel.setArg(1, gpu_weights[which]); 
-        kernel.setArg(2, gpu_function);                 // COPY_IN
-        kernel.setArg(3, gpu_deriv_out[which]);           // COPY_OUT 
-        //FIXME: we want to pass a size_t for maximum array lengths, but OpenCL does not allow
-        //size_t arguments at this time
-        int nb_stencils = (int)grid_ref.getStencilsSize(); 
-        kernel.setArg(4, sizeof(int), &nb_stencils);               // const 
-        int stencil_size = (int)grid_ref.getMaxStencilSize(); 
+        kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
+        kernel.setArg(1, der_ref_gpu.getGPUWeights(which)); 
+        kernel.setArg(2, this->solution[INDX_IN]);                 // COPY_IN / COPY_OUT
+        kernel.setArg(3, sizeof(int), &nb_stencils);               // const 
+        kernel.setArg(4, sizeof(int), &nb_nodes);                  // const 
         kernel.setArg(5, sizeof(int), &stencil_size);            // const
+        kernel.setArg(6, this->solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }

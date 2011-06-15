@@ -126,7 +126,7 @@ int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_ra
         std::vector<int>::iterator oit;
 
         // We send a list of node values 
-        vector<double> U_O(O_by_rank.size());
+        vector<double> U_O(O_by_rank[receiver_rank].size());
 
         if (O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
             //	cout << "O_by_rank is NOT size(0)" << endl;
@@ -191,7 +191,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
             int g_indx = *rit; 
             int l_indx = grid_ref.g2l(*rit);
-#if 1 
+#if 0 
             cout << label << "\t(Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")\tOld vec[" << l_indx << "]: " << vec[l_indx] << "\t New U_G[" << l_indx << "]: " << U_R[i] << endl;
 #endif 
             // Global to local mapping required
@@ -295,7 +295,7 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
     }
 
     cout << "RECEIVED FINAL (size=" << remoteQ.size() << " FROM CPU " << sender_rank << endl;
-#if DEBUG
+#if 0
     cout << "NEW FINAL_U_G: " << endl;
     map<int, double>::iterator it;
     for (it = global_U_G.begin(); it != global_U_G.end(); it++) {

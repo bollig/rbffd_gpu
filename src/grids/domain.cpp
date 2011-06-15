@@ -268,6 +268,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // std::set<int> R;			// Nodes REQUIRED from other Domains.
     //
     set<int>::iterator qit;
+    set<int> Dep; 
 
     printf("Domain %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f (Checking %dD)\n", id, xmin, xmax,
             ymin, ymax, zmin, zmax, dim_num);
@@ -300,12 +301,12 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
         }
 //        std::cout << "end stencil" << std::endl;
         if (depR) {
-            D.insert(*qit);
+            Dep.insert(*qit);
         }
     }
 
     std::cout << "Q size before set operations: " << Q.size() << std::endl;
-    std::cout << "D size before set operations: " << D.size() << std::endl;
+    std::cout << "Dep size before set operations: " << Dep.size() << std::endl;
 
     // Each Q (a set) is, by construction, sorted
 
@@ -348,8 +349,12 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     set_intersection(SAmQ.begin(), SAmQ.end(), Q.begin(), Q.end(), inserter(O,O.end()));
     std::cout << "O.size after stencilSet: " << O.size() << std::endl;
 
-    // B = O U D, But B\O is NOT_EQUAL to D
-    set_union(D.begin(), D.end(), O.begin(), O.end(), inserter(B, B.end()));
+    // B = O U Dep, this used to be B=O U D, But B\O is NOT_EQUAL to D, so we
+    // do an additional subtraction to guarantee that B\O == D
+    set_union(Dep.begin(), Dep.end(), O.begin(), O.end(), inserter(B, B.end()));
+
+    // D = B\O (so we can arrange G = { Q\B D O R }
+    set_union(B.begin(), B.end(), O.begin(), O.end(), inserter(D, D.end()));
 
     // QmB = Q\B
     set_difference(Q.begin(), Q.end(), B.begin(), B.end(), inserter(QmB,
@@ -382,7 +387,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
     // Index of local map corresponds to position in G (list of all centers). 
     // The local map elements map G[i] back to global domain indices
 
-    // We want these maps in order: (Q\B B R) 
+    // We want these maps in order: (Q\B B R) where B=(D O)
     // to make it more convenient when we work on memory management
     for (qit = QmB.begin(); qit != QmB.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);
@@ -392,7 +397,15 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         max_stencil_radii.push_back(max_dist[*qit]);
         min_stencil_radii.push_back(min_dist[*qit]);
     }
-    for (qit = B.begin(); qit != B.end(); qit++, i++) {
+    for (qit = D.begin(); qit != D.end(); qit++, i++) {
+        loc_to_glob.push_back(*qit);
+        node_list.push_back(rbf_centers[*qit]);
+        stencil_map.push_back(stencil[*qit]);
+        avg_stencil_radii.push_back(avg_dist[*qit]);
+        max_stencil_radii.push_back(max_dist[*qit]);
+        min_stencil_radii.push_back(min_dist[*qit]);
+    }
+    for (qit = O.begin(); qit != O.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);
         node_list.push_back(rbf_centers[*qit]);
         stencil_map.push_back(stencil[*qit]);

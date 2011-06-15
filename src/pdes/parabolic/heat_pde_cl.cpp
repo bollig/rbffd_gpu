@@ -73,15 +73,21 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
     size_t nb_nodes = grid_ref.getNodeListSize();
     size_t set_G_size = grid_ref.G.size();
+    size_t set_Q_size = grid_ref.Q.size() - 5; 
     size_t set_R_size = grid_ref.R.size() + 5;
+    size_t set_O_size = grid_ref.R.size() + 3;
     size_t float_size = this->getFloatSize();
     size_t set_R_bytes = set_R_size * float_size;
     size_t solution_mem_bytes = set_G_size*float_size; 
-    size_t offset_to_set_R = solution_mem_bytes - set_R_bytes;
+    // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
+    //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
+    size_t offset_to_set_R = set_Q_size;
+    size_t offset_to_set_O = (set_Q_size - set_O_size);
+    size_t set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
     std::vector<float> s(nb_nodes,0.); //= this->U_G; 
-    std::vector<float> test_output(nb_nodes,1.);
+    std::vector<float> test_output(nb_nodes,0.);
 
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
@@ -91,29 +97,19 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
     if (set_R_size > 0) {
 
-    std::cout << "HERE == " << set_R_size << " (" << set_R_bytes << ")" << std::endl;
-
     // Update CPU mem with R;
     std::set<int>::iterator it; 
     for (it = grid_ref.R.begin(); it != grid_ref.R.end(); it++) {
        s[*it] = *it; 
-    std::cout << "HERE\n";
     }
 
-    std::cout << "HERE == " << set_R_bytes << " (" << offset_to_set_R << ")" << std::endl;
     // Synchronize just the R part on GPU (CL_FALSE here indicates we dont block on write
-    err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_FALSE, offset_to_set_R, set_R_bytes, &s[0], NULL, &event);
+    err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_FALSE, offset_to_set_R * float_size, set_R_bytes, &U_G[0], NULL, &event);
 
     // readback all of gpu buffer to see 0s and R vals
-    err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &test_output[0], NULL, &event);
+    //err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &test_output[0], NULL, &event);
 
-    queue.finish();
-    for (int i = 0; i < nb_nodes; i++) {
-        std::cout << "u[" << i << "] = " << test_output[i] << std::endl;
-    }
-    }
-    exit(EXIT_FAILURE);
-#if  0
+#if  1
     // Launch kernel
     this->launchEulerKernel( ); 
 
@@ -121,13 +117,22 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
     // Pull the computed derivative back to the CPU
     // enqueueReadBuffer(buffer, blocking, offset, size, host_data, event queue to finish prior, returned_event_for_status_or_queue)
-    err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, offset_to_set_O, set_O_bytes, &this->zero_array[set_O_start], NULL, &event);
+    err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_FALSE, offset_to_set_O * float_size, set_O_bytes, &test_output[offset_to_set_O], NULL, &event);
+    //err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &test_output[0], NULL, &event);
 
+    queue.finish();
     // reset boundary solution
-    this->enforceBoundaryConditions(s, cur_time); 
+   // this->enforceBoundaryConditions(s, cur_time); 
 
     // synchronize();
-    this->sendrecvUpdates(s, "U_G");
+  //  this->sendrecvUpdates(s, "U_G");
+
+    queue.finish();
+    for (int i = 0; i < nb_nodes; i++) {
+        std::cout << "u[" << i << "] = " << test_output[i] << std::endl;
+    }
+    }
+    exit(EXIT_FAILURE);
 
     swap(INDX_IN, INDX_OUT);
 #endif 
@@ -141,6 +146,10 @@ void HeatPDE_CL::launchEulerKernel() {
 
     try {
         kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
+    } catch (cl::Error er) {
+        printf("[setKernelArg*] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+    }
+    try {
         kernel.setArg(1, der_ref_gpu.getGPUWeights(RBFFD::LAPL)); 
         kernel.setArg(2, this->gpu_solution[INDX_IN]);                 // COPY_IN / COPY_OUT
         kernel.setArg(3, sizeof(int), &nb_stencils);               // const 

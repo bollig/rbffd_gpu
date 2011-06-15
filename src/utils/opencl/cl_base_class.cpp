@@ -5,6 +5,9 @@
 
 #include "cl_base_class.h"
 
+// Static definition. 
+cl::Context CLBaseClass::context;
+int CLBaseClass::contextCreated = 0;
 
 //----------------------------------------------------------------------
 CLBaseClass::CLBaseClass(int rank) {
@@ -12,23 +15,27 @@ CLBaseClass::CLBaseClass(int rank) {
 
     printf("Initialize OpenCL object and context\n");
 
+    if (!contextCreated) {
+        //setup devices and context
+        std::vector<cl::Platform> platforms;
+        std::cout << "Getting the platform" << std::endl;
+        err = cl::Platform::get(&platforms);
+        std::cout << "GOT PLATFORM" << std::endl; 
+        printf("cl::Platform::get(): %s\n", oclErrorString(err));
+        if (platforms.size() == 0) {
+            printf("Platform size 0\n");
+        }
 
-    //setup devices and context
-    std::vector<cl::Platform> platforms;
-    std::cout << "Getting the platform" << std::endl;
-    err = cl::Platform::get(&platforms);
-    std::cout << "GOT PLATFORM" << std::endl; 
-    printf("cl::Platform::get(): %s\n", oclErrorString(err));
-    if (platforms.size() == 0) {
-        printf("Platform size 0\n");
+        //create the context
+        cl_context_properties properties[] =
+        { CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
+
+        std::cout << "Creating cl::Context (only selecting GPU devices)" << std::endl;
+        context = cl::Context(CL_DEVICE_TYPE_GPU, properties);
+        // This prevents the context from being created again
+        contextCreated++;
     }
 
-    //create the context
-    cl_context_properties properties[] =
-    { CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
-
-    std::cout << "Creating cl::Context (only selecting GPU devices)" << std::endl;
-    context = cl::Context(CL_DEVICE_TYPE_GPU, properties);
     devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
     //create the command queue we will use to execute OpenCL commands

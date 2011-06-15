@@ -13,7 +13,11 @@ class CLBaseClass
         unsigned int deviceUsed;
         std::vector<cl::Device> devices;
 
-        cl::Context context;
+        // We use static so all of our inheriting classes can share buffers
+        // across the context
+        static cl::Context context;
+        // Track if context was created so we dont accidentally make a new one
+        static int contextCreated; 
 
         cl::CommandQueue queue;
         cl::Program program;

@@ -36,7 +36,7 @@ class Domain : public Grid, public MPISendable
         std::set<int> Q;			// All stencil centers in this CPU's QUEUE							
         std::set<int> D;			// Set of stencil centers DEPENDENT on nodes in R before evaluation
         std::set<int> O;			// Stencil Centers that are OUTPUT to other Domains
-        std::set<int> B; 			// Stencil Centers on BOUNDARY (in O and D or both, but not in R)
+        std::set<int> B; 			// Stencil Centers on BOUNDARY (in O and D (NEW: not both; we now guarantee that B\O==D)), but not in R) (B = union(O,D))
         std::set<int> QmB; 			// Interior stencil centers excluding boundary stencils (computed without communication) 
         std::set<int> R;			// Nodes REQUIRED from other Domains (not stencil centers) 
         // Possibly add: 

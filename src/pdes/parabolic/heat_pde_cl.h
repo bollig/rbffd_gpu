@@ -14,7 +14,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         //      solution out
         //      
         // We use a ping pong buffer scheme here for solution to avoid copying one to the other
-        cl::Buffer solution[2]; 
+        cl::Buffer gpu_solution[2]; 
         int INDX_IN;
         int INDX_OUT;
         RBFFD_CL& der_ref_gpu; 
@@ -24,7 +24,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         // Note: we specifically require the OpenCL version of RBFFD
         HeatPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool useUniformDiffusion, bool weightsComputed=false) 
             : HeatPDE(grid, der, comm, useUniformDiffusion, weightsComputed), 
-            der_ref_gpu(*der), useDouble(true)
+            der_ref_gpu(*der), useDouble(true),
               INDX_IN(0), INDX_OUT(1)
         { 
             this->setupTimers(); 
@@ -44,6 +44,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
             std::cout << "[HeatPDE_CL] Error: solve should not be called. The time stepper should call a device kernel for solving\n";
         };
     
+        virtual void fillInitialConditions(ExactSolution* exact=NULL);
         
         virtual void loadKernels(); 
 
@@ -55,11 +56,13 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         virtual void setupTimers(); 
 
         void swap(int& a, int& b) { int temp = a; a = b; b = temp; }
+        size_t getFloatSize() { if (useDouble) { return sizeof(double); } return sizeof(float); }
 
     protected: 
         virtual std::string className() {return "heat_cl";}
 
         virtual void loadEulerKernel(); 
+        void launchEulerKernel();
 
         // Call kernel to advance using first order euler
         virtual void advanceFirstOrderEuler(double dt);

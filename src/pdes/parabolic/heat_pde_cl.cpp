@@ -10,6 +10,25 @@ void HeatPDE_CL::setupTimers()
    tm["loadAttach"] = new EB::Timer("Load the GPU Kernels for HeatPDE");
 }
 
+void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
+    // Fill U_G with initial conditions
+    this->HeatPDE::fillInitialConditions(exact);
+
+    size_t nb_nodes = grid_ref.G.size();
+    size_t solution_mem_bytes = nb_nodes*this->getFloatSize(); 
+   
+    if (useDouble) {
+        // Fill GPU mem with initial solution 
+        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
+    } else {
+        float* U_G_f = new float[nb_nodes];
+        for (size_t i = 0; i < nb_nodes; i++) {
+            U_G_f[i] = (float)U_G[i];
+        }
+        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
+    }
+}
+
 //----------------------------------------------------------------------
 
 void HeatPDE_CL::assemble() 
@@ -49,22 +68,60 @@ void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
 }
 
 //----------------------------------------------------------------------
-//
+// FIXME: this is a single precision version
 void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
+    size_t nb_nodes = grid_ref.getNodeListSize();
+    size_t set_G_size = grid_ref.G.size();
+    size_t set_R_size = grid_ref.R.size() + 5;
+    size_t float_size = this->getFloatSize();
+    size_t set_R_bytes = set_R_size * float_size;
+    size_t solution_mem_bytes = set_G_size*float_size; 
+    size_t offset_to_set_R = solution_mem_bytes - set_R_bytes;
+
     // backup the current solution so we can perform intermediate steps
-    std::vector<double>& s = this->U_G; 
+    std::vector<float> s(nb_nodes,0.); //= this->U_G; 
+    std::vector<float> test_output(nb_nodes,1.);
 
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
 
-    // TODO: update GPU solution with set R updates
+    queue.finish();
 
+    if (set_R_size > 0) {
+
+    std::cout << "HERE == " << set_R_size << " (" << set_R_bytes << ")" << std::endl;
+
+    // Update CPU mem with R;
+    std::set<int>::iterator it; 
+    for (it = grid_ref.R.begin(); it != grid_ref.R.end(); it++) {
+       s[*it] = *it; 
+    std::cout << "HERE\n";
+    }
+
+    std::cout << "HERE == " << set_R_bytes << " (" << offset_to_set_R << ")" << std::endl;
+    // Synchronize just the R part on GPU (CL_FALSE here indicates we dont block on write
+    err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_FALSE, offset_to_set_R, set_R_bytes, &s[0], NULL, &event);
+
+    // readback all of gpu buffer to see 0s and R vals
+    err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &test_output[0], NULL, &event);
+
+    queue.finish();
+    for (int i = 0; i < nb_nodes; i++) {
+        std::cout << "u[" << i << "] = " << test_output[i] << std::endl;
+    }
+    }
+    exit(EXIT_FAILURE);
+#if  0
     // Launch kernel
     this->launchEulerKernel( ); 
 
     // TODO: copy set R from GPU solution to CPU solution
+
+    // Pull the computed derivative back to the CPU
+    // enqueueReadBuffer(buffer, blocking, offset, size, host_data, event queue to finish prior, returned_event_for_status_or_queue)
+    err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, offset_to_set_O, set_O_bytes, &this->zero_array[set_O_start], NULL, &event);
 
     // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time); 
@@ -73,21 +130,23 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     this->sendrecvUpdates(s, "U_G");
 
     swap(INDX_IN, INDX_OUT);
+#endif 
 }
 
-void HeatPDE_CL::launchEulerKernel(cl::Buffer& gpu_function, cl::Buffer& gpu_new_solution) {
+void HeatPDE_CL::launchEulerKernel() {
 
     int nb_stencils = (int)grid_ref.getStencilsSize(); 
     int stencil_size = (int)grid_ref.getMaxStencilSize(); 
+    int nb_nodes = (int)grid_ref.getNodeListSize(); 
 
     try {
         kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
-        kernel.setArg(1, der_ref_gpu.getGPUWeights(which)); 
-        kernel.setArg(2, this->solution[INDX_IN]);                 // COPY_IN / COPY_OUT
+        kernel.setArg(1, der_ref_gpu.getGPUWeights(RBFFD::LAPL)); 
+        kernel.setArg(2, this->gpu_solution[INDX_IN]);                 // COPY_IN / COPY_OUT
         kernel.setArg(3, sizeof(int), &nb_stencils);               // const 
         kernel.setArg(4, sizeof(int), &nb_nodes);                  // const 
         kernel.setArg(5, sizeof(int), &stencil_size);            // const
-        kernel.setArg(6, this->solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
+        kernel.setArg(6, this->gpu_solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
@@ -159,49 +218,22 @@ void HeatPDE_CL::loadEulerKernel() {
 //----------------------------------------------------------------------
 //
 void HeatPDE_CL::allocateGPUMem() {
-#if 0
-    std::vector<StencilType>& stencil_map = grid_ref.getStencils();
+#if 1
     size_t nb_nodes = grid_ref.getNodeListSize();
-    size_t nb_stencils = stencil_map.size();
+    size_t nb_stencils = grid_ref.getStencilsSize();
 
-    cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
+    cout << "Allocating GPU memory for HeatPDE\n";
 
-    gpu_stencil_size = 0; 
-
-    for (size_t i = 0; i < stencil_map.size(); i++) {
-        gpu_stencil_size += stencil_map[i].size(); 
-    }
-
-    unsigned int float_size; 
-    if (useDouble) {
-        float_size = sizeof(double); 
-    } else {
-        float_size = sizeof(float);
-    }
-    std::cout << "FLOAT_SIZE=" << float_size << std::endl;;
-
-    stencil_mem_bytes = gpu_stencil_size * sizeof(int); 
-    function_mem_bytes = nb_nodes * float_size; 
-    weights_mem_bytes = gpu_stencil_size * float_size; 
-    deriv_mem_bytes = nb_stencils * float_size; 
-
-    std::cout << "Allocating GPU memory\n"; 
+    size_t set_G_size = grid_ref.G.size();
+    size_t solution_mem_bytes = set_G_size = set_G_size * this->getFloatSize();
 
     size_t bytesAllocated = 0;
 
-    // Two input arrays: 
-    // 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
-    gpu_stencils = cl::Buffer(context, CL_MEM_READ_WRITE, stencil_mem_bytes, NULL, &err);
-    bytesAllocated += stencil_mem_bytes; 
+    gpu_solution[INDX_IN] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
+    bytesAllocated += solution_mem_bytes; 
+    gpu_solution[INDX_OUT] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
+    bytesAllocated += solution_mem_bytes; 
 
-    gpu_function = cl::Buffer(context, CL_MEM_READ_ONLY, function_mem_bytes, NULL, &err);
-
-    for (int which = 0; which < NUM_DERIV_TYPES; which++) {
-        gpu_weights[which] = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_bytes, NULL, &err); 
-        bytesAllocated += weights_mem_bytes; 
-        gpu_deriv_out[which] = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
-        bytesAllocated += deriv_mem_bytes; 
-    }    
     std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 #endif 
 }

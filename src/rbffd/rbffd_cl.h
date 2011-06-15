@@ -52,6 +52,12 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         virtual ~RBFFD_CL() { if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} }; 
 
+
+        cl::Buffer& getGPUStencils() { return gpu_stencils; }
+        cl::Buffer& getGPUWeights(DerType which) { return gpu_weights[which]; }
+
+
+
         // FIXME: assumes size of buffers does not change (should check if it
         // does and resize accordingly on the GPU. 
         //TODO:        int updateGPUStructs();

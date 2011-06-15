@@ -22,6 +22,8 @@ class CLBaseClass
         //debugging variables
         cl_int err;
         cl::Event event;
+        cl::Event event2;
+        cl::Event event3;
 
     public:
 

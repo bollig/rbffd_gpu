@@ -17,8 +17,8 @@ advanceFirstOrderEuler(       \n
                    int nb_stencils, \n
                    int nb_nodes, \n
                    int stencil_size, \n
-                   FLOAT dt, \n
-                   FLOAT cur_time, \n
+                   float dt, \n
+                   float cur_time, \n
         __global FLOAT* solution_out\n
 )  \n
 {   \n

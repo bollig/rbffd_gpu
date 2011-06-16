@@ -10,20 +10,5 @@ float getDiffusionCoefficient(float4 node, float sol, float cur_time, float prev
 }
 
 
-__kernel void fillDiffusivity(
-    __global float4* node_list, 
-    __global float* cur_solution, 
-             float cur_time,
-             int nb_stencils,
-    __global float* diffusivity)
-{
-    size_t i = get_global_id(0);    \n
-    if(i < nb_stencils) {    \n
-        diffusivity[i] = getDiffusionCoefficient(node_list[i], cur_solution[i], cur_time, diffusivity[i]);
-
-    }
-}
-
-
 
 );

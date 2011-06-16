@@ -45,7 +45,10 @@ std::string getLocalGPUFuncs() {
                
    // Defines std::string diffusivity_source 
 #include "diffusivity.cl"
-   return diffusivity_source;
+#include "boundary_conditions.cl"
+    std::string l_source = diffusivity_source; 
+    l_source.append(boundary_conditions_source); 
+   return l_source;
 }
 
 

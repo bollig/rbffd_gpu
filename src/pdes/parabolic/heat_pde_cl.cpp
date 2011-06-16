@@ -45,6 +45,9 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
         err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity_f[0], NULL, &event);
 
+        delete [] U_G_f; 
+        delete [] diffusivity_f; 
+
     }
     std::cout << "[HeatPDE_CL] Done\n"; 
 }
@@ -152,21 +155,27 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     }
     queue.finish();
     
+    this->syncCPUtoGPU(); 
+
     // reset boundary solution
     this->enforceBoundaryConditions(U_G, cur_time); 
          
-    // synchronize();
-    this->sendrecvUpdates(U_G, "U_G");
-
-    this->syncCPUtoGPU(); 
 #if 1
     for (int i = 0; i < nb_nodes; i++) {
         std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
     }
 #endif 
-    exit(EXIT_FAILURE);
+
+    // synchronize();
+    this->sendrecvUpdates(U_G, "U_G");
+
+    //exit(EXIT_FAILURE);
 
     swap(INDX_IN, INDX_OUT);
+
+    if (cur_time > 0.0001) { 
+        exit(EXIT_FAILURE);
+    }
 }
 
 void HeatPDE_CL::launchEulerKernel( double dt ) {
@@ -221,6 +230,7 @@ void HeatPDE_CL::syncCPUtoGPU() {
         for (size_t i = 0; i < nb_nodes; i++) {
             U_G[i] = (double)U_G_f[i]; 
         }
+        delete [] U_G_f; 
     }
 
 }

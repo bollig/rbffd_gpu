@@ -159,6 +159,7 @@ void HeatPDE_CL::launchEulerKernel( double dt ) {
     int stencil_size = (int)grid_ref.getMaxStencilSize(); 
     int nb_nodes = (int)grid_ref.getNodeListSize(); 
     float dt_f = (float) dt;
+    float cur_time_f = (float) cur_time;
 
     try {
         kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
@@ -172,7 +173,8 @@ void HeatPDE_CL::launchEulerKernel( double dt ) {
         kernel.setArg(8, sizeof(int), &nb_nodes);                  // const 
         kernel.setArg(9, sizeof(int), &stencil_size);            // const
         kernel.setArg(10, sizeof(float), &dt_f);            // const
-        kernel.setArg(11, this->gpu_solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
+        kernel.setArg(11, sizeof(float), &cur_time_f);            // const
+        kernel.setArg(12, this->gpu_solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }

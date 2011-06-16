@@ -1,0 +1,27 @@
+Haberman2004 is really helpful. 
+
+
+Dirichlet Heat 1D: 
+p47: product solutions of the eqn are 
+
+u(x,t) = Sum_n=1^inf B sin( (n*pi*x)/L ) * exp( - k * (n * pi/L)^2 * t)
+
+B = (2/L) Int_0^L f(x) sin( (n*pi*x)/L ) dx
+
+where f(x) is the initial condition and n. Any initial condition. 
+
+To get the coeffs we need to do the actual integration. But if we choose our initial condition properly, we might be able to bypass that headache: 
+
+let f(x) = sin(pi x / L) then 
+B = 2/L * L/2 = 1
+since the integral of sin(pi x / L) * sin ( n pi x/L ) is L/2 when n = 1 and 0 everywhere else. How? sin(pi x/L) * sin(pi x/L ) = sin^2(pi x/L) = [1- cos(2 pi x/L) / 2]. Integrate the new cosine and we get L/2 
+
+If we want to target n = 3 we use the same trick of orthogonality to isolate the n=3 sin wave in the infinite series. This gives us: 
+
+Question: How do we find B when the diffusion is non-uniform? How do we find it when initial conditions do NOT satisfy the form of u(x,t) above? 
+
+p.69 good Table comparing product coefficients for Dirichlet, Neumann and Periodic boundaries (1D)
+
+p 233 worked example in 1D
+
+p347 non-uniform diffusion

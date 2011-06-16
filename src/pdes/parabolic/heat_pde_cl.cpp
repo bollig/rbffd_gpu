@@ -90,34 +90,23 @@ void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
     tm["advance_gpu"]->stop(); 
 }
 
-//----------------------------------------------------------------------
-// FIXME: this is a single precision version
-void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
-
+void HeatPDE_CL::syncSetRSingle() {
     size_t nb_nodes = grid_ref.getNodeListSize();
     size_t set_G_size = grid_ref.G.size();
     size_t set_Q_size = grid_ref.Q.size(); 
     size_t set_R_size = grid_ref.R.size();
-    size_t set_O_size = grid_ref.O.size();
 
     size_t float_size = this->getFloatSize();
 
     // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
     size_t offset_to_set_R = set_Q_size;
-    size_t offset_to_set_O = (set_Q_size - set_O_size);
 
     size_t solution_mem_bytes = set_G_size*float_size; 
     size_t set_R_bytes = set_R_size * float_size;
-    size_t set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
     std::vector<float> r_update_f(set_R_size,-1.); //= this->U_G; 
-    std::vector<float> o_update_f(set_O_size,1.);
-
-    // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
-    // For explicit schemes we can just solve for our weights and have them stored in memory.
-    this->assemble(); 
 
     if (set_R_size > 0) {
 
@@ -133,14 +122,57 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, offset_to_set_R * float_size, set_R_bytes, &r_update_f[0], NULL, &event);
        
     }
+}
 
-    // Launch kernel
-    this->launchEulerKernel( delta_t ); 
+
+void HeatPDE_CL::syncSetRDouble() {
+    size_t nb_nodes = grid_ref.getNodeListSize();
+    size_t set_G_size = grid_ref.G.size();
+    size_t set_Q_size = grid_ref.Q.size(); 
+    size_t set_R_size = grid_ref.R.size();
+
+    size_t float_size = this->getFloatSize();
+
+    // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
+    //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
+    size_t offset_to_set_R = set_Q_size;
+
+    size_t solution_mem_bytes = set_G_size*float_size; 
+    size_t set_R_bytes = set_R_size * float_size;
+
+    if (set_R_size > 0) {
+
+        // Synchronize just the R part on GPU (CL_FALSE here indicates we dont
+        // block on write NOTE: offset parameter to enqueueWriteBuffer is ONLY
+        // for the GPU side offset. The CPU offset needs to be managed directly
+        // on the CPU pointer: &U_G[offset_cpu]
+       err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, offset_to_set_R * float_size, set_R_bytes, &U_G[offset_to_set_R], NULL, &event);
+       
+    }
+}
+
+void HeatPDE_CL::syncSetOSingle() {
+    size_t nb_nodes = grid_ref.getNodeListSize();
+    size_t set_G_size = grid_ref.G.size();
+    size_t set_Q_size = grid_ref.Q.size(); 
+    size_t set_O_size = grid_ref.O.size();
+
+    size_t float_size = this->getFloatSize();
+
+    // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
+    //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
+    size_t offset_to_set_O = (set_Q_size - set_O_size);
+
+    size_t solution_mem_bytes = set_G_size*float_size; 
+    size_t set_O_bytes = set_O_size * float_size;
+
+    // backup the current solution so we can perform intermediate steps
+    std::vector<float> o_update_f(set_O_size,1.);
+
 
     if (set_O_size > 0) {
         // Pull only information required for neighboring domains back to the CPU 
         err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &o_update_f[0], NULL, &event);
-
 
        // Probably dont need this if we want to overlap comm and comp. 
        queue.finish();
@@ -152,6 +184,59 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
             U_G[offset_to_set_O + i] = (double) o_update_f[i];
         }
     }
+}
+
+
+void HeatPDE_CL::syncSetODouble() {
+    size_t nb_nodes = grid_ref.getNodeListSize();
+    size_t set_G_size = grid_ref.G.size();
+    size_t set_Q_size = grid_ref.Q.size(); 
+    size_t set_O_size = grid_ref.O.size();
+
+    size_t float_size = this->getFloatSize();
+
+    // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
+    //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
+    size_t offset_to_set_O = (set_Q_size - set_O_size);
+
+    size_t solution_mem_bytes = set_G_size*float_size; 
+    size_t set_O_bytes = set_O_size * float_size;
+
+    // backup the current solution so we can perform intermediate steps
+    std::vector<float> o_update_f(set_O_size,1.);
+
+
+    if (set_O_size > 0) {
+        // Pull only information required for neighboring domains back to the CPU 
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &U_G[offset_to_set_O], NULL, &event);
+
+    }
+}
+
+
+//----------------------------------------------------------------------
+// FIXME: this is a single precision version
+void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
+
+    // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
+    // For explicit schemes we can just solve for our weights and have them stored in memory.
+    this->assemble(); 
+
+    if (useDouble) {
+        this->syncSetRDouble();
+    } else {
+        this->syncSetRSingle(); 
+    }
+
+    // Launch kernel
+    this->launchEulerKernel( delta_t ); 
+
+    if (useDouble) {
+        this->syncSetODouble();
+    } else {
+        this->syncSetOSingle(); 
+    }
+
     queue.finish();
     
     this->syncCPUtoGPU(); 

@@ -14,6 +14,8 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
     // Fill U_G with initial conditions
     this->HeatPDE::fillInitialConditions(exact);
 
+    this->sendrecvUpdates(U_G, "U_G");
+
     size_t nb_nodes = grid_ref.G.size();
     size_t solution_mem_bytes = nb_nodes*this->getFloatSize(); 
    
@@ -101,10 +103,18 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
     if (set_R_size > 0) {
 
+        std::vector<float> s(nb_nodes, 0); 
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &s[0], NULL, &event);
+
+        for (int i = 0; i < nb_nodes; i++) {
+            std::cout << "input gpu_u[" << i << "] = " << s[i] << "\t" << U_G[i] << std::endl; 
+        }
+
         // Update CPU mem with R; 
         // NOTE: This is a single precision kernel call so we need to convert
         // the U_G to single precision
         for (int i = 0 ; i < set_R_size; i++) {
+            std::cout << "input u[" << i << "(global: " << grid_ref.l2g(offset_to_set_R+i) << ")] = " << U_G[offset_to_set_R + i] << std::endl; 
             r_update_f[i] = (float)U_G[offset_to_set_R + i]; 
         }
 
@@ -129,20 +139,26 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
         // NOTE: this is only required because we're calling a single precision
         // kernel 
         for (size_t i = 0; i < set_O_size; i++) {
-            //std::cout << "u[" << i << "] = " << U_G[offset_to_set_O + i] << "\t" << o_update_f[i] << std::endl;
+            std::cout << "output u[" << i << "(global: " << grid_ref.l2g(offset_to_set_O+i) << ")] = " << U_G[offset_to_set_O + i] << "\t" << o_update_f[i] << std::endl;
             U_G[offset_to_set_O + i] = (double) o_update_f[i];
         }
     }
-
+#if 0
+    for (size_t i = 0; i < 4; i++) {
+        std::cout << "u[" << i << "(global: " << grid_ref.l2g(200+i) << ")] = " << U_G[200+i] << std::endl; 
+    }
+#endif 
     // reset boundary solution
     // this->enforceBoundaryConditions(s, cur_time); 
          
     // synchronize();
     this->sendrecvUpdates(U_G, "U_G");
 
+#if 0
     for (int i = 0; i < nb_nodes; i++) {
         std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
     }
+#endif 
     exit(EXIT_FAILURE);
 
     swap(INDX_IN, INDX_OUT);

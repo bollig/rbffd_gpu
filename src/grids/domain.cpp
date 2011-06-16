@@ -354,7 +354,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     set_union(Dep.begin(), Dep.end(), O.begin(), O.end(), inserter(B, B.end()));
 
     // D = B\O (so we can arrange G = { Q\B D O R }
-    set_union(B.begin(), B.end(), O.begin(), O.end(), inserter(D, D.end()));
+    set_difference(B.begin(), B.end(), O.begin(), O.end(), inserter(D, D.end()));
 
     // QmB = Q\B
     set_difference(Q.begin(), Q.end(), B.begin(), B.end(), inserter(QmB,

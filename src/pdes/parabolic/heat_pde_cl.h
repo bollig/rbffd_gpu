@@ -23,13 +23,13 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
 
     public: 
         // Note: we specifically require the OpenCL version of RBFFD
-        HeatPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool useUniformDiffusion, bool weightsComputed=false) 
+        HeatPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, std::string& local_cl_sources, bool useUniformDiffusion, bool weightsComputed=false) 
             : HeatPDE(grid, der, comm, useUniformDiffusion, weightsComputed), 
             der_ref_gpu(*der), useDouble(true),
               INDX_IN(0), INDX_OUT(1)
         { 
             this->setupTimers(); 
-            this->loadKernels(); 
+            this->loadKernels(local_cl_sources); 
             this->allocateGPUMem();
         }
 
@@ -47,7 +47,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
     
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
         
-        virtual void loadKernels(); 
+        virtual void loadKernels(std::string& local_sources); 
 
         virtual void allocateGPUMem(); 
 
@@ -62,7 +62,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
     protected: 
         virtual std::string className() {return "heat_cl";}
 
-        virtual void loadEulerKernel(); 
+        virtual void loadEulerKernel(std::string& local_sources); 
         void launchEulerKernel( double dt );
 
         void syncCPUtoGPU(); 

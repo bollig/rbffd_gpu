@@ -211,16 +211,16 @@ void HeatPDE_CL::syncCPUtoGPU() {
 
 //----------------------------------------------------------------------
 //
-void HeatPDE_CL::loadKernels() {
+void HeatPDE_CL::loadKernels(std::string& local_sources) {
     tm["loadAttach"]->start(); 
 
-    this->loadEulerKernel(); 
+    this->loadEulerKernel(local_sources); 
 
     tm["loadAttach"]->stop(); 
 }
 
 
-void HeatPDE_CL::loadEulerKernel() {
+void HeatPDE_CL::loadEulerKernel(std::string& local_sources) {
 
 
     std::string kernel_name = "advanceFirstOrderEuler"; 
@@ -232,16 +232,16 @@ void HeatPDE_CL::loadEulerKernel() {
         useDouble = false;
     } 
 
-    std::string my_source; 
+    std::string my_source = local_sources; 
     if(useDouble) {
 #define FLOAT double 
 #include "cl_kernels/euler_heat.cl"
-        my_source = kernel_source;
+        my_source.append(kernel_source);
 #undef FLOAT
     }else {
 #define FLOAT float
 #include "cl_kernels/euler_heat.cl"
-        my_source = kernel_source;
+        my_source.append(kernel_source);
 #undef FLOAT
     }
 

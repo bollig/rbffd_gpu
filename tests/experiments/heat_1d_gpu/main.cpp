@@ -36,18 +36,16 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
 }
 
-// Load local (i.e., test specific) kernels.
-// For GPU only kernels, load a dummyKernel entry point and have all of the
-// local GPU functions appended to the source
-void loadLocalKernels() {
+// Load local (i.e., test specific) kernels from disk.
+// We return the source string and pass it to the OpenCL based classes so we can include the
+// source as part of the programs we build.
+std::string getLocalGPUFuncs() {
    CLBaseClass clLoader;  
    bool useDouble = false;
-   std::cout << "Loading diffusivity kernel" << std::endl;            
-
+               
    // Defines std::string diffusivity_source 
 #include "diffusivity.cl"
-
-   clLoader.loadProgram(diffusivity_source, useDouble);
+   return diffusivity_source;
 }
 
 
@@ -60,7 +58,6 @@ ExactSolution* getExactSolution(int dim_num) {
     ExactSolution* exact = new Exact1D(minX, maxX, decay);
     // NOTE: we must make sure the diffusivity in the local kernel matches the
     // exact solution or our error will look abnormally large
-    loadLocalKernels();
     return exact;
 }
 
@@ -322,7 +319,8 @@ int main(int argc, char** argv) {
     // We need to provide comm_unit to pass ghost node info
 #if 1
     if (use_gpu) {
-        pde = new HeatPDE_CL(subdomain, (RBFFD_CL*)der, comm_unit, uniformDiffusion, true); 
+        std::string local_sources = getLocalGPUFuncs(); 
+        pde = new HeatPDE_CL(subdomain, (RBFFD_CL*)der, comm_unit, local_sources, uniformDiffusion, true); 
     } else 
 #endif
     { 

@@ -19,16 +19,32 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
     size_t nb_nodes = grid_ref.G.size();
     size_t solution_mem_bytes = nb_nodes*this->getFloatSize(); 
    
+    std::vector<double> diffusivity(nb_nodes, 0.);
+
+    //FIXME: we're assuming float type on diffusivity. IF we need double, we'll
+    //have to move this down.
+    this->fillDiffusion(diffusivity, U_G, 0., nb_nodes);
+
     std::cout << "[HeatPDE_CL] Writing initial conditions to GPU\n"; 
     if (useDouble) {
+
         // Fill GPU mem with initial solution 
         err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
+    
+        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity[0], NULL, &event);
+
     } else {
+
         float* U_G_f = new float[nb_nodes];
+        float* diffusivity_f = new float[nb_nodes];
         for (size_t i = 0; i < nb_nodes; i++) {
             U_G_f[i] = (float)U_G[i];
+            diffusivity_f[i] = (float)diffusivity[i];
         }
         err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
+
+        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity_f[0], NULL, &event);
+
     }
     std::cout << "[HeatPDE_CL] Done\n"; 
 }
@@ -277,7 +293,7 @@ void HeatPDE_CL::allocateGPUMem() {
     gpu_solution[INDX_OUT] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
     bytesAllocated += solution_mem_bytes; 
     
-    gpu_diffusivity = cl::Buffer(context, CL_MEM_READ_ONLY, solution_mem_bytes, NULL, &err);
+    gpu_diffusivity = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
 
     std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 #endif 

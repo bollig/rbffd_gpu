@@ -3,7 +3,7 @@
 
 std::string diffusivity_source = STRINGIFY_WITH_SUBS(
 
-float getDiffusionCoefficient(float3 node, float sol, float cur_time, float prev_diffusivity)
+float getDiffusionCoefficient(float4 node, float sol, float cur_time, float prev_diffusivity)
 {
     // CONSTANT DIFFUSION:
     return prev_diffusivity; 
@@ -11,7 +11,7 @@ float getDiffusionCoefficient(float3 node, float sol, float cur_time, float prev
 
 
 __kernel void fillDiffusivity(
-    __global float3* node_list, 
+    __global float4* node_list, 
     __global float* cur_solution, 
              float cur_time,
              int nb_stencils,

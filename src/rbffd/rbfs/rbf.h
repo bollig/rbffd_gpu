@@ -270,7 +270,7 @@ class RBF {
 
         //------------------------------------------------------------------
         // Evaluations: 
-        double eval(const Vec3& x, const Vec3& xi) { this->eval(x-xi); }
+        double eval(const Vec3& x, const Vec3& xi) { return this->eval(x-xi); }
         virtual double eval(const Vec3& x) = 0;
         virtual CMPLX eval(const CVec3& x) = 0;
         virtual double eval(const double x) = 0;
@@ -278,9 +278,9 @@ class RBF {
 
         //------------------------------------------------------------------
         // First Derivatives: 
-        double xderiv(const Vec3& xvec, const Vec3& x_center) { this->xderiv(xvec-x_center); }
-        double yderiv(const Vec3& xvec, const Vec3& x_center) { this->yderiv(xvec-x_center); }
-        double zderiv(const Vec3& xvec, const Vec3& x_center) { this->zderiv(xvec-x_center); }
+        double xderiv(const Vec3& xvec, const Vec3& x_center) { return this->xderiv(xvec-x_center); }
+        double yderiv(const Vec3& xvec, const Vec3& x_center) { return this->yderiv(xvec-x_center); }
+        double zderiv(const Vec3& xvec, const Vec3& x_center) { return this->zderiv(xvec-x_center); }
         //------------------------------------------------------------------
         virtual double xderiv(const Vec3& xvec)  = 0;
         virtual CMPLX  xderiv(const CVec3& xvec) = 0;
@@ -300,7 +300,7 @@ class RBF {
 #endif    
         //------------------------------------------------------------------
         // Laplacians:
-        virtual double lapl_deriv(const Vec3& xvec, const Vec3& x_center) { this->lapl_deriv(xvec-x_center); }
+        virtual double lapl_deriv(const Vec3& xvec, const Vec3& x_center) { return this->lapl_deriv(xvec-x_center); }
         virtual double lapl_deriv(const Vec3& xvec) {
             switch (dim) 
             {

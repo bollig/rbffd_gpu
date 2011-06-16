@@ -160,7 +160,7 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     // reset boundary solution
    // this->enforceBoundaryConditions(U_G, cur_time); 
          
-#if 1
+#if 0
     for (int i = 0; i < nb_nodes; i++) {
         std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
     }
@@ -224,6 +224,12 @@ void HeatPDE_CL::syncCPUtoGPU() {
         err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
 
         for (size_t i = 0; i < nb_nodes; i++) {
+#if 0
+            double diff = fabs( U_G[i] - U_G_f[i] ); 
+            if (diff > 1e-4) {
+                std::cout << "GPUvsCPU diff[" << i << "]: " << diff << std::endl;
+            }
+#endif 
             U_G[i] = (double)U_G_f[i]; 
         }
         delete [] U_G_f; 

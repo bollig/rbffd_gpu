@@ -158,7 +158,7 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     this->syncCPUtoGPU(); 
 
     // reset boundary solution
-    this->enforceBoundaryConditions(U_G, cur_time); 
+   // this->enforceBoundaryConditions(U_G, cur_time); 
          
 #if 1
     for (int i = 0; i < nb_nodes; i++) {
@@ -172,10 +172,6 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     //exit(EXIT_FAILURE);
 
     swap(INDX_IN, INDX_OUT);
-
-    if (cur_time > 0.0001) { 
-        exit(EXIT_FAILURE);
-    }
 }
 
 void HeatPDE_CL::launchEulerKernel( double dt ) {

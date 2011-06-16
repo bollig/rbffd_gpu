@@ -67,52 +67,52 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t)
 {
     // x,y,z components of the gradient of u_t
-    std::vector<SolutionType> grad_x(n_nodes); 
-    std::vector<SolutionType> grad_y(n_nodes);
-    std::vector<SolutionType> grad_z(n_nodes);
+    std::vector<SolutionType> grad_u_x(n_nodes); 
+    std::vector<SolutionType> grad_u_y(n_nodes);
+    std::vector<SolutionType> grad_u_z(n_nodes);
 
     // diffusion coeffs 
     std::vector<SolutionType> diffusion(n_nodes);  
     
     // Equation is \div{K \cdot \grad{u}}
-    std::vector<SolutionType> K_dot_grad_u(n_stencils);  
+    std::vector<SolutionType> K_dot_grad_u_u(n_stencils);  
 
     // x,y,z components of divergence of (K \cdot \grad{u_t})
-    std::vector<SolutionType> div_x(n_stencils); 
-    std::vector<SolutionType> div_y(n_stencils);
-    std::vector<SolutionType> div_z(n_stencils);
+    std::vector<SolutionType> div_grad_u_x(n_stencils); 
+    std::vector<SolutionType> div_grad_u_y(n_stencils);
+    std::vector<SolutionType> div_grad_u_z(n_stencils);
 
     // ApplyWeights Parameters: type, input (size n_nodes), output (size n_stencils), update on gpu?
 
-    der_ref.applyWeightsForDeriv(RBFFD::X, u_t, grad_x, true); 
-    der_ref.applyWeightsForDeriv(RBFFD::Y, u_t, grad_y, true); 
-    der_ref.applyWeightsForDeriv(RBFFD::Z, u_t, grad_z, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::X, u_t, grad_u_x, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::Y, u_t, grad_u_y, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::Z, u_t, grad_u_z, true); 
 
     // Get the diffusivity of the domain for at the current time
     this->fillDiffusion(diffusion, u_t, t, n_nodes);
 
     // NEED TO GET GRAD and diffusion for ghost nodes here: 
-    this->sendrecvUpdates(grad_x, "grad_x"); 
-    this->sendrecvUpdates(grad_y, "grad_y"); 
-    this->sendrecvUpdates(grad_z, "grad_z"); 
+    this->sendrecvUpdates(grad_u_x, "grad_u_x"); 
+    this->sendrecvUpdates(grad_u_y, "grad_u_y"); 
+    this->sendrecvUpdates(grad_u_z, "grad_u_z"); 
 //Filled n_nodes above:    this->sendrecvUpdates(diffusion, "diffusion"); 
 
     // Compute K dot grad{u}
     // FIXME: we assume scalar diffusion, make this 
     for (size_t i = 0; i < n_nodes; i++) {
-        grad_x[i] *= diffusion[i];
-        grad_y[i] *= diffusion[i];
-        grad_z[i] *= diffusion[i];
+        grad_u_x[i] *= diffusion[i];
+        grad_u_y[i] *= diffusion[i];
+        grad_u_z[i] *= diffusion[i];
     }
 
     // Get divergence of quanity (K dot grad{u})
-    der_ref.applyWeightsForDeriv(RBFFD::X, grad_x, div_x, true); 
-    der_ref.applyWeightsForDeriv(RBFFD::Y, grad_y, div_y, true); 
-    der_ref.applyWeightsForDeriv(RBFFD::Z, grad_z, div_z, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::X, grad_u_x, div_grad_u_x, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::Y, grad_u_y, div_grad_u_y, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::Z, grad_u_z, div_grad_u_z, true); 
 
     // Finish computing divergence
     for (size_t i = 0; i < n_stencils; i++) {
-        (*f_out)[i] = div_x[i] + div_y[i] + div_z[i]; 
+        (*f_out)[i] = div_grad_u_x[i] + div_grad_u_y[i] + div_grad_u_z[i]; 
     }
 }
 

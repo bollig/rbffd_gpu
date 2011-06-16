@@ -1,7 +1,7 @@
 #define STRINGIFY_WITH_SUBS(s) STRINGIFY(s)
 #define STRINGIFY(s) #s
 
-std::string computeDeriv = STRINGIFY_WITH_SUBS(
+std::string computeDeriv_source = STRINGIFY_WITH_SUBS(
 
 // GPU Only routine
 void computeDeriv(       \n
@@ -29,16 +29,16 @@ void computeDeriv(       \n
 
 // GPU Only routine
 FLOAT applyWeights1PerThread(       \n
-     int* stencil,    \n
-     FLOAT* st_weights,   \n
-     FLOAT* solution,  \n
+     __global int* stencil,    \n
+     __global FLOAT* st_weights,   \n
+     __global FLOAT* solution,  \n
      int stencil_size)  \n
 {   \n
         FLOAT der = 0.0f;       \n
         for (int j = 0; j < stencil_size; j++) {        \n
             der += solution[stencil[j]] * st_weights[j];    \n
         }   \n
-        return der; 
+        return 1.f; 
 }
 
 );

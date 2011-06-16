@@ -114,12 +114,10 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
         // NOTE: offset parameter to enqueueWriteBuffer is ONLY for the GPU side offset. The CPU offset needs to be managed directly on the CPU pointer: &U_G[offset_cpu]
        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, offset_to_set_R * float_size, set_R_bytes, &r_update_f[0], NULL, &event);
        
-       // This copies the whole array of s into the input
-       // err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &s[0], NULL, &event);
     }
 
     // Launch kernel
-    this->launchEulerKernel( ); 
+    this->launchEulerKernel( delta_t ); 
 
     if (set_O_size > 0) {
         // Pull only information required for neighboring domains back to the CPU 
@@ -136,6 +134,7 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
             U_G[offset_to_set_O + i] = (double) o_update_f[i];
         }
     }
+    queue.finish();
     
     // reset boundary solution
     this->enforceBoundaryConditions(U_G, cur_time); 
@@ -143,7 +142,8 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     // synchronize();
     this->sendrecvUpdates(U_G, "U_G");
 
-#if 0
+    this->syncCPUtoGPU(); 
+#if 1
     for (int i = 0; i < nb_nodes; i++) {
         std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
     }
@@ -153,24 +153,26 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     swap(INDX_IN, INDX_OUT);
 }
 
-void HeatPDE_CL::launchEulerKernel() {
+void HeatPDE_CL::launchEulerKernel( double dt ) {
 
     int nb_stencils = (int)grid_ref.getStencilsSize(); 
     int stencil_size = (int)grid_ref.getMaxStencilSize(); 
     int nb_nodes = (int)grid_ref.getNodeListSize(); 
+    float dt_f = (float) dt;
 
     try {
         kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
-    } catch (cl::Error er) {
-        printf("[setKernelArg*] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
-    }
-    try {
         kernel.setArg(1, der_ref_gpu.getGPUWeights(RBFFD::LAPL)); 
-        kernel.setArg(2, this->gpu_solution[INDX_IN]);                 // COPY_IN / COPY_OUT
-        kernel.setArg(3, sizeof(int), &nb_stencils);               // const 
-        kernel.setArg(4, sizeof(int), &nb_nodes);                  // const 
-        kernel.setArg(5, sizeof(int), &stencil_size);            // const
-        kernel.setArg(6, this->gpu_solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
+        kernel.setArg(2, der_ref_gpu.getGPUWeights(RBFFD::X)); 
+        kernel.setArg(3, der_ref_gpu.getGPUWeights(RBFFD::Y)); 
+        kernel.setArg(4, der_ref_gpu.getGPUWeights(RBFFD::Z)); 
+        kernel.setArg(5, this->gpu_solution[INDX_IN]);                 // COPY_IN / COPY_OUT
+        kernel.setArg(6, this->gpu_diffusivity);                 // COPY_IN 
+        kernel.setArg(7, sizeof(int), &nb_stencils);               // const 
+        kernel.setArg(8, sizeof(int), &nb_nodes);                  // const 
+        kernel.setArg(9, sizeof(int), &stencil_size);            // const
+        kernel.setArg(10, sizeof(float), &dt_f);            // const
+        kernel.setArg(11, this->gpu_solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
@@ -179,7 +181,7 @@ void HeatPDE_CL::launchEulerKernel() {
             /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils), 
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
-    err = queue.finish();
+//    err = queue.finish();
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
             " failed (" << err << ")\n";
@@ -188,6 +190,22 @@ void HeatPDE_CL::launchEulerKernel() {
     }
 }
 
+void HeatPDE_CL::syncCPUtoGPU() {
+    size_t nb_nodes = grid_ref.getNodeListSize();
+    size_t solution_mem_bytes = nb_nodes * this->getFloatSize();
+
+    if (useDouble) {
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
+    } else {
+        float* U_G_f = new float[nb_nodes]; 
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
+
+        for (size_t i = 0; i < nb_nodes; i++) {
+            U_G[i] = (double)U_G_f[i]; 
+        }
+    }
+
+}
 
 //----------------------------------------------------------------------
 //
@@ -248,8 +266,7 @@ void HeatPDE_CL::allocateGPUMem() {
 
     cout << "Allocating GPU memory for HeatPDE\n";
 
-    size_t set_G_size = grid_ref.G.size();
-    size_t solution_mem_bytes = set_G_size = set_G_size * this->getFloatSize();
+    size_t solution_mem_bytes = nb_nodes * this->getFloatSize();
 
     size_t bytesAllocated = 0;
 
@@ -257,6 +274,8 @@ void HeatPDE_CL::allocateGPUMem() {
     bytesAllocated += solution_mem_bytes; 
     gpu_solution[INDX_OUT] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
     bytesAllocated += solution_mem_bytes; 
+    
+    gpu_diffusivity = cl::Buffer(context, CL_MEM_READ_ONLY, solution_mem_bytes, NULL, &err);
 
     std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 #endif 

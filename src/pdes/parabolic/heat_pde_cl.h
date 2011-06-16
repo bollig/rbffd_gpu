@@ -15,6 +15,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         //      
         // We use a ping pong buffer scheme here for solution to avoid copying one to the other
         cl::Buffer gpu_solution[2]; 
+        cl::Buffer gpu_diffusivity;
         int INDX_IN;
         int INDX_OUT;
         RBFFD_CL& der_ref_gpu; 
@@ -62,7 +63,9 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         virtual std::string className() {return "heat_cl";}
 
         virtual void loadEulerKernel(); 
-        void launchEulerKernel();
+        void launchEulerKernel( double dt );
+
+        void syncCPUtoGPU(); 
 
         // Call kernel to advance using first order euler
         virtual void advanceFirstOrderEuler(double dt);

@@ -2,7 +2,7 @@
 #define STRINGIFY(s) #s
 
 #include "computeDeriv.cl"
-std::string kernel_source = computeDeriv + STRINGIFY_WITH_SUBS(
+std::string kernel_source = computeDeriv_source + STRINGIFY_WITH_SUBS(
 
         // Kernel wrapper for computeDerivFLOAT (allow CPU access to the routine)
 __kernel void computeDerivKernel(       \n

@@ -207,7 +207,8 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
 
         // Copy the std::vector<std::vector<..> > into a contiguous memory space
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost 
-        for (size_t which = 0; which < NUM_DERIV_TYPES; which++) {
+        // FIXME: copy more than just the 4 types of weights
+        for (size_t which = 0; which < 4; which++) {
             cpu_weights_d[which] = new double[gpu_stencil_size]; 
             for (size_t i = 0; i < nb_stencils; i++) {
                 size_t stencil_size = grid_ref.getStencilSize(i); 

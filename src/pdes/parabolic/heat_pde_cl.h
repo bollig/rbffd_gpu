@@ -65,6 +65,12 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         virtual void loadEulerKernel(std::string& local_sources); 
         void launchEulerKernel( double dt );
 
+        void syncSetRSingle(); 
+        void syncSetRDouble(); 
+
+        void syncSetOSingle(); 
+        void syncSetODouble(); 
+
         void syncCPUtoGPU(); 
 
         // Call kernel to advance using first order euler

@@ -115,7 +115,6 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     std::vector<float> r_update_f(set_R_size,-1.); //= this->U_G; 
     std::vector<float> o_update_f(set_O_size,1.);
 
-    std::cout << "Launching First Order Euler\n";
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 

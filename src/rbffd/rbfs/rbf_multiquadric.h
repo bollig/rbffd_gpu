@@ -31,9 +31,9 @@ class RBF_Multiquadric : public RBF
 
         // DONT KNOW WHY THESE ARENT AVAILABLE FROM SUPERCLASS: 
         // seems like defining the pure virtual routines below overrides the availability of these?
-        virtual double xderiv(const Vec3& xvec, const Vec3& x_center) { this->xderiv(xvec-x_center); }
-        virtual double yderiv(const Vec3& xvec, const Vec3& x_center) { this->yderiv(xvec-x_center); }
-        virtual double zderiv(const Vec3& xvec, const Vec3& x_center) { this->zderiv(xvec-x_center); }
+        virtual double xderiv(const Vec3& xvec, const Vec3& x_center) { return this->xderiv(xvec-x_center); }
+        virtual double yderiv(const Vec3& xvec, const Vec3& x_center) { return this->yderiv(xvec-x_center); }
+        virtual double zderiv(const Vec3& xvec, const Vec3& x_center) { return this->zderiv(xvec-x_center); }
 
         //------------------------------------------------
         virtual double eval(const Vec3& x) {

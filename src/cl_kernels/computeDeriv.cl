@@ -38,7 +38,7 @@ FLOAT applyWeights1PerThread(       \n
         for (int j = 0; j < stencil_size; j++) {        \n
             der += solution[stencil[j]] * st_weights[j];    \n
         }   \n
-        return 1.f; 
+        return der; 
 }
 
 );

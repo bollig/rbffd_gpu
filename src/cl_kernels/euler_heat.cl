@@ -26,7 +26,10 @@ advanceFirstOrderEuler(       \n
 \n
     if(i < nb_stencils) {    \n
         __global int* st = stencils + i*stencil_size;\n
-        __global FLOAT* st_weights = lapl_weights + i*stencil_size; \n
+        __global FLOAT* lapl_st_weights = lapl_weights + i*stencil_size; \n
+        __global FLOAT* x_st_weights = x_weights + i*stencil_size;  
+        __global FLOAT* y_st_weights = y_weights + i*stencil_size;  
+        __global FLOAT* z_st_weights = z_weights + i*stencil_size;  
     \n
         // FIXME: add support for diffusion based on node position\n
         float4 node = (float4)(0.f, 0.f, 0.f, 0.f);\n
@@ -38,7 +41,7 @@ advanceFirstOrderEuler(       \n
         //          div(k.grad(u) = grad(k).grad(u) + k . lapl(u)\n
         // NOTE: the lhs requires interprocessor communication for grad(u)\n
         // before computing div(...)\n
-        FLOAT lapl_u = rewrittenLaplacian(st, lapl_weights, x_weights, y_weights, z_weights, solution_in, diffusivity, nb_stencils, nb_nodes, stencil_size, i);  \n
+        FLOAT lapl_u = rewrittenLaplacian(st, lapl_st_weights, x_st_weights, y_st_weights, z_st_weights, solution_in, diffusivity, nb_stencils, nb_nodes, stencil_size, i);  \n
 \n
        //To apply weights for a deriv:  applyWeights1PerThread(st, st_weights, solution_in, stencil_size);\n
 \n

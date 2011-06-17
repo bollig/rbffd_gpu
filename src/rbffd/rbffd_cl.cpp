@@ -103,7 +103,7 @@ void RBFFD_CL::allocateGPUMem() {
     }
     std::cout << "FLOAT_SIZE=" << float_size << std::endl;;
 
-    stencil_mem_bytes = gpu_stencil_size * sizeof(int); 
+    stencil_mem_bytes = gpu_stencil_size * sizeof(unsigned int); 
     function_mem_bytes = nb_nodes * float_size; 
     weights_mem_bytes = gpu_stencil_size * float_size; 
     deriv_mem_bytes = nb_stencils * float_size; 
@@ -135,7 +135,11 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
     unsigned int nb_stencils = stencil_map.size();
     // TODO: queue a WriteBuffer for each stencil and pass the &vector[0] ptr. CPU should handle that
     //      better than a loop, and we dont have to allocate memory then
-    int* cpu_stencils = new int[gpu_stencil_size];  
+    // FIXME: Store stencils as linear unsigned int array, not int** or vecctor<int>.  
+    // FIXME: If we align memory to the nearest XXX we could improve access patterns.
+    //  (figure out the stencil size to target)
+    //  NOTE: its not essential since we only put stencils on GPU one time.
+    unsigned int* cpu_stencils = new unsigned int[gpu_stencil_size];  
     unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
     for (unsigned int i = 0; i < nb_stencils; i++) {
         unsigned int j; 
@@ -145,7 +149,10 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
             //std::cout << cpu_stencils[indx] << "   ";
         }
         // Buffer remainder of stencils with the stencil center (so we can
-        // break on GPU when center ID is duplicated
+        // break on GPU when center ID is duplicated. This also prevents random
+        // values from showing up beyond our stencil index.
+        // NOTE: another failsafe is to have the weights set to 0 beyond this
+        // point so we dont add any values from outside indices
         for (; j < max_stencil_size; j++) {
             unsigned int indx = i*max_stencil_size+j; 
             cpu_stencils[indx] = stencil_map[i][0];
@@ -192,7 +199,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
     if (weightsModified) {
 
         tm["sendWeights"]->start();
-        int weights_mem_size = gpu_stencil_size * sizeof(double);  
+        unsigned int weights_mem_size = gpu_stencil_size * sizeof(double);  
         
         std::cout << "Writing weights to GPU memory\n"; 
 
@@ -257,7 +264,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
     if (weightsModified) {
 
         tm["sendWeights"]->start();
-        int weights_mem_size = gpu_stencil_size * sizeof(float);  
+        unsigned int weights_mem_size = gpu_stencil_size * sizeof(float);  
         
         std::cout << "Writing weights to GPU memory\n"; 
 
@@ -393,10 +400,10 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
         kernel.setArg(3, gpu_deriv_out[which]);           // COPY_OUT 
         //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
         //unsigned int arguments at this time
-        int nb_stencils = (int)grid_ref.getStencilsSize(); 
-        kernel.setArg(4, sizeof(int), &nb_stencils);               // const 
-        int stencil_size = (int)grid_ref.getMaxStencilSize(); 
-        kernel.setArg(5, sizeof(int), &stencil_size);            // const
+        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+        kernel.setArg(4, sizeof(unsigned int), &nb_stencils);               // const 
+        unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
+        kernel.setArg(5, sizeof(unsigned int), &stencil_size);            // const
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
@@ -463,10 +470,10 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
         kernel.setArg(3, gpu_deriv_out[which]);           // COPY_OUT 
         //FIXME: we want to pass a size_t for maximum array lengths, but OpenCL does not allow
         //size_t arguments at this time
-        int nb_stencils = (int)grid_ref.getStencilsSize(); 
-        kernel.setArg(4, sizeof(int), &nb_stencils);               // const 
-        int stencil_size = (int)grid_ref.getMaxStencilSize(); 
-        kernel.setArg(5, sizeof(int), &stencil_size);            // const
+        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+        kernel.setArg(4, sizeof(unsigned int), &nb_stencils);               // const 
+        unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
+        kernel.setArg(5, sizeof(unsigned int), &stencil_size);            // const
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }

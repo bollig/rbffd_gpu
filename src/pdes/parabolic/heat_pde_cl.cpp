@@ -53,13 +53,9 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
     }
    
     // FIXME: change all unsigned int to int. Or unsigned int. Size_t is not supported by GPU.
-    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
-    int* bindices = new int[nb_bnd]; 
-    // Would be unnec. if indices were in int instead of unsigned int
-    for (unsigned int i =0; i < nb_bnd; i++) {
-        bindices[i] = grid_ref.getBoundaryIndex(i);
-    }
-    err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_TRUE, 0, nb_bnd*sizeof(int), &bindices[0], NULL, &event);
+    std::vector<unsigned int>& bindices = grid_ref.getBoundaryIndices();
+    unsigned int nb_bnd = bindices.size();
+    err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_TRUE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
 
     std::cout << "[HeatPDE_CL] Done\n"; 
 }
@@ -70,23 +66,24 @@ void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, doubl
 {
 //    this->HeatPDE::enforceBoundaryConditions(u_t, t);
     
-    int nb_stencils = (int)grid_ref.getStencilsSize(); 
-    int stencil_size = (int)grid_ref.getMaxStencilSize(); 
-    int nb_bnd = (int)grid_ref.getBoundaryIndicesSize();
-    int nb_nodes = (int)grid_ref.getNodeListSize(); 
+    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+    unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
+    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
+    unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     float cur_time_f = (float) cur_time;
     
     try {
         bc_kernel.setArg(0, this->gpu_solution[INDX_OUT]);                 // COPY_IN  / COPY OUT
         bc_kernel.setArg(1, this->gpu_boundary_indices);                 // COPY_IN 
-        bc_kernel.setArg(2, sizeof(int), &nb_bnd);               // const 
+        bc_kernel.setArg(2, sizeof(unsigned int), &nb_bnd);               // const 
         bc_kernel.setArg(3, sizeof(float), &cur_time_f);
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
+    unsigned int safe_launch_size = (nb_bnd > 32) ? nb_bnd : 32;
 
     err = queue.enqueueNDRangeKernel(bc_kernel, /* offset */ cl::NullRange, 
-            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(max(nb_bnd, 32)), 
+            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(safe_launch_size), 
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
     if (err != CL_SUCCESS) {
@@ -309,9 +306,9 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
 void HeatPDE_CL::launchEulerKernel( double dt ) {
 
-    int nb_stencils = (int)grid_ref.getStencilsSize(); 
-    int stencil_size = (int)grid_ref.getMaxStencilSize(); 
-    int nb_nodes = (int)grid_ref.getNodeListSize(); 
+    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+    unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
+    unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     float dt_f = (float) dt;
     float cur_time_f = (float) cur_time;
 
@@ -323,9 +320,9 @@ void HeatPDE_CL::launchEulerKernel( double dt ) {
         euler_kernel.setArg(4, der_ref_gpu.getGPUWeights(RBFFD::Z)); 
         euler_kernel.setArg(5, this->gpu_solution[INDX_IN]);                 // COPY_IN / COPY_OUT
         euler_kernel.setArg(6, this->gpu_diffusivity);                 // COPY_IN 
-        euler_kernel.setArg(7, sizeof(int), &nb_stencils);               // const 
-        euler_kernel.setArg(8, sizeof(int), &nb_nodes);                  // const 
-        euler_kernel.setArg(9, sizeof(int), &stencil_size);            // const
+        euler_kernel.setArg(7, sizeof(unsigned int), &nb_stencils);               // const 
+        euler_kernel.setArg(8, sizeof(unsigned int), &nb_nodes);                  // const 
+        euler_kernel.setArg(9, sizeof(unsigned int), &stencil_size);            // const
         euler_kernel.setArg(10, sizeof(float), &dt_f);            // const
         euler_kernel.setArg(11, sizeof(float), &cur_time_f);            // const
         euler_kernel.setArg(12, this->gpu_solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
@@ -482,7 +479,7 @@ void HeatPDE_CL::allocateGPUMem() {
     
     gpu_diffusivity = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
 
-    gpu_boundary_indices = cl::Buffer(context, CL_MEM_READ_ONLY, nb_bnd * sizeof(int), NULL, &err);
+    gpu_boundary_indices = cl::Buffer(context, CL_MEM_READ_ONLY, nb_bnd * sizeof(unsigned int), NULL, &err);
 
     std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 #endif 

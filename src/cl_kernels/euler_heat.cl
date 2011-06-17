@@ -7,16 +7,16 @@ std::string kernel_source = laplacian_source + STRINGIFY_WITH_SUBS(
 __kernel void           \n
 advanceFirstOrderEuler(       \n
 //         __global float4* node_list,\n
-         __global int* stencils,    \n
+         __global uint* stencils,    \n
          __global FLOAT* lapl_weights,   \n
          __global FLOAT* x_weights,   \n
          __global FLOAT* y_weights,   \n
          __global FLOAT* z_weights,   \n
          __global FLOAT* solution_in,  \n
          __global FLOAT* diffusivity,  \n
-                   int nb_stencils, \n
-                   int nb_nodes, \n
-                   int stencil_size, \n
+                   uint nb_stencils, \n
+                   uint nb_nodes, \n
+                   uint stencil_size, \n
                    float dt, \n
                    float cur_time, \n
         __global FLOAT* solution_out\n
@@ -25,7 +25,7 @@ advanceFirstOrderEuler(       \n
     uint i = get_global_id(0);    \n
 \n
     if(i < nb_stencils) {    \n
-        __global int* st = stencils + i*stencil_size;\n
+        __global uint* st = stencils + i*stencil_size;\n
         __global FLOAT* lapl_st_weights = lapl_weights + i*stencil_size; \n
         __global FLOAT* x_st_weights = x_weights + i*stencil_size;  
         __global FLOAT* y_st_weights = y_weights + i*stencil_size;  

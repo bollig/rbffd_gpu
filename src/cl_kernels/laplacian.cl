@@ -6,7 +6,7 @@ std::string laplacian_source = computeDeriv_source + STRINGIFY_WITH_SUBS(
        
 FLOAT rewrittenLaplacian(\n
         // NOTE: this is a SINGLE stencil\n
-         __global int* stencil,    \n
+         __global uint* stencil,    \n
          // NOTE: these are st_weights (i.e., weights for ONE stencil)\n
          // and of stencil_size length. \n
          __global FLOAT* lapl_st_weights,   \n
@@ -16,10 +16,10 @@ FLOAT rewrittenLaplacian(\n
          // u_t and diffusion are nb_nodes length. \n
          __global FLOAT* u_t,  \n
          __global FLOAT* diffusion,  \n
-                   int nb_stencils, \n
-                   int nb_nodes, \n
-                   int stencil_size, \n
-                   int st_indx)\n
+                   uint nb_stencils, \n
+                   uint nb_nodes, \n
+                   uint stencil_size, \n
+                   uint st_indx)\n
 {\n
     FLOAT u_lapl_deriv = applyWeights1PerThread(stencil, lapl_st_weights, u_t, stencil_size); \n
     FLOAT K_dot_lapl_U = diffusion[st_indx] * u_lapl_deriv; \n

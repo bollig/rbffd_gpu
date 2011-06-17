@@ -107,6 +107,7 @@ class TimeDependentPDE : public PDE
         virtual void getExactSolution(ExactSolution* exact, std::vector<NodeType>& nodes, std::vector<SolutionType>* exact_vec) {
             std::vector<NodeType>::iterator it; 
             exact_vec->resize(nodes.size());
+            std::cout << "exact solution @ " << cur_time << std::endl;
             unsigned int i = 0; 
             for (it = nodes.begin(); it != nodes.end(); it++, i++) {
                 (*exact_vec)[i] = exact->at(*it, cur_time); 

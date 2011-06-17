@@ -124,11 +124,11 @@ void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
-        // y(t) + h/2 * feval1  @ t + dt/2
-        s[i] +=  0.5* dt * ( feval1[i] + f);
+        // y(t) + h/2 * feval1  @ t + h/2
+        s[i] = original_solution[i] + 0.5* dt * ( feval1[i] + f);
     }
 
-    // reset boundary solution @ t + dt/2
+    // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time+0.5*dt); 
 
     // Make sure our neighboring CPUs are aware of changes to values in set O (output)

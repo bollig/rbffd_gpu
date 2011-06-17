@@ -130,7 +130,7 @@ void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
             break;
 #endif 
         default: 
-            std::cout << "[TimeDependentPDE] Invalid TimeScheme specified. Bailing...\n";
+            std::cout << "[HeatPDE_CL] Invalid TimeScheme specified. Bailing...\n";
             exit(EXIT_FAILURE); 
             break; 
     };
@@ -391,15 +391,17 @@ void HeatPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& de
 
 
 void HeatPDE_CL::syncCPUtoGPU() {
+    std::cout << "SYNC CPU to GPU: " << INDX_IN << std::endl;
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     unsigned int solution_mem_bytes = nb_nodes * this->getFloatSize();
 
     if (useDouble) {
-        err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
     } else {
         float* U_G_f = new float[nb_nodes]; 
-        err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
 
+        queue.finish();
         for (unsigned int i = 0; i < nb_nodes; i++) {
 #if 0
             double diff = fabs( U_G[i] - U_G_f[i] ); 

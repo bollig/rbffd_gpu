@@ -218,15 +218,14 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
 void HeatPDE::enforceBoundaryConditions(std::vector<SolutionType>& u_t, double t)
 {
     unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize(); 
-    std::vector<unsigned int>& bnd_index = grid_ref.getBoundaryIndices();
     std::vector<NodeType>& nodes = grid_ref.getNodeList(); 
 
-    for (int i = 0; i < nb_bnd; i++) {
-        // first order
-        NodeType& v = nodes[bnd_index[i]];
-       // printf("bnd[%d] = {%ld} %f, %f, %f\n", i, bnd_index[i], v.x(), v.y(), v.z());
+    for (unsigned int i = 0; i < nb_bnd; i++) {
+        unsigned int indx = grid_ref.getBoundaryIndex(i); 
+        NodeType& v = nodes[indx];
+//        printf("bnd[%d] = {%ld} %f, %f, %f = %f\n", i, indx, v.x(), v.y(), v.z(), exact_ptr->at(v,t));
         // u_t[bnd_index[i]] = boundary_values[i];
-        u_t[bnd_index[i]] = exact_ptr->at(v, t); 
+        u_t[indx] = exact_ptr->at(v, t); 
     }
 }
 

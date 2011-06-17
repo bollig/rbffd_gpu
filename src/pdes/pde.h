@@ -89,11 +89,9 @@ class PDE : public MPISendable
             std::vector<NodeType>& nodes = global_grid->getNodeList();
             std::vector<unsigned int>& bounds = global_grid->getBoundaryIndices();
 
-            std::vector<SolutionType> sol(nodes.size());
+            std::vector<SolutionType> sol(nodes.size(), 0.);
             std::vector<SolutionType> exactSolution(nodes.size());
             
-            this->syncCPUtoGPU(); 
-
             // TODO: call for all subdomains to send final to master
 
             this->getGlobalSolution(&sol);
@@ -107,11 +105,12 @@ class PDE : public MPISendable
     protected: 
         // This is intended to be overridden by GPU based classes. when called,
         // its time to synchronize our solution with the results on the GPU
-        virtual void syncCPUtoGPU() {;} 
+        virtual void syncCPUtoGPU() { std::cout << "NOT DOING ANYTHING\n";} 
 
         // Fill vector with exact solution at provided nodes.
         // NOTE: override in time dependent PDE to leverage time-based solutions
         virtual void getExactSolution(ExactSolution* exact, std::vector<NodeType>& nodes, std::vector<SolutionType>* exact_vec) {
+            std::cout << "Getting master solution from PDE.h\n";
             std::vector<NodeType>::iterator it; 
             (*exact_vec).resize(nodes.size());
             unsigned int i = 0; 

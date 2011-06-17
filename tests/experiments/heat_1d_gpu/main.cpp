@@ -458,6 +458,8 @@ int main(int argc, char** argv) {
     }
 #if 1
     printf("after heat\n");
+    std::cout << "\n*********** Rank " << comm_unit->getRank() << " Final Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+    pde->checkLocalError(exact, max_local_rel_error); 
 
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 

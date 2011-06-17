@@ -230,24 +230,24 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
 }
 
 int PDE::sendFinal(int my_rank, int receiver_rank) {
-
+    
     if (my_rank != receiver_rank) {
-        set<int>::iterator qit;
+        unsigned int nb_stencils = grid_ref.getStencilsSize();
         // vector<set<int> > O; gives us the list of (global) indices which we
         // are sending to receiver_rank
 
         // We send a list of node values
-        vector<double> U_Q;
+        vector<double> U_Q(nb_stencils);
 
         if (grid_ref.O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
             //	cout << "O_by_rank is NOT size(0)" << endl;
             int i;
 
             // TODO the set U_G should be in order (Q, R) so we dont need this full copy (maybe...)
-            for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
+            for (unsigned int i = 0; i < nb_stencils; i++) {
                 // Elements in Q are in global indices
                 // so we need to first convert to local to index our U_G
-                U_Q.push_back(U_G[grid_ref.g2l(*qit)]);
+                U_Q[i] = U_G[i];
 #if 0    
                 cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
                     << "]: " << U_G[grid_ref.g2l(*qit)] << endl;
@@ -289,8 +289,8 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
     set<int>::iterator qit;
     int i = 0;
     for (qit = remoteQ.begin(); qit != remoteQ.end(); qit++, i++) {
-        unsigned int l_indx = i; 
-        unsigned int g_indx = *qit;
+        int l_indx = i; 
+        int g_indx = *qit;
         global_U_G[g_indx] = remoteU_Q[l_indx]; 
     }
 
@@ -316,6 +316,13 @@ int PDE::initFinal() {
 }
 
 int PDE::updateFinal() {
+
+    static int initCount=0; 
+    if (!initCount) {
+        this->initFinal();
+        initCount ++;
+    }
+
     //pair<map<char,int>::iterator,bool> ret;
     set<int>::iterator qit;
     int i = 0;

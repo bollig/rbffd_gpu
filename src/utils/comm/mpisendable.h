@@ -41,9 +41,10 @@ public:
 	// the vector by populating it with its own solution contribution.
     // Should only be called once to allocate memory and initialize the data.
     // Use updateFinal to synchronize local with global solutions. 
-	virtual int initFinal() =0;
-
     virtual int updateFinal() =0;
+
+    // The class should initialize a final buffer on the first call to updateFinal
+	//virtual int initFinal() =0;
 
 public: 
 	// Generic sends/receives for different STL types. These should accept template types in the future

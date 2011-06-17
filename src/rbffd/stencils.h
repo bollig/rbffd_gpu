@@ -112,6 +112,7 @@ class Stencils
             //    svd = new ContourSVD(rbf, rd2, eps_norm, rr0_norm, rrd_norm, rdvec_norm, rad/rad);
         }
 
+        ~Stencils() { delete(svd); }
         void setRad(double rad) { this->rad = rad; }
         void setEps(double eps) { this->eps = eps; }
         arma::mat computeDistMatrix2(arma::mat& x1, arma::mat& x2);

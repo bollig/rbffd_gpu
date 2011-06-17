@@ -47,6 +47,11 @@ class ContourSVD
         //              NOTE: this is NOT the same as rrd_norm (as in Vec(||x-xi||^2)); it is Vec(Vec3(x-xi));
         // rad = {???} typically passed 1.
         ContourSVD(RBF* rbf, arma::mat& rd2, double ep, arma::mat& rr0, arma::mat& rrd, ArrayT<Vec3>& rrdvec, double rad);
+
+
+        ~ContourSVD(); 
+
+
         void init(RBF* rbf, arma::mat& rd2, arma::rowvec& ep, arma::mat& rr0, arma::mat& rrd, ArrayT<Vec3>& rrdvec, double rad);
         void execute(int N);
         void getPoles();

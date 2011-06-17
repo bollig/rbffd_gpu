@@ -533,7 +533,7 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
         }
     }
 
-    printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
+    printf("sz= %u, nb_bnd= %u\n", sz, nb_bnd);
 
     arma::cx_colvec eigval;
     arma::cx_mat eigvec;
@@ -676,7 +676,7 @@ double RBFFD::computeHyperviscosityEigenvalues(DerType which, int k, double gamm
         }
     }
 
-    printf("sz= %lu, nb_bnd= %lu\n", sz, nb_bnd);
+    printf("sz= %u, nb_bnd= %u\n", sz, nb_bnd);
 
     arma::cx_colvec eigval;
     arma::cx_mat eigvec;
@@ -806,7 +806,7 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
         }
     }
     if (st_center == -1) {
-        printf("inconsistency with global rbf map (stencil should contain center: %lu)\n", irbf);
+        printf("inconsistency with global rbf map (stencil should contain center: %u)\n", irbf);
         exit(0);
     }
 
@@ -881,7 +881,7 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
     for (unsigned int i = 0; i < stencil.size(); i++) {
         expected_nz += stencil[i].size();
     }
-    fprintf(stdout, "Attempting to read %lu weights (%lu, %lu) from %s\n", expected_nz, M, N, filename.c_str()); 
+    fprintf(stdout, "Attempting to read %u weights (%u, %u) from %s\n", expected_nz, M, N, filename.c_str()); 
 
     if (M != expected_M) {
         std::cout << "Error! not enough stencils in the file" << std::endl;
@@ -972,7 +972,7 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
     for (unsigned int i = 0; i < stencil.size(); i++) {
         nz += stencil[i].size();
     }
-    fprintf(stdout, "Writing %lu weights to %s\n", nz, filename.c_str()); 
+    fprintf(stdout, "Writing %u weights to %s\n", nz, filename.c_str()); 
 
     // Num stencils (x_weights.size())
     const unsigned int M = (*deriv_choice_ptr).size();

@@ -60,9 +60,10 @@ class ExactSolution
             return tderiv(r.x(), r.y(), r.z(), t);
         }
 
-        Vec3& gradient(Vec3& pt, double t=0.) {
-            Vec3* grad = new Vec3(this->xderiv(pt,t), this->yderiv(pt,t), this->zderiv(pt,t)); 
-            return *grad;
+        Vec3 gradient(Vec3& pt, double t=0.) {
+            //Vec3* grad = new Vec3(this->xderiv(pt,t), this->yderiv(pt,t), this->zderiv(pt,t)); 
+            Vec3 grad(this->xderiv(pt,t), this->yderiv(pt,t), this->zderiv(pt,t)); 
+            return grad;
         }
 
         // The param sol here should be the SOLUTION at pt(x,y,z) at time t.

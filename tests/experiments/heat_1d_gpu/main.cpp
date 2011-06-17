@@ -197,6 +197,9 @@ int main(int argc, char** argv) {
         for (int i = 1; i < comm_unit->getSize(); i++) {
             std::cout << "Sending subdomain[" << i << "]\n";
             comm_unit->sendObject(subdomain_list[i], i); 
+
+            // Now that its sent, we can free the memory for domains on other processors.
+            delete(subdomain_list[i]);
         }
         tm["send"]->stop(); 
 

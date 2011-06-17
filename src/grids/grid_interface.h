@@ -132,7 +132,11 @@ class Grid
             boundary_nodes_first(false), DEBUG(0), node_list(nodes) 
     {} 
 
-        virtual ~Grid(){ }
+        virtual ~Grid(){
+            if (node_list_kdtree != NULL) {
+                delete(node_list_kdtree);
+            }
+        }
 
         // PROBABLY THE MOST IMPORTANT ROUTINE: generates the nodes in node_list
         virtual void generate(); 

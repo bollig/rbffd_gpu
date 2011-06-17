@@ -477,7 +477,7 @@ void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, unsigned 
             }
             break;
         case X:
-            printf("nb_stencils= %lu\n", nb_stencils);
+            printf("nb_stencils= %u\n", nb_stencils);
             for (int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex[i] = 1.;

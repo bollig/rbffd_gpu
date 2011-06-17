@@ -13,9 +13,10 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         double* cpu_weights_d[NUM_DERIV_TYPES]; 
         float* cpu_weights_f[NUM_DERIV_TYPES]; 
         bool deleteCPUWeightsBuffer;
+        bool deleteCPUStencilsBuffer;
 
         cl::Buffer gpu_stencils; 
-        int*    cpu_stencils;
+        unsigned int*    cpu_stencils;
 
         cl::Buffer gpu_deriv_out[NUM_DERIV_TYPES]; 
 
@@ -50,7 +51,10 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         RBFFD_CL(Grid* grid, int dim_num, int rank=0);
 
-        virtual ~RBFFD_CL() { if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} }; 
+        virtual ~RBFFD_CL() { 
+            if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} 
+            if (deleteCPUStencilsBuffer) { this->clearCPUStencils();} 
+        }; 
 
 
         cl::Buffer& getGPUStencils() { return gpu_stencils; }
@@ -118,6 +122,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         void allocateGPUMem(); 
 
         void clearCPUWeights();
+        void clearCPUStencils();
 
         void updateWeightsDouble(bool forceFinish);
         void updateWeightsSingle(bool forceFinish);

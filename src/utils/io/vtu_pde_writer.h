@@ -51,11 +51,11 @@ class VtuPDEWriter : public PDEWriter
         vtkDoubleArray* rel_err;
         vtkDoubleArray* diff;
  
-        char* sol_name;
-        char* exact_name;
-        char* abs_err_name;
-        char* rel_err_name;
-        char* diff_name;
+        std::string sol_name;
+        std::string exact_name;
+        std::string abs_err_name;
+        std::string rel_err_name;
+        std::string diff_name;
 
     public: 
 
@@ -159,32 +159,32 @@ class VtuPDEWriter : public PDEWriter
 
             sol = vtkDoubleArray::New();
             sol_name = "Computed Solution";
-            sol->SetName(sol_name); 
+            sol->SetName(sol_name.c_str()); 
             sol->SetNumberOfComponents(1);
             sol->SetNumberOfValues(subdomain->getNodeListSize());
 
             exact = vtkDoubleArray::New();
             exact_name = "Exact Solution";
-            exact->SetName(exact_name); 
+            exact->SetName(exact_name.c_str()); 
             exact->SetNumberOfComponents(1);
             exact->SetNumberOfValues(subdomain->getNodeListSize());
 
 
             abs_err = vtkDoubleArray::New();
             abs_err_name = "Absolute Error By Node";
-            abs_err->SetName(abs_err_name); 
+            abs_err->SetName(abs_err_name.c_str()); 
             abs_err->SetNumberOfComponents(1);
             abs_err->SetNumberOfValues(subdomain->getNodeListSize());
 
             rel_err = vtkDoubleArray::New();
             rel_err_name = "Relative Error By Node";
-            rel_err->SetName(rel_err_name); 
+            rel_err->SetName(rel_err_name.c_str()); 
             rel_err->SetNumberOfComponents(1);
             rel_err->SetNumberOfValues(subdomain->getNodeListSize());
 
             diff = vtkDoubleArray::New();
             diff_name = "Diffusivity";
-            diff->SetName(diff_name); 
+            diff->SetName(diff_name.c_str()); 
             diff->SetNumberOfComponents(1);
             diff->SetNumberOfValues(subdomain->getNodeListSize());
 
@@ -218,12 +218,12 @@ class VtuPDEWriter : public PDEWriter
             // write to file
 
             // Update the solution: 
-            vtkDoubleArray* s0 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(sol_name); 
+            vtkDoubleArray* s0 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(sol_name.c_str()); 
             for (int i = 0; i < s0->GetSize(); i++) {
                 s0->SetValue(i, heat->getLocalSolution(i));
             }
 
-            vtkDoubleArray* s1 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(exact_name); 
+            vtkDoubleArray* s1 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(exact_name.c_str()); 
             for (int i = 0; i < s1->GetSize(); i++) {
                 s1->SetValue(i, heat->getExactSolution(i));
             }
@@ -231,7 +231,7 @@ class VtuPDEWriter : public PDEWriter
 #if 1
 #define USE_PDE_ERR 1
             // Update the abs_error: 
-            vtkDoubleArray* s2 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(abs_err_name); 
+            vtkDoubleArray* s2 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(abs_err_name.c_str()); 
             for (int i = 0; i < s2->GetSize(); i++) {
 #if USE_PDE_ERR
                 s2->SetValue(i, heat->getAbsoluteError(i));
@@ -242,7 +242,7 @@ class VtuPDEWriter : public PDEWriter
             }
 
             // Update the abs_error: 
-            vtkDoubleArray* s3 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(rel_err_name); 
+            vtkDoubleArray* s3 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(rel_err_name.c_str()); 
             for (int i = 0; i < s3->GetSize(); i++) {
 #if USE_PDE_ERR
                 s3->SetValue(i, heat->getRelativeError(i));
@@ -256,7 +256,7 @@ class VtuPDEWriter : public PDEWriter
             }
 
             // Update the abs_error: 
-            vtkDoubleArray* s4 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(diff_name); 
+            vtkDoubleArray* s4 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(diff_name.c_str()); 
             for (int i = 0; i < s4->GetSize(); i++) {
                 s4->SetValue(i, heat->getDiffusivityAtNode(i));
             }

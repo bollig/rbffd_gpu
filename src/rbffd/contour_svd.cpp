@@ -14,6 +14,11 @@ using namespace arma;
 //[fds, poles] = contourSVD(@rbffdapp,rad/rad,ep/rad,N,rd2*rad^2,rd2(1,:)*rad^2,rbf,drbf);
 // optional: rd2*rad^2, rd2(1,:)*rad^2, rbf, drbf
 
+ContourSVD::~ContourSVD() {
+    delete(crrdvec);
+}
+
+
 ContourSVD::ContourSVD()
 {
 }
@@ -566,6 +571,10 @@ void ContourSVD::execute(int N_)
             // I need a routine to calculate the roots of a polynomial
         }
 
+    // Clear up memory
+    for (int i=0; i < numCoeffs; i++) {
+        delete(C[i]);
+    }
     //% End contourSVD
 
     //exit(0);
@@ -735,9 +744,9 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
     rbf->setEpsilon(eps);
 
     //EFB 052311
- //   rd.print("USING RD=");
- //   re.printcx("RE=");
-    
+    //   rd.print("USING RD=");
+    //   re.printcx("RE=");
+
     // Generate matrix Phi. This is \Phi(distanceMatrix). in other words,
     // the rbf evaluted for all distances in the distance matrix.
     cx_mat vals = (*rbf)(rd);

@@ -207,6 +207,8 @@ class Domain : public Grid, public MPISendable
         }
 
 
+        // NOT USED:
+        // Not memory safe.
         StencilType& convert_g2l(StencilType& stencil) {
             StencilType* local_stencil = new StencilType(stencil);
             for (int j = 0; j < stencil.size(); j++) {

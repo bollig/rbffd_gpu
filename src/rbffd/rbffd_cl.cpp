@@ -139,7 +139,7 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
     // FIXME: If we align memory to the nearest XXX we could improve access patterns.
     //  (figure out the stencil size to target)
     //  NOTE: its not essential since we only put stencils on GPU one time.
-    unsigned int* cpu_stencils = new unsigned int[gpu_stencil_size];  
+    cpu_stencils = new unsigned int[gpu_stencil_size];  
     unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
     for (unsigned int i = 0; i < nb_stencils; i++) {
         unsigned int j; 
@@ -165,8 +165,20 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
     err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_bytes, &cpu_stencils[0], NULL, &event);
     if (forceFinish) {
         queue.finish();
+        this->clearCPUWeights();
+        deleteCPUStencilsBuffer = false;
+    } else { 
+        deleteCPUStencilsBuffer = false;
     }
-    //delete(cpu_stencils);
+
+}
+
+void RBFFD_CL::clearCPUStencils() {
+    // Clear out buffer. No need to keep it since this should only happen once
+    // NOTE: make sure we delete only the single or double precision cpu side buffers;
+    for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
+        delete [] cpu_stencils;
+    }
 }
 
 
@@ -174,13 +186,15 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
 void RBFFD_CL::clearCPUWeights() {
     // Clear out buffer. No need to keep it since this should only happen once
     // NOTE: make sure we delete only the single or double precision cpu side buffers;
+    // FIXME: change the 4 here to NUM_DERIV_TYPES (need to compute all deriv
+    // types and save them to disk, then load them from file. 
     if (useDouble) {
-        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
+        for (unsigned int which = 0; which < 4; which++) {
             delete [] cpu_weights_d[which];
         }
     } else {
 
-        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
+        for (unsigned int which = 0; which < 4; which++) {
             delete [] cpu_weights_f[which];
         }
     }
@@ -369,9 +383,10 @@ void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool force
 
     err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, 0, function_mem_bytes, &cpu_u[0], NULL, &event);
 
-    if (forceFinish) {
+//    if (forceFinish) {
         queue.finish(); 
-    }
+  //  }
+    delete [] cpu_u;
 }
 
 
@@ -530,6 +545,9 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
     } else {
         //        std::cout << "CL program finished!" << std::endl;
     }
+
+    delete [] deriv_temp;
+
     tm["applyWeights"]->end();
 }
 //----------------------------------------------------------------------

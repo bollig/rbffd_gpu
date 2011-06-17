@@ -79,6 +79,7 @@ class PDE : public MPISendable
         void checkLocalError(ExactSolution* exact, double rel_err_max=-1.) { 
             exact_ptr = exact;
             std::vector<SolutionType> exactSolution;
+            this->syncCPUtoGPU(); 
             this->getExactSolution(exact, this->grid_ref.getNodeList(), &exactSolution); 
             this->checkError(exactSolution, this->U_G, this->grid_ref, rel_err_max); 
         }
@@ -90,6 +91,10 @@ class PDE : public MPISendable
 
             std::vector<SolutionType> sol(nodes.size());
             std::vector<SolutionType> exactSolution(nodes.size());
+            
+            this->syncCPUtoGPU(); 
+
+            // TODO: call for all subdomains to send final to master
 
             this->getGlobalSolution(&sol);
             this->getExactSolution(exact, nodes, &exactSolution); 
@@ -100,6 +105,9 @@ class PDE : public MPISendable
         SolutionType getLocalSolution(size_t indx) { return U_G[indx]; }
 
     protected: 
+        // This is intended to be overridden by GPU based classes. when called,
+        // its time to synchronize our solution with the results on the GPU
+        virtual void syncCPUtoGPU() {;} 
 
         // Fill vector with exact solution at provided nodes.
         // NOTE: override in time dependent PDE to leverage time-based solutions

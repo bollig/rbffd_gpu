@@ -291,7 +291,7 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
     queue.finish();
 
-    this->syncCPUtoGPU(); 
+//    this->syncCPUtoGPU(); 
          
 #if 0
     for (int i = 0; i < nb_nodes; i++) {

@@ -58,6 +58,22 @@ class VtuPDEWriter : public PDEWriter
         char* diff_name;
 
     public: 
+
+        virtual ~VtuPDEWriter() {
+            this->writeFinal(); 
+          //  uwriter->Stop();
+            uwriter->Delete();
+            ugrid->Delete();
+            pts->Delete();
+            //stns->Delete();
+            sol->Delete();
+            exact->Delete();
+            abs_err->Delete();
+            rel_err->Delete();
+            diff->Delete();
+        }
+
+
         VtuPDEWriter(Domain* subdomain_, TimeDependentPDE* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
             : PDEWriter(subdomain_, heat_, comm_unit_, local_write_freq_, global_write_freq_) 
         { 
@@ -139,6 +155,7 @@ class VtuPDEWriter : public PDEWriter
 #else 
             ugrid->SetCells(cell_type, cell_array);
 #endif 
+            cell_array->Delete();
 
             sol = vtkDoubleArray::New();
             sol_name = "Computed Solution";
@@ -188,19 +205,6 @@ class VtuPDEWriter : public PDEWriter
             uwriter->SetFileName(fname);
            // uwriter->SetNumberOfTimeSteps(10);
            // uwriter->Start();
-        }
-
-        virtual ~VtuPDEWriter() {
-            this->writeFinal(); 
-          //  uwriter->Stop();
-            uwriter->Delete();
-            ugrid->Delete();
-            pts->Delete();
-            //stns->Delete();
-            sol->Delete();
-            exact->Delete();
-            abs_err->Delete();
-            rel_err->Delete();
         }
 
         // MASTER process only!

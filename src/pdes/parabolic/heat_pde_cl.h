@@ -86,7 +86,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         void syncSetOSingle(); 
         void syncSetODouble(); 
 
-        void syncCPUtoGPU(); 
+        virtual void syncCPUtoGPU(); 
 
         // Call kernel to advance using first order euler
         virtual void advanceFirstOrderEuler(double dt);

@@ -13,14 +13,24 @@ function [stencils] = neighbor_query_hash(node_list, max_st_size, hnx)
 %         end
 %     end
 % end
-
 xmin = min(node_list(:,1));
 xmax = max(node_list(:,1));
-ymin = min(node_list(:,2));
-ymax = max(node_list(:,2));
-zmin = min(node_list(:,3));
-zmax = max(node_list(:,3));
 
+if (size(node_list, 2) > 1)
+    ymin = min(node_list(:,2));
+    ymax = max(node_list(:,2));
+else 
+    ymin = 0; 
+    ymax = 0;
+end
+
+if (size(node_list, 2) > 2)
+    zmin = min(node_list(:,3));
+    zmax = max(node_list(:,3));
+else 
+    zmin = 0; 
+    zmax = 0;
+end
 if (ymax-ymin) > 1e-8
     hny = hnx;
 else 

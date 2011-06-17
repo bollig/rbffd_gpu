@@ -10,6 +10,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
     protected: 
 
         cl::Kernel euler_kernel;
+        cl::Kernel step_kernel;
         // Kernel for boundary conditions
         cl::Kernel bc_kernel;
 
@@ -20,8 +21,18 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         //      solution out
         //      
         // We use a ping pong buffer scheme here for solution to avoid copying one to the other
-        cl::Buffer gpu_solution[2]; 
+        cl::Buffer gpu_solution[5]; 
         cl::Buffer gpu_diffusivity;
+
+        // Midpoint needs: 
+        //      solution in
+        //      diffusion
+        //      intermediate solution out
+        //      ---- COMM --- 
+        //      inermediate solution in
+        //      intermediate diffusion
+        //      solution out
+        //  
 
         // Boundary conditions need: 
         //  solution in
@@ -31,6 +42,10 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
 
         int INDX_IN;
         int INDX_OUT;
+        int INDX_INTERMEDIATE_1;
+        int INDX_INTERMEDIATE_2;
+        int INDX_INTERMEDIATE_3;
+
         RBFFD_CL& der_ref_gpu; 
         bool useDouble;
 
@@ -39,7 +54,10 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         HeatPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, std::string& local_cl_sources, bool useUniformDiffusion, bool weightsComputed=false) 
             : HeatPDE(grid, der, comm, useUniformDiffusion, weightsComputed), 
             der_ref_gpu(*der), useDouble(true),
-              INDX_IN(0), INDX_OUT(1)
+              INDX_IN(0), INDX_OUT(1),
+              INDX_INTERMEDIATE_1(2),
+              INDX_INTERMEDIATE_2(3),
+              INDX_INTERMEDIATE_3(4)
         { 
             this->setupTimers(); 
             this->loadKernels(local_cl_sources); 
@@ -59,7 +77,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         };
     
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
-        virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t);
+        virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, cl::Buffer& sol, double t);
         
         virtual void loadKernels(std::string& local_sources); 
 
@@ -77,19 +95,24 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         virtual std::string className() {return "heat_cl";}
 
         virtual void loadEulerKernel(std::string& local_sources); 
+        virtual void loadStepKernel(std::string& local_sources); 
         virtual void loadBCKernel(std::string& local_sources); 
-        void launchEulerKernel( double dt );
+        void launchEulerKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
+        void launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol, cl::Buffer& sol_out);
 
-        void syncSetRSingle(); 
-        void syncSetRDouble(); 
+        // Sync set R from the vec into the gpu_vec
+        void syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec); 
+        void syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec);
 
-        void syncSetOSingle(); 
-        void syncSetODouble(); 
+        // Sync set O from the gpu_vec to the vec
+        void syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec); 
+        void syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec); 
 
         virtual void syncCPUtoGPU(); 
 
         // Call kernel to advance using first order euler
         virtual void advanceFirstOrderEuler(double dt);
+        virtual void advanceSecondOrderMidpoint(double dt);
 }; 
 #endif 
 

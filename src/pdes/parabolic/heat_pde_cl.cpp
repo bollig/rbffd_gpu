@@ -75,10 +75,9 @@ void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, doubl
     int nb_bnd = (int)grid_ref.getBoundaryIndicesSize();
     int nb_nodes = (int)grid_ref.getNodeListSize(); 
     float cur_time_f = (float) cur_time;
-    std::vector<float> s(nb_nodes, 0); 
     
     try {
-        bc_kernel.setArg(0, this->gpu_solution[INDX_IN]);                 // COPY_IN  / COPY OUT
+        bc_kernel.setArg(0, this->gpu_solution[INDX_OUT]);                 // COPY_IN  / COPY OUT
         bc_kernel.setArg(1, this->gpu_boundary_indices);                 // COPY_IN 
         bc_kernel.setArg(2, sizeof(int), &nb_bnd);               // const 
         bc_kernel.setArg(3, sizeof(float), &cur_time_f);
@@ -87,7 +86,7 @@ void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, doubl
     }
 
     err = queue.enqueueNDRangeKernel(bc_kernel, /* offset */ cl::NullRange, 
-            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_bnd), 
+            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(max(nb_bnd, 32)), 
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
     if (err != CL_SUCCESS) {
@@ -96,10 +95,8 @@ void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, doubl
         std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
         exit(EXIT_FAILURE);
     }
-    
-    err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, nb_nodes*this->getFloatSize(), &s[0], NULL, &event);
 
-    queue.finish();
+    //queue.finish();
 }
 
 
@@ -280,11 +277,11 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
         this->syncSetRSingle(); 
     }
 
-    // reset boundary solution
-    this->enforceBoundaryConditions(U_G, cur_time); 
-
     // Launch kernel
     this->launchEulerKernel( delta_t ); 
+
+    // reset boundary solution on INDX_OUT
+    this->enforceBoundaryConditions(U_G, cur_time); 
 
     if (useDouble) {
         this->syncSetODouble();

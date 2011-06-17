@@ -103,9 +103,8 @@ void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
     unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
-    std::vector<double>& original_solution = this->U_G; 
     // backup the current solution so we can perform intermediate steps
-    std::vector<double> s = this->U_G; 
+    std::vector<double> s(nb_nodes, 0.);
 
     // Midpoint requires two evaluations: f(y(t)) and f(y + (h/2) * f(y(t)))
     std::vector<SolutionType> feval1(nb_stencils);  
@@ -117,41 +116,41 @@ void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
 
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in feval1
-    this->solve(s, &feval1, nb_stencils, nb_nodes, cur_time); 
+    this->solve(this->U_G, &feval1, nb_stencils, nb_nodes, cur_time); 
 
     // compute u^* = u^n + dt*lapl(u^n)
-    for (unsigned int i = 0; i < nb_nodes; i++) {
+    for (unsigned int i = 0; i < nb_stencils; i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * feval1  @ t + h/2
-        s[i] = original_solution[i] + 0.5* dt * ( feval1[i] + f);
+        s[i] = this->U_G[i] + 0.5* dt * ( feval1[i] + f);
     }
 
     // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time+0.5*dt); 
 
     // Make sure our neighboring CPUs are aware of changes to values in set O (output)
-    this->sendrecvUpdates(s, "s1");
+    this->sendrecvUpdates(s, "s_intermediate");
 
     // y*(t) = y(t) + h * feval2
     // but feval2 = lapl[ y(t) + h/2 * feval1 ] @ t+0.5dt (content between [..]'s was computed above)
     this->solve(s, &feval2, nb_stencils, nb_nodes, cur_time+0.5*dt); 
 
     // Finish step for midpoint method
-    for (unsigned int i = 0; i < feval2.size(); i++) {
+    for (unsigned int i = 0; i < nb_stencils; i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * feval1 
-        original_solution[i] = original_solution[i] + dt * ( feval2[i] + f);
+        U_G[i] = U_G[i] + dt * ( feval2[i] + f);
     }
 
     // Make sure any boundary conditions are met. 
-    this->enforceBoundaryConditions(s, cur_time+dt);
+    this->enforceBoundaryConditions(U_G, cur_time+dt);
     
     // Ensure we have consistent values across the board
-    this->sendrecvUpdates(original_solution, "U_G");
+    this->sendrecvUpdates(U_G, "U_G");
 }
 
 void TimeDependentPDE::advanceRungeKutta4(double dt) 

@@ -8,6 +8,12 @@
 class HeatPDE_CL : public HeatPDE, public CLBaseClass 
 {
     protected: 
+
+        cl::Kernel euler_kernel;
+        // Kernel for boundary conditions
+        cl::Kernel bc_kernel;
+
+
         // Euler needs: 
         //      solution in
         //      diffusion
@@ -16,6 +22,13 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         // We use a ping pong buffer scheme here for solution to avoid copying one to the other
         cl::Buffer gpu_solution[2]; 
         cl::Buffer gpu_diffusivity;
+
+        // Boundary conditions need: 
+        //  solution in
+        //  boundary indices
+        //  solution out
+        cl::Buffer gpu_boundary_indices;
+
         int INDX_IN;
         int INDX_OUT;
         RBFFD_CL& der_ref_gpu; 
@@ -46,6 +59,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         };
     
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
+        virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t);
         
         virtual void loadKernels(std::string& local_sources); 
 
@@ -63,6 +77,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         virtual std::string className() {return "heat_cl";}
 
         virtual void loadEulerKernel(std::string& local_sources); 
+        virtual void loadBCKernel(std::string& local_sources); 
         void launchEulerKernel( double dt );
 
         void syncSetRSingle(); 

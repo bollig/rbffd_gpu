@@ -26,7 +26,7 @@ void CVT::setupTimers() {
     timers["neighbor"] = new Timer("[CVT] nearest neighbor search");
 }
 //****************************************************************************80
-CVT::CVT (size_t nb_nodes_, size_t dimension, size_t nb_locked, Density* density_function, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size) 
+CVT::CVT (unsigned int nb_nodes_, unsigned int dimension, unsigned int nb_locked, Density* density_function, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size) 
     : Grid(nb_nodes_),
     nb_pts(nb_nodes_),
     nb_bnd(nb_locked),
@@ -53,7 +53,7 @@ CVT::CVT (size_t nb_nodes_, size_t dimension, size_t nb_locked, Density* density
     // 2) generate in generators and copy to node_list
 }
 
-CVT::CVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked, Density* density_function, size_t num_samples, size_t max_num_iters, size_t write_frequency, size_t sample_batch_size)
+CVT::CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_locked, Density* density_function, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size)
     : Grid(nodes.size()),
       nb_pts(nodes.size()),
     dim_num(dimension), 
@@ -3026,7 +3026,7 @@ void CVT::timestamp(void)
 
     static char time_buffer[TIME_SIZE];
     const struct tm *tm;
-    size_t len;
+    unsigned int len;
     time_t now;
 
     now = time(NULL);
@@ -3073,7 +3073,7 @@ char* CVT::timestring(void)
 #define TIME_SIZE 40
 
     const struct tm *tm;
-    size_t len;
+    unsigned int len;
     time_t now;
     char *s;
 

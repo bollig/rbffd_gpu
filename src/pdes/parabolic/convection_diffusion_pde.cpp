@@ -6,8 +6,8 @@ void ConvectionDiffusionPDE::setupTimers()
 }
 #if 0
 void ConvectionDiffusionPDE::fillBoundaryConditions(ExactSolution* exact) {
-    size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
-    std::vector<size_t>& bnd_index = grid_ref.getBoundaryIndices();
+    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
+    std::vector<unsigned int>& bnd_index = grid_ref.getBoundaryIndices();
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
     boundary_values.resize(nb_bnd);
@@ -32,7 +32,7 @@ void ConvectionDiffusionPDE::fillInitialConditions(ExactSolution* exact) {
 
 // Get the time dependent diffusion coeffs 
 void ConvectionDiffusionPDE::fillDiffusion(std::vector<SolutionType>& diff, double t) {
-    for(size_t i = 0; i < diff.size(); i++) {
+    for(unsigned int i = 0; i < diff.size(); i++) {
         NodeType& pt = grid_ref.getNode(i); 
         diff[i] = exact_ptr->diffuseCoefficient(pt, t);
     }
@@ -43,8 +43,8 @@ void ConvectionDiffusionPDE::fillDiffusion(std::vector<SolutionType>& diff, doub
 // FIXME: the PDE is not 0 on the boundary for a regular grid. 
 void ConvectionDiffusionPDE::enforceBoundaryConditions(std::vector<SolutionType>& u_t, double t)
 {
-    size_t nb_bnd = grid_ref.getBoundaryIndicesSize(); 
-    std::vector<size_t>& bnd_index = grid_ref.getBoundaryIndices();
+    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize(); 
+    std::vector<unsigned int>& bnd_index = grid_ref.getBoundaryIndices();
     std::vector<NodeType>& nodes = grid_ref.getNodeList(); 
 
     for (int i = 0; i < nb_bnd; i++) {
@@ -61,7 +61,7 @@ void ConvectionDiffusionPDE::enforceBoundaryConditions(std::vector<SolutionType>
 
 // Get the convection scalars/vectors for each point
 void ConvectionDiffusionPDE::fillConvection(std::vector<SolutionType>& diff, double t) {
-    for(size_t i = 0; i < diff.size(); i++) {
+    for(unsigned int i = 0; i < diff.size(); i++) {
         NodeType& pt = grid_ref.getNode(i); 
         diff[i] = exact_ptr->convectionCoefficient(pt, t);
     }
@@ -78,7 +78,7 @@ void ConvectionDiffusionPDE::assemble()
 // timestep: u(t+h) = u(t) + h*f(t,u(t))
 // For the diffusion equation this is f(t,u(t)) = laplacian(u(t))
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
-void ConvectionDiffusionPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n, double t)
+void ConvectionDiffusionPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n, double t)
 {
     std::vector<SolutionType> u_lapl_deriv(n); 
     std::vector<SolutionType> K_dot_lapl_U(n); 
@@ -94,12 +94,12 @@ void ConvectionDiffusionPDE::solve(std::vector<SolutionType>& u_t, std::vector<S
     // Get the diffusivity of the domain for at the current time
     this->fillDiffusion(diffusion, u_t, t);
 
-    for (size_t i = 0; i < n; i++) {
+    for (unsigned int i = 0; i < n; i++) {
         K_dot_lapl_U[i] = diffusion[i] * u_lapl_deriv[i]; 
     }
 
     if (uniformDiffusion) {
-        for (size_t i = 0; i < n; i++) {
+        for (unsigned int i = 0; i < n; i++) {
 #if 0
             SolutionType exact = exact_ptr->diffuseCoefficient(grid_ref.getNode(i), t) * exact_ptr->laplacian(grid_ref.getNode(i),t);
             double error = fabs(K_dot_lapl_U[i] - exact)/fabs(exact); 
@@ -128,7 +128,7 @@ void ConvectionDiffusionPDE::solve(std::vector<SolutionType>& u_t, std::vector<S
         der_ref.applyWeightsForDeriv(RBFFD::Y, diffusion, diff_y_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Z, diffusion, diff_z_deriv); 
 
-        for (size_t i = 0; i < n; i++) {
+        for (unsigned int i = 0; i < n; i++) {
             SolutionType grad_K[3] = { diff_x_deriv[i], diff_y_deriv[i], diff_z_deriv[i] }; 
             SolutionType grad_U[3] = { u_x_deriv[i], u_y_deriv[i], u_z_deriv[i] }; 
 

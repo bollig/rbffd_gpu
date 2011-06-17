@@ -6,8 +6,8 @@ void HeatPDE::setupTimers()
 }
 
 void HeatPDE::fillBoundaryConditions(ExactSolution* exact) {
-    size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
-    std::vector<size_t>& bnd_index = grid_ref.getBoundaryIndices();
+    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
+    std::vector<unsigned int>& bnd_index = grid_ref.getBoundaryIndices();
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
     boundary_values.resize(nb_bnd);
@@ -32,8 +32,8 @@ void HeatPDE::fillInitialConditions(ExactSolution* exact) {
 
 
 // Get the time dependent diffusion coeffs 
-void HeatPDE::fillDiffusion(std::vector<SolutionType>& diff, std::vector<SolutionType>& sol, double t, size_t n_nodes) {
-    for(size_t i = 0; i < n_nodes; i++) {
+void HeatPDE::fillDiffusion(std::vector<SolutionType>& diff, std::vector<SolutionType>& sol, double t, unsigned int n_nodes) {
+    for(unsigned int i = 0; i < n_nodes; i++) {
         NodeType& pt = grid_ref.getNode(i); 
         diff[i] = exact_ptr->diffuseCoefficient(pt, sol[i], t);
     }
@@ -51,7 +51,7 @@ void HeatPDE::assemble()
 // timestep: u(t+h) = u(t) + h*f(t,u(t))
 // For the diffusion equation this is f(t,u(t)) = laplacian(u(t))
 // FIXME: we are not using a time-based diffusion coefficient. YET. 
-void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t)
+void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t)
 {   
     // EFB06092011: div_grad is noticeably faster and it works. Gordon keeps
     // saying his didnt. I need to get a non-uniform test case with known exact
@@ -64,7 +64,7 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
 #endif 
 }
 
-void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t)
+void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t)
 {
     // x,y,z components of the gradient of u_t
     std::vector<SolutionType> grad_u_x(n_nodes); 
@@ -99,7 +99,7 @@ void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionT
 
     // Compute K dot grad{u}
     // FIXME: we assume scalar diffusion, make this 
-    for (size_t i = 0; i < n_nodes; i++) {
+    for (unsigned int i = 0; i < n_nodes; i++) {
         grad_u_x[i] *= diffusion[i];
         grad_u_y[i] *= diffusion[i];
         grad_u_z[i] *= diffusion[i];
@@ -111,13 +111,13 @@ void HeatPDE::solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionT
     der_ref.applyWeightsForDeriv(RBFFD::Z, grad_u_z, div_grad_u_z, true); 
 
     // Finish computing divergence
-    for (size_t i = 0; i < n_stencils; i++) {
+    for (unsigned int i = 0; i < n_stencils; i++) {
         (*f_out)[i] = div_grad_u_x[i] + div_grad_u_y[i] + div_grad_u_z[i]; 
     }
 }
 
 
-void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes,  double t)
+void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes,  double t)
 {
     std::vector<SolutionType> u_lapl_deriv(n_stencils); 
     std::vector<SolutionType> K_dot_lapl_U(n_stencils); 
@@ -144,7 +144,7 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
     // this.
     this->fillDiffusion(diffusion, u_t, t, n_nodes); //n_stencils);
 
-    for (size_t i = 0; i < n_stencils; i++) {
+    for (unsigned int i = 0; i < n_stencils; i++) {
         K_dot_lapl_U[i] = diffusion[i] * u_lapl_deriv[i]; 
     }
     
@@ -152,7 +152,7 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
     // EFB06012011
     // To compare with the div_grad version we want to avoid shortcuts
     if (uniformDiffusion) {
-        for (size_t i = 0; i < n; i++) {
+        for (unsigned int i = 0; i < n; i++) {
 #if 0
             SolutionType exact = exact_ptr->diffuseCoefficient(grid_ref.getNode(i), t) * exact_ptr->laplacian(grid_ref.getNode(i),t);
             double error = fabs(K_dot_lapl_U[i] - exact)/fabs(exact); 
@@ -186,7 +186,7 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
         der_ref.applyWeightsForDeriv(RBFFD::Y, diffusion, diff_y_deriv); 
         der_ref.applyWeightsForDeriv(RBFFD::Z, diffusion, diff_z_deriv); 
 
-        for (size_t i = 0; i < n_stencils; i++) {
+        for (unsigned int i = 0; i < n_stencils; i++) {
             SolutionType grad_K[3] = { diff_x_deriv[i], diff_y_deriv[i], diff_z_deriv[i] }; 
             SolutionType grad_U[3] = { u_x_deriv[i], u_y_deriv[i], u_z_deriv[i] }; 
 
@@ -217,8 +217,8 @@ void HeatPDE::solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vecto
 // FIXME: the PDE is not 0 on the boundary for a regular grid. 
 void HeatPDE::enforceBoundaryConditions(std::vector<SolutionType>& u_t, double t)
 {
-    size_t nb_bnd = grid_ref.getBoundaryIndicesSize(); 
-    std::vector<size_t>& bnd_index = grid_ref.getBoundaryIndices();
+    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize(); 
+    std::vector<unsigned int>& bnd_index = grid_ref.getBoundaryIndices();
     std::vector<NodeType>& nodes = grid_ref.getNodeList(); 
 
     for (int i = 0; i < nb_bnd; i++) {

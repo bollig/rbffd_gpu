@@ -52,7 +52,7 @@ class PDE : public MPISendable
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble() =0; 
         // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
-        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes) = 0;
+        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) = 0;
 
 
         // Print the current solution to STDOUT
@@ -87,7 +87,7 @@ class PDE : public MPISendable
         void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1.) {
             exact_ptr = exact;
             std::vector<NodeType>& nodes = global_grid->getNodeList();
-            std::vector<size_t>& bounds = global_grid->getBoundaryIndices();
+            std::vector<unsigned int>& bounds = global_grid->getBoundaryIndices();
 
             std::vector<SolutionType> sol(nodes.size());
             std::vector<SolutionType> exactSolution(nodes.size());
@@ -102,7 +102,7 @@ class PDE : public MPISendable
         }
 
 
-        SolutionType getLocalSolution(size_t indx) { return U_G[indx]; }
+        SolutionType getLocalSolution(unsigned int indx) { return U_G[indx]; }
 
     protected: 
         // This is intended to be overridden by GPU based classes. when called,
@@ -114,7 +114,7 @@ class PDE : public MPISendable
         virtual void getExactSolution(ExactSolution* exact, std::vector<NodeType>& nodes, std::vector<SolutionType>* exact_vec) {
             std::vector<NodeType>::iterator it; 
             (*exact_vec).resize(nodes.size());
-            size_t i = 0; 
+            unsigned int i = 0; 
             for (it = nodes.begin(); it != nodes.end(); it++, i++) {
                 //exit(-1);
                 (*exact_vec)[i] = exact->at(*it); 

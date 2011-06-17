@@ -22,7 +22,7 @@ advanceFirstOrderEuler(       \n
         __global FLOAT* solution_out\n
 )  \n
 {   \n
-    size_t i = get_global_id(0);    \n
+    uint i = get_global_id(0);    \n
 \n
     if(i < nb_stencils) {    \n
         __global int* st = stencils + i*stencil_size;\n

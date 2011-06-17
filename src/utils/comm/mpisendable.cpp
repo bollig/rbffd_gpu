@@ -1,7 +1,7 @@
 #include "mpisendable.h"
 #include <stdlib.h> 
 
-// TODO: make sure size_t send/recv works
+// TODO: make sure unsigned int send/recv works
 // TODO: send vector data without copying to buffer http://stackoverflow.com/questions/2546298/vector-usage-in-mpic
 // TODO: consider using boost serialization
 
@@ -54,26 +54,16 @@ int MPISendable::sendSTL(const std::vector<int> *origin, int myrank, int recv_ra
 
 //----------------------------------------------------------------------------
 
-int MPISendable::sendSTL(const std::vector<size_t> *origin, int myrank, int recv_rank) const 
+int MPISendable::sendSTL(const std::vector<unsigned int> *origin, int myrank, int recv_rank) const 
 {
     int sz = origin->size(); 	// All nodes for GPU
     //cout << "RANK " << my_rank << ": sending GPU size " << sz << " to RANK " << receiver_rank << endl;
     MPI_Send(&sz, 1, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
     if (sz > 0) {
-        MPI_Datatype type; 
-        // We have to check the system size_t to know what it maps to in MPI
-        if (sizeof(size_t) == sizeof(unsigned long)) {   // This is on my laptop (Evan)
-            type = MPI::UNSIGNED_LONG;
-        } else if (sizeof(size_t) == sizeof(unsigned int)) {
-            type = MPI::UNSIGNED;  
-        } else if (sizeof(size_t) == sizeof(unsigned short)) {
-            type = MPI::UNSIGNED_SHORT; 
-        } else { 
-            cout << "UNKOWN MPI_Datatype FOR SIZE_T\n";
-            exit(EXIT_FAILURE); 
-        }
-        size_t* buff = new size_t[sz]; 
+        MPI_Datatype type = MPI::UNSIGNED; 
+
+        unsigned int* buff = new unsigned int[sz]; 
         for (int i = 0; i < sz; i++) {
             buff[i] = (*origin)[i]; 
         }
@@ -163,7 +153,7 @@ int MPISendable::sendSTL(const std::map<int, int> *origin, int myrank, int recv_
 
 //----------------------------------------------------------------------------
 
-int MPISendable::sendSTL(const std::vector<std::vector<size_t> > *origin, int myrank, int recv_rank) const 
+int MPISendable::sendSTL(const std::vector<std::vector<unsigned int> > *origin, int myrank, int recv_rank) const 
 {
     int sz = origin->size(); 	// All nodes for GPU
 
@@ -175,8 +165,8 @@ int MPISendable::sendSTL(const std::vector<std::vector<size_t> > *origin, int my
 
     int totsize = 0;
     int i = 0;
-    for (std::vector<std::vector<size_t> >::const_iterator it=origin->begin(); it != origin->end(); it++, i++) {
-        const std::vector<size_t> *vint = &(*it);
+    for (std::vector<std::vector<unsigned int> >::const_iterator it=origin->begin(); it != origin->end(); it++, i++) {
+        const std::vector<unsigned int> *vint = &(*it);
         buff[i] = vint->size();
         totsize += vint->size(); 
     }
@@ -184,33 +174,21 @@ int MPISendable::sendSTL(const std::vector<std::vector<size_t> > *origin, int my
     // Send offsets into stencil buffer
     MPI_Send(&buff[0], sz, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
 
-    size_t* buff2 = new size_t[totsize]; 
+    unsigned int* buff2 = new unsigned int[totsize]; 
     int offset = 0; 
-    for (std::vector<std::vector<size_t> >::const_iterator it=origin->begin(); it != origin->end(); it++) {
-        const std::vector<size_t> *vint = &(*it);
+    for (std::vector<std::vector<unsigned int> >::const_iterator it=origin->begin(); it != origin->end(); it++) {
+        const std::vector<unsigned int> *vint = &(*it);
         for (int i = 0; i < vint->size(); i++) {
             buff2[offset + i] = (*vint)[i];
         }
         offset += vint->size(); 
     }
-    MPI_Datatype type; 
-    // We have to check the system size_t to know what it maps to in MPI
-    if (sizeof(size_t) == sizeof(unsigned long)) {   // This is on my laptop (Evan)
-        type = MPI::UNSIGNED_LONG;
-    } else if (sizeof(size_t) == sizeof(unsigned int)) {
-        type = MPI::UNSIGNED;  
-    } else if (sizeof(size_t) == sizeof(unsigned short)) {
-        type = MPI::UNSIGNED_SHORT; 
-    } else {
-        cout << "UNKNOWN MPI_Datatype for SIZE_T\n"; 
-        exit(EXIT_FAILURE); 
-    }
-
+    MPI_Datatype type = MPI::UNSIGNED; 
     // Send stencil buffer
     MPI_Send(&buff2[0], totsize, type, recv_rank, TAG, MPI_COMM_WORLD);
 
-    //  cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<size_t> > to RANK " << recv_rank << endl;
-    //  cout << "WARNING! size_t passing is not verified YET.\n";
+    //  cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<unsigned int> > to RANK " << recv_rank << endl;
+    //  cout << "WARNING! unsigned int passing is not verified YET.\n";
     delete [] buff;
     delete [] buff2;
 }
@@ -301,29 +279,17 @@ int MPISendable::sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank,
 }
 //----------------------------------------------------------------------------
 
-int MPISendable::sendSTL(const size_t *destination, int myrank, int recv_rank) const
+int MPISendable::sendSTL(const unsigned int *destination, int myrank, int recv_rank) const
 {
     MPI_Status stat; 
 
-    MPI_Datatype type; 
-    // We have to check the system size_t to know what it maps to in MPI
-    if (sizeof(size_t) == sizeof(unsigned long)) {   // This is on my laptop (Evan)
-        type = MPI::UNSIGNED_LONG;
-    } else if (sizeof(size_t) == sizeof(unsigned int)) {
-        type = MPI::UNSIGNED;  
-    } else if (sizeof(size_t) == sizeof(unsigned short)) {
-        type = MPI::UNSIGNED_SHORT; 
-    } else {
-        cout << "UNKNOWN MPI_Datatype for SIZE_T\n"; 
-        exit(EXIT_FAILURE); 
-    }
-
-    size_t buf = (*destination); 
+    MPI_Datatype type = MPI::UNSIGNED; 
+    unsigned int buf = (*destination); 
 
     // Length of set
     MPI_Send(&buf, 1, type, recv_rank, TAG, MPI_COMM_WORLD);
 
-    //  cout << "RANK " << myrank << " REPORTS: finished sending size_t (size: 1) to RANK " << recv_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: finished sending unsigned int (size: 1) to RANK " << recv_rank << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -402,7 +368,7 @@ int MPISendable::recvSTL(std::vector<int> *destination, int myrank, int sender_r
 //----------------------------------------------------------------------------
 
 // Recv int array and pack as STL::Vector.
-int MPISendable::recvSTL(std::vector<size_t> *destination, int myrank, int sender_rank)
+int MPISendable::recvSTL(std::vector<unsigned int> *destination, int myrank, int sender_rank)
 {
     MPI_Status stat; 
 
@@ -413,20 +379,8 @@ int MPISendable::recvSTL(std::vector<size_t> *destination, int myrank, int sende
     destination->resize(sz); 
 
     if (sz > 0) {
-        MPI_Datatype type; 
-        // We have to check the system size_t to know what it maps to in MPI
-        if (sizeof(size_t) == sizeof(unsigned long)) {   // This is on my laptop (Evan)
-            type = MPI::UNSIGNED_LONG;
-        } else if (sizeof(size_t) == sizeof(unsigned int)) {
-            type = MPI::UNSIGNED;  
-        } else if (sizeof(size_t) == sizeof(unsigned short)) {
-            type = MPI::UNSIGNED_SHORT; 
-        }  else {
-            cout << "UNKNOWN MPI_Datatype for SIZE_T\n"; 
-            exit(EXIT_FAILURE); 
-        }
-
-        size_t *buff = new size_t[sz];
+        MPI_Datatype type = MPI::UNSIGNED; 
+        unsigned int *buff = new unsigned int[sz];
         MPI_Recv(&buff[0], sz, type, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
         for (int i=0; i < sz; i++) {
@@ -515,7 +469,7 @@ int MPISendable::recvSTL(std::vector<Vec3> *destination, int myrank, int sender_
 
 //----------------------------------------------------------------------------
 
-int MPISendable::recvSTL(std::vector<std::vector<size_t> > *destination, int myrank, int sender_rank)
+int MPISendable::recvSTL(std::vector<std::vector<unsigned int> > *destination, int myrank, int sender_rank)
 {
     MPI_Status stat; 
 
@@ -532,21 +486,9 @@ int MPISendable::recvSTL(std::vector<std::vector<size_t> > *destination, int myr
         totsize += buff[i]; 
     }
 
-    MPI_Datatype type; 
-    // We have to check the system size_t to know what it maps to in MPI
-    if (sizeof(size_t) == sizeof(unsigned long)) {   // This is on my laptop (Evan)
-        type = MPI::UNSIGNED_LONG;
-    } else if (sizeof(size_t) == sizeof(unsigned int)) {
-        type = MPI::UNSIGNED;  
-    } else if (sizeof(size_t) == sizeof(unsigned short)) {
-        type = MPI::UNSIGNED_SHORT; 
-    }  else {
-        cout << "UNKNOWN MPI_Datatype for SIZE_T\n"; 
-        exit(EXIT_FAILURE); 
-    }
-
+    MPI_Datatype type = MPI::UNSIGNED; 
     // Raw data
-    size_t* buff2 = new size_t[totsize];
+    unsigned int* buff2 = new unsigned int[totsize];
     MPI_Recv(&buff2[0], totsize, type, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     // WARNING! THIS ERASES ALL ELEMENTS IN destination
@@ -558,7 +500,7 @@ int MPISendable::recvSTL(std::vector<std::vector<size_t> > *destination, int myr
         // accessible after leaving this routine? the push_back is supposed to call copy constructors
         // right? Just to be sure we better allocate, push the derefed mem, and delete. if we ever
         // get a double free from this then we know its not handled properly. 
-        std::vector<size_t>* temp = new std::vector<size_t>; 
+        std::vector<unsigned int>* temp = new std::vector<unsigned int>; 
         for (int j=0; j < buff[i]; j++) {
             temp->push_back(buff2[offset+j]);
         }
@@ -567,7 +509,7 @@ int MPISendable::recvSTL(std::vector<std::vector<size_t> > *destination, int myr
         delete(temp);
     }	
     //  cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;	
-    //  cout << "WARNING! size_t sending is not verified YET.\n"; 
+    //  cout << "WARNING! unsigned int sending is not verified YET.\n"; 
     delete [] buff; 
     delete [] buff2;
 }
@@ -659,27 +601,16 @@ int MPISendable::recvSTL(std::set<std::vector<Vec3> > *destination, int myrank, 
 
 //----------------------------------------------------------------------------
 
-int MPISendable::recvSTL(size_t *destination, int myrank, int sender_rank)
+int MPISendable::recvSTL(unsigned int *destination, int myrank, int sender_rank)
 {
     MPI_Status stat; 
 
-    MPI_Datatype type; 
-    // We have to check the system size_t to know what it maps to in MPI
-    if (sizeof(size_t) == sizeof(unsigned long)) {   // This is on my laptop (Evan)
-        type = MPI::UNSIGNED_LONG;
-    } else if (sizeof(size_t) == sizeof(unsigned int)) {
-        type = MPI::UNSIGNED;  
-    } else if (sizeof(size_t) == sizeof(unsigned short)) {
-        type = MPI::UNSIGNED_SHORT; 
-    }  else {
-        cout << "UNKNOWN MPI_Datatype for SIZE_T\n"; 
-        exit(EXIT_FAILURE); 
-    }
+    MPI_Datatype type = MPI::UNSIGNED; 
 
     // Length of set
     MPI_Recv(destination, 1, type, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
-    //  cout << "RANK " << myrank << " REPORTS: received size_t (size: 1) from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received unsigned int (size: 1) from RANK " << sender_rank << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -693,7 +624,7 @@ int MPISendable::recvSTL(int *destination, int myrank, int sender_rank)
     // Length of set
     MPI_Recv(destination, 1, type, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
-    //  cout << "RANK " << myrank << " REPORTS: received size_t (size: 1) from RANK " << sender_rank << endl;
+    //  cout << "RANK " << myrank << " REPORTS: received unsigned int (size: 1) from RANK " << sender_rank << endl;
 }
 
 //----------------------------------------------------------------------------

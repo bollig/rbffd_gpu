@@ -108,7 +108,7 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
 {
     //Program Setup
     int pl;
-    //size_t program_length;
+    //unsigned int program_length;
 
     std::string updated_source(kernel_source);
 
@@ -185,9 +185,9 @@ std::vector<std::string> CLBaseClass::split(const std::string &s, char delim) {
 // NOTE: if keep_substr=false we discard the delim wherever it is matched
 // if keep_substr=true we keep the delim in the substrings
 std::vector<std::string>& CLBaseClass::split(const std::string &s, const std::string delim, std::vector<std::string> &elems, bool keep_substr) {
-    size_t last_found = 0; 
-    size_t find_start = last_found; 
-    size_t found = 0;
+    unsigned int last_found = 0; 
+    unsigned int find_start = last_found; 
+    unsigned int found = 0;
     while(found != std::string::npos)
     {
         found = s.find(delim, find_start); 

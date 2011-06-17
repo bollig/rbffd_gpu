@@ -59,8 +59,8 @@ void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
 
 void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
 
-    size_t nb_stencils = grid_ref.getStencilsSize(); 
-    size_t nb_nodes = grid_ref.getNodeListSize(); 
+    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+    unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
     // backup the current solution so we can perform intermediate steps
@@ -77,7 +77,7 @@ void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
     this->solve(s, &feval1, nb_stencils, nb_nodes, cur_time); 
 
     // compute u^* = u^n + dt*lapl(u^n)
-    for (size_t i = 0; i < nb_nodes; i++) {
+    for (unsigned int i = 0; i < nb_nodes; i++) {
         NodeType& v = nodes[i];
         //printf("dt= %f, time= %f\n", dt, time);
         // FIXME: allow the use of a forcing term 
@@ -99,8 +99,8 @@ void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
 // Depends on Constructor #2 to be used so that a Domain class exists within this class.
 void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
 {
-    size_t nb_stencils = grid_ref.getStencilsSize(); 
-    size_t nb_nodes = grid_ref.getNodeListSize(); 
+    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+    unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
     std::vector<double>& original_solution = this->U_G; 
@@ -120,7 +120,7 @@ void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
     this->solve(s, &feval1, nb_stencils, nb_nodes, cur_time); 
 
     // compute u^* = u^n + dt*lapl(u^n)
-    for (size_t i = 0; i < nb_nodes; i++) {
+    for (unsigned int i = 0; i < nb_nodes; i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
@@ -139,7 +139,7 @@ void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
     this->solve(s, &feval2, nb_stencils, nb_nodes, cur_time+0.5*dt); 
 
     // Finish step for midpoint method
-    for (size_t i = 0; i < feval2.size(); i++) {
+    for (unsigned int i = 0; i < feval2.size(); i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
@@ -156,8 +156,8 @@ void TimeDependentPDE::advanceSecondOrderMidpoint(double dt)
 
 void TimeDependentPDE::advanceRungeKutta4(double dt) 
 {
-    size_t nb_stencils = grid_ref.getStencilsSize(); 
-    size_t nb_nodes = grid_ref.getNodeListSize(); 
+    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+    unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
     // backup the current solution so we can perform intermediate steps
@@ -171,7 +171,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
 
 #if 0
     this->printExpectedReceive();
-    for (size_t i = grid_ref.QmB.size(); i < s.size(); i++) {
+    for (unsigned int i = grid_ref.QmB.size(); i < s.size(); i++) {
         NodeType& v = nodes[i];
 //        printf("In to advance: (local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
     }
@@ -194,7 +194,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     this->sendrecvUpdates(k1, "k1");
 
     // ------------------- K2 ------------------------
-    for (size_t i = 0; i < nb_nodes; i++) {
+    for (unsigned int i = 0; i < nb_nodes; i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
@@ -216,7 +216,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     this->sendrecvUpdates(k2, "k2");
 
     // ------------------- K3 ------------------------
-    for (size_t i = 0; i < k2.size(); i++) {
+    for (unsigned int i = 0; i < k2.size(); i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
@@ -236,7 +236,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     this->sendrecvUpdates(k3, "k3");
 
     // ------------------- K4 ------------------------
-    for (size_t i = 0; i < k3.size(); i++) {
+    for (unsigned int i = 0; i < k3.size(); i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
@@ -258,7 +258,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // ------------------- K4 ------------------------
     // FINAL STEP: y_n+1 = y_n + 1/6 * h * (k1 + 2*k2 + 2*k3 + k4)
     //
-    for (size_t i = 0; i < k4.size(); i++) {
+    for (unsigned int i = 0; i < k4.size(); i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);

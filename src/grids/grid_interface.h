@@ -21,7 +21,7 @@ class Grid
 
         // Number of subdivisions in domain bounding box to use in each
         // direction for the cell overlay in the hash neighbor qeury 
-        size_t ns_nbx, ns_nby, ns_nbz; 
+        unsigned int ns_nbx, ns_nby, ns_nbz; 
 
     public: 
         // We allow multiple types of stencil generators (for backwards compat)
@@ -36,11 +36,11 @@ class Grid
         // Number of nodes this class is configured for. If this does not 
         // match the node_list.size() then we need to regenerate the node
         // set.
-        size_t nb_nodes; 
+        unsigned int nb_nodes; 
 
         // Maximum number of nodes to allow in a stencil (can be equal to
         // nb_nodes if we want to define a global function across a stencil)
-        size_t max_st_size; 
+        unsigned int max_st_size; 
 
         // Maximum radius allowed when searching stencil nodes
         double max_st_radius; 
@@ -58,7 +58,7 @@ class Grid
         std::vector<NodeType> node_list; 
 
         // True/False for every node: are you on the boundary?  
-        std::vector<size_t> boundary_indices; 
+        std::vector<unsigned int> boundary_indices; 
 
         // If a node is on interior the normal is assumed to be 0-vector. 
         // Nodes on boundary have a non-zero vector. 
@@ -88,8 +88,8 @@ class Grid
         // we dont have nodes sorted boundary first and want to access
         // boundary/interior only nodes. By default these are EMPTY. fill them
         // by calling partitionIndices()
-        std::set<size_t> b_indices;
-        std::set<size_t> i_indices; 
+        std::set<unsigned int> b_indices;
+        std::set<unsigned int> i_indices; 
         bool partitioned_indices;
 
         bool stencilsComputed;
@@ -107,7 +107,7 @@ class Grid
             partitioned_indices(false),
             boundary_nodes_first(false), DEBUG(0)
     {}
-        Grid(size_t num_nodes) : 
+        Grid(unsigned int num_nodes) : 
             xmin(0.), xmax(1.), 
             ymin(0.), ymax(1.), 
             zmin(0.), zmax(0.),
@@ -139,7 +139,7 @@ class Grid
 
         // SECOND MOST IMPORTANT ROUTINE: generates stencil connectivity of node_list stored in stencil_map
         void generateStencils(st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
-        void generateStencils(size_t st_max_size, st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
+        void generateStencils(unsigned int st_max_size, st_generator_t generator_choice = Grid::ST_BRUTE_FORCE);
         
         void generateStencilsBruteForce(); 
         void generateStencilsKDTree(); 
@@ -176,13 +176,13 @@ class Grid
 
         void partitionIndices(); 
         // Return the sorted set of interior and boundary nodes
-        std::set<size_t>& getSortedBoundarySet() { 
+        std::set<unsigned int>& getSortedBoundarySet() { 
             if(!partitioned_indices) { 
                 this->partitionIndices();
             }
             return b_indices; 
         } 
-        std::set<size_t>& getSortedInteriorSet() {  
+        std::set<unsigned int>& getSortedInteriorSet() {  
             if(!partitioned_indices) { 
                 this->partitionIndices();
             }
@@ -195,44 +195,44 @@ class Grid
         void setSortBoundaryNodes(int sort_boundary_first) 
         { this->boundary_nodes_first = sort_boundary_first; }
 
-        void setMaxStencilSize(size_t st_max_size) 
+        void setMaxStencilSize(unsigned int st_max_size) 
         { this->max_st_size = st_max_size; }
 
-        size_t getMaxStencilSize() 
+        unsigned int getMaxStencilSize() 
         { return this->max_st_size; }
 
-        size_t getNodeListSize() 
+        unsigned int getNodeListSize() 
         { return node_list.size(); }
 
         std::vector<NodeType>& getNodeList() 	
         { return node_list; }
 
-        NodeType& getNode(size_t indx) 	
+        NodeType& getNode(unsigned int indx) 	
         { return node_list[indx]; }
-        void setNode(size_t indx, NodeType node)
+        void setNode(unsigned int indx, NodeType node)
         { node_list[indx] = node; }
 
-        size_t getBoundaryIndicesSize() 
+        unsigned int getBoundaryIndicesSize() 
         { return boundary_indices.size();} 
-        std::vector<size_t>& getBoundaryIndices() 
+        std::vector<unsigned int>& getBoundaryIndices() 
         { return boundary_indices; } 
 
-        size_t& getBoundaryIndex(size_t indx) 
+        unsigned int& getBoundaryIndex(unsigned int indx) 
         { return boundary_indices[indx]; } 
-        void setBoundaryIndex(size_t indx, size_t boundary_indx)
+        void setBoundaryIndex(unsigned int indx, unsigned int boundary_indx)
         { boundary_indices[indx] = boundary_indx; }
 
         std::vector<Vec3>& getBoundaryNormals() 
         { return boundary_normals; }
 
-        Vec3& getBoundaryNormal(size_t indx) 
+        Vec3& getBoundaryNormal(unsigned int indx) 
         { return boundary_normals[indx]; }
-        void setBoundaryNormal(size_t indx, Vec3& normal) 
+        void setBoundaryNormal(unsigned int indx, Vec3& normal) 
         { boundary_normals[indx] = normal; }
 
-        size_t getStencilsSize() 
+        unsigned int getStencilsSize() 
         { return stencil_map.size(); }
-        size_t getStencilSize(int indx) 
+        unsigned int getStencilSize(int indx) 
         { return stencil_map[indx].size(); }
         std::vector<StencilType>& getStencils()
         { return stencil_map; }
@@ -306,7 +306,7 @@ class Grid
 
         void refreshExtents() {
             std::cout << "Updating extents" << std::endl;
-            for (size_t i = 0; i < this->getNodeListSize(); i++) {
+            for (unsigned int i = 0; i < this->getNodeListSize(); i++) {
                 NodeType& n = this->getNode(i);
                 if (n.x() < xmin) {
                     xmin = n.x(); 
@@ -329,7 +329,7 @@ class Grid
             }
         }
 
-        void setNSHashDims(size_t overlay_nbx, size_t overlay_nby, size_t overlay_nbz) {
+        void setNSHashDims(unsigned int overlay_nbx, unsigned int overlay_nby, unsigned int overlay_nbz) {
             ns_nbx = overlay_nbx; 
             ns_nby = overlay_nby; 
             ns_nbz = overlay_nbz; 
@@ -347,12 +347,12 @@ class Grid
         
     protected: 
         void writeVecToFile(std::string prefix, std::string suffix, std::vector<double> vals);
-        void resizeBoundary(size_t nb_boundary_nodes)
+        void resizeBoundary(unsigned int nb_boundary_nodes)
         {
             this->boundary_indices.resize(nb_boundary_nodes);
             this->boundary_normals.resize(nb_boundary_nodes);
         }
-        void resizeNodeList(size_t nb_pts)
+        void resizeNodeList(unsigned int nb_pts)
         {
             this->node_list.resize(nb_pts);
         }
@@ -385,7 +385,7 @@ class ltvec {
 // allow insertion sort of <distance, node_indx> pairs for std::set
 class ltdist {
     public: 
-        bool operator() (const std::pair<float,size_t> i, const std::pair<float,size_t> j)
+        bool operator() (const std::pair<float,unsigned int> i, const std::pair<float,unsigned int> j)
         {
             return i.first <= j.first; 
         }

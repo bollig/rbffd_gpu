@@ -84,14 +84,14 @@ void RBFFD_CL::loadKernel() {
 void RBFFD_CL::allocateGPUMem() {
 
     std::vector<StencilType>& stencil_map = grid_ref.getStencils();
-    size_t nb_nodes = grid_ref.getNodeListSize();
-    size_t nb_stencils = stencil_map.size();
+    unsigned int nb_nodes = grid_ref.getNodeListSize();
+    unsigned int nb_stencils = stencil_map.size();
 
     cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
 
     gpu_stencil_size = 0; 
 
-    for (size_t i = 0; i < stencil_map.size(); i++) {
+    for (unsigned int i = 0; i < stencil_map.size(); i++) {
         gpu_stencil_size += stencil_map[i].size(); 
     }
 
@@ -110,7 +110,7 @@ void RBFFD_CL::allocateGPUMem() {
 
     std::cout << "Allocating GPU memory\n"; 
 
-    size_t bytesAllocated = 0;
+    unsigned int bytesAllocated = 0;
 
     // Two input arrays: 
     // 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
@@ -132,22 +132,22 @@ void RBFFD_CL::allocateGPUMem() {
 //
 void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
     std::vector<StencilType>& stencil_map = grid_ref.getStencils();
-    size_t nb_stencils = stencil_map.size();
+    unsigned int nb_stencils = stencil_map.size();
     // TODO: queue a WriteBuffer for each stencil and pass the &vector[0] ptr. CPU should handle that
     //      better than a loop, and we dont have to allocate memory then
     int* cpu_stencils = new int[gpu_stencil_size];  
-    size_t max_stencil_size = grid_ref.getMaxStencilSize();
-    for (size_t i = 0; i < nb_stencils; i++) {
-        size_t j; 
+    unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
+    for (unsigned int i = 0; i < nb_stencils; i++) {
+        unsigned int j; 
         for (j = 0; j < stencil_map[i].size(); j++) {
-            size_t indx = i*max_stencil_size+j; 
+            unsigned int indx = i*max_stencil_size+j; 
             cpu_stencils[indx] = stencil_map[i][j];
             //std::cout << cpu_stencils[indx] << "   ";
         }
         // Buffer remainder of stencils with the stencil center (so we can
         // break on GPU when center ID is duplicated
         for (; j < max_stencil_size; j++) {
-            size_t indx = i*max_stencil_size+j; 
+            unsigned int indx = i*max_stencil_size+j; 
             cpu_stencils[indx] = stencil_map[i][0];
             //std::cout << cpu_stencils[indx] << "   ";
         }
@@ -168,12 +168,12 @@ void RBFFD_CL::clearCPUWeights() {
     // Clear out buffer. No need to keep it since this should only happen once
     // NOTE: make sure we delete only the single or double precision cpu side buffers;
     if (useDouble) {
-        for (size_t which = 0; which < NUM_DERIV_TYPES; which++) {
+        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
             delete [] cpu_weights_d[which];
         }
     } else {
 
-        for (size_t which = 0; which < NUM_DERIV_TYPES; which++) {
+        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
             delete [] cpu_weights_f[which];
         }
     }
@@ -196,8 +196,8 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
         
         std::cout << "Writing weights to GPU memory\n"; 
 
-        size_t max_stencil_size = grid_ref.getMaxStencilSize();
-        size_t nb_stencils = grid_ref.getStencilsSize();
+        unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
+        unsigned int nb_stencils = grid_ref.getStencilsSize();
 
         if ((nb_stencils * max_stencil_size) != gpu_stencil_size) {
             // Critical error between allocate and update
@@ -208,13 +208,13 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
         // Copy the std::vector<std::vector<..> > into a contiguous memory space
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost 
         // FIXME: copy more than just the 4 types of weights
-        for (size_t which = 0; which < 4; which++) {
+        for (unsigned int which = 0; which < 4; which++) {
             cpu_weights_d[which] = new double[gpu_stencil_size]; 
-            for (size_t i = 0; i < nb_stencils; i++) {
-                size_t stencil_size = grid_ref.getStencilSize(i); 
-                size_t j = 0; 
+            for (unsigned int i = 0; i < nb_stencils; i++) {
+                unsigned int stencil_size = grid_ref.getStencilSize(i); 
+                unsigned int j = 0; 
                 for (j = 0; j < stencil_size; j++) {
-                    size_t indx = i*stencil_size + j; 
+                    unsigned int indx = i*stencil_size + j; 
                     cpu_weights_d[which][indx] = (double)weights[which][i][j]; 
                     //  std::cout << cpu_weights[which][indx] << "   ";
                 }
@@ -223,7 +223,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
                 // the stencil (i.e., we can include extra terms in summation
                 // without added effect
                 for (; j < max_stencil_size; j++) {
-                    size_t indx = i*stencil_size + j; 
+                    unsigned int indx = i*stencil_size + j; 
                     cpu_weights_d[which][indx] = (double)0.;
                     //  std::cout << cpu_weights[which][indx] << "   ";
                 }
@@ -261,8 +261,8 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
         
         std::cout << "Writing weights to GPU memory\n"; 
 
-        size_t max_stencil_size = grid_ref.getMaxStencilSize();
-        size_t nb_stencils = grid_ref.getStencilsSize();
+        unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
+        unsigned int nb_stencils = grid_ref.getStencilsSize();
 
         if ((nb_stencils * max_stencil_size) != gpu_stencil_size) {
             // Critical error between allocate and update
@@ -273,13 +273,13 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
         // Copy the std::vector<std::vector<..> > into a contiguous memory space
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost 
         // FIXME: we only pass four weights to the GPU
-        for (size_t which = 0; which < 4; which++) {
+        for (unsigned int which = 0; which < 4; which++) {
             cpu_weights_f[which] = new float[gpu_stencil_size]; 
-            for (size_t i = 0; i < nb_stencils; i++) {
-                size_t stencil_size = grid_ref.getStencilSize(i); 
-                size_t j = 0; 
+            for (unsigned int i = 0; i < nb_stencils; i++) {
+                unsigned int stencil_size = grid_ref.getStencilSize(i); 
+                unsigned int j = 0; 
                 for (j = 0; j < stencil_size; j++) {
-                    size_t indx = i*stencil_size + j; 
+                    unsigned int indx = i*stencil_size + j; 
                     cpu_weights_f[which][indx] = (float)weights[which][i][j]; 
                     //  std::cout << cpu_weights[which][indx] << "   ";
                 }
@@ -288,7 +288,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
                 // the stencil (i.e., we can include extra terms in summation
                 // without added effect
                 for (; j < max_stencil_size; j++) {
-                    size_t indx = i*stencil_size + j; 
+                    unsigned int indx = i*stencil_size + j; 
                     cpu_weights_f[which][indx] = (float)0.f;
                     //  std::cout << cpu_weights[which][indx] << "   ";
                 }
@@ -321,7 +321,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
 //----------------------------------------------------------------------
 //
-void RBFFD_CL::updateFunctionDouble(size_t nb_nodes, double* u, bool forceFinish) {
+void RBFFD_CL::updateFunctionDouble(unsigned int nb_nodes, double* u, bool forceFinish) {
 
     //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
 
@@ -342,7 +342,7 @@ void RBFFD_CL::updateFunctionDouble(size_t nb_nodes, double* u, bool forceFinish
 
 //----------------------------------------------------------------------
 //
-void RBFFD_CL::updateFunctionSingle(size_t nb_nodes, double* u, bool forceFinish) {
+void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool forceFinish) {
 
     //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
 
@@ -373,7 +373,7 @@ void RBFFD_CL::updateFunctionSingle(size_t nb_nodes, double* u, bool forceFinish
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDerivDouble(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
@@ -391,8 +391,8 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, size_t nb_nodes, size_t
         kernel.setArg(1, gpu_weights[which]); 
         kernel.setArg(2, gpu_function);                 // COPY_IN
         kernel.setArg(3, gpu_deriv_out[which]);           // COPY_OUT 
-        //FIXME: we want to pass a size_t for maximum array lengths, but OpenCL does not allow
-        //size_t arguments at this time
+        //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
+        //unsigned int arguments at this time
         int nb_stencils = (int)grid_ref.getStencilsSize(); 
         kernel.setArg(4, sizeof(int), &nb_stencils);               // const 
         int stencil_size = (int)grid_ref.getMaxStencilSize(); 
@@ -443,7 +443,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, size_t nb_nodes, size_t
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDerivSingle(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 

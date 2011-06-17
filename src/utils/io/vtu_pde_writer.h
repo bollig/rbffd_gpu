@@ -91,7 +91,7 @@ class VtuPDEWriter : public PDEWriter
             pts->SetNumberOfPoints(subdomain->getNodeListSize());
 
             std::vector<NodeType>& nodes = subdomain->getNodeList(); 
-            for (size_t i = 0; i < subdomain->getNodeListSize(); i++) {
+            for (unsigned int i = 0; i < subdomain->getNodeListSize(); i++) {
                 NodeType& n = nodes[i]; 
                 pts->SetPoint(i, n.x(), n.y(), n.z()); 
             }
@@ -101,8 +101,8 @@ class VtuPDEWriter : public PDEWriter
             //            stns->SetNumberOfCells(subdomain->getStencilsSize());
             vtkCellArray* cell_array = vtkCellArray::New(); 
             vtkIdType cell_type;  
-            for (size_t i = 0; i < subdomain->getStencilsSize(); i++){
-                size_t ssize = subdomain->getStencilSize(i); 
+            for (unsigned int i = 0; i < subdomain->getStencilsSize(); i++){
+                unsigned int ssize = subdomain->getStencilSize(i); 
                 StencilType& st = subdomain->getStencil(i);
 #if 0
                 vtkPolyVertex* cell = vtkPolyVertex::New(); 

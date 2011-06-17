@@ -21,7 +21,7 @@ class EllipseCVT : public CVT {
 
     public:
         //EllipseCVT(double major_ = 1., double minor_ = 1., int DEBUG = 0);
-        EllipseCVT (size_t nb_generators, size_t dimension, Density* density_func, double major_axis, double minor_axis, size_t num_samples=2000, size_t max_num_iters=10, size_t write_freq=100, size_t sample_batch_size=1000)
+        EllipseCVT (unsigned int nb_generators, unsigned int dimension, Density* density_func, double major_axis, double minor_axis, unsigned int num_samples=2000, unsigned int max_num_iters=10, unsigned int write_freq=100, unsigned int sample_batch_size=1000)
             : CVT(nb_generators, dimension, 0, density_func, num_samples, max_num_iters, write_freq, sample_batch_size), 
             axis_major(major_axis), axis_minor(minor_axis)
     { ; }
@@ -46,8 +46,8 @@ class EllipseCVT : public CVT {
 
         /*** FOR THE BOUNDARY ***/ 
         void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
-        double computeBoundaryIntegral(Density& rho, size_t npts, std::vector<double>& intg);
-        double computeDomainIntegral(size_t npts, Density& rho);
+        double computeBoundaryIntegral(Density& rho, unsigned int npts, std::vector<double>& intg);
+        double computeDomainIntegral(unsigned int npts, Density& rho);
         void computeBoundaryPointDistribution(int dim_num, double tot_length, int npts, int nb_bnd, std::vector<double> intg, double bndry_pts[]);
 
         /*** FOR FILE NAMES: ***/ 

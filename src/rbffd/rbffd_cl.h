@@ -24,17 +24,17 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         // Total size of the gpu-stencils buffer. This should also be the size
         // of a single element of gpu_weights array. 
-        size_t gpu_stencil_size; 
+        unsigned int gpu_stencil_size; 
 
         // number of bytes for: 
         //      - gpu_stencils
         //      - gpu_deriv_out[ i ]
         //      - gpu_weights[ i ]
         //      - gpu_function
-        size_t stencil_mem_bytes;
-        size_t deriv_mem_bytes;
-        size_t weights_mem_bytes;
-        size_t function_mem_bytes;
+        unsigned int stencil_mem_bytes;
+        unsigned int deriv_mem_bytes;
+        unsigned int weights_mem_bytes;
+        unsigned int function_mem_bytes;
 
         // Is a double precision extension available on the unit? 
         bool useDouble; 
@@ -79,11 +79,11 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // Apply weights to an input solution vector and get the corresponding derivatives out
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             std::cout << "[RBFFD_CL] Warning! Using GPU to apply weights, but NOT advance timestep\n";
-            size_t nb_stencils = grid_ref.getStencilsSize();
+            unsigned int nb_stencils = grid_ref.getStencilsSize();
             deriv.resize(nb_stencils); 
             applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
         }
-        virtual void applyWeightsForDeriv(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true) {
+        virtual void applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true) {
             if (useDouble) {
                 this->applyWeightsForDerivDouble(which, nb_nodes, nb_stencils, u, deriv, isChangedU);
             } else {
@@ -91,9 +91,9 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             }
         }
 
-        virtual void applyWeightsForDerivDouble(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
-        virtual void applyWeightsForDerivSingle(DerType which, size_t nb_nodes, size_t nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
         // forceFinish ==> should we fire a queue.finish() and make sure all
         // tasks are completed (synchronously) before returning
@@ -104,7 +104,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             if (useDouble) { updateWeightsDouble(forceFinish); 
             } else { updateWeightsSingle(forceFinish); }
         }
-        void updateFunctionOnGPU(size_t nb_nodes, double* u, bool forceFinish)
+        void updateFunctionOnGPU(unsigned int nb_nodes, double* u, bool forceFinish)
         { 
             if (useDouble) { updateFunctionDouble(nb_nodes, u, forceFinish); 
             } else { updateFunctionSingle(nb_nodes, u, forceFinish); }
@@ -121,8 +121,8 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         void updateWeightsDouble(bool forceFinish);
         void updateWeightsSingle(bool forceFinish);
-        void updateFunctionDouble(size_t nb_nodes, double* u, bool forceFinish);
-        void updateFunctionSingle(size_t nb_nodes, double* u, bool forceFinish);
+        void updateFunctionDouble(unsigned int nb_nodes, double* u, bool forceFinish);
+        void updateFunctionSingle(unsigned int nb_nodes, double* u, bool forceFinish);
 };
 
 #endif 

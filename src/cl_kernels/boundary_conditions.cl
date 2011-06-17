@@ -11,7 +11,7 @@ enforceBoundaryConditions(
                    float cur_time \n
 )  \n
 {   \n
-    size_t i = get_global_id(0);    \n
+    uint i = get_global_id(0);    \n
 \n
     if(i < nb_bnd) {    \n
         int j = bndry_indices[i];

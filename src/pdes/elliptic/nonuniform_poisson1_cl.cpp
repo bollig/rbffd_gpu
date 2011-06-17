@@ -281,7 +281,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         }
 
         double max_rel_err = 0.0; 
-        size_t max_rel_err_indx = 0;
+        unsigned int max_rel_err_indx = 0;
         //error_host = x_host - exact_host;
         for (int i = 0; i < nb+ni; i++) {
             error_host[i] = fabs(x_host[i] - exact_host[i]);

@@ -40,7 +40,7 @@ class TimeDependentPDE : public PDE
         //  are required), then archive the original solution and any subsequent
         //  buffers and overwrite the final solution at the end of the routine.
         virtual void advance(TimeScheme which, double delta_t);
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t)=0;
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t)=0;
 
         // If we use an explicit scheme we can enforce boundaries here
         // Else, leave this routine empty for implicit and enforce boundaries
@@ -55,13 +55,13 @@ class TimeDependentPDE : public PDE
             end_time = end;
         } 
 
-        virtual SolutionType getExactSolution(size_t indx) {
+        virtual SolutionType getExactSolution(unsigned int indx) {
             NodeType& pt = grid_ref.getNode(indx); 
             SolutionType ex = exact_ptr->at(pt, cur_time); 
             return ex;
         }
 
-        virtual SolutionType getAbsoluteError(size_t indx) {
+        virtual SolutionType getAbsoluteError(unsigned int indx) {
             NodeType& pt = grid_ref.getNode(indx); 
             SolutionType ex = exact_ptr->at(pt, cur_time); 
             SolutionType app = this->getLocalSolution(indx);
@@ -69,7 +69,7 @@ class TimeDependentPDE : public PDE
             return l2norm(ex - app);
         }
 
-        virtual SolutionType getRelativeError(size_t indx) {
+        virtual SolutionType getRelativeError(unsigned int indx) {
             NodeType& pt = grid_ref.getNode(indx); 
             SolutionType ex = exact_ptr->at(pt, cur_time); 
             SolutionType app = this->getLocalSolution(indx);
@@ -78,7 +78,7 @@ class TimeDependentPDE : public PDE
             return rel;
         }
  
-        virtual SolutionType getDiffusivityAtNode(size_t indx) {
+        virtual SolutionType getDiffusivityAtNode(unsigned int indx) {
             NodeType& pt = grid_ref.getNode(indx); 
             SolutionType app = this->getLocalSolution(indx);
 
@@ -107,14 +107,14 @@ class TimeDependentPDE : public PDE
         virtual void getExactSolution(ExactSolution* exact, std::vector<NodeType>& nodes, std::vector<SolutionType>* exact_vec) {
             std::vector<NodeType>::iterator it; 
             exact_vec->resize(nodes.size());
-            size_t i = 0; 
+            unsigned int i = 0; 
             for (it = nodes.begin(); it != nodes.end(); it++, i++) {
                 (*exact_vec)[i] = exact->at(*it, cur_time); 
             }
         }
 
        // We'll hide this routine because we want one based on time (see above)
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes) { std::cout << "ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) { std::cout << "ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
 
 
 };

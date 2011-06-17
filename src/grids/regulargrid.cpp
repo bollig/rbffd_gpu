@@ -66,11 +66,11 @@ void RegularGrid::generate() {
     this->boundary_indices.clear();
     this->boundary_normals.clear();
 
-    size_t count = 0;
+    unsigned int count = 0;
 
-    for (size_t i = 0; i < nx; i++) {
-        for (size_t j = 0; j < ny; j++) {
-            for (size_t k = 0; k < nz; k++) {
+    for (unsigned int i = 0; i < nx; i++) {
+        for (unsigned int j = 0; j < ny; j++) {
+            for (unsigned int k = 0; k < nz; k++) {
 
                 // Pert defined in Grid::
                 double x = xmin + i * dx;

@@ -34,12 +34,12 @@ class HeatPDE : public TimeDependentPDE
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
         virtual void fillBoundaryConditions(ExactSolution* exact=NULL);
 
-        virtual void fillDiffusion(std::vector<SolutionType>& diff, std::vector<SolutionType>& sol, double t, size_t n_nodes);
+        virtual void fillDiffusion(std::vector<SolutionType>& diff, std::vector<SolutionType>& sol, double t, unsigned int n_nodes);
 
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble(); 
         // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t);
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t);
 
         virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t);
 
@@ -50,8 +50,8 @@ class HeatPDE : public TimeDependentPDE
         void setupTimers(); 
 
     protected: 
-        void solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t);
-        void solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, size_t n_stencils, size_t n_nodes, double t);
+        void solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t);
+        void solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t);
 
         virtual std::string className() {return "heat";}
 }; 

@@ -123,7 +123,7 @@ class Domain : public Grid, public MPISendable
 
 
         // Fill this Domains stencil and position sets based on the global set of RBF centers and stencils. 
-        void fillLocalData(std::vector<NodeType>& rbf_centers, std::vector<StencilType>& stencil, std::vector<size_t>& boundary, std::vector<double>& avg_dist, std::vector<double>& max_dist, std::vector<double>& min_dist);
+        void fillLocalData(std::vector<NodeType>& rbf_centers, std::vector<StencilType>& stencil, std::vector<unsigned int>& boundary, std::vector<double>& avg_dist, std::vector<double>& max_dist, std::vector<double>& min_dist);
 
         // Append to O_by_rank (find what subset of O is needed by rank subdomain_rank)
         void fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank); 
@@ -250,7 +250,7 @@ class Domain : public Grid, public MPISendable
 
         // Print contents of a set
         void printVector(const std::vector<double>& stencil_radii, std::string set_label) ; 
-        void printVector(const std::vector<size_t>& center_set, std::string set_label) ; 
+        void printVector(const std::vector<unsigned int>& center_set, std::string set_label) ; 
         void printVectorL2G(const std::vector<int>& center_set, std::string set_label) ; 
         void printVectorG2L(const std::vector<int>& center_set, std::string set_label) ; 
 
@@ -271,7 +271,7 @@ class Domain : public Grid, public MPISendable
         bool isInSet(const int center, const std::set<int>& center_set) const;
 
         // Determine if a center is member of a vector (center is global index)
-        bool isInVector(const size_t center, const std::vector<size_t>& center_set) const;
+        bool isInVector(const unsigned int center, const std::vector<unsigned int>& center_set) const;
 };
 
 #endif

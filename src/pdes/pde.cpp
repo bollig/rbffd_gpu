@@ -289,8 +289,8 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
     set<int>::iterator qit;
     int i = 0;
     for (qit = remoteQ.begin(); qit != remoteQ.end(); qit++, i++) {
-        size_t l_indx = i; 
-        size_t g_indx = *qit;
+        unsigned int l_indx = i; 
+        unsigned int g_indx = *qit;
         global_U_G[g_indx] = remoteU_Q[l_indx]; 
     }
 
@@ -309,8 +309,8 @@ int PDE::initFinal() {
     set<int>::iterator qit;
     int i = 0;
     for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
-        size_t l_indx = grid_ref.g2l(*qit); 
-        size_t g_indx = *qit;
+        unsigned int l_indx = grid_ref.g2l(*qit); 
+        unsigned int g_indx = *qit;
         global_U_G[g_indx] = U_G[l_indx]; 
     }
 }
@@ -320,8 +320,8 @@ int PDE::updateFinal() {
     set<int>::iterator qit;
     int i = 0;
     for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
-        size_t l_indx = grid_ref.g2l(*qit); 
-        size_t g_indx = *qit;
+        unsigned int l_indx = grid_ref.g2l(*qit); 
+        unsigned int g_indx = *qit;
         global_U_G[g_indx] = U_G[l_indx]; 
     }
     std::cout << "GLOBAL_U_G.size() = " << global_U_G.size() << std::endl;
@@ -349,7 +349,7 @@ void PDE::getGlobalSolution(std::vector<double> *final) {
     // output vector and we're done.
     map<int, double>::iterator it;
     final->resize(global_U_G.size());
-    size_t i = 0; 
+    unsigned int i = 0; 
     for (it = global_U_G.begin(); it != global_U_G.end(); it++, i++) {
         (*final)[i] = (*it).second;
     }
@@ -375,16 +375,16 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
 //----------------------------------------------------------------------
 
     struct ltclass {
-        bool operator() (size_t i, size_t j) { return (i<j); }
+        bool operator() (unsigned int i, unsigned int j) { return (i<j); }
     } srtobject; 
 
 
 void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, Grid& grid, double rel_err_max)
 {
-    std::set<size_t>& b_indices = grid.getSortedBoundarySet();
-    std::set<size_t>& i_indices = grid.getSortedInteriorSet(); 
-    size_t nb_bnd = b_indices.size();
-    size_t nb_int = i_indices.size();
+    std::set<unsigned int>& b_indices = grid.getSortedBoundarySet();
+    std::set<unsigned int>& i_indices = grid.getSortedInteriorSet(); 
+    unsigned int nb_bnd = b_indices.size();
+    unsigned int nb_int = i_indices.size();
     int nb_centers = grid.getNodeListSize();
     int nb_stencils = grid.getStencilsSize();
 
@@ -405,7 +405,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
     std::vector<double> sol_vec_int_no_bnd;
     std::vector<double> sol_exact_int_no_bnd;
 
-    std::set<size_t>::iterator it;
+    std::set<unsigned int>::iterator it;
     int i = 0;
     for (it = b_indices.begin(); it != b_indices.end(); it++, i++) { 
         int j = *it;
@@ -431,8 +431,8 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 #endif 
             // does the stencil contain any nodes that are on the boundary?
             bool dep_boundary = false; 
-            for (size_t sz = 0; sz < st.size(); sz ++) {
-                for(std::set<size_t>::iterator bit = b_indices.begin(); bit != b_indices.end(); bit++) 
+            for (unsigned int sz = 0; sz < st.size(); sz ++) {
+                for(std::set<unsigned int>::iterator bit = b_indices.begin(); bit != b_indices.end(); bit++) 
                 {
                     if (st[sz] == *bit){
                         dep_boundary=true;
@@ -474,7 +474,7 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
 #define COMPONENTWISE_ERR 0
 #if COMPONENTWISE_ERR
     double comp_sum; 
-    for (size_t i=0; i < nb_pts; i++) {
+    for (unsigned int i=0; i < nb_pts; i++) {
         double abserr = fabs(sol_vec[i] - sol_exact[i]); 
         double relerr = (fabs(sol_exact[i]) > 1e-10) ? abserr / fabs(sol_exact[i]) : 0.;
         std::cout <<  "AbsErr[" << i << "] = " << abserr << "\t" << sol_exact[i] << "\t";

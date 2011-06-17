@@ -51,7 +51,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         
         // This will apply the weights appropriately for an explicit (del_u =
         // L*u) or implicit (u = L^-1 del_u)
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, size_t n, double t) {
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n, double t) {
             // We done actually solve independent from the time stepper. The
             // stepper will internally call to a GPU device kernel to apply the
             // DM and "solve" 
@@ -71,7 +71,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         virtual void setupTimers(); 
 
         void swap(int& a, int& b) { int temp = a; a = b; b = temp; }
-        size_t getFloatSize() { if (useDouble) { return sizeof(double); } return sizeof(float); }
+        unsigned int getFloatSize() { if (useDouble) { return sizeof(double); } return sizeof(float); }
 
     protected: 
         virtual std::string className() {return "heat_cl";}

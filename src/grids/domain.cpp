@@ -277,7 +277,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
  //   printf("NB_STENCILS: %d\n", stencils.size());
 
     // Generate sets Q and D
-    for (size_t i = 0; i < rbf_centers.size(); i++) {
+    for (unsigned int i = 0; i < rbf_centers.size(); i++) {
         NodeType& pt = rbf_centers[i];
         if (this->isInsideSubdomain(pt)) {
             Q.insert(i);
@@ -291,7 +291,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
         depR = 0;
 //        std::cout << "begin stencil" << std::endl;
         for (int j = 1; j < st.size(); j++) { // Check all nodes in corresponding stencil
-            size_t indx = st[j];
+            unsigned int indx = st[j];
             NodeType& pt2 = rbf_centers[indx];
 //            std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2) << std::endl;
             // If any stencil node is outside the domain, then set this to true
@@ -372,7 +372,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 }
 
 //----------------------------------------------------------------------
-void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<size_t>& boundary, vector<double>& avg_dist, vector<double>& max_dist, vector<double>& min_dist) {
+void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<unsigned int>& boundary, vector<double>& avg_dist, vector<double>& max_dist, vector<double>& min_dist) {
     
     // Generate stencil membership lists (i.e., which set each stencil center belongs to)
     this->fillCenterSets(rbf_centers, stencil);
@@ -587,9 +587,9 @@ bool Domain::isInSet(const int center, const set<int>& center_set) const {
     return false;
 }
 
-bool Domain::isInVector(const size_t center, const vector<size_t>& center_set) const {
+bool Domain::isInVector(const unsigned int center, const vector<unsigned int>& center_set) const {
     //bool inSet = false;
-    for (vector<size_t>::const_iterator setiter = center_set.begin(); setiter
+    for (vector<unsigned int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++) {
         // True -> stencil[i][j] is in center set
         if (center == *setiter) {
@@ -652,10 +652,10 @@ void Domain::printVector(const vector<double>& stencil_radii, std::string set_la
     cout << "}" << endl;
 }
 
-void Domain::printVector(const vector<size_t>& center_set, std::string set_label) {
+void Domain::printVector(const vector<unsigned int>& center_set, std::string set_label) {
     cout << set_label << " = {" << endl;
     int i = 0;
-    for (vector<size_t>::const_iterator setiter = center_set.begin(); setiter
+    for (vector<unsigned int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
         if (loc_to_glob.size() > 0) {
@@ -670,7 +670,7 @@ void Domain::printVector(const vector<size_t>& center_set, std::string set_label
 
 void Domain::printVectorL2G(const vector<int>& center_set, std::string set_label) {
     cout << set_label << " = {" << endl;
-    size_t i = 0;
+    unsigned int i = 0;
     for (vector<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
@@ -680,7 +680,7 @@ void Domain::printVectorL2G(const vector<int>& center_set, std::string set_label
 }
 void Domain::printVectorG2L(const vector<int>& center_set, std::string set_label) {
     cout << set_label << " = {" << endl;
-    size_t i = 0;
+    unsigned int i = 0;
     for (vector<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set

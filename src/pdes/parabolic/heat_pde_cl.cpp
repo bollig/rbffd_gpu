@@ -16,8 +16,8 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
     this->sendrecvUpdates(U_G, "U_G");
 
-    size_t nb_nodes = grid_ref.G.size();
-    size_t solution_mem_bytes = nb_nodes*this->getFloatSize(); 
+    unsigned int nb_nodes = grid_ref.G.size();
+    unsigned int solution_mem_bytes = nb_nodes*this->getFloatSize(); 
    
     std::vector<double> diffusivity(nb_nodes, 0.);
 
@@ -38,7 +38,7 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
         float* U_G_f = new float[nb_nodes];
         float* diffusivity_f = new float[nb_nodes];
-        for (size_t i = 0; i < nb_nodes; i++) {
+        for (unsigned int i = 0; i < nb_nodes; i++) {
             U_G_f[i] = (float)U_G[i];
             diffusivity_f[i] = (float)diffusivity[i];
         }
@@ -52,11 +52,11 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
     }
    
-    // FIXME: change all size_t to int. Or unsigned int. Size_t is not supported by GPU.
-    size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
+    // FIXME: change all unsigned int to int. Or unsigned int. Size_t is not supported by GPU.
+    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
     int* bindices = new int[nb_bnd]; 
-    // Would be unnec. if indices were in int instead of size_t
-    for (size_t i =0; i < nb_bnd; i++) {
+    // Would be unnec. if indices were in int instead of unsigned int
+    for (unsigned int i =0; i < nb_bnd; i++) {
         bindices[i] = grid_ref.getBoundaryIndex(i);
     }
     err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_TRUE, 0, nb_bnd*sizeof(int), &bindices[0], NULL, &event);
@@ -140,19 +140,19 @@ void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
 }
 
 void HeatPDE_CL::syncSetRSingle() {
-    size_t nb_nodes = grid_ref.getNodeListSize();
-    size_t set_G_size = grid_ref.G.size();
-    size_t set_Q_size = grid_ref.Q.size(); 
-    size_t set_R_size = grid_ref.R.size();
+    unsigned int nb_nodes = grid_ref.getNodeListSize();
+    unsigned int set_G_size = grid_ref.G.size();
+    unsigned int set_Q_size = grid_ref.Q.size(); 
+    unsigned int set_R_size = grid_ref.R.size();
 
-    size_t float_size = this->getFloatSize();
+    unsigned int float_size = this->getFloatSize();
 
     // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
-    size_t offset_to_set_R = set_Q_size;
+    unsigned int offset_to_set_R = set_Q_size;
 
-    size_t solution_mem_bytes = set_G_size*float_size; 
-    size_t set_R_bytes = set_R_size * float_size;
+    unsigned int solution_mem_bytes = set_G_size*float_size; 
+    unsigned int set_R_bytes = set_R_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
     std::vector<float> r_update_f(set_R_size,-1.); //= this->U_G; 
@@ -175,19 +175,19 @@ void HeatPDE_CL::syncSetRSingle() {
 
 
 void HeatPDE_CL::syncSetRDouble() {
-    size_t nb_nodes = grid_ref.getNodeListSize();
-    size_t set_G_size = grid_ref.G.size();
-    size_t set_Q_size = grid_ref.Q.size(); 
-    size_t set_R_size = grid_ref.R.size();
+    unsigned int nb_nodes = grid_ref.getNodeListSize();
+    unsigned int set_G_size = grid_ref.G.size();
+    unsigned int set_Q_size = grid_ref.Q.size(); 
+    unsigned int set_R_size = grid_ref.R.size();
 
-    size_t float_size = this->getFloatSize();
+    unsigned int float_size = this->getFloatSize();
 
     // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
-    size_t offset_to_set_R = set_Q_size;
+    unsigned int offset_to_set_R = set_Q_size;
 
-    size_t solution_mem_bytes = set_G_size*float_size; 
-    size_t set_R_bytes = set_R_size * float_size;
+    unsigned int solution_mem_bytes = set_G_size*float_size; 
+    unsigned int set_R_bytes = set_R_size * float_size;
 
     if (set_R_size > 0) {
 
@@ -201,19 +201,19 @@ void HeatPDE_CL::syncSetRDouble() {
 }
 
 void HeatPDE_CL::syncSetOSingle() {
-    size_t nb_nodes = grid_ref.getNodeListSize();
-    size_t set_G_size = grid_ref.G.size();
-    size_t set_Q_size = grid_ref.Q.size(); 
-    size_t set_O_size = grid_ref.O.size();
+    unsigned int nb_nodes = grid_ref.getNodeListSize();
+    unsigned int set_G_size = grid_ref.G.size();
+    unsigned int set_Q_size = grid_ref.Q.size(); 
+    unsigned int set_O_size = grid_ref.O.size();
 
-    size_t float_size = this->getFloatSize();
+    unsigned int float_size = this->getFloatSize();
 
     // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
-    size_t offset_to_set_O = (set_Q_size - set_O_size);
+    unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-    size_t solution_mem_bytes = set_G_size*float_size; 
-    size_t set_O_bytes = set_O_size * float_size;
+    unsigned int solution_mem_bytes = set_G_size*float_size; 
+    unsigned int set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
     std::vector<float> o_update_f(set_O_size,1.);
@@ -228,7 +228,7 @@ void HeatPDE_CL::syncSetOSingle() {
 
         // NOTE: this is only required because we're calling a single precision
         // kernel 
-        for (size_t i = 0; i < set_O_size; i++) {
+        for (unsigned int i = 0; i < set_O_size; i++) {
         //    std::cout << "output u[" << i << "(global: " << grid_ref.l2g(offset_to_set_O+i) << ")] = " << U_G[offset_to_set_O + i] << "\t" << o_update_f[i] << std::endl;
             U_G[offset_to_set_O + i] = (double) o_update_f[i];
         }
@@ -237,19 +237,19 @@ void HeatPDE_CL::syncSetOSingle() {
 
 
 void HeatPDE_CL::syncSetODouble() {
-    size_t nb_nodes = grid_ref.getNodeListSize();
-    size_t set_G_size = grid_ref.G.size();
-    size_t set_Q_size = grid_ref.Q.size(); 
-    size_t set_O_size = grid_ref.O.size();
+    unsigned int nb_nodes = grid_ref.getNodeListSize();
+    unsigned int set_G_size = grid_ref.G.size();
+    unsigned int set_Q_size = grid_ref.Q.size(); 
+    unsigned int set_O_size = grid_ref.O.size();
 
-    size_t float_size = this->getFloatSize();
+    unsigned int float_size = this->getFloatSize();
 
     // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
-    size_t offset_to_set_O = (set_Q_size - set_O_size);
+    unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-    size_t solution_mem_bytes = set_G_size*float_size; 
-    size_t set_O_bytes = set_O_size * float_size;
+    unsigned int solution_mem_bytes = set_G_size*float_size; 
+    unsigned int set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
     std::vector<float> o_update_f(set_O_size,1.);
@@ -347,8 +347,8 @@ void HeatPDE_CL::launchEulerKernel( double dt ) {
 }
 
 void HeatPDE_CL::syncCPUtoGPU() {
-    size_t nb_nodes = grid_ref.getNodeListSize();
-    size_t solution_mem_bytes = nb_nodes * this->getFloatSize();
+    unsigned int nb_nodes = grid_ref.getNodeListSize();
+    unsigned int solution_mem_bytes = nb_nodes * this->getFloatSize();
 
     if (useDouble) {
         err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
@@ -356,7 +356,7 @@ void HeatPDE_CL::syncCPUtoGPU() {
         float* U_G_f = new float[nb_nodes]; 
         err = queue.enqueueReadBuffer(gpu_solution[INDX_OUT], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
 
-        for (size_t i = 0; i < nb_nodes; i++) {
+        for (unsigned int i = 0; i < nb_nodes; i++) {
 #if 0
             double diff = fabs( U_G[i] - U_G_f[i] ); 
             if (diff > 1e-4) {
@@ -465,15 +465,15 @@ void HeatPDE_CL::loadEulerKernel(std::string& local_sources) {
 //
 void HeatPDE_CL::allocateGPUMem() {
 #if 1
-    size_t nb_nodes = grid_ref.getNodeListSize();
-    size_t nb_stencils = grid_ref.getStencilsSize();
-    size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
+    unsigned int nb_nodes = grid_ref.getNodeListSize();
+    unsigned int nb_stencils = grid_ref.getStencilsSize();
+    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
     cout << "Allocating GPU memory for HeatPDE\n";
 
-    size_t solution_mem_bytes = nb_nodes * this->getFloatSize();
+    unsigned int solution_mem_bytes = nb_nodes * this->getFloatSize();
 
-    size_t bytesAllocated = 0;
+    unsigned int bytesAllocated = 0;
 
     gpu_solution[INDX_IN] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
     bytesAllocated += solution_mem_bytes; 

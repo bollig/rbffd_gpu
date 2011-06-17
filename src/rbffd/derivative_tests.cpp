@@ -9,7 +9,7 @@ using namespace std;
 
 // Struct to sort indices for the boundary below
 struct indxltclass {
-    bool operator() (size_t i, size_t j) { return (i<j); }
+    bool operator() (unsigned int i, unsigned int j) { return (i<j); }
 } srter; 
 
 //----------------------------------------------------------------------
@@ -20,7 +20,7 @@ struct indxltclass {
 // relative error it should be safe to assume we can adequately approximate
 // a laplacian and other linear differential operators for our PDEs.
 //----------------------------------------------------------------------
-void DerivativeTests::testAllFunctions(bool exitIfTestFails, size_t nb_stencils_to_test) {
+void DerivativeTests::testAllFunctions(bool exitIfTestFails, unsigned int nb_stencils_to_test) {
 
     this->testInterpolation(nb_stencils_to_test, exitIfTestFails);
 
@@ -62,9 +62,9 @@ void DerivativeTests::testAllFunctions(bool exitIfTestFails, size_t nb_stencils_
 //  this will check that our GPU precision is sufficiently close to the 
 //  CPU for our computation to proceed.
 //----------------------------------------------------------------------
-void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
-    size_t nb_centers = grid->getNodeListSize(); 
-    size_t nb_stencils = grid->getStencilsSize(); 
+void DerivativeTests::compareGPUandCPUDerivs(unsigned int nb_stencils_to_test) {
+    unsigned int nb_centers = grid->getNodeListSize(); 
+    unsigned int nb_stencils = grid->getStencilsSize(); 
 
     // If nb_stencils_to_test is 0 we stick with the original assumption we're
     // going to check all stencils
@@ -78,7 +78,7 @@ void DerivativeTests::compareGPUandCPUDerivs(size_t nb_stencils_to_test) {
 
 #if 1
     // We could also check a derivative function like in our test_deriv routines
-    for (size_t i = 0; i < nb_centers; i++) {
+    for (unsigned int i = 0; i < nb_centers; i++) {
         NodeType& node_r = grid->getNode(i); 
         NodeType center(0.,0.,0.); 
         u[i] =  sin((node_r-center).magnitude()); 
@@ -158,7 +158,7 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
 //----------------------------------------------------------------------
 // Use weights to perform interpolation and determine if the weights are "good
 // enough" for approximation
-void DerivativeTests::testInterpolation(size_t nb_stencils_to_test, bool exitIfTestFails) {
+void DerivativeTests::testInterpolation(unsigned int nb_stencils_to_test, bool exitIfTestFails) {
 
     // 1) Get weights for RBFs :w
     //
@@ -172,13 +172,13 @@ void DerivativeTests::testInterpolation(size_t nb_stencils_to_test, bool exitIfT
 // Compare the analytic and approximate derivatives and assess the
 // viability of the RBFFD stencils and weights for PDE solution.
 // NOTE: if nb_stencils_to_test is 0 then we check all stencils
-void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test, bool exitIfTestFails)
+void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, unsigned int nb_stencils_to_test, bool exitIfTestFails)
 {
     // Use a std::set because it auto sorts as we insert
-    std::set<size_t>& b_indices = grid->getSortedBoundarySet();
-    std::set<size_t>& i_indices = grid->getSortedInteriorSet(); 
-    size_t nb_bnd = b_indices.size();
-    size_t nb_int = i_indices.size();
+    std::set<unsigned int>& b_indices = grid->getSortedBoundarySet();
+    std::set<unsigned int>& i_indices = grid->getSortedInteriorSet(); 
+    unsigned int nb_bnd = b_indices.size();
+    unsigned int nb_int = i_indices.size();
     int nb_centers = grid->getNodeListSize();
     int nb_stencils = grid->getStencilsSize();
 
@@ -237,7 +237,7 @@ void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, 
     std::vector<double> avgDist_bnd(nb_bnd); 
     std::vector<double> avgDist_int(nb_int); 
    
-    std::set<size_t>::iterator it;
+    std::set<unsigned int>::iterator it;
     int i = 0;
     for (it = b_indices.begin(); it != b_indices.end(); it++, i++) { 
         int j = *it;
@@ -435,7 +435,7 @@ void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, 
 
 //----------------------------------------------------------------------
 //
-void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils, size_t nb_centers, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
+void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, unsigned int nb_stencils, unsigned int nb_centers, vector<double>& u, vector<double>& dux_ex, vector<double>& duy_ex,
         vector<double>& dulapl_ex)
 {
 #if 0
@@ -897,7 +897,7 @@ void DerivativeTests::checkXDerivatives(Derivative& der, Grid& grid)
 #endif
 
     // boundary points
-    vector<size_t>& boundary = grid.getBoundaryIndices();
+    vector<unsigned int>& boundary = grid.getBoundaryIndices();
     for (int ib=0; ib < boundary.size(); ib++) {
         int i = boundary[ib];
         StencilType& st = stencil[i];

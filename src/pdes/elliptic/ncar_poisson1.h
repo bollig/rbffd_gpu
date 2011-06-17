@@ -15,7 +15,7 @@ class NCARPoisson1
         std::vector<double> sol[2];
 
         std::vector<Vec3>* rbf_centers;
-        std::vector<size_t>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
+        std::vector<unsigned int>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
 
         Grid* subdomain;
         RBFFD* der;

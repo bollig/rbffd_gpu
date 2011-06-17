@@ -34,7 +34,7 @@ void Grid::writeToFile(std::string filename) {
     std::ofstream fout(filename.c_str()); 
 
     if (fout.is_open()) {
-        for (size_t i = 0; i < node_list.size(); i++) {
+        for (unsigned int i = 0; i < node_list.size(); i++) {
             fout << node_list[i] << std::endl; 
         }
     } else {
@@ -65,7 +65,7 @@ void Grid::writeBoundaryToFile(std::string filename) {
     std::ofstream fout(fname.c_str()); 
 
     if (fout.is_open()) {
-        for (size_t i = 0; i < boundary_indices.size(); i++) {
+        for (unsigned int i = 0; i < boundary_indices.size(); i++) {
             fout << boundary_indices[i] << std::endl; 
         }
     } else {
@@ -84,7 +84,7 @@ void Grid::writeNormalsToFile(std::string filename) {
     std::ofstream fout(fname.c_str()); 
 
     if (fout.is_open()) {
-        for (size_t i = 0; i < boundary_normals.size(); i++) {
+        for (unsigned int i = 0; i < boundary_normals.size(); i++) {
             fout << boundary_normals[i] << std::endl; 
         }
     } else {
@@ -111,7 +111,7 @@ void Grid::writeVecToFile(std::string filename_prefix, std::string filename_suff
 //    fout.precision( 15 );   // Try 15 first. Double should be able to go up to 17
 #endif 
     if (fout.is_open()) {
-        for (size_t i = 0; i < avg_stencil_radii.size(); i++) {
+        for (unsigned int i = 0; i < avg_stencil_radii.size(); i++) {
             fout << vec_to_write[i] << std::endl; 
         }
     } else {
@@ -150,9 +150,9 @@ void Grid::writeStencilsToFile(std::string filename) {
         std::ofstream fout(fname.c_str()); 
 
         if (fout.is_open()) {
-            for (size_t i = 0; i < stencil_map.size(); i++) {
+            for (unsigned int i = 0; i < stencil_map.size(); i++) {
                 fout << stencil_map[i].size(); 
-                for (size_t j=0; j < stencil_map[i].size(); j++) {
+                for (unsigned int j=0; j < stencil_map[i].size(); j++) {
                     fout << " " << stencil_map[i][j];
                 }
                 fout << std::endl;
@@ -260,7 +260,7 @@ int Grid::loadBoundaryFromFile(std::string filename) {
     if (fin.is_open()) {
         boundary_indices.clear(); 
         while (fin.good()) {
-            size_t indx; 
+            unsigned int indx; 
             fin >> indx; 
             if (!fin.eof()) {
                 boundary_indices.push_back(indx); 
@@ -354,11 +354,11 @@ int Grid::loadStencilsFromFile(std::string filename) {
         std::ifstream fin; 
         fin.open(fname.c_str()); 
 
-        size_t num_el_loaded = 0; 
+        unsigned int num_el_loaded = 0; 
         if (fin.is_open()) {
             stencil_map.clear(); 
             while (fin.good()) {
-                size_t st_size; 
+                unsigned int st_size; 
                 fin >> st_size; 
                 StencilType st; 
                 for (int i = 0; i < st_size; i++) {
@@ -447,7 +447,7 @@ std::string Grid::getFilename(int iter) {
 //----------------------------------------------------------------------------
 void Grid::perturbNodes(float perturb_amount) {
     pert = perturb_amount; 
-    for (size_t i = 0 ; i < node_list.size(); i ++) {
+    for (unsigned int i = 0 ; i < node_list.size(); i ++) {
         node_list[i][0] += randf(-pert, pert); 
         node_list[i][1] += randf(-pert, pert); 
         node_list[i][2] += randf(-pert, pert); 
@@ -464,13 +464,13 @@ void Grid::printNodeList(std::string label) {
 //----------------------------------------------------------------------------
 void Grid::printBoundaryIndices(std::string label) {
     std::cout << label << " (BoundaryIndices) = " << std::endl;
-    std::vector<size_t>::iterator i; 
+    std::vector<unsigned int>::iterator i; 
     for (i = boundary_indices.begin(); i != boundary_indices.end(); i++) {
         std::cout << (*i) << std::endl;
     }
 }
 //----------------------------------------------------------------------------
-void Grid::generateStencils(size_t st_max_size, st_generator_t generator_choice)
+void Grid::generateStencils(unsigned int st_max_size, st_generator_t generator_choice)
 {
     max_st_size = st_max_size; 
     generateStencils(generator_choice); 
@@ -662,7 +662,7 @@ void Grid::generateStencilsKDTree()
         node_list_kdtree = new KDTree(node_list);
     }
 
-    for (size_t i = 0; i < node_list.size(); i++) {
+    for (unsigned int i = 0; i < node_list.size(); i++) {
         StencilType& st = stencil_map[i]; 
         st.clear();     // In case of any residual stencil info
         NodeType& center = node_list[i];
@@ -673,7 +673,7 @@ void Grid::generateStencilsKDTree()
 
         st.resize(max_st_size);  
 
-        for (size_t j = 0; j < max_st_size; j++) { 
+        for (unsigned int j = 0; j < max_st_size; j++) { 
             if (nearest_dists[j] < max_st_radius) {
                 st[j] = nearest_ids[j]; 
             } else {
@@ -697,11 +697,11 @@ void Grid::generateStencilsHash()
 
     // Dimensions of the hash overlay grid (hnx by hny by hnz regular grid
     // spanning the full bounding box of the domain extent)
-    size_t hnx = ns_nbx; 
-    size_t hny = ns_nby;
-    size_t hnz = ns_nbz;
+    unsigned int hnx = ns_nbx; 
+    unsigned int hny = ns_nby;
+    unsigned int hnz = ns_nbz;
 
-    std::vector< std::vector<size_t> > cell_hash; 
+    std::vector< std::vector<unsigned int> > cell_hash; 
     // list of lists 
     cell_hash.resize(hnx * hny * hnz);  
 
@@ -718,7 +718,7 @@ void Grid::generateStencilsHash()
     //          node(x,y,z) exists in cellid((x-xmin)/dx, (y-ymin)/dy, (z-zmin)/dz)
     //          linearize cellid(xc, yc, zc) = ((xc*NY) + yc)*NZ + zc
     //          append node to list contained in list[cellid]
-    for (size_t i = 0; i < this->nb_nodes; i++) {
+    for (unsigned int i = 0; i < this->nb_nodes; i++) {
         NodeType node = this->getNode(i);
         // xc, yc and zc are the (x,y,z) corresponding to the cell id
         // xmin,ymin,zmin are member properties of the Grid class
@@ -726,23 +726,23 @@ void Grid::generateStencilsHash()
         // TODO: we note that the xc, yc and zc can be treated at binary digits
         // to select the CELL_ID (do we really need an optimization like that
         // though?)
-        size_t xc = floor((node.x() - xmin) / cdx); 
+        unsigned int xc = floor((node.x() - xmin) / cdx); 
 
         // This logic saves us when our nodes lie on xmax, ymax, or zmax
         // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
         xc = (xc == hnx) ? xc-1 : xc; 
-        size_t yc = floor((node.y() - ymin) / cdy); 
+        unsigned int yc = floor((node.y() - ymin) / cdy); 
         yc = (yc == hny) ? yc-1 : yc; 
-        size_t zc = floor((node.z() - zmin) / cdz);
+        unsigned int zc = floor((node.z() - zmin) / cdz);
         zc = (zc == hnz) ? zc-1 : zc; 
-        size_t cell_id = ((xc*hny) + yc)*hnz + zc; 
+        unsigned int cell_id = ((xc*hny) + yc)*hnz + zc; 
 
         //       std::cout << "NODE:" << node << "   in   CELL: " << cell_id << "      ( " << xc << ", " << yc << ", " << zc << " )" << std::endl;
         cell_hash[cell_id].push_back(i); 
     }
 
 #if 0
-    for (size_t i = 0; i < cell_hash.size(); i++) {
+    for (unsigned int i = 0; i < cell_hash.size(); i++) {
         std::cout << "CELL[" << i << "].size() = " << cell_hash[i].size() << std::endl;
     }
 #endif 
@@ -756,34 +756,34 @@ void Grid::generateStencilsHash()
     //          end
     //          sort the candidate list according to distance from node
     //          select stencil_size closest matches
-    for (size_t p = 0; p < this->nb_nodes; p++) {
+    for (unsigned int p = 0; p < this->nb_nodes; p++) {
 
         NodeType node = this->getNode(p);
         // xc, yc and zc are the (x,y,z) corresponding to the cell id
         // xmin,ymin,zmin are member properties of the Grid class
         // cdx,cdy,cdz are the deltaX, deltaY, deltaZ for the cell overlays
-        size_t xc = floor((node.x() - xmin) / cdx); 
+        unsigned int xc = floor((node.x() - xmin) / cdx); 
         // This logic saves us when our nodes lie on xmax, ymax, or zmax
         // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
         //
         xc = (xc == hnx) ? xc-1 : xc; 
-        size_t yc = floor((node.y() - ymin) / cdy); 
+        unsigned int yc = floor((node.y() - ymin) / cdy); 
         yc = (yc == hny) ? yc-1 : yc; 
-        size_t zc = floor((node.z() - zmin) / cdz);
+        unsigned int zc = floor((node.z() - zmin) / cdz);
         zc = (zc == hnz) ? zc-1 : zc; 
 
-        size_t node_cell_id = ((xc*hny) + yc)*hnz + zc; 
+        unsigned int node_cell_id = ((xc*hny) + yc)*hnz + zc; 
 
         // List of cell indices we will check
         // NOTE: we leverage set here because it does NOT allow duplicates,
         // so cells are not searched twice
-        std::set<size_t> neighbor_cell_set; 
+        std::set<unsigned int> neighbor_cell_set; 
 
         // Generate a list of cells to check for nearest neighbors
         // For each node expand the search until the max_st_size can be satisifed
         // DO NOT check cells with 0 node inside
 
-        size_t nb_neighbor_nodes_to_check = 0; 
+        unsigned int nb_neighbor_nodes_to_check = 0; 
         int level = 0; 
         // TODO: cut-off search if (max_st_radius+cdx) is execeeded
         //          (requires a working impl of max_st_radius)o
@@ -817,7 +817,7 @@ void Grid::generateStencilsHash()
                             continue;
                         }
 #endif 
-                        size_t cell_id = ((xc_o*hny) + yc_o)*hnz + zc_o; 
+                        unsigned int cell_id = ((xc_o*hny) + yc_o)*hnz + zc_o; 
 
                         //                        std::cout << "( " << xc_o << ", " << yc_o << ", " << zc_o << " ) = " << cell_id << std::endl;
 
@@ -832,8 +832,8 @@ void Grid::generateStencilsHash()
             // If its greater than max_st_size then we can stop expanding search
 
             nb_neighbor_nodes_to_check = 0;
-            for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
-                size_t cell_id = *it; 
+            for (std::set<unsigned int>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
+                unsigned int cell_id = *it; 
                 //                std::cout << "Node ID: " << p << " in CELL " << node_cell_id << ", Checking NEIGHBOR CELL: " << cell_id << std::endl;
                 nb_neighbor_nodes_to_check += cell_hash[cell_id].size();
             }
@@ -843,15 +843,15 @@ void Grid::generateStencilsHash()
         }
 
         // Compute distances for each neighbor and insert them into a sorted set. 
-        std::set< std::pair<float,size_t> , ltdist> dists;
-        size_t d_count = 0;  
-        for (std::set<size_t>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
-            size_t cell_id = *it; 
-            for (size_t q = 0; q < cell_hash[cell_id].size(); q++) {
+        std::set< std::pair<float,unsigned int> , ltdist> dists;
+        unsigned int d_count = 0;  
+        for (std::set<unsigned int>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
+            unsigned int cell_id = *it; 
+            for (unsigned int q = 0; q < cell_hash[cell_id].size(); q++) {
                 NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
-                //dists[d_count] = std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
+                //dists[d_count] = std::pair<float,unsigned int>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
                 //                std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << (node - neighbor).magnitude()  << std::endl;
-                dists.insert(std::pair<float,size_t>( (node - neighbor).magnitude(), cell_hash[cell_id][q] )); 
+                dists.insert(std::pair<float,unsigned int>( (node - neighbor).magnitude(), cell_hash[cell_id][q] )); 
                 d_count++;
             }
         }
@@ -862,8 +862,8 @@ void Grid::generateStencilsHash()
         //st.clear();     // In case of any residual stencil info
 
         st.resize(max_st_size);  
-        std::set< std::pair<float,size_t> , ltdist>::iterator sorted_ids = dists.begin(); 
-        for (size_t j = 0; j < max_st_size; j++) { 
+        std::set< std::pair<float,unsigned int> , ltdist>::iterator sorted_ids = dists.begin(); 
+        for (unsigned int j = 0; j < max_st_size; j++) { 
             if ((*sorted_ids).first < max_st_radius) {
                 // std::cout << "NODE ID: " << p << "\tDIST (" << j << ") = " << (*sorted_ids).first << "\t NeighborIndx: " << (*sorted_ids).second << std::endl;
                 st[j] = (*sorted_ids).second; 
@@ -919,19 +919,19 @@ void Grid::partitionIndices() {
 
     std::cout << "CALLED PartitionIndices\n";
     std::vector<NodeType>& nodes = this->getNodeList(); 
-    std::vector<size_t>& boundary_indx = this->getBoundaryIndices();
-    size_t nb_bnd = boundary_indx.size();
-    size_t nb_stencils = this->getStencilsSize();
-    size_t nb_nodes = nodes.size();
+    std::vector<unsigned int>& boundary_indx = this->getBoundaryIndices();
+    unsigned int nb_bnd = boundary_indx.size();
+    unsigned int nb_stencils = this->getStencilsSize();
+    unsigned int nb_nodes = nodes.size();
 
     b_indices.clear();
     // Use a std::set because it auto sorts as we insert
-    for (size_t i = 0; i < nb_bnd; i++) {
+    for (unsigned int i = 0; i < nb_bnd; i++) {
         b_indices.insert(boundary_indx[i]);  
     }
 
-    std::set<size_t> all_indices; 
-    for (size_t i = 0; i < nb_nodes; i++) {
+    std::set<unsigned int> all_indices; 
+    for (unsigned int i = 0; i < nb_nodes; i++) {
         all_indices.insert(i);  
     }
 

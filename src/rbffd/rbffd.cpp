@@ -58,9 +58,9 @@ RBFFD::~RBFFD() {
 void RBFFD::computeAllWeightsForAllStencils() {
 
     std::vector<StencilType>& st_map = grid_ref.getStencils(); 
-    size_t nb_st = st_map.size(); 
+    unsigned int nb_st = st_map.size(); 
 
-    for (size_t i = 0; i < nb_st; i++) {
+    for (unsigned int i = 0; i < nb_st; i++) {
         this->computeAllWeightsForStencil(i); 
     }
 
@@ -69,7 +69,7 @@ void RBFFD::computeAllWeightsForAllStencils() {
 
 //--------------------------------------------------------------------
 void RBFFD::getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h) {
-    size_t nn = stencil.size()+num_monomials; 
+    unsigned int nn = stencil.size()+num_monomials; 
     for (int i = 0; i < NUM_DERIV_TYPES; i++) {
         arma::mat col(nn,1); 
         // Fill by column
@@ -340,8 +340,8 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 //--------------------------------------------------------------------
 //
 void RBFFD::computeWeightsForAllStencils(DerType which) {
-    size_t nb_stencils = grid_ref.getStencilsSize(); 
-    for (size_t i = 0; i < nb_stencils; i++) {
+    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+    for (unsigned int i = 0; i < nb_stencils; i++) {
         this->computeWeightsForStencil(which, i);
     }
 }
@@ -461,17 +461,17 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
 void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
 //    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyAll"]->start(); 
-    size_t nb_stencils = grid_ref.getStencilsSize(); 
+    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
     double der;
 
     // TODO: this if we took advantage of a sparse matrix container, we might be able to
     // improve this Mat-Vec multiply. We could also do it on the GPU.
-    for (size_t i=0; i < nb_stencils; i++) {
+    for (unsigned int i=0; i < nb_stencils; i++) {
         double* w = this->weights[which][i]; 
         StencilType& st = grid_ref.getStencil(i);
         der = 0.0;
-        size_t n = st.size();
-        for (size_t s=0; s < n; s++) {
+        unsigned int n = st.size();
+        for (unsigned int s=0; s < n; s++) {
             der += w[s] * u[st[s]]; 
         }
         deriv[i] = der;
@@ -497,15 +497,15 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     std::vector<double*>& weights_r = this->weights[which];
   
     // Use a std::set because it auto sorts as we insert
-    std::set<size_t>& b_indices = grid_ref.getSortedBoundarySet();
-    std::set<size_t>& i_indices = grid_ref.getSortedInteriorSet(); 
-    size_t nb_bnd = b_indices.size();
-    size_t nb_int = i_indices.size();
+    std::set<unsigned int>& b_indices = grid_ref.getSortedBoundarySet();
+    std::set<unsigned int>& i_indices = grid_ref.getSortedInteriorSet(); 
+    unsigned int nb_bnd = b_indices.size();
+    unsigned int nb_int = i_indices.size();
     int nb_centers = grid_ref.getNodeListSize();
     int nb_stencils = grid_ref.getStencilsSize();
 
     // compute eigenvalues of derivative operator
-    size_t sz = weights_r.size();
+    unsigned int sz = weights_r.size();
 
 #if 0
     printf("sz= %lu\n", sz);
@@ -517,7 +517,7 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     eigmat.zeros();
 
     // Boundary nodes first with diagonal 1's.
-    std::set<size_t>::iterator it; 
+    std::set<unsigned int>::iterator it; 
     int i = 0;
     for (it = b_indices.begin(); it != b_indices.end(); it++, i++) {
         eigmat(*it,*it) = 1.0;
@@ -640,15 +640,15 @@ double RBFFD::computeHyperviscosityEigenvalues(DerType which, int k, double gamm
     std::vector<double*>& weights_r = this->weights[which];
   
     // Use a std::set because it auto sorts as we insert
-    std::set<size_t>& b_indices = grid_ref.getSortedBoundarySet();
-    std::set<size_t>& i_indices = grid_ref.getSortedInteriorSet(); 
-    size_t nb_bnd = b_indices.size();
-    size_t nb_int = i_indices.size();
+    std::set<unsigned int>& b_indices = grid_ref.getSortedBoundarySet();
+    std::set<unsigned int>& i_indices = grid_ref.getSortedInteriorSet(); 
+    unsigned int nb_bnd = b_indices.size();
+    unsigned int nb_int = i_indices.size();
     int nb_centers = grid_ref.getNodeListSize();
     int nb_stencils = grid_ref.getStencilsSize();
 
     // compute eigenvalues of derivative operator
-    size_t sz = weights_r.size();
+    unsigned int sz = weights_r.size();
 
 #if 0
     printf("sz= %lu\n", sz);
@@ -660,7 +660,7 @@ double RBFFD::computeHyperviscosityEigenvalues(DerType which, int k, double gamm
     eigmat.zeros();
 
     // Boundary nodes first with diagonal 1's.
-    std::set<size_t>::iterator it; 
+    std::set<unsigned int>::iterator it; 
     int i = 0;
     for (it = b_indices.begin(); it != b_indices.end(); it++, i++) {
         eigmat(*it,*it) = 1.0;
@@ -770,9 +770,9 @@ void RBFFD::setupTimers() {
 
 void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, int dim_num, arma::mat& ar, double h) {
     // We assume that all stencils are centered around the first node in the Stencil node list.
-    size_t irbf = stencil[0]; 
+    unsigned int irbf = stencil[0]; 
     Vec3& c = rbf_centers[irbf];
-    size_t n = stencil.size();
+    unsigned int n = stencil.size();
     //printf("stencil size= %d\n", n);
 
     //printf("stencil size(%d): n= %d\n", irbf, n);
@@ -873,12 +873,12 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
     std::vector<StencilType>& stencil = grid_ref.getStencils(); 
     std::vector<double*>* deriv_choice_ptr = &(weights[which]); 
     // number of non-zeros (should be close to max_st_size*num_stencils)
-    size_t expected_nz = 0;
+    unsigned int expected_nz = 0;
     // Num stencils (x_weights.size())
-    const size_t expected_M = (*deriv_choice_ptr).size();
+    const unsigned int expected_M = (*deriv_choice_ptr).size();
 
 
-    for (size_t i = 0; i < stencil.size(); i++) {
+    for (unsigned int i = 0; i < stencil.size(); i++) {
         expected_nz += stencil[i].size();
     }
     fprintf(stdout, "Attempting to read %lu weights (%lu, %lu) from %s\n", expected_nz, M, N, filename.c_str()); 
@@ -915,11 +915,11 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
     fclose(f);
 
     // Convert to our weights: 
-    for (size_t irbf = 0; irbf < N; irbf++) {
+    for (unsigned int irbf = 0; irbf < N; irbf++) {
         this->weights[which][irbf] = new double[M]; 
     }
-    size_t j = 0; 
-    size_t local_i = 0; 
+    unsigned int j = 0; 
+    unsigned int local_i = 0; 
     for (i = 0; i < nz; i++) {
         if (local_i != I[i]) {
             j = 0; 
@@ -945,7 +945,7 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
 void RBFFD::writeToFile(DerType which, std::string filename) {
 
     // number of non-zeros (should be close to max_st_size*num_stencils)
-    size_t nz = 0;
+    unsigned int nz = 0;
 
     std::vector<StencilType>& stencil = grid_ref.getStencils(); 
     std::vector<double*>* deriv_choice_ptr = &(weights[which]); 
@@ -969,15 +969,15 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
             break; 
     }
 #endif 
-    for (size_t i = 0; i < stencil.size(); i++) {
+    for (unsigned int i = 0; i < stencil.size(); i++) {
         nz += stencil[i].size();
     }
     fprintf(stdout, "Writing %lu weights to %s\n", nz, filename.c_str()); 
 
     // Num stencils (x_weights.size())
-    const size_t M = (*deriv_choice_ptr).size();
+    const unsigned int M = (*deriv_choice_ptr).size();
     // We have a square MxN matrix
-    const size_t N = M;
+    const unsigned int N = M;
 
     // Value obtained from mm_set_* routine
     MM_typecode matcode;                        
@@ -1000,8 +1000,8 @@ void RBFFD::writeToFile(DerType which, std::string filename) {
     /* NOTE: matrix market files use 1-based indices, i.e. first element
        of a vector has index 1, not 0.  */
     //    fprintf(stdout, "Writing file contents: \n"); 
-    for (size_t i = 0; i < stencil.size(); i++) {
-        for (size_t j = 0; j < stencil[i].size(); j++) {
+    for (unsigned int i = 0; i < stencil.size(); i++) {
+        for (unsigned int j = 0; j < stencil[i].size(); j++) {
             // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
             fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
             // fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
@@ -1018,8 +1018,8 @@ void RBFFD::setVariableEpsilon(std::vector<double>& avg_radius_, double alpha, d
     std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
     std::vector<double>& avg_stencil_radius = avg_radius_;
 
-    size_t nb_stencils = grid_ref.getStencilsSize(); 
-    size_t nb_radii = avg_stencil_radius.size(); 
+    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+    unsigned int nb_radii = avg_stencil_radius.size(); 
 
     std::cout << "NB_STENCILS: " << nb_stencils << ", NB_RADII: " << nb_radii << std::endl;
 // Types: 0 : Mine. 1 : Sarler2006 
@@ -1067,7 +1067,7 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
     //----------------------------------------------------------------------
     //void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, const char* choice)
     {
-        size_t irbf = st_indx;
+        unsigned int irbf = st_indx;
         StencilType& stencil = grid_ref.getStencil(st_indx); 
 
         std::vector<NodeType>& rbf_centers = grid_ref.getNodeList();
@@ -1170,9 +1170,9 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         //weights_new * rad*rad;
 
         // There should be a better way of doing this
-        size_t n = weights_new.n_rows;
+        unsigned int n = weights_new.n_rows;
         //printf("choice= %s, outsize: %d\n", choice, n);
-        size_t np = 0;
+        unsigned int np = 0;
 
         if (this->weights[which][irbf] == NULL) {
             this->weights[which][irbf] = new double[n+np];

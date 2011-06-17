@@ -12,13 +12,13 @@ void computeDeriv(       \n
    int nb_stencils, \n
    int stencil_size)  \n
 {   \n
-   size_t i = get_global_id(0);    \n
+   uint i = get_global_id(0);    \n
     
    if(i < nb_stencils) {    \n
 
         FLOAT der = 0.0f;       \n
         for (int j = 0; j < stencil_size; j++) {        \n
-            size_t indx = i*stencil_size + j;
+            uint indx = i*stencil_size + j;
 //            der += 1. * weights[indx];    \n
             der += solution[stencils[indx]] * weights[indx];    \n
         }   \n

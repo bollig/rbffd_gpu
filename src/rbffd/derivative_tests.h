@@ -49,26 +49,26 @@ class DerivativeTests {
         // FIXME: when nb_stencils_to_test != 0 we have a segfault. probably
         // because the subset of stencils we're checkign might NOT have
         // interior nodes, or may over compensate for boundary nodes. 
-        void testAllFunctions(bool exitIfTestsFail=true, size_t nb_stencils_to_test=0);
+        void testAllFunctions(bool exitIfTestsFail=true, unsigned int nb_stencils_to_test=0);
 
         // NOTE: nb_stencils_to_test==0 implies that ALL stencils will be tested. 
-        void compareGPUandCPUDerivs(size_t nb_stencils_to_test=0);
+        void compareGPUandCPUDerivs(unsigned int nb_stencils_to_test=0);
 
-        void testDerivativeOfFunction(DerivativeTests::TESTFUN choice, size_t nb_stencils_to_test=0, bool exitIfTestFails=true);
+        void testDerivativeOfFunction(DerivativeTests::TESTFUN choice, unsigned int nb_stencils_to_test=0, bool exitIfTestFails=true);
         
         // Test our interpolation to Franke's test function: 
         //  f(x,y) = (3/4) e^(-(1/4) * ((9x-2)^2 + (9y-2)^2))  
         //            +  (3/4) e^(-(1/49)(9x+1)^2 - (1/10)(9y+1)^2)  
         //            +  (1/2) e^(-(1/4) * ((9x-7)^2 + (9y-3)^2))  
         //            -  (1/5) e^(-(9x-4)^2 - (9y-7)^2)  
-        void testInterpolation(size_t nb_stencils_to_test=0, bool exitIfTestFails=true);
+        void testInterpolation(unsigned int nb_stencils_to_test=0, bool exitIfTestFails=true);
 
         void testEigen(RBFFD::DerType which=RBFFD::LAPL, bool exitIfTestFails=true, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
 
         void testHyperviscosity();
 
     protected: 
-        void fillTestFunction(DerivativeTests::TESTFUN which, size_t nb_stencils, size_t nb_centers, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);
+        void fillTestFunction(DerivativeTests::TESTFUN which, unsigned int nb_stencils, unsigned int nb_centers, std::vector<double>& u, std::vector<double>& dux_ex, std::vector<double>& duy_ex, std::vector<double>& dulapl_ex);
 
         double compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx);
 

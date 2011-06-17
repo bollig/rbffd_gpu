@@ -115,20 +115,20 @@ void EllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double
 {
     std::vector<double> intg;
 
-    size_t high_nb_pts = 200;
+    unsigned int high_nb_pts = 200;
     double bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg);
     double dom_intg = computeDomainIntegral(high_nb_pts, *rho);
 
     // total nb points used to compute Voronoi mesh. 
     // Only (nb_interior_pts-nb_bnd) will be able to move freely
-    size_t tot_nb_pts = nb_nodes;
+    unsigned int tot_nb_pts = nb_nodes;
     // number of boundary points, automatically calculated
     printf("tot_nb_pts= %d\n", tot_nb_pts);
     printf("domain integral = %f\n", dom_intg);
     printf("boundary integral = %f\n", bnd_intg);
 
-    size_t nb_computed_bnd = bnd_intg * sqrt(tot_nb_pts / dom_intg);
-    size_t nb_bnd_1 = 1. + 16. * tot_nb_pts * dom_intg / (bnd_intg * bnd_intg);
+    unsigned int nb_computed_bnd = bnd_intg * sqrt(tot_nb_pts / dom_intg);
+    unsigned int nb_bnd_1 = 1. + 16. * tot_nb_pts * dom_intg / (bnd_intg * bnd_intg);
     nb_bnd_1 = -bnd_intg * bnd_intg / (4. * dom_intg) * (1. - sqrt(nb_bnd_1));
     nb_computed_bnd = nb_bnd_1; // more accurate formula
     printf("calculated nb boundary pts: %d\n", nb_computed_bnd);
@@ -161,7 +161,7 @@ void EllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double
 //
 // GORDONs comment: Ideally, I should be integrating with respect to theta for 
 // more accuracy.
-double EllipseCVT::computeBoundaryIntegral(Density& rho, size_t npts, vector<double>& intg)
+double EllipseCVT::computeBoundaryIntegral(Density& rho, unsigned int npts, vector<double>& intg)
 {
     double major = axis_major; 
     double minor = axis_minor;
@@ -204,7 +204,7 @@ double EllipseCVT::computeBoundaryIntegral(Density& rho, size_t npts, vector<dou
 
 //----------------------------------------------------------------------
 
-double EllipseCVT::computeDomainIntegral(size_t npts, Density& rho) {
+double EllipseCVT::computeDomainIntegral(unsigned int npts, Density& rho) {
     // what is the surface element?
     // Ellipse: 
     // y1 = b*sqrt[1. - x^2 / a^2]  
@@ -245,7 +245,7 @@ void EllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length
     vector<double> equ_dist, theta;
     //bnd.resize(0);
 
-    size_t n = nb_bnd + 1; // space so that first and last point are the same
+    unsigned int n = nb_bnd + 1; // space so that first and last point are the same
     double pi = acos(-1.);
     double dtheta = 2. * pi / (npts - 1.);
     printf("npts= %d, n= %d\n", npts, n);

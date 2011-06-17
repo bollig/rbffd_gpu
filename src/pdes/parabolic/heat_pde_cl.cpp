@@ -33,6 +33,7 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
     
         err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity[0], NULL, &event);
 
+        queue.finish();
     } else {
 
         float* U_G_f = new float[nb_nodes];
@@ -44,13 +45,64 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
         err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
 
         err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity_f[0], NULL, &event);
+        queue.finish();
 
         delete [] U_G_f; 
         delete [] diffusivity_f; 
 
     }
+   
+    // FIXME: change all size_t to int. Or unsigned int. Size_t is not supported by GPU.
+    size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
+    int* bindices = new int[nb_bnd]; 
+    // Would be unnec. if indices were in int instead of size_t
+    for (size_t i =0; i < nb_bnd; i++) {
+        bindices[i] = grid_ref.getBoundaryIndex(i);
+    }
+    err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_TRUE, 0, nb_bnd*sizeof(int), &bindices[0], NULL, &event);
+
     std::cout << "[HeatPDE_CL] Done\n"; 
 }
+
+// Handle the boundary conditions however we want to. 
+// NOTE: we must update the solution on the GPU too. 
+void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, double t)
+{
+//    this->HeatPDE::enforceBoundaryConditions(u_t, t);
+    
+    int nb_stencils = (int)grid_ref.getStencilsSize(); 
+    int stencil_size = (int)grid_ref.getMaxStencilSize(); 
+    int nb_bnd = (int)grid_ref.getBoundaryIndicesSize();
+    int nb_nodes = (int)grid_ref.getNodeListSize(); 
+    float cur_time_f = (float) cur_time;
+    std::vector<float> s(nb_nodes, 0); 
+    
+    try {
+        bc_kernel.setArg(0, this->gpu_solution[INDX_IN]);                 // COPY_IN  / COPY OUT
+        bc_kernel.setArg(1, this->gpu_boundary_indices);                 // COPY_IN 
+        bc_kernel.setArg(2, sizeof(int), &nb_bnd);               // const 
+        bc_kernel.setArg(3, sizeof(float), &cur_time_f);
+    } catch (cl::Error er) {
+        printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+    }
+
+    err = queue.enqueueNDRangeKernel(bc_kernel, /* offset */ cl::NullRange, 
+            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_bnd), 
+            /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+
+    if (err != CL_SUCCESS) {
+        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+            " failed (" << err << ")\n";
+        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, nb_nodes*this->getFloatSize(), &s[0], NULL, &event);
+
+    queue.finish();
+}
+
+
 
 //----------------------------------------------------------------------
 
@@ -228,6 +280,9 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
         this->syncSetRSingle(); 
     }
 
+    // reset boundary solution
+    this->enforceBoundaryConditions(U_G, cur_time); 
+
     // Launch kernel
     this->launchEulerKernel( delta_t ); 
 
@@ -238,11 +293,8 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     }
 
     queue.finish();
-    
-    this->syncCPUtoGPU(); 
 
-    // reset boundary solution
-   // this->enforceBoundaryConditions(U_G, cur_time); 
+    this->syncCPUtoGPU(); 
          
 #if 0
     for (int i = 0; i < nb_nodes; i++) {
@@ -267,24 +319,24 @@ void HeatPDE_CL::launchEulerKernel( double dt ) {
     float cur_time_f = (float) cur_time;
 
     try {
-        kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
-        kernel.setArg(1, der_ref_gpu.getGPUWeights(RBFFD::LAPL)); 
-        kernel.setArg(2, der_ref_gpu.getGPUWeights(RBFFD::X)); 
-        kernel.setArg(3, der_ref_gpu.getGPUWeights(RBFFD::Y)); 
-        kernel.setArg(4, der_ref_gpu.getGPUWeights(RBFFD::Z)); 
-        kernel.setArg(5, this->gpu_solution[INDX_IN]);                 // COPY_IN / COPY_OUT
-        kernel.setArg(6, this->gpu_diffusivity);                 // COPY_IN 
-        kernel.setArg(7, sizeof(int), &nb_stencils);               // const 
-        kernel.setArg(8, sizeof(int), &nb_nodes);                  // const 
-        kernel.setArg(9, sizeof(int), &stencil_size);            // const
-        kernel.setArg(10, sizeof(float), &dt_f);            // const
-        kernel.setArg(11, sizeof(float), &cur_time_f);            // const
-        kernel.setArg(12, this->gpu_solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
+        euler_kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
+        euler_kernel.setArg(1, der_ref_gpu.getGPUWeights(RBFFD::LAPL)); 
+        euler_kernel.setArg(2, der_ref_gpu.getGPUWeights(RBFFD::X)); 
+        euler_kernel.setArg(3, der_ref_gpu.getGPUWeights(RBFFD::Y)); 
+        euler_kernel.setArg(4, der_ref_gpu.getGPUWeights(RBFFD::Z)); 
+        euler_kernel.setArg(5, this->gpu_solution[INDX_IN]);                 // COPY_IN / COPY_OUT
+        euler_kernel.setArg(6, this->gpu_diffusivity);                 // COPY_IN 
+        euler_kernel.setArg(7, sizeof(int), &nb_stencils);               // const 
+        euler_kernel.setArg(8, sizeof(int), &nb_nodes);                  // const 
+        euler_kernel.setArg(9, sizeof(int), &stencil_size);            // const
+        euler_kernel.setArg(10, sizeof(float), &dt_f);            // const
+        euler_kernel.setArg(11, sizeof(float), &cur_time_f);            // const
+        euler_kernel.setArg(12, this->gpu_solution[INDX_OUT]);                 // COPY_IN / COPY_OUT
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 
-    err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange, 
+    err = queue.enqueueNDRangeKernel(euler_kernel, /* offset */ cl::NullRange, 
             /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils), 
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
@@ -326,10 +378,51 @@ void HeatPDE_CL::syncCPUtoGPU() {
 void HeatPDE_CL::loadKernels(std::string& local_sources) {
     tm["loadAttach"]->start(); 
 
+    this->loadBCKernel(local_sources);
     this->loadEulerKernel(local_sources); 
 
     tm["loadAttach"]->stop(); 
 }
+
+void HeatPDE_CL::loadBCKernel(std::string& local_sources) {
+
+    std::string kernel_name = "enforceBoundaryConditions"; 
+
+    if (!this->getDeviceFP64Extension().compare("")){
+        useDouble = false;
+    }
+    if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
+        useDouble = false;
+    } 
+
+    std::string my_source = local_sources; 
+    if(useDouble) {
+#define FLOAT double 
+#include "cl_kernels/boundary_conditions.cl"
+        my_source.append(kernel_source);
+#undef FLOAT
+    }else {
+#define FLOAT float
+#include "cl_kernels/boundary_conditions.cl"
+        my_source.append(kernel_source);
+#undef FLOAT
+    }
+
+    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
+    
+    // FIXME: this overwrites the previous program source. Is this a problem? 
+    this->loadProgram(my_source, useDouble); 
+
+    try{
+        std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n"; 
+        bc_kernel = cl::Kernel(program, kernel_name.c_str(), &err);
+        std::cout << "Done attaching kernels!" << std::endl;
+    }
+    catch (cl::Error er) {
+        printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
+    }
+}
+
 
 
 void HeatPDE_CL::loadEulerKernel(std::string& local_sources) {
@@ -362,7 +455,7 @@ void HeatPDE_CL::loadEulerKernel(std::string& local_sources) {
 
     try{
         std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n"; 
-        kernel = cl::Kernel(program, kernel_name.c_str(), &err);
+        euler_kernel = cl::Kernel(program, kernel_name.c_str(), &err);
         std::cout << "Done attaching kernels!" << std::endl;
     }
     catch (cl::Error er) {
@@ -377,6 +470,7 @@ void HeatPDE_CL::allocateGPUMem() {
 #if 1
     size_t nb_nodes = grid_ref.getNodeListSize();
     size_t nb_stencils = grid_ref.getStencilsSize();
+    size_t nb_bnd = grid_ref.getBoundaryIndicesSize();
 
     cout << "Allocating GPU memory for HeatPDE\n";
 
@@ -390,6 +484,8 @@ void HeatPDE_CL::allocateGPUMem() {
     bytesAllocated += solution_mem_bytes; 
     
     gpu_diffusivity = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
+
+    gpu_boundary_indices = cl::Buffer(context, CL_MEM_READ_ONLY, nb_bnd * sizeof(int), NULL, &err);
 
     std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 #endif 

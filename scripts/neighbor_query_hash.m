@@ -22,7 +22,7 @@ zmin = min(node_list(:,3));
 zmax = max(node_list(:,3));
 
 if (ymax-ymin) > 1e-8
-    hny = hnx
+    hny = hnx;
 else 
     hny = 1;
 end
@@ -42,9 +42,9 @@ cell_hash = zeros(hnx * hny * hnz, 1);
 %' cell_hash.resize(hnx * hny * hnz);
 cell_id_end = zeros(hnx * hny * hnz, 1);
 
-cdx = (xmax - xmin) / hnx
-cdy = (ymax - ymin) / hny
-cdz = (zmax - zmin) / hnz
+cdx = (xmax - xmin) / hnx;
+cdy = (ymax - ymin) / hny;
+cdz = (zmax - zmin) / hnz;
 
 % Foreach node:
 %     determine hashid (cellid)
@@ -96,6 +96,7 @@ for i = 1 : nb_nodes
     cell_hash(cell_id,cell_id_end(cell_id)) = i;
 end
 
+%fprintf('Nodes hashed, ready to query neighbors');
 % TODO: Sort nodes according to hash for better access patterns
 
 % Foreach node:
@@ -178,6 +179,11 @@ for  p = 1:nb_nodes
             zlevel = level;
         end
         
+        % Now count the number of nodes we'll be checking.
+        % If its greater than max_st_size then we can stop expanding
+        % search
+        nb_neighbor_nodes_to_check = 0;
+        
         %NOTE: might need a +1 here:
         for xindx = 0-xlevel : 0+xlevel
             for yindx = 0-ylevel : 0+ylevel
@@ -209,19 +215,17 @@ for  p = 1:nb_nodes
                     if (l > 0)
                         %neighbor_cell_set.insert(cell_id);
                         level_neighbor_set(end+1) = cell_id;
+                        nb_neighbor_nodes_to_check = nb_neighbor_nodes_to_check + l;
                     end
                 end
             end
         end
         
-        % Now count the number of nodes we'll be checking.
-        % If its greater than max_st_size then we can stop expanding
-        % search
-        nb_neighbor_nodes_to_check = 0;
-        for it = 1:length(level_neighbor_set)
-            cell_id = level_neighbor_set(it);
-            nb_neighbor_nodes_to_check = nb_neighbor_nodes_to_check + length(cell_hash(cell_id,:));
-        end
+% 
+%         for it = 1:length(level_neighbor_set)
+%             cell_id = level_neighbor_set(it);
+%             nb_neighbor_nodes_to_check = nb_neighbor_nodes_to_check + length(cell_hash(cell_id,:));
+%         end
         
         % Increase our search radius
         level = level + 1;

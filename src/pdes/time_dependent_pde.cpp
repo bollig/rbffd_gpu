@@ -160,13 +160,14 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
     // backup the current solution so we can perform intermediate steps
-    std::vector<double>& original_solution = this->U_G; 
-    std::vector<double> s = this->U_G; 
+    std::vector<double>& input_sol = this->U_G; 
 
-    std::vector<SolutionType> k1(nb_stencils); // f(t_n, y_n)
-    std::vector<SolutionType> k2(nb_stencils); // f(t_n + 0.5dt, y_n + 0.5dt*k1)
-    std::vector<SolutionType> k3(nb_stencils); // f(t_n + 0.5dt, y_n + 0.5dt*k2) 
-    std::vector<SolutionType> k4(nb_stencils); // f(t_n + dt, y_n + dt*k3) 
+    std::vector<double> s(nb_nodes, 0.);
+
+    std::vector<SolutionType> k1(nb_stencils,0.); // f(t_n, y_n)
+    std::vector<SolutionType> k2(nb_stencils,0.); // f(t_n + 0.5dt, y_n + 0.5dt*k1)
+    std::vector<SolutionType> k3(nb_stencils,0.); // f(t_n + 0.5dt, y_n + 0.5dt*k2) 
+    std::vector<SolutionType> k4(nb_stencils,0.); // f(t_n + dt, y_n + dt*k3) 
 
 #if 0
     this->printExpectedReceive();
@@ -188,17 +189,16 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // ------------------- K1 ------------------------
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in k1 
-    this->solve(original_solution, &k1, nb_stencils, nb_nodes, cur_time); 
-
-    this->sendrecvUpdates(k1, "k1");
+    this->solve(input_sol, &k1, nb_stencils, nb_nodes, cur_time); 
+    //this->sendrecvUpdates(k1, "k1");
 
     // ------------------- K2 ------------------------
-    for (unsigned int i = 0; i < nb_nodes; i++) {
+    for (unsigned int i = 0; i < nb_stencils; i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * k1
-        s[i] = original_solution[i] + 0.5*dt * ( k1[i] + f);
+        s[i] = input_sol[i] + 0.5*dt * ( k1[i] + f);
     }
 
     // reset boundary solution
@@ -206,21 +206,21 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
 
     // FIXME: might not be necessary unless we strictly believe that enforcing
     // BC can only be done by controlling CPU
+    // NOTE: increases s from nb_stencils to nb_nodes
     this->sendrecvUpdates(s, "s");
 
     // y*(t) = y(t) + h * k2
     // but k2 = lapl[ y(t) + h/2 * k1 ] (content between [..] was computed above)
     this->solve(s, &k2, nb_stencils, nb_nodes, cur_time+0.5*dt); 
-
-    this->sendrecvUpdates(k2, "k2");
+    //    this->sendrecvUpdates(k2, "k2");
 
     // ------------------- K3 ------------------------
-    for (unsigned int i = 0; i < k2.size(); i++) {
+    for (unsigned int i = 0; i < nb_stencils; i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * k1
-        s[i] = original_solution[i] + 0.5*dt * ( k2[i] + f);
+        s[i] = input_sol[i] + 0.5*dt * ( k2[i] + f);
     }
 
     // reset boundary solution
@@ -231,16 +231,15 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     this->sendrecvUpdates(s, "s");
 
     this->solve(s, &k3, nb_stencils, nb_nodes, cur_time+0.5*dt); 
-
-    this->sendrecvUpdates(k3, "k3");
+    //    this->sendrecvUpdates(k3, "k3");
 
     // ------------------- K4 ------------------------
-    for (unsigned int i = 0; i < k3.size(); i++) {
+    for (unsigned int i = 0; i < nb_stencils; i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * k1
-        s[i] = original_solution[i] + dt * ( k3[i] + f);
+        s[i] = input_sol[i] + dt * ( k3[i] + f);
     }
 
     // reset boundary solution
@@ -251,23 +250,22 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     this->sendrecvUpdates(s, "s");
 
     this->solve(s, &k4, nb_stencils, nb_nodes, cur_time+dt); 
-    
-    this->sendrecvUpdates(k4, "k4");
+   //    this->sendrecvUpdates(k4, "k4");
 
     // ------------------- K4 ------------------------
     // FINAL STEP: y_n+1 = y_n + 1/6 * h * (k1 + 2*k2 + 2*k3 + k4)
     //
-    for (unsigned int i = 0; i < k4.size(); i++) {
+    for (unsigned int i = 0; i < nb_stencils; i++) {
         NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
         // y(t) + h/2 * feval1 
-        original_solution[i] = original_solution[i] + (dt/6.) * ( k1[i] + 2.*k2[i] + 2.*k3[i] + k4[i]);
+        input_sol[i] = input_sol[i] + (dt/6.) * ( k1[i] + 2.*k2[i] + 2.*k3[i] + k4[i]);
     }
 
     // Make sure any boundary conditions are met. 
-    this->enforceBoundaryConditions(original_solution, cur_time+dt);
+    this->enforceBoundaryConditions(input_sol, cur_time+dt);
     
     // Ensure we have consistent values across the board
-    this->sendrecvUpdates(original_solution, "U_G");
+    this->sendrecvUpdates(input_sol, "U_G");
 }

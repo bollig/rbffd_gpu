@@ -415,7 +415,6 @@ void HeatPDE_CL::syncCPUtoGPU() {
     }
 }
 
-
 //----------------------------------------------------------------------
 // FIXME: this is a single precision version
 void HeatPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
@@ -444,6 +443,8 @@ void HeatPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
     //      s1 = s0 + 0.5 dt * d(s0)/dt
     //      s2 = s0 + dt * d(s1)/dt
     //
+    //  RK4: 
+    //      s1 = s0 + dt
     this->launchStepKernel( 0.5*delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] ); 
     
     // Enforce boundary using GPU, but specify we want to use the intermediate buffer
@@ -503,6 +504,100 @@ void HeatPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
 }
 
 
+#if 0
+//----------------------------------------------------------------------
+// FIXME: this is a single precision version
+void HeatPDE_CL::advanceRungeKutta4(double delta_t) {
+
+    // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
+    // For explicit schemes we can just solve for our weights and have them stored in memory.
+    this->assemble(); 
+
+    //-------- Overlap beweeen these: ------------
+    // NOTE: syncSet*** ONLY copies between CPU and GPU. It does not synchronize across CPUs.
+    // Use sendrecvUpdates to perform an interproc comm.
+    if (useDouble) {
+        this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
+    } else {
+        this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]); 
+    }
+
+    // Launch kernel
+    //  params: timestep, vec_for_deriv_calc, vec_for_sum_rhs, vec_for_sum_lhs
+    //  In other words: s2 = s1 + dt * d(s0)/dt; 
+    //
+    //  Euler: 
+    //      s1 = s0 + dt * d(s0)/dt
+    //
+    //  Midpoint: 
+    //      s1 = s0 + 0.5 dt * d(s0)/dt
+    //      s2 = s0 + dt * d(s1)/dt
+    //
+    //  RK4: 
+    //      k1 = s0 + dt*
+
+
+    
+    // K1 t_n = cur_time + 0*dt
+    this->launchRK4StepKernel( 0., this->gpu_solution[INDX_IN], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] ); 
+    
+    // Enforce boundary using GPU, but specify we want to use the intermediate buffer
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_INTERMEDIATE_1], cur_time+0.5*delta_t); 
+    
+    // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
+    // the solution (i.e., sets O and R), 
+    // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
+    // the GPU calling syncSet*** on our INDX_OUT will overwrite any
+    // intermediate values stored there temporarily
+    // If we want to match the GPU we
+    // should do: syncCPUtoGPU()
+    if (useDouble) {
+        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+    } else {
+        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
+    }
+
+    // Should send intermediate steps by copying down from GPU, sending, then
+    // copying back up to GPU
+    this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+   
+    if (useDouble) {
+        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+    } else {
+        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
+    }
+
+    this->launchStepKernel( delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_OUT] ); 
+    //-------- END OVERLAP -----------------------
+
+    // reset boundary solution on INDX_OUT
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
+
+    if (useDouble) {
+        this->syncSetODouble(this->U_G, gpu_solution[INDX_OUT]);
+    } else {
+        this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]); 
+    }
+
+    queue.finish();
+
+//    this->syncCPUtoGPU(); 
+         
+#if 0
+    for (int i = 0; i < nb_nodes; i++) {
+        std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
+    }
+#endif 
+
+    // synchronize();
+    this->sendrecvUpdates(U_G, "U_G");
+
+    //exit(EXIT_FAILURE);
+
+    swap(INDX_IN, INDX_OUT);
+}
+
+#endif 
 //----------------------------------------------------------------------
 //
 void HeatPDE_CL::loadKernels(std::string& local_sources) {

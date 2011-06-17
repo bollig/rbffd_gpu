@@ -9,7 +9,8 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
 {
     protected: 
 
-        cl::Kernel euler_kernel;
+        cl::Kernel rk4_k_kernel;
+        cl::Kernel rk4_final_kernel;
         cl::Kernel step_kernel;
         // Kernel for boundary conditions
         cl::Kernel bc_kernel;
@@ -21,7 +22,14 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         //      solution out
         //      
         // We use a ping pong buffer scheme here for solution to avoid copying one to the other
-        cl::Buffer gpu_solution[5]; 
+        // Each of these is NB_NODES long
+        cl::Buffer gpu_solution[3]; 
+
+        // These are buffers for diff_op evaluations. For example: RK4 requires k1 = f(x,t)
+        // k2 = f(x+0.5dt*k1, t+0.5*dt) etc.
+        // Each of these is NB_STENCILS long
+        cl::Buffer gpu_feval[4]; 
+
         cl::Buffer gpu_diffusivity;
 
         // Midpoint needs: 
@@ -94,10 +102,11 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
     protected: 
         virtual std::string className() {return "heat_cl";}
 
-        virtual void loadEulerKernel(std::string& local_sources); 
+        virtual void loadRK4Kernels(std::string& local_sources); 
         virtual void loadStepKernel(std::string& local_sources); 
         virtual void loadBCKernel(std::string& local_sources); 
-        void launchEulerKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
+        void launchRK4_K_Kernel( double solveDT, double advanceDT, cl::Buffer solve_in, cl::Buffer solve_out, cl::Buffer advance_in, cl::Buffer advance_out);
+        void launchRK4_Final_Kernel( double solveDT, double advanceDT, cl::Buffer k1, cl::Buffer k2, cl::Buffer k3, cl::Buffer advance_in, cl::Buffer advance_out);
         void launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol, cl::Buffer& sol_out);
 
         // Sync set R from the vec into the gpu_vec
@@ -113,6 +122,7 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         // Call kernel to advance using first order euler
         virtual void advanceFirstOrderEuler(double dt);
         virtual void advanceSecondOrderMidpoint(double dt);
+        virtual void advanceRungeKutta4(double dt);
 }; 
 #endif 
 

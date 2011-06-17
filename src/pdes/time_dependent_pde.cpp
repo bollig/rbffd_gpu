@@ -186,6 +186,8 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
 
+//NOTE: between *****'s are kernel and comm. 
+//*********
     // ------------------- K1 ------------------------
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in k1 
@@ -208,7 +210,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // BC can only be done by controlling CPU
     // NOTE: increases s from nb_stencils to nb_nodes
     this->sendrecvUpdates(s, "s");
-
+//*********
     // y*(t) = y(t) + h * k2
     // but k2 = lapl[ y(t) + h/2 * k1 ] (content between [..] was computed above)
     this->solve(s, &k2, nb_stencils, nb_nodes, cur_time+0.5*dt); 
@@ -230,6 +232,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // BC can only be done by controlling CPU
     this->sendrecvUpdates(s, "s");
 
+//*********
     this->solve(s, &k3, nb_stencils, nb_nodes, cur_time+0.5*dt); 
     //    this->sendrecvUpdates(k3, "k3");
 
@@ -249,10 +252,11 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // BC can only be done by controlling CPU
     this->sendrecvUpdates(s, "s");
 
+//*********
     this->solve(s, &k4, nb_stencils, nb_nodes, cur_time+dt); 
    //    this->sendrecvUpdates(k4, "k4");
 
-    // ------------------- K4 ------------------------
+    // ------------------- FINAL ------------------------
     // FINAL STEP: y_n+1 = y_n + 1/6 * h * (k1 + 2*k2 + 2*k3 + k4)
     //
     for (unsigned int i = 0; i < nb_stencils; i++) {

@@ -278,7 +278,7 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     }
 
     // Launch kernel
-    this->launchEulerKernel( delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT] );
+    this->launchStepKernel( delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT] );
     //-------- END OVERLAP -----------------------
 
     // reset boundary solution on INDX_OUT
@@ -306,46 +306,6 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     //exit(EXIT_FAILURE);
 
     swap(INDX_IN, INDX_OUT);
-}
-
-// TODO: kill EulerKernel* and replace with call to more generic StepKernel
-void HeatPDE_CL::launchEulerKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out) {
-
-    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
-    unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
-    unsigned int nb_nodes = grid_ref.getNodeListSize(); 
-    float dt_f = (float) dt;
-    float cur_time_f = (float) cur_time;
-
-    try {
-        euler_kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
-        euler_kernel.setArg(1, der_ref_gpu.getGPUWeights(RBFFD::LAPL)); 
-        euler_kernel.setArg(2, der_ref_gpu.getGPUWeights(RBFFD::X)); 
-        euler_kernel.setArg(3, der_ref_gpu.getGPUWeights(RBFFD::Y)); 
-        euler_kernel.setArg(4, der_ref_gpu.getGPUWeights(RBFFD::Z)); 
-        euler_kernel.setArg(5, sol_in);                 // COPY_IN / COPY_OUT
-        euler_kernel.setArg(6, this->gpu_diffusivity);                 // COPY_IN 
-        euler_kernel.setArg(7, sizeof(unsigned int), &nb_stencils);               // const 
-        euler_kernel.setArg(8, sizeof(unsigned int), &nb_nodes);                  // const 
-        euler_kernel.setArg(9, sizeof(unsigned int), &stencil_size);            // const
-        euler_kernel.setArg(10, sizeof(float), &dt_f);            // const
-        euler_kernel.setArg(11, sizeof(float), &cur_time_f);            // const
-        euler_kernel.setArg(12, sol_out);                 // COPY_IN / COPY_OUT
-    } catch (cl::Error er) {
-        printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
-    }
-
-    err = queue.enqueueNDRangeKernel(euler_kernel, /* offset */ cl::NullRange, 
-            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils), 
-            /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
-
-//    err = queue.finish();
-    if (err != CL_SUCCESS) {
-        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
-            " failed (" << err << ")\n";
-        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
-        exit(EXIT_FAILURE);
-    }
 }
 
 void HeatPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol_in, cl::Buffer& sol_out) {
@@ -504,7 +464,7 @@ void HeatPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
 }
 
 
-#if 0
+#if 1
 //----------------------------------------------------------------------
 // FIXME: this is a single precision version
 void HeatPDE_CL::advanceRungeKutta4(double delta_t) {
@@ -534,12 +494,11 @@ void HeatPDE_CL::advanceRungeKutta4(double delta_t) {
     //      s2 = s0 + dt * d(s1)/dt
     //
     //  RK4: 
-    //      k1 = s0 + dt*
-
-
-    
+    //  
     // K1 t_n = cur_time + 0*dt
-    this->launchRK4StepKernel( 0., this->gpu_solution[INDX_IN], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] ); 
+    // S1 = s0 + 0.5dt * (k1 + f)
+    // params: dt on solve, dt on advance, input solve, output solve, input advance, output advance
+    this->launchRK4_K_Kernel( 0.f, 0.5*delta_t, this->gpu_solution[INDX_IN], this->gpu_feval[0], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] ); 
     
     // Enforce boundary using GPU, but specify we want to use the intermediate buffer
     this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_INTERMEDIATE_1], cur_time+0.5*delta_t); 
@@ -567,9 +526,70 @@ void HeatPDE_CL::advanceRungeKutta4(double delta_t) {
         this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
     }
 
-    this->launchStepKernel( delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_OUT] ); 
-    //-------- END OVERLAP -----------------------
+    // K2 t_n = cur_time + 0.5*dt
+    // S2 = s0 + 0.5dt * (k2 + f)
+    this->launchRK4_K_Kernel( 0.5f*delta_t, 0.5*delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_feval[1], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] ); 
+   
+    // Enforce boundary using GPU, but specify we want to use the intermediate buffer
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_INTERMEDIATE_1], cur_time+0.5*delta_t); 
+    
+    // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
+    // the solution (i.e., sets O and R), 
+    // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
+    // the GPU, calling syncSet*** on our INDX_OUT will overwrite any
+    // intermediate values stored there temporarily
+    // If we want to match the GPU we
+    // should do: syncCPUtoGPU()
+    if (useDouble) {
+        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+    } else {
+        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
+    }
 
+    // Should send intermediate steps by copying down from GPU, sending, then
+    // copying back up to GPU
+    this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+   
+    if (useDouble) {
+        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+    } else {
+        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
+    }
+
+
+    // K3 t_n = cur_time + 0.5*dt
+    // S3 = s0 + dt * (k3 + f)
+    this->launchRK4_K_Kernel( 0.5f*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_feval[2], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] ); 
+   
+    // Enforce boundary using GPU, but specify we want to use the intermediate buffer
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_INTERMEDIATE_1], cur_time+delta_t); 
+    // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
+    // the solution (i.e., sets O and R), 
+    // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
+    // the GPU calling syncSet*** on our INDX_OUT will overwrite any
+    // intermediate values stored there temporarily
+    // If we want to match the GPU we
+    // should do: syncCPUtoGPU()
+    if (useDouble) {
+        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+    } else {
+        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
+    }
+
+    // Should send intermediate steps by copying down from GPU, sending, then
+    // copying back up to GPU
+    this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+   
+    if (useDouble) {
+        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+    } else {
+        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
+    }
+
+ // K3 t_n = cur_time + 0.5*dt
+    // S3 = s0 + dt * (k3 + f)
+    this->launchRK4_Final_Kernel( 0.5f*delta_t, delta_t, this->gpu_solution[INDX_IN], this->gpu_feval[0], this->gpu_feval[1], this->gpu_feval[2], this->gpu_solution[INDX_OUT] ); 
+   
     // reset boundary solution on INDX_OUT
     this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
 
@@ -604,8 +624,8 @@ void HeatPDE_CL::loadKernels(std::string& local_sources) {
     tm["loadAttach"]->start(); 
 
     this->loadBCKernel(local_sources);
-    this->loadEulerKernel(local_sources); 
     this->loadStepKernel(local_sources); 
+    this->loadRK4Kernels(local_sources); 
 
     tm["loadAttach"]->stop(); 
 }
@@ -687,10 +707,10 @@ void HeatPDE_CL::loadStepKernel(std::string& local_sources) {
     }
 }
 
-void HeatPDE_CL::loadEulerKernel(std::string& local_sources) {
+void HeatPDE_CL::loadRK4Kernels(std::string& local_sources) {
 
-
-    std::string kernel_name = "advanceFirstOrderEuler"; 
+    std::string rk4_k_kernel_name = "evaluate_K_RK4"; 
+    std::string rk4_final_kernel_name = "final_RK4"; 
 
     if (!this->getDeviceFP64Extension().compare("")){
         useDouble = false;
@@ -702,12 +722,12 @@ void HeatPDE_CL::loadEulerKernel(std::string& local_sources) {
     std::string my_source = local_sources; 
     if(useDouble) {
 #define FLOAT double 
-#include "cl_kernels/euler_heat.cl"
+#include "cl_kernels/rk4_heat.cl"
         my_source.append(kernel_source);
 #undef FLOAT
     }else {
 #define FLOAT float
-#include "cl_kernels/euler_heat.cl"
+#include "cl_kernels/rk4_heat.cl"
         my_source.append(kernel_source);
 #undef FLOAT
     }
@@ -716,15 +736,15 @@ void HeatPDE_CL::loadEulerKernel(std::string& local_sources) {
     this->loadProgram(my_source, useDouble); 
 
     try{
-        std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n"; 
-        euler_kernel = cl::Kernel(program, kernel_name.c_str(), &err);
+        std::cout << "Loading kernel \""<< rk4_k_kernel_name << "\" with double precision = " << useDouble << "\n"; 
+        rk4_k_kernel = cl::Kernel(program, rk4_k_kernel_name.c_str(), &err);
+        rk4_final_kernel = cl::Kernel(program, rk4_final_kernel_name.c_str(), &err);
         std::cout << "Done attaching kernels!" << std::endl;
     }
     catch (cl::Error er) {
         printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
     }
 }
-
 //----------------------------------------------------------------------
 //
 void HeatPDE_CL::allocateGPUMem() {
@@ -744,10 +764,6 @@ void HeatPDE_CL::allocateGPUMem() {
     gpu_solution[INDX_OUT] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
     bytesAllocated += solution_mem_bytes; 
     gpu_solution[INDX_INTERMEDIATE_1] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
-    bytesAllocated += solution_mem_bytes; 
-    gpu_solution[INDX_INTERMEDIATE_2] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
-    bytesAllocated += solution_mem_bytes; 
-    gpu_solution[INDX_INTERMEDIATE_3] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
     bytesAllocated += solution_mem_bytes; 
     
     gpu_diffusivity = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);

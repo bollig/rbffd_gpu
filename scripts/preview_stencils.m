@@ -25,20 +25,20 @@ for j = 1:size(stencils, 1);
             max_rad = rad;
         end
         plot(segment(:,1), segment(:,2), 'r-', 'LineWidth', 3); 
-        plot(nodes(stencil(2:end),1), nodes(stencil(2:end),2),'o', 'LineWidth',2,'MarkerEdgeColor','k','MarkerFaceColor','y','MarkerSize',5); 
-        plot(nodes(stencil(1),1), nodes(stencil(1),2),'s', 'LineWidth',2,'MarkerEdgeColor','k','MarkerFaceColor','g','MarkerSize',7);
-        
-        %'LineWidth', 5, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'g', 'MarkerSize', 10); 
+        plot(x_i(1), x_i(2),'o', 'LineWidth',2,'MarkerEdgeColor','k','MarkerFaceColor','y','MarkerSize',5); 
+        plot(x_j(1), x_j(2),'s', 'LineWidth',2,'MarkerEdgeColor','k','MarkerFaceColor','g','MarkerSize',7);
     end
     
     [c_x, c_y, c_z] = cylinder(max_rad, 200);
     % draw circe centered at stencil center
     plot(c_x(1,:)+x_j(1), c_y(1,:)+x_j(2), '--m');
-    
+    ti = sprintf('Stencil %d', j); 
+    title(ti);
     axis square;
     axis([min_x max_x min_y max_y]);
     
     hold off;
+    % sleep until a key is pressed
     pause
     %pause(0.25)  % sleep 0.5 seconds to show stencil
 end

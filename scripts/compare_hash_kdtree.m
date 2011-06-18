@@ -1,14 +1,16 @@
 function [speedup] = compare_kdtree_hash()
 
-testN = [1000, 10000, 100000, 1000000];
-testk = [ 9];%, 13, 27 ];
-testSubs = [ 16, 32, 64, 100, 128, 200, 256, 300, 384, 512, 1024  ];
+testN = [10^2, 50^2, 100^2, 200^2 300^2 ];
+testk = [ 13] ;%, 13, 27 ];
+%testSubs = [ 16, 32, 64, 100, 128, 200, 256, 300, 384, 512, 1024  ]
 
 for i = 1:length(testN)
     %fprintf('Generate node list: ');
     tic;
     nodes = [rand( testN(i),  2 ) zeros(testN(i), 1)]; %[linspace(0, 1000, N)' zeros(N, 2)];
     t_nodes = toc;
+    
+    testSubs = [ floor(sqrt(testN(i)) / 2) ];
     
     for j = 1:length(testk)
         %fprintf('Mex Compiled KDTree: ');

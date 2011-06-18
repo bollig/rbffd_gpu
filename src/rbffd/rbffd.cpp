@@ -551,6 +551,14 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     double max_neg_eig = fabs(real(eigval(0)));
     double min_neg_eig = fabs(real(eigval(0)));
 
+    
+    int err = 0; 
+    FILE *f; 
+    std::string filename = "eigenvalues_"; 
+    filename.append(this->getFileDetailString(which));
+    filename.append(".ascii");
+    f = fopen(filename.c_str(), "w");
+    
     // Compute number of unstable modes
     // Also compute the largest and smallest (in magnitude) eigenvalue
     //for (int i=0; i < (sz-nb_bnd); i++) {
@@ -575,7 +583,10 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
         } else {
             zero_count++;
         }
+        fprintf(f, "%+lf%+lfi\n",real(eigval(i)),imag(eigval(i))); 
     }
+
+    fclose(f);
 #if 0
     count -= nb_bnd; // since we know at least nb_bnd eigenvalues are are (1+0i)
 

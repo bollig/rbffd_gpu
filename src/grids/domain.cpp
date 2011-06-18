@@ -121,7 +121,7 @@ int Domain::send(int my_rank, int receiver_rank) {
     sendSTL(&D, my_rank, receiver_rank); // Set of stencil centers DEPEND on nodes in R before evaluation
     sendSTL(&O, my_rank, receiver_rank); // Centers that are OUTPUT to other Domains
     sendSTL(&B, my_rank, receiver_rank); // Centers on BOUNDARY (in O and D or both)
-    sendSTL(&QmB, my_rank, receiver_rank); // Interior centers (computed without communication)
+    sendSTL(&QmD, my_rank, receiver_rank); // Interior centers (computed without communication)
     sendSTL(&R, my_rank, receiver_rank); // Nodes REQUIRED from other Domains.
 
     sendSTL(&stencil_map, my_rank, receiver_rank); // All stencils receiver_rank is responsible for
@@ -164,7 +164,7 @@ int Domain::receive(int my_rank, int sender_rank) {
     recvSTL(&D, my_rank, sender_rank); // Set of stencil centers DEPEND on nodes in R before evaluation
     recvSTL(&O, my_rank, sender_rank); // Centers that are OUTPUT to other Domains
     recvSTL(&B, my_rank, sender_rank); // Centers on BOUNDARY (in O and D or both)
-    recvSTL(&QmB, my_rank, sender_rank); // Interior centers (computed without communication)
+    recvSTL(&QmD, my_rank, sender_rank); // Interior centers (computed without communication)
     recvSTL(&R, my_rank, sender_rank); // Nodes REQUIRED from other Domains.
 
     recvSTL(&stencil_map, my_rank, sender_rank); // All stencils sender_rank is responsible for
@@ -264,11 +264,10 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // std::set<int> D;			// Set of stencil centers DEPEND on nodes in R before evaluation
     // std::set<int> O;			// Centers that are OUTPUT to other Domains
     // std::set<int> B; 		// Centers on BOUNDARY (in O and D or both)
-    // std::set<int> QmB; 		// Interior centers (computed without communication)
+    // std::set<int> QmD; 		// Interior centers (computed without RECEIVING)
     // std::set<int> R;			// Nodes REQUIRED from other Domains.
     //
     set<int>::iterator qit;
-    set<int> Dep; 
 
     printf("Domain %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f (Checking %dD)\n", id, xmin, xmax,
             ymin, ymax, zmin, zmax, dim_num);
@@ -301,12 +300,12 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
         }
 //        std::cout << "end stencil" << std::endl;
         if (depR) {
-            Dep.insert(*qit);
+            D.insert(*qit);
         }
     }
 
     std::cout << "Q size before set operations: " << Q.size() << std::endl;
-    std::cout << "Dep size before set operations: " << Dep.size() << std::endl;
+    std::cout << "D size before set operations: " << D.size() << std::endl;
 
     // Each Q (a set) is, by construction, sorted
 
@@ -349,24 +348,37 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     set_intersection(SAmQ.begin(), SAmQ.end(), Q.begin(), Q.end(), inserter(O,O.end()));
     std::cout << "O.size after stencilSet: " << O.size() << std::endl;
 
-    // B = O U Dep, this used to be B=O U D, But B\O is NOT_EQUAL to D, so we
+    // (QmD D R) = (Q\O O R)  (NOTE: O and D overlap and are NOT guaranteed to be the same
+    //
+    // QmD contains all nodes we can operate on without RECEIVING 
+    // D   contains all nodes we must wait to operate on after RECEIVING R
+    // R   contains all nodes we receive
+    // 
+    // NOTE: by using QmD we can operate on stencils in kernels that do not break to RECEIVE
+    
+    //      SENDING can happen without kernels breaking, so we dont need to worry about that.
+    // B = O U D, this used to be B=O U, But B\O is NOT_GUARANTEED_EQUAL to Dep, so we
     // do an additional subtraction to guarantee that B\O == D
-    set_union(Dep.begin(), Dep.end(), O.begin(), O.end(), inserter(B, B.end()));
-
-    // D = B\O (so we can arrange G = { Q\B D O R }
-    set_difference(B.begin(), B.end(), O.begin(), O.end(), inserter(D, D.end()));
-
-    // QmB = Q\B
-    set_difference(Q.begin(), Q.end(), B.begin(), B.end(), inserter(QmB,
-                QmB.end()));
+    set_union(D.begin(), D.end(), O.begin(), O.end(), inserter(B, B.end()));
+#if 0
+    // D = B\O (so we can arrange G = { Q\B O\D D R }
+    // By ordering nodes this way, we have the OPTION of operating on {Q\B O\D} 
+    // while communication happens for O and R. However, if we are on the GPU, O\D STILL require
+    // GPU to CPU transfer before it can be completed. That is why we concentrate kernels on 
+    // Q\B and B.
+    set_difference(O.begin(), O.end(), D.begin(), D.end(), inserter(OmD, OmD.end()));
+#endif 
+    // QmD = Q\B : the centers we can operate on without RECEIVING
+    set_difference(Q.begin(), Q.end(), D.begin(), D.end(), inserter(QmD, QmD.end()));
 
     set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
 
     printf("Q size= %d\n", (int) Q.size());
     printf("O.size= %d\n", (int) O.size());
     printf("D.size= %d\n", (int) D.size());
+//    printf("OmD.size= %d\n", (int) OmD.size());
     printf("B.size= %d\n", (int) B.size());
-    printf("QmB.size= %d\n", (int) QmB.size());
+    printf("QmD.size= %d\n", (int) QmD.size());
     printf("R.size= %d\n", (int) R.size());
     printf("G.size = %d\n", (int) G.size());
 }
@@ -389,7 +401,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
 
     // We want these maps in order: (Q\B B R) where B=(D O)
     // to make it more convenient when we work on memory management
-    for (qit = QmB.begin(); qit != QmB.end(); qit++, i++) {
+    for (qit = QmD.begin(); qit != QmD.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);
         node_list.push_back(rbf_centers[*qit]); // In order to compute we need the physical locations of all function values
         stencil_map.push_back(stencil[*qit]); // We also need to push the connectivity to evaluate stencils
@@ -398,14 +410,6 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         min_stencil_radii.push_back(min_dist[*qit]);
     }
     for (qit = D.begin(); qit != D.end(); qit++, i++) {
-        loc_to_glob.push_back(*qit);
-        node_list.push_back(rbf_centers[*qit]);
-        stencil_map.push_back(stencil[*qit]);
-        avg_stencil_radii.push_back(avg_dist[*qit]);
-        max_stencil_radii.push_back(max_dist[*qit]);
-        min_stencil_radii.push_back(min_dist[*qit]);
-    }
-    for (qit = O.begin(); qit != O.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);
         node_list.push_back(rbf_centers[*qit]);
         stencil_map.push_back(stencil[*qit]);

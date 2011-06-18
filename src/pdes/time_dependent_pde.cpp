@@ -169,19 +169,6 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     std::vector<SolutionType> k3(nb_stencils,0.); // f(t_n + 0.5dt, y_n + 0.5dt*k2) 
     std::vector<SolutionType> k4(nb_stencils,0.); // f(t_n + dt, y_n + dt*k3) 
 
-#if 0
-    this->printExpectedReceive();
-    for (unsigned int i = grid_ref.QmB.size(); i < s.size(); i++) {
-        NodeType& v = nodes[i];
-//        printf("In to advance: (local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
-    }
-
-        if (i > grid_ref.QmB.size()) {
-            printf("Adjusting (local: %lu), lapl(%f,%f,%f)= %f\tInput Solution=%f\n", i, v.x(), v.y(),v.z(), feval1[i], s[i]);
-        }
-
-#endif 
-
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 

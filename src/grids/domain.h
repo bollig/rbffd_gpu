@@ -25,7 +25,7 @@ class Domain : public Grid, public MPISendable
         double zmax;
 #endif 
         // Sets in GLOBAL INDEXING: 
-        //   G, Q, D, O, B, QmB, R 
+        //   G, Q, D, O, B, QmD, R 
         //
         // Sets in LOCAL INDEXING: 
         //   node_list, boundary_indices, boundary_normals
@@ -35,12 +35,14 @@ class Domain : public Grid, public MPISendable
         std::set<int> G; 			// All nodes required for computation
         std::set<int> Q;			// All stencil centers in this CPU's QUEUE							
         std::set<int> D;			// Set of stencil centers DEPENDENT on nodes in R before evaluation
-        std::set<int> O;			// Stencil Centers that are OUTPUT to other Domains
-        std::set<int> B; 			// Stencil Centers on BOUNDARY (in O and D (NEW: not both; we now guarantee that B\O==D)), but not in R) (B = union(O,D))
-        std::set<int> QmB; 			// Interior stencil centers excluding boundary stencils (computed without communication) 
+        std::set<int> O;			// Stencil Centers that are OUTPUT to other Domains but might NOT depend on R
+        //TODO: get rid of B since we dont do anything special with it.
+        std::set<int> B; 			// Stencil Centers on DOMAIN BOUNDARY (in O and D) We group O and D together even 
+                                    // if O can contain nodes that do not depend on R because set O will require a 
+                                    // memcpy back to the CPU from the GPU. 
+
+        std::set<int> QmD; 			// Interior stencil centers excluding stencils dependent on RECEIVING
         std::set<int> R;			// Nodes REQUIRED from other Domains (not stencil centers) 
-        // Possibly add: 
-        // std::set<int> BmD;
 
         // 5) These are the maps between local and global indexing space
         // l2g[i] = global_indx_matching_i
@@ -233,7 +235,7 @@ class Domain : public Grid, public MPISendable
         // ******** END MPISENDABLE ************
         
         //public: 	// Member Functions
-        // Fill sets Q, D, O, B, QmB and R to distinguish center memberships
+        // Fill sets Q, D, O, B, QmD and R to distinguish center memberships
         void fillCenterSets(std::vector<NodeType>& rbf_centers, std::vector<StencilType>& stencils);
 
         // Generate a set of ALL nodes that are used by the stencils in set s.

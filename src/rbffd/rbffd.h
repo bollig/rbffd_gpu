@@ -31,7 +31,7 @@ typedef RBF_InvMultiquadric IRBF;
 //enum RBF_Type {MQ=0, GA, IMQ, TPS, W2};
 
 // Should match how many DerTypes we have below
-#define NUM_DERIV_TYPES 6
+#define NUM_DERIV_TYPES 4
 
 class RBFFD
 {

@@ -100,6 +100,11 @@ class PDE : public MPISendable
         }
 
 
+        // Check the L1, L2 and Linf norms of our approximate solution.
+        // This does not break the code, but will allow us to monitor decay and perhaps
+        // notice when the solution explodes due to instability. 
+        void checkNorms(double rel_err_max=-1.);
+
         SolutionType getLocalSolution(unsigned int indx) { return U_G[indx]; }
 
     protected: 
@@ -120,7 +125,7 @@ class PDE : public MPISendable
             }
         }
 
-        // Check that the error in the solution is 
+        // Check our approximate solution against and exact solution. 
         void checkError(std::vector<SolutionType>& exactSolution, std::vector<SolutionType>& solution, Grid& grid, double rel_err_max=-1.);
         void calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max=1.);
 

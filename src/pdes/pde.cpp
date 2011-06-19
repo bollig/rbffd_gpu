@@ -529,8 +529,24 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
     }
 
 #endif 
+}
 
 
+void PDE::checkNorms(double max_l2_norm) {
+    std::vector<SolutionType>& sol_vec = this->U_G;
+    int nb_pts = sol_vec.size();
+    double l1fabs = l1norm(sol_vec, 0, nb_pts); 
+    double l2fabs = l2norm(sol_vec, 0, nb_pts); 
+    double lifabs = linfnorm(sol_vec, 0, nb_pts); 
 
+    printf("Approx Solution  l1  norm (%d nodes):  %le\n", nb_pts, l1fabs);
+    printf("Approx Solution  l2  norm (%d nodes):  %le\n", nb_pts, l2fabs);
+    printf("Approx Solution linf norm (%d nodes):  %le\n", nb_pts, lifabs);
 
+    if (max_l2_norm > 0) {
+        if (l2fabs > max_l2_norm) {
+            printf("Approx Solution l2 norm exceeds %le!", max_l2_norm); 
+            exit(EXIT_FAILURE);
+        }
+    }
 }

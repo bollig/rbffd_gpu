@@ -29,9 +29,9 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
     if (useDouble) {
 
         // Fill GPU mem with initial solution 
-        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
+        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_FALSE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
     
-        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity[0], NULL, &event);
+        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_FALSE, 0, solution_mem_bytes, &diffusivity[0], NULL, &event);
 
         queue.finish();
     } else {
@@ -42,9 +42,9 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
             U_G_f[i] = (float)U_G[i];
             diffusivity_f[i] = (float)diffusivity[i];
         }
-        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
+        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_FALSE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
 
-        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity_f[0], NULL, &event);
+        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_FALSE, 0, solution_mem_bytes, &diffusivity_f[0], NULL, &event);
         queue.finish();
 
         delete [] U_G_f; 
@@ -55,7 +55,7 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
     // FIXME: change all unsigned int to int. Or unsigned int. Size_t is not supported by GPU.
     std::vector<unsigned int>& bindices = grid_ref.getBoundaryIndices();
     unsigned int nb_bnd = bindices.size();
-    err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_TRUE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
+    err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_FALSE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
 
     std::cout << "[HeatPDE_CL] Done\n"; 
 }
@@ -106,7 +106,7 @@ void HeatPDE_CL::assemble()
     if (!weightsPrecomputed) {
         der_ref_gpu.computeAllWeightsForAllStencils();
     }
-    // This will avoid multiple writes to GPU if they latest version is already in place
+    // This will avoid multiple writes to GPU if the latest version is already in place
     // FIXME: allow this to finish later
     der_ref_gpu.updateWeightsOnGPU(false);
 }
@@ -167,12 +167,13 @@ void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_
 
         // Synchronize just the R part on GPU (CL_FALSE here indicates we dont block on write
         // NOTE: offset parameter to enqueueWriteBuffer is ONLY for the GPU side offset. The CPU offset needs to be managed directly on the CPU pointer: &U_G[offset_cpu]
-       err = queue.enqueueWriteBuffer(gpu_vec, CL_TRUE, offset_to_set_R * float_size, set_R_bytes, &r_update_f[0], NULL, &event);
+       err = queue.enqueueWriteBuffer(gpu_vec, CL_FALSE, offset_to_set_R * float_size, set_R_bytes, &r_update_f[0], NULL, &event);
        
     }
 }
 
 
+// General routine to copy the set R indices vec up to gpu_vec
 void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     unsigned int set_G_size = grid_ref.G.size();
@@ -194,11 +195,12 @@ void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_
         // block on write NOTE: offset parameter to enqueueWriteBuffer is ONLY
         // for the GPU side offset. The CPU offset needs to be managed directly
         // on the CPU pointer: &U_G[offset_cpu]
-       err = queue.enqueueWriteBuffer(gpu_vec, CL_TRUE, offset_to_set_R * float_size, set_R_bytes, &vec[offset_to_set_R], NULL, &event);
+       err = queue.enqueueWriteBuffer(gpu_vec, CL_FALSE, offset_to_set_R * float_size, set_R_bytes, &vec[offset_to_set_R], NULL, &event);
        
     }
 }
 
+// General routine to copy the set O indices from gpu_vec down to vec
 void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     unsigned int set_G_size = grid_ref.G.size();
@@ -220,7 +222,7 @@ void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_
 
     if (set_O_size > 0) {
         // Pull only information required for neighboring domains back to the CPU 
-        err = queue.enqueueReadBuffer(gpu_vec, CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &o_update_f[0], NULL, &event);
+        err = queue.enqueueReadBuffer(gpu_vec, CL_FALSE, offset_to_set_O * float_size, set_O_bytes, &o_update_f[0], NULL, &event);
 
        // Probably dont need this if we want to overlap comm and comp. 
        queue.finish();
@@ -256,7 +258,7 @@ void HeatPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_
 
     if (set_O_size > 0) {
         // Pull only information required for neighboring domains back to the CPU 
-        err = queue.enqueueReadBuffer(gpu_vec, CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &vec[offset_to_set_O], NULL, &event);
+        err = queue.enqueueReadBuffer(gpu_vec, CL_FALSE, offset_to_set_O * float_size, set_O_bytes, &vec[offset_to_set_O], NULL, &event);
 
     }
 }
@@ -270,47 +272,80 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
 
-    //-------- Overlap beweeen these: ------------
-    if (useDouble) {
-        this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
-    } else {
-        this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]); 
+    queue.finish();
+    // 1) Launch kernel for set QmD (will take a while, so in the meantime...)
+    this->launchEulerSetQmDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]); 
+    
+    queue.finish();
+    // NOTE: when run in serial only one kernel launch is required. 
+    if (comm_ref.getSize() > 1) {
+        std::cout << "INSIDE EULER set D STUFF\n";
+        // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
+        if (useDouble) {
+            this->syncSetODouble(this->U_G, gpu_solution[INDX_IN]);
+        } else {
+            this->syncSetOSingle(this->U_G, gpu_solution[INDX_IN]); 
+        }
+
+        // 3) OVERLAP: Transmit between CPUs
+        // NOTE: Require an MPI barrier here
+        this->sendrecvUpdates(U_G, "U_G");
+
+
+        // 4) OVERLAP: Update the input with set R
+        if (useDouble) {
+            this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
+        } else {
+            this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]); 
+        }
+
+        // 6) Launch a SECOND kernel to complete set D for this step (NOTE: in
+        // higher order timeschemes we need to perform ADDITIONAL communication
+        // here. Also, this MIGHT modify the boundary value so we should enforce
+        // conditions AFTER this kernel)
+        this->launchEulerSetDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
+        queue.finish();
     }
-
-    // Launch kernel
-    this->launchStepKernel( delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT] );
-    //-------- END OVERLAP -----------------------
-
-    // reset boundary solution on INDX_OUT
-    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
-
-    if (useDouble) {
-        this->syncSetODouble(this->U_G, gpu_solution[INDX_OUT]);
-    } else {
-        this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]); 
-    }
-
     queue.finish();
 
-//    this->syncCPUtoGPU(); 
-         
-#if 0
-    for (int i = 0; i < nb_nodes; i++) {
-        std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
-    }
-#endif 
+    // 5) FINAL: reset boundary solution on INDX_OUT
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
 
-    // synchronize();
-    this->sendrecvUpdates(U_G, "U_G");
+    // Fire events to force the queue to execute.
+    queue.finish();
 
-    //exit(EXIT_FAILURE);
-
+    // Flip our ping pong buffers. 
     swap(INDX_IN, INDX_OUT);
 }
 
-void HeatPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol_in, cl::Buffer& sol_out) {
 
-    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+// Launch a kernel to perform the step: 
+//      u(n+1) = u(n) + dt * f( u(n) )
+// Params: 
+//  dt => Timestep
+//  sol_in => parameter u(n) above
+//  sol_out => parameter u(n+1) above
+void HeatPDE_CL::launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out) {
+    this->launchStepKernel(dt, sol_in, sol_in, sol_out, grid_ref.QmD.size(), 0);
+}
+
+// Same as EulerSetQmDKernel, but it requires transfer of O and R to be complete. 
+void HeatPDE_CL::launchEulerSetDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out) {
+    this->launchStepKernel(dt, sol_in, sol_in, sol_out, grid_ref.D.size(), grid_ref.QmD.size());
+}
+
+
+// Launch a kernel to perform the step: 
+//      u(n+1) = u(n) + dt * f( U(n) )
+// Params: 
+//  dt => Timestep
+//  sol_in => parameter u(n) above
+//  deriv_sol_in => parameter U(n) above
+//  sol_out => parameter u(n+1) above
+//
+void HeatPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol_in, cl::Buffer& sol_out, unsigned int n_stencils, unsigned int offset_to_set) {
+
+//    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
     unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
     unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     float dt_f = (float) dt;
@@ -325,18 +360,19 @@ void HeatPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& de
         step_kernel.setArg(5, sol_in);                 // COPY_IN 
         step_kernel.setArg(6, deriv_sol_in);                 // COPY_IN 
         step_kernel.setArg(7, this->gpu_diffusivity);                 // COPY_IN 
-        step_kernel.setArg(8, sizeof(unsigned int), &nb_stencils);               // const 
-        step_kernel.setArg(9, sizeof(unsigned int), &nb_nodes);                  // const 
-        step_kernel.setArg(10, sizeof(unsigned int), &stencil_size);            // const
-        step_kernel.setArg(11, sizeof(float), &dt_f);            // const
-        step_kernel.setArg(12, sizeof(float), &cur_time_f);            // const
-        step_kernel.setArg(13, sol_out);                 // COPY_IN / COPY_OUT
+        step_kernel.setArg(8, sizeof(unsigned int), &offset_to_set);               // const 
+        step_kernel.setArg(9, sizeof(unsigned int), &n_stencils);               // const 
+        step_kernel.setArg(10, sizeof(unsigned int), &nb_nodes);                  // const 
+        step_kernel.setArg(11, sizeof(unsigned int), &stencil_size);            // const
+        step_kernel.setArg(12, sizeof(float), &dt_f);            // const
+        step_kernel.setArg(13, sizeof(float), &cur_time_f);            // const
+        step_kernel.setArg(14, sol_out);                 // COPY_IN / COPY_OUT
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 
     err = queue.enqueueNDRangeKernel(step_kernel, /* offset */ cl::NullRange, 
-            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils), 
+            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(n_stencils), 
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
 //    err = queue.finish();
@@ -356,10 +392,10 @@ void HeatPDE_CL::syncCPUtoGPU() {
     unsigned int solution_mem_bytes = nb_nodes * this->getFloatSize();
 
     if (useDouble) {
-        err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_FALSE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
     } else {
         float* U_G_f = new float[nb_nodes]; 
-        err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
+        err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_FALSE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
 
         queue.finish();
         for (unsigned int i = 0; i < nb_nodes; i++) {
@@ -378,7 +414,7 @@ void HeatPDE_CL::syncCPUtoGPU() {
 //----------------------------------------------------------------------
 // FIXME: this is a single precision version
 void HeatPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
-
+#if EVAN_UPDATE_THIS
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
@@ -461,6 +497,7 @@ void HeatPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
     //exit(EXIT_FAILURE);
 
     swap(INDX_IN, INDX_OUT);
+#endif 
 }
 
 
@@ -469,6 +506,7 @@ void HeatPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
 // FIXME: this is a single precision version
 void HeatPDE_CL::advanceRungeKutta4(double delta_t) {
 
+#if EVAN_UPDATE_THESE
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
@@ -615,6 +653,7 @@ void HeatPDE_CL::advanceRungeKutta4(double delta_t) {
     //exit(EXIT_FAILURE);
 
     swap(INDX_IN, INDX_OUT);
+#endif 
 }
 
 #endif 
@@ -625,8 +664,9 @@ void HeatPDE_CL::loadKernels(std::string& local_sources) {
 
     this->loadBCKernel(local_sources);
     this->loadStepKernel(local_sources); 
+#if EVAN_UPDATE_THESE
     this->loadRK4Kernels(local_sources); 
-
+#endif 
     tm["loadAttach"]->stop(); 
 }
 
@@ -707,6 +747,7 @@ void HeatPDE_CL::loadStepKernel(std::string& local_sources) {
     }
 }
 
+#if EVAN_UPDATE_THESE
 void HeatPDE_CL::loadRK4Kernels(std::string& local_sources) {
 
     std::string rk4_k_kernel_name = "evaluate_K_RK4"; 
@@ -745,6 +786,9 @@ void HeatPDE_CL::loadRK4Kernels(std::string& local_sources) {
         printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
     }
 }
+#endif 
+
+
 //----------------------------------------------------------------------
 //
 void HeatPDE_CL::allocateGPUMem() {

@@ -46,8 +46,8 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     nb_nodes = settings->GetSettingAs<int>("NB_NODES", ProjectSettings::required); 
 
     major_axis = settings->GetSettingAs<double>("MAJOR_AXIS", ProjectSettings::optional, "1.0"); 
-    minor_axis = settings->GetSettingAs<double>("MINOR_AXIS", ProjectSettings::optional, "0.5"); 
-    midax_axis = settings->GetSettingAs<double>("MIDAX_AXIS", ProjectSettings::optional, "0.5"); 
+    minor_axis = settings->GetSettingAs<double>("MINOR_AXIS", ProjectSettings::optional, "0.8"); 
+    midax_axis = settings->GetSettingAs<double>("MIDAX_AXIS", ProjectSettings::optional, "0.6"); 
     nb_cvt_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::optional, "10000"); 	
     nb_cvt_iters = settings->GetSettingAs<int>("NB_CVT_ITERS", ProjectSettings::optional, "1000"); 
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 

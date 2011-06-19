@@ -101,13 +101,23 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
 
     protected: 
         virtual std::string className() {return "heat_cl";}
-
+#if EVAN_UPDATE_THESE
         virtual void loadRK4Kernels(std::string& local_sources); 
-        virtual void loadStepKernel(std::string& local_sources); 
-        virtual void loadBCKernel(std::string& local_sources); 
         void launchRK4_K_Kernel( double solveDT, double advanceDT, cl::Buffer solve_in, cl::Buffer solve_out, cl::Buffer advance_in, cl::Buffer advance_out);
         void launchRK4_Final_Kernel( double solveDT, double advanceDT, cl::Buffer k1, cl::Buffer k2, cl::Buffer k3, cl::Buffer advance_in, cl::Buffer advance_out);
-        void launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol, cl::Buffer& sol_out);
+#endif 
+        virtual void loadStepKernel(std::string& local_sources); 
+        virtual void loadBCKernel(std::string& local_sources); 
+
+
+        // Launch a kernel to do u(n+1) = u(n) + dt * f( U(n) ) over the
+        // n_stencils_in_set starting at offset_to_set index in solution u.  
+        // For example, if set D starts at index 15 and is 5 elements wide,
+        // then call n_stencils_in_set=5, offset_to_set=15 (this routine
+        // calculates the BYTE offset on its own. 
+        void launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol, cl::Buffer& sol_out, unsigned int n_stencils_in_set, unsigned int offset_to_set);
+        void launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
+        void launchEulerSetDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
 
         // Sync set R from the vec into the gpu_vec
         void syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec); 

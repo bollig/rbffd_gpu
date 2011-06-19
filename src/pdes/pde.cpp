@@ -549,4 +549,21 @@ void PDE::checkNorms(double max_l2_norm) {
             exit(EXIT_FAILURE);
         }
     }
+
+    if (max_l2_norm < 0) {
+
+        if (l2fabs > 1e100) {
+            printf("Approx Solution l2 norm exceeds 1.0e100. Assuming instability!"); 
+            exit(EXIT_FAILURE);
+        }
+
+    }
+
+    // NaN is the only thing that satisfies this and we should DEFINITELY exit
+    // if its encountered
+    if (l2fabs != l2fabs) {
+        printf("NaN encountered. Modify support parameter or node distribution to improve stability"); 
+        exit(EXIT_FAILURE);
+    }
+
 }

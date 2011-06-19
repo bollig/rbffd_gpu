@@ -268,15 +268,15 @@ void HeatPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_
 // FIXME: this is a single precision version
 void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
+    // Target: 0.3991 ms
+
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
 
-    queue.finish();
     // 1) Launch kernel for set QmD (will take a while, so in the meantime...)
     this->launchEulerSetQmDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]); 
     
-    queue.finish();
     // NOTE: when run in serial only one kernel launch is required. 
     if (comm_ref.getSize() > 1) {
         std::cout << "INSIDE EULER set D STUFF\n";
@@ -309,10 +309,11 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
     queue.finish();
 
     // 5) FINAL: reset boundary solution on INDX_OUT
-    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
+    // COST: 0.3 ms
+    //this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
 
     // Fire events to force the queue to execute.
-    queue.finish();
+    //queue.finish();
 
     // Flip our ping pong buffers. 
     swap(INDX_IN, INDX_OUT);

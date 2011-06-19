@@ -316,7 +316,7 @@ void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
     // 5) FINAL: reset boundary solution on INDX_OUT
     // COST: 0.3 ms
-    //this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
 
     // Fire events to force the queue to execute.
     //queue.finish();

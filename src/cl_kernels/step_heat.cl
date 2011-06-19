@@ -38,7 +38,7 @@ evaluateStep(       \n
         float4 node = (float4)(0.f, 0.f, 0.f, 0.f);\n
         //  = node_list[i];\n
        \n
-        diffusivity[j] = getDiffusionCoefficient(node, solution_in[j], cur_time, diffusivity[j]);\n
+       diffusivity[j] = getDiffusionCoefficient(node, solution_in[j], cur_time, diffusivity[j]);\n
         // Solve for each laplacian using the rewritten form (RHS): \n
         //          div(k.grad(u) = grad(k).grad(u) + k . lapl(u)\n
         // NOTE: the lhs requires interprocessor communication for grad(u)\n

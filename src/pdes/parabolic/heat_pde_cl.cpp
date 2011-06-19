@@ -268,7 +268,13 @@ void HeatPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_
 // FIXME: this is a single precision version
 void HeatPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
-    // Target: 0.3991 ms
+    // Target (st5): 0.3991 ms
+    //        (st33): 1.2 ms
+    // GPU: 
+    // Without diffusion, boundary or f(u) eval (st33): 0.3599
+    // Without boundary or f(u) eval (st33): 0.3562
+    // Without boundary (st33): 4.8389
+    // no boundary, K*Laplacian only (no gradK . gradU) (st33): 1.1898
 
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.

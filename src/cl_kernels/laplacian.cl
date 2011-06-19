@@ -25,17 +25,17 @@ FLOAT rewrittenLaplacian(\n
     FLOAT K_dot_lapl_U = diffusion[st_indx] * u_lapl_deriv; \n
 \n
     // If we have non-uniform diffusion, more derivatives are requried\n
-    FLOAT u_x_deriv = applyWeights1PerThread(stencil, x_st_weights, u_t, stencil_size); \n
-    FLOAT u_y_deriv = applyWeights1PerThread(stencil, y_st_weights, u_t, stencil_size); \n
-    FLOAT u_z_deriv = applyWeights1PerThread(stencil, z_st_weights, u_t, stencil_size); \n
+  //  FLOAT u_x_deriv = applyWeights1PerThread(stencil, x_st_weights, u_t, stencil_size); \n
+  //  FLOAT u_y_deriv = applyWeights1PerThread(stencil, y_st_weights, u_t, stencil_size); \n
+  //  FLOAT u_z_deriv = applyWeights1PerThread(stencil, z_st_weights, u_t, stencil_size); \n
 \n
-    FLOAT diff_x_deriv = applyWeights1PerThread(stencil, x_st_weights, diffusion, stencil_size); \n
-    FLOAT diff_y_deriv = applyWeights1PerThread(stencil, y_st_weights, diffusion, stencil_size); \n
-    FLOAT diff_z_deriv = applyWeights1PerThread(stencil, z_st_weights, diffusion, stencil_size); \n
+ //   FLOAT diff_x_deriv = applyWeights1PerThread(stencil, x_st_weights, diffusion, stencil_size); \n
+ //   FLOAT diff_y_deriv = applyWeights1PerThread(stencil, y_st_weights, diffusion, stencil_size); \n
+ //   FLOAT diff_z_deriv = applyWeights1PerThread(stencil, z_st_weights, diffusion, stencil_size); \n
 \n
-    FLOAT grad_K_dot_grad_U = diff_x_deriv * u_x_deriv + diff_y_deriv * u_y_deriv + diff_z_deriv * u_z_deriv; 
+//    FLOAT grad_K_dot_grad_U = diff_x_deriv * u_x_deriv + diff_y_deriv * u_y_deriv + diff_z_deriv * u_z_deriv; 
 \n
-   return grad_K_dot_grad_U + K_dot_lapl_U;\n
+   return /*grad_K_dot_grad_U +*/ K_dot_lapl_U;\n
 }
 
 

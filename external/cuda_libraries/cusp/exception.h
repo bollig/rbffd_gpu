@@ -14,7 +14,13 @@
  *  limitations under the License.
  */
 
+/*! \file exception.h
+ *  \brief Cusp exceptions
+ */
+
 #pragma once
+
+#include <cusp/detail/config.h>
 
 #include <string>
 #include <stdexcept>

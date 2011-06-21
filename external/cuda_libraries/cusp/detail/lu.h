@@ -36,8 +36,6 @@ int lu_factor(cusp::array2d<ValueType,MemorySpace,Orientation>& A,
     // For each row and column, k = 0, ..., n-1,
     for (int k = 0; k < n; k++)
     {
-        ValueType * p_k = &A.values[0] + k * n;
-
         // find the pivot row
         pivot[k] = k;
         ValueType max = std::fabs(A(k,k));
@@ -130,6 +128,8 @@ class lu_solver : public cusp::linear_operator<ValueType,MemorySpace>
     lu_solver(const cusp::array2d<ValueType,MemorySpace,Orientation>& A) 
         : linear_operator<ValueType,MemorySpace>(A.num_rows, A.num_cols, A.num_entries)
     {
+        CUSP_PROFILE_SCOPED();
+
         // TODO assert A is square
         lu = A;
         pivot.resize(A.num_rows);
@@ -140,6 +140,8 @@ class lu_solver : public cusp::linear_operator<ValueType,MemorySpace>
     template <typename VectorType1, typename VectorType2>
     void operator()(const VectorType1& x, VectorType2& y) const
     {
+        CUSP_PROFILE_SCOPED();
+
         lu_solve(lu, pivot, x, y);
     }
 };

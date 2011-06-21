@@ -24,36 +24,92 @@
 #include <cusp/array1d.h>
 #include <cusp/csr_matrix.h>
 
+#include <thrust/count.h>
+
+// TODO remove std::
+
 namespace cusp
 {
 namespace detail
 {
 namespace host
 {
-
-template <typename IndexType, typename ValueType>
-IndexType count_diagonals(const cusp::csr_matrix<IndexType, ValueType, cusp::host_memory> & csr)
+namespace detail
 {
-    std::vector<IndexType> occupied_diagonals(csr.num_rows + csr.num_cols, char(0));
 
-    for(IndexType i = 0; i < csr.num_rows; i++){
+template <typename Matrix>
+size_t count_diagonals(const Matrix& csr, cusp::csr_format)
+{
+    typedef typename Matrix::index_type IndexType;
+
+    cusp::array1d<bool,cusp::host_memory> occupied_diagonals(csr.num_rows + csr.num_cols, false);
+
+    for(size_t i = 0; i < csr.num_rows; i++)
+    {
         for(IndexType jj = csr.row_offsets[i]; jj < csr.row_offsets[i+1]; jj++){
             IndexType j = csr.column_indices[jj];
             IndexType diagonal_offset = (csr.num_rows - i) + j; //offset shifted by + num_rows
-            occupied_diagonals[diagonal_offset] = 1;
+            occupied_diagonals[diagonal_offset] = true;
         }
     }
 
-    return std::accumulate(occupied_diagonals.begin(), occupied_diagonals.end(), IndexType(0));
+    return thrust::count(occupied_diagonals.begin(), occupied_diagonals.end(), true);
 }
 
-template <typename IndexType, typename ValueType>
-IndexType compute_max_entries_per_row(const cusp::csr_matrix<IndexType,ValueType,cusp::host_memory>& csr)
+template <typename Matrix>
+size_t compute_max_entries_per_row(const Matrix& csr, cusp::csr_format)
 {
-    IndexType max_entries_per_row = 0;
-    for(IndexType i = 0; i < csr.num_rows; i++)
-        max_entries_per_row = std::max(max_entries_per_row, csr.row_offsets[i+1] - csr.row_offsets[i]); 
+    size_t max_entries_per_row = 0;
+    for(size_t i = 0; i < csr.num_rows; i++)
+        max_entries_per_row = std::max<size_t>(max_entries_per_row, csr.row_offsets[i+1] - csr.row_offsets[i]); 
     return max_entries_per_row;
+}
+
+template <typename Matrix>
+size_t compute_optimal_entries_per_row(const Matrix& csr,
+                                      float relative_speed,
+                                      size_t breakeven_threshold,
+                                      cusp::csr_format)
+{
+    typedef typename Matrix::index_type IndexType;
+    
+    // compute maximum row length
+    size_t max_cols_per_row = 0;
+    for(size_t i = 0; i < csr.num_rows; i++)
+        max_cols_per_row = std::max<size_t>(max_cols_per_row, csr.row_offsets[i+1] - csr.row_offsets[i]); 
+
+    // compute distribution of nnz per row
+    std::vector<IndexType> histogram(max_cols_per_row + 1, 0);
+    for(size_t i = 0; i < csr.num_rows; i++)
+        histogram[csr.row_offsets[i+1] - csr.row_offsets[i]]++;
+
+    // compute optimal ELL column size 
+    size_t num_cols_per_row = max_cols_per_row;
+    for(size_t i = 0, rows = csr.num_rows; i < max_cols_per_row; i++)
+    {
+        rows -= histogram[i];  //number of rows of length > i
+        if(relative_speed * rows < csr.num_rows || (size_t) rows < breakeven_threshold)
+        {
+            num_cols_per_row = i;
+            break;
+        }
+    }
+
+    return num_cols_per_row;
+}
+
+} // end namespace detail
+
+template <typename Matrix>
+size_t count_diagonals(const Matrix& m)
+{
+  return cusp::detail::host::detail::count_diagonals(m, typename Matrix::format());
+}
+
+template <typename Matrix>
+size_t compute_max_entries_per_row(const Matrix& m)
+{
+  return cusp::detail::host::detail::compute_max_entries_per_row(m, typename Matrix::format());
 }
 
 
@@ -71,33 +127,13 @@ IndexType compute_max_entries_per_row(const cusp::csr_matrix<IndexType,ValueType
 //! @param relative_speed       Speed of ELL relative to COO (e.g. 2.0 -> ELL is twice as fast)
 //! @param breakeven_threshold  Minimum threshold at which ELL is faster than COO
 ////////////////////////////////////////////////////////////////////////////////
-template <typename IndexType, typename ValueType>
-IndexType compute_optimal_entries_per_row(const cusp::csr_matrix<IndexType,ValueType,cusp::host_memory>& csr,
-                                          float relative_speed = 3.0, IndexType breakeven_threshold = 4096)
+template <typename Matrix>
+size_t compute_optimal_entries_per_row(const Matrix& m,
+                                       float relative_speed = 3.0f,
+                                       size_t breakeven_threshold = 4096)
 {
-    // compute maximum row length
-    IndexType max_cols_per_row = 0;
-    for(IndexType i = 0; i < csr.num_rows; i++)
-        max_cols_per_row = std::max(max_cols_per_row, csr.row_offsets[i+1] - csr.row_offsets[i]); 
-
-    // compute distribution of nnz per row
-    std::vector<IndexType> histogram(max_cols_per_row + 1, 0);
-    for(IndexType i = 0; i < csr.num_rows; i++)
-        histogram[csr.row_offsets[i+1] - csr.row_offsets[i]]++;
-
-    // compute optimal ELL column size 
-    IndexType num_cols_per_row = max_cols_per_row;
-    for(IndexType i = 0, rows = csr.num_rows; i < max_cols_per_row; i++)
-    {
-        rows -= histogram[i];  //number of rows of length > i
-        if(relative_speed * rows < csr.num_rows || rows < breakeven_threshold)
-        {
-            num_cols_per_row = i;
-            break;
-        }
-    }
-
-    return num_cols_per_row;
+  return cusp::detail::host::detail::compute_optimal_entries_per_row
+    (m, relative_speed, breakeven_threshold, typename Matrix::format());
 }
 
 } // end namespace host

@@ -14,8 +14,13 @@
  *  limitations under the License.
  */
 
+/*! \file stencil.h
+ *  \brief Generate sparse matrix from grid stencil
+ */
 
 #pragma once
+
+#include <cusp/detail/config.h>
 
 #include <cusp/array1d.h>
 

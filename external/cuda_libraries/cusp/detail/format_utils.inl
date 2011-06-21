@@ -14,38 +14,66 @@
  *  limitations under the License.
  */
     
-#include <cusp/coo_matrix.h>
-#include <cusp/csr_matrix.h>
-#include <cusp/dia_matrix.h>
-#include <cusp/ell_matrix.h>
-#include <cusp/hyb_matrix.h>
+#include <cusp/copy.h>
+#include <cusp/format.h>
+#include <cusp/array1d.h>
 
 #include <thrust/fill.h>
+#include <thrust/extrema.h>
 #include <thrust/binary_search.h>
 #include <thrust/transform.h>
+#include <thrust/gather.h>
 #include <thrust/scatter.h>
+#include <thrust/sequence.h>
+#include <thrust/scan.h>
+#include <thrust/sort.h>
 
 namespace cusp
 {
 namespace detail
 {
 
+template <typename IndexType>
+struct empty_row_functor
+{
+  typedef bool result_type;
+
+  template <typename Tuple>
+    __host__ __device__
+  bool operator()(const Tuple& t) const
+  {
+    const IndexType a = thrust::get<0>(t);
+    const IndexType b = thrust::get<1>(t);
+
+    return a != b;
+  }
+};
+
+
 template <typename OffsetArray, typename IndexArray>
 void offsets_to_indices(const OffsetArray& offsets, IndexArray& indices)
 {
+    CUSP_PROFILE_SCOPED();
+
     typedef typename OffsetArray::value_type OffsetType;
 
     // convert compressed row offsets into uncompressed row indices
-    thrust::upper_bound(offsets.begin() + 1,
-                        offsets.end(),
-                        thrust::counting_iterator<OffsetType>(0),
-                        thrust::counting_iterator<OffsetType>(indices.size()),
-                        indices.begin());
+    thrust::fill(indices.begin(), indices.end(), OffsetType(0));
+    thrust::scatter_if( thrust::counting_iterator<OffsetType>(0),
+			thrust::counting_iterator<OffsetType>(offsets.size()-1),
+			offsets.begin(),
+                    	thrust::make_transform_iterator(
+                                thrust::make_zip_iterator( thrust::make_tuple( offsets.begin(), offsets.begin()+1 ) ),
+                                empty_row_functor<OffsetType>()),
+                    	indices.begin());
+    thrust::inclusive_scan(indices.begin(), indices.end(), indices.begin(), thrust::maximum<OffsetType>());
 }
 
 template <typename IndexArray, typename OffsetArray>
 void indices_to_offsets(const IndexArray& indices, OffsetArray& offsets)
 {
+    CUSP_PROFILE_SCOPED();
+
     typedef typename OffsetArray::value_type OffsetType;
 
     // convert uncompressed row indices into compressed row offsets
@@ -56,79 +84,79 @@ void indices_to_offsets(const IndexArray& indices, OffsetArray& offsets)
                         offsets.begin());
 }
 
-template<typename T, typename IndexType>
-struct row_operator : public std::unary_function<T,IndexType>
+template<typename IndexType>
+struct row_operator : public std::unary_function<size_t,IndexType>
 {
-    row_operator(int a_step)
-        : step(a_step)
-	{
+    size_t pitch;
 
-	}
+    row_operator(size_t pitch)
+        : pitch(pitch) {}
 
-    __host__ __device__ IndexType operator()(const T &value) const
-	{
-        return value % step;
-	}
-
-    private:
-        int step;
+    __host__ __device__
+    IndexType operator()(const size_t & linear_index) const
+    {
+        return linear_index % pitch;
+    }
 };
 
 
-
-// TODO fuse transform and scatter_if together
-template <typename IndexType, typename ValueType, typename MemorySpace,
-          typename ArrayType>
-void extract_diagonal(const cusp::coo_matrix<IndexType,ValueType,MemorySpace>& A, ArrayType& output)
+template <typename IndexType>
+struct tuple_equal_to : public thrust::unary_function<thrust::tuple<IndexType,IndexType>,bool>
 {
-    output.resize(thrust::min(A.num_rows, A.num_cols));
+    __host__ __device__
+    bool operator()(const thrust::tuple<IndexType,IndexType>& t) const
+    {
+        return thrust::get<0>(t) == thrust::get<1>(t);
+    }
+};
 
+template <typename Matrix, typename Array>
+void extract_diagonal(const Matrix& A, Array& output, cusp::coo_format)
+{
+    CUSP_PROFILE_SCOPED();
+
+    typedef typename Matrix::index_type  IndexType;
+    typedef typename Array::value_type   ValueType;
+    
     // initialize output to zero
     thrust::fill(output.begin(), output.end(), ValueType(0));
-
-    // determine which matrix entries correspond to the matrix diagonal
-    cusp::array1d<unsigned int,MemorySpace> is_diagonal(A.num_entries);
-    thrust::transform(A.row_indices.begin(), A.row_indices.end(), A.column_indices.begin(), is_diagonal.begin(), thrust::equal_to<IndexType>());
 
     // scatter the diagonal values to output
     thrust::scatter_if(A.values.begin(), A.values.end(),
                        A.row_indices.begin(),
-                       is_diagonal.begin(),
+                       thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(A.row_indices.begin(), A.column_indices.begin())), tuple_equal_to<IndexType>()),
                        output.begin());
 }
 
 
-template <typename IndexType, typename ValueType, typename MemorySpace,
-          typename ArrayType>
-void extract_diagonal(const cusp::csr_matrix<IndexType,ValueType,MemorySpace>& A, ArrayType& output)
+template <typename Matrix, typename Array>
+void extract_diagonal(const Matrix& A, Array& output, cusp::csr_format)
 {
-    output.resize(thrust::min(A.num_rows, A.num_cols));
-
-    // initialize output to zero
-    thrust::fill(output.begin(), output.end(), ValueType(0));
-
+    typedef typename Matrix::index_type  IndexType;
+    typedef typename Array::value_type   ValueType;
+    typedef typename Array::memory_space MemorySpace;
+    
     // first expand the compressed row offsets into row indices
     cusp::array1d<IndexType,MemorySpace> row_indices(A.num_entries);
     offsets_to_indices(A.row_offsets, row_indices);
 
-    // determine which matrix entries correspond to the matrix diagonal
-    cusp::array1d<unsigned int,MemorySpace> is_diagonal(A.num_entries);
-    thrust::transform(row_indices.begin(), row_indices.end(), A.column_indices.begin(), is_diagonal.begin(), thrust::equal_to<IndexType>());
+    // initialize output to zero
+    thrust::fill(output.begin(), output.end(), ValueType(0));
 
     // scatter the diagonal values to output
     thrust::scatter_if(A.values.begin(), A.values.end(),
                        row_indices.begin(),
-                       is_diagonal.begin(),
+                       thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(row_indices.begin(), A.column_indices.begin())), tuple_equal_to<IndexType>()),
                        output.begin());
 }
 
 
-template <typename IndexType, typename ValueType, typename MemorySpace,
-          typename ArrayType>
-void extract_diagonal(const cusp::dia_matrix<IndexType,ValueType,MemorySpace>& A, ArrayType& output)
+template <typename Matrix, typename Array>
+void extract_diagonal(const Matrix& A, Array& output, cusp::dia_format)
 {
-    output.resize(thrust::min(A.num_rows, A.num_cols));
-
+    typedef typename Matrix::index_type  IndexType;
+    typedef typename Array::value_type   ValueType;
+    
     // copy diagonal_offsets to host (sometimes unnecessary)
     cusp::array1d<IndexType,cusp::host_memory> diagonal_offsets(A.diagonal_offsets);
 
@@ -137,8 +165,8 @@ void extract_diagonal(const cusp::dia_matrix<IndexType,ValueType,MemorySpace>& A
         if(diagonal_offsets[i] == 0)
         {
             // diagonal found, copy to output and return
-            thrust::copy(A.values.values.begin() + A.values.num_rows * i,
-                         A.values.values.begin() + A.values.num_rows * i + output.size(),
+            thrust::copy(A.values.values.begin() + A.values.pitch * i,
+                         A.values.values.begin() + A.values.pitch * i + output.size(),
                          output.begin());
             return;
         }
@@ -149,76 +177,119 @@ void extract_diagonal(const cusp::dia_matrix<IndexType,ValueType,MemorySpace>& A
 }
 
 
-template <typename IndexType, typename ValueType, typename MemorySpace,
-          typename ArrayType>
-void extract_diagonal(const cusp::ell_matrix<IndexType,ValueType,MemorySpace>& A, ArrayType& output)
+template <typename Matrix, typename Array>
+void extract_diagonal(const Matrix& A, Array& output, cusp::ell_format)
 {
-    output.resize(thrust::min(A.num_rows, A.num_cols));
-
+    typedef typename Matrix::index_type  IndexType;
+    typedef typename Array::value_type   ValueType;
+    
     // initialize output to zero
     thrust::fill(output.begin(), output.end(), ValueType(0));
 
-    // compute ELL row indices
-    cusp::array1d<IndexType,MemorySpace> row_indices(A.column_indices.values.size());
-    thrust::transform(thrust::counting_iterator<int>(0), thrust::counting_iterator<int>(A.column_indices.values.size()),
-            row_indices.begin(), row_operator<int,IndexType>(A.column_indices.num_rows));
+    thrust::scatter_if
+        (A.values.values.begin(), A.values.values.end(),
+         thrust::make_transform_iterator(thrust::counting_iterator<size_t>(0), row_operator<IndexType>(A.column_indices.pitch)),
+         thrust::make_zip_iterator(thrust::make_tuple
+             (thrust::make_transform_iterator(thrust::counting_iterator<size_t>(0), row_operator<IndexType>(A.column_indices.pitch)),
+              A.column_indices.values.begin())),
+         output.begin(),
+         tuple_equal_to<IndexType>());
 
-    // determine which matrix entries correspond to the matrix diagonal
-    cusp::array1d<unsigned int,MemorySpace> is_diagonal(A.column_indices.values.size());
-    thrust::transform(row_indices.begin(), row_indices.end(), A.column_indices.values.begin(), is_diagonal.begin(), thrust::equal_to<IndexType>());
-
-    // scatter the diagonal values to output
-    thrust::scatter_if(A.values.values.begin(), A.values.values.end(),
-                       row_indices.begin(),
-                       is_diagonal.begin(),
-                       output.begin());
+    // TODO ignore padded values in column_indices
 }
 
-template <typename IndexType, typename ValueType, typename MemorySpace,
-          typename ArrayType>
-void extract_diagonal(const cusp::hyb_matrix<IndexType,ValueType,MemorySpace>& A, ArrayType& output)
+template <typename Matrix, typename Array>
+void extract_diagonal(const Matrix& A, Array& output, cusp::hyb_format)
 {
-    output.resize(thrust::min(A.num_rows, A.num_cols));
+    typedef typename Matrix::index_type  IndexType;
+    typedef typename Array::value_type   ValueType;
     
-    // initialize output to zero
-    thrust::fill(output.begin(), output.end(), ValueType(0));
-
     // extract COO diagonal
-    {
-        // determine which matrix entries correspond to the matrix diagonal
-        cusp::array1d<unsigned int,MemorySpace> is_diagonal(A.coo.num_entries);
-        thrust::transform(A.coo.row_indices.begin(), A.coo.row_indices.end(),
-                          A.coo.column_indices.begin(),
-                          is_diagonal.begin(),
-                          thrust::equal_to<IndexType>());
-    
-        // scatter the diagonal values to output
-        thrust::scatter_if(A.coo.values.begin(), A.coo.values.end(),
-                           A.coo.row_indices.begin(),
-                           is_diagonal.begin(),
-                           output.begin());
-    }
+    cusp::detail::extract_diagonal(A.coo, output);
 
     // extract ELL diagonal
+    thrust::scatter_if
+        (A.ell.values.values.begin(), A.ell.values.values.end(),
+         thrust::make_transform_iterator(thrust::counting_iterator<size_t>(0), row_operator<IndexType>(A.ell.column_indices.pitch)),
+         thrust::make_zip_iterator(thrust::make_tuple
+             (thrust::make_transform_iterator(thrust::counting_iterator<size_t>(0), row_operator<IndexType>(A.ell.column_indices.pitch)),
+              A.ell.column_indices.values.begin())),
+         output.begin(),
+         tuple_equal_to<IndexType>());
+
+    // TODO ignore padded values in column_indices
+}
+
+
+template <typename Matrix, typename Array>
+void extract_diagonal(const Matrix& A, Array& output)
+{
+    CUSP_PROFILE_SCOPED();
+
+    output.resize(thrust::min(A.num_rows, A.num_cols));
+
+    // dispatch on matrix format
+    extract_diagonal(A, output, typename Matrix::format());
+}
+
+template <typename Array1, typename Array2, typename Array3>
+void sort_by_row(Array1& rows, Array2& columns, Array3& values)
+{
+    CUSP_PROFILE_SCOPED();
+
+    typedef typename Array1::value_type IndexType;
+    typedef typename Array3::value_type ValueType;
+    typedef typename Array1::memory_space MemorySpace;
+        
+    size_t N = rows.size();
+
+    cusp::array1d<IndexType,MemorySpace> permutation(N);
+    thrust::sequence(permutation.begin(), permutation.end());
+  
+    // compute permutation that sorts the rows
+    thrust::sort_by_key(rows.begin(), rows.end(), permutation.begin());
+
+    // copy columns and values to temporary buffers
+    cusp::array1d<IndexType,MemorySpace> temp1(columns);
+    cusp::array1d<ValueType,MemorySpace> temp2(values);
+        
+    // use permutation to reorder the values
+    thrust::gather(permutation.begin(), permutation.end(),
+                   thrust::make_zip_iterator(thrust::make_tuple(temp1.begin(),   temp2.begin())),
+                   thrust::make_zip_iterator(thrust::make_tuple(columns.begin(), values.begin())));
+}
+
+template <typename Array1, typename Array2, typename Array3>
+void sort_by_row_and_column(Array1& rows, Array2& columns, Array3& values)
+{
+    CUSP_PROFILE_SCOPED();
+
+    typedef typename Array1::value_type IndexType;
+    typedef typename Array3::value_type ValueType;
+    typedef typename Array1::memory_space MemorySpace;
+        
+    size_t N = rows.size();
+
+    cusp::array1d<IndexType,MemorySpace> permutation(N);
+    thrust::sequence(permutation.begin(), permutation.end());
+  
+    // compute permutation and sort by (I,J)
     {
-        // compute ELL row indices
-        cusp::array1d<IndexType,MemorySpace> row_indices(A.ell.column_indices.values.size());
-        thrust::transform(thrust::counting_iterator<int>(0), thrust::counting_iterator<int>(A.ell.column_indices.values.size()),
-                          row_indices.begin(),
-                          row_operator<int,IndexType>(A.ell.column_indices.num_rows));
+        cusp::array1d<IndexType,MemorySpace> temp(columns);
+        thrust::stable_sort_by_key(temp.begin(), temp.end(), permutation.begin());
 
-        // determine which matrix entries correspond to the matrix diagonal
-        cusp::array1d<unsigned int,MemorySpace> is_diagonal(A.ell.column_indices.values.size());
-        thrust::transform(row_indices.begin(), row_indices.end(),
-                          A.ell.column_indices.values.begin(),
-                          is_diagonal.begin(),
-                          thrust::equal_to<IndexType>());
+        cusp::copy(rows, temp);
+        thrust::gather(permutation.begin(), permutation.end(), temp.begin(), rows.begin());
+        thrust::stable_sort_by_key(rows.begin(), rows.end(), permutation.begin());
 
-        // scatter the diagonal values to output
-        thrust::scatter_if(A.ell.values.values.begin(), A.ell.values.values.end(),
-                           row_indices.begin(),
-                           is_diagonal.begin(),
-                           output.begin());
+        cusp::copy(columns, temp);
+        thrust::gather(permutation.begin(), permutation.end(), temp.begin(), columns.begin());
+    }
+
+    // use permutation to reorder the values
+    {
+        cusp::array1d<ValueType,MemorySpace> temp(values);
+        thrust::gather(permutation.begin(), permutation.end(), temp.begin(), values.begin());
     }
 }
 

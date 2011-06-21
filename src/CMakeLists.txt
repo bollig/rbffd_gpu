@@ -51,6 +51,7 @@ SET(REQUIRED_SOURCE_FILES
 SET( REQUIRED_CU_SOURCE_FILES
     # find * -name "*.cu"
     #pdes/elliptic/ncar_poisson1_cusp.cu
+    pdes/parabolic/heat_pde_cusp.cu
     )
 
 SET( REQUIRED_CL_SOURCE_FILES
@@ -59,7 +60,7 @@ SET( REQUIRED_CL_SOURCE_FILES
     # find * -name "*cl.c*"
     #*	pdes/elliptic/ncar_poisson1_cl.cpp
     #P1 pdes/elliptic/ncar_poisson2_cl.cpp
-    pdes/elliptic/nonuniform_poisson1_cl.cpp
+    #REQUIRES BOOST:    pdes/elliptic/nonuniform_poisson1_cl.cpp
     pdes/parabolic/heat_pde_cl.cpp
     rbffd/rbffd_cl.cpp
 )
@@ -113,13 +114,23 @@ IF(CUDA_FOUND)
 ENDIF(CUDA_FOUND)
 
 IF(OPENCL_FOUND) 
-    MESSAGE(STATUS "ADDING ${FRAMEWORK_OPENCL_LIBRARY} TO BUILD PROCESS ${OPENCL_LIBRARIES}")
-    INCLUDE_DIRECTORIES( ${OPENCL_INCLUDE_DIR} )
-    ADD_LIBRARY (${FRAMEWORK_OPENCL_LIBRARY} ${REQUIRED_CL_SOURCE_FILES} noop.c)
-    ADD_DEPENDENCIES( ${FRAMEWORK_OPENCL_LIBRARY} ${FRAMEWORK_DEPENDENCIES} ${FRAMEWORK_LIBRARY})
-    TARGET_LINK_LIBRARIES (	${FRAMEWORK_OPENCL_LIBRARY}
-        ${OPENCL_LIBRARIES}
-        )
+    # NOTE: vienna cl requires boost
+    FIND_PACKAGE(Boost)
+    #    IF (Boost_FOUND)
+        MESSAGE(STATUS "ADDING ${FRAMEWORK_OPENCL_LIBRARY} TO BUILD PROCESS ${OPENCL_LIBRARIES}")
+        INCLUDE_DIRECTORIES( 
+            ${OPENCL_INCLUDE_DIR}
+            #${Boost_INCLUDE_DIRS}
+            )
+        ADD_LIBRARY (${FRAMEWORK_OPENCL_LIBRARY} ${REQUIRED_CL_SOURCE_FILES} noop.c)
+        ADD_DEPENDENCIES( ${FRAMEWORK_OPENCL_LIBRARY} ${FRAMEWORK_DEPENDENCIES} ${FRAMEWORK_LIBRARY})
+        TARGET_LINK_LIBRARIES (	${FRAMEWORK_OPENCL_LIBRARY}
+            ${OPENCL_LIBRARIES}
+            #            ${BOOST_LIBRARIES}
+            )
+        #ELSE (Boost_FOUND)
+        #MESSAGE (WARNING "Could not find boost! Will not be able to build OpenCL library")
+        #ENDIF(Boost_FOUND)
 ENDIF(OPENCL_FOUND)
 
 

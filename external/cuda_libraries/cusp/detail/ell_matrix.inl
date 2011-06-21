@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-#include <cusp/detail/convert.h>
+#include <cusp/convert.h>
 #include <cusp/detail/utils.h>
 
 namespace cusp
@@ -24,97 +24,79 @@ namespace cusp
 // Constructors //
 //////////////////
         
-// construct empty matrix
-template <typename IndexType, typename ValueType, class MemorySpace>
-ell_matrix<IndexType,ValueType,MemorySpace>
-    ::ell_matrix()
-        : detail::matrix_base<IndexType,ValueType,MemorySpace>() {}
-
-// construct matrix with given shape and number of entries
-template <typename IndexType, typename ValueType, class MemorySpace>
-ell_matrix<IndexType,ValueType,MemorySpace>
-    ::ell_matrix(IndexType num_rows, IndexType num_cols, IndexType num_entries,
-                 IndexType num_entries_per_row, IndexType alignment)
-        : detail::matrix_base<IndexType,ValueType,MemorySpace>(num_rows, num_cols, num_entries),
-          column_indices(detail::round_up(num_rows, alignment), num_entries_per_row),
-          values(detail::round_up(num_rows, alignment), num_entries_per_row) {}
-
-// construct from another matrix
-template <typename IndexType, typename ValueType, class MemorySpace>
-template <typename IndexType2, typename ValueType2, typename MemorySpace2>
-ell_matrix<IndexType,ValueType,MemorySpace>
-    ::ell_matrix(const ell_matrix<IndexType2, ValueType2, MemorySpace2>& matrix)
-        : detail::matrix_base<IndexType,ValueType,MemorySpace>(matrix.num_rows, matrix.num_cols, matrix.num_entries),
-          column_indices(matrix.column_indices), values(matrix.values) {}
-
-// construct from a different matrix format
+// construct from a different matrix
 template <typename IndexType, typename ValueType, class MemorySpace>
 template <typename MatrixType>
 ell_matrix<IndexType,ValueType,MemorySpace>
     ::ell_matrix(const MatrixType& matrix)
     {
-        cusp::detail::convert(*this, matrix);
+        cusp::convert(matrix, *this);
     }
 
 //////////////////////
 // Member Functions //
 //////////////////////
 
-// resize matrix shape and storage
-template <typename IndexType, typename ValueType, class MemorySpace>
-    void
-    ell_matrix<IndexType,ValueType,MemorySpace>
-    ::resize(IndexType num_rows, IndexType num_cols, IndexType num_entries,
-             IndexType num_entries_per_row, IndexType alignment)
-    {
-        this->num_rows    = num_rows;
-        this->num_cols    = num_cols;
-        this->num_entries = num_entries;
-
-        column_indices.resize(detail::round_up(num_rows, alignment), num_entries_per_row);
-        values.resize(detail::round_up(num_rows, alignment), num_entries_per_row);
-    }
-
-// swap matrix contents
-template <typename IndexType, typename ValueType, class MemorySpace>
-    void
-    ell_matrix<IndexType,ValueType,MemorySpace>
-    ::swap(ell_matrix& matrix)
-    {
-        detail::matrix_base<IndexType,ValueType,MemorySpace>::swap(matrix);
-
-        column_indices.swap(matrix.column_indices);
-        values.swap(matrix.values);
-    }
-
-// assignment from another coo_matrix
-template <typename IndexType, typename ValueType, class MemorySpace>
-template <typename IndexType2, typename ValueType2, typename MemorySpace2>
-    ell_matrix<IndexType,ValueType,MemorySpace>&
-    ell_matrix<IndexType,ValueType,MemorySpace>
-    ::operator=(const ell_matrix<IndexType2, ValueType2, MemorySpace2>& matrix)
-    {
-        // TODO use matrix_base::operator=
-        this->num_rows            = matrix.num_rows;
-        this->num_cols            = matrix.num_cols;
-        this->num_entries         = matrix.num_entries;
-        this->column_indices      = matrix.column_indices;
-        this->values              = matrix.values;
-
-        return *this;
-    }
-
-// assignment from another matrix format
+// assignment from another matrix
 template <typename IndexType, typename ValueType, class MemorySpace>
 template <typename MatrixType>
     ell_matrix<IndexType,ValueType,MemorySpace>&
     ell_matrix<IndexType,ValueType,MemorySpace>
     ::operator=(const MatrixType& matrix)
     {
-        cusp::detail::convert(*this, matrix);
+        cusp::convert(matrix, *this);
         
         return *this;
     }
+
+///////////////////////////
+// Convenience Functions //
+///////////////////////////
+
+template <typename Array1,
+          typename Array2>
+ell_matrix_view<Array1,Array2>
+make_ell_matrix_view(size_t num_rows,
+                     size_t num_cols,
+                     size_t num_entries,
+                     Array1 column_indices,
+                     Array2 values)
+{
+  return ell_matrix_view<Array1,Array2>
+    (num_rows, num_cols, num_entries,
+     column_indices, values);
+}
+
+template <typename Array1,
+          typename Array2,
+          typename IndexType,
+          typename ValueType,
+          typename MemorySpace>
+ell_matrix_view<Array1,Array2,IndexType,ValueType,MemorySpace>
+make_ell_matrix_view(const ell_matrix_view<Array1,Array2,IndexType,ValueType,MemorySpace>& m)
+{
+  return ell_matrix_view<Array1,Array2,IndexType,ValueType,MemorySpace>(m);
+}
+    
+template <typename IndexType, typename ValueType, class MemorySpace>
+typename ell_matrix<IndexType,ValueType,MemorySpace>::view
+make_ell_matrix_view(ell_matrix<IndexType,ValueType,MemorySpace>& m)
+{
+  return make_ell_matrix_view
+    (m.num_rows, m.num_cols, m.num_entries,
+     cusp::make_array2d_view(m.column_indices),
+     cusp::make_array2d_view(m.values));
+}
+
+template <typename IndexType, typename ValueType, class MemorySpace>
+typename ell_matrix<IndexType,ValueType,MemorySpace>::const_view
+make_ell_matrix_view(const ell_matrix<IndexType,ValueType,MemorySpace>& m)
+{
+  return make_ell_matrix_view
+    (m.num_rows, m.num_cols, m.num_entries,
+     cusp::make_array2d_view(m.column_indices),
+     cusp::make_array2d_view(m.values));
+}
 
 } // end namespace cusp
 

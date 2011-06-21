@@ -14,15 +14,14 @@
  *  limitations under the License.
  */
 
+#include <cusp/copy.h>
 #include <cusp/dia_matrix.h>
 
-#include <thrust/tuple.h> // TODO add cusp::tuple?
-
+#include <thrust/tuple.h>
 #include <thrust/reduce.h>
 #include <thrust/scan.h>
 #include <thrust/count.h>
 #include <thrust/functional.h>
-
 
 namespace cusp
 {
@@ -157,12 +156,8 @@ void generate_matrix_from_stencil(      cusp::dia_matrix<IndexType,ValueType,Mem
     cusp::array1d<IndexType,cusp::host_memory> strides(grid_indices.size());
     thrust::exclusive_scan(grid_indices.begin(), grid_indices.end(), strides.begin(), IndexType(1), thrust::multiplies<IndexType>());
 
-    //std::cout << "strides ";
-    //thrust::copy(strides.begin(), strides.end(), std::ostream_iterator<IndexType>(std::cout, " "));
-    //std::cout << std::endl;
-    
     cusp::array1d<IndexType,cusp::host_memory> offsets(stencil.size(), 0);
-    for(IndexType i = 0; i < offsets.size(); i++)
+    for(size_t i = 0; i < offsets.size(); i++)
     {
         cusp::array1d<IndexType,cusp::host_memory> stencil_indices(num_dimensions);
         detail::unpack_tuple(thrust::get<0>(stencil[i]), stencil_indices.begin());
@@ -172,27 +167,25 @@ void generate_matrix_from_stencil(      cusp::dia_matrix<IndexType,ValueType,Mem
             offsets[i] += strides[j] * stencil_indices[j];
         }
     }
-    //std::cout << "offsets ";
-    //thrust::copy(offsets.begin(), offsets.end(), std::ostream_iterator<IndexType>(std::cout, " "));
-    //std::cout << std::endl;
 
+    // TODO compute num_entries directly from stencil
     matrix.resize(num_rows, num_rows, 0, num_diagonals); // XXX we set NNZ to zero for now
 
-    matrix.diagonal_offsets = offsets;
+    cusp::copy(offsets, matrix.diagonal_offsets);
 
     // ideally we'd have row views and column views here
     for(IndexType i = 0; i < num_diagonals; i++)
     {
         thrust::transform(thrust::counting_iterator<IndexType>(0),
                           thrust::counting_iterator<IndexType>(num_rows),
-                          matrix.values.values.begin() + matrix.values.num_rows * i, 
+                          matrix.values.values.begin() + matrix.values.pitch * i, 
                           detail::fill_diagonal_entries<IndexType,ValueType,StencilPoint,GridDimension>(stencil[i], grid));
     }
 
     matrix.num_entries = matrix.values.values.size() - thrust::count(matrix.values.values.begin(), matrix.values.values.end(), ValueType(0));
 }
 
-
+// TODO add an entry point and make this the default path
 template <typename MatrixType,
           typename StencilPoint,
           typename GridDimension>
@@ -200,6 +193,8 @@ void generate_matrix_from_stencil(      MatrixType& matrix,
                                   const cusp::array1d<StencilPoint,cusp::host_memory>& stencil,
                                   const GridDimension& grid)
 {
+    CUSP_PROFILE_SCOPED();
+
     typedef typename MatrixType::index_type   IndexType;
     typedef typename MatrixType::value_type   ValueType;
     typedef typename MatrixType::memory_space MemorySpace;
@@ -207,7 +202,7 @@ void generate_matrix_from_stencil(      MatrixType& matrix,
     cusp::dia_matrix<IndexType,ValueType,MemorySpace> dia;
     generate_matrix_from_stencil(dia, stencil, grid);
 
-    matrix = dia;
+    cusp::convert(dia, matrix);
 }
                             
 } // end namespace gallery

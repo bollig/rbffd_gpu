@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-#include <cusp/detail/convert.h>
+#include <cusp/convert.h>
 #include <cusp/detail/utils.h>
 
 namespace cusp
@@ -24,83 +24,18 @@ namespace cusp
 // Constructors //
 //////////////////
         
-// construct empty matrix
-template <typename IndexType, typename ValueType, class MemorySpace>
-dia_matrix<IndexType,ValueType,MemorySpace>
-    ::dia_matrix() {}
-
-// construct matrix with given shape and number of entries
-template <typename IndexType, typename ValueType, class MemorySpace>
-dia_matrix<IndexType,ValueType,MemorySpace>
-    ::dia_matrix(IndexType num_rows, IndexType num_cols, IndexType num_entries,
-                 IndexType num_diagonals, IndexType alignment)
-        : detail::matrix_base<IndexType,ValueType,MemorySpace>(num_rows, num_cols, num_entries),
-          diagonal_offsets(num_diagonals),
-          values(detail::round_up(num_rows, alignment), num_diagonals) {}
-
-// construct from another dia_matrix
-template <typename IndexType, typename ValueType, class MemorySpace>
-template <typename IndexType2, typename ValueType2, typename MemorySpace2>
-dia_matrix<IndexType,ValueType,MemorySpace>
-    ::dia_matrix(const dia_matrix<IndexType2, ValueType2, MemorySpace2>& matrix)
-        : detail::matrix_base<IndexType,ValueType,MemorySpace>(matrix.num_rows, matrix.num_cols, matrix.num_entries),
-          diagonal_offsets(matrix.diagonal_offsets), values(matrix.values) {}
-
-// construct from a different matrix format
+// construct from a different matrix
 template <typename IndexType, typename ValueType, class MemorySpace>
 template <typename MatrixType>
 dia_matrix<IndexType,ValueType,MemorySpace>
     ::dia_matrix(const MatrixType& matrix)
     {
-        cusp::detail::convert(*this, matrix);
+        cusp::convert(matrix, *this);
     }
 
 //////////////////////
 // Member Functions //
 //////////////////////
-
-// resize matrix shape and storage
-template <typename IndexType, typename ValueType, class MemorySpace>
-    void
-    dia_matrix<IndexType,ValueType,MemorySpace>
-    ::resize(IndexType num_rows, IndexType num_cols, IndexType num_entries,
-             IndexType num_diagonals, IndexType alignment)
-    {
-        this->num_rows      = num_rows;
-        this->num_cols      = num_cols;
-        this->num_entries   = num_entries;
-
-        diagonal_offsets.resize(num_diagonals);
-        values.resize(detail::round_up(num_rows, alignment), num_diagonals);
-    }
-
-// swap matrix contents
-template <typename IndexType, typename ValueType, class MemorySpace>
-    void
-    dia_matrix<IndexType,ValueType,MemorySpace>
-    ::swap(dia_matrix& matrix)
-    {
-        detail::matrix_base<IndexType,ValueType,MemorySpace>::swap(matrix);
-
-        diagonal_offsets.swap(matrix.diagonal_offsets);
-        values.swap(matrix.values);
-    }
-
-// copy another dia_matrix
-template <typename IndexType, typename ValueType, class MemorySpace>
-template <typename IndexType2, typename ValueType2, typename MemorySpace2>
-    dia_matrix<IndexType,ValueType,MemorySpace>&
-    dia_matrix<IndexType,ValueType,MemorySpace>
-    ::operator=(const dia_matrix<IndexType2, ValueType2, MemorySpace2>& matrix)
-    {
-        this->num_rows         = matrix.num_rows;
-        this->num_cols         = matrix.num_cols;
-        this->num_entries      = matrix.num_entries;
-        this->diagonal_offsets = matrix.diagonal_offsets;
-        this->values           = matrix.values;
-
-        return *this;
-    }
 
 // copy a matrix in a different format
 template <typename IndexType, typename ValueType, class MemorySpace>
@@ -109,10 +44,59 @@ template <typename MatrixType>
     dia_matrix<IndexType,ValueType,MemorySpace>
     ::operator=(const MatrixType& matrix)
     {
-        cusp::detail::convert(*this, matrix);
+        cusp::convert(matrix, *this);
         
         return *this;
     }
+
+///////////////////////////
+// Convenience Functions //
+///////////////////////////
+
+template <typename Array1,
+          typename Array2>
+dia_matrix_view<Array1,Array2>
+make_dia_matrix_view(size_t num_rows,
+                     size_t num_cols,
+                     size_t num_entries,
+                     Array1 diagonal_offsets,
+                     Array2 values)
+{
+  return dia_matrix_view<Array1,Array2>
+    (num_rows, num_cols, num_entries,
+     diagonal_offsets, values);
+}
+
+template <typename Array1,
+          typename Array2,
+          typename IndexType,
+          typename ValueType,
+          typename MemorySpace>
+dia_matrix_view<Array1,Array2,IndexType,ValueType,MemorySpace>
+make_dia_matrix_view(const dia_matrix_view<Array1,Array2,IndexType,ValueType,MemorySpace>& m)
+{
+  return dia_matrix_view<Array1,Array2,IndexType,ValueType,MemorySpace>(m);
+}
+    
+template <typename IndexType, typename ValueType, class MemorySpace>
+typename dia_matrix<IndexType,ValueType,MemorySpace>::view
+make_dia_matrix_view(dia_matrix<IndexType,ValueType,MemorySpace>& m)
+{
+  return make_dia_matrix_view
+    (m.num_rows, m.num_cols, m.num_entries,
+     cusp::make_array1d_view(m.diagonal_offsets),
+     cusp::make_array2d_view(m.values));
+}
+
+template <typename IndexType, typename ValueType, class MemorySpace>
+typename dia_matrix<IndexType,ValueType,MemorySpace>::const_view
+make_dia_matrix_view(const dia_matrix<IndexType,ValueType,MemorySpace>& m)
+{
+  return make_dia_matrix_view
+    (m.num_rows, m.num_cols, m.num_entries,
+     cusp::make_array1d_view(m.diagonal_offsets),
+     cusp::make_array2d_view(m.values));
+}
 
 } // end namespace cusp
 

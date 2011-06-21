@@ -14,26 +14,34 @@
  *  limitations under the License.
  */
 
+/*! \file hyb_matrix.h
+ *  \brief Hybrid ELL/COO matrix format
+ */
 
 #pragma once
 
 #include <cusp/detail/config.h>
 
 #include <cusp/array1d.h>
+#include <cusp/format.h>
 #include <cusp/detail/matrix_base.h>
 
 namespace cusp
 {
-/*! \addtogroup containers Containers 
- *  \addtogroup sparse_matrix_formats Sparse Matrices
- *  \ingroup containers
- *  \{
- */
     // Forward definitions
     template <typename IndexType, typename ValueType, class MemorySpace> class ell_matrix;
     template <typename IndexType, typename ValueType, class MemorySpace> class coo_matrix;
+    template <typename Matrix1, typename Matrix2, typename IndexType, typename ValueType, class MemorySpace> class hyb_matrix_view;
 
-/*! \p hyb_matrix : Hybrid ELL/COO matrix format
+/*! \addtogroup sparse_matrices Sparse Matrices
+ */
+
+/*! \addtogroup sparse_matrix_containers Sparse Matrix Containers
+ *  \ingroup sparse_matrices
+ *  \{
+ */
+
+/*! \p hyb_matrix : Hybrid ELL/COO matrix container
  *
  * The \p hyb_matrix is a combination of the \p ell_matrix and
  * \p coo_matrix formats.  Specifically, the \p hyb_matrix format
@@ -114,77 +122,189 @@ namespace cusp
  *  \see \p ell_matrix
  *  \see \p coo_matrix
  */
-    template <typename IndexType, typename ValueType, class MemorySpace>
-    class hyb_matrix : public detail::matrix_base<IndexType,ValueType,MemorySpace>
+template <typename IndexType, typename ValueType, class MemorySpace>
+class hyb_matrix : public detail::matrix_base<IndexType,ValueType,MemorySpace,cusp::hyb_format>
+{
+  typedef cusp::detail::matrix_base<IndexType,ValueType,MemorySpace,cusp::hyb_format> Parent;
+    public:
+    /*! rebind matrix to a different MemorySpace
+     */
+    template<typename MemorySpace2>
+    struct rebind { typedef cusp::hyb_matrix<IndexType, ValueType, MemorySpace2> type; };
+    
+    /*! equivalent container type
+     */
+    typedef typename cusp::hyb_matrix<IndexType, ValueType, MemorySpace> container;
+
+    /*! equivalent view type
+     */
+    typedef typename cusp::hyb_matrix_view<typename cusp::ell_matrix<IndexType,ValueType,MemorySpace>::view,
+                                           typename cusp::coo_matrix<IndexType,ValueType,MemorySpace>::view,
+                                           IndexType, ValueType, MemorySpace> view;
+    
+    /*! equivalent const_view type
+     */
+    typedef typename cusp::hyb_matrix_view<typename cusp::ell_matrix<IndexType,ValueType,MemorySpace>::const_view,
+                                           typename cusp::coo_matrix<IndexType,ValueType,MemorySpace>::const_view,
+                                           IndexType, ValueType, MemorySpace> const_view;
+    
+    /*! type of \p ELL portion of the HYB structure 
+     */
+    typedef cusp::ell_matrix<IndexType,ValueType,MemorySpace> ell_matrix_type;
+    
+    /*! type of \p COO portion of the HYB structure 
+     */
+    typedef cusp::coo_matrix<IndexType,ValueType,MemorySpace> coo_matrix_type;
+    
+    /*! Storage for the \p ell_matrix portion.
+     */
+    ell_matrix_type ell;
+    
+    /*! Storage for the \p ell_matrix portion.
+     */
+    coo_matrix_type coo;
+
+    /*! Construct an empty \p hyb_matrix.
+     */
+    hyb_matrix() {}
+
+    /*! Construct a \p hyb_matrix with a specific shape and separation into ELL and COO portions.
+     *
+     *  \param num_rows Number of rows.
+     *  \param num_cols Number of columns.
+     *  \param num_ell_entries Number of nonzero matrix entries in the ELL portion.
+     *  \param num_coo_entries Number of nonzero matrix entries in the ELL portion.
+     *  \param num_entries_per_row Maximum number of nonzeros per row in the ELL portion.
+     *  \param alignment Amount of padding used to align the ELL data structure (default 32).
+     */
+    hyb_matrix(IndexType num_rows, IndexType num_cols,
+               IndexType num_ell_entries, IndexType num_coo_entries,
+               IndexType num_entries_per_row, IndexType alignment = 32)
+    : Parent(num_rows, num_cols, num_ell_entries + num_coo_entries),
+      ell(num_rows, num_cols, num_ell_entries, num_entries_per_row, alignment),
+      coo(num_rows, num_cols, num_coo_entries) {}
+
+    // TODO remove default alignment of 32
+
+    /*! Construct a \p hyb_matrix from another matrix.
+     *
+     *  \param matrix Another sparse or dense matrix.
+     */
+    template <typename MatrixType>
+    hyb_matrix(const MatrixType& matrix);
+    
+    /*! Resize matrix dimensions and underlying storage
+     */
+    void resize(IndexType num_rows, IndexType num_cols,
+                IndexType num_ell_entries, IndexType num_coo_entries,
+                IndexType num_entries_per_row, IndexType alignment = 32)
     {
-        public:
-        template<typename MemorySpace2>
-        struct rebind { typedef hyb_matrix<IndexType, ValueType, MemorySpace2> type; };
+      Parent::resize(num_rows, num_cols, num_ell_entries + num_coo_entries);
+      ell.resize(num_rows, num_cols, num_ell_entries, num_entries_per_row, alignment);
+      coo.resize(num_rows, num_cols, num_coo_entries);
+    }
 
-        /*! Storage for the \p ell_matrix portion.
-         */
-        cusp::ell_matrix<IndexType,ValueType,MemorySpace> ell;
-        
-        /*! Storage for the \p coo_matrix portion.
-         */
-        cusp::coo_matrix<IndexType,ValueType,MemorySpace> coo;
-
-        /*! Construct an empty \p hyb_matrix.
-         */
-        hyb_matrix();
-
-        /*! Construct a \p hyb_matrix with a specific shape and separation into ELL and COO portions.
-         *
-         *  \param num_rows Number of rows.
-         *  \param num_cols Number of columns.
-         *  \param num_ell_entries Number of nonzero matrix entries in the ELL portion.
-         *  \param num_coo_entries Number of nonzero matrix entries in the ELL portion.
-         *  \param num_entries_per_row Maximum number of nonzeros per row in the ELL portion.
-         *  \param alignment Amount of padding used to align the ELL data structure (default 32).
-         */
-        hyb_matrix(IndexType num_rows, IndexType num_cols,
-                   IndexType num_ell_entries, IndexType num_coo_entries,
-                   IndexType num_entries_per_row, IndexType alignment = 32);
-
-        /*! Construct a \p hyb_matrix from another \p hyb_matrix.
-         *
-         *  \param matrix Another \p hyb_matrix.
-         */
-        template <typename IndexType2, typename ValueType2, typename MemorySpace2>
-        hyb_matrix(const hyb_matrix<IndexType2, ValueType2, MemorySpace2>& matrix);
-        
-        /*! Construct a \p hyb_matrix from another matrix format.
-         *
-         *  \param matrix Another sparse or dense matrix.
-         */
-        template <typename MatrixType>
-        hyb_matrix(const MatrixType& matrix);
-        
-        void resize(IndexType num_rows, IndexType num_cols,
-                    IndexType num_ell_entries, IndexType num_coo_entries,
-                    IndexType num_entries_per_row, IndexType alignment = 32);
-
-        /*! Swap the contents of two \p hyb_matrix objects.
-         *
-         *  \param matrix Another \p hyb_matrix with the same IndexType and ValueType.
-         */
-        void swap(hyb_matrix& matrix);
-        
-        /*! Assignment from another \p hyb_matrix.
-         *
-         *  \param matrix Another \p hyb_matrix with possibly different IndexType and ValueType.
-         */
-        template <typename IndexType2, typename ValueType2, typename MemorySpace2>
-        hyb_matrix& operator=(const hyb_matrix<IndexType2, ValueType2, MemorySpace2>& matrix);
-
-        /*! Assignment from another matrix format.
-         *
-         *  \param matrix Another sparse or dense matrix.
-         */
-        template <typename MatrixType>
-        hyb_matrix& operator=(const MatrixType& matrix);
-    }; // class hyb_matrix
+    /*! Swap the contents of two \p hyb_matrix objects.
+     *
+     *  \param matrix Another \p hyb_matrix with the same IndexType and ValueType.
+     */
+    void swap(hyb_matrix& matrix)
+    {
+      Parent::swap(matrix);
+      ell.swap(matrix.ell);
+      coo.swap(matrix.coo);
+    }
+    
+    /*! Assignment from another matrix.
+     *
+     *  \param matrix Another sparse or dense matrix.
+     */
+    template <typename MatrixType>
+    hyb_matrix& operator=(const MatrixType& matrix);
+}; // class hyb_matrix
 /*! \}
+ */
+
+
+/*! \addtogroup sparse_matrix_views Sparse Matrix Views
+ *  \ingroup sparse_matrices
+ *  \{
+ */
+
+/*! \p hyb_matrix_view : Hybrid ELL/COO matrix view
+ *
+ * \tparam Matrix1 Type of \c ell
+ * \tparam Matrix2 Type of \c coo
+ * \tparam IndexType Type used for matrix indices (e.g. \c int).
+ * \tparam ValueType Type used for matrix values (e.g. \c float).
+ * \tparam MemorySpace A memory space (e.g. \c cusp::host_memory or cusp::device_memory)
+ *
+ */
+template <typename Matrix1,
+          typename Matrix2,
+          typename IndexType   = typename Matrix1::index_type,
+          typename ValueType   = typename Matrix1::value_type,
+          typename MemorySpace = typename cusp::minimum_space<typename Matrix1::memory_space, typename Matrix2::memory_space>::type >
+class hyb_matrix_view : public detail::matrix_base<IndexType,ValueType,MemorySpace,cusp::hyb_format>
+{
+  typedef cusp::detail::matrix_base<IndexType,ValueType,MemorySpace,cusp::hyb_format> Parent;
+  public:
+    /*! type of \p ELL portion of the HYB structure
+     */
+    typedef Matrix1 ell_matrix_type;
+    
+    /*! type of \p COO portion of the HYB structure 
+     */
+    typedef Matrix2 coo_matrix_type;
+
+    /*! equivalent container type
+     */
+    typedef typename cusp::hyb_matrix<IndexType, ValueType, MemorySpace> container;
+
+    /*! equivalent view type
+     */
+    typedef typename cusp::hyb_matrix_view<Matrix1, Matrix2, IndexType, ValueType, MemorySpace> view;
+
+    /*! View to the \p ELL portion of the HYB structure.
+     */
+    ell_matrix_type ell;
+    
+    /*! View to the \p COO portion of the HYB structure.
+     */
+    coo_matrix_type coo;
+
+    /*! Construct an empty \p hyb_matrix_view.
+     */
+    hyb_matrix_view() {}
+
+    template <typename OtherMatrix1, typename OtherMatrix2>
+    hyb_matrix_view(OtherMatrix1& ell, OtherMatrix2& coo)
+    : Parent(ell.num_rows, ell.num_cols, ell.num_entries + coo.num_entries), ell(ell), coo(coo) {}
+    
+    template <typename OtherMatrix1, typename OtherMatrix2>
+    hyb_matrix_view(const OtherMatrix1& ell, const OtherMatrix2& coo)
+    : Parent(ell.num_rows, ell.num_cols, ell.num_entries + coo.num_entries), ell(ell), coo(coo) {}
+
+    template <typename Matrix>
+    hyb_matrix_view(Matrix& A)
+    : Parent(A), ell(A.ell), coo(A.coo) {}
+    
+    template <typename Matrix>
+    hyb_matrix_view(const Matrix& A)
+    : Parent(A), ell(A.ell), coo(A.coo) {}
+
+    /*! Resize matrix dimensions and underlying storage
+     */
+    void resize(size_t num_rows, size_t num_cols,
+                size_t num_ell_entries, size_t num_coo_entries,
+                size_t num_entries_per_row, size_t alignment = 32)
+    {
+      Parent::resize(num_rows, num_cols, num_ell_entries + num_coo_entries);
+      ell.resize(num_rows, num_cols, num_ell_entries, num_entries_per_row, alignment);
+      coo.resize(num_rows, num_cols, num_coo_entries);
+    }
+};
+/*! \} // end Views
  */
 
 } // end namespace cusp

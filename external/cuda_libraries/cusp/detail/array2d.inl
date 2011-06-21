@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-#include <cusp/detail/convert.h>
+#include <cusp/convert.h>
 
 namespace cusp
 {
@@ -23,109 +23,129 @@ namespace cusp
 // Constructors //
 //////////////////
 
-// construct empty matrix
-template<typename ValueType, class MemorySpace, class Orientation>
-array2d<ValueType,MemorySpace,Orientation>
-    ::array2d() {}
-
-// construct matrix with given shape and number of entries
-template<typename ValueType, class MemorySpace, class Orientation>
-array2d<ValueType,MemorySpace,Orientation>
-    ::array2d(int num_rows, int num_cols)
-        : detail::matrix_base<int,ValueType,MemorySpace>(num_rows, num_cols, num_rows * num_cols),
-          values(num_rows * num_cols) {}
-
-// construct matrix with given shape and number of entries and fill with a given value
-template<typename ValueType, class MemorySpace, class Orientation>
-array2d<ValueType,MemorySpace,Orientation>
-    ::array2d(int num_rows, int num_cols, const ValueType& value)
-        : detail::matrix_base<int,ValueType,MemorySpace>(num_rows, num_cols, num_rows * num_cols),
-          values(num_rows * num_cols, value) {}
-
-// construct from another array2d
-template<typename ValueType, class MemorySpace, class Orientation>
-template <typename ValueType2, typename MemorySpace2>
-array2d<ValueType,MemorySpace,Orientation>
-    ::array2d(const array2d<ValueType2, MemorySpace2, Orientation>& matrix)
-        : detail::matrix_base<int,ValueType,MemorySpace>(matrix.num_rows, matrix.num_cols, matrix.num_entries),
-          values(matrix.values) {}
-
-// construct from a different matrix format
+// construct from a different matrix
 template<typename ValueType, class MemorySpace, class Orientation>
 template <typename MatrixType>
 array2d<ValueType,MemorySpace,Orientation>
-    ::array2d(const MatrixType& matrix)
-    {
-        cusp::detail::convert(*this, matrix);
-    }
+  ::array2d(const MatrixType& matrix)
+  {
+    cusp::convert(matrix, *this);
+  }
 
 //////////////////////
 // Member Functions //
 //////////////////////
 
-template<typename ValueType, class MemorySpace, class Orientation>
-    void
-    array2d<ValueType,MemorySpace,Orientation>
-    ::resize(int num_rows, int num_cols)
-{
-    this->num_rows    = num_rows;
-    this->num_cols    = num_cols;
-    this->num_entries = num_rows * num_cols;
-
-    values.resize(num_rows * num_cols);
-}
-
-template<typename ValueType, class MemorySpace, class Orientation>
-    void
-    array2d<ValueType,MemorySpace,Orientation>
-    ::swap(array2d<ValueType,MemorySpace,Orientation> & matrix)
-{
-    detail::matrix_base<int,ValueType,MemorySpace>::swap(matrix);
-
-    values.swap(matrix.values);
-}
-
 template <typename ValueType, class MemorySpace, class Orientation>
-template <typename ValueType2, typename MemorySpace2>
-    array2d<ValueType,MemorySpace,Orientation>&
-    array2d<ValueType,MemorySpace,Orientation>
-    ::operator=(const array2d<ValueType2, MemorySpace2, Orientation>& matrix)
-    {
-        this->num_rows    = matrix.num_rows;
-        this->num_cols    = matrix.num_cols;
-        this->num_entries = matrix.num_entries;
-        this->values      = matrix.values;
+array2d<ValueType,MemorySpace,Orientation>&
+array2d<ValueType,MemorySpace,Orientation>
+  ::operator=(const array2d<ValueType,MemorySpace,Orientation>& matrix)
+  {
+    cusp::convert(matrix, *this);
 
-        return *this;
-    }
+    return *this;
+  }
 
 template <typename ValueType, class MemorySpace, class Orientation>
 template <typename MatrixType>
-    array2d<ValueType,MemorySpace,Orientation>&
-    array2d<ValueType,MemorySpace,Orientation>
-    ::operator=(const MatrixType& matrix)
-    {
-        cusp::detail::convert(*this, matrix);
-        
-        return *this;
-    }
+array2d<ValueType,MemorySpace,Orientation>&
+array2d<ValueType,MemorySpace,Orientation>
+  ::operator=(const MatrixType& matrix)
+  {
+    cusp::convert(matrix, *this);
+
+    return *this;
+  }
+
+/////////////////////
+// Other Functions //
+/////////////////////
+
+namespace detail
+{
+template <typename Array1, typename Array2>
+bool array2d_equal(const Array1& lhs, const Array2& rhs)
+{
+  typedef typename Array1::orientation Orientation1;
+  typedef typename Array2::orientation Orientation2;
+
+  if (lhs.num_rows != rhs.num_rows || lhs.num_cols != rhs.num_cols)
+      return false;
+  
+  thrust::counting_iterator<size_t> begin(0);
+  thrust::counting_iterator<size_t> end(lhs.num_entries);
+
+  cusp::detail::logical_to_physical_functor      <size_t, Orientation1>               func1(lhs.num_rows, lhs.num_cols, lhs.pitch);
+  cusp::detail::logical_to_other_physical_functor<size_t, Orientation1, Orientation2> func2(rhs.num_rows, rhs.num_cols, rhs.pitch);
+
+  // like a boss
+  return thrust::equal(thrust::make_permutation_iterator(lhs.values.begin(), thrust::make_transform_iterator(begin, func1)),
+                       thrust::make_permutation_iterator(lhs.values.begin(), thrust::make_transform_iterator(end,   func1)),
+                       thrust::make_permutation_iterator(rhs.values.begin(), thrust::make_transform_iterator(begin, func2)));
+}
+  
+} // end namespace detail
 
 template<typename ValueType1, typename MemorySpace1, typename Orientation1,
-         typename ValueType2, typename MemorySpace2>
+         typename ValueType2, typename MemorySpace2, typename Orientation2>
 bool operator==(const array2d<ValueType1,MemorySpace1,Orientation1>& lhs,
-                const array2d<ValueType2,MemorySpace2,Orientation1>& rhs)
+                const array2d<ValueType2,MemorySpace2,Orientation2>& rhs)
 {
-    // TODO generalize to mixed orientations
-    if (lhs.num_rows != rhs.num_rows || lhs.num_cols != rhs.num_cols)
-        return false;
+  return cusp::detail::array2d_equal(lhs, rhs);
+}
 
-    return lhs.values == rhs.values;
+template<typename Array1, typename Orientation1,
+         typename Array2, typename Orientation2>
+bool operator==(const array2d_view<Array1,Orientation1>& lhs,
+                const array2d_view<Array2,Orientation2>& rhs)
+{
+  return cusp::detail::array2d_equal(lhs, rhs);
 }
 
 template<typename ValueType1, typename MemorySpace1, typename Orientation1,
-         typename ValueType2, typename MemorySpace2>
+         typename Array2, typename Orientation2>
+bool operator==(const array2d<ValueType1,MemorySpace1,Orientation1>& lhs,
+                const array2d_view<Array2,Orientation2>& rhs)
+{
+  return cusp::detail::array2d_equal(lhs, rhs);
+}
+
+template<typename Array1, typename Orientation1,
+         typename ValueType2, typename MemorySpace2, typename Orientation2>
+bool operator==(const array2d_view<Array1,Orientation1>& lhs,
+                const array2d<ValueType2,MemorySpace2,Orientation2>& rhs)
+{
+  return cusp::detail::array2d_equal(lhs, rhs);
+}
+
+template<typename ValueType1, typename MemorySpace1, typename Orientation1,
+         typename ValueType2, typename MemorySpace2, typename Orientation2>
 bool operator!=(const array2d<ValueType1,MemorySpace1,Orientation1>& lhs,
-                const array2d<ValueType2,MemorySpace2,Orientation1>& rhs)
+                const array2d<ValueType2,MemorySpace2,Orientation2>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template<typename Array1, typename Orientation1,
+         typename Array2, typename Orientation2>
+bool operator!=(const array2d_view<Array1,Orientation1>& lhs,
+                const array2d_view<Array2,Orientation2>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template<typename ValueType1, typename MemorySpace1, typename Orientation1,
+         typename Array2, typename Orientation2>
+bool operator!=(const array2d<ValueType1,MemorySpace1,Orientation1>& lhs,
+                const array2d_view<Array2,Orientation2>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template<typename Array1, typename Orientation1,
+         typename ValueType2, typename MemorySpace2, typename Orientation2>
+bool operator!=(const array2d_view<Array1,Orientation1>& lhs,
+                const array2d<ValueType2,MemorySpace2,Orientation2>& rhs)
 {
     return !(lhs == rhs);
 }

@@ -14,6 +14,9 @@
  *  limitations under the License.
  */
 
+/*! \file multiply.h
+ *  \brief Matrix multiplication 
+ */
 
 #pragma once
 
@@ -67,7 +70,7 @@ namespace cusp
  *      cusp::multiply(A, x, y);
  *  
  *      // print y
- *      cusp::print_matrix(y);
+ *      cusp::print(y);
  *  
  *      return 0;
  *  }
@@ -76,9 +79,9 @@ namespace cusp
 template <typename LinearOperator,
           typename MatrixOrVector1,
           typename MatrixOrVector2>
-void multiply(const LinearOperator&  A,
-              const MatrixOrVector1& B,
-                    MatrixOrVector2& C);
+void multiply(LinearOperator&  A,
+              MatrixOrVector1& B,
+              MatrixOrVector2& C);
 /*! \}
  */
 

@@ -27,28 +27,28 @@ namespace detail
 template <typename LinearOperator,
           typename MatrixOrVector1,
           typename MatrixOrVector2>
-void multiply(const LinearOperator&  A,
-              const MatrixOrVector1& B,
-                    MatrixOrVector2& C,
-              thrust::detail::true_type)
+void multiply(LinearOperator&  A,
+              MatrixOrVector1& B,
+              MatrixOrVector2& C,
+              cusp::unknown_format)
 {
-    // invoke linear_operator multiplication method
-    A(B,C);
+  // user-defined LinearOperator
+  A(B,C);
 }
 
 template <typename LinearOperator,
           typename MatrixOrVector1,
           typename MatrixOrVector2>
-void multiply(const LinearOperator&  A,
-              const MatrixOrVector1& B,
-                    MatrixOrVector2& C,
-              thrust::detail::false_type)
+void multiply(LinearOperator&  A,
+              MatrixOrVector1& B,
+              MatrixOrVector2& C,
+              cusp::known_format)
 {
-    cusp::detail::dispatch::multiply
-        (A, B, C,
-         typename LinearOperator::memory_space(),
-         typename MatrixOrVector1::memory_space(),
-         typename MatrixOrVector2::memory_space());
+  // built-in format
+  cusp::detail::dispatch::multiply(A, B, C,
+                                   typename LinearOperator::memory_space(),
+                                   typename MatrixOrVector1::memory_space(),
+                                   typename MatrixOrVector2::memory_space());
 }
 
 } // end namespace detail
@@ -56,15 +56,19 @@ void multiply(const LinearOperator&  A,
 template <typename LinearOperator,
           typename MatrixOrVector1,
           typename MatrixOrVector2>
-void multiply(const LinearOperator&  A,
-              const MatrixOrVector1& B,
-                    MatrixOrVector2& C)
+void multiply(LinearOperator&  A,
+              MatrixOrVector1& B,
+              MatrixOrVector2& C)
 {
-    typedef typename LinearOperator::value_type   ValueType;
-    typedef typename LinearOperator::memory_space MemorySpace;
+  CUSP_PROFILE_SCOPED();
 
-    cusp::detail::multiply(A, B, C,
-         typename thrust::detail::is_convertible< LinearOperator, typename cusp::linear_operator<ValueType, MemorySpace> >::type());
+  // TODO check that dimensions are compatible
+
+  typedef typename LinearOperator::value_type   ValueType;
+  typedef typename LinearOperator::memory_space MemorySpace;
+
+  cusp::detail::multiply(A, B, C,
+                         typename LinearOperator::format());
 }
 
 } // end namespace cusp

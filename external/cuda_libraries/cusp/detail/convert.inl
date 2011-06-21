@@ -16,20 +16,47 @@
     
 #include <cusp/detail/dispatch/convert.h>
 
+#include <cusp/copy.h>
+
 namespace cusp
 {
 namespace detail
 {
-
-template <class DestinationType, class SourceType>
-void convert(DestinationType& dst, const SourceType& src)
+  
+// same format
+template <typename SourceType, typename DestinationType,
+          typename T1>
+void convert(const SourceType& src, DestinationType& dst,
+             T1, T1)
 {
-    typedef typename DestinationType::memory_space destination_space;
-    typedef typename SourceType::memory_space      source_space;
+  cusp::copy(src, dst);
+}
 
-    cusp::detail::dispatch::convert(dst, src, destination_space(), source_space());
+// different formats
+template <typename SourceType, typename DestinationType,
+          typename T1, typename T2>
+void convert(const SourceType& src, DestinationType& dst,
+             T1, T2)
+{
+  cusp::detail::dispatch::convert(src, dst,
+      typename SourceType::memory_space(),
+      typename DestinationType::memory_space());
 }
 
 } // end namespace detail
+
+/////////////////
+// Entry Point //
+/////////////////
+template <typename SourceType, typename DestinationType>
+void convert(const SourceType& src, DestinationType& dst)
+{
+  CUSP_PROFILE_SCOPED();
+
+  cusp::detail::convert(src, dst,
+      typename SourceType::format(),
+      typename DestinationType::format());
+}
+
 } // end namespace cusp
 

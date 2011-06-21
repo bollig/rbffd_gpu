@@ -16,11 +16,18 @@
 
 #pragma once
 
+#include <cusp/format.h>
 #include <cusp/coo_matrix.h>
-#include <cusp/array2d.h>
 
-#include <cusp/detail/generic/multiply.h>
-#include <cusp/detail/device/spmv.h>
+// SpMV
+#include <cusp/detail/device/spmv/coo_flat.h>
+#include <cusp/detail/device/spmv/csr_vector.h>
+#include <cusp/detail/device/spmv/dia.h>
+#include <cusp/detail/device/spmv/ell.h>
+#include <cusp/detail/device/spmv/hyb.h>
+
+// SpMM
+#include <cusp/detail/device/spmm/coo.h>
 
 namespace cusp
 {
@@ -30,38 +37,33 @@ namespace device
 {
 
 //////////////////////////////////
-// Matrix-Matrix Multiplication //
+// Dense Matrix-Vector Multiply //
 //////////////////////////////////
-template <typename IndexType,
-          typename ValueType,
-          typename MemorySpace>
-void multiply(const cusp::coo_matrix<IndexType,ValueType,MemorySpace>& A,
-              const cusp::coo_matrix<IndexType,ValueType,MemorySpace>& B,
-                    cusp::coo_matrix<IndexType,ValueType,MemorySpace>& C)
-{
-    cusp::detail::generic::multiply(A,B,C);
-}
-    
-template <typename ValueType,
-          typename MemorySpace>
-void multiply(const cusp::array2d<ValueType,MemorySpace>& A,
-              const cusp::array2d<ValueType,MemorySpace>& B,
-                    cusp::array2d<ValueType,MemorySpace>& C)
-{
-    cusp::detail::generic::multiply(A,B,C);
-}
+//// TODO implement this for both row and column-major ordering
+//template <typename Matrix,
+//          typename Vector1,
+//          typename Vector2>
+//void multiply(const Matrix&  A,
+//              const Vector1& B,
+//                    Vector2& C,
+//              cusp::array2d_format,
+//              cusp::array1d_format,
+//              cusp::array1d_format)
+//{
+//}
 
-//////////////////////////////////
-// Matrix-Vector Multiplication //
-//////////////////////////////////
-template <typename IndexType,
-          typename ValueType,
-          typename MemorySpace1,
-          typename MemorySpace2,
-          typename MemorySpace3>
-void multiply(const cusp::coo_matrix<IndexType,ValueType,MemorySpace1>& A,
-              const cusp::array1d<ValueType,MemorySpace2>& B,
-                    cusp::array1d<ValueType,MemorySpace3>& C)
+///////////////////////////////////
+// Sparse Matrix-Vector Multiply //
+///////////////////////////////////
+template <typename Matrix,
+          typename Vector1,
+          typename Vector2>
+void multiply(const Matrix&  A,
+              const Vector1& B,
+                    Vector2& C,
+              cusp::coo_format,
+              cusp::array1d_format,
+              cusp::array1d_format)
 {
 #ifdef CUSP_USE_TEXTURE_MEMORY    
     cusp::detail::device::spmv_coo_flat_tex(A, thrust::raw_pointer_cast(&B[0]), thrust::raw_pointer_cast(&C[0]));
@@ -70,14 +72,15 @@ void multiply(const cusp::coo_matrix<IndexType,ValueType,MemorySpace1>& A,
 #endif    
 }
 
-template <typename IndexType,
-          typename ValueType,
-          typename MemorySpace1,
-          typename MemorySpace2,
-          typename MemorySpace3>
-void multiply(const cusp::csr_matrix<IndexType,ValueType,MemorySpace1>& A,
-              const cusp::array1d<ValueType,MemorySpace2>& B,
-                    cusp::array1d<ValueType,MemorySpace3>& C)
+template <typename Matrix,
+          typename Vector1,
+          typename Vector2>
+void multiply(const Matrix&  A,
+              const Vector1& B,
+                    Vector2& C,
+              cusp::csr_format,
+              cusp::array1d_format,
+              cusp::array1d_format)
 {
 #ifdef CUSP_USE_TEXTURE_MEMORY    
     cusp::detail::device::spmv_csr_vector_tex(A, thrust::raw_pointer_cast(&B[0]), thrust::raw_pointer_cast(&C[0]));
@@ -86,14 +89,15 @@ void multiply(const cusp::csr_matrix<IndexType,ValueType,MemorySpace1>& A,
 #endif    
 }
 
-template <typename IndexType,
-          typename ValueType,
-          typename MemorySpace1,
-          typename MemorySpace2,
-          typename MemorySpace3>
-void multiply(const cusp::dia_matrix<IndexType,ValueType,MemorySpace1>& A,
-              const cusp::array1d<ValueType,MemorySpace2>& B,
-                    cusp::array1d<ValueType,MemorySpace3>& C)
+template <typename Matrix,
+          typename Vector1,
+          typename Vector2>
+void multiply(const Matrix&  A,
+              const Vector1& B,
+                    Vector2& C,
+              cusp::dia_format,
+              cusp::array1d_format,
+              cusp::array1d_format)
 {
 #ifdef CUSP_USE_TEXTURE_MEMORY    
     cusp::detail::device::spmv_dia_tex(A, thrust::raw_pointer_cast(&B[0]), thrust::raw_pointer_cast(&C[0]));
@@ -102,14 +106,15 @@ void multiply(const cusp::dia_matrix<IndexType,ValueType,MemorySpace1>& A,
 #endif    
 }
 
-template <typename IndexType,
-          typename ValueType,
-          typename MemorySpace1,
-          typename MemorySpace2,
-          typename MemorySpace3>
-void multiply(const cusp::ell_matrix<IndexType,ValueType,MemorySpace1>& A,
-              const cusp::array1d<ValueType,MemorySpace2>& B,
-                    cusp::array1d<ValueType,MemorySpace3>& C)
+template <typename Matrix,
+          typename Vector1,
+          typename Vector2>
+void multiply(const Matrix&  A,
+              const Vector1& B,
+                    Vector2& C,
+              cusp::ell_format,
+              cusp::array1d_format,
+              cusp::array1d_format)
 {
 #ifdef CUSP_USE_TEXTURE_MEMORY    
     cusp::detail::device::spmv_ell_tex(A, thrust::raw_pointer_cast(&B[0]), thrust::raw_pointer_cast(&C[0]));
@@ -118,20 +123,105 @@ void multiply(const cusp::ell_matrix<IndexType,ValueType,MemorySpace1>& A,
 #endif    
 }
 
-template <typename IndexType,
-          typename ValueType,
-          typename MemorySpace1,
-          typename MemorySpace2,
-          typename MemorySpace3>
-void multiply(const cusp::hyb_matrix<IndexType,ValueType,MemorySpace1>& A,
-              const cusp::array1d<ValueType,MemorySpace2>& B,
-                    cusp::array1d<ValueType,MemorySpace3>& C)
+template <typename Matrix,
+          typename Vector1,
+          typename Vector2>
+void multiply(const Matrix&  A,
+              const Vector1& B,
+                    Vector2& C,
+              cusp::hyb_format,
+              cusp::array1d_format,
+              cusp::array1d_format)
 {
 #ifdef CUSP_USE_TEXTURE_MEMORY    
-    cusp::detail::device::spmv_tex(A, thrust::raw_pointer_cast(&B[0]), thrust::raw_pointer_cast(&C[0]));
+    cusp::detail::device::spmv_hyb_tex(A, thrust::raw_pointer_cast(&B[0]), thrust::raw_pointer_cast(&C[0]));
 #else
-    cusp::detail::device::spmv(A, thrust::raw_pointer_cast(&B[0]), thrust::raw_pointer_cast(&C[0]));
+    cusp::detail::device::spmv_hyb(A, thrust::raw_pointer_cast(&B[0]), thrust::raw_pointer_cast(&C[0]));
 #endif    
+}
+
+////////////////////////////////////////
+// Sparse Matrix-BlockVector Multiply //
+////////////////////////////////////////
+//// TODO implement this w/ repeated SpMVs and then specialize
+//template <typename Matrix,
+//          typename Vector1,
+//          typename Vector2>
+//void multiply(const Matrix&  A,
+//              const Vector1& B,
+//                    Vector2& C,
+//              cusp::sparse_format,
+//              cusp::array2d_format,
+//              cusp::array2d_format)
+//{
+//}
+
+////////////////////////////////////////
+// Dense Matrix-Matrix Multiplication //
+////////////////////////////////////////
+// TODO implement
+//template <typename Matrix1,
+//          typename Matrix2,
+//          typename Matrix3>
+//void multiply(const Matrix1& A,
+//              const Matrix2& B,
+//                    Matrix3& C,
+//              cusp::array2d_format,
+//              cusp::array2d_format,
+//              cusp::array2d_format)
+//{
+//}
+
+/////////////////////////////////////////
+// Sparse Matrix-Matrix Multiplication //
+/////////////////////////////////////////
+template <typename Matrix1,
+          typename Matrix2,
+          typename Matrix3>
+void multiply(const Matrix1& A,
+              const Matrix2& B,
+                    Matrix3& C,
+              cusp::coo_format,
+              cusp::coo_format,
+              cusp::coo_format)
+{
+    cusp::detail::device::spmm_coo(A,B,C);
+}
+
+template <typename Matrix1,
+          typename Matrix2,
+          typename Matrix3>
+void multiply(const Matrix1& A,
+              const Matrix2& B,
+                    Matrix3& C,
+              cusp::sparse_format,
+              cusp::sparse_format,
+              cusp::sparse_format)
+{
+    // other formats use COO * COO
+    cusp::coo_matrix<typename Matrix1::index_type,typename Matrix1::value_type,cusp::device_memory> A_(A);
+    cusp::coo_matrix<typename Matrix2::index_type,typename Matrix2::value_type,cusp::device_memory> B_(B);
+    cusp::coo_matrix<typename Matrix3::index_type,typename Matrix3::value_type,cusp::device_memory> C_;
+
+    cusp::detail::device::spmm_coo(A_,B_,C_);
+
+    cusp::convert(C_, C);
+}
+
+/////////////////
+// Entry Point //
+/////////////////
+template <typename Matrix,
+          typename MatrixOrVector1,
+          typename MatrixOrVector2>
+void multiply(const Matrix&  A,
+              const MatrixOrVector1& B,
+                    MatrixOrVector2& C)
+{
+    cusp::detail::device::multiply(A, B, C,
+            typename Matrix::format(),
+            typename MatrixOrVector1::format(),
+            typename MatrixOrVector2::format());
 }
 
 } // end namespace device

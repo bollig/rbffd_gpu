@@ -16,6 +16,7 @@
 		experiments/heat_regulargrid_2d
 		experiments/heat_1d_verification
 		experiments/heat_1d_gpu
+		experiments/heat_1d_cusp
 		experiments/heat_1d_nonuniform_diffusion
         #TODO		experiments/sarler_vertnick_2006
         experiments/heat_2d_verification

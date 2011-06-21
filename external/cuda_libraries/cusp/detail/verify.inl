@@ -14,18 +14,13 @@
  *  limitations under the License.
  */
 
-#include <cusp/csr_matrix.h>
+#include <cusp/format.h>
 #include <cusp/exception.h>
 
+#include <thrust/sort.h>
 #include <thrust/count.h>
 #include <thrust/extrema.h>
 #include <thrust/functional.h>
-
-#if THRUST_VERSION < 100300
-#include <thrust/is_sorted.h>
-#else
-#include <thrust/sort.h>
-#endif
 
 #include <sstream>
 
@@ -42,20 +37,25 @@ template <typename IndexVector>
 thrust::pair<typename IndexVector::value_type, typename IndexVector::value_type>
 index_range(const IndexVector& indices)
 {
-    // return a pair<> containing the min and max value in a range
-    thrust::pair<typename IndexVector::const_iterator, typename IndexVector::const_iterator> iter = thrust::minmax_element(indices.begin(), indices.end());
-    return thrust::make_pair(*iter.first, *iter.second);
+//    // return a pair<> containing the min and max value in a range
+//    thrust::pair<typename IndexVector::const_iterator, typename IndexVector::const_iterator> iter = thrust::minmax_element(indices.begin(), indices.end());
+//    return thrust::make_pair(*iter.first, *iter.second);
+   
+    // WAR lack of const_iterator in array1d_view
+    return thrust::make_pair
+      (*thrust::min_element(indices.begin(), indices.end()),
+       *thrust::max_element(indices.begin(), indices.end()));
 }
 
 template <typename IndexType>
 struct is_ell_entry
 {
     IndexType num_rows;
-    IndexType stride;
+    IndexType pitch;
     IndexType invalid_index;
 
-    is_ell_entry(IndexType num_rows, IndexType stride, IndexType invalid_index)
-        : num_rows(num_rows), stride(stride), invalid_index(invalid_index) {}
+    is_ell_entry(IndexType num_rows, IndexType pitch, IndexType invalid_index)
+        : num_rows(num_rows), pitch(pitch), invalid_index(invalid_index) {}
 
     template <typename Tuple>
     __host__ __device__
@@ -63,7 +63,7 @@ struct is_ell_entry
     {
         IndexType n = thrust::get<0>(t);
         IndexType j = thrust::get<1>(t);
-        return (n % stride < num_rows) && (j != invalid_index);
+        return (n % pitch < num_rows) && (j != invalid_index);
     }
 };
 
@@ -72,11 +72,11 @@ struct is_ell_entry_in_bounds
 {
     IndexType num_rows;
     IndexType num_cols;
-    IndexType stride;
+    IndexType pitch;
     IndexType invalid_index;
 
-    is_ell_entry_in_bounds(IndexType num_rows, IndexType num_cols, IndexType stride, IndexType invalid_index)
-        : num_rows(num_rows), num_cols(num_cols), stride(stride), invalid_index(invalid_index) {}
+    is_ell_entry_in_bounds(IndexType num_rows, IndexType num_cols, IndexType pitch, IndexType invalid_index)
+        : num_rows(num_rows), num_cols(num_cols), pitch(pitch), invalid_index(invalid_index) {}
 
     template <typename Tuple>
     __host__ __device__
@@ -84,7 +84,7 @@ struct is_ell_entry_in_bounds
     {
         IndexType n = thrust::get<0>(t);
         IndexType j = thrust::get<1>(t);
-        return (n % stride < num_rows) && (j != invalid_index) && (j >= 0) && (j < num_cols);
+        return (n % pitch < num_rows) && (j != invalid_index) && (j >= 0) && (j < num_cols);
     }
 };
 
@@ -93,11 +93,13 @@ struct is_ell_entry_in_bounds
 // Matrix-Specific Functions //
 ///////////////////////////////
 
-template <typename IndexType, typename ValueType, typename MemoryType,
-          typename OutputStream>
-bool is_valid_matrix(const cusp::coo_matrix<IndexType,ValueType,MemoryType>& A,
-                           OutputStream& ostream)
+template <typename MatrixType, typename OutputStream>
+bool is_valid_matrix(const MatrixType& A,
+                     OutputStream& ostream,
+                     cusp::coo_format)
 {
+    typedef typename MatrixType::index_type IndexType;
+
     // we could relax some of these conditions if necessary
     if (A.row_indices.size() != A.num_entries)
     {
@@ -122,13 +124,6 @@ bool is_valid_matrix(const cusp::coo_matrix<IndexType,ValueType,MemoryType>& A,
    
     if (A.num_entries > 0)
     {
-        // check that row_indices is a non-decreasing sequence
-        if (!thrust::is_sorted(A.row_indices.begin(), A.row_indices.end()))
-        {
-            ostream << "row indices should form a non-decreasing sequence";
-            return false;
-        }
-
         // check that row indices are within [0, num_rows)
         thrust::pair<IndexType,IndexType> min_max_row = index_range(A.row_indices);
         if (min_max_row.first < 0)
@@ -136,9 +131,16 @@ bool is_valid_matrix(const cusp::coo_matrix<IndexType,ValueType,MemoryType>& A,
             ostream << "row indices should be non-negative";
             return false;
         }
-        if (min_max_row.second >= A.num_cols)
+        if (static_cast<size_t>(min_max_row.second) >= A.num_rows)
         {
             ostream << "row indices should be less than num_row (" << A.num_rows << ")";
+            return false;
+        }
+        
+        // check that row_indices is a non-decreasing sequence
+        if (!thrust::is_sorted(A.row_indices.begin(), A.row_indices.end()))
+        {
+            ostream << "row indices should form a non-decreasing sequence";
             return false;
         }
 
@@ -149,7 +151,7 @@ bool is_valid_matrix(const cusp::coo_matrix<IndexType,ValueType,MemoryType>& A,
             ostream << "column indices should be non-negative";
             return false;
         }
-        if (min_max_col.second >= A.num_cols)
+        if (static_cast<size_t>(min_max_col.second) >= A.num_cols)
         {
             ostream << "column indices should be less than num_cols (" << A.num_cols << ")";
             return false;
@@ -160,11 +162,13 @@ bool is_valid_matrix(const cusp::coo_matrix<IndexType,ValueType,MemoryType>& A,
 }
 
 
-template <typename IndexType, typename ValueType, typename MemoryType,
-          typename OutputStream>
-bool is_valid_matrix(const cusp::csr_matrix<IndexType,ValueType,MemoryType>& A,
-                           OutputStream& ostream)
+template <typename MatrixType, typename OutputStream>
+bool is_valid_matrix(const MatrixType& A,
+                     OutputStream& ostream,
+                     cusp::csr_format)
 {
+    typedef typename MatrixType::index_type IndexType;
+
     // we could relax some of these conditions if necessary
     
     if (A.row_offsets.size() != A.num_rows + 1)
@@ -174,14 +178,15 @@ bool is_valid_matrix(const cusp::csr_matrix<IndexType,ValueType,MemoryType>& A,
         return false;
     }
     
-    if (A.row_offsets.front() != 0)
+    if (A.row_offsets.front() != IndexType(0))
     {
         ostream << "first value in row_offsets (" << A.row_offsets.front() << ") "
                 << "should be equal to 0";
         return false;
     }
 
-    if (A.row_offsets.back() != A.num_entries)
+    // TODO is this overly strict?
+    if (static_cast<size_t>(A.row_offsets.back()) != A.num_entries)
     {
         ostream << "last value in row_offsets (" << A.row_offsets.back() << ") "
                 << "should be equal to num_entries (" << A.num_entries << ")";
@@ -219,7 +224,7 @@ bool is_valid_matrix(const cusp::csr_matrix<IndexType,ValueType,MemoryType>& A,
             ostream << "column indices should be non-negative";
             return false;
         }
-        if (min_max.second >= A.num_cols)
+        if (static_cast<size_t>(min_max.second) >= A.num_cols)
         {
             ostream << "column indices should be less than num_cols (" << A.num_cols << ")";
             return false;
@@ -230,10 +235,10 @@ bool is_valid_matrix(const cusp::csr_matrix<IndexType,ValueType,MemoryType>& A,
 }
 
 
-template <typename IndexType, typename ValueType, typename MemoryType,
-          typename OutputStream>
-bool is_valid_matrix(const cusp::dia_matrix<IndexType,ValueType,MemoryType>& A,
-                           OutputStream& ostream)
+template <typename MatrixType, typename OutputStream>
+bool is_valid_matrix(const MatrixType& A,
+                     OutputStream& ostream,
+                     cusp::dia_format)
 {
     if (A.num_rows > A.values.num_rows)
     {
@@ -252,12 +257,14 @@ bool is_valid_matrix(const cusp::dia_matrix<IndexType,ValueType,MemoryType>& A,
     return true;
 }
 
-template <typename IndexType, typename ValueType, typename MemoryType,
-          typename OutputStream>
-bool is_valid_matrix(const cusp::ell_matrix<IndexType,ValueType,MemoryType>& A,
-                           OutputStream& ostream)
+template <typename MatrixType, typename OutputStream>
+bool is_valid_matrix(const MatrixType& A,
+                     OutputStream& ostream,
+                     cusp::ell_format)
 {
-    const IndexType invalid_index = cusp::ell_matrix<IndexType,ValueType,MemoryType>::invalid_index;
+    typedef typename MatrixType::index_type IndexType;
+
+    const IndexType invalid_index = MatrixType::invalid_index;
 
     if (A.column_indices.num_rows != A.values.num_rows ||
         A.column_indices.num_cols != A.values.num_cols)
@@ -275,18 +282,18 @@ bool is_valid_matrix(const cusp::ell_matrix<IndexType,ValueType,MemoryType>& A,
     }
 
     // count true number of entries in ell structure
-    IndexType true_num_entries = thrust::count_if(
-                                    thrust::make_zip_iterator
-                                    (
-                                        thrust::make_tuple(thrust::counting_iterator<IndexType>(0), 
-                                                           A.column_indices.values.begin())
-                                    ),
-                                    thrust::make_zip_iterator
-                                    (
-                                        thrust::make_tuple(thrust::counting_iterator<IndexType>(0), 
-                                                           A.column_indices.values.begin())
-                                    ) + A.column_indices.values.size(),
-                                    is_ell_entry<IndexType>(A.num_rows, A.column_indices.num_rows, invalid_index));
+    size_t true_num_entries = 
+      thrust::count_if(thrust::make_zip_iterator
+                       (
+                           thrust::make_tuple(thrust::counting_iterator<IndexType>(0), 
+                                              A.column_indices.values.begin())
+                       ),
+                       thrust::make_zip_iterator
+                       (
+                           thrust::make_tuple(thrust::counting_iterator<IndexType>(0), 
+                                              A.column_indices.values.begin())
+                       ) + A.column_indices.values.size(),
+                       is_ell_entry<IndexType>(A.num_rows, A.column_indices.pitch, invalid_index));
 
     if (A.num_entries != true_num_entries)
     {
@@ -298,18 +305,18 @@ bool is_valid_matrix(const cusp::ell_matrix<IndexType,ValueType,MemoryType>& A,
     if (A.num_entries > 0)
     {
         // check that column indices are in [0, num_cols)
-        IndexType num_entries_in_bounds = thrust::count_if(
-                                              thrust::make_zip_iterator
-                                              (
-                                                  thrust::make_tuple(thrust::counting_iterator<IndexType>(0), 
-                                                                     A.column_indices.values.begin())
-                                              ),
-                                              thrust::make_zip_iterator
-                                              (
-                                                  thrust::make_tuple(thrust::counting_iterator<IndexType>(0), 
-                                                                     A.column_indices.values.begin())
-                                              ) + A.column_indices.values.size(),
-                                              is_ell_entry_in_bounds<IndexType>(A.num_rows, A.num_cols, A.column_indices.num_rows, invalid_index));
+        size_t num_entries_in_bounds =
+          thrust::count_if(thrust::make_zip_iterator
+                           (
+                               thrust::make_tuple(thrust::counting_iterator<IndexType>(0), 
+                                                  A.column_indices.values.begin())
+                           ),
+                           thrust::make_zip_iterator
+                           (
+                               thrust::make_tuple(thrust::counting_iterator<IndexType>(0), 
+                                                  A.column_indices.values.begin())
+                           ) + A.column_indices.values.size(),
+                           is_ell_entry_in_bounds<IndexType>(A.num_rows, A.num_cols, A.column_indices.pitch, invalid_index));
         if (num_entries_in_bounds != true_num_entries)
         {
             ostream << "matrix contains (" << (true_num_entries - num_entries_in_bounds) << ") out-of-bounds column indices";
@@ -320,10 +327,10 @@ bool is_valid_matrix(const cusp::ell_matrix<IndexType,ValueType,MemoryType>& A,
     return true;
 }
 
-template <typename IndexType, typename ValueType, typename MemoryType,
-          typename OutputStream>
-bool is_valid_matrix(const cusp::hyb_matrix<IndexType,ValueType,MemoryType>& A,
-                           OutputStream& ostream)
+template <typename MatrixType, typename OutputStream>
+bool is_valid_matrix(const MatrixType& A,
+                     OutputStream& ostream,
+                     cusp::hyb_format)
 {
     // make sure redundant shapes values agree
     if (A.num_rows != A.ell.num_rows || A.num_rows != A.coo.num_rows ||
@@ -348,10 +355,10 @@ bool is_valid_matrix(const cusp::hyb_matrix<IndexType,ValueType,MemoryType>& A,
 }
 
 
-template <typename IndexType, typename ValueType, typename MemoryType,
-          typename OutputStream>
-bool is_valid_matrix(const cusp::array2d<IndexType,ValueType,MemoryType>& A,
-                           OutputStream& ostream)
+template <typename MatrixType, typename OutputStream>
+bool is_valid_matrix(const MatrixType& A,
+                     OutputStream& ostream,
+                     cusp::array2d_format)
 {
     if (A.num_rows * A.num_cols != A.num_entries)
     {
@@ -366,6 +373,8 @@ bool is_valid_matrix(const cusp::array2d<IndexType,ValueType,MemoryType>& A,
         ostream << "should agree with size of values array (" << A.values.size() << ")";
         return false;
     }
+    
+    // TODO check .pitch
 
     return true;
 }
@@ -387,19 +396,8 @@ bool is_valid_matrix(const MatrixType& A)
 template <typename MatrixType, typename OutputStream>
 bool is_valid_matrix(const MatrixType& A, OutputStream& ostream)
 {
-    if ((A.num_rows < 0) || (A.num_cols < 0))
-    {
-        ostream << "matrix has invalid shape (" << A.num_rows << "," << A.num_cols << ")";
-        return false;
-    }
-    
-    if (A.num_entries < 0)
-    {
-        ostream << "matrix has invalid number of entries (" << A.num_entries << ")";
-        return false;
-    }
-
-    return detail::is_valid_matrix(A, ostream);
+    // dispatch on matrix format
+    return detail::is_valid_matrix(A, ostream, typename MatrixType::format());
 }
 
 template <typename MatrixType>

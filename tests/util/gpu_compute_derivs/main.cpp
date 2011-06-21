@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "pdes/parabolic/heat.h"
+#include "pdes/parabolic/heat_pde.h"
 
 #include "grids/regulargrid.h"
 

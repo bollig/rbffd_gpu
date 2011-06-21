@@ -60,7 +60,8 @@ SET( REQUIRED_CL_SOURCE_FILES
     # find * -name "*cl.c*"
     #*	pdes/elliptic/ncar_poisson1_cl.cpp
     #P1 pdes/elliptic/ncar_poisson2_cl.cpp
-    #REQUIRES BOOST:    pdes/elliptic/nonuniform_poisson1_cl.cpp
+    #REQUIRES BOOST:    
+    #TODO: Update    pdes/elliptic/nonuniform_poisson1_cl.cpp
     pdes/parabolic/heat_pde_cl.cpp
     rbffd/rbffd_cl.cpp
 )

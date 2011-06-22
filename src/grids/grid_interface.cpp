@@ -85,7 +85,7 @@ void Grid::writeNormalsToFile(std::string filename) {
 
     if (fout.is_open()) {
         for (unsigned int i = 0; i < boundary_normals.size(); i++) {
-            fout << boundary_normals[i] << std::endl; 
+            fout << this->getBoundaryNormal(i) << std::endl; 
         }
     } else {
         printf("Error opening file to write\n"); 
@@ -713,6 +713,9 @@ void Grid::generateStencilsHash()
     NodeType cell_start(xmin, ymin, zmin); 
     NodeType cell_end(xmax, ymax, zmax); 
 
+    // We'll sort our nodes according to hash (roughly sorted), to try to improve caching
+    std::vector<NodeType> hash_sorted_nodes(nb_nodes); 
+
     // Foreach node: 
     //     determine hashid (cellid)
     //          node(x,y,z) exists in cellid((x-xmin)/dx, (y-ymin)/dy, (z-zmin)/dz)
@@ -740,6 +743,39 @@ void Grid::generateStencilsHash()
         //       std::cout << "NODE:" << node << "   in   CELL: " << cell_id << "      ( " << xc << ", " << yc << ", " << zc << " )" << std::endl;
         cell_hash[cell_id].push_back(i); 
     }
+
+#if 1
+    // Now we sort our nodes
+    unsigned int indx = 0;
+    unsigned int bindx = 0;
+    std::vector<unsigned int>& bindices = this->getBoundaryIndices();
+    for (unsigned int i =0; i < cell_hash.size(); i++) {
+        for (unsigned int j = 0; j < cell_hash[i].size(); j++) {
+
+            hash_sorted_nodes[indx] =  this->getNode(cell_hash[i][j]); 
+    
+            // Update the boundary info if necessary
+            std::vector<unsigned int>::iterator old_bindx = find(bindices.begin()+bindx, bindices.end(), cell_hash[i][j]); 
+            if (old_bindx != bindices.end()) {
+//                std::cout << "Swapping boundary[" << *old_bindx << "] for " << indx << std::endl;
+                // Swap our boundary indices (not the most efficient, but...itll do the job
+                this->boundary_indices[*old_bindx] = this->getBoundaryIndex(bindx);
+                this->boundary_indices[bindx] = indx;  
+
+                Vec3 normal = this->getBoundaryNormal(bindx); 
+                this->boundary_normals[bindx] = this->getBoundaryNormal(*old_bindx); 
+                this->boundary_normals[*old_bindx] = normal; 
+                bindx++;
+            }
+
+            // Update the cell_hash so we know about the new index;
+            cell_hash[i][j] = indx;
+            indx++;
+        }
+    }
+    // Overwrite our existing node_list.
+    std::copy(hash_sorted_nodes.begin(), hash_sorted_nodes.end(), this->node_list.begin());
+#endif 
 
 #if 0
     for (unsigned int i = 0; i < cell_hash.size(); i++) {

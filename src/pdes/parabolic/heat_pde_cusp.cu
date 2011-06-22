@@ -670,11 +670,12 @@ void HeatPDE_CL::allocateGPUMem() {
 void HeatPDE_CL::launchEulerSetQmDKernel( double dt, cusp::array1d<float, cusp::device_memory>& sol_in, cusp::array1d<float, cusp::device_memory>& sol_out)
 {
     // 1) Assume no parallelism to start. Then all we need is:  y = y + dt*f
-    //      f = A * y
+    //      f = K . (A * y)
     cusp::multiply(l_weights_gpu, sol_in, sol_out);  
+
     cusp::blas::axpy(sol_in, sol_out, (float)dt);  
 }
-void HeatPDE_CL::launchEulerSetDKernel( double dt, cusp::array1d<float, cusp::device_memory>& sol_in, cusp::array1d<float, cusp::device_memory>& sol_out) 
+void HeatPDE_CL::launchEulerSetDKernel(double dt, cusp::array1d<float, cusp::device_memory>& sol_in, cusp::array1d<float, cusp::device_memory>& sol_out) 
 {
     ;
 }

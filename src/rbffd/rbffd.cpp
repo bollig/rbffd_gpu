@@ -1158,8 +1158,15 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
 
         //EFB060111
         // By choosing rad = 1 we are NOT normalizing or scaling any of the inputs to ContourSVD and/or the output coefs
-        //double rad = 1.;
+#if SCALE_BY_H
         double rad = 1./grid_ref.getMaxStencilRadius(st_indx);
+      //  double rad = 1.;
+      //  double h = grid_ref.getMaxStencilRadius(st_indx);
+        double h = 1.;
+#else 
+        double rad = 1.;
+        double h = 1.;
+#endif 
         double eps = var_epsilon[st_indx]; 
 #endif 
         //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
@@ -1173,9 +1180,6 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
 
         std::string choice = derTypeStr[which];  
         
-        // This is the AVG stencil radius
-        double h = grid_ref.getMaxStencilRadius(st_indx);
-
         // This is a 
         Stencils sten(&rbf, rad, h, eps, &xd, choice.c_str());
         //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);

@@ -42,10 +42,13 @@ class Stencils
             //if (strcmp(choice, "lapl") == 0) {
             // RD2 is a DISTANCE Matrix (without RBF evaluation)
             rd2 = computeDistMatrix2(*xd, *xd); // unnormalized
+            rd2 *= 1./this->h; 
+//            rd2.print("RD2");
             double maxStencilDist = sqrt(matMax(rd2));
             //} else {
             // RDVEC is the partial DISTANCE matrix where each entry is a Vec3(x-x_0, y-y0, z-z0)
             rdvec = computeDistMatrixVec(*xd, *xd); // unnormalized
+            rdvec *= 1./this->h;
             //rdvec.printcx("RDVEC");
             const int* dims = rdvec.getDims();
             //printf("before rdvec size: %d, %d, %d\n", dims[0], dims[1], dims[2]);
@@ -138,8 +141,10 @@ class Stencils
                 // our derivs become inaccurate.: 
                 // EFB052411 (want to play with rad)
                 return coefs*rad*rad;
+                //return coefs*(1./(this->h*this->h));
             } else {
                 return coefs*rad;
+                //return coefs*(1./(this->h));
             }
         }
         arma::mat computeCoefs(double eps);

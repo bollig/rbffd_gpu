@@ -23,7 +23,7 @@ class Vec3
             this->vec[0] = v.vec[0];
             this->vec[1] = v.vec[1];
             this->vec[2] = v.vec[2];
-	  //  std::cout << ".";
+	    std::cout << ".";
         }
         inline Vec3(int x, int y=0, int z=0)
     		{ Vec3((double)x, (double)y, (double)z); }

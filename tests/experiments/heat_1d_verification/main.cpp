@@ -123,6 +123,7 @@ int main(int argc, char** argv) {
     int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "1"); 
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
     int use_eigen_dt = settings->GetSettingAs<int>("USE_EIGEN_DT", ProjectSettings::optional, "1");
+    int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
 
     if (comm_unit->isMaster()) {
 
@@ -348,7 +349,7 @@ int main(int argc, char** argv) {
     double avgdx = 1000.;
     std::vector<StencilType>& sten = subdomain->getStencils();
     for (size_t i=0; i < sten.size(); i++) {
-        double dx = subdomain->getStencilRadius(i);
+        double dx = subdomain->getMaxStencilRadius(i);
         if (dx < avgdx) {
             avgdx = dx; 
         }
@@ -363,7 +364,14 @@ int main(int argc, char** argv) {
     //          dt <= nu/dx^2 
     // is valid for stability in some FD schemes. 
    // double max_dt = 0.2*(sten_area);
-	printf("dt = %f (FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", dt, max_dt, 0.5*sten_area);
+	printf("dt = %f, min h=%f\n", dt, avgdx); 
+    printf("(FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", max_dt, 0.5*sten_area);
+
+    // Only use the CFL dt if our current choice is greater and we insist it be used
+    if (use_cfl_dt && dt > max_dt) {
+        dt = 0.9999*max_dt;
+    }
+
     // This appears to be consistent with Chinchipatnam2006 (Thesis)
     // TODO: get more details on CFL for RBFFD
     // note: checking stability only works if we have all weights for all
@@ -397,24 +405,6 @@ int main(int argc, char** argv) {
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
-        char label[256]; 
-#if 0
-        sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
-        pde->printSolution(label); 
-#endif 
-
-        tm["timestep"]->start(); 
-        pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
-        tm["timestep"]->stop(); 
-
-        // This just double checks that all procs have ghost node info.
-        // pde->advance(..) should broadcast intermediate updates as needed,
-        // but updated solution. 
-        tm["updates"]->start(); 
-        comm_unit->broadcastObjectUpdates(pde);
-        comm_unit->barrier();
-        tm["updates"]->stop();
-
         if (!(iter % local_sol_dump_frequency)) {
 
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
@@ -441,6 +431,26 @@ int main(int argc, char** argv) {
             cout << "Press [Enter] to continue" << std::endl;
             cin.get(); 
         }
+
+        char label[256]; 
+#if 0
+        sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
+        pde->printSolution(label); 
+#endif 
+
+        tm["timestep"]->start(); 
+        pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
+        tm["timestep"]->stop(); 
+
+        // This just double checks that all procs have ghost node info.
+        // pde->advance(..) should broadcast intermediate updates as needed,
+        // but updated solution. 
+        tm["updates"]->start(); 
+        comm_unit->broadcastObjectUpdates(pde);
+        comm_unit->barrier();
+        tm["updates"]->stop();
+
+
     }
 #if 1
     printf("after heat\n");

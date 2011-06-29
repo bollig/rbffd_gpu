@@ -411,6 +411,7 @@ int main(int argc, char** argv) {
 
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
             pde->checkLocalError(exact, max_local_rel_error); 
+            pde->checkNorms();
         }
         if (!(iter % global_sol_dump_frequency)) {
             tm["consolidate"]->start(); 

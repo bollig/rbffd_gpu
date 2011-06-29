@@ -498,9 +498,9 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
         printf("Relative =>  || x_exact - x_approx ||_p / || x_exact ||_p  ,  where p={1,2,inf}\n"); 
     }
 
-    printf("%s l1 error (%d nodes):   Absolute = %le,    Relative = %le (Denom: %le)\n", label.c_str(), nb_pts, l1fabs, l1rel, l1denom);
-    printf("%s l2 error (%d nodes):   Absolute = %le,    Relative = %le (Denom: %le)\n", label.c_str(), nb_pts, l2fabs, l2rel, l2denom );
-    printf("%s linf error (%d nodes): Absolute = %le,    Relative = %le (Denom: %le)\n", label.c_str(), nb_pts, lifabs, lirel, linfdenom);
+    printf("%s l1 error (%d nodes):   Absolute = %le,    Relative = %le \n", label.c_str(), nb_pts, l1fabs, l1rel);
+    printf("%s l2 error (%d nodes):   Absolute = %le,    Relative = %le \n", label.c_str(), nb_pts, l2fabs, l2rel);
+    printf("%s linf error (%d nodes): Absolute = %le,    Relative = %le \n", label.c_str(), nb_pts, lifabs, lirel);
 
 #if 0
     if (l1rel > rel_err_max) {

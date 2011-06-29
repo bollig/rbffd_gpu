@@ -123,7 +123,8 @@ int main(int argc, char** argv) {
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
     int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "1"); 
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
-    int use_eigen_dt = settings->GetSettingAs<int>("USE_EIGEN_DT", ProjectSettings::optional, "1");
+    int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
+    int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
 
     if (comm_unit->isMaster()) {
 
@@ -155,8 +156,8 @@ int main(int argc, char** argv) {
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
 //            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
-//            grid->generateStencils(Grid::ST_KDTREE);   
-            grid->generateStencils(Grid::ST_HASH);   
+            grid->generateStencils(Grid::ST_KDTREE);   
+//            grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 
@@ -277,6 +278,7 @@ int main(int argc, char** argv) {
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
         bool weightsPreComputed = true; 
         bool exitIfTestFailed = settings->GetSettingAs<int>("BREAK_ON_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
+        bool exitIfEigTestFailed = settings->GetSettingAs<int>("BREAK_ON_EIG_TESTS", ProjectSettings::optional, "1");
         tm["tests"]->start(); 
         // The test class only computes weights if they havent been done already
         DerivativeTests* der_test = new DerivativeTests(dim, der, subdomain, weightsPreComputed);
@@ -295,7 +297,7 @@ int main(int argc, char** argv) {
                 // Test Y and 30 are > 0
                 // Test Z and 36 are > 0
                 // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
-                der_test->testEigen(RBFFD::LAPL, 0);
+                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);
             }
         }
         tm["tests"]->stop();
@@ -310,10 +312,13 @@ int main(int argc, char** argv) {
     // We need to provide comm_unit to pass ghost node info
 #if 0
     if (use_gpu) {
-        pde = new HeatPDE(subdomain, der, comm_unit, true); 
+        pde = new HeatPDE_CL(subdomain, (RBFFD_CL*)der, comm_unit, uniformDiffusion, true); 
     } else 
 #endif
     { 
+        if (use_gpu) {
+            std::cout << "GPU version of HeatPDE disabled.\n";
+        }
         // Implies initial conditions are generated
         // true here indicates the weights are computed. 
         pde = new HeatPDE(subdomain, der, comm_unit, uniformDiffusion, true);
@@ -346,12 +351,13 @@ int main(int argc, char** argv) {
     double avgdx = 1000.;
     std::vector<StencilType>& sten = subdomain->getStencils();
     for (size_t i=0; i < sten.size(); i++) {
-        double dx = subdomain->getStencilRadius(i);
+        // In FD stencils we divide by h^2 for the laplacian. That is the 
+        double dx = subdomain->getMaxStencilRadius(i);
         if (dx < avgdx) {
             avgdx = dx; 
         }
     }
-    // Laplacian = d^2/dx^2 + d^2/dy^2
+    // Laplacian = d^2/dx^2
     double sten_area = avgdx*avgdx;
 
     double max_dt = (0.5*sten_area)/decay;
@@ -361,7 +367,14 @@ int main(int argc, char** argv) {
     //          dt <= nu/dx^2 
     // is valid for stability in some FD schemes. 
    // double max_dt = 0.2*(sten_area);
-	printf("dt = %f (FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", dt, max_dt, 0.5*sten_area);
+	printf("dt = %f, min h=%f\n", dt, avgdx); 
+    printf("(FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", max_dt, 0.5*sten_area);
+
+    // Only use the CFL dt if our current choice is greater and we insist it be used
+    if (use_cfl_dt && dt > max_dt) {
+        dt = 0.9999*max_dt;
+    }
+
     // This appears to be consistent with Chinchipatnam2006 (Thesis)
     // TODO: get more details on CFL for RBFFD
     // note: checking stability only works if we have all weights for all
@@ -395,28 +408,11 @@ int main(int argc, char** argv) {
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
-        char label[256]; 
-#if 0
-        sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
-        pde->printSolution(label); 
-#endif 
-
-        tm["timestep"]->start(); 
-        pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
-        tm["timestep"]->stop(); 
-
-        // This just double checks that all procs have ghost node info.
-        // pde->advance(..) should broadcast intermediate updates as needed,
-        // but updated solution. 
-        tm["updates"]->start(); 
-        comm_unit->broadcastObjectUpdates(pde);
-        comm_unit->barrier();
-        tm["updates"]->stop();
-
         if (!(iter % local_sol_dump_frequency)) {
 
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
             pde->checkLocalError(exact, max_local_rel_error); 
+            pde->checkNorms();
         }
         if (!(iter % global_sol_dump_frequency)) {
             tm["consolidate"]->start(); 
@@ -439,6 +435,26 @@ int main(int argc, char** argv) {
             cout << "Press [Enter] to continue" << std::endl;
             cin.get(); 
         }
+
+        char label[256]; 
+#if 0
+        sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
+        pde->printSolution(label); 
+#endif 
+
+        tm["timestep"]->start(); 
+        pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
+        tm["timestep"]->stop(); 
+
+        // This just double checks that all procs have ghost node info.
+        // pde->advance(..) should broadcast intermediate updates as needed,
+        // but updated solution. 
+        tm["updates"]->start(); 
+        comm_unit->broadcastObjectUpdates(pde);
+        comm_unit->barrier();
+        tm["updates"]->stop();
+
+
     }
 #if 1
     printf("after heat\n");

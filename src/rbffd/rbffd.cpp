@@ -1,5 +1,6 @@
 #define ONE_MONOMIAL 1
 #define SCALE_BY_H 1 
+#define SCALE_OUT_BY_H 1 
 
 #include "rbffd/stencils.h"
 
@@ -196,8 +197,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
         // FIXME: for 3D, h^2
         double scale = 1.;// grid_ref.getStencilRadius(irbf);
  
-#if 0
-        // SCALE_BY_H
+#if SCALE_OUT_BY_H
         scale = 1./h;
         // LAPL should scale by 1/h^2
         if (i == LAPL) {
@@ -277,6 +277,8 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
 #if SCALE_BY_H
         //xjv.print("xjv = ");
+        // This scales the stencil to the unit disk. This seems to improve the conditioning
+        // when solving for weights in domains with high numbers of nodes
         Vec3 diff = (x0v - xjv) * (1./h);
 #else 
         Vec3 diff = (x0v - xjv);
@@ -413,8 +415,7 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     // X,Y,Z weights should scale by 1/h
     double scale = 1.;
 
-#if 0
-    // SCALE_BY_H
+#if SCALE_OUT_BY_H
     scale = 1./h;
     // LAPL should scale by 1/h^2
     if (which == LAPL) {

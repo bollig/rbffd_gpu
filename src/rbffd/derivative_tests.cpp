@@ -421,7 +421,7 @@ void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, 
     printf("Average Laplacian L2 Absolute Error (Interior) = %14.7e (%14.7e)\n", l2_int, sqrt(inter_error)/nb_int);
     // IF l2_int != l2_int its 'nan' and we should quit. 
     // NaN is the only number not equal to itself
-    if ((l2_int > 1.e-2) || (l2_int != l2_int)) {
+    if ((l2_int > 9.e-2) || (l2_int != l2_int)) {
         printf ("ERROR! Interior l2 error is too high to continue\n");
         if (exitIfTestFails) { exit(EXIT_FAILURE); }
     }

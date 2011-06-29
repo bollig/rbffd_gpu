@@ -526,7 +526,7 @@ void Grid::computeStencilRadii() {
         min_stencil_radii[i] = dmin; 
 
         double dmax = (rbf_centers[st[st.size()-1]] - rbf_centers[st[0]]).magnitude(); 
-        max_stencil_radii[i] = dmin; 
+        max_stencil_radii[i] = dmax; 
 
         //        std::cout << "st.max_dist = " << max_stencil_radii[i] << std::endl;
 

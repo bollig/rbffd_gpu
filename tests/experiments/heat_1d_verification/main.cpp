@@ -277,6 +277,7 @@ int main(int argc, char** argv) {
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
         bool weightsPreComputed = true; 
         bool exitIfTestFailed = settings->GetSettingAs<int>("BREAK_ON_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
+        bool exitIfEigTestFailed = settings->GetSettingAs<int>("BREAK_ON_EIG_TESTS", ProjectSettings::optional, "1");
         tm["tests"]->start(); 
         // The test class only computes weights if they havent been done already
         DerivativeTests* der_test = new DerivativeTests(dim, der, subdomain, weightsPreComputed);
@@ -295,7 +296,7 @@ int main(int argc, char** argv) {
                 // Test Y and 30 are > 0
                 // Test Z and 36 are > 0
                 // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
-                der_test->testEigen(RBFFD::LAPL, /*exitIfTestFailed*/ false, 0);
+                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);
             }
         }
         tm["tests"]->stop();

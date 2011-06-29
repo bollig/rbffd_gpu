@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
     int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "1"); 
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
-    int use_eigen_dt = settings->GetSettingAs<int>("USE_EIGEN_DT", ProjectSettings::optional, "1");
+    int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
     int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
 
     if (comm_unit->isMaster()) {
@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
                 // Test Y and 30 are > 0
                 // Test Z and 36 are > 0
                 // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
-                der_test->testEigen(RBFFD::LAPL, exitIfTestFailed, 0);
+                der_test->testEigen(RBFFD::LAPL, /*exitIfTestFailed*/ false, 0);
             }
         }
         tm["tests"]->stop();

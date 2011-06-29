@@ -155,8 +155,8 @@ int main(int argc, char** argv) {
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
 //            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
-//            grid->generateStencils(Grid::ST_KDTREE);   
-            grid->generateStencils(Grid::ST_HASH);   
+            grid->generateStencils(Grid::ST_KDTREE);   
+//            grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 
@@ -349,6 +349,7 @@ int main(int argc, char** argv) {
     double avgdx = 1000.;
     std::vector<StencilType>& sten = subdomain->getStencils();
     for (size_t i=0; i < sten.size(); i++) {
+        // In FD stencils we divide by h^2 for the laplacian. That is the 
         double dx = subdomain->getMaxStencilRadius(i);
         if (dx < avgdx) {
             avgdx = dx; 

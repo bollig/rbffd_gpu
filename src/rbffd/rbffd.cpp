@@ -270,7 +270,13 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // B_c(||x0v - xjv||) = B_j(||x0v - xjv||).
         //
         // FIXME: allow var_epsilon[stencil[j]] (we need to pass stencil info for ghost nodes if this is to be allowed)
-        IRBF rbf(var_epsilon[stencil[0]], dim_num); 
+#if SCALE_BY_H
+        double eps = var_epsilon[stencil[0]] * h; 
+#else 
+        double eps = var_epsilon[stencil[0]]; 
+#endif 
+
+        IRBF rbf(eps, dim_num); 
 
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3 xjv = rbf_centers[stencil[j]];
@@ -836,7 +842,13 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
         // We allow a unique var_epsilon at each RBF. within a stencil.
         // TODO: test when its a uniq var_epsilon by stencil, not by RBF *WITHIN* a stencil
         // FIXME: allow var_epsilon[stencil[j]] (we need to pass stencil info for ghost nodes if this is to be allowed)
-        IRBF rbf(var_epsilon[stencil[0]], dim_num);
+#if SCALE_BY_H
+        double eps = var_epsilon[stencil[0]] * h; 
+#else 
+        double eps = var_epsilon[stencil[0]]; 
+#endif 
+
+        IRBF rbf(eps, dim_num);
         // rbf centered at xj
         Vec3& xjv = rbf_centers[stencil[j]];
         for (int i=0; i < n; i++) {
@@ -844,7 +856,10 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
             Vec3 xiv = rbf_centers[stencil[i]]; 
 #if SCALE_BY_H
             // Center is on right:
-            Vec3 diff = (xiv - xjv) * (1./h);
+            // NOTE we scale this by h so we are computing weights of the
+            // stencil spanning the unit disk
+            Vec3 diff = (xiv - xjv) * (1./h); 
+    //        std::cout << xiv << "\t" << xjv << "\t" << diff <<  std::endl;
             ar(j,i) = rbf(diff);
 #else 
             ar(j,i) = rbf(xiv, xjv);

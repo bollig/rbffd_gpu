@@ -1,5 +1,5 @@
 #define ONE_MONOMIAL 1
-#define SCALE_BY_H 0 
+#define SCALE_BY_H 1 
 
 #include "rbffd/stencils.h"
 
@@ -167,7 +167,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     // We pass h (the minimum dist to nearest node) so we can potentially factor it out
     double h = 1.;
 #if SCALE_BY_H
-    h = grid_ref.getMinStencilRadius(st_indx); 
+    h = grid_ref.getMaxStencilRadius(st_indx); 
 #endif 
 
     this->getStencilMultiRHS(rbf_centers, stencil, np, rhs, h);
@@ -196,7 +196,8 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
         // FIXME: for 3D, h^2
         double scale = 1.;// grid_ref.getStencilRadius(irbf);
  
-#if SCALE_BY_H
+#if 0
+        // SCALE_BY_H
         scale = 1./h;
         // LAPL should scale by 1/h^2
         if (i == LAPL) {
@@ -387,7 +388,7 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
 
     double h = 1.;
 #if SCALE_BY_H
-    h = grid_ref.getMinStencilRadius(st_indx);
+    h = grid_ref.getMaxStencilRadius(st_indx);
 #endif 
 
     this->getStencilRHS(which, rbf_centers, stencil, np, rhs, h);
@@ -412,7 +413,8 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     // X,Y,Z weights should scale by 1/h
     double scale = 1.;
 
-#if SCALE_BY_H
+#if 0
+    // SCALE_BY_H
     scale = 1./h;
     // LAPL should scale by 1/h^2
     if (which == LAPL) {

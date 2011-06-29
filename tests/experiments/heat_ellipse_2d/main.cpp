@@ -96,11 +96,27 @@ Grid* getGrid(int dim_num) {
 }
 
 
+// Load local (i.e., test specific) kernels from disk.
+// We return the source string and pass it to the OpenCL based classes so we can include the
+// source as part of the programs we build.
+std::string getLocalGPUFuncs() {
+   CLBaseClass clLoader;  
+   bool useDouble = false;
+               
+   // Defines std::string diffusivity_source 
+#include "diffusivity.cl"
+#include "boundary_conditions.cl"
+    std::string l_source = diffusivity_source; 
+    l_source.append(boundary_conditions_source); 
+   return l_source;
+}
+
 
 
 
 using namespace std;
 using namespace EB;
+
 
 //----------------------------------------------------------------------
 //NOTE: EVERYTHING BELOW IN MAIN WAS COPIED FROM heat_regulargrid_2d/main.cpp
@@ -150,7 +166,6 @@ int main(int argc, char** argv) {
 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
     
-    int compareExact = settings->GetSettingAs<int>("COMPARE_EXACT_SOLUTION", ProjectSettings::optional, "0"); 
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
 
@@ -225,6 +240,9 @@ int main(int argc, char** argv) {
         for (int i = 1; i < comm_unit->getSize(); i++) {
             std::cout << "Sending subdomain[" << i << "]\n";
             comm_unit->sendObject(subdomain_list[i], i); 
+
+            // Now that its sent, we can free the memory for domains on other processors.
+            delete(subdomain_list[i]);
         }
         tm["send"]->stop(); 
 
@@ -348,15 +366,13 @@ int main(int argc, char** argv) {
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
     // We need to provide comm_unit to pass ghost node info
-#if 0
+#if 1
     if (use_gpu) {
-        pde = new HeatPDE_CL(subdomain, (RBFFD_CL*)der, comm_unit, uniformDiffusion, true); 
+        std::string local_sources = getLocalGPUFuncs(); 
+        pde = new HeatPDE_CL(subdomain, (RBFFD_CL*)der, comm_unit, local_sources, uniformDiffusion, true); 
     } else 
 #endif
     { 
-        if (use_gpu) {
-            std::cout << "GPU version of HeatPDE disabled.\n";
-        }
         // Implies initial conditions are generated
         // true here indicates the weights are computed. 
         pde = new HeatPDE(subdomain, der, comm_unit, uniformDiffusion, true);
@@ -459,10 +475,7 @@ int main(int argc, char** argv) {
         if (!(iter % local_sol_dump_frequency)) {
 
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
-            pde->checkNorms();
-            if (compareExact) {
-                pde->checkLocalError(exact, max_local_rel_error); 
-            }
+            pde->checkLocalError(exact, max_local_rel_error); 
         }
         if (!(iter % global_sol_dump_frequency)) {
             tm["consolidate"]->start(); 
@@ -471,10 +484,7 @@ int main(int argc, char** argv) {
             tm["consolidate"]->stop(); 
             if (comm_unit->isMaster()) {
                 std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
-                pde->checkNorms();
-                if (compareExact) {
-                    pde->checkGlobalError(exact, grid, max_global_rel_error); 
-                }
+                pde->checkGlobalError(exact, grid, max_global_rel_error); 
             }
         }
 #if 0
@@ -491,6 +501,8 @@ int main(int argc, char** argv) {
     }
 #if 1
     printf("after heat\n");
+    std::cout << "\n*********** Rank " << comm_unit->getRank() << " Final Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+    pde->checkLocalError(exact, max_local_rel_error); 
 
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 

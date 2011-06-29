@@ -897,7 +897,7 @@ void Grid::generateStencilsHash()
         StencilType& st = stencil_map[p]; 
         //st.clear();     // In case of any residual stencil info
 
-        st.resize(max_st_size);  
+        //st.resize(max_st_size);  
         std::set< std::pair<float,unsigned int> , ltdist>::iterator sorted_ids = dists.begin(); 
         for (unsigned int j = 0; j < max_st_size; j++) { 
             if ((*sorted_ids).first < max_st_radius) {

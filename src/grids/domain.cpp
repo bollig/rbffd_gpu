@@ -36,7 +36,7 @@ Domain::Domain(const Domain& subdomain) {
 
 
 // Construct a new Domain object
-Domain::Domain(int dimension, float _xmin, float _xmax, float _ymin, float _ymax, float _zmin, float _zmax, 
+Domain::Domain(int dimension, double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, 
         int _comm_rank, int _comm_size) :
     dim_num(dimension),
     inclMX(false),inclMY(false),inclMZ(false),
@@ -59,9 +59,9 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
     subdomains.resize(gx * gy * gz);
 
     // We partition points by divying up the extents
-    float deltax = (float) (xmax - xmin) / (float) gx;
-    float deltay = (float) (ymax - ymin) / (float) gy;
-    float deltaz = (float) (zmax - zmin) / (float) gz;
+    double deltax = (double) (xmax - xmin) / (double) gx;
+    double deltay = (double) (ymax - ymin) / (double) gy;
+    double deltaz = (double) (zmax - zmin) / (double) gz;
 
     printf("domain decomposition deltas (dx, dy, dz) = (%f, %f, %f)\n", deltax, deltay, deltaz);
 
@@ -78,9 +78,9 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         int igx = (id - igz * (gx*gy)) - igy * gx;
 
         //        printf("igx = %d, igy = %d, igz = %d\n", igx, igy, igz);
-        float xm = xmin + igx * deltax;
-        float ym = ymin + igy * deltay;
-        float zm = zmin + igz * deltaz;
+        double xm = xmin + igx * deltax;
+        double ym = ymin + igy * deltay;
+        double zm = zmin + igz * deltaz;
         printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, xm, xm+deltax, ym, ym+deltay, zm, zm+deltaz);
         printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
         subdomains[id] = new Domain(dim_num, xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, id, comm_size);
@@ -114,7 +114,7 @@ int Domain::send(int my_rank, int receiver_rank) {
 
     sendSTL(&id, my_rank, receiver_rank);  
 
-    float buff[6] = { xmin, xmax, ymin, ymax, zmin, zmax };
+    double buff[6] = { xmin, xmax, ymin, ymax, zmin, zmax };
     MPI_Send(&buff, 6, MPI::DOUBLE, receiver_rank, TAG, MPI_COMM_WORLD);
 
     sendSTL(&Q, my_rank, receiver_rank); // All stencil centers in this CPUs QUEUE
@@ -150,7 +150,7 @@ int Domain::receive(int my_rank, int sender_rank) {
     recvSTL(&id, my_rank, sender_rank);  
 
     // Get the subdomain bounds 
-    float buff[6];
+    double buff[6];
     MPI_Recv(&buff, 6, MPI::DOUBLE, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     xmin = buff[0];

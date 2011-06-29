@@ -5,7 +5,7 @@
 #include <set> 
 #include <string>
 #include <sstream>
-#include "Vec3.h"
+#include "Vec3d.h"
 #include "KDTree.h"
 
 #include "common_typedefs.h"
@@ -15,9 +15,9 @@ class Grid
     public: 
         // Bounding box of domain (should contain ALL points regardless of
         // geom)
-        float xmin, xmax; 
-        float ymin, ymax; 
-        float zmin, zmax; 
+        double xmin, xmax; 
+        double ymin, ymax; 
+        double zmin, zmax; 
 
         // Number of subdivisions in domain bounding box to use in each
         // direction for the cell overlay in the hash neighbor qeury 
@@ -62,7 +62,7 @@ class Grid
 
         // If a node is on interior the normal is assumed to be 0-vector. 
         // Nodes on boundary have a non-zero vector. 
-        std::vector<Vec3> boundary_normals; 
+        std::vector<Vec3d> boundary_normals; 
 
         // These are the stencils connecting our nodes in node_list.  These are
         // not guaranteed to be generated and are usually computed by calling
@@ -226,12 +226,12 @@ class Grid
         void setBoundaryIndex(unsigned int indx, unsigned int boundary_indx)
         { boundary_indices[indx] = boundary_indx; }
 
-        std::vector<Vec3>& getBoundaryNormals() 
+        std::vector<Vec3d>& getBoundaryNormals() 
         { return boundary_normals; }
 
-        Vec3& getBoundaryNormal(unsigned int indx) 
+        Vec3d& getBoundaryNormal(unsigned int indx) 
         { return boundary_normals[indx]; }
-        void setBoundaryNormal(unsigned int indx, Vec3& normal) 
+        void setBoundaryNormal(unsigned int indx, Vec3d& normal) 
         { boundary_normals[indx] = normal; }
 
         unsigned int getStencilsSize() 
@@ -297,7 +297,7 @@ class Grid
         // Select a random number [randf(-pert, pert)] for each node dimension
         // and add to randomly perturb nodes in space; store perturb_percent in
         // pert to maintain limited history of node perturbation
-        virtual void perturbNodes(float perturb_amount);
+        virtual void perturbNodes(double perturb_amount);
 
         void setExtents( double minX, double maxX, double minY, double maxY, double minZ, double maxZ ) {
             xmin = minX;
@@ -389,7 +389,7 @@ class ltvec {
 // allow insertion sort of <distance, node_indx> pairs for std::set
 class ltdist {
     public: 
-        bool operator() (const std::pair<float,unsigned int> i, const std::pair<float,unsigned int> j)
+        bool operator() (const std::pair<double,unsigned int> i, const std::pair<double,unsigned int> j)
         {
             return i.first <= j.first; 
         }

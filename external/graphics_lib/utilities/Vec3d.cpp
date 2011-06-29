@@ -7,21 +7,21 @@
 #include <stdio.h>
 #include <iostream>
 //#include <Amira/HxMessage.h>
-#include "Vec3.h"
+#include "Vec3d.h"
 
 using namespace std;
 
 //=======================================================================
 
 #if 0
-Vec3::Vec3()
+Vec3d::Vec3d()
 {
-    Vec3((double)0., (double)0., (double)0.);
+    Vec3d((double)0., (double)0., (double)0.);
 }
 
 //=======================================================================
 
-Vec3::Vec3(int x, int y, int z)
+Vec3d::Vec3d(int x, int y, int z)
 {
     vec[0] = (double) x;
     vec[1] = (double) y;
@@ -30,7 +30,7 @@ Vec3::Vec3(int x, int y, int z)
 
 //=======================================================================
 
-Vec3::Vec3(float x, float y, float z)
+Vec3d::Vec3d(float x, float y, float z)
 {
     vec[0] = x;
     vec[1] = y;
@@ -39,7 +39,7 @@ Vec3::Vec3(float x, float y, float z)
 
 //=======================================================================
 
-Vec3::Vec3(double x, double y, double z)
+Vec3d::Vec3d(double x, double y, double z)
 {
     vec[0] = x;
     vec[1] = y;
@@ -48,7 +48,7 @@ Vec3::Vec3(double x, double y, double z)
 
 //=======================================================================
 
-Vec3::Vec3(double* pt)
+Vec3d::Vec3d(double* pt)
 {
     vec[0] = *pt++;
     vec[1] = *pt++;
@@ -57,7 +57,7 @@ Vec3::Vec3(double* pt)
 
 //=======================================================================
 
-Vec3::Vec3(double* pt)
+Vec3d::Vec3d(double* pt)
 {
     vec[0] = *pt++;
     vec[1] = *pt++;
@@ -67,7 +67,7 @@ Vec3::Vec3(double* pt)
 
 //=======================================================================
 
-Vec3::Vec3(Vec3& vec)
+Vec3d::Vec3d(Vec3d& vec)
 {
     this->vec[0] = vec.x();
     this->vec[1] = vec.y();
@@ -76,14 +76,14 @@ Vec3::Vec3(Vec3& vec)
 
 //=======================================================================
 
-double* Vec3::getVec()
+double* Vec3d::getVec()
 {
     return vec;
 }
 
 //=======================================================================
 
-void Vec3::getVec(double* x, double* y, double* z)
+void Vec3d::getVec(double* x, double* y, double* z)
 {
     *x = vec[0];
     *y = vec[1];
@@ -91,7 +91,7 @@ void Vec3::getVec(double* x, double* y, double* z)
 }
 
 //=======================================================================
-void Vec3::setValue(double x)
+void Vec3d::setValue(double x)
 {
     vec[0] = x;
     vec[1] = x;
@@ -99,7 +99,7 @@ void Vec3::setValue(double x)
 }
 //=======================================================================
 
-void Vec3::setValue(double x, double y, double z)
+void Vec3d::setValue(double x, double y, double z)
 {
     vec[0] = x;
     vec[1] = y;
@@ -108,7 +108,7 @@ void Vec3::setValue(double x, double y, double z)
 
 //=======================================================================
 
-void Vec3::setValue(Vec3& v)
+void Vec3d::setValue(Vec3d& v)
 {
 	vec[0] = v[0];
 	vec[1] = v[1];
@@ -117,7 +117,7 @@ void Vec3::setValue(Vec3& v)
 
 //=======================================================================
 
-void Vec3::setValue(double* val)
+void Vec3d::setValue(double* val)
 {
 	vec[0] = val[0];
 	vec[1] = val[1];
@@ -125,7 +125,7 @@ void Vec3::setValue(double* val)
 }
 //=======================================================================
 
-void Vec3::normalize(double scale)
+void Vec3d::normalize(double scale)
 {
     double norm = sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
     if (norm != 0.0)
@@ -139,19 +139,19 @@ void Vec3::normalize(double scale)
 
 //=======================================================================
 
-double Vec3::magnitude()
+double Vec3d::magnitude()
 {
     return sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
 }
 
-double Vec3::magnitude() const
+double Vec3d::magnitude() const
 {
     return sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
 }
 
 //=======================================================================
 
-void Vec3::print(const char *msg) const
+void Vec3d::print(const char *msg) const
 {
 	if (msg) {
     	printf("%s: %g, %g, %g\n", msg, vec[0], vec[1], vec[2]);
@@ -164,53 +164,53 @@ void Vec3::print(const char *msg) const
 //----------------------------------------------------------------------
 std::ostream&
 operator<< (std::ostream&  os,
-            const Vec3& p)
+            const Vec3d& p)
 {
 //    os << '(' << p.x()  << ',' << p.y() << ',' << p.z() << ')';
     os << p.x() << ' ' << p.y() << ' ' << p.z(); 
     if (os.fail())
-        cout << "operator<<(ostream&,Vec3&) failed" << endl;
+        cout << "operator<<(ostream&,Vec3d&) failed" << endl;
     return os;
 }
 
 //----------------------------------------------------------------------
 std::istream&
 operator>> (std::istream&  os,
-            Vec3& p)
+            Vec3d& p)
 {
     os >> p.x() >> p.y() >> p.z(); 
     if (os.fail())
-        cout << "operator>>(istream&,Vec3&) failed" << endl;
+        cout << "operator>>(istream&,Vec3d&) failed" << endl;
     return os;
 }
 #endif 
 //----------------------------------------------------------------------
 #ifdef STANDALONE
 
-//void testvec(Vec3& a)
+//void testvec(Vec3d& a)
 //{
-	//a.print("inside testvec Vec3&, a= ");
+	//a.print("inside testvec Vec3d&, a= ");
 //}
-void testvec(Vec3 a)
+void testvec(Vec3d a)
 {
-	a.print("inside testvec Vec3, a= ");
+	a.print("inside testvec Vec3d, a= ");
 }
 
-// Problems occur when I use testvec(Vec3&) and 
+// Problems occur when I use testvec(Vec3d&) and 
 // I allocate the vector on the stack. That is probably 
 // because I cannot take a reference of such a vector.
-// Therefore, one should either work with testvec(Vec3) 
-// or testvec(Vec3&) but not both (for safety). It is also 
+// Therefore, one should either work with testvec(Vec3d) 
+// or testvec(Vec3d&) but not both (for safety). It is also 
 // safer not to allocate memory for the the arguments in
 // place when calling the function IF the function argument 
 // is a reference.
 
 int main()
 {
-	Vec3 a(.2,.5,.7);
-	Vec3 b(-.2,-.2,.8);
+	Vec3d a(.2,.5,.7);
+	Vec3d b(-.2,-.2,.8);
 
-	Vec3 c;
+	Vec3d c;
 
 	c = a + b;
 	a.print("a= ");
@@ -222,13 +222,13 @@ int main()
 	c.print("b-a");
 	(a-b).print("inline a-b: ");
 
-	Vec3 d = c  + b - 3*c;
+	Vec3d d = c  + b - 3*c;
 	(a^b).print("a^b" );
 
-    Vec3 dd = Vec3(.2,.6,.9) + a;
-	testvec(Vec3(.2,.2,.2)+Vec3(.1,.1,.1));
-	testvec(dd^Vec3(.2,.3,.5));
-	testvec(dd += Vec3(.3, .7. .2));
+    Vec3d dd = Vec3d(.2,.6,.9) + a;
+	testvec(Vec3d(.2,.2,.2)+Vec3d(.1,.1,.1));
+	testvec(dd^Vec3d(.2,.3,.5));
+	testvec(dd += Vec3d(.3, .7. .2));
 
 	return 0;
 }

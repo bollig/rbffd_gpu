@@ -70,7 +70,7 @@ class Domain : public Grid, public MPISendable
         Domain(const Domain& subdomain); // Copy constructor
 
         // Requires communicator to pass messages. This must be preconstructed comm_unit 
-        Domain(int dim_num, float _xmin, float _xmax, float _ymin, float _ymax, float _zmin, float _zmax, int _comm_rank, int _comm_size);
+        Domain(int dim_num, double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, int _comm_rank, int _comm_size);
 
 
         Domain(int dim_num, Grid* _grid, int _comm_size);
@@ -162,9 +162,9 @@ class Domain : public Grid, public MPISendable
 #endif 
         }
 
-        bool isInsideRange(float pt_, float rmin, float rmax, bool inclusiveMax) {
-            float d1 = pt_ - rmin; 
-            float d2 = rmax - pt_; 
+        bool isInsideRange(double pt_, double rmin, double rmax, bool inclusiveMax) {
+            double d1 = pt_ - rmin; 
+            double d2 = rmax - pt_; 
 #if 0
             if (fabs(d2) < 1e-5) {
                 std::cout << "+"; 

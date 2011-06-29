@@ -7,21 +7,21 @@
 #include <stdio.h>
 #include <iostream>
 //#include <Amira/HxMessage.h>
-#include "Vec3.h"
+#include "Vec3f.h"
 
 using namespace std;
 
 //=======================================================================
 
 #if 0
-Vec3::Vec3()
+Vec3f::Vec3f()
 {
-    Vec3((float)0., (float)0., (float)0.);
+    Vec3f((float)0., (float)0., (float)0.);
 }
 
 //=======================================================================
 
-Vec3::Vec3(int x, int y, int z)
+Vec3f::Vec3f(int x, int y, int z)
 {
     vec[0] = (float) x;
     vec[1] = (float) y;
@@ -30,7 +30,7 @@ Vec3::Vec3(int x, int y, int z)
 
 //=======================================================================
 
-Vec3::Vec3(float x, float y, float z)
+Vec3f::Vec3f(float x, float y, float z)
 {
     vec[0] = x;
     vec[1] = y;
@@ -39,7 +39,7 @@ Vec3::Vec3(float x, float y, float z)
 
 //=======================================================================
 
-Vec3::Vec3(double x, double y, double z)
+Vec3f::Vec3f(double x, double y, double z)
 {
     vec[0] = x;
     vec[1] = y;
@@ -48,7 +48,7 @@ Vec3::Vec3(double x, double y, double z)
 
 //=======================================================================
 
-Vec3::Vec3(float* pt)
+Vec3f::Vec3f(float* pt)
 {
     vec[0] = *pt++;
     vec[1] = *pt++;
@@ -57,7 +57,7 @@ Vec3::Vec3(float* pt)
 
 //=======================================================================
 
-Vec3::Vec3(double* pt)
+Vec3f::Vec3f(double* pt)
 {
     vec[0] = *pt++;
     vec[1] = *pt++;
@@ -67,7 +67,7 @@ Vec3::Vec3(double* pt)
 
 //=======================================================================
 
-Vec3::Vec3(Vec3& vec)
+Vec3f::Vec3f(Vec3f& vec)
 {
     this->vec[0] = vec.x();
     this->vec[1] = vec.y();
@@ -76,14 +76,14 @@ Vec3::Vec3(Vec3& vec)
 
 //=======================================================================
 
-float* Vec3::getVec()
+float* Vec3f::getVec()
 {
     return vec;
 }
 
 //=======================================================================
 
-void Vec3::getVec(float* x, float* y, float* z)
+void Vec3f::getVec(float* x, float* y, float* z)
 {
     *x = vec[0];
     *y = vec[1];
@@ -91,7 +91,7 @@ void Vec3::getVec(float* x, float* y, float* z)
 }
 
 //=======================================================================
-void Vec3::setValue(float x)
+void Vec3f::setValue(float x)
 {
     vec[0] = x;
     vec[1] = x;
@@ -99,7 +99,7 @@ void Vec3::setValue(float x)
 }
 //=======================================================================
 
-void Vec3::setValue(float x, float y, float z)
+void Vec3f::setValue(float x, float y, float z)
 {
     vec[0] = x;
     vec[1] = y;
@@ -108,7 +108,7 @@ void Vec3::setValue(float x, float y, float z)
 
 //=======================================================================
 
-void Vec3::setValue(Vec3& v)
+void Vec3f::setValue(Vec3f& v)
 {
 	vec[0] = v[0];
 	vec[1] = v[1];
@@ -117,7 +117,7 @@ void Vec3::setValue(Vec3& v)
 
 //=======================================================================
 
-void Vec3::setValue(float* val)
+void Vec3f::setValue(float* val)
 {
 	vec[0] = val[0];
 	vec[1] = val[1];
@@ -125,7 +125,7 @@ void Vec3::setValue(float* val)
 }
 //=======================================================================
 
-void Vec3::normalize(float scale)
+void Vec3f::normalize(float scale)
 {
     float norm = sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
     if (norm != 0.0)
@@ -139,19 +139,19 @@ void Vec3::normalize(float scale)
 
 //=======================================================================
 
-float Vec3::magnitude()
+float Vec3f::magnitude()
 {
     return sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
 }
 
-float Vec3::magnitude() const
+float Vec3f::magnitude() const
 {
     return sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
 }
 
 //=======================================================================
 
-void Vec3::print(const char *msg) const
+void Vec3f::print(const char *msg) const
 {
 	if (msg) {
     	printf("%s: %g, %g, %g\n", msg, vec[0], vec[1], vec[2]);
@@ -164,53 +164,53 @@ void Vec3::print(const char *msg) const
 //----------------------------------------------------------------------
 std::ostream&
 operator<< (std::ostream&  os,
-            const Vec3& p)
+            const Vec3f& p)
 {
 //    os << '(' << p.x()  << ',' << p.y() << ',' << p.z() << ')';
     os << p.x() << ' ' << p.y() << ' ' << p.z(); 
     if (os.fail())
-        cout << "operator<<(ostream&,Vec3&) failed" << endl;
+        cout << "operator<<(ostream&,Vec3f&) failed" << endl;
     return os;
 }
 
 //----------------------------------------------------------------------
 std::istream&
 operator>> (std::istream&  os,
-            Vec3& p)
+            Vec3f& p)
 {
     os >> p.x() >> p.y() >> p.z(); 
     if (os.fail())
-        cout << "operator>>(istream&,Vec3&) failed" << endl;
+        cout << "operator>>(istream&,Vec3f&) failed" << endl;
     return os;
 }
 #endif 
 //----------------------------------------------------------------------
 #ifdef STANDALONE
 
-//void testvec(Vec3& a)
+//void testvec(Vec3f& a)
 //{
-	//a.print("inside testvec Vec3&, a= ");
+	//a.print("inside testvec Vec3f&, a= ");
 //}
-void testvec(Vec3 a)
+void testvec(Vec3f a)
 {
-	a.print("inside testvec Vec3, a= ");
+	a.print("inside testvec Vec3f, a= ");
 }
 
-// Problems occur when I use testvec(Vec3&) and 
+// Problems occur when I use testvec(Vec3f&) and 
 // I allocate the vector on the stack. That is probably 
 // because I cannot take a reference of such a vector.
-// Therefore, one should either work with testvec(Vec3) 
-// or testvec(Vec3&) but not both (for safety). It is also 
+// Therefore, one should either work with testvec(Vec3f) 
+// or testvec(Vec3f&) but not both (for safety). It is also 
 // safer not to allocate memory for the the arguments in
 // place when calling the function IF the function argument 
 // is a reference.
 
 int main()
 {
-	Vec3 a(.2,.5,.7);
-	Vec3 b(-.2,-.2,.8);
+	Vec3f a(.2,.5,.7);
+	Vec3f b(-.2,-.2,.8);
 
-	Vec3 c;
+	Vec3f c;
 
 	c = a + b;
 	a.print("a= ");
@@ -222,13 +222,13 @@ int main()
 	c.print("b-a");
 	(a-b).print("inline a-b: ");
 
-	Vec3 d = c  + b - 3*c;
+	Vec3f d = c  + b - 3*c;
 	(a^b).print("a^b" );
 
-    Vec3 dd = Vec3(.2,.6,.9) + a;
-	testvec(Vec3(.2,.2,.2)+Vec3(.1,.1,.1));
-	testvec(dd^Vec3(.2,.3,.5));
-	testvec(dd += Vec3(.3, .7. .2));
+    Vec3f dd = Vec3f(.2,.6,.9) + a;
+	testvec(Vec3f(.2,.2,.2)+Vec3f(.1,.1,.1));
+	testvec(dd^Vec3f(.2,.3,.5));
+	testvec(dd += Vec3f(.3, .7. .2));
 
 	return 0;
 }

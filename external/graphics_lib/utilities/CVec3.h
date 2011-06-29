@@ -56,7 +56,8 @@ class CVec3
 
         ~CVec3() {};
         CVec3(CVec3&);
-	 	CVec3(Vec3&);
+	 	CVec3(Vec3f &);
+	 	CVec3(Vec3d &);
         /*
          * memory allocated in class
          */

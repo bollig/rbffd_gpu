@@ -12,7 +12,7 @@
 // ltvec declared in grid_interface.h
 NodeType ltvec::xi;
 std::vector<NodeType>* ltvec::rbf_centers;
-//float* ltdist::dists;
+//double* ltdist::dists;
 
 //----------------------------------------------------------------------------
 void Grid::generate() {
@@ -291,7 +291,7 @@ int Grid::loadNormalsFromFile(std::string filename) {
     if (fin.is_open()) {
         boundary_normals.clear(); 
         while (fin.good()) {
-            Vec3 norml; 
+            Vec3d norml; 
             fin >> norml; 
             if (!fin.eof()) {
                 boundary_normals.push_back(norml); 
@@ -445,7 +445,7 @@ std::string Grid::getFilename(int iter) {
 
 
 //----------------------------------------------------------------------------
-void Grid::perturbNodes(float perturb_amount) {
+void Grid::perturbNodes(double perturb_amount) {
     pert = perturb_amount; 
     for (unsigned int i = 0 ; i < node_list.size(); i ++) {
         node_list[i][0] += randf(-pert, pert); 
@@ -607,7 +607,7 @@ void Grid::generateStencilsBruteForce() {
     // O(n^2) algorithm, whose cost is independent of the number of nearest sought
 
     for (int i = 0; i < nb_rbf; i++) {
-        Vec3& v = rbf_centers[i];
+        Vec3d& v = rbf_centers[i];
         StencilType& st = stencil_map[i];
 #if 0
         if (st.size() < max_st_size) {
@@ -705,10 +705,10 @@ void Grid::generateStencilsHash()
     // list of lists 
     cell_hash.resize(hnx * hny * hnz);  
 
-    float cdx = (xmax - xmin) / hnx;
-    //float cdx = (hnx > 1) ? (xmax - xmin) / (hnx - 1.) : (xmax - xmin) / hnx;
-    float cdy = (ymax - ymin) / hny;
-    float cdz = (zmax - zmin) / hnz;
+    double cdx = (xmax - xmin) / hnx;
+    //double cdx = (hnx > 1) ? (xmax - xmin) / (hnx - 1.) : (xmax - xmin) / hnx;
+    double cdy = (ymax - ymin) / hny;
+    double cdz = (zmax - zmin) / hnz;
 
     NodeType cell_start(xmin, ymin, zmin); 
     NodeType cell_end(xmax, ymax, zmax); 
@@ -772,7 +772,7 @@ void Grid::generateStencilsHash()
                 this->boundary_indices[old_bindx] = this->getBoundaryIndex(bindx);
                 this->boundary_indices[bindx] = indx;  
 
-                Vec3 normal = this->getBoundaryNormal(bindx); 
+                Vec3d normal = this->getBoundaryNormal(bindx); 
                 this->boundary_normals[bindx] = this->getBoundaryNormal(old_bindx); 
                 this->boundary_normals[old_bindx] = normal; 
                 bindx++;
@@ -889,15 +889,15 @@ void Grid::generateStencilsHash()
         }
 
         // Compute distances for each neighbor and insert them into a sorted set. 
-        std::set< std::pair<float,unsigned int> , ltdist> dists;
+        std::set< std::pair<double,unsigned int> , ltdist> dists;
         unsigned int d_count = 0;  
         for (std::set<unsigned int>::iterator it = neighbor_cell_set.begin(); it != neighbor_cell_set.end(); it++) {
             unsigned int cell_id = *it; 
             for (unsigned int q = 0; q < cell_hash[cell_id].size(); q++) {
                 NodeType& neighbor = this->getNode(cell_hash[cell_id][q]); 
-                //dists[d_count] = std::pair<float,unsigned int>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
+                //dists[d_count] = std::pair<double,unsigned int>( (node - neighbor).magnitude(), cell_hash[cell_id][q] ); 
                 //                std::cout << "DIST (" << node << "   to   " << neighbor << ") = " << (node - neighbor).magnitude()  << std::endl;
-                dists.insert(std::pair<float,unsigned int>( (node - neighbor).magnitude(), cell_hash[cell_id][q] )); 
+                dists.insert(std::pair<double,unsigned int>( (node - neighbor).magnitude(), cell_hash[cell_id][q] )); 
                 d_count++;
             }
         }
@@ -909,7 +909,7 @@ void Grid::generateStencilsHash()
 
         //st.reserve(max_st_size);  
         st.resize(max_st_size);  
-        std::set< std::pair<float,unsigned int> , ltdist>::iterator sorted_ids = dists.begin(); 
+        std::set< std::pair<double,unsigned int> , ltdist>::iterator sorted_ids = dists.begin(); 
         for (unsigned int j = 0; j < max_st_size; j++) { 
             if ((*sorted_ids).first < max_st_radius) {
                 // std::cout << "NODE ID: " << p << "\tDIST (" << j << ") = " << (*sorted_ids).first << "\t NeighborIndx: " << (*sorted_ids).second << std::endl;

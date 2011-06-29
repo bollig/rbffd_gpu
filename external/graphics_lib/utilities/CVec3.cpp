@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <iostream>
 //#include <Amira/HxMessage.h>
+
+#include "Vec3d.h"
+#include "Vec3f.h"
 #include "CVec3.h"
 
 using namespace std;
@@ -75,7 +78,15 @@ CVec3::CVec3(CVec3& vec)
 }
 
 //----------------------------------------------------------------------
-CVec3::CVec3(Vec3& vec)
+CVec3::CVec3(Vec3d & vec)
+{
+    this->vec[0] = CMPLX(vec.x(), 0.);
+    this->vec[1] = CMPLX(vec.y(), 0.);
+    this->vec[2] = CMPLX(vec.z(), 0.);
+}
+
+//----------------------------------------------------------------------
+CVec3::CVec3(Vec3f & vec)
 {
     this->vec[0] = CMPLX(vec.x(), 0.);
     this->vec[1] = CMPLX(vec.y(), 0.);

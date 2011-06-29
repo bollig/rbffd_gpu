@@ -8,7 +8,7 @@
 
 #include "grids/cvt/ellipse_cvt.h"
 #include "grids/cvt/ellipsoid_cvt.h"
-#include "exact_2d.h"
+#include "exact_2D.h"
 
 #include "grids/domain.h"
 #include "rbffd/derivative_tests.h"

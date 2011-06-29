@@ -752,19 +752,29 @@ void Grid::generateStencilsHash()
     for (unsigned int i =0; i < cell_hash.size(); i++) {
         for (unsigned int j = 0; j < cell_hash[i].size(); j++) {
 
+            bool found = false; 
+            unsigned int old_bindx = 0;
             hash_sorted_nodes[indx] =  this->getNode(cell_hash[i][j]); 
     
             // Update the boundary info if necessary
-            std::vector<unsigned int>::iterator old_bindx = find(bindices.begin()+bindx, bindices.end(), cell_hash[i][j]); 
-            if (old_bindx != bindices.end()) {
+            // This caused a segfault on Keeneland. we'll do our own search
+       //     std::vector<unsigned int>::iterator old_bindx = find(bindices.begin()+bindx, bindices.end(), cell_hash[i][j]); 
+            for (unsigned int k = bindx; k < this->getBoundaryIndicesSize(); k++) {
+                if (bindices[k] == cell_hash[i][j]) {
+                    found = true; 
+                    old_bindx = k;
+                }
+            }
+
+            if (found) {
 //                std::cout << "Swapping boundary[" << *old_bindx << "] for " << indx << std::endl;
                 // Swap our boundary indices (not the most efficient, but...itll do the job
-                this->boundary_indices[*old_bindx] = this->getBoundaryIndex(bindx);
+                this->boundary_indices[old_bindx] = this->getBoundaryIndex(bindx);
                 this->boundary_indices[bindx] = indx;  
 
                 Vec3 normal = this->getBoundaryNormal(bindx); 
-                this->boundary_normals[bindx] = this->getBoundaryNormal(*old_bindx); 
-                this->boundary_normals[*old_bindx] = normal; 
+                this->boundary_normals[bindx] = this->getBoundaryNormal(old_bindx); 
+                this->boundary_normals[old_bindx] = normal; 
                 bindx++;
             }
 
@@ -897,6 +907,7 @@ void Grid::generateStencilsHash()
         StencilType& st = stencil_map[p]; 
         //st.clear();     // In case of any residual stencil info
 
+        //st.reserve(max_st_size);  
         st.resize(max_st_size);  
         std::set< std::pair<float,unsigned int> , ltdist>::iterator sorted_ids = dists.begin(); 
         for (unsigned int j = 0; j < max_st_size; j++) { 
@@ -943,6 +954,7 @@ void Grid::checkStencilSize() {
     // for each node, a vector of stencil nodes (global indexing)
     if (stencil_map.size() < nb_rbf) {
         std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
+        stencil_map.reserve(nb_rbf);
         stencil_map.resize(nb_rbf);
     }
 }

@@ -20,10 +20,10 @@ public:
 
     virtual double tderiv(double Xx, double Yy, double Zz, double t);
 
-    virtual double diffuseCoefficient(Vec3& v, double t);
-    virtual double diffuse_xderiv(double Xx, double Yy, double Zz, double t);
-    virtual double diffuse_yderiv(double Xx, double Yy, double Zz, double t);
-    virtual double diffuse_zderiv(double Xx, double Yy, double Zz, double t);
+    virtual double diffuseCoefficient(double Xx, double Yy, double Zz, double sol, double t);
+    virtual double diffuse_xderiv(double Xx, double Yy, double Zz, double sol, double t);
+    virtual double diffuse_yderiv(double Xx, double Yy, double Zz, double sol, double t);
+    virtual double diffuse_zderiv(double Xx, double Yy, double Zz, double sol, double t);
 
 
 private:

@@ -280,6 +280,7 @@ Vec3 Node::getBoundaryPt()
 	Vec3 pt(xc,yc,zc);
 
 	printf("how_far: %g\n", patch->how_far(pt));
+    return pt; 
 }
 //----------------------------------------------------------------------
 void Node::parseTree(BaseCheck& check)

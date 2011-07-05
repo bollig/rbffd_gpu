@@ -241,7 +241,7 @@ void ContourSVD::execute(int N_)
     urowvec columnCoeffsCounter(mc);
 
     for (int j=0; j < mc; j++) {
-        columnCoeffsCounter(j) = 0.;
+        columnCoeffsCounter(j) = 0;
         for (int i=0; i < mg; i++) {
             int b = (fabs(negPows(i,j)) > COEFF_MAGNITUDE_TOL) ? TRUE : FALSE;
             b = (b == TRUE) && (result(i,j) == TRUE) ? TRUE : FALSE;

@@ -4,7 +4,7 @@
 
 #include "heat_pde_cusp.h"
 
-#include "rbffd/rbffd_cl.h"
+//#include "rbffd/rbffd_cl.h"
 
 //----------------------------------------------------------------------
 

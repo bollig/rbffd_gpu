@@ -302,17 +302,14 @@ class RBF {
         // Laplacians:
         virtual double lapl_deriv(const Vec3& xvec, const Vec3& x_center) { return this->lapl_deriv(xvec-x_center); }
         virtual double lapl_deriv(const Vec3& xvec) {
-            switch (dim) 
+            switch (this->dim) 
             {
                 case 1: 
                     return this->lapl_deriv1D(xvec);
-                    break; 
                 case 2: 
                     return this->lapl_deriv2D(xvec);
-                    break;
                 case 3: 
                     return this->lapl_deriv3D(xvec);
-                    break; 
                 default: 
                     printf("error: unsupported rbf.lapl_deriv dimension\n");
                     exit(EXIT_FAILURE); 
@@ -329,13 +326,10 @@ class RBF {
             {
                 case 1: 
                     return this->lapl_deriv1D(x);
-                    break; 
                 case 2: 
                     return this->lapl_deriv2D(x);
-                    break;
                 case 3: 
                     return this->lapl_deriv3D(x);
-                    break; 
                 default: 
                     printf("error: unsupported rbf.lapl_deriv dimension\n");
                     exit(EXIT_FAILURE); 

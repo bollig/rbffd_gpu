@@ -27,8 +27,8 @@
     derTypeStr[1] = "y";
     derTypeStr[2] = "z";
     derTypeStr[3] = "lapl";
-    derTypeStr[4] = "interp";
-    derTypeStr[5] = "hv2";
+    derTypeStr[4] = "hv2";
+    derTypeStr[5] = "interp";
 
     weightTypeStr[0] = "direct"; 
     weightTypeStr[1] = "contoursvd"; 

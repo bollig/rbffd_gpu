@@ -729,16 +729,16 @@ void Grid::generateStencilsHash()
         // TODO: we note that the xc, yc and zc can be treated at binary digits
         // to select the CELL_ID (do we really need an optimization like that
         // though?)
-        unsigned int xc = floor((node.x() - xmin) / cdx); 
+        int xc = (int)floor((node.x() - xmin) / cdx); 
 
         // This logic saves us when our nodes lie on xmax, ymax, or zmax
         // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
         xc = (xc == hnx) ? xc-1 : xc; 
-        unsigned int yc = floor((node.y() - ymin) / cdy); 
+        int yc = (int)floor((node.y() - ymin) / cdy); 
         yc = (yc == hny) ? yc-1 : yc; 
-        unsigned int zc = floor((node.z() - zmin) / cdz);
+        int zc = (int)floor((node.z() - zmin) / cdz);
         zc = (zc == hnz) ? zc-1 : zc; 
-        unsigned int cell_id = ((xc*hny) + yc)*hnz + zc; 
+        int cell_id = ((xc*hny) + yc)*hnz + zc; 
 
         //       std::cout << "NODE:" << node << "   in   CELL: " << cell_id << "      ( " << xc << ", " << yc << ", " << zc << " )" << std::endl;
         cell_hash[cell_id].push_back(i); 
@@ -808,14 +808,14 @@ void Grid::generateStencilsHash()
         // xc, yc and zc are the (x,y,z) corresponding to the cell id
         // xmin,ymin,zmin are member properties of the Grid class
         // cdx,cdy,cdz are the deltaX, deltaY, deltaZ for the cell overlays
-        unsigned int xc = floor((node.x() - xmin) / cdx); 
+        int xc = (int)floor((node.x() - xmin) / cdx); 
         // This logic saves us when our nodes lie on xmax, ymax, or zmax
         // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
         //
         xc = (xc == hnx) ? xc-1 : xc; 
-        unsigned int yc = floor((node.y() - ymin) / cdy); 
+        int yc = (int)floor((node.y() - ymin) / cdy); 
         yc = (yc == hny) ? yc-1 : yc; 
-        unsigned int zc = floor((node.z() - zmin) / cdz);
+        int zc = (int)floor((node.z() - zmin) / cdz);
         zc = (zc == hnz) ? zc-1 : zc; 
 
         unsigned int node_cell_id = ((xc*hny) + yc)*hnz + zc; 

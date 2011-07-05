@@ -55,7 +55,7 @@ void Communicator::sendObject(MPISendable* object, int receiver_rank)
 	object->send(this->getRank(), receiver_rank); 
 }
 
-int Communicator::receiveObject(MPISendable* object, int sender_rank)
+void Communicator::receiveObject(MPISendable* object, int sender_rank)
 {
 	object->receive(this->getRank(), sender_rank); 
 }

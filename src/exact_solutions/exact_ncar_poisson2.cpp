@@ -144,19 +144,19 @@ double ExactNCARPoisson2::tderiv(double x, double y, double z, double t)
     return 0.;
 }
 //----------------------------------------------------------------------
-double ExactNCARPoisson2::diffuseCoefficient(Vec3& v, double t) {
-        double diffuse = v.y() ;//* Sin(v.x()) * Cos(2.*v.y());
+double ExactNCARPoisson2::diffuseCoefficient(double x, double y, double z, double sol, double t) {
+        double diffuse = y;//* Sin(v.x()) * Cos(2.*v.y());
         return diffuse;
 }
 //----------------------------------------------------------------------
 
-        double ExactNCARPoisson2::diffuse_xderiv(double x, double y, double z, double t) {
+        double ExactNCARPoisson2::diffuse_xderiv(double x, double y, double z, double sol, double t) {
             return 0.;
         }
-        double ExactNCARPoisson2::diffuse_yderiv(double x, double y, double z, double t) {
+        double ExactNCARPoisson2::diffuse_yderiv(double x, double y, double z, double sol, double t) {
             return 1.;
         }
-        double ExactNCARPoisson2::diffuse_zderiv(double x, double y, double z, double t) {
+        double ExactNCARPoisson2::diffuse_zderiv(double x, double y, double z, double sol, double t) {
             return 0.;
         }
  

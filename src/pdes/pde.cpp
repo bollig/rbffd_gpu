@@ -7,12 +7,12 @@
 
 int PDE::send(int my_rank, int receiver_rank) {
     // Initially we have nothing to send.
-    ; 
+    return 0; 
 }
 
 int PDE::receive(int my_rank, int sender_rank) {
     // Initially we have nothing to receive 
-    ;
+    return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
 
 // By default we send updates for the SOLUTION of our PDE. 
 int PDE::sendUpdate(int my_rank, int receiver_rank) {
-    this->sendUpdate(this->U_G, my_rank, receiver_rank, "U_G");
+    return this->sendUpdate(this->U_G, my_rank, receiver_rank, "U_G");
 }
 
 // Alternatively we can specify a vector to update
@@ -158,10 +158,11 @@ int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_ra
         sendSTL(&U_O, my_rank, receiver_rank);
 //        cout << "RANK " << my_rank << " REPORTS: sent update to RANK " << receiver_rank << endl;
     }
+    return 0;           // FIXME: return bytes sent (in case we need to monitor this)
 }
 
 int PDE::receiveUpdate(int my_rank, int sender_rank) {
-    this->receiveUpdate(this->U_G, my_rank, sender_rank, "U_G");
+    return this->receiveUpdate(this->U_G, my_rank, sender_rank, "U_G");
 }
 
 int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label) {
@@ -200,6 +201,8 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
 
 //        cout << "RANK " << my_rank << " REPORTS: received update from RANK " << sender_rank << endl;
     }
+
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 
 int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label) 
@@ -227,6 +230,7 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
 			this->receiveUpdate(vec, comm_ref.getRank(), j, label);
 		}
 	}
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 
 int PDE::sendFinal(int my_rank, int receiver_rank) {
@@ -260,6 +264,7 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
         sendSTL(&U_Q, my_rank, receiver_rank);
     //    cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
     }
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 
 
@@ -302,6 +307,7 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
         cout << "\tU_G[" << (*it).first << "] = " << (*it).second << endl;
     }
 #endif 
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 
 int PDE::initFinal() {
@@ -313,6 +319,7 @@ int PDE::initFinal() {
         unsigned int g_indx = *qit;
         global_U_G[g_indx] = U_G[l_indx]; 
     }
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 
 int PDE::updateFinal() {
@@ -332,6 +339,7 @@ int PDE::updateFinal() {
         global_U_G[g_indx] = U_G[l_indx]; 
     }
     std::cout << "GLOBAL_U_G.size() = " << global_U_G.size() << std::endl;
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 
 void PDE::printSolution(std::string set_label) {
@@ -376,6 +384,7 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
     }
     //fout.close();
     fclose(fdsol);
+    return i; 
 }
 
 

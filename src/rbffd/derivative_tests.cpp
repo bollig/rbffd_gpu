@@ -683,7 +683,7 @@ void DerivativeTests::testHyperviscosity()
 
     der->computeEigenvalues(RBFFD::LAPL, false, &orig_eig_results); 
 
-    RBFFD::EigenvalueOutput eig_results; 
+    RBFFD::EigenvalueOutput eig_results = orig_eig_results; 
     int i = 0; 
     while (eig_results.nb_positive > nb_bnd) {
         printf("---- iteration %d ------\n", i);

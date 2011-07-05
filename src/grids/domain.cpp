@@ -140,6 +140,7 @@ int Domain::send(int my_rank, int receiver_rank) {
     sendSTL(&max_st_size, my_rank, receiver_rank);  
 
     cout << "RANK " << my_rank << " REPORTS: sent Domain object" << endl;
+    return 0;           // FIXME: return bytes sent (in case we need to monitor this)
 }
 
 int Domain::receive(int my_rank, int sender_rank) {
@@ -187,6 +188,7 @@ int Domain::receive(int my_rank, int sender_rank) {
     set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
 
     cout << "RANK " << my_rank << " REPORTS: received Domain object" << endl;
+    return 0;           // FIXME: return bytes sent (in case we need to monitor this)
 }
 
 void Domain::printVerboseDependencyGraph() {

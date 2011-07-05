@@ -125,7 +125,7 @@ void Timer::begin()
 	}
 	gettimeofday(&t_start, NULL);
 	t1 = clock();
-	t2 = 0.0;
+	t2 = (clock_t)0;
 	count++;
 }
 //----------------------------------------------------------------------

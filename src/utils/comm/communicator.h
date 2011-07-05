@@ -21,7 +21,7 @@ public:
     void sendObject(MPISendable* object, int reciever_rank);
 
     // Setup MPI_Recv for any CPUs expecting subdomain from CPU0
-    int receiveObject(MPISendable* object, int sender_rank);
+    void receiveObject(MPISendable* object, int sender_rank);
 
     // As a CPU, loop through CPUs and send updates required by each.
     // Round Robin style posting as ALL CPUs will need opportunity to broadcast

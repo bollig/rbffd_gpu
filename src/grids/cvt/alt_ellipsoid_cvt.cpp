@@ -615,7 +615,7 @@ void AltEllipsoidCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, d
 
     // Now that we know how many boundary nodes we want out of the total
     // number of nodes in the domain, resize to that value
-    this->nb_bnd = nb_computed_bnd;
+    this->nb_bnd = (int)nb_computed_bnd;
     this->resizeBoundary(this->nb_bnd);
     //bndry_pts.resize(this->nb_bnd);
 

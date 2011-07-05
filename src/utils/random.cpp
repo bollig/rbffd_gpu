@@ -4,7 +4,7 @@
 
 int randi(int i1, int i2) {
 	double r = (double) (random() / RAND_MAX);
-	return (i1 + r * (i2 - i1));
+	return (int)(i1 + r * (i2 - i1));
 }
 
 //----------------------------------------------------------------------

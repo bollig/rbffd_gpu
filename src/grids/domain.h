@@ -163,9 +163,10 @@ class Domain : public Grid, public MPISendable
         }
 
         bool isInsideRange(double pt_, double rmin, double rmax, bool inclusiveMax) {
+
+#if 0
             double d1 = pt_ - rmin; 
             double d2 = rmax - pt_; 
-#if 0
             if (fabs(d2) < 1e-5) {
                 std::cout << "+"; 
             } else if (fabs(d1) < 1e-5) {
@@ -224,14 +225,14 @@ class Domain : public Grid, public MPISendable
         virtual int send(int my_rank, int receiver_rank); 
         virtual int receive(int my_rank, int sender_rank);
 
-        virtual int sendUpdate(int my_rank, int receiver_rank) { std::cout << "[Domain] sending node updates not allowed yet.\n"; }
-        virtual int receiveUpdate(int my_rank, int sender_rank) { std::cout << "[Domain] receiving node updates not allowed yet.\n"; }
+        virtual int sendUpdate(int my_rank, int receiver_rank) { std::cout << "[Domain] sending node updates not allowed yet.\n"; return 0; }
+        virtual int receiveUpdate(int my_rank, int sender_rank) { std::cout << "[Domain] receiving node updates not allowed yet.\n"; return 0; }
 
-        virtual int sendFinal(int my_rank, int receiver_rank) { std::cout << "[Domain] nothing final to send\n"; }
-        virtual int receiveFinal(int my_rank, int sender_rank) { std::cout << "[Domain] nothing final to receive\n"; }
+        virtual int sendFinal(int my_rank, int receiver_rank) { std::cout << "[Domain] nothing final to send\n"; return 0; }
+        virtual int receiveFinal(int my_rank, int sender_rank) { std::cout << "[Domain] nothing final to receive\n"; return 0; }
 
-        virtual int initFinal() { ; }
-        virtual int updateFinal() { ; }
+        virtual int initFinal() { return 0; }
+        virtual int updateFinal() { return 0; }
         // ******** END MPISENDABLE ************
         
         //public: 	// Member Functions

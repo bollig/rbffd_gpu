@@ -52,9 +52,11 @@ Vec3& ParametricPatch::nearest(Vec3& pt)
 Vec3 ParametricPatch::find(Vec3& pt, int& umin, int& umax, 
 	int& vmin, int& vmax)
 {
+    std::cout << "[ParametricPatch] Error: find not implemented\n";
+    return Vec3(0.,0.,0.); 
 }
 //----------------------------------------------------------------------
-Vec3& ParametricPatch::F(Vec3& pt_surf, Vec3& seed)
+Vec3 ParametricPatch::F(Vec3& pt_surf, Vec3& seed)
 // rsd: seed point
 // rsf: surface point
 //(rsd-rsf)xgrad(rsf) = 0 = F(rsf) 
@@ -64,6 +66,7 @@ Vec3& ParametricPatch::F(Vec3& pt_surf, Vec3& seed)
 	Vec3& grad = gradient(pt_surf.x(), pt_surf.y(), pt_surf.z());
 	Vec3 diff = seed - pt_surf; // why is temporary type Vec3 ?
 	Vec3 cr = diff.cross(grad);
+    return cr; 
 }
 //----------------------------------------------------------------------
 // Line: from vector rsd with direction "dir"

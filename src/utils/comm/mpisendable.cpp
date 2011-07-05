@@ -98,6 +98,7 @@ int MPISendable::sendSTL(const std::set<int> *origin, int myrank, int recv_rank)
     //  cout << "RANK " << myrank << " REPORTS: finished sending std::set<int> to RANK " << recv_rank << endl;
     delete [] buff; 
     //  cout << "RANK " << myrank << " buff was freed\n";  
+    return (sz+1)*sizeof(int); 
 }
 
 //----------------------------------------------------------------------------
@@ -123,6 +124,7 @@ int MPISendable::sendSTL(const std::vector<Vec3> *origin, int myrank, int recv_r
     MPI_Send(&buff[0], sz*3, MPI::DOUBLE, recv_rank, TAG, MPI_COMM_WORLD);
     //  cout << "RANK " << myrank << " REPORTS: finished sending std::set<Vec3> to RANK " << recv_rank << endl;
     delete [] buff; 
+    return (3*sz+1)*sizeof(double); 
 }
 
 //----------------------------------------------------------------------------
@@ -149,6 +151,7 @@ int MPISendable::sendSTL(const std::map<int, int> *origin, int myrank, int recv_
     MPI_Send(&buff[0], sz*2, MPI::INT, recv_rank, TAG, MPI_COMM_WORLD);
     //  cout << "RANK " << myrank << " REPORTS: finished sending std::map<int,int> to RANK " << recv_rank << endl;
     delete [] buff; 
+    return (2*sz+1)*sizeof(int); 
 }
 
 //----------------------------------------------------------------------------
@@ -191,6 +194,7 @@ int MPISendable::sendSTL(const std::vector<std::vector<unsigned int> > *origin, 
     //  cout << "WARNING! unsigned int passing is not verified YET.\n";
     delete [] buff;
     delete [] buff2;
+    return -1; // FIXME: return the actual number of bytes sent
 }
 
 //----------------------------------------------------------------------------
@@ -233,6 +237,7 @@ int MPISendable::sendSTL(const std::vector<std::vector<int> > *origin, int myran
     delete [] buff; 
     delete [] buff2; 
     //  cout << "RANK " << myrank << " REPORTS: freed buff and buff2\n"; 
+    return -1; // FIXME: return the actual number of bytes sent
 }
 
 //----------------------------------------------------------------------------
@@ -276,6 +281,7 @@ int MPISendable::sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank,
     //  cout << "RANK " << myrank << " REPORTS: finished sending std::set< std::vector<Vec3> > to RANK " << recv_rank << endl;
     delete [] buff; 
     delete [] buff2; 
+    return -1; // FIXME: return the actual number of bytes sent
 }
 //----------------------------------------------------------------------------
 
@@ -290,6 +296,7 @@ int MPISendable::sendSTL(const unsigned int *destination, int myrank, int recv_r
     MPI_Send(&buf, 1, type, recv_rank, TAG, MPI_COMM_WORLD);
 
     //  cout << "RANK " << myrank << " REPORTS: finished sending unsigned int (size: 1) to RANK " << recv_rank << endl;
+    return -1; // FIXME: return the actual number of bytes sent
 }
 
 //----------------------------------------------------------------------------
@@ -305,6 +312,7 @@ int MPISendable::sendSTL(const int *destination, int myrank, int recv_rank) cons
     MPI_Send(&buf, 1, type, recv_rank, TAG, MPI_COMM_WORLD);
 
     //  cout << "RANK " << myrank << " REPORTS: finished sending int (size: 1) to RANK " << recv_rank << endl;
+    return -1; // FIXME: return the actual number of bytes sent
 }
 
 //----------------------------------------------------------------------------
@@ -417,6 +425,7 @@ int MPISendable::recvSTL(std::map<int, int> *destination, int myrank, int sender
 
     //  cout << "RANK " << myrank << " REPORTS: received std::map<int,int> (size: " << sz << ") from RANK " << sender_rank << endl;	
     delete [] buff; 
+    return -1; // FIXME: return the actual number of bytes received
 }
 
 //----------------------------------------------------------------------------
@@ -441,6 +450,7 @@ int MPISendable::recvSTL(std::set<int> *destination, int myrank, int sender_rank
     //  cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;
     delete [] buff; 
     //  cout << "RANK " << myrank << " REPORTS: buff freed\n";
+    return -1; // FIXME: return the actual number of bytes received
 }
 
 //----------------------------------------------------------------------------
@@ -465,6 +475,7 @@ int MPISendable::recvSTL(std::vector<Vec3> *destination, int myrank, int sender_
     }	
     //  cout << "RANK " << myrank << " REPORTS: received std::set<Vec3> (size: " << sz << ") from RANK " << sender_rank << endl;
     delete [] buff; 
+    return -1; // FIXME: return the actual number of bytes received
 }
 
 //----------------------------------------------------------------------------
@@ -512,6 +523,7 @@ int MPISendable::recvSTL(std::vector<std::vector<unsigned int> > *destination, i
     //  cout << "WARNING! unsigned int sending is not verified YET.\n"; 
     delete [] buff; 
     delete [] buff2;
+    return -1; // FIXME: return the actual number of bytes received
 }
 
 //----------------------------------------------------------------------------
@@ -554,6 +566,7 @@ int MPISendable::recvSTL(std::vector<std::vector<int> > *destination, int myrank
     delete [] buff; 
     delete [] buff2; 
     //  cout << "RANK " << myrank << " REPORTS: freed buff and buff2\n";
+    return -1; // FIXME: return the actual number of bytes received
 }
 
 //----------------------------------------------------------------------------
@@ -597,6 +610,7 @@ int MPISendable::recvSTL(std::set<std::vector<Vec3> > *destination, int myrank, 
     //  cout << "RANK " << myrank << " REPORTS: received std::set<int> (size: " << sz << ") from RANK " << sender_rank << endl;
     delete [] buff; 
     delete [] buff2; 
+    return -1; // FIXME: return the actual number of bytes received
 }
 
 //----------------------------------------------------------------------------
@@ -611,6 +625,7 @@ int MPISendable::recvSTL(unsigned int *destination, int myrank, int sender_rank)
     MPI_Recv(destination, 1, type, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     //  cout << "RANK " << myrank << " REPORTS: received unsigned int (size: 1) from RANK " << sender_rank << endl;
+    return -1; // FIXME: return the actual number of bytes received
 }
 
 //----------------------------------------------------------------------------
@@ -625,6 +640,7 @@ int MPISendable::recvSTL(int *destination, int myrank, int sender_rank)
     MPI_Recv(destination, 1, type, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     //  cout << "RANK " << myrank << " REPORTS: received unsigned int (size: 1) from RANK " << sender_rank << endl;
+    return -1; // FIXME: return the actual number of bytes received
 }
 
 //----------------------------------------------------------------------------

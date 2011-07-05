@@ -67,7 +67,7 @@ public:
 		return vzero;
 	}
 
-	virtual Vec3& gradient(Vec3& r)  {
+	Vec3& gradient(Vec3& r)  {
 	    //printf("grad(vec) in parametric_patch\n");
 		return gradient(r.x(), r.y(), r.z());
 	}
@@ -119,7 +119,7 @@ public:
 	}
 
 	// project a point onto the surface
-	virtual Vec3 ProjectToBoundary(double x, double y, double z) 
+	Vec3 ProjectToBoundary(double x, double y, double z) 
 	{
 		// assumes one is close to the boundary
 		pt.setValue(x,y,z);
@@ -182,8 +182,7 @@ public:
 	// collection of boundary points
 	std::vector<Vec3> getBoundaryPoints();
 
-	inline int getMinIndices(int& min_u, int&  max_u, 
-      int& min_v, int& max_v) {
+	inline void getMinIndices(int& min_u, int&  max_u, int& min_v, int& max_v) {
 	  	min_u = umin;
 	  	max_u = umax;
 	  	min_v = vmin;
@@ -197,8 +196,8 @@ public:
 	Vec3 planeIntersect(Vec3& rsd, Vec3& dir, Vec3& pt0, Vec3& normal);
 
 	// project pt_off_surface to the surface. 
-	virtual Vec3 project(Vec3 pt_off_surface);
-	virtual Vec3 projectToBoundary(Vec3& pt, Vec3& dir);
+	Vec3 project(Vec3 pt_off_surface);
+	Vec3 projectToBoundary(Vec3& pt, Vec3& dir);
 
 	// intersection of patch with line pt = pt0 + t*(pt1-pt0)
 	// Intersection occurs when t in [0,1] and pt is on the patch
@@ -210,7 +209,7 @@ private:
 
 private:
 //  (rsd-rsf)xgrad(rsf) = 0 = F(rsf) 
-	Vec3& F(Vec3& pt_surf, Vec3& pt_vol);
+	Vec3 F(Vec3& pt_surf, Vec3& pt_vol);
 //----------------------------------------------------------------------
 };
 

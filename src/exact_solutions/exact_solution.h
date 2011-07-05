@@ -19,7 +19,7 @@ class ExactSolution
         //	~ExactSolution() {}; 
 
         virtual double operator()(double x, double y, double z, double t=0.) = 0;
-        virtual double operator()(Vec3& r, double t=0.) {
+        double operator()(Vec3& r, double t=0.) {
             return (*this)(r.x(), r.y(), r.z(), t);
         }
 
@@ -27,7 +27,7 @@ class ExactSolution
             return (*this)(r, t);
         }
 
-        virtual double laplacian(Vec3& v, double t=0.) {
+        double laplacian(Vec3& v, double t=0.) {
             return this->laplacian(v.x(), v.y(), v.z(), t); 
         }
 
@@ -103,12 +103,12 @@ class ExactSolution
 
 
         // Return the diffusivity at node v (K=1 by default)
-        virtual double diffuseCoefficient(Vec3& v, double sol=0., double t=0.){
+        double diffuseCoefficient(Vec3& v, double sol=0., double t=0.){
             return this->diffuseCoefficient(v.x(), v.y(), v.z(), sol, t);
         }
 
         // Return the gradient of the diffusivity at node v
-        virtual Vec3 diffuseGradient(Vec3& v, double sol=0., double t=0.){
+        Vec3 diffuseGradient(Vec3& v, double sol=0., double t=0.){
             Vec3 diff_grad(this->diffuse_xderiv(v,sol,t), this->diffuse_yderiv(v,sol,t), this->diffuse_zderiv(v,sol,t));
             return diff_grad;
         }
@@ -146,11 +146,11 @@ class ExactSolution
             return convection_zderiv(r.x(), r.y(), r.z(), t);
         }
 
-        virtual double convectionCoefficient(Vec3& v, double t=0.){
+        double convectionCoefficient(Vec3& v, double t=0.){
             return this->convectionCoefficient(v.x(), v.y(), v.z(), t);
         }
 
-        virtual Vec3 convectionGradient(Vec3& v, double t=0.){
+        Vec3 convectionGradient(Vec3& v, double t=0.){
             Vec3 conv_grad(this->convection_xderiv(v,t), this->convection_yderiv(v,t), this->convection_zderiv(v,t));
             return conv_grad;
         }

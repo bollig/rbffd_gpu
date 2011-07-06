@@ -701,9 +701,9 @@ void Grid::generateStencilsHash()
     unsigned int hny = ns_nby;
     unsigned int hnz = ns_nbz;
 
-    std::vector< std::vector<unsigned int> > cell_hash; 
+    std::vector< std::vector<unsigned int> > cell_hash(hnx*hny*hnz, (unsigned int)0); 
     // list of lists 
-    cell_hash.resize(hnx * hny * hnz);  
+//    cell_hash.resize(hnx * hny * hnz);  
 
     double cdx = (xmax - xmin) / hnx;
     //double cdx = (hnx > 1) ? (xmax - xmin) / (hnx - 1.) : (xmax - xmin) / hnx;
@@ -729,16 +729,16 @@ void Grid::generateStencilsHash()
         // TODO: we note that the xc, yc and zc can be treated at binary digits
         // to select the CELL_ID (do we really need an optimization like that
         // though?)
-        int xc = (int)floor((node.x() - xmin) / cdx); 
+        unsigned int xc = (unsigned int)floor((node.x() - xmin) / cdx); 
 
         // This logic saves us when our nodes lie on xmax, ymax, or zmax
         // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
         xc = (xc == hnx) ? xc-1 : xc; 
-        int yc = (int)floor((node.y() - ymin) / cdy); 
+        unsigned int yc = (unsigned int)floor((node.y() - ymin) / cdy); 
         yc = (yc == hny) ? yc-1 : yc; 
-        int zc = (int)floor((node.z() - zmin) / cdz);
+        unsigned int zc = (unsigned int)floor((node.z() - zmin) / cdz);
         zc = (zc == hnz) ? zc-1 : zc; 
-        int cell_id = ((xc*hny) + yc)*hnz + zc; 
+        unsigned int cell_id = ((xc*hny) + yc)*hnz + zc; 
 
         //       std::cout << "NODE:" << node << "   in   CELL: " << cell_id << "      ( " << xc << ", " << yc << ", " << zc << " )" << std::endl;
         cell_hash[cell_id].push_back(i); 
@@ -808,14 +808,14 @@ void Grid::generateStencilsHash()
         // xc, yc and zc are the (x,y,z) corresponding to the cell id
         // xmin,ymin,zmin are member properties of the Grid class
         // cdx,cdy,cdz are the deltaX, deltaY, deltaZ for the cell overlays
-        int xc = (int)floor((node.x() - xmin) / cdx); 
+        unsigned int xc = (unsigned int)floor((node.x() - xmin) / cdx); 
         // This logic saves us when our nodes lie on xmax, ymax, or zmax
         // so instead of covering [n-1*dx,xmax), our cell covers [n-1*dx,xmax]
         //
         xc = (xc == hnx) ? xc-1 : xc; 
-        int yc = (int)floor((node.y() - ymin) / cdy); 
+        unsigned int yc = (unsigned int)floor((node.y() - ymin) / cdy); 
         yc = (yc == hny) ? yc-1 : yc; 
-        int zc = (int)floor((node.z() - zmin) / cdz);
+        unsigned int zc = (unsigned int)floor((node.z() - zmin) / cdz);
         zc = (zc == hnz) ? zc-1 : zc; 
 
         unsigned int node_cell_id = ((xc*hny) + yc)*hnz + zc; 
@@ -905,9 +905,8 @@ void Grid::generateStencilsHash()
         // Set insertion auto-sorts by distance
 
         StencilType& st = stencil_map[p]; 
-        //st.clear();     // In case of any residual stencil info
-
-        //st.reserve(max_st_size);  
+//        st.clear();     // In case of any residual stencil info
+        st.reserve(max_st_size);  
         st.resize(max_st_size);  
         std::set< std::pair<double,unsigned int> , ltdist>::iterator sorted_ids = dists.begin(); 
         for (unsigned int j = 0; j < max_st_size; j++) { 
@@ -956,6 +955,10 @@ void Grid::checkStencilSize() {
         std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
         stencil_map.reserve(nb_rbf);
         stencil_map.resize(nb_rbf);
+        for (int i =0 ; i < nb_rbf; i++) {
+            stencil_map[i].reserve(nb_rbf); 
+            stencil_map[i].resize(nb_rbf); 
+        }
     }
 }
 

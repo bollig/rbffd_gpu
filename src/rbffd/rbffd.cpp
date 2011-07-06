@@ -600,7 +600,7 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     count -= nb_bnd; // since we know at least nb_bnd eigenvalues are are (1+0i)
 
 #endif 
-    printf("\n[RBFFD] ****** Number positive eigenvalues: %d *******\n\n", pos_count);
+    printf("\n[RBFFD] ****** Number positive eigenvalues: %d (nb_bnd: %d) *******\n\n", pos_count, nb_bnd);
     printf("\n[RBFFD] ****** Number negative eigenvalues: %d *******\n\n", neg_count);
     printf("\n[RBFFD] ****** Number zero (-1e-8 <= eval <= 1e-8) eigenvalues: %d *******\n\n", zero_count);
 
@@ -629,6 +629,7 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     cachedEigenvalues.nb_negative = neg_count; 
     cachedEigenvalues.nb_zero     = zero_count; 
 
+    // If both are greater than 0 then we have a problem
     if ((neg_count - nb_bnd > 0) && (pos_count - nb_bnd > 0)){
         std::cout << "[RBFFD] Error: we expect either all positive or all negative eigenvalues (except for the number of boundary nodes).\n";
         if (exit_on_fail) {

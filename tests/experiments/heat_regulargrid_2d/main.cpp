@@ -246,7 +246,7 @@ int main(int argc, char** argv) {
 
         tm["receive"]->start(); 
         subdomain = new Domain(); // EMPTY object that will be filled by MPI
-        int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
+        comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
         tm["receive"]->stop(); 
     }
 

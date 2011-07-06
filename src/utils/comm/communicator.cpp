@@ -50,14 +50,14 @@ int Communicator::getRank() {
 }
 
 
-void Communicator::sendObject(MPISendable* object, int receiver_rank)
+int Communicator::sendObject(MPISendable* object, int receiver_rank)
 {
-	object->send(this->getRank(), receiver_rank); 
+	return object->send(this->getRank(), receiver_rank); 
 }
 
-void Communicator::receiveObject(MPISendable* object, int sender_rank)
+int Communicator::receiveObject(MPISendable* object, int sender_rank)
 {
-	object->receive(this->getRank(), sender_rank); 
+	return object->receive(this->getRank(), sender_rank); 
 }
 
 // As a CPU, loop through CPUs and send updates required by each. 

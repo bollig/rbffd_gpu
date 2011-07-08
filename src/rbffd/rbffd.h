@@ -201,8 +201,10 @@ class RBFFD
         std::vector<double*>& getWeights(DerType choice) { return weights[choice]; }
         double*& getStencilWeights(DerType choice, int st_indx) { return weights[choice][st_indx]; } 
 
+        void writeAllWeightsToFile(); 
         void writeToFile(DerType which, std::string filename);
         void writeToFile(DerType which) { this->writeToFile(which, this->getFilename(which)); }
+        int  loadAllWeightsFromFile();
         int  loadFromFile(DerType which, std::string filename);
         int  loadFromFile(DerType which){ return this->loadFromFile(which, this->getFilename(which)); }
 

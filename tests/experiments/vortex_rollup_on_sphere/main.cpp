@@ -233,10 +233,13 @@ int main(int argc, char** argv) {
 #endif 
  
     // Try loading all the weight files
+#if 0
     int err = der->loadFromFile(RBFFD::X); 
     err += der->loadFromFile(RBFFD::Y); 
     err += der->loadFromFile(RBFFD::Z); 
     err += der->loadFromFile(RBFFD::LAPL); 
+#endif 
+    int err = der->loadAllWeightsFromFile();
 
     if (err) { 
         printf("start computing weights\n");
@@ -250,11 +253,13 @@ int main(int argc, char** argv) {
 
         cout << "end computing weights" << endl;
 
+        der->writeAllWeightsToFile(); 
+#if 0
         der->writeToFile(RBFFD::X);
         der->writeToFile(RBFFD::Y);
         der->writeToFile(RBFFD::Z);
         der->writeToFile(RBFFD::LAPL);
-
+#endif
         cout << "end write weights to file" << endl;
     }
 

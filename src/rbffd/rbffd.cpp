@@ -976,6 +976,28 @@ int RBFFD::loadFromFile(DerType which, std::string filename) {
 }
 //--------------------------------------------------------------------
 
+int RBFFD::loadAllWeightsFromFile() {
+    
+    int err = 0;
+    for (int i = 0; i < NUM_DERIV_TYPES; i++) {
+        err += this->loadFromFile((DerType)i);
+    }
+    return err;
+}
+
+//--------------------------------------------------------------------
+
+void RBFFD::writeAllWeightsToFile() {
+    
+    for (int i = 0; i < NUM_DERIV_TYPES; i++) {
+        this->writeToFile((DerType)i);
+    }
+
+}
+
+
+//--------------------------------------------------------------------
+
 void RBFFD::writeToFile(DerType which, std::string filename) {
 
     // number of non-zeros (should be close to max_st_size*num_stencils)

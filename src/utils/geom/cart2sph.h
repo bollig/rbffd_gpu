@@ -12,9 +12,11 @@ typedef struct sph_coords {
 
 sph_coords_type cart2sph(double x, double y, double z) {
     sph_coords_type ret; 
-    ret.theta = atan2(y, x); 
-    ret.phi = atan2(z, sqrt(x*x + y*y)); 
-    ret.r = sqrt(x*x + y*y + z*z); 
+    // NOTE: we use atan2 to get the tan^{-1} for the right quadrant
+    ret.theta = atan2(y,x); 
+    ret.r     = sqrt(x*x + y*y + z*z); 
+    ret.phi = atan2(z, sqrt(x*x + y*y));
+
     return ret;
 }
 
@@ -22,6 +24,7 @@ sph_coords_type cart2sph(double x, double y, double z) {
 // We define it here for convenience. 
 inline double sech(double x) {
     return 1./cosh(x);
+//    return 2./(exp(x) + exp(-x));
 }
 
 #endif 

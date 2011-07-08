@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <map> 
 
-//#include "pdes/unclassified/vortex_rollup.h"
+#include "pdes/unclassified/vortex_rollup.h"
 
 #include "grids/grid_reader.h"
 
@@ -233,12 +233,6 @@ int main(int argc, char** argv) {
 #endif 
  
     // Try loading all the weight files
-#if 0
-    int err = der->loadFromFile(RBFFD::X); 
-    err += der->loadFromFile(RBFFD::Y); 
-    err += der->loadFromFile(RBFFD::Z); 
-    err += der->loadFromFile(RBFFD::LAPL); 
-#endif 
     int err = der->loadAllWeightsFromFile();
 
     if (err) { 
@@ -254,12 +248,6 @@ int main(int argc, char** argv) {
         cout << "end computing weights" << endl;
 
         der->writeAllWeightsToFile(); 
-#if 0
-        der->writeToFile(RBFFD::X);
-        der->writeToFile(RBFFD::Y);
-        der->writeToFile(RBFFD::Z);
-        der->writeToFile(RBFFD::LAPL);
-#endif
         cout << "end write weights to file" << endl;
     }
 
@@ -297,8 +285,9 @@ int main(int argc, char** argv) {
 
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
+
     // We need to provide comm_unit to pass ghost node info
-//    pde = new HeatPDE(subdomain, der, comm_unit, uniformDiffusion, true);
+    pde = new VortexRollup(subdomain, der, comm_unit);
 
     // This should not influence anything. 
     pde->setStartEndTime(start_time, end_time);
@@ -384,7 +373,7 @@ int main(int argc, char** argv) {
 
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
-
+#if 0
         if (!(iter % local_sol_dump_frequency)) {
 
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
@@ -419,6 +408,7 @@ int main(int argc, char** argv) {
         pde->printSolution(label); 
 #endif 
 
+#endif 
         tm["timestep"]->start(); 
         pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
         tm["timestep"]->stop(); 

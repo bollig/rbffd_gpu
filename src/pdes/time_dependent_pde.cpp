@@ -3,6 +3,8 @@
 #include <iostream>
 
 void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
+
+    exact_ptr = exactSolution;
     vector<SolutionType>& s = U_G;
 
     std::set<int>& Q = grid_ref.Q;			// All stencil centers in this CPU's QUEUE							

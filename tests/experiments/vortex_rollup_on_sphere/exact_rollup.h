@@ -24,10 +24,15 @@ class ExactRollup : public ExactSolution
 
         virtual double operator()(double x, double y, double z, double t) {
 
+            // NOTE: in Natasha's email they assume [phi theta r] = cart2sph(x,y,z)
+            // The real return order is [theta phi r]. However, to maintain consistency
+            // with their code I am swapping the phi and theta here. 
             sph_coords_type spherical_coords = cart2sph(x, y, z);
-            double theta_p = spherical_coords.theta; 
-            double phi_p = spherical_coords.phi; 
+            double theta_p = spherical_coords.phi; 
+            double phi_p = spherical_coords.theta; 
             double temp = spherical_coords.r; 
+
+//            std::cout << "CART(" << x << ",  " << y << ", " << z << ") => SPH(" << theta_p << ", " << phi_p << ", " << temp << ")\n"; 
 
             // From Natasha's email: 
             // 7/7/11 4:46 pm

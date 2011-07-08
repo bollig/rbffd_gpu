@@ -1,6 +1,6 @@
 #define ONE_MONOMIAL 1
-#define SCALE_BY_H 0 
-#define SCALE_OUT_BY_H 0 
+#define SCALE_BY_H 1 
+#define SCALE_OUT_BY_H 1 
 
 #include "rbffd/stencils.h"
 
@@ -103,8 +103,8 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
- //       d_matrix(n, i) = 1.0;
- //       d_matrix(i, n) = 1.0;
+        d_matrix(n, i) = 1.0;
+        d_matrix(i, n) = 1.0;
     }
     if (np > 1) {
         for (int i=0; i < n; i++) {
@@ -153,7 +153,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     StencilType& stencil = grid_ref.getStencil(st_indx); 
     int n = stencil.size();
 #if ONE_MONOMIAL
-    int np = 0;//1;//+dim_num; // +3 for the x,y,z monomials
+    int np = 1;//+dim_num; // +3 for the x,y,z monomials
 #else 
     int np = 1+dim_num; // +3 for the x,y,z monomials
 #endif 
@@ -201,9 +201,10 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
         scale = 1./h;
         // LAPL should scale by 1/h^2
         if (i == LAPL) {
-            //for (int i = 1; i < dim_num; i++) {
             scale *= scale; 
-            //}
+        }
+        if (i == INTERP) {
+            scale = 1.; 
         }
 #endif 
         if (this->weights[i][irbf] == NULL) {
@@ -255,6 +256,10 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     // RHS we evaluate all RBF translates at the stencil center
     NodeType& x0v = rbf_centers[stencil[0]];
 
+    // To test interpolation on sphere
+                Vec3 offset_x0v = x0v + Vec3(h, 0., 0.); 
+                offset_x0v.normalize();
+
     // NOTE: we want to evaluate the analytic derivs of phi at the stencil center point
     // using every stencil RBF: 
     //  RHS: 
@@ -303,8 +308,8 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 rhs(j,0) = rbf.lapl_deriv(diff);
                 break; 
             case INTERP: 
-                rhs(j,0) = rbf.eval(diff);
-                std::cout << diff << "\t" << diff.square() << std::endl;
+                rhs(j,0) = rbf.eval(offset_x0v - xjv);
+                //std::cout << diff << "\t" << diff.square() << std::endl;
                 break; 
             case HV2: 
                 // FIXME: this is only for 2D right now
@@ -317,9 +322,12 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
    }
 
 
-    if (np > 0) {
+    if ((np > 0) && (which != INTERP)) {
         // REQUIRE at least np = 1 (will ERR out if not valid)
         rhs(n) = 0.0; 
+    } else {
+        // This is part of RBF interpolation. Use 1 on the rhs to match monomial constants
+        rhs(n) = 1.0;
     }
 
     if (np > 1) {
@@ -349,9 +357,6 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         }
     }
 //        rhs.print("RHS before");
-        if (which == INTERP) {
-            rhs.print("RHS");
-        }
 }
 
 //--------------------------------------------------------------------
@@ -437,7 +442,9 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
             scale *= scale; 
         }
     }
-   // DO NOTHING
+    if (which == INTERP) {
+        scale = 1.; 
+    }
 #endif 
 
     if (this->weights[which][irbf] == NULL) {

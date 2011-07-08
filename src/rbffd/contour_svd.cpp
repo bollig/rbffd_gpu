@@ -697,6 +697,11 @@ mat ContourSVD::rbffdapp(double eps, mat& rd, ArrayT<Vec3>& re, const char* choi
         vald = rbf->zderiv(re);
     } else if (strcmp(choice, "lapl") == 0) {
         vald = rbf->lapl_deriv(re);
+    } else if (strcmp(choice, "hv2") == 0) {
+        // FIXME: 2D hyperviscosity only.
+        vald = rbf->lapl2_deriv2D(re);
+    } else if (strcmp(choice, "interp") == 0) {
+        vald = (*rbf)(re);
     } else {
         printf("mat rbfdapp:: unknown derivative type\n");
         exit(1);
@@ -768,6 +773,9 @@ cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char
     } else if (strcmp(choice, "interp") == 0) {
         // Just get the interpolation weights
         vald = (*rbf)(re);
+    } else if (strcmp(choice, "hv2") == 0) {
+        // Just get the interpolation weights
+        vald = rbf->lapl_deriv(re);
     } else {
         printf("cx_mat rbfdapp:: unknown derivative type\n");
         exit(1);

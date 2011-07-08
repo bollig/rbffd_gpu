@@ -187,30 +187,14 @@ Grid::GridLoadErrType Grid::loadFromFile(int iter) {
 //----------------------------------------------------------------------------
 
 Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
-    std::cout << "[" << this->className() << "] \treading file: " << filename << std::endl;
-    std::ifstream fin(filename.c_str());
-
     node_list.clear(); 
-
     boundary_normals.clear();
 
-    if (fin.is_open()) {
-        while (fin.good()) {
-            NodeType node; 
-            fin >> node; 
-            if (!fin.eof()) {
-                node_list.push_back(node); 
-            }
-        }
-    } else {
-        printf("Error opening node file to read\n"); 
+    if (this->loadNodesFromFile(filename)) {
+        printf("Error loading nodes from file"); 
         return NO_GRID_FILES;
-        //		exit(EXIT_FAILURE);
     }
-    fin.close(); 
-    nb_nodes = node_list.size(); 
-    std::cout << "[" << this->className() << "] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
-
+    
     if (this->loadBoundaryFromFile(filename)) {
         printf("Error loading boundary nodes\n"); 
         return NO_GRID_FILES;
@@ -246,6 +230,30 @@ Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
     
     return GRID_AND_STENCILS_LOADED;
 }
+
+int Grid::loadNodesFromFile(std::string filename) {
+    std::cout << "[" << this->className() << "] \treading file: " << filename << std::endl;
+    std::ifstream fin(filename.c_str());
+
+    if (fin.is_open()) {
+        while (fin.good()) {
+            NodeType node; 
+            fin >> node; 
+            if (!fin.eof()) {
+                node_list.push_back(node); 
+            }
+        }
+    } else {
+        printf("Error opening node file to read\n"); 
+        return -1;
+    }
+    fin.close(); 
+    nb_nodes = node_list.size(); 
+    std::cout << "[" << this->className() << "] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
+    this->refreshExtents();
+    return 0;    
+}
+
 
 //----------------------------------------------------------------------------
 

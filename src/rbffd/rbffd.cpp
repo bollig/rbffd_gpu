@@ -315,10 +315,13 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         }
    }
 
+
     if (np > 0) {
         // REQUIRE at least np = 1 (will ERR out if not valid)
         rhs(n) = 0.0; 
+    }
 
+    if (np > 1) {
         // Analytic derivs of monomial terms
         switch (which) {
             case X: 
@@ -340,6 +343,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 // all 3 dims for LAPL are 0.0
                 break; 
             default:
+                std::cout << "[RBFFD] warning. np > 1 not supported for deriv type: " << which << std::endl;
                 break; 
         }
     }

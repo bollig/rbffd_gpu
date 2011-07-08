@@ -189,12 +189,12 @@ void RBFFD_CL::clearCPUWeights() {
     // FIXME: change the 4 here to NUM_DERIV_TYPES (need to compute all deriv
     // types and save them to disk, then load them from file. 
     if (useDouble) {
-        for (unsigned int which = 0; which < 4; which++) {
+        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
             delete [] cpu_weights_d[which];
         }
     } else {
 
-        for (unsigned int which = 0; which < 4; which++) {
+        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
             delete [] cpu_weights_f[which];
         }
     }
@@ -229,7 +229,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
         // Copy the std::vector<std::vector<..> > into a contiguous memory space
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost 
         // FIXME: copy more than just the 4 types of weights
-        for (unsigned int which = 0; which < 4; which++) {
+        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
             cpu_weights_d[which] = new double[gpu_stencil_size]; 
             for (unsigned int i = 0; i < nb_stencils; i++) {
                 unsigned int stencil_size = grid_ref.getStencilSize(i); 
@@ -294,7 +294,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
         // Copy the std::vector<std::vector<..> > into a contiguous memory space
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost 
         // FIXME: we only pass four weights to the GPU
-        for (unsigned int which = 0; which < 4; which++) {
+        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
             cpu_weights_f[which] = new float[gpu_stencil_size]; 
             for (unsigned int i = 0; i < nb_stencils; i++) {
                 unsigned int stencil_size = grid_ref.getStencilSize(i); 

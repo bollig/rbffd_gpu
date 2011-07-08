@@ -188,7 +188,7 @@ set(gcf,'colormap',invgray);
 %title('');
 xlabel('x');
 ylabel('y');
-title('$\hat{f}_N(x,y)$', 'Interpreter', 'latex','FontSize',24);
+title('$\hat{f}_N = \sum_{j=1}^{N} w_j \Phi_j(r)$', 'Interpreter', 'latex','FontSize',24);
 axis tight
 grid on; 
 view(3);

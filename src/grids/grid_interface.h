@@ -26,7 +26,7 @@ class Grid
     public: 
         // We allow multiple types of stencil generators (for backwards compat)
         enum st_generator_t {ST_BRUTE_FORCE=0, ST_KDTREE, ST_HASH};
-        enum GridLoadErrType {GRID_AND_STENCILS_LOADED=0, NO_GRID_FILES, NO_STENCIL_FILES, NO_EXTRA_FILES};
+        enum GridLoadErrType {GRID_AND_STENCILS_LOADED=0, NO_GRID_FILES, NO_STENCIL_FILES, NO_EXTRA_FILES, NOT_ENOUGH_NODES_IN_FILE};
 
     protected: 
         // 0 = Debug output off; 1 = Verbose output and write intermediate
@@ -169,6 +169,7 @@ class Grid
         Grid::GridLoadErrType loadFromFile(int iter=-1); 
         virtual GridLoadErrType loadFromFile(std::string filename); 
 
+        int loadNodesFromFile(std::string grid_filename); 
         int loadBoundaryFromFile(std::string grid_filename); 
         int loadNormalsFromFile(std::string grid_filename); 
         int loadAvgRadiiFromFile(std::string grid_filename); 

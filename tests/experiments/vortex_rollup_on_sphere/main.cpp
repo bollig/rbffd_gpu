@@ -273,7 +273,8 @@ int main(int argc, char** argv) {
                 // Test Y and 30 are > 0
                 // Test Z and 36 are > 0
                 // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
-                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);
+//                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);
+                der_test->testEigen(RBFFD::INTERP, exitIfEigTestFailed, 0);
             }
         }
         tm["tests"]->stop();
@@ -373,7 +374,7 @@ int main(int argc, char** argv) {
 
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
-#if 0
+#if 1
         if (!(iter % local_sol_dump_frequency)) {
 
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;

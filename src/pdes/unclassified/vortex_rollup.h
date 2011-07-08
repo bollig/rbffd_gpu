@@ -24,6 +24,8 @@ class VortexRollup : public TimeDependentPDE
             //DO NOTHING;
         }
 
+        virtual void advance(TimeScheme which, double delta_t);
+
     private: 
         void setupTimers(); 
 

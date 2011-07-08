@@ -87,7 +87,7 @@ function plot_stencils(j)
         axis([min_x max_x min_y max_y]);
         pbaspect(aspect_ratio)
     else
-        Tes = delaunay3(nodes(:,1),nodes(:,2),nodes(:,3))
+        Tes = delaunay3(nodes(:,1),nodes(:,2),nodes(:,3));
         %X = [x(:) y(:) z(:)];
         hB = tetramesh(Tes,nodes);
         bcol =[250 250 0]/256;

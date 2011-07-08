@@ -44,7 +44,7 @@ ExactSolution* getExactSolution(int dim_num) {
 
 // Choose a specific type of Grid for the test case
 Grid* getGrid(int dim_num) {
-    Grid* grid = new GridReader("/Users/bollig/GRIDS/md/md006.00049", 49); 
+    Grid* grid = new GridReader("/Users/bollig/GRIDS/md/md015.00256"); 
     return grid; 
 }
 

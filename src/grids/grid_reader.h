@@ -7,11 +7,11 @@ class GridReader : public Grid {
     protected: 
         bool file_loaded;
         std::string filename; 
-        unsigned int n_nodes; 
+        int n_nodes; 
 
     public:
 
-        GridReader(std::string filename_to_load, unsigned int n_nodes_to_read);
+        GridReader(std::string filename_to_load, int n_nodes_to_read = -1);
         virtual ~GridReader();
 
         // Overrides Grid::generate()

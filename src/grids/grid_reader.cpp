@@ -11,13 +11,13 @@ using namespace std;
 
 
 /*----------------------------------------------------------------------*/
-GridReader::GridReader(std::string filename_to_read, unsigned int n_nodes_to_read)
+GridReader::GridReader(std::string filename_to_read, int n_nodes_to_read)
     : Grid(n_nodes), 
     n_nodes(n_nodes_to_read),
     filename(filename_to_read),
     file_loaded(false)
 {
-    node_list.reserve(n_nodes);
+    node_list.clear();
     boundary_normals.clear();
     boundary_indices.clear();
 }
@@ -62,13 +62,14 @@ int GridReader::readNodeList(int expect_num_extra_dbls_per_line) {
     fin.close(); 
 
     nb_nodes = node_list.size(); 
-    if (nb_nodes < n_nodes) {
+    if ((n_nodes > 0) && (nb_nodes < n_nodes)) {
         std::cout << "[" << this->className() << "] \tERROR: Found only " << i << " nodes \t" << filename << ". Check your configuration." << std::endl;
         exit(EXIT_FAILURE); 
         return -2; 
         
     } else {
         std::cout << "[" << this->className() << "] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
+        n_nodes = nb_nodes;
     }
  
     // By default we dont try to load stencil files

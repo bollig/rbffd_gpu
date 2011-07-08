@@ -20,31 +20,25 @@
 #include "utils/io/vtu_pde_writer.h"
 #endif 
 
-int n_nodes;
-int ny;
-double minX; 
-double minY; 
-double maxX; 
-double maxY; 
-double decay;
-int uniformDiffusion;
+std::string md_grid_filename;
+
 
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
+    md_grid_filename = settings->GetSettingAs<string>("GRID_FILENAME", ProjectSettings::required); 
 }
 
 
 // Choose a specific Solution to this test case
 ExactSolution* getExactSolution(int dim_num) {
     //double Re = 2.;
-    //decay = 1.0/Re;
     ExactSolution* exact = new ExactRollup(); 
     return exact;
 }
 
 // Choose a specific type of Grid for the test case
 Grid* getGrid(int dim_num) {
-    Grid* grid = new GridReader("/Users/bollig/GRIDS/md/md015.00256"); 
+    Grid* grid = new GridReader(md_grid_filename);
     return grid; 
 }
 
@@ -338,7 +332,7 @@ int main(int argc, char** argv) {
     // Laplacian = d^2/dx^2
     double sten_area = avgdx*avgdx;
 
-    double max_dt = (0.5*sten_area)/decay;
+    double max_dt = 0;//(0.5*sten_area)/decay;
 
     // Not sure where Gordon came up with this parameter.
     // for second centered difference and euler time we have nu = 0.5

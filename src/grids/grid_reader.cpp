@@ -5,6 +5,8 @@
 #include <sstream>
 #include <string>
 
+#include "utils/io/realpathext.h"
+
 #include "grid_reader.h"
 
 using namespace std;
@@ -30,8 +32,11 @@ GridReader::~GridReader() {
 /*----------------------------------------------------------------------*/
 int GridReader::readNodeList(int expect_num_extra_dbls_per_line) {
 
-    std::cout << "[" << this->className() << "] \treading file: " << filename << std::endl;
-    std::ifstream fin(filename.c_str());
+    char fpath[PATH_MAX];
+    realpathExt(filename.c_str(), fpath); 
+
+    std::cout << "[" << this->className() << "] \treading file: " << fpath << std::endl;
+    std::ifstream fin(fpath);
         
     unsigned int i = 0; 
 

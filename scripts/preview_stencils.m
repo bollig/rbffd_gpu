@@ -87,6 +87,13 @@ function plot_stencils(j)
         axis([min_x max_x min_y max_y]);
         pbaspect(aspect_ratio)
     else
+        Tes = delaunay3(nodes(:,1),nodes(:,2),nodes(:,3))
+        %X = [x(:) y(:) z(:)];
+        hB = tetramesh(Tes,nodes);
+        bcol =[250 250 0]/256;
+        alpha = 0.35; 
+        set(hB,'facecolor',bcol,'facealpha', alpha, 'edgelighting','phong','facelighting','phong','LineStyle','none','marker','.','markeredgecolor','b','markersize',15);
+
         [c_x,c_y,c_z] = sphere(20);
         c_x = max_rad * c_x + x_j(1); 
         c_y = max_rad * c_y + x_j(2); 
@@ -101,7 +108,7 @@ function plot_stencils(j)
         title(ti);
         axis square;
         axis([min_x max_x min_y max_y min_z max_z]);
-        pbaspect(aspect_ratio)
+        pbaspect(aspect_ratio);
     end
     
     hold off;

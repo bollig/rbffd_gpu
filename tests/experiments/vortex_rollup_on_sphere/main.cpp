@@ -145,8 +145,8 @@ int main(int argc, char** argv) {
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
 //            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
-            grid->generateStencils(Grid::ST_KDTREE);   
-//            grid->generateStencils(Grid::ST_HASH);   
+//            grid->generateStencils(Grid::ST_KDTREE);   
+            grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
             grid->writeToFile(); 
             tm.writeToFile("gridgen_timer_log"); 

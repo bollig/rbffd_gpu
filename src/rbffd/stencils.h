@@ -142,6 +142,8 @@ class Stencils
                 // EFB052411 (want to play with rad)
                 return coefs*rad*rad;
                 //return coefs*(1./(this->h*this->h));
+            } else if (strcmp(choice, "interp") == 0) { 
+                return coefs; 
             } else {
                 return coefs*rad;
                 //return coefs*(1./(this->h));

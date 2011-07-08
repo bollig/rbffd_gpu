@@ -1,6 +1,6 @@
 #define ONE_MONOMIAL 1
-#define SCALE_BY_H 1 
-#define SCALE_OUT_BY_H 1 
+#define SCALE_BY_H 0 
+#define SCALE_OUT_BY_H 0 
 
 #include "rbffd/stencils.h"
 
@@ -27,8 +27,8 @@
     derTypeStr[1] = "y";
     derTypeStr[2] = "z";
     derTypeStr[3] = "lapl";
-    derTypeStr[4] = "hv2";
-    derTypeStr[5] = "interp";
+    derTypeStr[4] = "interp";
+//    derTypeStr[5] = "hv2";
 
     weightTypeStr[0] = "direct"; 
     weightTypeStr[1] = "contoursvd"; 
@@ -103,8 +103,8 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 
     // Fill the polynomial part
     for (int i=0; i < n; i++) {
-        d_matrix(n, i) = 1.0;
-        d_matrix(i, n) = 1.0;
+ //       d_matrix(n, i) = 1.0;
+ //       d_matrix(i, n) = 1.0;
     }
     if (np > 1) {
         for (int i=0; i < n; i++) {
@@ -153,7 +153,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     StencilType& stencil = grid_ref.getStencil(st_indx); 
     int n = stencil.size();
 #if ONE_MONOMIAL
-    int np = 1;//+dim_num; // +3 for the x,y,z monomials
+    int np = 0;//1;//+dim_num; // +3 for the x,y,z monomials
 #else 
     int np = 1+dim_num; // +3 for the x,y,z monomials
 #endif 
@@ -182,7 +182,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
     int irbf = st_indx;
 
-#if 0
+#if 1
     char buf[256]; 
     sprintf(buf, "LHS(%d)=", st_indx); 
     lhs.print(buf); 
@@ -304,6 +304,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
             case INTERP: 
                 rhs(j,0) = rbf.eval(diff);
+                std::cout << diff << "\t" << diff.square() << std::endl;
                 break; 
             case HV2: 
                 // FIXME: this is only for 2D right now
@@ -348,6 +349,9 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         }
     }
 //        rhs.print("RHS before");
+        if (which == INTERP) {
+            rhs.print("RHS");
+        }
 }
 
 //--------------------------------------------------------------------
@@ -864,11 +868,11 @@ void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& sten
             // NOTE we scale this by h so we are computing weights of the
             // stencil spanning the unit disk
             Vec3 diff = (xiv - xjv) * (1./h); 
-    //        std::cout << xiv << "\t" << xjv << "\t" << diff <<  std::endl;
-            ar(j,i) = rbf(diff);
 #else 
-            ar(j,i) = rbf(xiv, xjv);
+            Vec3 diff = (xiv - xjv);
 #endif 
+    //        std::cout << xiv << "\t" << xjv << "\t" << diff <<  std::endl;
+            ar(j,i) = rbf.eval(diff);
         }
     }
 //    std::cout << "H = " << h << std::endl;

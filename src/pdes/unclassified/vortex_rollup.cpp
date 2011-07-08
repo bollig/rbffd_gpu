@@ -28,8 +28,11 @@ void VortexRollup::solve(std::vector<SolutionType>& u_t, std::vector<SolutionTyp
 
 
     std::vector<SolutionType> interpolated_solution(n_nodes);  
-//    der_ref.applyWeightsForDeriv(RBFFD::INTERP, u_t, interpolated_solution, true); 
-    der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, interpolated_solution, true); 
+    //der_ref.applyWeightsForDeriv(RBFFD::INTERP, u_t, interpolated_solution, true); 
+    der_ref.applyWeightsForDeriv(RBFFD::INTERP, u_t, *f_out, true); 
+//  der_ref.applyWeightsForDeriv(RBFFD::LAPL, u_t, interpolated_solution, true); 
+
+    return;
 
     for (unsigned int i = 0; i < n_stencils; i++) {
         (*f_out)[i] = interpolated_solution[i]; 
@@ -62,7 +65,8 @@ void VortexRollup::advance(TimeScheme which, double delta_t) {
         //printf("dt= %f, time= %f\n", dt, time);
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
-        s[i] = s[i] + delta_t* ( feval1[i] + f);
+        printf("%f %f\n", feval1[i], s[i] );
+        s[i] = feval1[i]; //s[i] + delta_t* ( feval1[i] + f);
    }
 
     cur_time += delta_t; 

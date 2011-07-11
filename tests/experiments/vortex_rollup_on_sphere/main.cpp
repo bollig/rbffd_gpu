@@ -231,6 +231,7 @@ int main(int argc, char** argv) {
 #else 
         der->setWeightType((RBFFD::WeightType)weight_method);
 #endif 
+        der->setComputeConditionNumber(true);
  
     // Try loading all the weight files
     int err = der->loadAllWeightsFromFile();
@@ -458,6 +459,7 @@ int main(int argc, char** argv) {
         fin.close();
 #endif 
         std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
+        std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
         pde->checkGlobalError(exact, grid, max_global_rel_error); 
         std::cout << "============== Solution Valid =============\n"; 
 

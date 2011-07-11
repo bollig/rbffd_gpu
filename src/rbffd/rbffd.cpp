@@ -14,7 +14,7 @@
     RBFFD::RBFFD(Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
 : grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
     weightsModified(false), weightMethod(RBFFD::Direct), 
-    eigenvalues_computed(false)
+    eigenvalues_computed(false), computeCondNums(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
@@ -42,6 +42,7 @@
     // also have their own supports 
     // TODO: verify that the Domain class passes all nb_rbf support params to each subdomain
     var_epsilon.resize(nb_rbfs); 
+    condNums.resize(nb_rbfs); 
 
     this->setupTimers(); 
 }
@@ -179,6 +180,17 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 
     this->getStencilMultiRHS(rbf_centers, stencil, np, rhs, h);
     this->getStencilLHS(rbf_centers, stencil, np, lhs, h);
+
+    // Compute the condition numbers of the matrices? 
+    if (computeCondNums) {
+        arma::cx_colvec eigval;
+        arma::cx_mat eigvec;
+        eig_gen(eigval, eigvec, lhs);
+        eigval.print();
+        std::cout << max(eigval) << "/" << min(eigval) << std::endl;
+        condNums[st_indx] = max(eigval) / min(eigval); 
+        std::cout << "Cond(" << st_indx << ") = " << condNums[st_indx] << std::endl;
+    }
 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage

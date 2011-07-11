@@ -1,11 +1,35 @@
 
 #include "vortex_rollup.h"
+#include "utils/geom/cart2sph.h"
 
 // This should assemble a matrix L of weights which can be used to solve the PDE
 void VortexRollup::assemble() {
     if (!weightsPrecomputed) {
         der_ref.computeAllWeightsForAllStencils();
     }
+
+    unsigned int n_stencils = grid_ref.getStencilsSize();
+
+    boost::numeric::ublas::compressed_matrix<FLOAT> L_host(n_stencils, n_stencils);
+    for (unsigned int j = 0; j < n_stencils; j++) {
+
+        NodeType& x_j = grid_ref.getNode(j);
+     
+        StencilType& st = grid_ref.getStencil(j); 
+
+        // Get just the dPhi/dr weights
+        double* dPhi_dlambda = der_ref.getStencilWeights(RBFFD::LAMBDA, j);
+
+        // Match the weights with the scalars
+        for (unsigned int i = 0; i < st.size(); i++) {
+            NodeType& x_i = grid_ref.getNode(st[i]);
+            L_host(st[0], st[i]) = dPhi_dlambda[i];  
+        }
+    }
+
+    //std::cout << L_host << std::endl;
+
+    this->D_N = L_host; 
 }
 
 
@@ -25,17 +49,46 @@ void VortexRollup::solve(std::vector<SolutionType>& u_t, std::vector<SolutionTyp
     //       D = B A^-1
     // with B_i,j = cos(theta_p_i) cos(theta_p_j) * sin(lambda_i - lambda_j) (1/r)(d theta / dr)
     //
+    double rho0 = 3.;
+    double gamma = 5.;
 
+    //std::vector<SolutionType> dh_d_lambda(n_nodes, 1.);  
 
-    std::vector<SolutionType> interpolated_solution(n_nodes,1.);  
-    der_ref.applyWeightsForDeriv(RBFFD::INTERP, u_t, interpolated_solution, true); 
+    boost::numeric::ublas::vector<double> dh_d_lambda(n_stencils);
+    boost::numeric::ublas::vector<double> h(n_stencils);
+    for (unsigned int i = 0; i < n_stencils; i++) {
+        h(i) = u_t[i]; 
+    }
+
+    dh_d_lambda = boost::numeric::ublas::prod(this->D_N, h); 
 
     for (unsigned int i = 0; i < n_stencils; i++) {
-        (*f_out)[i] = interpolated_solution[i]; 
+        NodeType& v = grid_ref.getNode(i);
+        
+        sph_coords_type spherical_coords = cart2sph(v.x(), v.y(), v.z());
+        double theta_p = spherical_coords.phi; 
+        double phi_p = spherical_coords.theta; 
+        double temp = spherical_coords.r; 
+
+        // From Natasha's email: 
+        // 7/7/11 4:46 pm
+        double rho_p = rho0 * cos(theta_p); 
+
+        // NOTE: The sqrt(2) is written as sqrt(3.) in the paper with Grady.
+        // Natasha verified sqrt(3) is required
+        // Also, for whatever reason sech is not defined in the C standard
+        // math. I provide it in the cart2sph header. 
+        double Vt = (3.* sqrt(3.) / 2.) * (sech(rho_p) * sech(rho_p)) * tanh(rho_p); 
+        double w_theta_P = (fabs(rho_p) < 4. * DBL_EPSILON) ? 0. : Vt / rho_p;
+
+        // dh/dt + u' / cos(theta') * dh/d(lambda) = 0
+        // u' = w(theta') cos(theta')
+        // So, dh/dt = - w(theta_P) * dh/d(lambda)
+        (*f_out)[i] = - (w_theta_P) * dh_d_lambda[i];
     }
 }
 
-
+#if 0
 void VortexRollup::advance(TimeScheme which, double delta_t) {
 
     unsigned int nb_stencils = grid_ref.getStencilsSize(); 
@@ -61,12 +114,15 @@ void VortexRollup::advance(TimeScheme which, double delta_t) {
         //printf("dt= %f, time= %f\n", dt, time);
         // FIXME: allow the use of a forcing term 
         double f = 0.;//force(i, v, time*dt);
-        s[i] = feval1[i]; //s[i] + delta_t* ( feval1[i] + f);
-        printf("%f %f\n", feval1[i], exact_ptr->at(grid_ref.getNode(i), 0));
+        s[i] = s[i] + delta_t* ( feval1[i] + f);
+        double e1 = exact_ptr->at(grid_ref.getNode(i), cur_time); 
+        printf("%f %f %f\n", s[i], e1, s[i] - e1);
    }
 
+//    cur_time = start_time;
     cur_time += delta_t; 
 }
+#endif 
 
 
 void VortexRollup::setupTimers() {

@@ -39,9 +39,10 @@ class ExactRollup : public ExactSolution
             double rho_p = rho0 * cos(theta_p); 
 
             // NOTE: The sqrt(2) is written as sqrt(3.) in the paper with Grady.
+            // Natasha verified sqrt(3) is required
             // Also, for whatever reason sech is not defined in the C standard
             // math. I provide it in the cart2sph header. 
-            double Vt = (3.* sqrt(2.) / 2.) * (sech(rho_p) * sech(rho_p)) * tanh(rho_p); 
+            double Vt = (3.* sqrt(3.) / 2.) * (sech(rho_p) * sech(rho_p)) * tanh(rho_p); 
             double w = (fabs(rho_p) < 4. * DBL_EPSILON) ? 0. : Vt / rho_p;
         
             double h = 1. - tanh((rho_p / gamma) * sin(phi_p - w * t)); 

@@ -45,6 +45,7 @@ SET(REQUIRED_SOURCE_FILES
     utils/conf/projectsettings.cpp
     utils/geom/parametric_patch.cpp
     utils/geom/octree.cpp	
+    utils/geom/cart2sph.cpp
     utils/random.cpp
     utils/norms.cpp
     )

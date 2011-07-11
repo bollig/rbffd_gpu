@@ -1,8 +1,9 @@
 #define ONE_MONOMIAL 1
-#define SCALE_BY_H 1 
-#define SCALE_OUT_BY_H 1 
+#define SCALE_BY_H 0 
+#define SCALE_OUT_BY_H 0 
 
 #include "rbffd/stencils.h"
+#include "utils/geom/cart2sph.h"
 
 #include "rbffd.h"
 // For writing weights in (sparse) matrix market format
@@ -23,12 +24,15 @@
         this->weights[i].resize(nb_rbfs, NULL); 
     }
 
-    derTypeStr[0] = "x";
-    derTypeStr[1] = "y";
-    derTypeStr[2] = "z";
-    derTypeStr[3] = "lapl";
-    derTypeStr[4] = "interp";
-//    derTypeStr[5] = "hv2";
+    derTypeStr[X] = "x";
+    derTypeStr[Y] = "y";
+    derTypeStr[Z] = "z";
+    derTypeStr[LAPL] = "lapl";
+    derTypeStr[HV2] = "hv2";
+    derTypeStr[R] = "r";   // radial deriv 
+    derTypeStr[LAMBDA] = "lambda";   // Longitude
+    derTypeStr[INTERP] = "interp";
+
 
     weightTypeStr[0] = "direct"; 
     weightTypeStr[1] = "contoursvd"; 
@@ -101,10 +105,12 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 //    re.print("RE=");
 //    this->rbf(d_matrix);
 
-    // Fill the polynomial part
-    for (int i=0; i < n; i++) {
-        d_matrix(n, i) = 1.0;
-        d_matrix(i, n) = 1.0;
+    if (np > 0) {
+        // Fill the polynomial part
+        for (int i=0; i < n; i++) {
+            d_matrix(n, i) = 1.0;
+            d_matrix(i, n) = 1.0;
+        }
     }
     if (np > 1) {
         for (int i=0; i < n; i++) {
@@ -182,7 +188,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
     int irbf = st_indx;
 
-#if 1
+#if 0
     char buf[256]; 
     sprintf(buf, "LHS(%d)=", st_indx); 
     lhs.print(buf); 
@@ -257,9 +263,14 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     NodeType& x0v = rbf_centers[stencil[0]];
 
     // To test interpolation on sphere
-                Vec3 offset_x0v = x0v + Vec3(h, 0., 0.); 
-                offset_x0v.normalize();
-
+#if 0
+    if ((which == INTERP) && false) {
+        std::cout << "Changing: " << x0v << " to "; 
+        x0v = x0v + Vec3(h, 0., 0.); 
+       // x0v.normalize();
+        std::cout << x0v << std::endl;
+    }
+#endif 
     // NOTE: we want to evaluate the analytic derivs of phi at the stencil center point
     // using every stencil RBF: 
     //  RHS: 
@@ -308,8 +319,38 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 rhs(j,0) = rbf.lapl_deriv(diff);
                 break; 
             case INTERP: 
-                rhs(j,0) = rbf.eval(offset_x0v - xjv);
-                //std::cout << diff << "\t" << diff.square() << std::endl;
+                rhs(j,0) = rbf.eval(diff);
+                break; 
+            case R: 
+                rhs(j,0) = rbf.rderiv(diff);
+                break; 
+            case LAMBDA:
+                {
+                    // LAMBDA is: dr/dlambda * dphi/dr = dphi/dlambda
+                    // yes, i know: we're swapping theta and phi here. This is consistent with 
+                    // Natashas paper.
+                    sph_coords_type spherical_coords_j = cart2sph(xjv.x(), xjv.y(), xjv.z());
+                    double thetaP_j = spherical_coords_j.phi; 
+                    double lambdaP_j = spherical_coords_j.theta; 
+                    double r_j = spherical_coords_j.r; 
+
+                    sph_coords_type spherical_coords_i = cart2sph(x0v.x(), x0v.y(), x0v.z());
+                    double thetaP_i = spherical_coords_i.phi; 
+                    double lambdaP_i = spherical_coords_i.theta; 
+                    double r_i = spherical_coords_i.r; 
+                    
+                    double dr_dlambda = cos(thetaP_i) * cos(thetaP_j) * sin(lambdaP_i - lambdaP_j);
+
+                    double r2 = (x0v - xjv).square();
+                    double r = sqrt(r2);
+
+                    if (fabs(dr_dlambda) > 0.) {
+                        // See equation below eq 20 in Flyer Wright, Transport schemes paper
+                        rhs(j,0) = dr_dlambda * (1./r) * rbf.rderiv(diff); 
+                    } else {
+                        rhs(j,0) = 0.; 
+                    }
+                }   // Note: use the {'s to allow new declarations inside case
                 break; 
             case HV2: 
                 // FIXME: this is only for 2D right now
@@ -322,12 +363,8 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
    }
 
 
-    if ((np > 0) && (which != INTERP)) {
-        // REQUIRE at least np = 1 (will ERR out if not valid)
+    if (np > 0) {
         rhs(n) = 0.0; 
-    } else {
-        // This is part of RBF interpolation. Use 1 on the rhs to match monomial constants
-        rhs(n) = 1.0;
     }
 
     if (np > 1) {

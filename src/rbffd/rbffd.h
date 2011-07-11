@@ -31,13 +31,15 @@ typedef RBF_InvMultiquadric IRBF;
 //enum RBF_Type {MQ=0, GA, IMQ, TPS, W2};
 
 // Should match how many DerTypes we have below
-#define NUM_DERIV_TYPES 5
+#define NUM_DERIV_TYPES 8
 
 class RBFFD
 {
     public:
-        // INTERP are for NO derivatives, but for interpolating functions 
-        enum DerType {X, Y, Z, LAPL, INTERP, HV2};
+        // INTERP are for NO derivatives, but for interpolating functions in
+        // those cases we avoid using monomial terms
+        // R is the radial deriv (dPhi/dr)
+        enum DerType {LAMBDA, X, Y, Z, LAPL, HV2, R, INTERP};
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 
         enum WeightType {Direct, ContourSVD};

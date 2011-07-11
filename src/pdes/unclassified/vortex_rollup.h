@@ -3,12 +3,20 @@
 
 #include "pdes/time_dependent_pde.h"
 
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/operation_sparse.hpp>
+#include <boost/numeric/ublas/io.hpp> 
+
+
 // TODO: extend this class and compute diffusion in two terms: lapl(y(t)) = div(y(t)) .dot. grad(y(t))
 class VortexRollup : public TimeDependentPDE
 {
     protected: 
         // T/F : are the weights already computed so we can avoid that cost?
         bool weightsPrecomputed;
+
+        boost::numeric::ublas::compressed_matrix<FLOAT> D_N;
 
     public: 
         VortexRollup(Domain* grid, RBFFD* der, Communicator* comm, bool weightsComputed=false) 
@@ -24,8 +32,9 @@ class VortexRollup : public TimeDependentPDE
             //DO NOTHING;
         }
 
+#if 0
         virtual void advance(TimeScheme which, double delta_t);
-
+#endif 
     private: 
         void setupTimers(); 
 

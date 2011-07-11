@@ -34,6 +34,7 @@ class RBF_Gaussian : public RBF
         virtual double xderiv(const Vec3& xvec, const Vec3& x_center) { return this->xderiv(xvec-x_center); }
         virtual double yderiv(const Vec3& xvec, const Vec3& x_center) { return this->yderiv(xvec-x_center); }
         virtual double zderiv(const Vec3& xvec, const Vec3& x_center) { return this->zderiv(xvec-x_center); }
+        virtual double rderiv(const Vec3& xvec, const Vec3& x_center) { return this->rderiv(xvec-x_center); }
 
         //------------------------------------------------
         virtual double eval(const Vec3& x) {
@@ -92,7 +93,22 @@ class RBF_Gaussian : public RBF
             CMPLX zeps = x.z() * ceps2;
             return -2. * zeps * this->eval(x);
         }
+
         //------------------------------------------------
+        virtual double rderiv(const Vec3& x) { 
+            double r2 = x.square();
+            double reps = sqrt(r2) * eps2;
+            return -2. * reps * this->eval(x);
+        }
+
+        virtual CMPLX rderiv(const CVec3& x) {
+            CMPLX r2 = x.square();
+            CMPLX reps = sqrt(r2) * ceps2;
+            return -2. * reps * this->eval(x);
+        }
+
+        //------------------------------------------------
+
         virtual double lapl_deriv1D(const Vec3& x) {
             double x2eps2 = x.x()*x.x() * eps2; 
             return 2. * eps2 * (-1. + 2.*x2eps2) * this->eval(x); 

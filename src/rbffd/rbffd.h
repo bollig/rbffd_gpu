@@ -39,6 +39,7 @@ class RBFFD
         // INTERP are for NO derivatives, but for interpolating functions in
         // those cases we avoid using monomial terms
         // R is the radial deriv (dPhi/dr)
+        // LAMBDA is longitude
         enum DerType {LAMBDA, X, Y, Z, LAPL, HV2, R, INTERP};
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 

@@ -98,35 +98,49 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
     //    d_matrix.zeros(n+np,n+np);
     d_matrix.zeros(); 
 
-    // value 0 => stencil center is at index 0 in "stencil"
-    // dim_num required for RBF
-    this->distanceMatrix(rbf_centers, stencil, dim_num, d_matrix, h);
- //   d_matrix.print("DMAT=");
- //   arma::mat re = d_matrix.submat(0,0,n,0);
-//    re.print("RE=");
-//    this->rbf(d_matrix);
+    // Acceptable range: [1e-8, 1e-9]
+    while (condNums[stencil[0]] > 1e-9) && (condNums[stencil[0]] < 1e-8) { 
+        // value 0 => stencil center is at index 0 in "stencil"
+        // dim_num required for RBF
+        this->distanceMatrix(rbf_centers, stencil, dim_num, d_matrix, h);
+        //   d_matrix.print("DMAT=");
+        //   arma::mat re = d_matrix.submat(0,0,n,0);
+        //    re.print("RE=");
+        //    this->rbf(d_matrix);
 
-    if (np > 0) {
-        // Fill the polynomial part
-        for (int i=0; i < n; i++) {
-            d_matrix(n, i) = 1.0;
-            d_matrix(i, n) = 1.0;
+        if (np > 0) {
+            // Fill the polynomial part
+            for (int i=0; i < n; i++) {
+                d_matrix(n, i) = 1.0;
+                d_matrix(i, n) = 1.0;
+            }
         }
-    }
-    if (np > 1) {
-        for (int i=0; i < n; i++) {
-            d_matrix(n+1, i) = rbf_centers[stencil[i]].x();
-            d_matrix(i, n+1) = rbf_centers[stencil[i]].x();
+        if (np > 1) {
+            for (int i=0; i < n; i++) {
+                d_matrix(n+1, i) = rbf_centers[stencil[i]].x();
+                d_matrix(i, n+1) = rbf_centers[stencil[i]].x();
 
-            if (np > 2) {
-                d_matrix(n+2, i) = rbf_centers[stencil[i]].y();
-                d_matrix(i, n+2) = rbf_centers[stencil[i]].y();
-            }
+                if (np > 2) {
+                    d_matrix(n+2, i) = rbf_centers[stencil[i]].y();
+                    d_matrix(i, n+2) = rbf_centers[stencil[i]].y();
+                }
 
-            if (np == 4) {
-                d_matrix(n+3, i) = rbf_centers[stencil[i]].z();
-                d_matrix(i, n+3) = rbf_centers[stencil[i]].z();
+                if (np == 4) {
+                    d_matrix(n+3, i) = rbf_centers[stencil[i]].z();
+                    d_matrix(i, n+3) = rbf_centers[stencil[i]].z();
+                }
             }
+        }
+
+
+        // Compute the condition numbers of the matrices? 
+        if ( (computeCondNums) || true) {
+            arma::cx_colvec eigval;
+            arma::cx_mat eigvec;
+            eig_gen(eigval, eigvec, lhs);
+            //eigval.print();
+            condNums[st_indx] = max(eigval) / min(eigval); 
+            //std::cout << "Cond(" << st_indx << ") = " << condNums[st_indx] << std::endl;
         }
     }
 
@@ -178,19 +192,8 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     h = grid_ref.getMaxStencilRadius(st_indx); 
 #endif 
 
-    this->getStencilMultiRHS(rbf_centers, stencil, np, rhs, h);
     this->getStencilLHS(rbf_centers, stencil, np, lhs, h);
-
-    // Compute the condition numbers of the matrices? 
-    if (computeCondNums) {
-        arma::cx_colvec eigval;
-        arma::cx_mat eigvec;
-        eig_gen(eigval, eigvec, lhs);
-        eigval.print();
-        std::cout << max(eigval) << "/" << min(eigval) << std::endl;
-        condNums[st_indx] = max(eigval) / min(eigval); 
-        std::cout << "Cond(" << st_indx << ") = " << condNums[st_indx] << std::endl;
-    }
+    this->getStencilMultiRHS(rbf_centers, stencil, np, rhs, h);
 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage
@@ -461,8 +464,8 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     h = grid_ref.getMaxStencilRadius(st_indx);
 #endif 
 
-    this->getStencilRHS(which, rbf_centers, stencil, np, rhs, h);
     this->getStencilLHS(rbf_centers, stencil, np, lhs, h); 
+    this->getStencilRHS(which, rbf_centers, stencil, np, rhs, h);
 
     // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
     // because A is symmetric. Rather than compute full inverse we leverage

@@ -19,7 +19,15 @@
 	INCLUDE (CPack)
 	INCLUDE (UseDoxygen)
 	FIND_PACKAGE (MPI)
+
+OPTION (USE_CUDA "Enable/Disable the use of CUDA" ON)
+OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
+
 	FIND_PACKAGE (OPENCL)
+    IF (NOT USE_OPENCL)
+        set (OPENCL_FOUND false)
+    ENDIF (NOT USE_OPENCL)
+
 
 	unset(CUDA_CUDA_LIBRARY CACHE)
 	FIND_PACKAGE (CUDA)
@@ -27,6 +35,9 @@
 		MESSAGE (WARNING "\nWARNING! Dep: libcuda was NOT FOUND. Disabling cuda support for framework. Please install NVidia proprietary driver and verify you have an NVidia GPU if you want it enabled.\n")
 		set(CUDA_FOUND false)
 	ENDIF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
+    IF (NOT USE_CUDA)
+        set (CUDA_FOUND false)
+    ENDIF (NOT USE_CUDA)
 
 
 ###############################################

@@ -99,7 +99,8 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
     d_matrix.zeros(); 
 
     // Acceptable range: [1e-8, 1e-9]
-    while (condNums[stencil[0]] > 1e-9) && (condNums[stencil[0]] < 1e-8) { 
+//while (condNums[stencil[0]] > 1e-9) && (condNums[stencil[0]] < 1e-8)     
+    { 
         // value 0 => stencil center is at index 0 in "stencil"
         // dim_num required for RBF
         this->distanceMatrix(rbf_centers, stencil, dim_num, d_matrix, h);
@@ -134,12 +135,14 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 
 
         // Compute the condition numbers of the matrices? 
-        if ( (computeCondNums) || true) {
+        if (computeCondNums)
+                //|| true) 
+        {
             arma::cx_colvec eigval;
             arma::cx_mat eigvec;
-            eig_gen(eigval, eigvec, lhs);
+            eig_gen(eigval, eigvec, d_matrix);
             //eigval.print();
-            condNums[st_indx] = max(eigval) / min(eigval); 
+            condNums[stencil[0]] = max(eigval) / min(eigval); 
             //std::cout << "Cond(" << st_indx << ") = " << condNums[st_indx] << std::endl;
         }
     }

@@ -40,7 +40,7 @@ class RBFFD
         // those cases we avoid using monomial terms
         // R is the radial deriv (dPhi/dr)
         // LAMBDA is longitude
-        enum DerType {LAMBDA, X, Y, Z, LAPL, HV2, R, INTERP};
+        enum DerType {LAMBDA, X, Y, Z, LAPL, HV, R, INTERP};
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 
         enum WeightType {Direct, ContourSVD};
@@ -65,6 +65,7 @@ class RBFFD
         Grid& grid_ref;
 
         std::string eps_string;
+        std::string hv_string;
 
         // Weight array. Each element is associated with one DerType (see above). 
         std::vector<double*> weights[NUM_DERIV_TYPES]; 
@@ -104,6 +105,14 @@ class RBFFD
         EigenvalueOutput cachedEigenvalues;
         bool eigenvalues_computed;
 
+
+        // Parameters for hyperviscosity: 
+        // recall that we get the hyperviscosity at -(gamma * N^{-k} * (lapl)^{k})
+        double hv_gamma;
+        double hv_k; 
+
+        bool useHyperviscosity;
+
         //TODO: add choice for RBF (only one option at the moment)
 
     public: 
@@ -111,7 +120,6 @@ class RBFFD
         // Note: dim_num here is the desired dimensions for which we calculate derivatives
         // (up to 3 right now) 
         RBFFD(Grid* grid, int dim_num, int rank=0);
-        // , RBF_Type rbf_choice=MQ); 
 
         virtual ~RBFFD(); 
 
@@ -131,6 +139,10 @@ class RBFFD
 
         // Single RHS ContourSVD
         void computeWeightsForStencil_ContourSVD(DerType, int st_indx);
+
+        void setUseHyperviscosity(bool tf) {
+            useHyperviscosity = tf; 
+        }
 
         void setComputeConditionNumber(bool tf) {
             computeCondNums = tf; 
@@ -162,9 +174,49 @@ class RBFFD
         // Use output to obtain MINIMUM and MAXIMUM
         double computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output=NULL);
         
-        // Compute Eigenvalues of DM + Hyperviscosity term. 
-        // hyperviscosity = - gamma * N_nodes^-k * (lapl)^-k
-        double computeHyperviscosityEigenvalues(DerType which, int k, double gamma, EigenvalueOutput* output=NULL);
+
+        // Support parameter type 3 (variable depends on stencil size and might ONLY work on a sphere)
+        // These will be available as part of Natasha and Erik's new paper on shallow water. 
+        // Given a stencil size (right now we only have a few candidates), we know the support parameter
+        // can scale linearly to produce a constant average condition number. So we take the stencil size
+        // and automatically adjust the support. 
+        void setEpsilonByStencilSize(unsigned int st_size) {
+            double c1, c2; 
+
+            switch(st_size) {
+                case 17: 
+                    c1 = 0.026; 
+                    c2 = 0.08; 
+                    hv_k = 2; 
+                    hv_gamma = 8e-4;
+                    break; 
+                case 31: 
+                    c1 = 0.035; 
+                    c2 = 0.1; 
+                    hv_k = 4; 
+                    hv_gamma = 5e-2;
+                    break; 
+                case 50: 
+                    c1 = 0.044; 
+                    c2 = 0.14; 
+                    hv_k = 6; 
+                    hv_gamma = 5e-1;
+                case 101:
+                    c1 = 0.058; 
+                    c2 = 0.16; 
+                    hv_k = 8; 
+                    hv_gamma = 5.0;
+                    break; 
+                default:
+                    std::cout << "[RBFFD] Error: setEpsilonByStencilSize does not support stencil size " << st_size << " at this time. Try using 17, 31, 50, and 101\n"; 
+                    exit(EXIT_FAILURE);
+            };
+
+            // Epsilon as a function of condition number is a linear function: 
+            double eps = c1 * sqrt(grid_ref.getNodeListSize()) + c2; 
+
+            this->setEpsilon(eps); 
+        }
 
 
         void setEpsilon(double eps) { 
@@ -254,6 +306,19 @@ class RBFFD
 
         virtual std::string getEpsString() {
             return eps_string; 
+        }
+
+        // String for hyperviscosity
+        virtual std::string getHVString() {
+            std::stringstream ss(std::stringstream::out); 
+            if (this->useHyperviscosity) {
+                ss << "no_hv"; 
+            }
+            else {
+                ss << "hv_k_" << hv_k << "_hv_gamma_" << hv_gamma; 
+            }
+            hv_string = ss.str(); 
+            return hv_string; 
         }
 
         virtual std::string className() { return "rbffd"; }

@@ -161,7 +161,39 @@ class RBF_Gaussian : public RBF
             return ceps2*eps2 * (16. * e4r4 - 64. * e2r2 + 32.) * this->eval(x);
         }
 
+        // Hyperviscosity: (lapl)^k
+        // NOTE: maintain scaling separately
+        // L(phi(r)) = eps^{2k} * p_k(r) * phi(r)
+        // where 
+        // p_k(r) = (-4)^k * k! * P_{k}^{d/2-1}( (eps*r)^2 )
+        //
+        // or: 
+        //  p_0(r) = 1
+        //  p_1(r) = 4(eps*r)^2 - 2d
+        //  p_{k+1}(r) = 4( (eps*r)^2 - 2k - d/2 ) * p_k(r) - 8k(2k - 2 + d) * p_{k-1}(r)
+        virtual double hyperviscosity(const Vec3& x, const int k) {
+            double r2 = x.square(); 
+            return pow(eps, 2*k) * this->hv_p_k(r2, k) * this->eval(x); 
+        }
 
+        // recursive evaluation of generalized Laguerre polynomials for hyperviscosity. 
+        // Should reproduce the regular Laguerre polynomials when dim==2
+        virtual double hv_p_k(double r2, int k) {
+            double epsr2 = eps2*r2; 
+            switch (k) {
+                case 0:
+                    return 1;
+                    break;
+                case 1:
+                    return 4.*(epsr2) - 2.*this->dim;
+                    break;
+                default: 
+                    // Pass: 
+                    break;
+            }    
+            // IS this d/2 supposed to be INTEGER or FLOAT division? 
+            return 4.*(epsr2 - 2.*k - this->dim/2.) * this->hv_p_k(r2, k-1) - 8.*k*(2.*k - 2. + this->dim) * this->hv_p_k(r2,k-2); 
+        }
 };
 
 #endif

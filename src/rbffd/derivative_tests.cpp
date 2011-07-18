@@ -654,7 +654,7 @@ void DerivativeTests::testEigen(RBFFD::DerType which, bool exitIfTestFails, unsi
     der->computeWeightsForAllStencils(RBFFD::LAPL);
 }
 
-#if 1
+#if 0
 //----------------------------------------------------------------------
 // Test hyperviscosity to see if we can move eigenvalues from right plane to left plane
 //

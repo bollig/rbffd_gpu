@@ -14,6 +14,7 @@
     RBFFD::RBFFD(Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
 : grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
     weightsModified(false), weightMethod(RBFFD::Direct), 
+    hv_k(2), hv_gamma(8e-4), useHyperviscosity(false), 
     eigenvalues_computed(false), computeCondNums(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
@@ -28,7 +29,7 @@
     derTypeStr[Y] = "y";
     derTypeStr[Z] = "z";
     derTypeStr[LAPL] = "lapl";
-    derTypeStr[HV2] = "hv2";
+    derTypeStr[HV] = "hv";
     derTypeStr[R] = "r";   // radial deriv 
     derTypeStr[LAMBDA] = "lambda";   // Longitude
     derTypeStr[INTERP] = "interp";
@@ -370,9 +371,9 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                     }
                 }   // Note: use the {'s to allow new declarations inside case
                 break; 
-            case HV2: 
+            case HV: 
                 // FIXME: this is only for 2D right now
-                rhs(j,0) = rbf.lapl2_deriv2D(diff);
+                rhs(j,0) = rbf.hyperviscosity(diff, hv_k);
                 break; 
             default:
                 std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
@@ -601,15 +602,35 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     for (it = b_indices.begin(); it != b_indices.end(); it++, i++) {
         eigmat(*it,*it) = 1.0;
     }
-   
-    // We put our interior nodes after the boundary nodes in matrix
-    for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
-        double* w = weights_r[*it];
-        StencilType& st = grid_ref.getStencil(*it);
-        for (int j=0; j < st.size(); j++) {
-            eigmat(*it,st[j])  = w[j];
-            // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
+  
+    if (useHyperviscosity) {
+        // Compute Eigenvalues of DM + Hyperviscosity term. 
+        // hyperviscosity = - gamma * N_nodes^-k * (lapl)^k
+    
+        std::vector<double*>& weights_hv = this->weights[HV];
+
+        // We put our interior nodes after the boundary nodes in matrix
+        for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
+            double* w = weights_r[*it];
+            double* hv = weights_hv[*it]; 
+            StencilType& st = grid_ref.getStencil(*it);
+            for (int j=0; j < st.size(); j++) {
+                eigmat(*it,st[j])  = w[j] + hv[j];
+                // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
+            }
         }
+
+    } else {
+        // We put our interior nodes after the boundary nodes in matrix
+        for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
+            double* w = weights_r[*it];
+            StencilType& st = grid_ref.getStencil(*it);
+            for (int j=0; j < st.size(); j++) {
+                eigmat(*it,st[j])  = w[j];
+                // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
+            }
+        }
+
     }
 
     printf("sz= %u, nb_bnd= %u\n", sz, nb_bnd);
@@ -720,128 +741,6 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
             exit(EXIT_FAILURE);
         }
     }
-
-    return max_neg_eig;
-}
-
-
-double RBFFD::computeHyperviscosityEigenvalues(DerType which, int k, double gamma, EigenvalueOutput* output) 
-{
-
-    std::vector<double*>& weights_r = this->weights[which];
-  
-    // Use a std::set because it auto sorts as we insert
-    std::set<unsigned int>& b_indices = grid_ref.getSortedBoundarySet();
-    std::set<unsigned int>& i_indices = grid_ref.getSortedInteriorSet(); 
-    unsigned int nb_bnd = b_indices.size();
-    unsigned int nb_int = i_indices.size();
-    int nb_centers = grid_ref.getNodeListSize();
-    int nb_stencils = grid_ref.getStencilsSize();
-
-    // compute eigenvalues of derivative operator
-    unsigned int sz = weights_r.size();
-
-#if 0
-    printf("sz= %lu\n", sz);
-    printf("weights.size= %d\n", (int) weights_r.size());
-#endif 
-
-    printf("Generating matrix of weights for interior nodes ONLY\n");
-    arma::mat eigmat(sz, sz);
-    eigmat.zeros();
-
-    // Boundary nodes first with diagonal 1's.
-    std::set<unsigned int>::iterator it; 
-    int i = 0;
-    for (it = b_indices.begin(); it != b_indices.end(); it++, i++) {
-        eigmat(*it,*it) = 1.0;
-    }
-   
-    // We put our interior nodes after the boundary nodes in matrix
-    for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
-        double* w = weights_r[*it];
-        StencilType& st = grid_ref.getStencil(*it);
-        for (int j=0; j < st.size(); j++) {
-            eigmat(*it,st[j])  = w[j];
-            // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
-        }
-    }
-
-    printf("sz= %u, nb_bnd= %u\n", sz, nb_bnd);
-
-    arma::cx_colvec eigval;
-    arma::cx_mat eigvec;
-    printf("Computing Eigenvalues of Laplacian Operator on Interior Nodes\n");
-    eig_gen(eigval, eigvec, eigmat);
-    //eigval.print("eigval");
-
-    int pos_count=0;
-    int neg_count=0;
-    int zero_count=0;
-
-    double max_pos_eig= fabs(real(eigval(0)));
-    double min_pos_eig = fabs(real(eigval(0)));
-
-    double max_neg_eig = fabs(real(eigval(0)));
-    double min_neg_eig = fabs(real(eigval(0)));
-
-    // Compute number of unstable modes
-    // Also compute the largest and smallest (in magnitude) eigenvalue
-    //for (int i=0; i < (sz-nb_bnd); i++) {
-    for (int i=0; i < sz; i++) {
-        double e = real(eigval(i));
-        if (e > 1.e-8) {
-            pos_count++;
-            if (fabs(e) > max_pos_eig) {
-                max_pos_eig = fabs(e);
-            }
-            if (fabs(e) < min_pos_eig) {
-                min_pos_eig = fabs(e);
-            }
-        } else if (e < -1.e-8) {
-            neg_count++;
-            if (fabs(e) > max_neg_eig) {
-                max_neg_eig = fabs(e);
-            }
-            if (fabs(e) < min_neg_eig) {
-                min_neg_eig = fabs(e);
-            }
-        } else {
-            zero_count++;
-        }
-    }
-#if 0
-    count -= nb_bnd; // since we know at least nb_bnd eigenvalues are are (1+0i)
-
-#endif 
-    printf("\n[RBFFD] ****** Number positive eigenvalues: %d *******\n\n", pos_count);
-    printf("\n[RBFFD] ****** Number negative eigenvalues: %d *******\n\n", neg_count);
-    printf("\n[RBFFD] ****** Number zero (-1e-8 <= eval <= 1e-8) eigenvalues: %d *******\n\n", zero_count);
-
-    printf("min abs(real(eig)) (among negative reals): %f\n", min_neg_eig);
-    printf("max abs(real(eig)) (among negative reals): %f\n", max_neg_eig);
-
-    printf("min abs(real(eig)) (among positive reals): %f\n", min_pos_eig);
-    printf("max abs(real(eig)) (among positive reals): %f\n", max_pos_eig);
-
-    if (output) {
-        output->max_pos_eig = max_pos_eig; 
-        output->min_pos_eig = min_pos_eig; 
-        output->max_neg_eig = max_neg_eig; 
-        output->min_neg_eig = min_neg_eig; 
-        output->nb_positive = pos_count; 
-        output->nb_negative = neg_count; 
-        output->nb_zero     = zero_count; 
-    }
-
-    eigenvalues_computed = true;
-    cachedEigenvalues.max_pos_eig = max_pos_eig; 
-    cachedEigenvalues.min_pos_eig = min_pos_eig;
-    cachedEigenvalues.max_neg_eig = max_neg_eig; 
-    cachedEigenvalues.min_neg_eig = min_neg_eig;
-    cachedEigenvalues.nb_positive = pos_count; 
-    cachedEigenvalues.nb_negative = neg_count; 
-    cachedEigenvalues.nb_zero     = zero_count; 
 
     return max_neg_eig;
 }
@@ -1336,7 +1235,7 @@ void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
 //----------------------------------------------------------------------------
 std::string RBFFD::getFileDetailString(DerType which) {
     std::stringstream ss(std::stringstream::out); 
-    ss << derTypeStr[which] << "_weights_" << weightTypeStr[weightMethod] << "_" << this->getEpsString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();  
+    ss << derTypeStr[which] << "_weights_" << weightTypeStr[weightMethod] << "_" << this->getEpsString() << "_" << this->getHVString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();  
     return ss.str();
 }
 

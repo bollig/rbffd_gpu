@@ -106,16 +106,17 @@ int main(int argc, char** argv) {
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
     int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "1"); 
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
+    int useHyperviscosity = settings->GetSettingAs<int>("USE_HYPERVISCOSITY", ProjectSettings::optional, "0");
     int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
     int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
+
+    int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
     if (comm_unit->isMaster()) {
 
         int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
         int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
         int ns_nz = settings->GetSettingAs<int>("NS_NB_Z", ProjectSettings::optional, "10");
-
-        int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
         tm["settings"]->stop(); 
 
@@ -214,24 +215,10 @@ int main(int argc, char** argv) {
         der = new RBFFD(subdomain, dim, comm_unit->getRank()); 
     }
 
-    int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");
-    if (use_var_eps) {
-        double alpha = settings->GetSettingAs<double>("VAR_EPSILON_ALPHA", ProjectSettings::optional, "1.0"); 
-        double beta = settings->GetSettingAs<double>("VAR_EPSILON_BETA", ProjectSettings::optional, "1.0"); 
-        //der->setVariableEpsilon(subdomain->getStencilRadii(), subdomain->getStencils(), alpha, beta); 
-        der->setVariableEpsilon(alpha, beta); 
-    } else {
-        double epsilon = settings->GetSettingAs<double>("EPSILON", ProjectSettings::required);
-        der->setEpsilon(epsilon);
-    }
-
-#if 0
-        der->setWeightType(RBFFD::ContourSVD);
-        der->setWeightType(RBFFD::Direct);
-#else 
-        der->setWeightType((RBFFD::WeightType)weight_method);
-#endif 
-        der->setComputeConditionNumber(true);
+    der->setUseHyperviscosity(useHyperviscosity);
+    der->setEpsilonByStencilSize(stencil_size);
+    der->setWeightType((RBFFD::WeightType)weight_method);
+    der->setComputeConditionNumber(true);
  
     // Try loading all the weight files
     int err = der->loadAllWeightsFromFile();
@@ -274,8 +261,10 @@ int main(int argc, char** argv) {
                 // Test Y and 30 are > 0
                 // Test Z and 36 are > 0
                 // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
-//                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);
-                der_test->testEigen(RBFFD::INTERP, exitIfEigTestFailed, 0);
+//                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);                
+                // NOTE: testHyperviscosity boolean allow us to write the
+                // effect of hyperviscosity on the eigenvalues
+                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0, useHyperviscosity);
             }
         }
         tm["tests"]->stop();

@@ -62,6 +62,9 @@ OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
 	)
 	MESSAGE(STATUS "Found armadillo in: ${armadillo}")
 
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES_SAVED ${CMAKE_FIND_LIBRARY_SUFFIXES}) #Backup
+    LIST(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.3")
+
 	# Typically installed separately. Same rules as Armadillo (local dir here; global unecessary)
    	FIND_LIBRARY(fftw3 fftw3 PATHS 
 		/Users/erlebach/Documents/src/fftw-3.2.2/.libs
@@ -75,6 +78,7 @@ OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
 	/usr/local/lib64
     #	NO_DEFAULT_PATH
 	)
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_SAVED}) #Restore
 	MESSAGE(STATUS "Found fftw3 in: ${fftw3}")
 
 
@@ -96,6 +100,7 @@ OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
 		.
 		/Users/erlebach/Documents/src/fftw-3.2.2/include
 		/Users/erlebach/Documents/src/armadillo-0.9.52/include
+        $ENV{INCLUDE_PATH}
 		/opt/local/include   # for boost
                 ~/local/include
 		~/local/usr/include

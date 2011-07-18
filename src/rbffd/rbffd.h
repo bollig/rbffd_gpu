@@ -65,7 +65,6 @@ class RBFFD
         Grid& grid_ref;
 
         std::string eps_string;
-        std::string hv_string;
 
         // Weight array. Each element is associated with one DerType (see above). 
         std::vector<double*> weights[NUM_DERIV_TYPES]; 
@@ -111,7 +110,7 @@ class RBFFD
         double hv_gamma;
         double hv_k; 
 
-        bool useHyperviscosity;
+        int useHyperviscosity;
 
         //TODO: add choice for RBF (only one option at the moment)
 
@@ -140,7 +139,8 @@ class RBFFD
         // Single RHS ContourSVD
         void computeWeightsForStencil_ContourSVD(DerType, int st_indx);
 
-        void setUseHyperviscosity(bool tf) {
+        void setUseHyperviscosity(int tf) {
+            std::cout << "USE " << tf << std::endl;
             useHyperviscosity = tf; 
         }
 
@@ -188,6 +188,8 @@ class RBFFD
                     c1 = 0.026; 
                     c2 = 0.08; 
                     hv_k = 2; 
+                    // NOTE: After testing this, I found that this gamma includes N^{-k} within it. 
+                    //      This is very VERY important
                     hv_gamma = 8e-4;
                     break; 
                 case 31: 
@@ -201,11 +203,12 @@ class RBFFD
                     c2 = 0.14; 
                     hv_k = 6; 
                     hv_gamma = 5e-1;
+                    break;
                 case 101:
                     c1 = 0.058; 
                     c2 = 0.16; 
                     hv_k = 8; 
-                    hv_gamma = 5.0;
+                    hv_gamma = 5;
                     break; 
                 default:
                     std::cout << "[RBFFD] Error: setEpsilonByStencilSize does not support stencil size " << st_size << " at this time. Try using 17, 31, 50, and 101\n"; 
@@ -213,7 +216,7 @@ class RBFFD
             };
 
             // Epsilon as a function of condition number is a linear function: 
-            double eps = c1 * sqrt(grid_ref.getNodeListSize()) + c2; 
+            double eps = c1 * sqrt(grid_ref.getNodeListSize()) - c2; 
 
             this->setEpsilon(eps); 
         }
@@ -312,13 +315,11 @@ class RBFFD
         virtual std::string getHVString() {
             std::stringstream ss(std::stringstream::out); 
             if (this->useHyperviscosity) {
+                ss << "hv_k_" << hv_k << "_hv_gamma_" << hv_gamma; 
+            } else {
                 ss << "no_hv"; 
             }
-            else {
-                ss << "hv_k_" << hv_k << "_hv_gamma_" << hv_gamma; 
-            }
-            hv_string = ss.str(); 
-            return hv_string; 
+            return ss.str(); 
         }
 
         virtual std::string className() { return "rbffd"; }

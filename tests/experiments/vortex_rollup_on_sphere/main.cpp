@@ -264,7 +264,7 @@ int main(int argc, char** argv) {
 //                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);                
                 // NOTE: testHyperviscosity boolean allow us to write the
                 // effect of hyperviscosity on the eigenvalues
-                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0, useHyperviscosity);
+                der_test->testEigen(RBFFD::LAMBDA, exitIfEigTestFailed, 0, useHyperviscosity);
             }
         }
         tm["tests"]->stop();

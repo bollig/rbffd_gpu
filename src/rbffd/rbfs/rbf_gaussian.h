@@ -172,27 +172,54 @@ class RBF_Gaussian : public RBF
         //  p_1(r) = 4(eps*r)^2 - 2d
         //  p_{k+1}(r) = 4( (eps*r)^2 - 2k - d/2 ) * p_k(r) - 8k(2k - 2 + d) * p_{k-1}(r)
         virtual double hyperviscosity(const Vec3& x, const int k) {
+            double eps2r2 = eps2 * x.square();
             double r2 = x.square(); 
+#if 0
+            double hv_fact1; 
+            switch (k) {
+                case 0:
+                    hv_fact1 = this->eval(x); 
+                    break; 
+                case 1:
+                    hv_fact1 = eps2 * (4.*(eps2r2 - 4.)) * this->eval(x);
+                    break; 
+                case 2:
+                    hv_fact1 = eps2*eps2 * (16.*eps2r2*eps2r2 - 64.*eps2r2 + 32) * this->eval(x); 
+                    break; 
+                case 3:
+                    hv_fact1 = eps2*eps2*eps2 * (64.*eps2r2*eps2r2*eps2r2 - 576.*eps2r2*eps2r2 + 1152.*eps2r2 - 384.) * this->eval(x); 
+                    break;
+                default: 
+                    break;
+            };
+
+
+            double hv_fact2 = pow(eps, 2*k) * this->hv_p_k(r2, k) * this->eval(x); 
+            if (hv_fact1 - hv_fact2 > 1e-10) {
+                std::cout << "[RBFFD] HV fact1-fact2 = " << hv_fact1 - hv_fact2 << " (" << hv_fact1 << ", " << hv_fact2 << ")" << std::endl;
+            }
+            return hv_fact1; 
+#endif 
             return pow(eps, 2*k) * this->hv_p_k(r2, k) * this->eval(x); 
         }
 
         // recursive evaluation of generalized Laguerre polynomials for hyperviscosity. 
         // Should reproduce the regular Laguerre polynomials when dim==2
         virtual double hv_p_k(double r2, int k) {
-            double epsr2 = eps2*r2; 
+            double eps2r2 = eps2*r2; 
             switch (k) {
                 case 0:
-                    return 1;
+                    return 1.;
                     break;
                 case 1:
-                    return 4.*(epsr2) - 2.*this->dim;
+                    return 4.*(eps2r2) - 2.*this->dim;
                     break;
                 default: 
                     // Pass: 
                     break;
             }    
             // IS this d/2 supposed to be INTEGER or FLOAT division? 
-            return 4.*(epsr2 - 2.*k - this->dim/2.) * this->hv_p_k(r2, k-1) - 8.*k*(2.*k - 2. + this->dim) * this->hv_p_k(r2,k-2); 
+            return 4.*(eps2r2 - 2.*(k-1) - this->dim/2.) * this->hv_p_k(r2, k-1) - 8.*(k-1)*(2.*(k-1) - 2. + this->dim) * this->hv_p_k(r2,k-2); 
         }
 };
 

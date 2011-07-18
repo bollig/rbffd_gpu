@@ -14,7 +14,7 @@
     RBFFD::RBFFD(Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
 : grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
     weightsModified(false), weightMethod(RBFFD::Direct), 
-    hv_k(2), hv_gamma(8e-4), useHyperviscosity(false), 
+    hv_k(2), hv_gamma(8e-4), useHyperviscosity(0), 
     eigenvalues_computed(false), computeCondNums(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
@@ -615,7 +615,12 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
             double* hv = weights_hv[*it]; 
             StencilType& st = grid_ref.getStencil(*it);
             for (int j=0; j < st.size(); j++) {
-                eigmat(*it,st[j])  = w[j] + hv[j];
+#if 0
+                double hv_filter = -hv_gamma * pow((double)nb_centers, -hv_k) * hv[j]; 
+#else 
+                double hv_filter = -hv_gamma * hv[j]; 
+#endif 
+                eigmat(*it,st[j])  = w[j] + hv_filter;
                 // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
             }
         }

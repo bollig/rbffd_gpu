@@ -12,8 +12,6 @@ SET( CMAKE_MODULE_PATH
 # Setup any external libraries we might need
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/external)
 
-#MESSAGE("ENV{EXTERNAL_INCLUDE_DIRS}= $ENV{EXTERNAL_INCLUDE_DIRS}")
-
 # Get common build instructions used by all operating systems
 INCLUDE (COMMON_CONFIG)
 
@@ -55,12 +53,14 @@ include(ARMA_FindMKL)
 message(STATUS "MKL_FOUND     = ${MKL_FOUND}")
 
 include_directories(${MKL_INCLUDE_DIRS})
+STRING(REPLACE ":" ";" inc_paths $ENV{INCLUDE_PATH})
+include_directories(${inc_paths})
 
 # This is an external dependency
 # Its name should not change
 SET( FRAMEWORK_DEPENDENCIES
 	$ENV{EXTERNAL_LIB_DEPENDENCIES}
-    ${MKL_LIBRARIES}
+    #    ${MKL_LIBRARIES}
 	#${CUDA_LIBRARIES}
 )
 

@@ -8,28 +8,59 @@ void VortexRollup::assemble() {
         der_ref.computeAllWeightsForAllStencils();
     }
 
-    unsigned int n_stencils = grid_ref.getStencilsSize();
+    static int assembled = 0; 
 
-    boost::numeric::ublas::compressed_matrix<FLOAT> L_host(n_stencils, n_stencils);
-    for (unsigned int j = 0; j < n_stencils; j++) {
+    if (!assembled) {
 
-        NodeType& x_j = grid_ref.getNode(j);
-     
-        StencilType& st = grid_ref.getStencil(j); 
+        unsigned int n_stencils = grid_ref.getStencilsSize();
 
-        // Get just the dPhi/dr weights
-        double* dPhi_dlambda = der_ref.getStencilWeights(RBFFD::LAMBDA, j);
+        boost::numeric::ublas::compressed_matrix<double> L_host(n_stencils, n_stencils);
+    if (this->useHyperviscosity) {
+        std::cout << "PDE USING HYPERVISCOSITY\n";
+        for (unsigned int j = 0; j < n_stencils; j++) {
 
-        // Match the weights with the scalars
-        for (unsigned int i = 0; i < st.size(); i++) {
-            NodeType& x_i = grid_ref.getNode(st[i]);
-            L_host(st[0], st[i]) = dPhi_dlambda[i];  
+            NodeType& x_j = grid_ref.getNode(j);
+
+            StencilType& st = grid_ref.getStencil(j); 
+
+            // Get just the dPhi/dr weights
+            double* dPhi_dlambda = der_ref.getStencilWeights(RBFFD::LAMBDA, j);
+            double* hv_filter = der_ref.getStencilWeights(RBFFD::HV, j);
+            // Match the weights with the scalars
+            for (unsigned int i = 0; i < st.size(); i++) {
+                L_host(st[0], st[i]) = dPhi_dlambda[i] + hv_filter[i];
+                //  printf ("lhost(%d, st[%d]) = w[%d] = %g\n", st[0], st[i], i, val);
+            }
+        }
+    } else {
+        for (unsigned int j = 0; j < n_stencils; j++) {
+            NodeType& x_j = grid_ref.getNode(j);
+            StencilType& st = grid_ref.getStencil(j); 
+            // Get just the dPhi/dr weights
+            double* dPhi_dlambda = der_ref.getStencilWeights(RBFFD::LAMBDA, j);
+
+            // Match the weights with the scalars
+            for (unsigned int i = 0; i < st.size(); i++) {
+                L_host(st[0], st[i]) = dPhi_dlambda[i];
+                //  printf ("lhost(%d, st[%d]) = w[%d] = %g\n", st[0], st[i], i, val);
+            }
         }
     }
+        std::ofstream fout;
+        fout.open("L_host.mtx"); 
+        for (unsigned int i =0; i < n_stencils; i++) {
+            for (unsigned int j =0; j < n_stencils-1; j++) {
+                fout << L_host(i,j) << ",";
+            }
+            fout << L_host(i,n_stencils-1);
+            fout << std::endl;
+        }
+        fout.close();
+        //std::cout << L_host << std::endl;
 
-    //std::cout << L_host << std::endl;
-
-    this->D_N = L_host; 
+        this->D_N = L_host; 
+        assembled = 1;
+    }
 }
 
 

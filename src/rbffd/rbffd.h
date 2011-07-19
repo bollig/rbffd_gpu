@@ -40,7 +40,7 @@ class RBFFD
         // those cases we avoid using monomial terms
         // R is the radial deriv (dPhi/dr)
         // LAMBDA is longitude
-        enum DerType {LAMBDA, X, Y, Z, LAPL, HV, R, INTERP};
+        enum DerType {X, Y, Z, LAPL, LAMBDA, HV, R, INTERP};
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 
         enum WeightType {Direct, ContourSVD};
@@ -217,7 +217,6 @@ class RBFFD
 
             // Epsilon as a function of condition number is a linear function: 
             double eps = c1 * sqrt(grid_ref.getNodeListSize()) - c2; 
-
             this->setEpsilon(eps); 
         }
 

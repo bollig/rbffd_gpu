@@ -264,7 +264,7 @@ int main(int argc, char** argv) {
 //                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);                
                 // NOTE: testHyperviscosity boolean allow us to write the
                 // effect of hyperviscosity on the eigenvalues
-                der_test->testEigen(RBFFD::LAMBDA, exitIfEigTestFailed, 0, useHyperviscosity);
+                der_test->testEigen(RBFFD::LAMBDA, exitIfEigTestFailed, 0);
             }
         }
         tm["tests"]->stop();
@@ -278,7 +278,7 @@ int main(int argc, char** argv) {
     tm["heat_init"]->start(); 
 
     // We need to provide comm_unit to pass ghost node info
-    pde = new VortexRollup(subdomain, der, comm_unit);
+    pde = new VortexRollup(subdomain, der, comm_unit, useHyperviscosity, true);
 
     // This should not influence anything. 
     pde->setStartEndTime(start_time, end_time);
@@ -338,9 +338,9 @@ int main(int argc, char** argv) {
     // nodes, so we dont do it in parallel
     if (compute_eigenvalues && (comm_unit->getSize() == 1)) {
         RBFFD::EigenvalueOutput eigs = der->getEigenvalues();
-        // Not sure why this is 2
+        // Not sure why this is 2 (doesnt seem to be correct)
         max_dt = 2. / eigs.max_neg_eig;
-        printf("Suggested max_dt based on eigenvalues (2/lambda_max)= %f\n", max_dt);
+        printf("Suggested max_dt based on eigenvalues (1/lambda_max)= %f\n", max_dt);
         
         // CFL condition:
         if (dt > max_dt) {

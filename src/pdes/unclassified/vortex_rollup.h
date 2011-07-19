@@ -18,9 +18,12 @@ class VortexRollup : public TimeDependentPDE
 
         boost::numeric::ublas::compressed_matrix<FLOAT> D_N;
 
+        int useHyperviscosity; 
+
     public: 
-        VortexRollup(Domain* grid, RBFFD* der, Communicator* comm, bool weightsComputed=false) 
-            : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed)
+        VortexRollup(Domain* grid, RBFFD* der, Communicator* comm, int useHyperviscosity, bool weightsComputed=false) 
+            : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed), 
+               useHyperviscosity(useHyperviscosity)
         { ; }
 
         // This should assemble a matrix L of weights which can be used to solve the PDE

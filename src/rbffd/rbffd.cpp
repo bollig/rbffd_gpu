@@ -232,6 +232,11 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
             scale = 1.; 
         }
 #endif 
+
+        if (i == HV) {
+//            scale = -hv_gamma; 
+        }
+
         if (this->weights[i][irbf] == NULL) {
             this->weights[i][irbf] = new double[n+np];
         }
@@ -373,7 +378,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
             case HV: 
                 // FIXME: this is only for 2D right now
-                rhs(j,0) = rbf.hyperviscosity(diff, hv_k);
+                rhs(j,0) = -hv_gamma * rbf.hyperviscosity(diff, hv_k);
                 break; 
             default:
                 std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
@@ -503,6 +508,10 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     }
 #endif 
 
+    if (which == HV) {
+//        scale = -hv_gamma; 
+    }
+
     if (this->weights[which][irbf] == NULL) {
         this->weights[which][irbf] = new double[n+np];
     }
@@ -606,22 +615,15 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
     if (useHyperviscosity) {
         // Compute Eigenvalues of DM + Hyperviscosity term. 
         // hyperviscosity = - gamma * N_nodes^-k * (lapl)^k
-    
-        std::vector<double*>& weights_hv = this->weights[HV];
-
+        std::cout << "USING HYPERVISCOSITY\n";
         // We put our interior nodes after the boundary nodes in matrix
         for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
-            double* w = weights_r[*it];
-            double* hv = weights_hv[*it]; 
+            //double* w = weights_r[*it];
+            double* w = this->getStencilWeights(which, *it);
+            double* hv = this->getStencilWeights(HV, *it); //weights_hv[*it]; 
             StencilType& st = grid_ref.getStencil(*it);
             for (int j=0; j < st.size(); j++) {
-#if 0
-                double hv_filter = -hv_gamma * pow((double)nb_centers, -hv_k) * hv[j]; 
-#else 
-                double hv_filter = -hv_gamma * hv[j]; 
-#endif 
-                eigmat(*it,st[j])  = w[j] + hv_filter;
-                // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
+                eigmat(*it,st[j])  = w[j] + hv[j];
             }
         }
 
@@ -635,8 +637,8 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
                 // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
             }
         }
-
     }
+
 
     printf("sz= %u, nb_bnd= %u\n", sz, nb_bnd);
 

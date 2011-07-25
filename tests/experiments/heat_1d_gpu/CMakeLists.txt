@@ -22,11 +22,7 @@ SET (ARGV
 
 require_config()   # Default is to require test.conf
 
-require_framework_vtk()
-
-IF(VTK_FOUND) 
-	ADD_DEFINITIONS("-DUSE_VTK=1")
-ENDIF(VTK_FOUND)
+load_vtk()
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 

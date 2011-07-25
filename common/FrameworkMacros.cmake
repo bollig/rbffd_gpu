@@ -7,21 +7,27 @@
 
 #SET ( TEST_COUNT 0 ) 
 
-MACRO ( REQUIRE_FRAMEWORK_VTK )
+MACRO ( LOAD_VTK )
     # if VTK_FOUND and ENABLED
     #   assume the rbf_vtk lib was built
-    message( STATUS "TODO: DISABLE TEST IF VTK NOT FOUND" )
-    find_package(VTK)
-    if (VTK_FOUND)
-         INCLUDE( ${USE_VTK_FILE} )
-        message( STATUS "VTK found, updating FRAMEWORK_{...} variables.")
-        set (FRAMEWORK_DEP_INCLUDE_DIRS ${FRAMEWORK_DEP_INCLUDE_DIRS} ${VTK_INCLUDE_DIRS})
-        # NOTE: we need to fix these libraries in the future
-        set (FRAMEWORK_DEPENDENCIES ${FRAMEWORK_DEPENDENCIES} vtkHybrid vtkWidgets)
-    else (VTK_FOUND)
-        message(ERROR "A VTK installation is required to proceed.")
-    endif (VTK_FOUND)
-ENDMACRO( REQUIRE_FRAMEWORK_VTK )
+    if (USE_VTK)
+        find_package(VTK)
+        if (VTK_FOUND)
+            INCLUDE( ${USE_VTK_FILE} )
+            message( STATUS "VTK found, updating FRAMEWORK_{...} variables.")
+            set (FRAMEWORK_DEP_INCLUDE_DIRS ${FRAMEWORK_DEP_INCLUDE_DIRS} ${VTK_INCLUDE_DIRS})
+            # NOTE: we need to fix these libraries in the future
+            set (FRAMEWORK_DEPENDENCIES ${FRAMEWORK_DEPENDENCIES} vtkHybrid vtkWidgets)
+            ADD_DEFINITIONS("-DUSE_VTK=1")
+        else (VTK_FOUND)
+            message(WARNING "VTK was not found.")
+            ADD_DEFINITIONS("-DUSE_VTK=0")
+        endif (VTK_FOUND)
+    else (USE_VTK)
+        message( STATUS "USE_VTK=off, not loading VTK.")
+        ADD_DEFINITIONS("-DUSE_VTK=0")
+    endif (USE_VTK)
+ENDMACRO( LOAD_VTK )
 
 
 

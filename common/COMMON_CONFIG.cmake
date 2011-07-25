@@ -20,6 +20,7 @@
 	INCLUDE (UseDoxygen)
 	FIND_PACKAGE (MPI)
 
+OPTION (USE_VTK "Enable/Disable the use of VTK (if required by a test)" ON)
 OPTION (USE_CUDA "Enable/Disable the use of CUDA" ON)
 OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
 

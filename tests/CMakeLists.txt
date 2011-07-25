@@ -22,6 +22,7 @@
         experiments/heat_2d_verification
         experiments/heat_ellipse_2d
         experiments/vortex_rollup_on_sphere
+        experiments/cosine_bell_on_sphere
         #****        experiments/ncar_poisson1_vcl
 
         #****		gridgen/nested_spheres_ccvt

@@ -31,6 +31,7 @@ SET(REQUIRED_SOURCE_FILES
     #TODO    pdes/parabolic/convection_diffusion_pde.cpp
     pdes/elliptic/ncar_poisson1.cpp
     pdes/hyperbolic/vortex_rollup.cpp
+    pdes/hyperbolic/cosine_bell.cpp
 
     rbffd/rbffd.cpp
     rbffd/derivative_tests.cpp

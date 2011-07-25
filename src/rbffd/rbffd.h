@@ -31,7 +31,7 @@ typedef RBF_InvMultiquadric IRBF;
 //enum RBF_Type {MQ=0, GA, IMQ, TPS, W2};
 
 // Should match how many DerTypes we have below
-#define NUM_DERIV_TYPES 8
+#define NUM_DERIV_TYPES 10
 
 class RBFFD
 {
@@ -40,7 +40,9 @@ class RBFFD
         // those cases we avoid using monomial terms
         // R is the radial deriv (dPhi/dr)
         // LAMBDA is longitude
-        enum DerType {X, Y, Z, LAPL, R, INTERP, LAMBDA, HV};
+        // THETA is latitude
+        // SPH_LAPL is spherical laplacian (Laplace-Beltrami Operator)
+        enum DerType {X, Y, Z, LAPL, R, INTERP, LAMBDA, THETA, SPH_LAPL, HV};
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 
         enum WeightType {Direct, ContourSVD};
@@ -146,7 +148,7 @@ class RBFFD
 
         double getHVScalar() {
             //return -hv_gamma;
-            return hv_gamma / pow(grid_ref.getNodeListSize(), hv_k);
+            return -hv_gamma / pow(grid_ref.getNodeListSize(), hv_k);
         }
 
         void setComputeConditionNumber(bool tf) {

@@ -34,6 +34,8 @@
     derTypeStr[HV] = "hv";
     derTypeStr[R] = "r";   // radial deriv 
     derTypeStr[LAMBDA] = "lambda";   // Longitude
+    derTypeStr[THETA] = "theta";   // Latitude
+    derTypeStr[SPH_LAPL] = "sph_lapl";   // Latitude
     derTypeStr[INTERP] = "interp";
 
 
@@ -209,7 +211,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
     int irbf = st_indx;
 
-#if 1
+#if 0
     char buf[256]; 
     sprintf(buf, "LHS(%d)=", st_indx); 
     lhs.print(buf); 
@@ -333,6 +335,19 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 #else 
         Vec3 diff = (x0v - xjv);
 #endif 
+
+        // yes, i know: we're swapping theta and phi here. This is consistent with 
+        // Natashas paper.
+        sph_coords_type spherical_coords_j = cart2sph(xjv.x(), xjv.y(), xjv.z());
+        double lambdaP_j = spherical_coords_j.theta; 
+        double thetaP_j = spherical_coords_j.phi; 
+        double r_j = spherical_coords_j.r; 
+
+        sph_coords_type spherical_coords_i = cart2sph(x0v.x(), x0v.y(), x0v.z());
+        double lambdaP_i = spherical_coords_i.theta; 
+        double thetaP_i = spherical_coords_i.phi; 
+        double r_i = spherical_coords_i.r; 
+
         switch (which) {
             case X:
                 rhs(j,0) = rbf.xderiv(diff);
@@ -354,19 +369,6 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
             case LAMBDA:
                 {
-                    // LAMBDA is: dr/dlambda * dphi/dr = dphi/dlambda
-                    // yes, i know: we're swapping theta and phi here. This is consistent with 
-                    // Natashas paper.
-                    sph_coords_type spherical_coords_j = cart2sph(xjv.x(), xjv.y(), xjv.z());
-                    double lambdaP_j = spherical_coords_j.theta; 
-                    double thetaP_j = spherical_coords_j.phi; 
-                    double r_j = spherical_coords_j.r; 
-
-                    sph_coords_type spherical_coords_i = cart2sph(x0v.x(), x0v.y(), x0v.z());
-                    double lambdaP_i = spherical_coords_i.theta; 
-                    double thetaP_i = spherical_coords_i.phi; 
-                    double r_i = spherical_coords_i.r; 
-                    
                     double dr_dlambda = cos(thetaP_i) * cos(thetaP_j) * sin(lambdaP_i - lambdaP_j);
 
                     if (fabs(dr_dlambda) > 0.) {
@@ -377,6 +379,23 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                     }
                 }   // Note: use the {'s to allow new declarations inside case
                 break; 
+            case THETA:
+                {
+                    double dr_dtheta = cos(thetaP_j) * sin(thetaP_i) * cos(lambdaP_i - lambdaP_j) - sin(thetaP_j) * cos(thetaP_i);
+                    if (fabs(dr_dtheta) > 0.) {
+                        // See equation below eq 20 in Flyer Wright, Transport schemes paper
+                        rhs(j,0) = dr_dtheta * rbf.rderiv_over_r(diff); 
+                    } else {
+                        rhs(j,0) = 0.; 
+                    }
+                }
+                break; 
+            case SPH_LAPL: 
+                {
+                    double r2 = diff.square();
+                    // Laplace-Beltrami Operator for surface of sphere (Equation 20 in Flyer,Wright,Yuen paper)
+                    rhs(j,0) = (1./4.) * ( (4.-r2)*rbf.rderiv2(diff) + (4. - 3.*r2)*rbf.rderiv_over_r(diff) );
+                }
             case HV: 
                 // FIXME: this is only for 2D right now
                 rhs(j,0) = rbf.hyperviscosity(diff, hv_k);

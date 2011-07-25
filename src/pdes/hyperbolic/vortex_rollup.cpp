@@ -124,7 +124,6 @@ void VortexRollup::solve(std::vector<SolutionType>& u_t, std::vector<SolutionTyp
         (*f_out)[i] = - (w_theta_P) * dh_d_lambda[i];
     }
     if (useHyperviscosity) {
-        std::cout << "Using Hyperviscosity Filter\n";
         // Filter is ONLY applied after the rest of the RHS is evaluated
         std::vector<SolutionType> hv_filter; 
         der_ref.applyWeightsForDeriv(RBFFD::HV, u_t, hv_filter, true); 

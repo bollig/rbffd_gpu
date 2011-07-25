@@ -119,6 +119,19 @@ class RBF_Gaussian : public RBF
             return -2. * eps2 * this->eval(x);
         }
 
+         //------------------------------------------------
+         //ANalytically remove r/r
+        virtual double rderiv2(const Vec3& x) { 
+            double r2 = x.square();
+            return this->rderiv_over_r(x) + 4.*(eps2*eps2)*r2 *exp(-(eps2*r2));
+        }
+
+        virtual CMPLX rderiv2(const CVec3& x) {
+            CMPLX r2 = x.square();
+            return this->rderiv_over_r(x) + 4.*(ceps2*ceps2)*r2 *exp(-(ceps2*r2));
+        }
+
+
 
         //------------------------------------------------
 

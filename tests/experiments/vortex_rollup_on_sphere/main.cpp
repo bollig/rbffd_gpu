@@ -367,7 +367,7 @@ int main(int argc, char** argv) {
 #if 1
         if (!(iter % local_sol_dump_frequency)) {
 
-            std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+            std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
             pde->checkLocalError(exact, max_local_rel_error); 
             pde->checkNorms();
         }
@@ -377,7 +377,7 @@ int main(int argc, char** argv) {
             comm_unit->barrier();
             tm["consolidate"]->stop(); 
             if (comm_unit->isMaster()) {
-                std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+                std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
                 pde->checkGlobalError(exact, grid, max_global_rel_error); 
             }
         }

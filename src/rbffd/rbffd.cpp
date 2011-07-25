@@ -1,6 +1,8 @@
 #define ONE_MONOMIAL 1
 #define SCALE_BY_H 0 
 #define SCALE_OUT_BY_H 0 
+// Default: 0
+#define SCALE_B_BY_GAMMA 0
 
 #include "rbffd/stencils.h"
 #include "utils/geom/cart2sph.h"
@@ -207,7 +209,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
     int irbf = st_indx;
 
-#if 0
+#if 1
     char buf[256]; 
     sprintf(buf, "LHS(%d)=", st_indx); 
     lhs.print(buf); 
@@ -233,11 +235,13 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
         }
 #endif 
 
+#if 1
         if (i == HV) {
-//            scale = -hv_gamma; 
+            scale = this->getHVScalar(); 
         }
+#endif 
 
-        if (this->weights[i][irbf] == NULL) {
+       if (this->weights[i][irbf] == NULL) {
             this->weights[i][irbf] = new double[n+np];
         }
 
@@ -354,23 +358,20 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                     // yes, i know: we're swapping theta and phi here. This is consistent with 
                     // Natashas paper.
                     sph_coords_type spherical_coords_j = cart2sph(xjv.x(), xjv.y(), xjv.z());
-                    double thetaP_j = spherical_coords_j.phi; 
                     double lambdaP_j = spherical_coords_j.theta; 
+                    double thetaP_j = spherical_coords_j.phi; 
                     double r_j = spherical_coords_j.r; 
 
                     sph_coords_type spherical_coords_i = cart2sph(x0v.x(), x0v.y(), x0v.z());
-                    double thetaP_i = spherical_coords_i.phi; 
                     double lambdaP_i = spherical_coords_i.theta; 
+                    double thetaP_i = spherical_coords_i.phi; 
                     double r_i = spherical_coords_i.r; 
                     
                     double dr_dlambda = cos(thetaP_i) * cos(thetaP_j) * sin(lambdaP_i - lambdaP_j);
 
-                    double r2 = (x0v - xjv).square();
-                    double r = sqrt(r2);
-
                     if (fabs(dr_dlambda) > 0.) {
                         // See equation below eq 20 in Flyer Wright, Transport schemes paper
-                        rhs(j,0) = dr_dlambda * (1./r) * rbf.rderiv(diff); 
+                        rhs(j,0) = dr_dlambda * rbf.rderiv_over_r(diff); 
                     } else {
                         rhs(j,0) = 0.; 
                     }
@@ -378,7 +379,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 break; 
             case HV: 
                 // FIXME: this is only for 2D right now
-                rhs(j,0) = -hv_gamma * rbf.hyperviscosity(diff, hv_k);
+                rhs(j,0) = rbf.hyperviscosity(diff, hv_k);
                 break; 
             default:
                 std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
@@ -508,10 +509,11 @@ void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
     }
 #endif 
 
+#if 1
     if (which == HV) {
-//        scale = -hv_gamma; 
+        scale = this->getHVScalar(); 
     }
-
+#endif 
     if (this->weights[which][irbf] == NULL) {
         this->weights[which][irbf] = new double[n+np];
     }
@@ -644,7 +646,7 @@ double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOut
 
     arma::cx_colvec eigval;
     arma::cx_mat eigvec;
-    printf("Computing Eigenvalues of Laplacian Operator on Interior Nodes\n");
+    printf("Computing Eigenvalues of Operator on Interior Nodes\n");
     eig_gen(eigval, eigvec, eigmat);
     //eigval.print("eigval");
 

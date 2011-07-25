@@ -53,7 +53,7 @@ include(ARMA_FindMKL)
 message(STATUS "MKL_FOUND     = ${MKL_FOUND}")
 
 include_directories(${MKL_INCLUDE_DIRS})
-STRING(REPLACE ":" ";" inc_paths $ENV{INCLUDE_PATH})
+STRING(REPLACE ":" ";" inc_paths "$ENV{INCLUDE_PATH}:.")
 include_directories(${inc_paths})
 
 # This is an external dependency

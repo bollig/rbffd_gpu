@@ -10,6 +10,7 @@ void VortexRollup::assemble() {
 
     static int assembled = 0; 
 
+#if 0
     if (!assembled) {
 
         unsigned int n_stencils = grid_ref.getStencilsSize();
@@ -46,6 +47,7 @@ void VortexRollup::assemble() {
             }
         }
     }
+#if 0
         std::ofstream fout;
         fout.open("L_host.mtx"); 
         for (unsigned int i =0; i < n_stencils; i++) {
@@ -57,10 +59,11 @@ void VortexRollup::assemble() {
         }
         fout.close();
         //std::cout << L_host << std::endl;
-
+#endif 
         this->D_N = L_host; 
         assembled = 1;
     }
+#endif
 }
 
 
@@ -83,15 +86,18 @@ void VortexRollup::solve(std::vector<SolutionType>& u_t, std::vector<SolutionTyp
     double rho0 = 3.;
     double gamma = 5.;
 
-    //std::vector<SolutionType> dh_d_lambda(n_nodes, 1.);  
+    std::vector<SolutionType> dh_d_lambda(n_stencils);  
+    
+    der_ref.applyWeightsForDeriv(RBFFD::LAMBDA, u_t, dh_d_lambda, true); 
 
+#if 0
     boost::numeric::ublas::vector<double> dh_d_lambda(n_stencils);
     boost::numeric::ublas::vector<double> h(n_stencils);
     for (unsigned int i = 0; i < n_stencils; i++) {
         h(i) = u_t[i]; 
     }
-
     dh_d_lambda = boost::numeric::ublas::prod(this->D_N, h); 
+#endif 
 
     for (unsigned int i = 0; i < n_stencils; i++) {
         NodeType& v = grid_ref.getNode(i);
@@ -116,6 +122,15 @@ void VortexRollup::solve(std::vector<SolutionType>& u_t, std::vector<SolutionTyp
         // u' = w(theta') cos(theta')
         // So, dh/dt = - w(theta_P) * dh/d(lambda)
         (*f_out)[i] = - (w_theta_P) * dh_d_lambda[i];
+    }
+    if (useHyperviscosity) {
+        std::cout << "Using Hyperviscosity Filter\n";
+        // Filter is ONLY applied after the rest of the RHS is evaluated
+        std::vector<SolutionType> hv_filter; 
+        der_ref.applyWeightsForDeriv(RBFFD::HV, u_t, hv_filter, true); 
+        for (unsigned int i =0; i < n_stencils; i++) {
+            (*f_out)[i] += hv_filter[i]; 
+        }
     }
 }
 

@@ -40,7 +40,7 @@ class RBFFD
         // those cases we avoid using monomial terms
         // R is the radial deriv (dPhi/dr)
         // LAMBDA is longitude
-        enum DerType {X, Y, Z, LAPL, LAMBDA, HV, R, INTERP};
+        enum DerType {X, Y, Z, LAPL, R, INTERP, LAMBDA, HV};
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 
         enum WeightType {Direct, ContourSVD};
@@ -142,6 +142,11 @@ class RBFFD
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;
             useHyperviscosity = tf; 
+        }
+
+        double getHVScalar() {
+            //return -hv_gamma;
+            return hv_gamma / pow(grid_ref.getNodeListSize(), hv_k);
         }
 
         void setComputeConditionNumber(bool tf) {

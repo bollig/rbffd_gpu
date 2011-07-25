@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <map> 
 
-#include "pdes/unclassified/vortex_rollup.h"
+#include "pdes/hyperbolic/vortex_rollup.h"
 
 #include "grids/grid_reader.h"
 

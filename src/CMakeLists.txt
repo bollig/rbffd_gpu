@@ -30,7 +30,7 @@ SET(REQUIRED_SOURCE_FILES
     pdes/parabolic/heat_pde.cpp
     #TODO    pdes/parabolic/convection_diffusion_pde.cpp
     pdes/elliptic/ncar_poisson1.cpp
-    pdes/unclassified/vortex_rollup.cpp
+    pdes/hyperbolic/vortex_rollup.cpp
 
     rbffd/rbffd.cpp
     rbffd/derivative_tests.cpp

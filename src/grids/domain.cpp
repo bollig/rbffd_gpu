@@ -29,6 +29,10 @@ Domain::Domain(const Domain& subdomain) {
     ymax = grid->ymax;
     zmin = grid->zmin;
     zmax = grid->zmax;
+
+    // We might need to know how many nodes are in the domain globally for things like Hyperviscosity
+    this->global_num_nodes = grid->getNodeListSize();
+
     // Forms sets (Q,O,R) and l2g/g2l maps
     fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii()); 
     this->max_st_size = grid->getMaxStencilSize();
@@ -36,11 +40,15 @@ Domain::Domain(const Domain& subdomain) {
 
 
 // Construct a new Domain object
-Domain::Domain(int dimension, double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, 
+Domain::Domain(int dimension, unsigned int global_nb_nodes, 
+        double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, 
         int _comm_rank, int _comm_size) :
     dim_num(dimension),
     inclMX(false),inclMY(false),inclMZ(false),
     id(_comm_rank), comm_size(_comm_size) {
+
+        // These are props of Grid inherited by Domain
+        global_num_nodes = global_nb_nodes;
         xmin = _xmin;
         xmax = _xmax;
         ymin = _ymin; 
@@ -83,7 +91,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         double zm = zmin + igz * deltaz;
         printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, xm, xm+deltax, ym, ym+deltay, zm, zm+deltaz);
         printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
-        subdomains[id] = new Domain(dim_num, xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, id, comm_size);
+        subdomains[id] = new Domain(dim_num, global_num_nodes, xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, id, comm_size);
         subdomains[id]->setMaxStencilSize(this->max_st_size);
         subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1); 
     }
@@ -113,6 +121,8 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
 int Domain::send(int my_rank, int receiver_rank) {
 
     sendSTL(&id, my_rank, receiver_rank);  
+    
+    MPI_Send(&global_num_nodes, 1, MPI::UNSIGNED, receiver_rank, TAG, MPI_COMM_WORLD);
 
     double buff[6] = { xmin, xmax, ymin, ymax, zmin, zmax };
     MPI_Send(&buff, 6, MPI::DOUBLE, receiver_rank, TAG, MPI_COMM_WORLD);
@@ -149,6 +159,8 @@ int Domain::receive(int my_rank, int sender_rank) {
 
     // Start by identifying the subdomain ID
     recvSTL(&id, my_rank, sender_rank);  
+    
+    MPI_Recv(&global_num_nodes, 1, MPI::UNSIGNED, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     // Get the subdomain bounds 
     double buff[6];
@@ -222,9 +234,11 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
     int i = 0;
 
     if (O_by_rank.size() == 0) {
+#if 0
         cout << "RESIZING O_by_rank" << endl;
-        O_by_rank.resize(comm_size);
         printSetG2L(this->O, "Original O");
+#endif 
+        O_by_rank.resize(comm_size);
     }
 
 //        printSetG2L(subdomain_R, "R-by-rank");
@@ -239,18 +253,24 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
     }
 #endif 
 
+#if 0
     char label[256];
     sprintf(label, "Rank %d O_by_rank[%d]", id, subdomain_rank);
     std::cout << label << " = {" << std::endl;
+#endif 
     for (int i = 0; i < O_by_rank[subdomain_rank].size(); i++) {
         int g_indx = O_by_rank[subdomain_rank][i];
         int l_indx = this->g2l(g_indx);
+#if 0
         std::cout << "\t" << g_indx << " (l_indx: " << l_indx << ")\n";
+#endif 
     }
+#if 0
     std::cout << "}\n";
     // O_by_rank is still in global indices, but the g2l wont be able to map it 
     //printVectorG2L(this->O_by_rank[subdomain_rank], label);
 //    printVectorG2L(this->O_by_rank[subdomain_rank], label);
+#endif 
 
     return;
 }

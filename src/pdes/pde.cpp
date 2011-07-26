@@ -548,9 +548,9 @@ void PDE::checkNorms(double max_l2_norm) {
     double l2fabs = l2norm(sol_vec, 0, nb_pts); 
     double lifabs = linfnorm(sol_vec, 0, nb_pts); 
 
-    printf("Approx Solution  l1  norm (%d nodes):  %le\n", nb_pts, l1fabs);
-    printf("Approx Solution  l2  norm (%d nodes):  %le\n", nb_pts, l2fabs);
-    printf("Approx Solution linf norm (%d nodes):  %le\n", nb_pts, lifabs);
+    printf("\tApprox Solution  l1  norm (%d nodes):  %le\n", nb_pts, l1fabs);
+    printf("\tApprox Solution  l2  norm (%d nodes):  %le\n", nb_pts, l2fabs);
+    printf("\tApprox Solution linf norm (%d nodes):  %le\n", nb_pts, lifabs);
 
     if (max_l2_norm > 0) {
         if (l2fabs > max_l2_norm) {

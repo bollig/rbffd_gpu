@@ -13,14 +13,6 @@ void CosineBell::assemble() {
 
 // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
 void CosineBell::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t) {
-    // RADIUS OF THE SPHERE: 
-    double a = 1.;//6.37122*10^6; % radius of earth in meters
-    // RADIUS OF THE BELL
-    double R = a/3.;
-    // ANGLE OF ADVECTION AROUND SPHERE (from Equator and Greenwhich Mean Time) 
-    double alpha = -M_PI/2.;
-    // The initial velocity (NOTE: scalar in denom is 12 days in seconds)
-    double u0 = (2.*M_PI*a)/1036800.; 
     
     std::vector<SolutionType> dh_dlambda(n_stencils);  
     std::vector<SolutionType> dh_dtheta(n_stencils);  
@@ -38,8 +30,9 @@ void CosineBell::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>
         double lambda = spherical_coords.theta; 
         double theta = spherical_coords.phi; 
 
-        double vel_u =   u0 * (cos(theta) * cos(alpha) - sin(theta) * sin(lambda) * sin(alpha)); 
-        double vel_v = - u0 * (cos(lambda) * sin(alpha));
+        double vel_u =   u0 * (cos(theta) * cos(alpha) + sin(theta) * cos(lambda) * sin(alpha)); 
+        //double vel_v = - u0 * (cos(lambda) * sin(alpha));
+        double vel_v = - u0 * (sin(lambda) * sin(alpha));
 
         // dh/dt + u / cos(theta) * dh/d(lambda) + v * dh/d(theta) = 0
         // dh/dt = - [diag(u/cos(theta)) * D_LAMBDA * h + diag(v/a) * D_THETA * h] + H

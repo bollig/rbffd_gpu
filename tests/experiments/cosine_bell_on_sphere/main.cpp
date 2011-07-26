@@ -22,17 +22,41 @@
 
 std::string md_grid_filename;
 
+double sphere_radius; 
+double velocity_angle; 
+double time_for_one_revolution; 
+double start_time; 
+double end_time; 
+double dt;
+
+int num_timesteps; 
+int num_revolutions; 
 
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     md_grid_filename = settings->GetSettingAs<string>("GRID_FILENAME", ProjectSettings::required); 
+    sphere_radius = settings->GetSettingAs<double>("SPHERE_RADIUS", ProjectSettings::optional, "1.0"); 
+    double velocity_angle_denom = settings->GetSettingAs<double>("VELOCITY_ANGLE_DENOM", ProjectSettings::optional, "0"); 
+    if (fabs(velocity_angle_denom) > 0.) {  
+        velocity_angle = M_PI/velocity_angle_denom;
+    } else {
+        velocity_angle = 0.;
+    }
+    start_time = settings->GetSettingAs<double>("START_TIME", ProjectSettings::optional, "0"); 
+    num_revolutions = settings->GetSettingAs<double>("NUM_REVOLUTIONS", ProjectSettings::optional, "1"); 
+    time_for_one_revolution = settings->GetSettingAs<double>("TIME_FOR_ONE_REVOLUTION", ProjectSettings::optional, "1036800"); 
+
+    num_timesteps = settings->GetSettingAs<double>("NUM_TIMESTEPS", ProjectSettings::optional, "300"); 
+
+    end_time = time_for_one_revolution * num_revolutions;  
+    dt = (time_for_one_revolution) / num_timesteps;  
 }
 
 
 // Choose a specific Solution to this test case
 ExactSolution* getExactSolution(int dim_num) {
     //double Re = 2.;
-    ExactSolution* exact = new ExactAdvection(); 
+    ExactSolution* exact = new ExactAdvection(sphere_radius); 
     return exact;
 }
 
@@ -94,17 +118,15 @@ int main(int argc, char** argv) {
 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
     
-    int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
-    int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
+    int local_err_dump_frequency = settings->GetSettingAs<int>("LOCAL_ERR_DUMP_FREQ", ProjectSettings::optional, "1"); 
+    int global_err_dump_frequency = settings->GetSettingAs<int>("GLOBAL_ERR_DUMP_FREQ", ProjectSettings::optional, "5"); 
+    int sol_dump_frequency = settings->GetSettingAs<int>("SOL_DUMP_FREQ", ProjectSettings::optional, "10"); 
 
     int prompt_to_continue = settings->GetSettingAs<int>("PROMPT_TO_CONTINUE", ProjectSettings::optional, "0"); 
     int debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
 
-    double start_time = settings->GetSettingAs<double>("START_TIME", ProjectSettings::optional, "0.0"); 
-    double end_time = settings->GetSettingAs<double>("END_TIME", ProjectSettings::optional, "1.0"); 
-    double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
-    int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
-    int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "1"); 
+    int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "2"); 
+    int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "0"); 
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
     int useHyperviscosity = settings->GetSettingAs<int>("USE_HYPERVISCOSITY", ProjectSettings::optional, "0");
     int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
@@ -278,7 +300,7 @@ int main(int argc, char** argv) {
     tm["heat_init"]->start(); 
 
     // We need to provide comm_unit to pass ghost node info
-    pde = new CosineBell(subdomain, der, comm_unit, useHyperviscosity, true);
+    pde = new CosineBell(subdomain, der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, useHyperviscosity, true);
 
     // This should not influence anything. 
     pde->setStartEndTime(start_time, end_time);
@@ -298,9 +320,9 @@ int main(int argc, char** argv) {
     // Setup a logging class that will monitor our iteration and dump intermediate files
 #if USE_VTK
     // TODO: update VtuPDEWriter for the new PDE classes
-    PDEWriter* writer = new VtuPDEWriter(subdomain, pde, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
+    PDEWriter* writer = new VtuPDEWriter(subdomain, pde, comm_unit, sol_dump_frequency,0);
 #else 
-    PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, local_sol_dump_frequency, global_sol_dump_frequency);
+    PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, sol_dump_frequency, 0);
 #endif 
 
     // Test DT: 
@@ -316,7 +338,7 @@ int main(int argc, char** argv) {
     }
     // Laplacian = d^2/dx^2
     double sten_area = avgdx*avgdx;
-
+#if 0
     double max_dt = 0;//(0.5*sten_area)/decay;
 
     // Not sure where Gordon came up with this parameter.
@@ -352,26 +374,45 @@ int main(int argc, char** argv) {
             }
         }
     }
-
+#endif 
     std::cout << "[MAIN] ********* USING TIMESTEP dt=" << dt << " ********** " << std::endl;
 
     //    subdomain->printCenterMemberships(subdomain->G, "G = " );
     //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
-    int iter;
+    int iter = 0;
 
     int num_iters = (int) ((end_time - start_time) / dt);
     std::cout << "NUM_ITERS = " << num_iters << std::endl;
+            
+    writer->update(iter);
 
-    for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
-        writer->update(iter);
+//    for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
+    for (int revs = 1; revs <= num_revolutions; revs++) {
+        for (int rev_iter =0; rev_iter < num_timesteps; rev_iter++) {
+
+            tm["timestep"]->start(); 
+            pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
+            tm["timestep"]->stop(); 
+
+            // This just double checks that all procs have ghost node info.
+            // pde->advance(..) should broadcast intermediate updates as needed,
+            // but updated solution. 
+            tm["updates"]->start(); 
+            comm_unit->broadcastObjectUpdates(pde);
+            comm_unit->barrier();
+            tm["updates"]->stop();
+
+            iter++;
+            writer->update(iter);
+        }
 #if 1
-        if (!(iter % local_sol_dump_frequency)) {
-
+        if (!(revs % local_err_dump_frequency)) {
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
             pde->checkLocalError(exact, max_local_rel_error); 
             pde->checkNorms();
         }
-        if (!(iter % global_sol_dump_frequency)) {
+
+        if (!(revs % global_err_dump_frequency)) {
             tm["consolidate"]->start(); 
             comm_unit->consolidateObjects(pde);
             comm_unit->barrier();
@@ -381,41 +422,16 @@ int main(int argc, char** argv) {
                 pde->checkGlobalError(exact, grid, max_global_rel_error); 
             }
         }
-#if 0
-        sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
-        pde->printSolution(label); 
 #endif 
-
         //        double nrm = pde->maxNorm();
         if (prompt_to_continue && comm_unit->isMaster()) {
             std::string buf; 
             cout << "Press [Enter] to continue" << std::endl;
             cin.get(); 
         }
-
-        char label[256]; 
-#if 0
-        sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
-        pde->printSolution(label); 
-#endif 
-
-#endif 
-        tm["timestep"]->start(); 
-        pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
-        tm["timestep"]->stop(); 
-
-        // This just double checks that all procs have ghost node info.
-        // pde->advance(..) should broadcast intermediate updates as needed,
-        // but updated solution. 
-        tm["updates"]->start(); 
-        comm_unit->broadcastObjectUpdates(pde);
-        comm_unit->barrier();
-        tm["updates"]->stop();
-
-
     }
 #if 1
-    printf("after heat\n");
+    printf("after %d revolutions, %d iters\n", num_revolutions, iter);
 
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 

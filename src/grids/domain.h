@@ -70,7 +70,7 @@ class Domain : public Grid, public MPISendable
         Domain(const Domain& subdomain); // Copy constructor
 
         // Requires communicator to pass messages. This must be preconstructed comm_unit 
-        Domain(int dim_num, double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, int _comm_rank, int _comm_size);
+        Domain(int dim_num, unsigned int global_nb_nodes, double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, int _comm_rank, int _comm_size);
 
 
         Domain(int dim_num, Grid* _grid, int _comm_size);
@@ -117,8 +117,6 @@ class Domain : public Grid, public MPISendable
         //--------------------------------------------------
         void writeG2LToFile(std::string filename); 
         void writeL2GToFile(std::string filename); 
-
-
 
         // Decompose the current domain into x_divisions by y_divisions by z_divisions. 	
         void generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions = 1, int z_divisions = 1); 

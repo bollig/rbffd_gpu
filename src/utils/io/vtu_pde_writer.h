@@ -74,8 +74,8 @@ class VtuPDEWriter : public PDEWriter
         }
 
 
-        VtuPDEWriter(Domain* subdomain_, TimeDependentPDE* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
-            : PDEWriter(subdomain_, heat_, comm_unit_, local_write_freq_, global_write_freq_) 
+        VtuPDEWriter(Domain* subdomain_, TimeDependentPDE* pde_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
+            : PDEWriter(subdomain_, pde_, comm_unit_, local_write_freq_, global_write_freq_) 
         { 
 #if USE_POLY_DATA
             uwriter = vtkPolyDataWriter::New();
@@ -220,12 +220,12 @@ class VtuPDEWriter : public PDEWriter
             // Update the solution: 
             vtkDoubleArray* s0 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(sol_name.c_str()); 
             for (int i = 0; i < s0->GetSize(); i++) {
-                s0->SetValue(i, heat->getLocalSolution(i));
+                s0->SetValue(i, pde->getLocalSolution(i));
             }
 
             vtkDoubleArray* s1 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(exact_name.c_str()); 
             for (int i = 0; i < s1->GetSize(); i++) {
-                s1->SetValue(i, heat->getExactSolution(i));
+                s1->SetValue(i, pde->getExactSolution(i));
             }
 
 #if 1
@@ -234,7 +234,7 @@ class VtuPDEWriter : public PDEWriter
             vtkDoubleArray* s2 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(abs_err_name.c_str()); 
             for (int i = 0; i < s2->GetSize(); i++) {
 #if USE_PDE_ERR
-                s2->SetValue(i, heat->getAbsoluteError(i));
+                s2->SetValue(i, pde->getAbsoluteError(i));
 #else 
                 double absval = fabs(s1->GetValue(i) - s0->GetValue(i)); 
                 s2->SetValue(i, absval);
@@ -245,7 +245,7 @@ class VtuPDEWriter : public PDEWriter
             vtkDoubleArray* s3 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(rel_err_name.c_str()); 
             for (int i = 0; i < s3->GetSize(); i++) {
 #if USE_PDE_ERR
-                s3->SetValue(i, heat->getRelativeError(i));
+                s3->SetValue(i, pde->getRelativeError(i));
 #else 
                  if (fabs(s1->GetValue(i)) > 1e-10) {
                     s3->SetValue(i, s2->GetValue(i) / fabs( s1->GetValue(i)));
@@ -258,7 +258,7 @@ class VtuPDEWriter : public PDEWriter
             // Update the abs_error: 
             vtkDoubleArray* s4 = (vtkDoubleArray*)ugrid->GetPointData()->GetArray(diff_name.c_str()); 
             for (int i = 0; i < s4->GetSize(); i++) {
-                s4->SetValue(i, heat->getDiffusivityAtNode(i));
+                s4->SetValue(i, pde->getDiffusivityAtNode(i));
             }
 #endif 
             char fname[FILENAME_MAX]; 
@@ -268,9 +268,10 @@ class VtuPDEWriter : public PDEWriter
 //            uwriter->WriteNextTime(iter);
             uwriter->Write();
 
-            std::cout << "VTU FILE WRITTEN" << std::endl;
+            pde->checkNorms();
+//            std::cout << "VTU FILE WRITTEN" << std::endl;
             //Write ASCII files: 
-            //heat->writeLocalSolutionToFile(iter);
+            //pde->writeLocalSolutionToFile(iter);
         }
 
         void writeGlobalVTU(int iter) {
@@ -294,6 +295,7 @@ class VtuPDEWriter : public PDEWriter
          * Write the local solution, error, etc for a subdomain
          */
         virtual void writeLocal(int iter) { 
+            std::cout << "Iteration " << iter << ", writing local solution file.\n";
             this->writeVTU(iter); 
         }
 
@@ -305,6 +307,7 @@ class VtuPDEWriter : public PDEWriter
             comm_unit->consolidateObjects(subdomain);
             comm_unit->barrier();
 
+            std::cout << "Iteration " << iter << ", writing global solution file.\n";
             this->writeGlobalVTU(iter);
             //subdomain->writeGlobalSolutionToFile(iter);
         }

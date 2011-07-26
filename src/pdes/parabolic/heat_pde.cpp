@@ -56,6 +56,7 @@ void HeatPDE::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f
     // EFB06092011: div_grad is noticeably faster and it works. Gordon keeps
     // saying his didnt. I need to get a non-uniform test case with known exact
     // solution to verify that statement.
+    // NOTE: I use Rewritten Laplacian because it saves on MPI comm time.
 #define SOLVE_DIV_GRAD 0
 #if SOLVE_DIV_GRAD
     this->solveDivGrad(u_t, f_out, n_stencils, n_nodes, t);

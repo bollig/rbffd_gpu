@@ -148,7 +148,7 @@ class RBFFD
 
         double getHVScalar() {
             //return -hv_gamma;
-            return -hv_gamma / pow(grid_ref.getNodeListSize(), hv_k);
+            return -hv_gamma / pow(grid_ref.getGlobalNodeListSize(), hv_k);
         }
 
         void setComputeConditionNumber(bool tf) {

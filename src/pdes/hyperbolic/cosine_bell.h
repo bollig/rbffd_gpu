@@ -22,11 +22,32 @@ class CosineBell : public TimeDependentPDE
 #endif 
         int useHyperviscosity; 
 
+        // RADIUS OF THE SPHERE: 
+        double a;
+        // RADIUS OF THE BELL
+        double R;
+        // ANGLE OF ADVECTION AROUND SPHERE (from Equator and Greenwhich Mean Time) 
+        double alpha;
+        // The initial velocity (NOTE: scalar in denom is 12 days in seconds)
+        double u0;
+        double time_for_revolution; 
+
     public: 
-        CosineBell(Domain* grid, RBFFD* der, Communicator* comm, int useHyperviscosity, bool weightsComputed=false) 
+        CosineBell(Domain* grid, RBFFD* der, Communicator* comm, double earth_radius, double velocity_angle, double one_revolution_in_seconds, int useHyperviscosity, bool weightsComputed=false) 
             : TimeDependentPDE(grid, der, comm), weightsPrecomputed(weightsComputed), 
-               useHyperviscosity(useHyperviscosity)
-        { ; }
+               useHyperviscosity(useHyperviscosity), 
+                   // RADIUS OF THE SPHERE: 
+                   a(earth_radius), //6.37122*10^6; % radius of earth in meters
+                   // ANGLE OF ADVECTION AROUND SPHERE (from Equator and Greenwhich Mean Time) 
+                   alpha(velocity_angle),
+                   // Time in seconds to complete one revolution
+                   time_for_revolution(one_revolution_in_seconds)
+        { 
+            // RADIUS OF THE BELL
+            R = a/3.;
+            // The initial velocity (NOTE: scalar in denom is 12 days in seconds)
+            u0 = (2.*M_PI*a)/time_for_revolution; 
+        }
 
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble(); 

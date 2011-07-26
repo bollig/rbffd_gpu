@@ -15,13 +15,13 @@ class PDEWriter
         int local_write_freq; 
         int global_write_freq; 
         Domain* subdomain; 
-        TimeDependentPDE* heat; 
+        TimeDependentPDE* pde; 
         Communicator* comm_unit;
         EB::TimerList tm; 
 
     public: 
-        PDEWriter(Domain* subdomain_, TimeDependentPDE* heat_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
-            : subdomain(subdomain_), heat(heat_), comm_unit(comm_unit_), 
+        PDEWriter(Domain* subdomain_, TimeDependentPDE* pde_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
+            : subdomain(subdomain_), pde(pde_), comm_unit(comm_unit_), 
             local_write_freq(local_write_freq_), 
             global_write_freq(global_write_freq_) { 
                 tm["write"] = new EB::Timer("write grid info and solution to disk");
@@ -46,13 +46,13 @@ class PDEWriter
                 tm["write"]->stop(); 
             }
 
-            if ((iter % local_write_freq) == 0) { 
+            if ((local_write_freq > 0) && ((iter % local_write_freq) == 0)) { 
                 tm["write"]->start(); 
                 this->writeLocal(iter); 
                 tm["write"]->stop(); 
             }
 
-            if ((iter % global_write_freq) == 0) { 
+            if ((global_write_freq > 0) && ((iter % global_write_freq) == 0)) { 
                 tm["write"]->start(); 
                 this->writeGlobal(iter); 
                 tm["write"]->stop();
@@ -74,9 +74,10 @@ class PDEWriter
          * Write the local solution, error, etc for a subdomain
          */
         virtual void writeLocal(int iter) { 
-            heat->writeLocalSolutionToFile(iter); 
-            //    heat->writeSolutionToFile(iter); 
-            //    heat->writeErrorToFile(iter);  
+            std::cout << "Iteration " << iter << ", writing local solution file.\n";
+            pde->writeLocalSolutionToFile(iter); 
+            //    pde->writeSolutionToFile(iter); 
+            //    pde->writeErrorToFile(iter);      
         }
 
         /** Consolidate and write the global solution and grid to file 
@@ -84,9 +85,10 @@ class PDEWriter
          *      writing local information (e.g., no error)
          */
         virtual void writeGlobal(int iter) {
-            comm_unit->consolidateObjects(heat);
+            std::cout << "Iteration " << iter << ", writing global solution file.\n";
+            comm_unit->consolidateObjects(pde);
             comm_unit->barrier();
-            heat->writeGlobalSolutionToFile(iter);
+            pde->writeGlobalSolutionToFile(iter);
         }
 
         /** 

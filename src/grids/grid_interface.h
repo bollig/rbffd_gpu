@@ -37,6 +37,11 @@ class Grid
         // match the node_list.size() then we need to regenerate the node
         // set.
         unsigned int nb_nodes; 
+        
+        // Number of nodes in the global domain. This should match nb_nodes
+        // in the event we're running on 1proc. If we run multiple procs 
+        // expect the union of all subdomains to be this number of nodes.
+        unsigned int global_num_nodes;
 
         // Maximum number of nodes to allow in a stencil (can be equal to
         // nb_nodes if we want to define a global function across a stencil)
@@ -102,6 +107,7 @@ class Grid
             ns_nbx(10), ns_nby(10), ns_nbz(10),
             max_st_size(0), max_st_radius(DBL_MAX),
             pert(0.), nb_nodes(0),
+            global_num_nodes(0),
             node_list_kdtree(NULL),
             stencilsComputed(false),
             partitioned_indices(false),
@@ -114,6 +120,7 @@ class Grid
             ns_nbx(10), ns_nby(10), ns_nbz(10),
             max_st_size(0), max_st_radius(DBL_MAX), 
             pert(0), nb_nodes(num_nodes), 
+            global_num_nodes(num_nodes),
             node_list_kdtree(NULL),
             stencilsComputed(false),
             partitioned_indices(false),
@@ -126,6 +133,7 @@ class Grid
             ns_nbx(10), ns_nby(10), ns_nbz(10),
             max_st_size(0), max_st_radius(DBL_MAX), 
             pert(0), nb_nodes(nodes.size()), 
+            global_num_nodes(nodes.size()),
             node_list_kdtree(NULL), 
             stencilsComputed(false),
             partitioned_indices(false),
@@ -259,7 +267,7 @@ class Grid
         double getMinStencilRadius(int indx) 
         { return min_stencil_radii[indx]; }
 
-
+        unsigned int getGlobalNodeListSize() { return global_num_nodes; }
 
         KDTree* getNodeListAsKDTree() {
             if (node_list_kdtree == NULL) {

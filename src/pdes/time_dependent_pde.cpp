@@ -36,7 +36,7 @@ void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
 
 // Advancing requires: 
 //  - computing an update to the current solution (i.e., calling applyWeightsForDerivs(currentSolution)) 
-//  - applying the updates to the current solution (i.e., RK45 weighted summation of intermediate updates).
+//  - applying the updates to the current solution (i.e., RK4 weighted summation of intermediate updates).
 void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
     tm["advance"]->start(); 
     switch (which) 

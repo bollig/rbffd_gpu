@@ -434,8 +434,8 @@ void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
 
 void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
 
-    std::string rk4_k_kernel_name = "evaluate_K_RK4"; 
-    std::string rk4_final_kernel_name = "final_RK4"; 
+    std::string rk4_substep_kernel_name  = "evaluateRK4_substep"; 
+    std::string rk4_advance_substep_kernel_name = "advanceRK4_substeps"; 
 
     if (!this->getDeviceFP64Extension().compare("")){
         useDouble = false;
@@ -447,12 +447,12 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
     std::string my_source = local_sources; 
     if(useDouble) {
 #define FLOAT double 
-#include "cl_kernels/rk4_heat.cl"
+#include "cl_kernels/rk4_general.cl"
         my_source.append(kernel_source);
 #undef FLOAT
     }else {
 #define FLOAT float
-#include "cl_kernels/rk4_heat.cl"
+#include "cl_kernels/rk4_general.cl"
         my_source.append(kernel_source);
 #undef FLOAT
     }
@@ -461,9 +461,11 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
     this->loadProgram(my_source, useDouble); 
 
     try{
-        std::cout << "Loading kernel \""<< rk4_k_kernel_name << "\" with double precision = " << useDouble << "\n"; 
-        rk4_k_kernel = cl::Kernel(program, rk4_k_kernel_name.c_str(), &err);
-        rk4_final_kernel = cl::Kernel(program, rk4_final_kernel_name.c_str(), &err);
+        std::cout << "Loading kernel \""<< rk4_substep_kernel_name << "\" with double precision = " << useDouble << "\n"; 
+        rk4_substep_kernel = cl::Kernel(program, rk4_substep_kernel_name.c_str(), &err);
+
+        std::cout << "Loading kernel \""<< rk4_advance_substep_kernel_name << "\" with double precision = " << useDouble << "\n"; 
+        rk4_advance_substep_kernel = cl::Kernel(program, rk4_advance_substep_kernel_name.c_str(), &err);
         std::cout << "Done attaching kernels!" << std::endl;
     }
     catch (cl::Error er) {

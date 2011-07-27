@@ -31,11 +31,14 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // IN and OUT
         cl::Buffer gpu_solution[2]; 
 
-        // We have two kernels: 
+        // We have three kernels for RK4: 
         // the first is a straight RK4 scheme for nodes without cross CPU deps
-        cl::Kernel rk4_k_kernel;
-        // The second pauses after each RK4 substep to perform MPI comm
-        cl::Kernel rk4_final_kernel;
+        cl::Kernel rk4_no_comm_kernel;
+
+        // the second is for evaluating each of the k1,k2,k3,k4 substeps of RK4 
+        cl::Kernel rk4_substep_kernel;
+        // we need a final kernel to sum the substeps and advance the solution.
+        cl::Kernel rk4_advance_substep_kernel;
 
 
     public: 

@@ -2,6 +2,7 @@
 #include <map> 
 
 #include "pdes/hyperbolic/cosine_bell.h"
+#include "pdes/hyperbolic/cosine_bell_cl.h"
 
 #include "grids/grid_reader.h"
 
@@ -299,8 +300,11 @@ int main(int argc, char** argv) {
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
 
-    // We need to provide comm_unit to pass ghost node info
-    pde = new CosineBell(subdomain, der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, useHyperviscosity, true);
+    if (use_gpu) {
+        pde = new CosineBell(subdomain, der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, useHyperviscosity, true);
+    } else {
+        pde = new CosineBell_CL(subdomain, (RBFFD_CL*)der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, useHyperviscosity, true);
+    }
 
     // This should not influence anything. 
     pde->setStartEndTime(start_time, end_time);

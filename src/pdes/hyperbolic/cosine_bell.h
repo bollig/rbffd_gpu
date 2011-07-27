@@ -65,7 +65,7 @@ class CosineBell : public TimeDependentPDE
         void setupTimers(); 
 
     protected: 
-        virtual std::string className() {return "vortex_rollup";}
+        virtual std::string className() {return "cosine_bell";}
 }; 
 #endif 
 

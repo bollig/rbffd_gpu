@@ -67,6 +67,8 @@ SET( REQUIRED_CL_SOURCE_FILES
     #REQUIRES BOOST:    
     #TODO: Update    pdes/elliptic/nonuniform_poisson1_cl.cpp
     pdes/parabolic/heat_pde_cl.cpp
+    #    pdes/hyperbolic/cosine_bell_cl.cpp
+    pdes/time_dependent_pde_cl.cpp
     rbffd/rbffd_cl.cpp
 )
 

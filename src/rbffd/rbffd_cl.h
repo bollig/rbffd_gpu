@@ -82,7 +82,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         //                This override is how we hack this together.
         // Apply weights to an input solution vector and get the corresponding derivatives out
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
-            std::cout << "[RBFFD_CL] Warning! Using GPU to apply weights, but NOT advance timestep\n";
+//            std::cout << "[RBFFD_CL] Warning! Using GPU to apply weights, but NOT advance timestep\n";
             unsigned int nb_stencils = grid_ref.getStencilsSize();
             deriv.resize(nb_stencils); 
             applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);

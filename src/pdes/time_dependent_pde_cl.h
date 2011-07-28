@@ -113,7 +113,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         void launchRK4_K_Kernel( double solveDT, double advanceDT, cl::Buffer solve_in, cl::Buffer solve_out, cl::Buffer advance_in, cl::Buffer advance_out);
         void launchRK4_Final_Kernel( double solveDT, double advanceDT, cl::Buffer k1, cl::Buffer k2, cl::Buffer k3, cl::Buffer advance_in, cl::Buffer advance_out);
 
-        virtual void loadStepKernel(std::string& local_sources); 
+        virtual void loadEulerKernel(std::string& local_sources); 
 
         // Launch a kernel to do u(n+1) = u(n) + dt * f( U(n) ) over the
         // n_stencils_in_set starting at offset_to_set index in solution u.  

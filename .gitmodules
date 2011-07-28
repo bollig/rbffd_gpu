@@ -1,3 +1,6 @@
 [submodule "common/external/jedbrown-cmake-modules"]
 	path = common/external/jedbrown-cmake-modules
 	url = git://github.com/jedbrown/cmake-modules.git
+[submodule "doc"]
+	path = doc
+	url = ssh://efb06@pamd.sc.fsu.edu/~/repos/rbf_doc.git

@@ -240,18 +240,18 @@ void TimeDependentPDE_CL::advance(TimeScheme which, double delta_t) {
     tm["advance_gpu"]->start(); 
     switch (which) 
     {
-#if 0
         case EULER: 
             advanceFirstOrderEuler(delta_t); 
             break; 
-
+#if 0
         case MIDPOINT: 
             advanceSecondOrderMidpoint(delta_t);
             break;  
-#endif 
+
         case RK4: 
             advanceRungeKutta4(delta_t); 
             break;
+#endif 
 
         default: 
             std::cout << "[TimeDependentPDE_CL] Invalid TimeScheme specified. Bailing...\n";
@@ -265,9 +265,162 @@ void TimeDependentPDE_CL::advance(TimeScheme which, double delta_t) {
 //----------------------------------------------------------------------
 
 // FIXME: this is a single precision version
+void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
+
+    // Target (st5): 0.3991 ms
+    //        (st33): 1.2 ms
+    // GPU: 
+    // Without diffusion, boundary or f(u) eval (st33): 0.3599
+    // Without boundary or f(u) eval (st33): 0.3562
+    // Without boundary (st33): 4.8389
+    // no boundary, K*Laplacian only (no gradK . gradU) (st33): 1.1898
+
+    // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
+    // For explicit schemes we can just solve for our weights and have them stored in memory.
+    this->assemble(); 
+
+    // 1) Launch kernel for set QmD (will take a while, so in the meantime...)
+    this->launchEulerSetQmDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]); 
+    
+    // NOTE: when run in serial only one kernel launch is required. 
+    if (comm_ref.getSize() > 1) {
+        std::cout << "INSIDE EULER set D STUFF\n";
+        // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
+        if (useDouble) {
+            this->syncSetODouble(this->U_G, gpu_solution[INDX_IN]);
+        } else {
+            this->syncSetOSingle(this->U_G, gpu_solution[INDX_IN]); 
+        }
+
+        // 3) OVERLAP: Transmit between CPUs
+        // NOTE: Require an MPI barrier here
+        this->sendrecvUpdates(U_G, "U_G");
+
+
+        // 4) OVERLAP: Update the input with set R
+        if (useDouble) {
+            this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
+        } else {
+            this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]); 
+        }
+
+        // 6) Launch a SECOND kernel to complete set D for this step (NOTE: in
+        // higher order timeschemes we need to perform ADDITIONAL communication
+        // here. Also, this MIGHT modify the boundary value so we should enforce
+        // conditions AFTER this kernel)
+        this->launchEulerSetDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
+        queue.finish();
+    }
+    queue.finish();
+
+    // 5) FINAL: reset boundary solution on INDX_OUT
+    // COST: 0.3 ms
+//TODO:     this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
+
+    // Fire events to force the queue to execute.
+    //queue.finish();
+
+    // Flip our ping pong buffers. 
+    swap(INDX_IN, INDX_OUT);
+}
+
+//----------------------------------------------------------------------
+//
+// FIXME: this is a single precision version
+void TimeDependentPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
+#if 0
+    // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
+    // For explicit schemes we can just solve for our weights and have them stored in memory.
+    this->assemble(); 
+
+    //-------- Overlap beweeen these: ------------
+    // NOTE: syncSet*** ONLY copies between CPU and GPU. It does not synchronize across CPUs.
+    // Use sendrecvUpdates to perform an interproc comm.
+    if (useDouble) {
+        this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
+    } else {
+        this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]); 
+    }
+
+    // Launch kernel
+    //  params: timestep, vec_for_deriv_calc, vec_for_sum_rhs, vec_for_sum_lhs
+    //  In other words: s2 = s1 + dt * d(s0)/dt; 
+    //
+    //  Euler: 
+    //      s1 = s0 + dt * d(s0)/dt
+    //
+    //  Midpoint: 
+    //      s1 = s0 + 0.5 dt * d(s0)/dt
+    //      s2 = s0 + dt * d(s1)/dt
+    //
+    //  RK4: 
+    //      s1 = s0 + dt
+    this->launchStepKernel( 0.5*delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] ); 
+    
+    // Enforce boundary using GPU, but specify we want to use the intermediate buffer
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_INTERMEDIATE_1], cur_time+0.5*delta_t); 
+    
+    // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
+    // the solution (i.e., sets O and R), 
+    // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
+    // the GPU calling syncSet*** on our INDX_OUT will overwrite any
+    // intermediate values stored there temporarily
+    // If we want to match the GPU we
+    // should do: syncCPUtoGPU()
+    if (useDouble) {
+        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+    } else {
+        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
+    }
+
+    // Should send intermediate steps by copying down from GPU, sending, then
+    // copying back up to GPU
+    this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+   
+    if (useDouble) {
+        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+    } else {
+        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]); 
+    }
+
+    this->launchStepKernel( delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_OUT] ); 
+    //-------- END OVERLAP -----------------------
+
+    // reset boundary solution on INDX_OUT
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time); 
+
+    if (useDouble) {
+        this->syncSetODouble(this->U_G, gpu_solution[INDX_OUT]);
+    } else {
+        this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]); 
+    }
+
+    queue.finish();
+
+//    this->syncCPUtoGPU(); 
+         
+#if 0
+    for (int i = 0; i < nb_nodes; i++) {
+        std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
+    }
+#endif 
+
+    // synchronize();
+    this->sendrecvUpdates(U_G, "U_G");
+
+    //exit(EXIT_FAILURE);
+
+    swap(INDX_IN, INDX_OUT);
+#endif 
+}
+
+//----------------------------------------------------------------------
+
+
+// FIXME: this is a single precision version
 void TimeDependentPDE_CL::advanceRK4(double delta_t) {
 
-#if EVAN_UPDATE_THESE
+#if 0 
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that. 
     // For explicit schemes we can just solve for our weights and have them stored in memory.
     this->assemble(); 
@@ -424,11 +577,54 @@ void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
 
 #if 0
     this->loadBCKernel(local_sources);
-    this->loadStepKernel(local_sources); 
 #endif 
+
+    this->loadEulerKernel(local_sources); 
     this->loadRK4Kernels(local_sources); 
     tm["loadAttach"]->stop(); 
 }
+
+//----------------------------------------------------------------------
+
+void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
+
+
+    std::string kernel_name = "advanceEuler"; 
+
+    if (!this->getDeviceFP64Extension().compare("")){
+        useDouble = false;
+    }
+    if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
+        useDouble = false;
+    } 
+
+    std::string my_source = local_sources; 
+    if(useDouble) {
+        // This keeps FLOAT scoped
+#define FLOAT double 
+#include "cl_kernels/euler_general.cl"
+        my_source.append(kernel_source);
+#undef FLOAT
+    }else {
+#define FLOAT float
+#include "cl_kernels/euler_general.cl"
+        my_source.append(kernel_source);
+#undef FLOAT
+    }
+
+    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
+    this->loadProgram(my_source, useDouble); 
+
+    try{
+        std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n"; 
+        step_kernel = cl::Kernel(program, kernel_name.c_str(), &err);
+        std::cout << "Done attaching kernels!" << std::endl;
+    }
+    catch (cl::Error er) {
+        printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
+    }
+}
+
 
 //----------------------------------------------------------------------
 
@@ -500,4 +696,77 @@ void TimeDependentPDE_CL::allocateGPUMem() {
 
 //----------------------------------------------------------------------
 //
+
+
+//----------------------------------------------------------------------
+
+// Launch a kernel to perform the step: 
+//      u(n+1) = u(n) + dt * f( u(n) )
+// Params: 
+//  dt => Timestep
+//  sol_in => parameter u(n) above
+//  sol_out => parameter u(n+1) above
+void TimeDependentPDE_CL::launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out) {
+    this->launchStepKernel(dt, sol_in, sol_in, sol_out, grid_ref.QmD.size(), 0);
+}
+
+//----------------------------------------------------------------------
+
+// Same as EulerSetQmDKernel, but it requires transfer of O and R to be complete. 
+void TimeDependentPDE_CL::launchEulerSetDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out) {
+    this->launchStepKernel(dt, sol_in, sol_in, sol_out, grid_ref.D.size(), grid_ref.QmD.size());
+}
+
+//----------------------------------------------------------------------
+
+
+// Launch a kernel to perform the step: 
+//      u(n+1) = u(n) + dt * f( U(n) )
+// Params: 
+//  dt => Timestep
+//  sol_in => parameter u(n) above
+//  deriv_sol_in => parameter U(n) above
+//  sol_out => parameter u(n+1) above
+//
+void TimeDependentPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol_in, cl::Buffer& sol_out, unsigned int n_stencils, unsigned int offset_to_set) {
+
+//    unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+    unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
+    unsigned int nb_nodes = grid_ref.getNodeListSize(); 
+    float dt_f = (float) dt;
+    float cur_time_f = (float) cur_time;
+
+    try {
+        step_kernel.setArg(0, der_ref_gpu.getGPUStencils()); 
+        step_kernel.setArg(1, der_ref_gpu.getGPUWeights(RBFFD::LAPL)); 
+        step_kernel.setArg(2, der_ref_gpu.getGPUWeights(RBFFD::X)); 
+        step_kernel.setArg(3, der_ref_gpu.getGPUWeights(RBFFD::Y)); 
+        step_kernel.setArg(4, der_ref_gpu.getGPUWeights(RBFFD::Z)); 
+        step_kernel.setArg(5, sol_in);                 // COPY_IN 
+        step_kernel.setArg(6, deriv_sol_in);                 // COPY_IN 
+        step_kernel.setArg(8, sizeof(unsigned int), &offset_to_set);               // const 
+        step_kernel.setArg(9, sizeof(unsigned int), &n_stencils);               // const 
+        step_kernel.setArg(10, sizeof(unsigned int), &nb_nodes);                  // const 
+        step_kernel.setArg(11, sizeof(unsigned int), &stencil_size);            // const
+        step_kernel.setArg(12, sizeof(float), &dt_f);            // const
+        step_kernel.setArg(13, sizeof(float), &cur_time_f);            // const
+        step_kernel.setArg(14, sol_out);                 // COPY_IN / COPY_OUT
+    } catch (cl::Error er) {
+        printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+    }
+
+    err = queue.enqueueNDRangeKernel(step_kernel, /* offset */ cl::NullRange, 
+            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(n_stencils), 
+            /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+
+//    err = queue.finish();
+    if (err != CL_SUCCESS) {
+        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+            " failed (" << err << ")\n";
+        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+
 

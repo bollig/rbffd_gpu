@@ -31,15 +31,20 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // IN and OUT
         cl::Buffer gpu_solution[2]; 
 
-        // We have three kernels for RK4: 
-        // the first is a straight RK4 scheme for nodes without cross CPU deps
-        cl::Kernel rk4_no_comm_kernel;
 
-        // the second is for evaluating each of the k1,k2,k3,k4 substeps of RK4 
+        // RK4 requires 4 substeps with a barrier between each. 
+        // To minimize barriers, we use two kernels. First, a 
+        // kernel which evaluates a substep (k1, k2, k3), scales it and adds
+        // it to the solution--this is the input for the next evaluation 
+        // using the same routine (except k3). 
         cl::Kernel rk4_substep_kernel;
-        // we need a final kernel to sum the substeps and advance the solution.
+        // The second kernel takes the 3 substep outputs from the above kernel
+        // scales, and addes them to the solution to output the new solution
+        // at t+dt. 
         cl::Kernel rk4_advance_substep_kernel;
 
+        // This is for Euler and Midpoint method substeps
+        cl::Kernel step_kernel;
 
     public: 
 
@@ -94,6 +99,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // These should be generic for any PDE, so long as we have the solve()
         // routine custom to the PDE we can build the RK4 kernel generically. 
         virtual void advanceRK4(double dt);
+        virtual void advanceFirstOrderEuler(double dt);
+        virtual void advanceSecondOrderMidpoint(double dt);
 #if 0
         virtual void advanceEuler(double dt);
         virtual void advanceMidpoint(double dt);
@@ -106,7 +113,16 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         void launchRK4_K_Kernel( double solveDT, double advanceDT, cl::Buffer solve_in, cl::Buffer solve_out, cl::Buffer advance_in, cl::Buffer advance_out);
         void launchRK4_Final_Kernel( double solveDT, double advanceDT, cl::Buffer k1, cl::Buffer k2, cl::Buffer k3, cl::Buffer advance_in, cl::Buffer advance_out);
 
+        virtual void loadStepKernel(std::string& local_sources); 
 
+        // Launch a kernel to do u(n+1) = u(n) + dt * f( U(n) ) over the
+        // n_stencils_in_set starting at offset_to_set index in solution u.  
+        // For example, if set D starts at index 15 and is 5 elements wide,
+        // then call n_stencils_in_set=5, offset_to_set=15 (this routine
+        // calculates the BYTE offset on its own. 
+        void launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol, cl::Buffer& sol_out, unsigned int n_stencils_in_set, unsigned int offset_to_set);
+        void launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
+        void launchEulerSetDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
 
 
         virtual std::string className() {return "heat_cl";}

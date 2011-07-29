@@ -1,0 +1,12 @@
+The doc directory has been removed and placed in a separate GIT repository.
+
+Most of the documentaton is latex and PNG figures, so we avoid distributing it
+with the source code to keep the dist size small.
+
+To get the content of the doc directory you can either: 
+
+a) from this directory run "git submodule init; git submodule update" which will connect to the doc git repo and fetch a specific version of the documentation that was current the day the dir was removed from this repo.  NOTE: if you want the latest documentation, run the above command, followed by "cd doc; git checkout master; git pull origin master"
+
+b) checkout the doc repo independently of the rbffd_gpu.git. The git url is: ssh://pamd.sc.fsu.edu/~efb06/repos/rbffd_gpu_doc.git 
+
+

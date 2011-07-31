@@ -60,7 +60,7 @@ std::string getLocalGPUFuncs() {
 ExactSolution* getExactSolution(int dim_num) {
 //    double Re = 10;
 //    decay = 1.0/Re;
-    double L = maxX - minX; 
+   // double L = maxX - minX;
     ExactSolution* exact = new Exact1D(minX, maxX, decay);
     // NOTE: we must make sure the diffusivity in the local kernel matches the
     // exact solution or our error will look abnormally large
@@ -417,8 +417,8 @@ int main(int argc, char** argv) {
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
-        char label[256]; 
 #if 0
+        char label[256];
         sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
         pde->printSolution(label); 
 #endif 

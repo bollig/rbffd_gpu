@@ -40,7 +40,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         cl::Kernel rk4_substep_kernel;
         // The second kernel takes the 3 substep outputs from the above kernel
         // scales, and addes them to the solution to output the new solution
-        // at t+dt. 
+        // at t+dt.
         cl::Kernel rk4_advance_substep_kernel;
 
         // This is for Euler and Midpoint method substeps

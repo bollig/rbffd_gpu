@@ -7,6 +7,20 @@
 
 #SET ( TEST_COUNT 0 ) 
 
+MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source _destination)
+
+    ADD_CUSTOM_COMMAND(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${_destination}
+        COMMAND #${CMAKE_COMMAND} copy
+        cp ${CMAKE_SOURCE_DIR}/src/cl_kernels/${_source} ${CMAKE_CURRENT_BINARY_DIR}/${_destination}
+        DEPENDS ${CMAKE_SOURCE_DIR}/src/cl_kernels/${_source}
+    )
+    add_custom_target(bin ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${_destination})
+
+ENDMACRO ( COPY_KERNEL_SOLVER_COMMAND _source _destination)
+
+
+
 MACRO ( LOAD_VTK )
     # if VTK_FOUND and ENABLED
     #   assume the rbf_vtk lib was built

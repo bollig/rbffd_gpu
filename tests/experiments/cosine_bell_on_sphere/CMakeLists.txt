@@ -24,6 +24,10 @@ require_config()   # Default is to require test.conf
 
 load_vtk()
 
+# Copy the source to destination whenever we run: "make solver"
+copy_kernel_solver_command("cosine_bell_solve.cl" "solve.cl")
+
+
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )

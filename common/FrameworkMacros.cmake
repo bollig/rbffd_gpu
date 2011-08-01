@@ -7,7 +7,13 @@
 
 #SET ( TEST_COUNT 0 ) 
 
-MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source _destination)
+MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source )
+
+    if ( ${ARGC} LESS 2 )
+        set (_destination "solver.cl")
+    else (${ARGC} LESS 2)
+        set (_destination ${ARGV1})
+    endif (${ARGC} LESS 2)
 
     ADD_CUSTOM_COMMAND(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${_destination}
@@ -15,7 +21,16 @@ MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source _destination)
         cp ${CMAKE_SOURCE_DIR}/src/cl_kernels/${_source} ${CMAKE_CURRENT_BINARY_DIR}/${_destination}
         DEPENDS ${CMAKE_SOURCE_DIR}/src/cl_kernels/${_source}
     )
-    add_custom_target(bin ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${_destination})
+    SET (_which "${_source}_to_${_destination}")
+    
+    IF (NOT DEFINED ${TARGET_COUNT_${_which}})
+        SET(TARGET_COUNT_${_destination} 0 CACHE TYPE INTERNAL)
+        MARK_AS_ADVANCED(TARGET_COUNT_${_which})
+    ENDIF (NOT DEFINED ${TARGET_COUNT_${_which}})
+
+    increment(TARGET_COUNT_${_which})
+    SET (FULL_TARGET_NAME "Copy ${_source} to ${_destination} ${TARGET_COUNT_${_which}}")
+    add_custom_target(${FULL_TARGET_NAME} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${_destination})
 
 ENDMACRO ( COPY_KERNEL_SOLVER_COMMAND _source _destination)
 

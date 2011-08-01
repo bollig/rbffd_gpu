@@ -24,17 +24,40 @@ MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source )
     SET (_which "${_source}_to_${_destination}")
     
     IF (NOT DEFINED ${TARGET_COUNT_${_which}})
-        SET(TARGET_COUNT_${_destination} 0 CACHE TYPE INTERNAL)
+        SET(TARGET_COUNT_${_which} 0 CACHE TYPE INTERNAL)
         MARK_AS_ADVANCED(TARGET_COUNT_${_which})
     ENDIF (NOT DEFINED ${TARGET_COUNT_${_which}})
 
     increment(TARGET_COUNT_${_which})
     SET (FULL_TARGET_NAME "Copy ${_source} to ${_destination} ${TARGET_COUNT_${_which}}")
-    add_custom_target(${FULL_TARGET_NAME} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${_destination})
+    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${_destination})
 
 ENDMACRO ( COPY_KERNEL_SOLVER_COMMAND _source _destination)
 
+MACRO ( COPY_FILE_COMMAND _source_filename _source_dir _dest_filename _dest_dir)
 
+    SET (_source "${_source_dir}/${_source_filename}")
+    SET (_destination "${_dest_dir}/${_dest_filename}")
+
+    ADD_CUSTOM_COMMAND(
+        OUTPUT ${_dest_filename}
+        COMMAND 
+        cp ${_source} ${_destination}
+        DEPENDS ${_source_filename}
+    )
+    SET (_which "${_source_filename}_to_${_dest_filename}")
+    
+    IF (NOT DEFINED ${TARGET_COUNT_${_which}})
+        SET(TARGET_COUNT_${_which} 0 CACHE TYPE INTERNAL)
+        MARK_AS_ADVANCED(TARGET_COUNT_${_which})
+    ENDIF (NOT DEFINED ${TARGET_COUNT_${_which}})
+
+    STRING(REPLACE "/" "_" _dest_dir_no_seps ${CMAKE_CURRENT_BINARY_DIR})
+
+    increment(TARGET_COUNT_${_which})
+    SET (FULL_TARGET_NAME "Copy ${_source_filename} to ${_dest_dir_no_seps}_${TARGET_COUNT_${_which}}")
+    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS ${_destination})
+ENDMACRO ( COPY_FILE_COMMAND _source_filename _source_dir _dest_filename _dest_dir)
 
 MACRO ( LOAD_VTK )
     # if VTK_FOUND and ENABLED
@@ -94,16 +117,23 @@ ENDMACRO ( PRINT_DEPS )
 ############################################
 MACRO ( REQUIRE_CONFIG )
     if ( ${ARGC} LESS 1 )
-        set (_configfilename ${CMAKE_CURRENT_SOURCE_DIR}/test.conf)
+        set (_filename test.conf)
     else (${ARGC} LESS 1)
-        set (_configfilename ${CMAKE_CURRENT_SOURCE_DIR}/${ARGV0})
+        set (_filename ${ARGV0})
     endif (${ARGC} LESS 1)
-    if ( EXISTS ${_configfilename} )	
+        
+    set (_source ${CMAKE_CURRENT_SOURCE_DIR}/${_filename})
+    set (_destination ${CMAKE_CURRENT_BINARY_DIR}/${_filename})
+    
+    if ( EXISTS ${_source} )	
         # COPY ANY CONFIG FILES REQUIRED BY THE TEST
-        FILE(COPY ${_configfilename} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    else (EXISTS ${_configfilename})
-        MESSAGE(SEND_ERROR "\nERROR! File: ${_configfilename} required for testing does not exist.")
-    endif ( EXISTS ${_configfilename} )
+        # FILE(COPY ${_configfilename} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+        COPY_FILE_COMMAND( "${_filename}" "${CMAKE_CURRENT_SOURCE_DIR}" "${_filename}" "${CMAKE_CURRENT_BINARY_DIR}" )
+
+    else (EXISTS ${_source})
+        MESSAGE(SEND_ERROR "\nERROR! File: ${_source} required for testing does not exist.")
+    endif ( EXISTS ${_source} )
 ENDMACRO(REQUIRE_CONFIG)
 
 MACRO ( REQUIRE_FILE _filename)

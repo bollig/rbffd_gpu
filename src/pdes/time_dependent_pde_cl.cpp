@@ -590,32 +590,8 @@ void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
 void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
     std::string kernel_name = "advanceEuler";
 
-
     // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
     std::string my_source = this->loadFileContents("euler_general.cl", true);
-
-
-#if 0
-    if (!this->getDeviceFP64Extension().compare("")){
-        useDouble = false;
-    }
-    if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
-        useDouble = false;
-    } 
-    std::string my_source = local_sources;
-    if(useDouble) {
-        // This keeps FLOAT scoped
-#define FLOAT double
-#include "cl_kernels/euler_general.cl"
-        my_source.append(kernel_source);
-#undef FLOAT
-    }else {
-#define FLOAT float
-#include "cl_kernels/euler_general.cl"
-        my_source.append(kernel_source);
-#undef FLOAT
-    }
-#endif
 
     //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
     this->loadProgram(my_source, useDouble); 
@@ -634,7 +610,7 @@ void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
 
 void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
     std::string kernel_name = "advanceMidpoint";
-
+#if 0
     if (!this->getDeviceFP64Extension().compare("")){
         useDouble = false;
     }
@@ -655,7 +631,11 @@ void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
         my_source.append(kernel_source);
 #undef FLOAT
     }
+#endif
 
+    // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
+    std::string my_source = this->loadFileContents("midpoint_general.cl", true);
+                    ;
     //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
     this->loadProgram(my_source, useDouble);
 
@@ -677,25 +657,8 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
     std::string rk4_substep_kernel_name  = "evaluateRK4_substep"; 
     std::string rk4_advance_substep_kernel_name = "advanceRK4_substeps"; 
 
-    if (!this->getDeviceFP64Extension().compare("")){
-        useDouble = false;
-    }
-    if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
-        useDouble = false;
-    } 
-
-    std::string my_source = local_sources; 
-    if(useDouble) {
-#define FLOAT double 
-#include "cl_kernels/rk4_general.cl"
-        my_source.append(kernel_source);
-#undef FLOAT
-    }else {
-#define FLOAT float
-#include "cl_kernels/rk4_general.cl"
-        my_source.append(kernel_source);
-#undef FLOAT
-    }
+    // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
+    std::string my_source = this->loadFileContents("rk4_general.cl", true);
 
     //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
     this->loadProgram(my_source, useDouble); 

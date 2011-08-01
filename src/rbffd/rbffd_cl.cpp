@@ -67,7 +67,8 @@ void RBFFD_CL::loadKernel() {
 #undef FLOAT
     }
 
-    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
+    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
+    std::cout << "Loading program source: derivative_kernels.cl\n";
     this->loadProgram(my_source, useDouble); 
 
     try{

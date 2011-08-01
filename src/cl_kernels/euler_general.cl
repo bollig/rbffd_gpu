@@ -19,7 +19,7 @@ advanceEuler(
         if(i < nb_stencils) {
                 // This routine will apply our weights to "s" in however many intermediate steps are required
                 // and store the results in feval1
-                FLOAT feval1 = solve(solution_in, nb_stencils, nb_nodes, cur_time);
+                FLOAT feval1 = 0.f; //solve(solution_in, nb_stencils, nb_nodes, cur_time);
 
                 // compute u^* = u^n + dt*lapl(u^n)
                 for (unsigned int i = 0; i < nb_nodes; i++) {

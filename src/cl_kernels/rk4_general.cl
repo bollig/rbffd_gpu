@@ -1,29 +1,26 @@
-#define STRINGIFY_WITH_SUBS(s) STRINGIFY(s)
-#define STRINGIFY(s) #s
-
-std::string kernel_source = STRINGIFY_WITH_SUBS(
+#include "useDouble.cl"
 
 typedef struct Params {
-    uint nb_stencils;           \n
-    uint nb_nodes;              \n
-    uint stencil_size;          \n
+    uint nb_stencils;           
+    uint nb_nodes;              
+    uint stencil_size;          
     // TODO: add weights pointers
 } Params;
 /*
-__kernel void           \n
+__kernel void           
 advanceRK4( 
-         __global uint* stencils,               \n
-         __global FLOAT* solution_in,           \n
-         __global FLOAT* solution_out,          \n
-                  float dt,                     \n
-                  float cur_time,               \n
+         __global uint* stencils,               
+         __global FLOAT* solution_in,           
+         __global FLOAT* solution_out,          
+                  float dt,                     
+                  float cur_time,               
          __constant Params* param 
-)  \n
-{   \n
-    uint i = get_global_id(0);    \n
-\n
-    if(i < param->nb_stencils) {    \n
-        __global uint* st = stencils + i* param->stencil_size;\n
+)  
+{   
+    uint i = get_global_id(0);    
+
+    if(i < param->nb_stencils) {    
+        __global uint* st = stencils + i* param->stencil_size;
 
         //    k1 = dt*func(DM_Lambda, DM_Theta, H, u, t, nodes, useHV);
         //    k2 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F1, t+0.5*dt, nodes, useHV);
@@ -63,9 +60,9 @@ advanceRK4(
         double k4 = solve(stencils, weights, k4_input, nb_stencils, nb_nodes, stencil_size, dt, cur_time+dt); 
   
         // The k's have dt rolled into them
-        solution_out[i] = solution_in[i] + (k1 + 2.*k2 + 2.*k3 + k4)/6.; \n
-    }\n
-}\n
+        solution_out[i] = solution_in[i] + (k1 + 2.*k2 + 2.*k3 + k4)/6.; 
+    }
+}
 */
 
 // -----------------------------------------------------------
@@ -77,25 +74,25 @@ advanceRK4(
 //        the last step (below).
 // -----------------------------------------------------------
 
-__kernel void           \n
+__kernel void           
 evaluateRK4_substep( 
-         __global FLOAT* u_plus_scaled_k_in,           \n
-         __global FLOAT* u_plus_scaled_k_out,          \n
-                  float k_scale,         \n
-                  float dt,                     \n
-                  float cur_time,               \n
-         __global uint* stencils,    \n
-         __global uint* weights,    \n
+         __global FLOAT* u_plus_scaled_k_in,           
+         __global FLOAT* u_plus_scaled_k_out,          
+                  float k_scale,         
+                  float dt,                     
+                  float cur_time,               
+         __global uint* stencils,    
+         __global uint* weights,    
          __constant Params* params 
-)  \n
-{   \n
-    uint i = get_global_id(0);    \n
-\n
-    if(i < params->nb_stencils) {    \n
+)  
+{   
+    uint i = get_global_id(0);    
+
+    if(i < params->nb_stencils) {    
         double feval = 1.0; //solve(u_plus_scaled_k_in, nb_stencils, dt, cur_time, params); 
-        u_plus_scaled_k_out[i] = u_plus_scaled_k_in[i] + k_scale * feval; \n
-    }\n
-}\n
+        u_plus_scaled_k_out[i] = u_plus_scaled_k_in[i] + k_scale * feval; 
+    }
+}
 
 
 
@@ -103,23 +100,23 @@ evaluateRK4_substep(
 // -----------------------------------------------------------
 // Evaluate the final substep of RK4 and advance the solution
 // -----------------------------------------------------------
-__kernel void           \n
+__kernel void           
 advanceRK4_substeps( 
-         __global FLOAT* u_in,           \n
-         __global FLOAT* u_out,          \n
-         __global FLOAT* u_plus_scaled_k1,          \n
-         __global FLOAT* u_plus_scaled_k2,          \n
-         __global FLOAT* u_plus_scaled_k3,          \n
-                  float dt,                     \n
-                  float cur_time,               \n
-         __global uint* stencils,    \n
-         __global uint* weights,    \n
+         __global FLOAT* u_in,           
+         __global FLOAT* u_out,          
+         __global FLOAT* u_plus_scaled_k1,          
+         __global FLOAT* u_plus_scaled_k2,          
+         __global FLOAT* u_plus_scaled_k3,          
+                  float dt,                     
+                  float cur_time,               
+         __global uint* stencils,    
+         __global uint* weights,    
          __constant Params* param 
-)  \n
-{   \n
-    uint i = get_global_id(0);    \n
-\n
-    if(i < param->nb_stencils) {    \n
+)  
+{   
+    uint i = get_global_id(0);    
+
+    if(i < param->nb_stencils) {    
         double sol = u_in[i]; 
 
         // Note: k1 and k2 are scaled by 0.5, but we do NOT remove that scale.
@@ -131,8 +128,6 @@ advanceRK4_substeps(
         double k4 = 1.;//solve(stencils, weights, sol_plus_k3_in, nb_stencils, nb_nodes, stencil_size, dt, cur_time + dt); 
 
         // See logic above. 
-        u_out[i] = sol + (2.*k1 + 4.*k2 + 2.*k3 + k4)/6.; \n
-    }\n
-}\n
-
-);
+        u_out[i] = sol + (2.*k1 + 4.*k2 + 2.*k3 + k4)/6.; 
+    }
+}

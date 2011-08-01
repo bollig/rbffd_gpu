@@ -227,9 +227,11 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
 //----------------------------------------------------------------------
 
 void TimeDependentPDE_CL::syncCPUtoGPU() {
-        std::cout << "SYNC CPU to GPU: " << INDX_IN << std::endl;
+
         unsigned int nb_nodes = grid_ref.getNodeListSize();
         unsigned int solution_mem_bytes = nb_nodes * this->getFloatSize();
+
+        std::cout << "SYNC CPU to GPU: " << solution_mem_bytes << " bytes, from index: " << INDX_IN << std::endl;
 
         if (useDouble) {
                 err = queue.enqueueReadBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
@@ -332,7 +334,6 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
                 queue.finish();
         }
         queue.finish();
-        this->syncCPUtoGPU();
 
         // 5) FINAL: reset boundary solution on INDX_OUT
         // COST: 0.3 ms

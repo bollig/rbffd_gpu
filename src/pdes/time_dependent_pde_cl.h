@@ -52,6 +52,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
 
         TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool weightsComputed=false) 
             : TimeDependentPDE(grid, der, comm),
+              INDX_IN(0), INDX_OUT(1),
+              INDX_INTERMEDIATE_1(0), INDX_INTERMEDIATE_2(1), INDX_INTERMEDIATE_3(2),
             // We maintain a ref to der here so we can keep it cast as an OpenCL RBFFD class
             der_ref_gpu(*der), weightsPrecomputed(weightsComputed)
         {;}

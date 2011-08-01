@@ -364,6 +364,7 @@ void PDE::getGlobalSolution(std::vector<double> *final) {
     // output vector and we're done.
     map<int, double>::iterator it;
     final->resize(global_U_G.size());
+    this->syncCPUtoGPU();
     unsigned int i = 0; 
     for (it = global_U_G.begin(); it != global_U_G.end(); it++, i++) {
         (*final)[i] = (*it).second;
@@ -542,6 +543,7 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
 
 
 void PDE::checkNorms(double max_l2_norm) {
+        this->syncCPUtoGPU();
     std::vector<SolutionType>& sol_vec = this->U_G;
     int nb_pts = sol_vec.size();
     double l1fabs = l1norm(sol_vec, 0, nb_pts); 

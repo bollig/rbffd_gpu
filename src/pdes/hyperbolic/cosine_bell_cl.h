@@ -5,9 +5,9 @@
 
 class CosineBell_CL : public TimeDependentPDE_CL
 {
-    public: 
+    public:
         CosineBell_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, double earth_radius, double velocity_angle, double one_revolution_in_seconds, int useHyperviscosity, bool weightsComputed=false) 
-            :   
+            :
             TimeDependentPDE_CL(grid, der, comm, weightsComputed)
     {
         // Fill in constants
@@ -23,7 +23,7 @@ class CosineBell_CL : public TimeDependentPDE_CL
         }
 
 
-    protected: 
+    protected:
         virtual std::string className() {return "cosine_bell_cl";}
 }; 
 #endif 

@@ -44,6 +44,9 @@ class CLBaseClass
         //----------------------------------------------------------------------
         void loadProgram(std::string& kernel_source, bool enable_fp64 = false);
 
+
+        std::string loadFileContents(const char* filename, bool searchEnvDir);
+
         //----------------------------------------------------------------------
         // Helper function to get error string
         // *********************************************************************

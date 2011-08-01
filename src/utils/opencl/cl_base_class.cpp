@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <stdio.h>
 #include <vector>
 #include <stdlib.h>
@@ -132,7 +133,16 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
 
     try
     {
-        err = program.build(devices);
+            char* kernel_dir = getenv("CL_KERNELS");
+
+            if (kernel_dir == NULL) {
+                printf("\n**** [CLBaseClass] Error: You must set CL_KERNELS in your environment to run on the GPU!\n\n");
+                exit(EXIT_FAILURE);
+            }
+     //       printf("Loading kernels from the directory: %s and .\n **** Specified by environment variable: CL_KERNELS\n", kernel_dir);
+            char includes[PATH_MAX];
+            sprintf(includes, "-I%s -I.", kernel_dir);
+            err = program.build(devices, includes);
     }
     catch (cl::Error er) {
         printf("program.build: %s\n", oclErrorString(er.err()));
@@ -162,6 +172,29 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
 #endif 
 }
 
+
+std::string CLBaseClass::loadFileContents(const char* filename, bool searchEnvDir) {
+
+        if (searchEnvDir) {
+                char* kernel_dir = getenv("CL_KERNELS");
+
+                if (kernel_dir == NULL) {
+                        printf("\n**** [CLBaseClass] Error: You must set CL_KERNELS in your environment to load kernel file contents!\n\n");
+                        exit(EXIT_FAILURE);
+                }
+                char kernel_path[PATH_MAX];
+                sprintf(kernel_path, "%s/%s", kernel_dir, filename);
+
+                std::ifstream ifs(kernel_path);
+                std::string str((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+                return str;
+        } else {
+                // Grab the whole file in one go using the iterators
+                std::ifstream ifs(filename);
+                std::string str((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+                return str;
+        }
+}
 
 
 // Split a string (for example, a list of extensions, given a character

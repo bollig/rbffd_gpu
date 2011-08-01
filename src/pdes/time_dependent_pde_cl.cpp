@@ -580,28 +580,32 @@ void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
 #endif 
 
     this->loadEulerKernel(local_sources); 
-    this->loadRK4Kernels(local_sources); 
+    this->loadMidpointKernel(local_sources);
+    this->loadRK4Kernels(local_sources);
     tm["loadAttach"]->stop(); 
 }
 
 //----------------------------------------------------------------------
 
 void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
+    std::string kernel_name = "advanceEuler";
 
 
-    std::string kernel_name = "advanceEuler"; 
+    // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
+    std::string my_source = this->loadFileContents("euler_general.cl", true);
 
+
+#if 0
     if (!this->getDeviceFP64Extension().compare("")){
         useDouble = false;
     }
     if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
         useDouble = false;
     } 
-
-    std::string my_source = local_sources; 
+    std::string my_source = local_sources;
     if(useDouble) {
         // This keeps FLOAT scoped
-#define FLOAT double 
+#define FLOAT double
 #include "cl_kernels/euler_general.cl"
         my_source.append(kernel_source);
 #undef FLOAT
@@ -611,12 +615,52 @@ void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
         my_source.append(kernel_source);
 #undef FLOAT
     }
+#endif
 
     //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
     this->loadProgram(my_source, useDouble); 
 
     try{
         std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n"; 
+        step_kernel = cl::Kernel(program, kernel_name.c_str(), &err);
+        std::cout << "Done attaching kernels!" << std::endl;
+    }
+    catch (cl::Error er) {
+        printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
+    }
+}
+
+//----------------------------------------------------------------------
+
+void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
+    std::string kernel_name = "advanceMidpoint";
+
+    if (!this->getDeviceFP64Extension().compare("")){
+        useDouble = false;
+    }
+    if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
+        useDouble = false;
+    }
+
+    std::string my_source = local_sources;
+    if(useDouble) {
+        // This keeps FLOAT scoped
+#define FLOAT double
+#include "cl_kernels/midpoint_general.cl"
+        my_source.append(kernel_source);
+#undef FLOAT
+    }else {
+#define FLOAT float
+#include "cl_kernels/midpoint_general.cl"
+        my_source.append(kernel_source);
+#undef FLOAT
+    }
+
+    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
+    this->loadProgram(my_source, useDouble);
+
+    try{
+        std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n";
         step_kernel = cl::Kernel(program, kernel_name.c_str(), &err);
         std::cout << "Done attaching kernels!" << std::endl;
     }

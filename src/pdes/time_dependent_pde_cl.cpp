@@ -480,9 +480,9 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
                 // If we want to match the GPU we
                 // should do: syncCPUtoGPU()
                 if (useDouble) {
-                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                        this->syncSetODouble(this->U_G, gpu_solution[INDX_IN]);
                 } else {
-                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_IN]);
                 }
 
                 // Should send intermediate steps by copying down from GPU, sending, then
@@ -490,9 +490,9 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
                 this->sendrecvUpdates(this->U_G, "intermediate_U_G");
 
                 if (useDouble) {
-                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
                 } else {
-                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]);
                 }
 
                 this->launchRK4_substep_SetDKernel(cur_time, delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1], 0.5);
@@ -525,9 +525,9 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
                 // If we want to match the GPU we
                 // should do: syncCPUtoGPU()
                 if (useDouble) {
-                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
+                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
                 } else {
-                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
+                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
                 }
 
                 // Should send intermediate steps by copying down from GPU, sending, then
@@ -535,9 +535,9 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
                 this->sendrecvUpdates(this->U_G, "intermediate_U_G");
 
                 if (useDouble) {
-                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
+                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
                 } else {
-                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
+                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
                 }
 
                 this->launchRK4_substep_SetDKernel(cur_time+0.5*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_INTERMEDIATE_2], 0.5);
@@ -570,9 +570,9 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
                 // If we want to match the GPU we
                 // should do: syncCPUtoGPU()
                 if (useDouble) {
-                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
+                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
                 } else {
-                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
+                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
                 }
 
                 // Should send intermediate steps by copying down from GPU, sending, then
@@ -580,9 +580,9 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
                 this->sendrecvUpdates(this->U_G, "intermediate_U_G");
 
                 if (useDouble) {
-                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
+                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
                 } else {
-                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
+                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
                 }
 
                 this->launchRK4_substep_SetDKernel(cur_time+0.5*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_2], this->gpu_solution[INDX_INTERMEDIATE_3], 1.0);
@@ -607,27 +607,28 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         if (comm_ref.getSize() > 1) {
 
                 if (useDouble) {
-                        this->syncSetODouble(this->U_G, gpu_solution[INDX_OUT]);
+                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
                 } else {
-                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]);
+                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
                 }
                 // Should send intermediate steps by copying down from GPU, sending, then
                 // copying back up to GPU
                 this->sendrecvUpdates(this->U_G, "intermediate_U_G");
 
                 if (useDouble) {
-                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_OUT]);
+                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
                 } else {
-                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_OUT]);
+                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
                 }
 
                 this->launchRK4_advance_substep_SetDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT], this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_INTERMEDIATE_2],this->gpu_solution[INDX_INTERMEDIATE_3]);
         }
         queue.finish();
 
-            this->syncCPUtoGPU();
+
 
 #if 0
+//            this->syncCPUtoGPU();
         for (int i = 0; i < nb_nodes; i++) {
                 std::cout << "u[" << i << "] = " << U_G[i] << std::endl;
         }

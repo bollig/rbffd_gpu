@@ -243,7 +243,7 @@ void TimeDependentPDE_CL::advance(TimeScheme which, double delta_t) {
         case EULER: 
             advanceFirstOrderEuler(delta_t); 
             break; 
-#if 0
+#if 1
         case MIDPOINT: 
             advanceSecondOrderMidpoint(delta_t);
             break;  
@@ -280,7 +280,7 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
     this->assemble(); 
 
     // 1) Launch kernel for set QmD (will take a while, so in the meantime...)
-    this->launchEulerSetQmDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]); 
+    this->launchEulerSetQmDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
     
     // NOTE: when run in serial only one kernel launch is required. 
     if (comm_ref.getSize() > 1) {
@@ -579,9 +579,11 @@ void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
     this->loadBCKernel(local_sources);
 #endif 
 
-    this->loadEulerKernel(local_sources); 
+    this->loadEulerKernel(local_sources);
+#if 0
     this->loadMidpointKernel(local_sources);
     this->loadRK4Kernels(local_sources);
+#endif
     tm["loadAttach"]->stop(); 
 }
 

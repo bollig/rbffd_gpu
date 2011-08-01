@@ -129,7 +129,7 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
     // std::cout << updated_source << std::endl;
     pl = updated_source.size();
     printf("[CLBaseClass] building kernel source of size: %d\n", pl);
-    //printf("kernel: \n %s\n", updated_source.c_str());
+    printf("kernel: \n %s\n", updated_source.c_str());
     try
     {
         cl::Program::Sources source(1,
@@ -143,6 +143,7 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
     try
     {
             char* kernel_dir = getenv("CL_KERNELS");
+            char* cwd = getenv("PWD");
 
             if (kernel_dir == NULL) {
                 printf("\n**** [CLBaseClass] Error: You must set CL_KERNELS in your environment to run on the GPU!\n\n");
@@ -150,7 +151,7 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
             }
      //       printf("Loading kernels from the directory: %s and .\n **** Specified by environment variable: CL_KERNELS\n", kernel_dir);
             char includes[PATH_MAX];
-            sprintf(includes, "-I%s -I.", kernel_dir);
+            sprintf(includes, "-I%s -I%s", kernel_dir, cwd);
             err = program.build(devices, includes);
     }
     catch (cl::Error er) {

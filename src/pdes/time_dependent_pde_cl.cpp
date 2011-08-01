@@ -81,6 +81,7 @@ void TimeDependentPDE_CL::assemble()
 {
         if (!weightsPrecomputed) {
                 der_ref_gpu.computeAllWeightsForAllStencils();
+                weightsPrecomputed = true;
         }
         // This will avoid multiple writes to GPU if the latest version is already in place
         // FIXME: allow this to finish later
@@ -269,7 +270,7 @@ void TimeDependentPDE_CL::advance(TimeScheme which, double delta_t) {
                 break;
 
         case RK4: 
-                advanceRungeKutta4(delta_t);
+                advanceRK4(delta_t);
                 break;
 #endif 
 
@@ -439,11 +440,11 @@ void TimeDependentPDE_CL::advanceSecondOrderMidpoint(double delta_t) {
 // FIXME: this is a single precision version
 void TimeDependentPDE_CL::advanceRK4(double delta_t) {
 
-#if 0 
         // If we need to assemble a matrix L for solving implicitly, this is the routine to do that.
         // For explicit schemes we can just solve for our weights and have them stored in memory.
         this->assemble();
 
+#if 0
         //-------- Overlap beweeen these: ------------
         // NOTE: syncSet*** ONLY copies between CPU and GPU. It does not synchronize across CPUs.
         // Use sendrecvUpdates to perform an interproc comm.
@@ -452,127 +453,179 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         } else {
                 this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]);
         }
+#endif
 
-        // Launch kernel
-        //  params: timestep, vec_for_deriv_calc, vec_for_sum_rhs, vec_for_sum_lhs
-        //  In other words: s2 = s1 + dt * d(s0)/dt;
+        // ----------------------------------
         //
-        //  Euler:
-        //      s1 = s0 + dt * d(s0)/dt
+        //    k1 = dt*func(DM_Lambda, DM_Theta, H, u, t, nodes, useHV);
+        //    k2 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F1, t+0.5*dt, nodes, useHV);
+        //    k3 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F2, t+0.5*dt, nodes, useHV);
+        //    k4 = dt*func(DM_Lambda, DM_Theta, H, u+F3, t+dt, nodes, useHV);
         //
-        //  Midpoint:
-        //      s1 = s0 + 0.5 dt * d(s0)/dt
-        //      s2 = s0 + dt * d(s1)/dt
-        //
-        //  RK4:
-        //
-        // K1 t_n = cur_time + 0*dt
-        // S1 = s0 + 0.5dt * (k1 + f)
-        // params: dt on solve, dt on advance, input solve, output solve, input advance, output advance
-        this->launchRK4_K_Kernel( 0.f, 0.5*delta_t, this->gpu_solution[INDX_IN], this->gpu_feval[0], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] );
-
+        // ----------------------------------
+        // Param list corresponds to ( t, dt, u, u+0.5*F1, 0.5 )
+        this->launchRK4_substep_SetQmDKernel(cur_time, delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1], 0.5);
+#if 0
         // Enforce boundary using GPU, but specify we want to use the intermediate buffer
         this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_INTERMEDIATE_1], cur_time+0.5*delta_t);
+#endif
 
-        // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
-        // the solution (i.e., sets O and R),
-        // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
-        // the GPU calling syncSet*** on our INDX_OUT will overwrite any
-        // intermediate values stored there temporarily
-        // If we want to match the GPU we
-        // should do: syncCPUtoGPU()
-        if (useDouble) {
-                this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        } else {
-                this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+        // NOTE: when run in serial only one kernel launch is required.
+        if (comm_ref.getSize() > 1) {
+                // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
+                // the solution (i.e., sets O and R),
+                // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
+                // the GPU calling syncSet*** on our INDX_OUT will overwrite any
+                // intermediate values stored there temporarily
+                // If we want to match the GPU we
+                // should do: syncCPUtoGPU()
+                if (useDouble) {
+                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                } else {
+                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                }
+
+                // Should send intermediate steps by copying down from GPU, sending, then
+                // copying back up to GPU
+                this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+
+                if (useDouble) {
+                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                } else {
+                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                }
+
+                this->launchRK4_substep_SetDKernel(cur_time, delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1], 0.5);
+                queue.finish();
         }
 
-        // Should send intermediate steps by copying down from GPU, sending, then
-        // copying back up to GPU
-        this->sendrecvUpdates(this->U_G, "intermediate_U_G");
-
-        if (useDouble) {
-                this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        } else {
-                this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        }
+        // --------------
+        // NOW K2 (scale: 0.5)
+        // --------------
 
         // K2 t_n = cur_time + 0.5*dt
         // S2 = s0 + 0.5dt * (k2 + f)
-        this->launchRK4_K_Kernel( 0.5f*delta_t, 0.5*delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_feval[1], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] );
+        this->launchRK4_substep_SetQmDKernel(cur_time+0.5*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_INTERMEDIATE_2], 0.5);
+
+#if 0
+        //this->launchRK4_K_Kernel( 0.5f*delta_t, 0.5*delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_feval[1], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] );
 
         // Enforce boundary using GPU, but specify we want to use the intermediate buffer
         this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_INTERMEDIATE_1], cur_time+0.5*delta_t);
+#endif
 
-        // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
-        // the solution (i.e., sets O and R),
-        // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
-        // the GPU, calling syncSet*** on our INDX_OUT will overwrite any
-        // intermediate values stored there temporarily
-        // If we want to match the GPU we
-        // should do: syncCPUtoGPU()
-        if (useDouble) {
-                this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        } else {
-                this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+        // NOTE: when run in serial only one kernel launch is required.
+        if (comm_ref.getSize() > 1) {
+
+                // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
+                // the solution (i.e., sets O and R),
+                // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
+                // the GPU, calling syncSet*** on our INDX_OUT will overwrite any
+                // intermediate values stored there temporarily
+                // If we want to match the GPU we
+                // should do: syncCPUtoGPU()
+                if (useDouble) {
+                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
+                } else {
+                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
+                }
+
+                // Should send intermediate steps by copying down from GPU, sending, then
+                // copying back up to GPU
+                this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+
+                if (useDouble) {
+                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
+                } else {
+                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_2]);
+                }
+
+                this->launchRK4_substep_SetDKernel(cur_time+0.5*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_INTERMEDIATE_2], 0.5);
+                queue.finish();
         }
-
-        // Should send intermediate steps by copying down from GPU, sending, then
-        // copying back up to GPU
-        this->sendrecvUpdates(this->U_G, "intermediate_U_G");
-
-        if (useDouble) {
-                this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        } else {
-                this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        }
+        // --------------
+        // NOW K3
+        // --------------
 
 
         // K3 t_n = cur_time + 0.5*dt
         // S3 = s0 + dt * (k3 + f)
-        this->launchRK4_K_Kernel( 0.5f*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_feval[2], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] );
+
+        this->launchRK4_substep_SetQmDKernel(cur_time+0.5*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_2], this->gpu_solution[INDX_INTERMEDIATE_3], 1.0);
+#if 0
+        //        this->launchRK4_K_Kernel( 0.5f*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_feval[2], this->gpu_solution[INDX_IN], this->gpu_solution[INDX_INTERMEDIATE_1] );
 
         // Enforce boundary using GPU, but specify we want to use the intermediate buffer
         this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_INTERMEDIATE_1], cur_time+delta_t);
-        // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
-        // the solution (i.e., sets O and R),
-        // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
-        // the GPU calling syncSet*** on our INDX_OUT will overwrite any
-        // intermediate values stored there temporarily
-        // If we want to match the GPU we
-        // should do: syncCPUtoGPU()
-        if (useDouble) {
-                this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        } else {
-                this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        }
+#endif
 
-        // Should send intermediate steps by copying down from GPU, sending, then
-        // copying back up to GPU
-        this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+        // NOTE: when run in serial only one kernel launch is required.
+        if (comm_ref.getSize() > 1) {
 
-        if (useDouble) {
-                this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
-        } else {
-                this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_1]);
+                // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
+                // the solution (i.e., sets O and R),
+                // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
+                // the GPU calling syncSet*** on our INDX_OUT will overwrite any
+                // intermediate values stored there temporarily
+                // If we want to match the GPU we
+                // should do: syncCPUtoGPU()
+                if (useDouble) {
+                        this->syncSetODouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
+                } else {
+                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
+                }
+
+                // Should send intermediate steps by copying down from GPU, sending, then
+                // copying back up to GPU
+                this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+
+                if (useDouble) {
+                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
+                } else {
+                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_INTERMEDIATE_3]);
+                }
+
+                this->launchRK4_substep_SetDKernel(cur_time+0.5*delta_t, delta_t, this->gpu_solution[INDX_INTERMEDIATE_2], this->gpu_solution[INDX_INTERMEDIATE_3], 1.0);
+                queue.finish();
         }
+        // --------------
+        // NOW K4 and finish
+        // --------------
 
         // K3 t_n = cur_time + 0.5*dt
         // S3 = s0 + dt * (k3 + f)
+        this->launchRK4_advance_substep_SetQmDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT], this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_INTERMEDIATE_2],this->gpu_solution[INDX_INTERMEDIATE_3]);
+
+#if 0
         this->launchRK4_Final_Kernel( 0.5f*delta_t, delta_t, this->gpu_solution[INDX_IN], this->gpu_feval[0], this->gpu_feval[1], this->gpu_feval[2], this->gpu_solution[INDX_OUT] );
 
         // reset boundary solution on INDX_OUT
         this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time);
+#endif
 
-        if (useDouble) {
-                this->syncSetODouble(this->U_G, gpu_solution[INDX_OUT]);
-        } else {
-                this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]);
+        // NOTE: when run in serial only one kernel launch is required.
+        if (comm_ref.getSize() > 1) {
+
+                if (useDouble) {
+                        this->syncSetODouble(this->U_G, gpu_solution[INDX_OUT]);
+                } else {
+                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]);
+                }
+                // Should send intermediate steps by copying down from GPU, sending, then
+                // copying back up to GPU
+                this->sendrecvUpdates(this->U_G, "intermediate_U_G");
+
+                if (useDouble) {
+                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_OUT]);
+                } else {
+                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_OUT]);
+                }
+
+                this->launchRK4_advance_substep_SetDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT], this->gpu_solution[INDX_INTERMEDIATE_1], this->gpu_solution[INDX_INTERMEDIATE_2],this->gpu_solution[INDX_INTERMEDIATE_3]);
         }
-
         queue.finish();
 
-        //    this->syncCPUtoGPU();
+            this->syncCPUtoGPU();
 
 #if 0
         for (int i = 0; i < nb_nodes; i++) {
@@ -586,7 +639,6 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         //exit(EXIT_FAILURE);
 
         swap(INDX_IN, INDX_OUT);
-#endif 
 }
 
 //----------------------------------------------------------------------
@@ -599,9 +651,9 @@ void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
 #endif 
 
         this->loadEulerKernel(local_sources);
+        this->loadRK4Kernels(local_sources);
 #if 0
         this->loadMidpointKernel(local_sources);
-        this->loadRK4Kernels(local_sources);
 #endif
         tm["loadAttach"]->stop();
 }
@@ -731,6 +783,12 @@ void TimeDependentPDE_CL::allocateGPUMem() {
         std::cout << "Done with first buffer: " << nb_nodes << "*" << this->getFloatSize() << " bytes\n";
         gpu_solution[INDX_OUT] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
         bytesAllocated += solution_mem_bytes;
+        gpu_solution[INDX_INTERMEDIATE_1] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
+        bytesAllocated += solution_mem_bytes;
+        gpu_solution[INDX_INTERMEDIATE_2] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
+        bytesAllocated += solution_mem_bytes;
+        gpu_solution[INDX_INTERMEDIATE_3] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
+        bytesAllocated += solution_mem_bytes;
 
         std::cout << "[TimeDependentPDE_CL] Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 #endif
@@ -806,7 +864,7 @@ void TimeDependentPDE_CL::launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in
                         args_set++;
                 }
                 err = queue.enqueueNDRangeKernel(euler_kernel, /* offset */ cl::NullRange,
-                                                 /* GLOBAL (work-groups in the grid)  */   cl::NDRange(n_stencils),
+                                                 /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.QmD.size()),
                                                  /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
 //                err = queue.flush();
@@ -853,7 +911,7 @@ void TimeDependentPDE_CL::launchEulerSetDKernel( double dt, cl::Buffer& sol_in, 
                 printf("[launchEulerSetDKernel] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
         }
         err = queue.enqueueNDRangeKernel(euler_kernel, /* offset */ cl::NullRange,
-                                         /* GLOBAL (work-groups in the grid)  */   cl::NDRange(n_stencils),
+                                         /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.D.size()),
                                          /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
 //        err = queue.flush();
@@ -918,5 +976,184 @@ void TimeDependentPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::B
 #endif
 }
 
+//----------------------------------------------------------------------
 
+void TimeDependentPDE_CL::launchRK4_substep_SetQmDKernel( double adjusted_t, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, double substep_scale) {
 
+        unsigned int n_stencils = grid_ref.getStencilsSize();
+        float dt_f = (float) dt;
+        float cur_time_f = (float) adjusted_t;
+        float substep_scale_f = (float) substep_scale;
+        static int args_set = 0;
+
+        int i = 0;
+
+        try {
+                // These will change each iteration
+                rk4_substep_kernel.setArg(i++, sol_in);
+                rk4_substep_kernel.setArg(i++, sol_out);
+                rk4_substep_kernel.setArg(i++, dt_f);
+                rk4_substep_kernel.setArg(i++, cur_time_f);
+                rk4_substep_kernel.setArg(i++, substep_scale_f);
+
+                // We should only do this on the first iter
+                if (!args_set) {
+                        rk4_substep_kernel.setArg(i++, 0);
+                        rk4_substep_kernel.setArg(i++, grid_ref.QmD.size());
+
+                        this->setAdvanceArgs( rk4_substep_kernel, i);
+                        args_set++;
+                }
+                err = queue.enqueueNDRangeKernel( rk4_substep_kernel, /* offset */ cl::NullRange,
+                                                 /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.QmD.size()),
+                                                 /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+
+//                err = queue.flush();
+                if (err != CL_SUCCESS) {
+                        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+                                     " failed (" << err << ")\n";
+                        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+                        exit(EXIT_FAILURE);
+                }
+        } catch (cl::Error er) {
+                printf("[launchRK4_substep_SetQmDKernel] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+        }
+
+}
+
+//----------------------------------------------------------------------
+
+void TimeDependentPDE_CL::launchRK4_substep_SetDKernel( double adjusted_t, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, double substep_scale) {
+
+        unsigned int n_stencils = grid_ref.getStencilsSize();
+        float dt_f = (float) dt;
+        float cur_time_f = (float) adjusted_t;
+        float substep_scale_f = (float) substep_scale;
+        static int args_set = 0;
+
+        int i = 0;
+
+        try {
+                // These will change each iteration
+                rk4_substep_kernel.setArg(i++, sol_in);
+                rk4_substep_kernel.setArg(i++, sol_out);
+                rk4_substep_kernel.setArg(i++, dt_f);
+                rk4_substep_kernel.setArg(i++, cur_time_f);
+                rk4_substep_kernel.setArg(i++, substep_scale_f);
+
+                // We should only do this on the first iter
+                if (!args_set) {
+                        rk4_substep_kernel.setArg(i++, grid_ref.QmD.size());
+                        rk4_substep_kernel.setArg(i++, grid_ref.D.size());
+
+                        this->setAdvanceArgs( rk4_substep_kernel, i);
+                        args_set++;
+                }
+                err = queue.enqueueNDRangeKernel( rk4_substep_kernel, /* offset */ cl::NullRange,
+                                                 /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.D.size()),
+                                                 /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+
+//                err = queue.flush();
+                if (err != CL_SUCCESS) {
+                        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+                                     " failed (" << err << ")\n";
+                        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+                        exit(EXIT_FAILURE);
+                }
+        } catch (cl::Error er) {
+                printf("[launchRK4_substep_SetDKerne] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+        }
+
+}
+
+//----------------------------------------------------------------------
+
+void TimeDependentPDE_CL::launchRK4_advance_substep_SetQmDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, cl::Buffer& substep1, cl::Buffer& substep2, cl::Buffer& substep3)
+{
+        unsigned int n_stencils = grid_ref.getStencilsSize();
+        float dt_f = (float) dt;
+        float cur_time_f = (float) cur_time;
+        static int args_set = 0;
+
+        int i = 0;
+
+        try {
+                // These will change each iteration
+                rk4_advance_substep_kernel.setArg(i++, sol_in);
+                rk4_advance_substep_kernel.setArg(i++, sol_out);
+                rk4_advance_substep_kernel.setArg(i++, substep1);
+                rk4_advance_substep_kernel.setArg(i++, substep2);
+                rk4_advance_substep_kernel.setArg(i++, substep3);
+                rk4_advance_substep_kernel.setArg(i++, dt_f);
+                rk4_advance_substep_kernel.setArg(i++, cur_time_f);
+
+                // We should only do this on the first iter
+                if (!args_set) {
+                        rk4_advance_substep_kernel.setArg(i++, 0);
+                        rk4_advance_substep_kernel.setArg(i++, grid_ref.QmD.size());
+
+                        this->setAdvanceArgs( rk4_advance_substep_kernel, i);
+                        args_set++;
+                }
+                err = queue.enqueueNDRangeKernel( rk4_advance_substep_kernel, /* offset */ cl::NullRange,
+                                                 /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.QmD.size()),
+                                                 /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+
+//                err = queue.flush();
+                if (err != CL_SUCCESS) {
+                        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+                                     " failed (" << err << ")\n";
+                        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+                        exit(EXIT_FAILURE);
+                }
+        } catch (cl::Error er) {
+                printf("[launchRK4_advance_substep_SetQmDKerne] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+        }
+
+}
+
+//----------------------------------------------------------------------
+
+void TimeDependentPDE_CL::launchRK4_advance_substep_SetDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, cl::Buffer& substep1, cl::Buffer& substep2, cl::Buffer& substep3)
+{
+        unsigned int n_stencils = grid_ref.getStencilsSize();
+        float dt_f = (float) dt;
+        float cur_time_f = (float) cur_time;
+        static int args_set = 0;
+
+        int i = 0;
+
+        try {
+                // These will change each iteration
+                rk4_advance_substep_kernel.setArg(i++, sol_in);
+                rk4_advance_substep_kernel.setArg(i++, sol_out);
+                rk4_advance_substep_kernel.setArg(i++, substep1);
+                rk4_advance_substep_kernel.setArg(i++, substep2);
+                rk4_advance_substep_kernel.setArg(i++, substep3);
+                rk4_advance_substep_kernel.setArg(i++, dt_f);
+                rk4_advance_substep_kernel.setArg(i++, cur_time_f);
+
+                // We should only do this on the first iter
+                if (!args_set) {
+                        rk4_advance_substep_kernel.setArg(i++, grid_ref.QmD.size());
+                        rk4_advance_substep_kernel.setArg(i++, grid_ref.D.size());
+
+                        this->setAdvanceArgs( rk4_advance_substep_kernel, i);
+                        args_set++;
+                }
+                err = queue.enqueueNDRangeKernel( rk4_advance_substep_kernel, /* offset */ cl::NullRange,
+                                                 /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.D.size()),
+                                                 /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+
+//                err = queue.flush();
+                if (err != CL_SUCCESS) {
+                        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+                                     " failed (" << err << ")\n";
+                        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+                        exit(EXIT_FAILURE);
+                }
+        } catch (cl::Error er) {
+                printf("[launchRK4_advance_substep_SetQmDKerne] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+        }
+
+}

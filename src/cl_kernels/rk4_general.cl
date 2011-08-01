@@ -1,12 +1,14 @@
 #include "useDouble.cl"
+#include "solver.cl"
 
+/*
 typedef struct Params {
     uint nb_stencils;           
     uint nb_nodes;              
     uint stencil_size;          
     // TODO: add weights pointers
 } Params;
-/*
+
 __kernel void           
 advanceRK4( 
          __global uint* stencils,               
@@ -74,23 +76,68 @@ advanceRK4(
 //        the last step (below).
 // -----------------------------------------------------------
 
-__kernel void           
-evaluateRK4_substep( 
-         __global FLOAT* u_plus_scaled_k_in,           
-         __global FLOAT* u_plus_scaled_k_out,          
-                  float k_scale,         
-                  float dt,                     
-                  float cur_time,               
-         __global uint* stencils,    
-         __global uint* weights,    
-         __constant Params* params 
+__kernel
+void evaluateRK4_substep(
+    __global FLOAT* u_plus_scaled_k_in,
+    __global FLOAT* u_plus_scaled_k_out,
+    float dt,
+    float cur_time,
+    float k_scale,
+
+    // if we want to run this kernel on set QmD, offset is 0. To run kernel on set D, offset should be the offset in num elements to get to D
+    uint offset_to_set,
+    // This should not exceed the number of stencils in the set QmD, or set D
+    uint nb_stencils_to_compute,
+
+    __global FLOAT4* nodes,
+
+    __global uint* stencils,
+
+    __global FLOAT* x_weights,
+    __global FLOAT* y_weights,
+    __global FLOAT* z_weights,
+    __global FLOAT* lapl_weights,
+    __global FLOAT* r_weights,
+    __global FLOAT* lambda_weights,
+    __global FLOAT* theta_weights,
+    __global FLOAT* hv_weights,
+
+    uint nb_nodes,
+    uint stencil_size,
+    int useHyperviscosity
 )  
 {   
-    uint i = get_global_id(0);    
+    uint i = get_global_id(0);
+    uint j = i + offset_to_set;
+    if(j < nb_stencils_to_compute) {
+            FLOAT feval1 = solve(u_plus_scaled_k_in,
+                                 j,
+                                 cur_time,
+                                 nodes,
+                                 stencils,
+                                 x_weights,
+                                 y_weights,
+                                 z_weights,
+                                 lapl_weights,
+                                 r_weights,
+                                 lambda_weights,
+                                 theta_weights,
+                                 hv_weights,
+                                 nb_nodes,
+                                 stencil_size,
+                                 useHyperviscosity
+                                 );
 
-    if(i < params->nb_stencils) {    
-        double feval = 1.0; //solve(u_plus_scaled_k_in, nb_stencils, dt, cur_time, params); 
-        u_plus_scaled_k_out[i] = u_plus_scaled_k_in[i] + k_scale * feval; 
+
+
+            //    k1 = dt*func(DM_Lambda, DM_Theta, H, u, t, nodes, useHV);
+            //    k2 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F1, t+0.5*dt, nodes, useHV);
+            //    k3 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F2, t+0.5*dt, nodes, useHV);
+            //    k4 = dt*func(DM_Lambda, DM_Theta, H, u+F3, t+dt, nodes, useHV);
+            // --------------
+            //   u+0.5*dt*feval1
+
+        u_plus_scaled_k_out[j] = u_plus_scaled_k_in[j] + k_scale * dt * feval1;
     }
 }
 
@@ -103,31 +150,66 @@ evaluateRK4_substep(
 __kernel void           
 advanceRK4_substeps( 
          __global FLOAT* u_in,           
-         __global FLOAT* u_out,          
+         __global FLOAT* u_out,
          __global FLOAT* u_plus_scaled_k1,          
          __global FLOAT* u_plus_scaled_k2,          
          __global FLOAT* u_plus_scaled_k3,          
-                  float dt,                     
-                  float cur_time,               
-         __global uint* stencils,    
-         __global uint* weights,    
-         __constant Params* param 
+    float dt,
+    float cur_time,
+
+    // if we want to run this kernel on set QmD, offset is 0. To run kernel on set D, offset should be the offset in num elements to get to D
+    uint offset_to_set,
+    // This should not exceed the number of stencils in the set QmD, or set D
+    uint nb_stencils_to_compute,
+
+    __global FLOAT4* nodes,
+
+    __global uint* stencils,
+
+    __global FLOAT* x_weights,
+    __global FLOAT* y_weights,
+    __global FLOAT* z_weights,
+    __global FLOAT* lapl_weights,
+    __global FLOAT* r_weights,
+    __global FLOAT* lambda_weights,
+    __global FLOAT* theta_weights,
+    __global FLOAT* hv_weights,
+
+    uint nb_nodes,
+    uint stencil_size,
+    int useHyperviscosity
 )  
 {   
-    uint i = get_global_id(0);    
-
-    if(i < param->nb_stencils) {    
-        double sol = u_in[i]; 
+    uint i = get_global_id(0);
+    uint j = i + offset_to_set;
+    if(j < nb_stencils_to_compute) {
+        double sol = u_in[j];
 
         // Note: k1 and k2 are scaled by 0.5, but we do NOT remove that scale.
         //       Instead we adjust the scalar in the equation below
-        double k1 = u_plus_scaled_k1[i] - sol; 
-        double k2 = u_plus_scaled_k2[i] - sol; 
-        double k3 = u_plus_scaled_k3[i] - sol; 
+        double k1 = u_plus_scaled_k1[j] - sol;
+        double k2 = u_plus_scaled_k2[j] - sol;
+        double k3 = u_plus_scaled_k3[j] - sol;
         // Solve for k4
-        double k4 = 1.;//solve(stencils, weights, sol_plus_k3_in, nb_stencils, nb_nodes, stencil_size, dt, cur_time + dt); 
+        FLOAT k4 = solve(u_plus_scaled_k3,
+                             j,
+                             cur_time+dt,
+                             nodes,
+                             stencils,
+                             x_weights,
+                             y_weights,
+                             z_weights,
+                             lapl_weights,
+                             r_weights,
+                             lambda_weights,
+                             theta_weights,
+                             hv_weights,
+                             nb_nodes,
+                             stencil_size,
+                             useHyperviscosity
+                             );
 
         // See logic above. 
-        u_out[i] = sol + (2.*k1 + 4.*k2 + 2.*k3 + k4)/6.; 
+        u_out[j] = sol + (2.*k1 + 4.*k2 + 2.*k3 + dt * k4)/6.;
     }
 }

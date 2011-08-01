@@ -27,9 +27,9 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // These are buffers for RK4 evaluations. 
         // Each of these is NB_STENCILS long
         // K1, K2, K3 and K4
-        cl::Buffer gpu_feval[4]; 
+        //cl::Buffer gpu_feval[4];
         // IN and OUT
-        cl::Buffer gpu_solution[2]; 
+        cl::Buffer gpu_solution[5];
 
 
         // RK4 requires 4 substeps with a barrier between each. 
@@ -53,7 +53,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool weightsComputed=false) 
             : TimeDependentPDE(grid, der, comm),
               INDX_IN(0), INDX_OUT(1),
-              INDX_INTERMEDIATE_1(0), INDX_INTERMEDIATE_2(1), INDX_INTERMEDIATE_3(2),
+              INDX_INTERMEDIATE_1(2), INDX_INTERMEDIATE_2(3), INDX_INTERMEDIATE_3(4),
             // We maintain a ref to der here so we can keep it cast as an OpenCL RBFFD class
             der_ref_gpu(*der), weightsPrecomputed(weightsComputed)
         {;}
@@ -119,10 +119,13 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // Runge Kutta 4
         // --------------------------------------
         virtual void loadRK4Kernels(std::string& local_sources); 
-        void launchRK4_K_Kernel( double solveDT, double advanceDT, cl::Buffer solve_in, cl::Buffer solve_out, cl::Buffer advance_in, cl::Buffer advance_out);
-        void launchRK4_Final_Kernel( double solveDT, double advanceDT, cl::Buffer k1, cl::Buffer k2, cl::Buffer k3, cl::Buffer advance_in, cl::Buffer advance_out);
+        void launchRK4_substep_SetQmDKernel(double adjusted_t, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, double substep_scale);
+        void launchRK4_substep_SetDKernel(double adjusted_t, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, double substep_scale);
 
-        virtual void loadEulerKernel(std::string& local_sources); 
+        void launchRK4_advance_substep_SetQmDKernel(double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, cl::Buffer& substep1, cl::Buffer& substep2, cl::Buffer& substep3);
+        void launchRK4_advance_substep_SetDKernel(double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, cl::Buffer& substep1, cl::Buffer& substep2, cl::Buffer& substep3);
+
+        virtual void loadEulerKernel(std::string& local_sources);
         virtual void loadMidpointKernel(std::string& local_sources);
 
         // Launch a kernel to do u(n+1) = u(n) + dt * f( U(n) ) over the

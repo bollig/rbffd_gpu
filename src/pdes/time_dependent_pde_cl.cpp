@@ -590,6 +590,13 @@ void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
 void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
     std::string kernel_name = "advanceEuler";
 
+    if (!this->getDeviceFP64Extension().compare("")){
+        useDouble = false;
+    }
+    if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
+        useDouble = false;
+    }
+
     // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
     std::string my_source = this->loadFileContents("euler_general.cl", true);
 
@@ -610,7 +617,7 @@ void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
 
 void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
     std::string kernel_name = "advanceMidpoint";
-#if 0
+
     if (!this->getDeviceFP64Extension().compare("")){
         useDouble = false;
     }
@@ -618,6 +625,7 @@ void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
         useDouble = false;
     }
 
+#if 0
     std::string my_source = local_sources;
     if(useDouble) {
         // This keeps FLOAT scoped
@@ -656,6 +664,13 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
 
     std::string rk4_substep_kernel_name  = "evaluateRK4_substep"; 
     std::string rk4_advance_substep_kernel_name = "advanceRK4_substeps"; 
+
+    if (!this->getDeviceFP64Extension().compare("")){
+        useDouble = false;
+    }
+    if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
+        useDouble = false;
+    }
 
     // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
     std::string my_source = this->loadFileContents("rk4_general.cl", true);

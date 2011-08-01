@@ -69,10 +69,18 @@ std::string CLBaseClass::addExtension(std::string& source, std::string ext,
     std::ostringstream oss; 
     oss << "#pragma OPENCL EXTENSION " << ext << ": "; 
     if (enabled) 
-        oss << "enable";
+        oss << "enable\n";
     else 
-        oss << "disable";
+        oss << "disable\n";
+#if 0
+    if (enabled)
+            oss << "typedef double FLOAT;\n";
+    else
+            oss << "typedef float FLOAT;\n";
+#endif
+
     oss << "\n" << source;
+
     return oss.str(); 
 }
 
@@ -113,14 +121,15 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
 
     std::string updated_source(kernel_source);
 
-    if (enable_fp64) {
-        updated_source = addExtension(kernel_source, getDeviceFP64Extension(deviceUsed)); 
+//    if (enable_fp64)
+    {
+        updated_source = addExtension(kernel_source, getDeviceFP64Extension(deviceUsed), enable_fp64);
     }
 
     // std::cout << updated_source << std::endl;
     pl = updated_source.size();
     printf("[CLBaseClass] building kernel source of size: %d\n", pl);
-    //printf("kernel: \n %s\n", kernel_source.c_str());
+    //printf("kernel: \n %s\n", updated_source.c_str());
     try
     {
         cl::Program::Sources source(1,

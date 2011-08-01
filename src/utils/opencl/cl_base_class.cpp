@@ -129,7 +129,7 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
     // std::cout << updated_source << std::endl;
     pl = updated_source.size();
     printf("[CLBaseClass] building kernel source of size: %d\n", pl);
-    printf("kernel: \n %s\n", updated_source.c_str());
+    //printf("kernel: \n %s\n", updated_source.c_str());
     try
     {
         cl::Program::Sources source(1,

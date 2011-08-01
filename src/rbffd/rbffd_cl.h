@@ -4,22 +4,26 @@
 //#include <CL/cl.hpp> 
 #include "utils/opencl/cl_base_class.h"
 #include "rbffd.h"
+#include "utils/opencl/structs.h"
 
 class RBFFD_CL : public RBFFD, public CLBaseClass
 {
     protected: 
         // Weight buffers matching number of weights we have in super class
         cl::Buffer gpu_weights[NUM_DERIV_TYPES]; 
-        double* cpu_weights_d[NUM_DERIV_TYPES]; 
-        float* cpu_weights_f[NUM_DERIV_TYPES]; 
+        cl::Buffer gpu_nodes;
+
+        double* cpu_weights_d[NUM_DERIV_TYPES];
+        float* cpu_weights_f[NUM_DERIV_TYPES];
+        float4* cpu_nodes;
         bool deleteCPUWeightsBuffer;
+        bool deleteCPUNodesBuffer;
         bool deleteCPUStencilsBuffer;
 
         cl::Buffer gpu_stencils; 
         unsigned int*    cpu_stencils;
 
         cl::Buffer gpu_deriv_out[NUM_DERIV_TYPES]; 
-
 
         cl::Buffer gpu_function; 
 
@@ -36,6 +40,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         unsigned int deriv_mem_bytes;
         unsigned int weights_mem_bytes;
         unsigned int function_mem_bytes;
+        unsigned int nodes_mem_bytes;
 
         // Is a double precision extension available on the unit? 
         bool useDouble; 
@@ -53,11 +58,13 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         virtual ~RBFFD_CL() { 
             if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} 
-            if (deleteCPUStencilsBuffer) { this->clearCPUStencils();} 
+            if (deleteCPUNodesBuffer) { this->clearCPUNodes();}
+            if (deleteCPUStencilsBuffer) { this->clearCPUStencils();}
         }; 
 
 
         cl::Buffer& getGPUStencils() { return gpu_stencils; }
+        cl::Buffer& getGPUNodes() { return gpu_nodes; }
         cl::Buffer& getGPUWeights(DerType which) { return gpu_weights[which]; }
 
 
@@ -113,6 +120,8 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             } else { updateFunctionSingle(nb_nodes, u, forceFinish); }
         }
 
+        void updateNodesOnGPU(bool forceFinish);
+
         bool areGPUKernelsDouble() { return useDouble; }
 
     protected: 
@@ -122,6 +131,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         void clearCPUWeights();
         void clearCPUStencils();
+        void clearCPUNodes();
 
         void updateWeightsDouble(bool forceFinish);
         void updateWeightsSingle(bool forceFinish);

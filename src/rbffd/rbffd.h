@@ -146,6 +146,10 @@ class RBFFD
             useHyperviscosity = tf; 
         }
 
+        int getUseHyperviscosity() {
+                return useHyperviscosity;
+        }
+
         double getHVScalar() {
             //return -hv_gamma;
             return -hv_gamma / pow(grid_ref.getGlobalNodeListSize(), hv_k);
@@ -270,7 +274,8 @@ class RBFFD
         double* getLaplWeights(int indx) { return (getLaplWeights())[indx]; }
 
         std::vector<double*>& getWeights(DerType choice) { return weights[choice]; }
-        double*& getStencilWeights(DerType choice, int st_indx) { return weights[choice][st_indx]; } 
+        std::vector<NodeType> getNodes() { return grid_ref.getNodeList(); }
+        double*& getStencilWeights(DerType choice, int st_indx) { return weights[choice][st_indx]; }
 
 
 

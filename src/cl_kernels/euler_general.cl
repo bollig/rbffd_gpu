@@ -7,15 +7,18 @@ advanceEuler(
 
         __global FLOAT* solution_in,
         __global FLOAT* solution_out,
+        float dt,
+        float cur_time,
+
         // if we want to run this kernel on set QmD, offset is 0. To run kernel on set D, offset should be the offset in num elements to get to D
         uint offset_to_set,
         // This should not exceed the number of stencils in the set QmD, or set D
         uint nb_stencils_to_compute,
-        float dt,
-        float cur_time,
 
         __global FLOAT4* nodes,
+
         __global uint* stencils,
+
         __global FLOAT* x_weights,
         __global FLOAT* y_weights,
         __global FLOAT* z_weights,

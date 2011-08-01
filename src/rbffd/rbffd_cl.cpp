@@ -4,6 +4,7 @@
 #include "timer_eb.h"
 #include "common_typedefs.h"     // Declares type FLOAT
 
+
 using namespace EB;
 using namespace std;
 
@@ -13,10 +14,11 @@ using namespace std;
 : RBFFD(grid, dim_num, rank), CLBaseClass(rank), 
     useDouble(true)
 {
-    this->setupTimers(); 
-    this->loadKernel(); 
-    this->allocateGPUMem();
-    this->updateStencilsOnGPU(false); 
+            this->setupTimers();
+            this->loadKernel();
+            this->allocateGPUMem();
+            this->updateStencilsOnGPU(false);
+            this->updateNodesOnGPU(false);
 }
 
 
@@ -107,7 +109,10 @@ void RBFFD_CL::allocateGPUMem() {
     stencil_mem_bytes = gpu_stencil_size * sizeof(unsigned int); 
     function_mem_bytes = nb_nodes * float_size; 
     weights_mem_bytes = gpu_stencil_size * float_size; 
-    deriv_mem_bytes = nb_stencils * float_size; 
+    deriv_mem_bytes = nb_stencils * float_size;
+
+    // Nodes are going to be cast to float4
+    nodes_mem_bytes = nb_nodes * float_size * 4;
 
     std::cout << "Allocating GPU memory\n"; 
 
@@ -125,8 +130,35 @@ void RBFFD_CL::allocateGPUMem() {
         bytesAllocated += weights_mem_bytes; 
         gpu_deriv_out[which] = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
         bytesAllocated += deriv_mem_bytes; 
-    }    
+    }
+
+    gpu_nodes = cl::Buffer(context, CL_MEM_READ_ONLY, nodes_mem_bytes, NULL, &err);
+
     std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
+}
+
+//----------------------------------------------------------------------
+void RBFFD_CL::updateNodesOnGPU(bool forceFinish) {
+        unsigned int nb_nodes = grid_ref.getNodeListSize();
+        std::vector<NodeType>& nodes = grid_ref.getNodeList();
+
+        cpu_nodes = new float4[nb_nodes];
+
+        for (unsigned int i = 0; i < nb_nodes; i++) {
+                cpu_nodes[i] = float4( (float)nodes[i].x(),
+                                         (float)nodes[i].y(),
+                                         (float)nodes[i].z(),
+                                         0.f );
+        }
+        err = queue.enqueueWriteBuffer(gpu_nodes, CL_TRUE, 0, nodes_mem_bytes, &cpu_nodes[0], NULL, &event);
+        queue.flush();
+        if (forceFinish) {
+                queue.finish();
+                this->clearCPUWeights();
+                deleteCPUNodesBuffer= false;
+        } else {
+                deleteCPUNodesBuffer = true;
+        }
 }
 
 //----------------------------------------------------------------------
@@ -164,15 +196,21 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
 
     //    std::cout << "Writing GPU Stencils buffer: (bytes)" << stencil_mem_bytes << std::endl;
     err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_bytes, &cpu_stencils[0], NULL, &event);
+    queue.flush();
     if (forceFinish) {
         queue.finish();
         this->clearCPUWeights();
         deleteCPUStencilsBuffer = false;
     } else { 
-        deleteCPUStencilsBuffer = false;
+        deleteCPUStencilsBuffer = true;
     }
 
 }
+
+void RBFFD_CL::clearCPUNodes() {
+        delete [] cpu_nodes;
+}
+
 
 void RBFFD_CL::clearCPUStencils() {
     // Clear out buffer. No need to keep it since this should only happen once
@@ -254,6 +292,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
             //std::cout << std::endl;
             // Send to GPU
             err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_d[which][0]), NULL, &event); 
+            queue.flush();
         }
 
         if (forceFinish) {
@@ -319,6 +358,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
             //std::cout << std::endl;
             // Send to GPU
             err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_f[which][0]), NULL, &event); 
+            queue.flush();
         }
 
         if (forceFinish) {
@@ -356,6 +396,7 @@ void RBFFD_CL::updateFunctionDouble(unsigned int nb_nodes, double* u, bool force
 
     // TODO: mask off fields not update
     err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, 0, function_mem_bytes, &u[0], NULL, &event);
+    queue.flush();
 
     if (forceFinish) {
         queue.finish(); 
@@ -410,25 +451,27 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
     this->updateWeightsOnGPU(false);
 
     try {
-        kernel.setArg(0, gpu_stencils); 
-        kernel.setArg(1, gpu_weights[which]); 
-        kernel.setArg(2, gpu_function);                 // COPY_IN
-        kernel.setArg(3, gpu_deriv_out[which]);           // COPY_OUT 
+            int i = 0;
+        kernel.setArg(i++, gpu_stencils);
+        kernel.setArg(i++, gpu_weights[which]);
+        kernel.setArg(i++, gpu_function);                 // COPY_IN
+        kernel.setArg(i++, gpu_deriv_out[which]);           // COPY_OUT
         //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
         //unsigned int arguments at this time
         unsigned int nb_stencils = grid_ref.getStencilsSize(); 
-        kernel.setArg(4, sizeof(unsigned int), &nb_stencils);               // const 
+        kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
-        kernel.setArg(5, sizeof(unsigned int), &stencil_size);            // const
+        kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
+        std::cout << "Set " << i << " kernel args\n";
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 
+
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange, 
             /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils), 
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
-
-    err = queue.finish();
+    queue.flush();
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
             " failed (" << err << ")\n";
@@ -443,6 +486,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
 
     // Pull the computed derivative back to the CPU
     err = queue.enqueueReadBuffer(gpu_deriv_out[which], CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
+    queue.flush();
 
     if (err != CL_SUCCESS) {
         std::cerr << " enequeue ERROR: " << err << std::endl; 
@@ -480,16 +524,18 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
     this->updateWeightsOnGPU(false);
 
     try {
-        kernel.setArg(0, gpu_stencils); 
-        kernel.setArg(1, gpu_weights[which]); 
-        kernel.setArg(2, gpu_function);                 // COPY_IN
-        kernel.setArg(3, gpu_deriv_out[which]);           // COPY_OUT 
+        int i = 0;
+        kernel.setArg(i++, gpu_stencils);
+        kernel.setArg(i++, gpu_weights[which]);
+        kernel.setArg(i++, gpu_function);                 // COPY_IN
+        kernel.setArg(i++, gpu_deriv_out[which]);           // COPY_OUT
         //FIXME: we want to pass a size_t for maximum array lengths, but OpenCL does not allow
         //size_t arguments at this time
         unsigned int nb_stencils = grid_ref.getStencilsSize(); 
-        kernel.setArg(4, sizeof(unsigned int), &nb_stencils);               // const 
+        kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
-        kernel.setArg(5, sizeof(unsigned int), &stencil_size);            // const
+        kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
+
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }

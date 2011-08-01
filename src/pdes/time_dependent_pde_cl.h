@@ -46,6 +46,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // This is for Euler and Midpoint method substeps
         cl::Kernel euler_kernel;
 
+        cl::Kernel midpoint_kernel;
+
     public: 
 
         TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool weightsComputed=false) 
@@ -54,7 +56,10 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
             der_ref_gpu(*der), weightsPrecomputed(weightsComputed)
         {;}
         
-        void initialize(std::string solve_source) 
+        // Fill in the initial conditions of the PDE. (overwrite the solution)
+        virtual void fillInitialConditions(ExactSolution* exact=NULL);
+
+        void initialize(std::string solve_source)
         {
             this->setupTimers();
             this->loadKernels(solve_source); 
@@ -74,7 +79,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         virtual void loadKernels(std::string& local_solve_source); 
         virtual void allocateGPUMem();
         // Set the default set of arguments for a kernel
-        virtual void setAdvanceArgs(cl::Kernel kern);
+        virtual void setAdvanceArgs(cl::Kernel kern, int start_indx);
 
         // Use RK4 scheme to advance
         virtual void advance(TimeScheme which, double delta_t); 

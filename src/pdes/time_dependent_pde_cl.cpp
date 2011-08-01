@@ -607,7 +607,7 @@ void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
 
     try{
         std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n"; 
-        step_kernel = cl::Kernel(program, kernel_name.c_str(), &err);
+        euler_kernel = cl::Kernel(program, kernel_name.c_str(), &err);
         std::cout << "Done attaching kernels!" << std::endl;
     }
     catch (cl::Error er) {
@@ -722,6 +722,80 @@ void TimeDependentPDE_CL::allocateGPUMem() {
 //
 
 
+
+void TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
+
+        unsigned int stencil_size = grid_ref.getMaxStencilSize();
+        unsigned int nb_nodes = grid_ref.getNodeListSize();
+        float dt_f = (float) dt;
+        float cur_time_f = (float) cur_time;
+
+        try {
+            __global FLOAT* solution_in,
+            __global FLOAT* solution_out,
+            // if we want to run this kernel on set QmD, offset is 0. To run kernel on set D, offset should be the offset in num elements to get to D
+            uint offset_to_set,
+            // This should not exceed the number of stencils in the set QmD, or set D
+            uint nb_stencils_to_compute,
+            float dt,
+            float cur_time,
+
+
+                            // Subtract 1 to make sure our ++ below works out correctly;
+            int i = argc_start - 1;
+
+            step_kernel.setArg(i++, der_ref_gpu.getGPUNodes());
+            step_kernel.setArg(i++, der_ref_gpu.getGPUStencils());
+
+            step_kernel.setArg(i++, der_ref_gpu.getGPUWeights(RBFFD::X));
+            step_kernel.setArg(i++, der_ref_gpu.getGPUWeights(RBFFD::Y));
+            step_kernel.setArg(i++, der_ref_gpu.getGPUWeights(RBFFD::Z));
+            step_kernel.setArg(i++, der_ref_gpu.getGPUWeights(RBFFD::LAPL));
+            step_kernel.setArg(i++, der_ref_gpu.getGPUWeights(RBFFD::R));
+            step_kernel.setArg(i++, der_ref_gpu.getGPUWeights(RBFFD::LAMBDA));
+            step_kernel.setArg(i++, der_ref_gpu.getGPUWeights(RBFFD::THETA));
+            step_kernel.setArg(i++, der_ref_gpu.getGPUWeights(RBFFD::HV));
+
+
+            // set constants
+
+
+#if 0
+                step_kernel.setArg(0, der_ref_gpu.getGPUStencils());
+
+            step_kernel.setArg(2, der_ref_gpu.getGPUWeights(RBFFD::X));
+            step_kernel.setArg(3, der_ref_gpu.getGPUWeights(RBFFD::Y));
+            step_kernel.setArg(4, der_ref_gpu.getGPUWeights(RBFFD::Z));
+            step_kernel.setArg(5, sol_in);                 // COPY_IN
+            step_kernel.setArg(6, deriv_sol_in);                 // COPY_IN
+            step_kernel.setArg(8, sizeof(unsigned int), &offset_to_set);               // const
+            step_kernel.setArg(9, sizeof(unsigned int), &n_stencils);               // const
+            step_kernel.setArg(10, sizeof(unsigned int), &nb_nodes);                  // const
+            step_kernel.setArg(11, sizeof(unsigned int), &stencil_size);            // const
+            step_kernel.setArg(12, sizeof(float), &dt_f);            // const
+            step_kernel.setArg(13, sizeof(float), &cur_time_f);            // const
+            step_kernel.setArg(14, sol_out);                 // COPY_IN / COPY_OUT
+#endif
+        } catch (cl::Error er) {
+            printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+        }
+
+        err = queue.enqueueNDRangeKernel(step_kernel, /* offset */ cl::NullRange,
+                /* GLOBAL (work-groups in the grid)  */   cl::NDRange(n_stencils),
+                /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+
+    //    err = queue.finish();
+        if (err != CL_SUCCESS) {
+            std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+                " failed (" << err << ")\n";
+            std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+}
+
+
+
 //----------------------------------------------------------------------
 
 // Launch a kernel to perform the step: 
@@ -731,6 +805,14 @@ void TimeDependentPDE_CL::allocateGPUMem() {
 //  sol_in => parameter u(n) above
 //  sol_out => parameter u(n+1) above
 void TimeDependentPDE_CL::launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out) {
+
+   static int args_set = 0;
+   if (!args_set) {
+        this->setAdvanceArgs();
+   }
+
+
+
     this->launchStepKernel(dt, sol_in, sol_in, sol_out, grid_ref.QmD.size(), 0);
 }
 

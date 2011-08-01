@@ -1,5 +1,5 @@
 #include "useDouble.cl"
-#include "constants.cl"
+//#include "constants.cl"
 #include "solver.cl"
 
 __kernel void
@@ -15,9 +15,7 @@ advanceEuler(
         float cur_time,
 
         __global FLOAT4* nodes,
-
         __global uint* stencils,
-
         __global FLOAT* x_weights,
         __global FLOAT* y_weights,
         __global FLOAT* z_weights,
@@ -25,7 +23,11 @@ advanceEuler(
         __global FLOAT* r_weights,
         __global FLOAT* lambda_weights,
         __global FLOAT* theta_weights,
-        __global FLOAT* hv_weights
+        __global FLOAT* hv_weights,
+
+        uint nb_nodes,
+        uint stencil_size,
+        int useHyperviscosity
         )
 {
         uint i = get_global_id(0);
@@ -45,7 +47,11 @@ advanceEuler(
                                      r_weights,
                                      lambda_weights,
                                      theta_weights,
-                                     hv_weights);
+                                     hv_weights,
+                                     nb_nodes,
+                                     stencil_size,
+                                     useHyperviscosity
+                                     );
 
                 solution_out[j] = solution_in[j] + dt* ( feval1 );
 /*

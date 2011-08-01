@@ -44,7 +44,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         cl::Kernel rk4_advance_substep_kernel;
 
         // This is for Euler and Midpoint method substeps
-        cl::Kernel step_kernel;
+        cl::Kernel euler_kernel;
 
     public: 
 
@@ -72,7 +72,9 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
 
         // Interfaces: 
         virtual void loadKernels(std::string& local_solve_source); 
-        virtual void allocateGPUMem(); 
+        virtual void allocateGPUMem();
+        // Set the default set of arguments for a kernel
+        virtual void setAdvanceArgs(cl::Kernel kern);
 
         // Use RK4 scheme to advance
         virtual void advance(TimeScheme which, double delta_t); 

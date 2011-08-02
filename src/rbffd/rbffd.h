@@ -219,7 +219,8 @@ class RBFFD
                     c1 = 0.058; 
                     c2 = 0.16; 
                     hv_k = 8; 
-                    hv_gamma = 5;
+                    //hv_gamma = 5;
+                    hv_gamma = 5e-2;
                     break; 
                 default:
                     std::cout << "[RBFFD] Error: setEpsilonByStencilSize does not support stencil size " << st_size << " at this time. Try using 17, 31, 50, and 101\n"; 

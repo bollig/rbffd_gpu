@@ -139,6 +139,7 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
         }
 
 
+#if 0
         // Compute the condition numbers of the matrices? 
         if (computeCondNums)
                 //|| true) 
@@ -150,6 +151,7 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
             condNums[stencil[0]] = max(eigval) / min(eigval); 
             //std::cout << "Cond(" << st_indx << ") = " << condNums[st_indx] << std::endl;
         }
+#endif 
     }
 
     // d_matrix.print("DISTANCE MATRIX BEFORE: ");

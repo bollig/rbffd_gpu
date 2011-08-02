@@ -23,6 +23,7 @@
 OPTION (USE_VTK "Enable/Disable the use of VTK (if required by a test)" ON)
 OPTION (USE_CUDA "Enable/Disable the use of CUDA" ON)
 OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
+OPTION (USE_ICC "Enable/Disable the use of Intel ICC compiler for CUDA" OFF)
 
 	FIND_PACKAGE (OPENCL)
     IF (NOT USE_OPENCL)

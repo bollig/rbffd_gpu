@@ -709,7 +709,7 @@ void Grid::generateStencilsHash()
     unsigned int hny = ns_nby;
     unsigned int hnz = ns_nbz;
 
-    std::vector< std::vector<unsigned int> > cell_hash(hnx*hny*hnz, (unsigned int)0); 
+    std::vector< std::vector<unsigned int> > cell_hash(hnx*hny*hnz);//, (unsigned int)0); 
     // list of lists 
 //    cell_hash.resize(hnx * hny * hnz);  
 

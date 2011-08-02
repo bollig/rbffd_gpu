@@ -1,10 +1,10 @@
 #ifndef __GRID_H__
 #define __GRID_H__
 
-#include <vector> 
 #include <set> 
 #include <string>
 #include <sstream>
+#include <vector> 
 #include "Vec3d.h"
 #include "KDTree.h"
 

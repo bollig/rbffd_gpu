@@ -2,13 +2,6 @@
 #include "solver.cl"
 
 /*
-typedef struct Params {
-    uint nb_stencils;           
-    uint nb_nodes;              
-    uint stencil_size;          
-    // TODO: add weights pointers
-} Params;
-
 __kernel void           
 advanceRK4( 
          __global uint* stencils,               

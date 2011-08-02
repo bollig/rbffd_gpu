@@ -1,3 +1,4 @@
+
 #include "useDouble.cl"
 #include "applyWeights.cl"
 #include "cart2sph.cl"

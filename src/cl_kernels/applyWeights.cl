@@ -1,6 +1,5 @@
-#include "constants.cl"
+#include "useDouble.cl"
     
-__kernel
 FLOAT applyWeights(__global FLOAT* weights, __global FLOAT* u, unsigned int indx, __global uint* stencils, uint stencil_size)
 {
         // This __global will change to __constant if we can fit the weight into const memory (OPTIMIZATION TODO)

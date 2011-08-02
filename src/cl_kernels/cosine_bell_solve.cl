@@ -5,7 +5,7 @@
 
 FLOAT solve(__global FLOAT* u_t,
             unsigned int indx,
-            double t,
+            float t,
             __global FLOAT4* nodes,
             __global uint* stencils,
             __global FLOAT* x_weights,

@@ -176,13 +176,13 @@ advanceRK4_substeps(
     uint i = get_global_id(0);
     uint j = i + offset_to_set;
     if(j < nb_stencils_to_compute) {
-        double sol = u_in[j];
+        FLOAT sol = u_in[j];
 
         // Note: k1 and k2 are scaled by 0.5, but we do NOT remove that scale.
         //       Instead we adjust the scalar in the equation below
-        double k1 = u_plus_scaled_k1[j] - sol;
-        double k2 = u_plus_scaled_k2[j] - sol;
-        double k3 = u_plus_scaled_k3[j] - sol;
+        FLOAT k1 = u_plus_scaled_k1[j] - sol;
+        FLOAT k2 = u_plus_scaled_k2[j] - sol;
+        FLOAT k3 = u_plus_scaled_k3[j] - sol;
         // Solve for k4
         FLOAT k4 = solve(u_plus_scaled_k3,
                              j,

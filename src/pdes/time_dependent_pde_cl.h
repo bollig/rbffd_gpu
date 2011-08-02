@@ -19,6 +19,11 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         int INDX_INTERMEDIATE_2;
         int INDX_INTERMEDIATE_3;
 
+
+        int euler_args_set; 
+        int rk4_sub_args_set;
+        int rk4_adv_args_set;
+
         RBFFD_CL& der_ref_gpu;
 
         bool weightsPrecomputed; 
@@ -54,6 +59,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
             : TimeDependentPDE(grid, der, comm),
               INDX_IN(0), INDX_OUT(1),
               INDX_INTERMEDIATE_1(2), INDX_INTERMEDIATE_2(3), INDX_INTERMEDIATE_3(4),
+              euler_args_set(0), rk4_sub_args_set(0), rk4_adv_args_set(0),
             // We maintain a ref to der here so we can keep it cast as an OpenCL RBFFD class
             der_ref_gpu(*der), weightsPrecomputed(weightsComputed)
         {;}

@@ -805,10 +805,11 @@ void TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         unsigned int nb_nodes = grid_ref.getNodeListSize();
 
-        try {
-                // Subtract 1 to make sure our ++ below works out correctly;
-                int i = argc_start;
+        // Subtract 1 to make sure our ++ below works out correctly;
+        int i = argc_start;
+        std::cout << "SETTING THE ARGUMENTS FOR GPU TIME SCHEMES\n";
 
+        try {
                 kern.setArg(i++, der_ref_gpu.getGPUNodes());
                 kern.setArg(i++, der_ref_gpu.getGPUStencils());
 
@@ -826,7 +827,7 @@ void TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
                 kern.setArg(i++, der_ref.getUseHyperviscosity());
 
         } catch (cl::Error er) {
-                printf("[TimeDependentPDE_CL::setAdvanceArgs] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+                printf("[TimeDependentPDE_CL::setAdvanceArgs] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
         }
 }
 
@@ -845,7 +846,6 @@ void TimeDependentPDE_CL::launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in
         unsigned int n_stencils = grid_ref.getStencilsSize();
         float dt_f = (float) dt;
         float cur_time_f = (float) cur_time;
-        static int args_set = 0;
 
         int i = 0;
 
@@ -857,12 +857,12 @@ void TimeDependentPDE_CL::launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in
                 euler_kernel.setArg(i++, cur_time_f);
 
                 // We should only do this on the first iter
-                if (!args_set) {
-                        euler_kernel.setArg(i++, 0);
-                        euler_kernel.setArg(i++, grid_ref.QmD.size());
+                if (!euler_args_set) {
+                        euler_kernel.setArg(i++, (unsigned int) 0);
+                        euler_kernel.setArg(i++, (unsigned int)grid_ref.QmD.size());
 
                         this->setAdvanceArgs(euler_kernel, i);
-                        args_set++;
+                        euler_args_set++;
                 }
                 err = queue.enqueueNDRangeKernel(euler_kernel, /* offset */ cl::NullRange,
                                                  /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.QmD.size()),
@@ -889,7 +889,6 @@ void TimeDependentPDE_CL::launchEulerSetDKernel( double dt, cl::Buffer& sol_in, 
         unsigned int n_stencils = grid_ref.getStencilsSize();
         float dt_f = (float) dt;
         float cur_time_f = (float) cur_time;
-        static int args_set = 0;
 
         int i = -1;
 
@@ -901,12 +900,12 @@ void TimeDependentPDE_CL::launchEulerSetDKernel( double dt, cl::Buffer& sol_in, 
                 euler_kernel.setArg(i++, cur_time_f);
 
                 // We should only do this on the first iter
-                if (!args_set) {
-                        euler_kernel.setArg(i++, grid_ref.QmD.size());
-                        euler_kernel.setArg(i++, grid_ref.D.size());
+                if (!euler_args_set) {
+                        euler_kernel.setArg(i++,(unsigned int) grid_ref.QmD.size());
+                        euler_kernel.setArg(i++, (unsigned int)grid_ref.D.size());
 
                         this->setAdvanceArgs(euler_kernel, i);
-                        args_set++;
+                        euler_args_set++;
                 }
         } catch (cl::Error er) {
                 printf("[launchEulerSetDKernel] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
@@ -985,7 +984,6 @@ void TimeDependentPDE_CL::launchRK4_substep_SetQmDKernel( double adjusted_t, dou
         float dt_f = (float) dt;
         float cur_time_f = (float) adjusted_t;
         float substep_scale_f = (float) substep_scale;
-        static int args_set = 0;
 
         int i = 0;
 
@@ -998,12 +996,12 @@ void TimeDependentPDE_CL::launchRK4_substep_SetQmDKernel( double adjusted_t, dou
                 rk4_substep_kernel.setArg(i++, substep_scale_f);
 
                 // We should only do this on the first iter
-                if (!args_set) {
-                        rk4_substep_kernel.setArg(i++, 0);
-                        rk4_substep_kernel.setArg(i++, grid_ref.QmD.size());
+                if (!rk4_sub_args_set) {
+                        rk4_substep_kernel.setArg(i++, (unsigned int) 0);
+                        rk4_substep_kernel.setArg(i++, (unsigned int)grid_ref.QmD.size());
 
                         this->setAdvanceArgs( rk4_substep_kernel, i);
-                        args_set++;
+                        rk4_sub_args_set++;
                 }
                 err = queue.enqueueNDRangeKernel( rk4_substep_kernel, /* offset */ cl::NullRange,
                                                  /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.QmD.size()),
@@ -1017,7 +1015,7 @@ void TimeDependentPDE_CL::launchRK4_substep_SetQmDKernel( double adjusted_t, dou
                         exit(EXIT_FAILURE);
                 }
         } catch (cl::Error er) {
-                printf("[launchRK4_substep_SetQmDKernel] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+                printf("[launchRK4_substep_SetQmDKernel] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
         }
 
 }
@@ -1030,7 +1028,6 @@ void TimeDependentPDE_CL::launchRK4_substep_SetDKernel( double adjusted_t, doubl
         float dt_f = (float) dt;
         float cur_time_f = (float) adjusted_t;
         float substep_scale_f = (float) substep_scale;
-        static int args_set = 0;
 
         int i = 0;
 
@@ -1043,12 +1040,12 @@ void TimeDependentPDE_CL::launchRK4_substep_SetDKernel( double adjusted_t, doubl
                 rk4_substep_kernel.setArg(i++, substep_scale_f);
 
                 // We should only do this on the first iter
-                if (!args_set) {
-                        rk4_substep_kernel.setArg(i++, grid_ref.QmD.size());
-                        rk4_substep_kernel.setArg(i++, grid_ref.D.size());
+                if (!rk4_sub_args_set) {
+                        rk4_substep_kernel.setArg(i++, (unsigned int)grid_ref.QmD.size());
+                        rk4_substep_kernel.setArg(i++, (unsigned int)grid_ref.D.size());
 
                         this->setAdvanceArgs( rk4_substep_kernel, i);
-                        args_set++;
+                        rk4_sub_args_set++;
                 }
                 err = queue.enqueueNDRangeKernel( rk4_substep_kernel, /* offset */ cl::NullRange,
                                                  /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.D.size()),
@@ -1074,7 +1071,6 @@ void TimeDependentPDE_CL::launchRK4_advance_substep_SetQmDKernel( double dt, cl:
         unsigned int n_stencils = grid_ref.getStencilsSize();
         float dt_f = (float) dt;
         float cur_time_f = (float) cur_time;
-        static int args_set = 0;
 
         int i = 0;
 
@@ -1089,12 +1085,12 @@ void TimeDependentPDE_CL::launchRK4_advance_substep_SetQmDKernel( double dt, cl:
                 rk4_advance_substep_kernel.setArg(i++, cur_time_f);
 
                 // We should only do this on the first iter
-                if (!args_set) {
-                        rk4_advance_substep_kernel.setArg(i++, 0);
-                        rk4_advance_substep_kernel.setArg(i++, grid_ref.QmD.size());
+                if (!rk4_adv_args_set) {
+                        rk4_advance_substep_kernel.setArg(i++, (unsigned int)0);
+                        rk4_advance_substep_kernel.setArg(i++, (unsigned int)grid_ref.QmD.size());
 
                         this->setAdvanceArgs( rk4_advance_substep_kernel, i);
-                        args_set++;
+                        rk4_adv_args_set++;
                 }
                 err = queue.enqueueNDRangeKernel( rk4_advance_substep_kernel, /* offset */ cl::NullRange,
                                                  /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.QmD.size()),
@@ -1108,7 +1104,7 @@ void TimeDependentPDE_CL::launchRK4_advance_substep_SetQmDKernel( double dt, cl:
                         exit(EXIT_FAILURE);
                 }
         } catch (cl::Error er) {
-                printf("[launchRK4_advance_substep_SetQmDKerne] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+                printf("[launchRK4_advance_substep_SetQmDKerne] ERROR: %s(%s) (arg index: %d) \n", er.what(), oclErrorString(er.err()), i);
         }
 
 }
@@ -1120,7 +1116,6 @@ void TimeDependentPDE_CL::launchRK4_advance_substep_SetDKernel( double dt, cl::B
         unsigned int n_stencils = grid_ref.getStencilsSize();
         float dt_f = (float) dt;
         float cur_time_f = (float) cur_time;
-        static int args_set = 0;
 
         int i = 0;
 
@@ -1135,12 +1130,12 @@ void TimeDependentPDE_CL::launchRK4_advance_substep_SetDKernel( double dt, cl::B
                 rk4_advance_substep_kernel.setArg(i++, cur_time_f);
 
                 // We should only do this on the first iter
-                if (!args_set) {
-                        rk4_advance_substep_kernel.setArg(i++, grid_ref.QmD.size());
-                        rk4_advance_substep_kernel.setArg(i++, grid_ref.D.size());
+                if (!rk4_adv_args_set) {
+                        rk4_advance_substep_kernel.setArg(i++, (unsigned int)grid_ref.QmD.size());
+                        rk4_advance_substep_kernel.setArg(i++, (unsigned int)grid_ref.D.size());
 
                         this->setAdvanceArgs( rk4_advance_substep_kernel, i);
-                        args_set++;
+                        rk4_adv_args_set++;
                 }
                 err = queue.enqueueNDRangeKernel( rk4_advance_substep_kernel, /* offset */ cl::NullRange,
                                                  /* GLOBAL (work-groups in the grid)  */   cl::NDRange(grid_ref.D.size()),

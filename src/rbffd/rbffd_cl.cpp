@@ -148,7 +148,7 @@ void RBFFD_CL::updateNodesOnGPU(bool forceFinish) {
         cpu_nodes = new float4[nb_nodes];
 
         for (unsigned int i = 0; i < nb_nodes; i++) {
-                cpu_nodes[i] = float4( (float)nodes[i].x(),
+            cpu_nodes[i] = float4( (float)nodes[i].x(),
                                          (float)nodes[i].y(),
                                          (float)nodes[i].z(),
                                          0.f );

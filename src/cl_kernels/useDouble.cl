@@ -4,7 +4,7 @@
 //typedef float FLOAT;
 //typedef float4 FLOAT4;
 
-typedef double FLOAT; 
+typedef float FLOAT; 
 typedef float4 FLOAT4;
 
 #endif 

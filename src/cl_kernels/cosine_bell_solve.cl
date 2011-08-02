@@ -1,3 +1,5 @@
+#ifndef __COSINE_BELL_SOLVE_H__
+#define __COSINE_BELL_SOLVE_H__
 
 #include "useDouble.cl"
 #include "applyWeights.cl"
@@ -22,11 +24,12 @@ FLOAT solve(__global FLOAT* u_t,
             int useHyperviscosity
             )
 {
-        FLOAT pi = 3.14159;
-        FLOAT R = 1./3.;
-        FLOAT alpha =-pi/2.;
-        FLOAT a = 6.37122e6; // radius of earth in meters
-        FLOAT u0 = 2*pi*a/1036800.; // The initial velocity (scalar in denom is 12days in seconds)
+        FLOAT pi = 3.14159f;
+        FLOAT R = 1.f/3.f;
+        FLOAT alpha =-pi/2.f;
+        FLOAT a = 6.37122e6f; // radius of earth in meters
+        FLOAT u0 = 2.f*pi*a/1036800.f; // The initial velocity (scalar in denom is 12days in seconds)
+
 
         FLOAT dh_dlambda= applyWeights(lambda_weights, u_t, indx, stencils, stencil_size);
         FLOAT dh_dtheta = applyWeights(theta_weights, u_t, indx, stencils, stencil_size);
@@ -53,3 +56,5 @@ FLOAT solve(__global FLOAT* u_t,
 
         return f_out;
 }
+
+#endif 

@@ -2,7 +2,8 @@
 #include "solver.cl"
 
 /*
-__kernel void           
+
+   __kernel void           
 advanceRK4( 
          __global uint* stencils,               
          __global FLOAT* solution_in,           
@@ -22,7 +23,7 @@ advanceRK4(
         //    k3 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F2, t+0.5*dt, nodes, useHV);
         //    k4 = dt*func(DM_Lambda, DM_Theta, H, u+F3, t+dt, nodes, useHV);
 
-        double* k1 = solve(stencils, weights, solution_in, nb_stencils, nb_nodes, stencil_size, dt, cur_time); 
+        FLOAT* k1 = solve(stencils, weights, solution_in, nb_stencils, nb_nodes, stencil_size, dt, cur_time); 
 
         // global barrier required. probably best if we do eval+saxpy kernel combo and specify: 
         //      kernel(solution_in, solution_in, 0, k1_out)  =>      calls solve(stencils, weights, solution_in + 0*solution_in, nb_stencils, nb_nodes, stencil_size, dt, cur_time + 0*dt)       // Matches k1
@@ -40,19 +41,19 @@ advanceRK4(
         // Run loop for stencil: 
         k2_input = solution_in + 0.5 * k1
         
-        double k2 = solve(stencils, weights, k2_input, nb_stencils, nb_nodes, stencil_size, dt, cur_time+0.5*dt); 
+        FLOAT k2 = solve(stencils, weights, k2_input, nb_stencils, nb_nodes, stencil_size, dt, cur_time+0.5*dt); 
         
         // barrier
 
         k3_input = solution_in + 0.5 * k2; 
 
-        double k3 = solve(stencils, weights, k3_input, nb_stencils, nb_nodes, stencil_size, dt, cur_time+0.5*dt); 
+        FLOAT k3 = solve(stencils, weights, k3_input, nb_stencils, nb_nodes, stencil_size, dt, cur_time+0.5*dt); 
         
         // barrier
 
         k4_input = solution_in + k3; 
 
-        double k4 = solve(stencils, weights, k4_input, nb_stencils, nb_nodes, stencil_size, dt, cur_time+dt); 
+        FLOAT k4 = solve(stencils, weights, k4_input, nb_stencils, nb_nodes, stencil_size, dt, cur_time+dt); 
   
         // The k's have dt rolled into them
         solution_out[i] = solution_in[i] + (k1 + 2.*k2 + 2.*k3 + k4)/6.; 
@@ -130,7 +131,16 @@ void evaluateRK4_substep(
             // --------------
             //   u+0.5*dt*feval1
 
-        u_plus_scaled_k_out[j] = u_plus_scaled_k_in[j] + k_scale * dt * feval1;
+            // In 1: u, t                       Out 1: u+0.5*(f1)
+            // In 2: u+0.5*(f1), t+0.5*dt       Out 2: u+0.5*(f2)
+            // In 3: u+0.5*(f2), t+0.5*dt       Out 3: u + 1*(f3)
+            // In 4: u,t, u+0.5(f1), u+0.5(f2), u+1*(f3)        
+
+            //  Out 4: u + (dt/6) * (k1 + 2k2 + 2k3 + k4) 
+            //          which means we need: 
+            //         u + (dt/6) * (2(k1 - u) + 4(k2-u) + 2(k3-u) + k4)
+            
+        u_plus_scaled_k_out[j] = u_plus_scaled_k_in[j] + k_scale * feval1;
     }
 }
 
@@ -186,7 +196,7 @@ advanceRK4_substeps(
         // Solve for k4
         FLOAT k4 = solve(u_plus_scaled_k3,
                              j,
-                             cur_time+dt,
+                             cur_time,
                              nodes,
                              stencils,
                              x_weights,
@@ -203,6 +213,6 @@ advanceRK4_substeps(
                              );
 
         // See logic above. 
-        u_out[j] = sol + (2.*k1 + 4.*k2 + 2.*k3 + dt * k4)/6.;
+        u_out[j] = sol + (2.f*k1 + 4.f*k2 + 2.f*k3 + k4) * (dt/6.f);
     }
 }

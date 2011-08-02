@@ -14,8 +14,6 @@ int CLBaseClass::contextCreated = 0;
 
 //----------------------------------------------------------------------
 CLBaseClass::CLBaseClass(int rank) {
-    std::cout<<"Loading and compiling OpenCL source for DerivativeCL\n";
-
     printf("Initialize OpenCL object and context\n");
 
     if (!contextCreated) {

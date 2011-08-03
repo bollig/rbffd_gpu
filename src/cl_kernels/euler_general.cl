@@ -4,7 +4,6 @@
 
 __kernel void
 advanceEuler(
-
         __global FLOAT* solution_in,
         __global FLOAT* solution_out,
         float dt,
@@ -57,6 +56,7 @@ advanceEuler(
                                      );
 
                 solution_out[j] = solution_in[j] + dt* ( feval1 );
+
 /*
                 // reset boundary solution
                 this->enforceBoundaryConditions(s, cur_time);

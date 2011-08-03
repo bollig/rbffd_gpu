@@ -332,9 +332,11 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
                 // here. Also, this MIGHT modify the boundary value so we should enforce
                 // conditions AFTER this kernel)
                 this->launchEulerSetDKernel(delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
-                queue.finish();
+        //        queue.finish();
         }
         queue.finish();
+
+        this->syncCPUtoGPU();
 
         // 5) FINAL: reset boundary solution on INDX_OUT
         // COST: 0.3 ms

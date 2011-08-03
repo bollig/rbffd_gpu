@@ -15,9 +15,13 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
     protected:         
         int INDX_IN;
         int INDX_OUT;
-        int INDX_INTERMEDIATE_1;
-        int INDX_INTERMEDIATE_2;
-        int INDX_INTERMEDIATE_3;
+        // Useful for RK4
+        int INDX_K1;
+        int INDX_K2;
+        int INDX_K3;
+        int INDX_K4;
+        int INDX_TEMP1; 
+        int INDX_TEMP2; 
 
 
         int euler_args_set; 
@@ -48,6 +52,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // at t+dt.
         cl::Kernel rk4_advance_substep_kernel;
 
+
         // This is for Euler and Midpoint method substeps
         cl::Kernel euler_kernel;
 
@@ -58,7 +63,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool weightsComputed=false) 
             : TimeDependentPDE(grid, der, comm),
               INDX_IN(0), INDX_OUT(1),
-              INDX_INTERMEDIATE_1(2), INDX_INTERMEDIATE_2(3), INDX_INTERMEDIATE_3(4),
+              INDX_K1(2), INDX_K2(3), INDX_K3(4), INDX_K4(5),
+              INDX_TEMP1(6), INDX_TEMP2(7),
               euler_args_set(0), rk4_sub_args_set(0), rk4_adv_args_set(0),
               useDouble(true),
             // We maintain a ref to der here so we can keep it cast as an OpenCL RBFFD class
@@ -126,11 +132,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // Runge Kutta 4
         // --------------------------------------
         virtual void loadRK4Kernels(std::string& local_sources); 
-        void launchRK4_substep_SetQmDKernel(double adjusted_t, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, double substep_scale);
-        void launchRK4_substep_SetDKernel(double adjusted_t, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, double substep_scale);
-
-        void launchRK4_advance_substep_SetQmDKernel(double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, cl::Buffer& substep1, cl::Buffer& substep2, cl::Buffer& substep3);
-        void launchRK4_advance_substep_SetDKernel(double dt, cl::Buffer& sol_in, cl::Buffer& sol_out, cl::Buffer& substep1, cl::Buffer& substep2, cl::Buffer& substep3);
+        virtual void evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double current_time, double substep_scale); 
+        virtual void advanceRK4_WithComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ); 
 
         virtual void loadEulerKernel(std::string& local_sources);
         virtual void loadMidpointKernel(std::string& local_sources);
@@ -141,9 +144,10 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // then call n_stencils_in_set=5, offset_to_set=15 (this routine
         // calculates the BYTE offset on its own. 
         void launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol, cl::Buffer& sol_out, unsigned int n_stencils_in_set, unsigned int offset_to_set);
-        void launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
-        void launchEulerSetDKernel( double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
+        void launchEulerKernel( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
 
+        void launchRK4_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale);
+        void launchRK4_adv( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, cl::Buffer& u_in, cl::Buffer& k1, cl::Buffer k2, cl::Buffer& k3, cl::Buffer& k4, cl::Buffer& u_out);
 
         virtual std::string className() {return "heat_cl";}
 

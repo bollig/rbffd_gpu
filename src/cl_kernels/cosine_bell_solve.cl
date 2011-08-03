@@ -24,11 +24,11 @@ FLOAT solve(__global FLOAT* u_t,
             int useHyperviscosity
             )
 {
-        FLOAT pi = acos(-1.);
-        FLOAT R = 1./3.;
-        FLOAT alpha =-pi/4.;
-        FLOAT a = 6.37122e6; // radius of earth in meters
-        FLOAT u0 = 2.*pi*a/1036800.; // The initial velocity (scalar in denom is 12days in seconds)
+        FLOAT pi = acos(-1.f);
+        FLOAT R = 1.f/3.f;
+        FLOAT alpha =-pi/4.f;
+        FLOAT a = 6.37122e6f; // radius of earth in meters
+        FLOAT u0 = 2.f*pi*a/1036800.f; // The initial velocity (scalar in denom is 12days in seconds)
 
 
         FLOAT dh_dlambda= applyWeights(lambda_weights, u_t, indx, stencils, stencil_size);

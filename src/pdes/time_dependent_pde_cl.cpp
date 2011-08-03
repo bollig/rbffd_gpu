@@ -906,7 +906,7 @@ void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned i
                         exit(EXIT_FAILURE);
                 }
         } catch (cl::Error er) {
-                printf("[launchRK4_substep_SetQmDKernel] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
+                printf("[launchRK4_eval] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
         }
 
 }
@@ -945,7 +945,7 @@ void TimeDependentPDE_CL::launchRK4_adv( unsigned int offset_to_set, unsigned in
                         exit(EXIT_FAILURE);
                 }
         } catch (cl::Error er) {
-                printf("[launchRK4_advance_substep_SetQmDKerne] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+                printf("[launchRK4_adv] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
         }
 
 }

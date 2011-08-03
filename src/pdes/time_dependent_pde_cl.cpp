@@ -337,7 +337,7 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
         }
         queue.finish();
 
-        this->syncCPUtoGPU();
+        //this->syncCPUtoGPU();
 
         // 5) FINAL: reset boundary solution on INDX_OUT
         // COST: 0.3 ms
@@ -482,6 +482,7 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
       
         queue.finish();
 
+        //this->syncCPUtoGPU();
         // synchronize();
         this->sendrecvUpdates(U_G, "U_G");
 

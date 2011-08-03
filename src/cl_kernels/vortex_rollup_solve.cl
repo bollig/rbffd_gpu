@@ -1,13 +1,15 @@
-#ifndef __COSINE_BELL_SOLVE_H__
-#define __COSINE_BELL_SOLVE_H__
-
-#include "useDouble.cl"
+// f
+#ifndef __VORTEX_ROLLUP_SOLVE_H__
+#define __VORTEX_ROLLUP_SOLVE_H__
 #include "applyWeights.cl"
 #include "cart2sph.cl"
 
+#include "useDouble.cl"
+
 FLOAT solve(__global FLOAT* u_t,
+
             unsigned int indx,
-            double t,
+            float t,
             __global FLOAT4* nodes,
             __global uint* stencils,
             __global FLOAT* x_weights,
@@ -24,29 +26,32 @@ FLOAT solve(__global FLOAT* u_t,
             int useHyperviscosity
             )
 {
-        FLOAT pi = acos(-1.f);
-        FLOAT R = 1.f/3.f;
-        FLOAT alpha =-pi/4.f;
-        FLOAT a = 6.37122e6f; // radius of earth in meters
-        FLOAT u0 = 2.f*pi*a/1036800.f; // The initial velocity (scalar in denom is 12days in seconds)
-
+    FLOAT rho0 = 3.f;
+    FLOAT gamma = 5.f;
+    FLOAT mach_eps = 0.00001f;
 
         FLOAT dh_dlambda= applyWeights(lambda_weights, u_t, indx, stencils, stencil_size);
-        FLOAT dh_dtheta = applyWeights(theta_weights, u_t, indx, stencils, stencil_size);
 
 //        __global FLOAT4* node = nodes[indx];
         FLOAT4 spherical_coords = cart2sph(nodes[indx]);
         // longitude, latitude respectively:
-        FLOAT lambda = spherical_coords.x;
-        FLOAT theta = spherical_coords.y;
+//        FLOAT lambda = spherical_coords.x;
+        FLOAT theta_p = spherical_coords.y;
 
-        FLOAT vel_u =   u0 * (cos(theta) * cos(alpha) + sin(theta) * cos(lambda) * sin(alpha));
-        //double vel_v = - u0 * (cos(lambda) * sin(alpha));
-        FLOAT vel_v = - u0 * (sin(lambda) * sin(alpha));
 
-        // dh/dt + u / cos(theta) * dh/d(lambda) + v * dh/d(theta) = 0
-        // dh/dt = - [diag(u/cos(theta)) * D_LAMBDA * h + diag(v/a) * D_THETA * h] + H
-        FLOAT f_out = -((vel_u/(a * cos(theta))) * dh_dlambda + (vel_v/a) * dh_dtheta);
+        // From Natasha's email: 
+        // 7/7/11 4:46 pm
+        FLOAT rho_p = rho0 * cos(theta_p); 
+
+        // NOTE: The sqrt(2) is written as sqrt(3.) in the paper with Grady.
+        // Natasha verified sqrt(3) is required
+        // Also, for whatever reason sech is not defined in the C standard
+        // math. I provide it in the cart2sph header. 
+        FLOAT Vt = (3.f* sqrt(3.f) / 2.f) * (sech(rho_p) * sech(rho_p)) * tanh(rho_p); 
+        
+        FLOAT w_theta_P = (fabs(rho_p) < mach_eps) ? 0.f : Vt / rho_p;
+
+        FLOAT f_out = - w_theta_P * dh_dlambda; 
 
         if (useHyperviscosity) {
                 FLOAT hv_filter = applyWeights(hv_weights, u_t, indx, stencils, stencil_size);

@@ -26,7 +26,7 @@ load_vtk()
 
 # Copy the source to destination whenever we run: "make" and the file has been edited
 copy_kernel_solver_command("cosine_bell_solve.cl")
-copy_kernel_solver_command("rk4_general.cl" "advance.cl")
+#copy_kernel_solver_command("rk4_general.cl" "advance.cl")
 
 
 # Add one or more serial or parallel tests with arg list

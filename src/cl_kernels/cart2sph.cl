@@ -1,11 +1,14 @@
+// f
 #ifndef __CART_2_SPH_CL__
 #define __CART_2_SPH_CL__
 
+#include "useDouble.cl"
+
 FLOAT4 cart2sph(FLOAT4 node) {
     FLOAT4 ret;   
-    float x = node.x; 
-    float y = node.y; 
-    float z = node.z;
+    FLOAT x = node.x; 
+    FLOAT y = node.y; 
+    FLOAT z = node.z;
     
     // NOTE: we use atan2 to get the tan^{-1} for the right quadrant
     // Theta: 
@@ -17,6 +20,10 @@ FLOAT4 cart2sph(FLOAT4 node) {
     // EMPTY
     ret.w = 0.f;
     return ret;
+}
+
+FLOAT sech(FLOAT v) {
+    return 1.f/cosh(v); 
 }
 
 #endif 

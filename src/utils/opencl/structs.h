@@ -225,6 +225,145 @@ namespace rtps
 
     } float4;
 
+    // IJ
+    typedef struct double4
+    {
+        double x;
+        double y;
+        double z;
+        double w;
+
+        double4()
+        {
+        };
+        double4(double xx, double yy, double zz, double ww):
+        x(xx),
+        y(yy),
+        z(zz),
+        w(ww)
+        {
+        }
+        void set(double xx, double yy, double zz, double ww=1.)
+        {
+            x = xx;
+            y = yy;
+            z = zz;
+            w = ww;
+        }
+
+        void print(const char* msg=0)
+        {
+            printf("%s: %e, %e, %e, %f\n", msg, x, y, z, w);
+        }
+        
+        void printd(const char* msg=0) {
+            printf("%s: %18.11e, %18.11e, %18.11e, %f\n", msg, x, y, z, w);
+        }
+
+        friend double4 operator-(double4& a, double4& b)
+        {
+            double4 c = double4(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w);
+            return c;
+        }
+
+        // to do: double4 aa = min - double4(5.,5.,5.,5.); // min is double4
+        friend const double4 operator-(const double4& a, const double4& b)
+        {
+            double4 c = double4(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w);
+            return c;
+        }
+
+        friend double4 operator-(double4&a)
+        {
+            double4 c = double4(-a.x, -a.y, -a.z, -a.w);
+            return c;
+        }
+
+        friend double4 operator+(double4& a, double4& b)
+        {
+            double4 c = double4(b.x+a.x, b.y+a.y, b.z+a.z, b.w+a.w);
+            return c;
+        }
+
+        friend const double4 operator+(const double4& a, const double4& b)
+        {
+            double4 c = double4(b.x+a.x, b.y+a.y, b.z+a.z, b.w+a.w);
+            return c;
+        }
+
+        void operator+=(double4 a)
+        {
+            (*this).x += a.x;
+            (*this).y += a.y;
+            (*this).z += a.z;
+            (*this).w += a.w;
+        }
+
+        void operator-=(double4 a)
+        {
+            (*this).x -= a.x;
+            (*this).y -= a.y;
+            (*this).z -= a.z;
+            (*this).w -= a.w;
+        }
+
+        void operator*=(double4 a)
+        {
+            (*this).x *= a.x;
+            (*this).y *= a.y;
+            (*this).z *= a.z;
+            (*this).w *= a.w;
+        }
+        void operator*=(double a)
+        {
+            (*this).x *= a;
+            (*this).y *= a;
+            (*this).z *= a;
+            (*this).w *= a;
+        }
+
+        void operator/=(double a)
+        {
+            (*this).x /= a;
+            (*this).y /= a;
+            (*this).z /= a;
+            (*this).w /= a;
+        }
+        void operator/=(double4 a)
+        {
+            (*this).x /= a.x;
+            (*this).y /= a.y;
+            (*this).z /= a.z;
+            (*this).w /= a.w;
+        }
+
+        friend double4 operator*(double r, double4& b)
+        {
+            double4 m = double4(r*b.x, r*b.y, r*b.z, r*b.w);
+            return m;
+        }
+        friend double4 operator*(double4& b, double r)
+        {
+            double4 m = double4(r*b.x, r*b.y, r*b.z, r*b.w);
+            return m;
+        }
+
+        friend double4 operator/(double4& b, double r)
+        {
+            double d = 1.f/r;
+            double4 m = double4(d*b.x, d*b.y, d*b.z, d*b.w);
+            return m;
+        }
+
+        double length()
+        {
+            double4& f = *this;
+            return sqrt(f.x*f.x + f.y*f.y + f.z*f.z);
+        }
+
+
+    } double4;
+
 
     // size: 4*4 = 16 floats
     // shared memory = 65,536 bytes = 16,384 floats

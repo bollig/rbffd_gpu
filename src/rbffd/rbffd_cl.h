@@ -15,7 +15,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         double* cpu_weights_d[NUM_DERIV_TYPES];
         float* cpu_weights_f[NUM_DERIV_TYPES];
-        float4* cpu_nodes;
+        double4* cpu_nodes;
         bool deleteCPUWeightsBuffer;
         bool deleteCPUNodesBuffer;
         bool deleteCPUStencilsBuffer;

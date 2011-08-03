@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <map> 
 
+#include "pdes/hyperbolic/vortex_rollup_cl.h"
 #include "pdes/hyperbolic/vortex_rollup.h"
+
 
 #include "grids/grid_reader.h"
 
@@ -278,7 +280,11 @@ int main(int argc, char** argv) {
     tm["heat_init"]->start(); 
 
     // We need to provide comm_unit to pass ghost node info
-    pde = new VortexRollup(subdomain, der, comm_unit, useHyperviscosity, true);
+    if (use_gpu) {
+        pde = new VortexRollup_CL(subdomain, (RBFFD_CL*)der, comm_unit, useHyperviscosity, true);
+    } else {
+        pde = new VortexRollup(subdomain, der, comm_unit, useHyperviscosity, true);
+    }
 
     // This should not influence anything. 
     pde->setStartEndTime(start_time, end_time);

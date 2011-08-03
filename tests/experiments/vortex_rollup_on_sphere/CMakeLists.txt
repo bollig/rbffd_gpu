@@ -24,6 +24,8 @@ require_config()   # Default is to require test.conf
 
 load_vtk()
 
+copy_kernel_solver_command("vortex_rollup_solve.cl")
+
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )

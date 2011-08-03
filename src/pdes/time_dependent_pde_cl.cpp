@@ -924,6 +924,7 @@ void TimeDependentPDE_CL::launchRK4_adv( unsigned int offset_to_set, unsigned in
                 rk4_advance_substep_kernel.setArg(i++, k2);
                 rk4_advance_substep_kernel.setArg(i++, k3);
                 rk4_advance_substep_kernel.setArg(i++, k4);
+                rk4_advance_substep_kernel.setArg(i++, u_out);
 
                 // We should only do this on the first iter
                 if (!rk4_adv_args_set) {

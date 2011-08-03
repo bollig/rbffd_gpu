@@ -67,7 +67,7 @@ evaluateRK4_classic(
             //    k4 = dt*func(DM_Lambda, DM_Theta, H, u+F3, t+dt, nodes, useHV);
 
             k_out[j] = dt * feval1;
-            u_plus_scaled_k_out[j] = u_in[j] + k_scale * feval1;
+            u_plus_scaled_k_out[j] = u_in[j] + k_scale * dt * feval1;
     }
 }
 

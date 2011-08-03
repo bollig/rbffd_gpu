@@ -8,8 +8,8 @@ advanceRK4(
          __global uint* stencils,               
          __global FLOAT* solution_in,           
          __global FLOAT* solution_out,          
-                  float dt,                     
-                  float cur_time,               
+                  double dt,                     
+                  double cur_time,               
          __constant Params* param 
 )  
 {   
@@ -74,9 +74,9 @@ __kernel
 void evaluateRK4_substep(
     __global FLOAT* u_plus_scaled_k_in,
     __global FLOAT* u_plus_scaled_k_out,
-    float dt,
-    float cur_time,
-    float k_scale,
+    double dt,
+    double cur_time,
+    double k_scale,
 
     // if we want to run this kernel on set QmD, offset is 0. To run kernel on set D, offset should be the offset in num elements to get to D
     uint offset_to_set,
@@ -157,8 +157,8 @@ advanceRK4_substeps(
          __global FLOAT* u_plus_scaled_k1,          
          __global FLOAT* u_plus_scaled_k2,          
          __global FLOAT* u_plus_scaled_k3,          
-    float dt,
-    float cur_time,
+    double dt,
+    double cur_time,
 
     // if we want to run this kernel on set QmD, offset is 0. To run kernel on set D, offset should be the offset in num elements to get to D
     uint offset_to_set,
@@ -196,7 +196,7 @@ advanceRK4_substeps(
         // Solve for k4
         FLOAT k4 = solve(u_plus_scaled_k3,
                              j,
-                             cur_time,
+                             cur_time+dt,
                              nodes,
                              stencils,
                              x_weights,
@@ -213,6 +213,6 @@ advanceRK4_substeps(
                              );
 
         // See logic above. 
-        u_out[j] = sol + (2.f*k1 + 4.f*k2 + 2.f*k3 + k4) * (dt/6.f);
+        u_out[j] = sol + (2.*k1 + 4.*k2 + 2.*k3 + k4) * (dt/6.);
     }
 }

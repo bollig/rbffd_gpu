@@ -3,9 +3,9 @@
 
 FLOAT4 cart2sph(FLOAT4 node) {
     FLOAT4 ret;   
-    float x = node.x; 
-    float y = node.y; 
-    float z = node.z;
+    double x = node.x; 
+    double y = node.y; 
+    double z = node.z;
     
     // NOTE: we use atan2 to get the tan^{-1} for the right quadrant
     // Theta: 

@@ -114,8 +114,7 @@ void RBFFD_CL::allocateGPUMem() {
     weights_mem_bytes = gpu_stencil_size * float_size; 
     deriv_mem_bytes = nb_stencils * float_size;
 
-    // Nodes are going to be cast to float4
-    nodes_mem_bytes = nb_nodes * sizeof(float4);
+    nodes_mem_bytes = nb_nodes * sizeof(double4);
 
     std::cout << "Allocating GPU memory\n"; 
 
@@ -145,13 +144,13 @@ void RBFFD_CL::updateNodesOnGPU(bool forceFinish) {
         unsigned int nb_nodes = grid_ref.getNodeListSize();
         std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
-        cpu_nodes = new float4[nb_nodes];
+        cpu_nodes = new double4[nb_nodes];
 
         for (unsigned int i = 0; i < nb_nodes; i++) {
-            cpu_nodes[i] = float4( (float)nodes[i].x(),
-                                         (float)nodes[i].y(),
-                                         (float)nodes[i].z(),
-                                         0.f );
+            cpu_nodes[i] = double4( nodes[i].x(),
+                                    nodes[i].y(),
+                                    nodes[i].z(),
+                                    0.0 );
         }
         err = queue.enqueueWriteBuffer(gpu_nodes, CL_TRUE, 0, nodes_mem_bytes, &cpu_nodes[0], NULL, &event);
 //        queue.flush();

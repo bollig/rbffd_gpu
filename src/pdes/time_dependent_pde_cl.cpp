@@ -853,8 +853,8 @@ void TimeDependentPDE_CL::launchEulerSetQmDKernel( double dt, cl::Buffer& sol_in
                 // These will change each iteration
                 euler_kernel.setArg(i++, sol_in);
                 euler_kernel.setArg(i++, sol_out);
-                euler_kernel.setArg(i++, dt_f);
-                euler_kernel.setArg(i++, cur_time_f);
+                euler_kernel.setArg(i++, dt);
+                euler_kernel.setArg(i++, cur_time);
 
                 // We should only do this on the first iter
                 if (!euler_args_set) {
@@ -896,8 +896,8 @@ void TimeDependentPDE_CL::launchEulerSetDKernel( double dt, cl::Buffer& sol_in, 
                 // These will change each iteration
                 euler_kernel.setArg(i++, sol_in);
                 euler_kernel.setArg(i++, sol_out);
-                euler_kernel.setArg(i++, dt_f);
-                euler_kernel.setArg(i++, cur_time_f);
+                euler_kernel.setArg(i++, dt);
+                euler_kernel.setArg(i++, cur_time);
 
                 // We should only do this on the first iter
                 if (!euler_args_set) {
@@ -991,9 +991,9 @@ void TimeDependentPDE_CL::launchRK4_substep_SetQmDKernel( double adjusted_t, dou
                 // These will change each iteration
                 rk4_substep_kernel.setArg(i++, sol_in);
                 rk4_substep_kernel.setArg(i++, sol_out);
-                rk4_substep_kernel.setArg(i++, dt_f);
-                rk4_substep_kernel.setArg(i++, cur_time_f);
-                rk4_substep_kernel.setArg(i++, substep_scale_f);
+                rk4_substep_kernel.setArg(i++, dt);
+                rk4_substep_kernel.setArg(i++, cur_time);
+                rk4_substep_kernel.setArg(i++, substep_scale);
 
                 // We should only do this on the first iter
                 if (!rk4_sub_args_set) {
@@ -1035,9 +1035,9 @@ void TimeDependentPDE_CL::launchRK4_substep_SetDKernel( double adjusted_t, doubl
                 // These will change each iteration
                 rk4_substep_kernel.setArg(i++, sol_in);
                 rk4_substep_kernel.setArg(i++, sol_out);
-                rk4_substep_kernel.setArg(i++, dt_f);
-                rk4_substep_kernel.setArg(i++, cur_time_f);
-                rk4_substep_kernel.setArg(i++, substep_scale_f);
+                rk4_substep_kernel.setArg(i++, dt);
+                rk4_substep_kernel.setArg(i++, cur_time);
+                rk4_substep_kernel.setArg(i++, substep_scale);
 
                 // We should only do this on the first iter
                 if (!rk4_sub_args_set) {
@@ -1081,8 +1081,8 @@ void TimeDependentPDE_CL::launchRK4_advance_substep_SetQmDKernel( double dt, cl:
                 rk4_advance_substep_kernel.setArg(i++, substep1);
                 rk4_advance_substep_kernel.setArg(i++, substep2);
                 rk4_advance_substep_kernel.setArg(i++, substep3);
-                rk4_advance_substep_kernel.setArg(i++, dt_f);
-                rk4_advance_substep_kernel.setArg(i++, cur_time_f);
+                rk4_advance_substep_kernel.setArg(i++, dt);
+                rk4_advance_substep_kernel.setArg(i++, cur_time);
 
                 // We should only do this on the first iter
                 if (!rk4_adv_args_set) {
@@ -1126,8 +1126,8 @@ void TimeDependentPDE_CL::launchRK4_advance_substep_SetDKernel( double dt, cl::B
                 rk4_advance_substep_kernel.setArg(i++, substep1);
                 rk4_advance_substep_kernel.setArg(i++, substep2);
                 rk4_advance_substep_kernel.setArg(i++, substep3);
-                rk4_advance_substep_kernel.setArg(i++, dt_f);
-                rk4_advance_substep_kernel.setArg(i++, cur_time_f);
+                rk4_advance_substep_kernel.setArg(i++, dt);
+                rk4_advance_substep_kernel.setArg(i++, cur_time);
 
                 // We should only do this on the first iter
                 if (!rk4_adv_args_set) {

@@ -7,8 +7,8 @@ advanceEuler(
 
         __global FLOAT* solution_in,
         __global FLOAT* solution_out,
-        float dt,
-        float cur_time,
+        double dt,
+        double cur_time,
 
         // if we want to run this kernel on set QmD, offset is 0. To run kernel on set D, offset should be the offset in num elements to get to D
         uint offset_to_set,

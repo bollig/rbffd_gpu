@@ -38,7 +38,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // K1, K2, K3 and K4
         //cl::Buffer gpu_feval[4];
         // IN and OUT
-        cl::Buffer gpu_solution[5];
+        cl::Buffer gpu_solution[8];
 
 
         // RK4 requires 4 substeps with a barrier between each. 

@@ -467,7 +467,7 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         // NOTE: INDX_IN maps to "u", INDX_K1 to "F1" and INDX_TEMP to "u+0.5*F1"
 
         // Compute K1, K2, K3 and K4 in separate kernel launches (required to ensure global barrier between evaluations)
-        evaluateRK4_WithComm(INDX_IN, INDX_IN, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);  
+        evaluateRK4_WithComm(INDX_IN, INDX_TEMP2, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);  
         // We use INDX_TEMP1 (== u+0.5*K1) to compute K2 and write INDX_TEMP2 with "u+0.5*K2"
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K2, INDX_TEMP2, delta_t, cur_time+0.5*delta_t, 0.5);  
         // We use INDX_TEMP2 (== u+0.5*K2) to compute K3 and write INDX_TEMP1 with "u+K3"

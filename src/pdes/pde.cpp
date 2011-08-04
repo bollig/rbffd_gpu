@@ -330,6 +330,8 @@ int PDE::updateFinal() {
         initCount ++;
     }
 
+    this->syncCPUtoGPU();
+
     //pair<map<char,int>::iterator,bool> ret;
     set<int>::iterator qit;
     int i = 0;

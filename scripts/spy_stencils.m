@@ -1,4 +1,16 @@
-function [] = spy_stencils(stencil_list)
+
+function [] = spy_stencils(stencil_list_in,is_from_cpp)
+
+if nargin < 1
+   is_from_cpp = 0;  
+end
+
+if is_from_cpp
+   stencil_list = stencil_list_in(:,2:end) + 1; 
+else 
+    stencil_list = stencil_list_in; 
+end
+
 % Show the spy(stencil_list) to see sparsity patterns
 s = figure; 
 N = size(stencil_list, 1); 

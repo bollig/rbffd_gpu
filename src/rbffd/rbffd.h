@@ -155,6 +155,12 @@ class RBFFD
             return -hv_gamma / pow(grid_ref.getGlobalNodeListSize(), hv_k);
         }
 
+        // Allow me to override the defaults. Right now, the scalars are set for cosine bell
+        double setHVScalars(int k, double gamma_c) {
+            hv_gamma = gamma_c; 
+            hv_k = k;
+        }
+
         void setComputeConditionNumber(bool tf) {
             computeCondNums = tf; 
         }
@@ -194,6 +200,8 @@ class RBFFD
         void setEpsilonByStencilSize(unsigned int st_size) {
             double c1, c2; 
 
+            // NOTE: these are specific to the cosine bell. use
+            // "setHVScalars(k, gamma)" to specify the scalars for vortex roll
             switch(st_size) {
                 case 17: 
                     c1 = 0.026; 

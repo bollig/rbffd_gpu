@@ -61,6 +61,7 @@ evaluateRK4_classic(
                                  stencil_size,
                                  useHyperviscosity
                                  );
+
             //    k1 = dt*func(DM_Lambda, DM_Theta, H, u, t, nodes, useHV);
             //    k2 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F1, t+0.5*dt, nodes, useHV);
             //    k3 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F2, t+0.5*dt, nodes, useHV);
@@ -68,6 +69,7 @@ evaluateRK4_classic(
 
             k_out[j] = dt * feval1;
             u_plus_scaled_k_out[j] = u_in[j] + k_scale * dt * feval1;
+
     }
 }
 

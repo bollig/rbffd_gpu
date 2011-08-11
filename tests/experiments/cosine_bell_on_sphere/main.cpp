@@ -37,7 +37,7 @@ int num_revolutions;
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     md_grid_filename = settings->GetSettingAs<string>("GRID_FILENAME", ProjectSettings::required); 
     sphere_radius = settings->GetSettingAs<double>("SPHERE_RADIUS", ProjectSettings::optional, "1.0"); 
-    double velocity_angle_denom = settings->GetSettingAs<double>("VELOCITY_ANGLE_DENOM", ProjectSettings::optional, "0"); 
+    double velocity_angle_denom = settings->GetSettingAs<double>("VELOCITY_ANGLE_DENOM", ProjectSettings::optional, "2"); 
     if (fabs(velocity_angle_denom) > 0.) {  
         velocity_angle = M_PI/velocity_angle_denom;
     } else {

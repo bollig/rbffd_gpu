@@ -25,9 +25,9 @@ FLOAT solve(__global FLOAT* u_t,
             )
 {
         FLOAT pi = acos(-1.f);
-        FLOAT R = 1.f/3.f;
-        FLOAT alpha =-pi/4.f;
-        FLOAT a = 6.37122e6f; // radius of earth in meters
+        FLOAT alpha =-pi/2.f;
+        FLOAT a = 1.f;//6.37122e6f; // radius of earth in meters
+        FLOAT R = a/3.f;
         FLOAT u0 = 2.f*pi*a/1036800.f; // The initial velocity (scalar in denom is 12days in seconds)
 
 

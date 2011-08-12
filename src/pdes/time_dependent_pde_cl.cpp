@@ -336,7 +336,8 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
             }
         }
 
-        //this->syncCPUtoGPU();
+        // Copies from INDX_IN to U_G
+//        this->syncCPUtoGPU();
 
         // Flip our ping pong buffers.
         swap(INDX_IN, INDX_OUT);

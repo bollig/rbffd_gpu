@@ -479,8 +479,7 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         queue.finish();
 
         //this->syncCPUtoGPU();
-        // synchronize();
-        this->sendrecvUpdates(U_G, "U_G");
+        //this->sendrecvUpdates(U_G, "U_G");
 
         //exit(EXIT_FAILURE);
 
@@ -786,11 +785,8 @@ void TimeDependentPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::B
 void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
 {
 
+    // This launch requires set R for u+s*K1, u+s*K2, u+s*K3 
     this->launchRK4_eval(0, grid_ref.QmD.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-#if 0
-    // Enforce boundary using GPU, but specify we want to use the intermediate buffer
-    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_K1], cur_time+0.5*delta_t);
-#endif
 
     // NOTE: when run in serial only one kernel launch is required.
     if (comm_ref.getSize() > 1) {
@@ -802,9 +798,9 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
         // If we want to match the GPU we
         // should do: syncCPUtoGPU()
         if (useDouble) {
-            this->syncSetODouble(this->U_G, gpu_solution[indx_u_in]);
+            this->syncSetODouble(this->U_G, gpu_solution[indx_u_out]);
         } else {
-            this->syncSetOSingle(this->U_G, gpu_solution[indx_u_in]);
+            this->syncSetOSingle(this->U_G, gpu_solution[indx_u_out]);
         }
 
         // Should send intermediate steps by copying down from GPU, sending, then
@@ -812,9 +808,9 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
         this->sendrecvUpdates(this->U_G, "intermediate_U_G");
 
         if (useDouble) {
-            this->syncSetRDouble(this->U_G, gpu_solution[indx_u_in]);
+            this->syncSetRDouble(this->U_G, gpu_solution[indx_u_out]);
         } else {
-            this->syncSetRSingle(this->U_G, gpu_solution[indx_u_in]);
+            this->syncSetRSingle(this->U_G, gpu_solution[indx_u_out]);
         }
 
         this->launchRK4_eval(grid_ref.QmD.size(), grid_ref.D.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);

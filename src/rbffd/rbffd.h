@@ -151,7 +151,6 @@ class RBFFD
         }
 
         double getHVScalar() {
-            //return -hv_gamma;
             return -hv_gamma / pow(grid_ref.getGlobalNodeListSize(), hv_k);
         }
 

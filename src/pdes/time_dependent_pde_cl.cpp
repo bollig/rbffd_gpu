@@ -264,16 +264,14 @@ void TimeDependentPDE_CL::advance(TimeScheme which, double delta_t) {
         case EULER: 
                 advanceFirstOrderEuler(delta_t);
                 break;
-#if 1
+#if 0
         case MIDPOINT: 
                 advanceSecondOrderMidpoint(delta_t);
                 break;
-
+#endif 
         case RK4: 
-             //   advanceRK4(delta_t);
                 advanceRK4(delta_t);
                 break;
-#endif 
 
         default: 
                 std::cout << "[TimeDependentPDE_CL] Invalid TimeScheme specified. Bailing...\n";
@@ -447,7 +445,7 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         // For explicit schemes we can just solve for our weights and have them stored in memory.
         this->assemble();
 
-#if 0
+#if 1
         //-------- Overlap beweeen these: ------------
         // NOTE: syncSet*** ONLY copies between CPU and GPU. It does not synchronize across CPUs.
         // Use sendrecvUpdates to perform an interproc comm.
@@ -806,9 +804,9 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
         // If we want to match the GPU we
         // should do: syncCPUtoGPU()
         if (useDouble) {
-            this->syncSetODouble(this->U_G, gpu_solution[INDX_IN]);
+            this->syncSetODouble(this->U_G, gpu_solution[indx_u_in]);
         } else {
-            this->syncSetOSingle(this->U_G, gpu_solution[INDX_IN]);
+            this->syncSetOSingle(this->U_G, gpu_solution[indx_u_in]);
         }
 
         // Should send intermediate steps by copying down from GPU, sending, then
@@ -816,9 +814,9 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
         this->sendrecvUpdates(this->U_G, "intermediate_U_G");
 
         if (useDouble) {
-            this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
+            this->syncSetRDouble(this->U_G, gpu_solution[indx_u_in]);
         } else {
-            this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]);
+            this->syncSetRSingle(this->U_G, gpu_solution[indx_u_in]);
         }
 
         this->launchRK4_eval(grid_ref.QmD.size(), grid_ref.D.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);

@@ -28,6 +28,7 @@ class PDE : public MPISendable
         // Each solution type could be a scalar or vector
         std::vector<SolutionType> U_G; 
 
+        int initCount; 
 
     private:
         // A map for global INDEX=VALUE storage of the final solution
@@ -43,7 +44,8 @@ class PDE : public MPISendable
 
     public: 
         PDE(Domain* grid, RBFFD* der, Communicator* comm) 
-            : grid_ref(*grid), der_ref(*der), comm_ref(*comm)
+            : grid_ref(*grid), der_ref(*der), comm_ref(*comm), 
+            initCount(0)
         {
             // We want our solution to match the number of nodes
             U_G.resize(grid_ref.getNodeListSize());
@@ -96,6 +98,13 @@ class PDE : public MPISendable
 
             this->getGlobalSolution(&sol);
             this->getExactSolution(exact, nodes, &exactSolution); 
+   
+#if 0
+            std::cout << "Global Grid nodelist size is " << global_grid->getNodeListSize() << std::endl;
+            for (unsigned int i = 0; i < global_grid->getNodeListSize(); i++) {
+                std::cout << i << "\t" << sol[i] << "\t" << exactSolution[i] << std::endl;
+            }
+#endif 
             this->checkError(exactSolution, sol, *global_grid, rel_err_max); 
         }
 

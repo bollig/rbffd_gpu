@@ -423,6 +423,7 @@ int main(int argc, char** argv) {
                 pde->checkGlobalError(exact, grid, max_global_rel_error); 
             }
         }
+exit(EXIT_FAILURE);
 #if 0
         sprintf(label, "LOCAL UPDATED SOLUTION [local_indx (global_indx)] AFTER %d ITERATIONS", iter+1); 
         pde->printSolution(label); 

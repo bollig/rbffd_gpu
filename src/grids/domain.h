@@ -24,11 +24,20 @@ class Domain : public Grid, public MPISendable
         double zmin;
         double zmax;
 #endif 
+
+
+        // ***************************************************
+        //              N O T E: 
+        //----------------------------------------------------
+        //
         // Sets in GLOBAL INDEXING: 
         //   G, Q, D, O, B, QmD, R 
         //
         // Sets in LOCAL INDEXING: 
         //   node_list, boundary_indices, boundary_normals
+        //
+        //
+        // ***************************************************
 
 
         // 1) These are the sets of stencil centers

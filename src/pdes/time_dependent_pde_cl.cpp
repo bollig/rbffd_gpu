@@ -299,39 +299,42 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
         // For explicit schemes we can just solve for our weights and have them stored in memory.
         this->assemble();
 
-        queue.finish();
+//        queue.finish();
 
         // 1) Launch kernel for set QmD (will take a while, so in the meantime...)
         this->launchEulerKernel(0, grid_ref.QmD.size(), delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
 
+        queue.finish();
+
         // NOTE: when run in serial only one kernel launch is required.
         if (comm_ref.getSize() > 1) {
-                std::cout << "INSIDE EULER set D STUFF\n";
-                // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
-                if (useDouble) {
-                        this->syncSetODouble(this->U_G, gpu_solution[INDX_IN]);
-                } else {
-                        this->syncSetOSingle(this->U_G, gpu_solution[INDX_IN]);
-                }
+                
+            std::cout << "INSIDE EULER set D STUFF (useDouble = " << useDouble << ")\n";
 
-                // 3) OVERLAP: Transmit between CPUs
-                // NOTE: Require an MPI barrier here
-                this->sendrecvUpdates(U_G, "U_G");
+            // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
+            if (useDouble) {
+                this->syncSetODouble(this->U_G, gpu_solution[INDX_IN]);
+            } else {
+                this->syncSetOSingle(this->U_G, gpu_solution[INDX_IN]);
+            }
+
+            // 3) OVERLAP: Transmit between CPUs
+            // NOTE: Require an MPI barrier here
+            this->sendrecvUpdates(U_G, "U_G");
 
 
-                // 4) OVERLAP: Update the input with set R
-                if (useDouble) {
-                        this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
-                } else {
-                        this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]);
-                }
+            // 4) OVERLAP: Update the input with set R
+            if (useDouble) {
+                this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
+            } else {
+                this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]);
+            }
 
-                // 6) Launch a SECOND kernel to complete set D for this step (NOTE: in
-                // higher order timeschemes we need to perform ADDITIONAL communication
-                // here. Also, this MIGHT modify the boundary value so we should enforce
-                // conditions AFTER this kernel)
-                this->launchEulerKernel(grid_ref.QmD.size(), grid_ref.D.size(), delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
-                queue.finish();
+            // 6) Launch a SECOND kernel to complete set D for this step (NOTE: in
+            // higher order timeschemes we need to perform ADDITIONAL communication
+            // here. Also, this MIGHT modify the boundary value so we should enforce
+            // conditions AFTER this kernel)
+            this->launchEulerKernel(grid_ref.QmD.size(), grid_ref.D.size(), delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
         }
         queue.finish();
 

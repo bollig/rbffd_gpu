@@ -28,11 +28,11 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
         //have to move this down.
         this->fillDiffusion(diffusivity, U_G, 0., nb_nodes);
 
-        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_FALSE, 0, solution_mem_bytes, &diffusivity[0], NULL, &event);
+        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity[0], NULL, &event);
 //        queue.flush();
         float* diffusivity_f = new float[nb_nodes];
         diffusivity_f[i] = (float)diffusivity[i];
-        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_FALSE, 0, solution_mem_bytes, &diffusivity_f[0], NULL, &event);
+        err = queue.enqueueWriteBuffer(gpu_diffusivity, CL_TRUE, 0, solution_mem_bytes, &diffusivity_f[0], NULL, &event);
 //        queue.flush();
         delete [] diffusivity_f;
 #endif
@@ -42,7 +42,7 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
                 if (useDouble) {
 
                         // Fill GPU mem with initial solution
-                        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_FALSE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
+                        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G[0], NULL, &event);
 //                        queue.flush();
 
                         queue.finish();
@@ -52,7 +52,7 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
                         for (unsigned int i = 0; i < nb_nodes; i++) {
                                 U_G_f[i] = (float)U_G[i];
                         }
-                        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_FALSE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
+                        err = queue.enqueueWriteBuffer(gpu_solution[INDX_IN], CL_TRUE, 0, solution_mem_bytes, &U_G_f[0], NULL, &event);
 //                        queue.flush();
 
                         queue.finish();
@@ -67,7 +67,7 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
         // FIXME: change all unsigned int to int. Or unsigned int. Size_t is not supported by GPU.
         std::vector<unsigned int>& bindices = grid_ref.getBoundaryIndices();
         unsigned int nb_bnd = bindices.size();
-        err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_FALSE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
+        err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_TRUE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
 //        queue.flush();
 #endif
         std::cout << "[TimeDependentPDE_CL] Done\n";
@@ -117,9 +117,9 @@ void TimeDependentPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buf
                         r_update_f[i] = (float)vec[offset_to_set_R + i];
                 }
 
-                // Synchronize just the R part on GPU (CL_FALSE here indicates we dont block on write
+                // Synchronize just the R part on GPU (CL_TRUE here indicates we dont block on write
                 // NOTE: offset parameter to enqueueWriteBuffer is ONLY for the GPU side offset. The CPU offset needs to be managed directly on the CPU pointer: &U_G[offset_cpu]
-                err = queue.enqueueWriteBuffer(gpu_vec, CL_FALSE, offset_to_set_R * float_size, set_R_bytes, &r_update_f[0], NULL, &event);
+                err = queue.enqueueWriteBuffer(gpu_vec, CL_TRUE, offset_to_set_R * float_size, set_R_bytes, &r_update_f[0], NULL, &event);
 //                queue.flush();
                 queue.finish();
 
@@ -146,11 +146,11 @@ void TimeDependentPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buf
 
         if (set_R_size > 0) {
 
-                // Synchronize just the R part on GPU (CL_FALSE here indicates we dont
+                // Synchronize just the R part on GPU (CL_TRUE here indicates we dont
                 // block on write NOTE: offset parameter to enqueueWriteBuffer is ONLY
                 // for the GPU side offset. The CPU offset needs to be managed directly
                 // on the CPU pointer: &U_G[offset_cpu]
-                err = queue.enqueueWriteBuffer(gpu_vec, CL_FALSE, offset_to_set_R * float_size, set_R_bytes, &vec[offset_to_set_R], NULL, &event);
+                err = queue.enqueueWriteBuffer(gpu_vec, CL_TRUE, offset_to_set_R * float_size, set_R_bytes, &vec[offset_to_set_R], NULL, &event);
 //                queue.flush();
                 queue.finish();
 
@@ -181,7 +181,7 @@ void TimeDependentPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buf
 
         if (set_O_size > 0) {
                 // Pull only information required for neighboring domains back to the CPU
-                err = queue.enqueueReadBuffer(gpu_vec, CL_FALSE, offset_to_set_O * float_size, set_O_bytes, &o_update_f[0], NULL, &event);
+                err = queue.enqueueReadBuffer(gpu_vec, CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &o_update_f[0], NULL, &event);
 //                queue.flush();
 
                 // Probably dont need this if we want to overlap comm and comp.
@@ -219,7 +219,7 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
 
         if (set_O_size > 0) {
                 // Pull only information required for neighboring domains back to the CPU
-                err = queue.enqueueReadBuffer(gpu_vec, CL_FALSE, offset_to_set_O * float_size, set_O_bytes, &vec[offset_to_set_O], NULL, &event);
+                err = queue.enqueueReadBuffer(gpu_vec, CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &vec[offset_to_set_O], NULL, &event);
 //                queue.flush();
 
         }
@@ -302,47 +302,41 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
 //        queue.finish();
 
         // 1) Launch kernel for set QmD (will take a while, so in the meantime...)
-        this->launchEulerKernel(0, grid_ref.QmD.size(), delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
-
+        this->launchEulerKernel(0, grid_ref.Q.size(), delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
         queue.finish();
+
+        // 6) Launch a SECOND kernel to complete set D for this step (NOTE: in
+        // higher order timeschemes we need to perform ADDITIONAL communication
+        // here. Also, this MIGHT modify the boundary value so we should enforce
+        // conditions AFTER this kernel)
+//        this->launchEulerKernel(grid_ref.QmD.size(), grid_ref.D.size(), delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
 
         // NOTE: when run in serial only one kernel launch is required.
         if (comm_ref.getSize() > 1) {
-                
             std::cout << "INSIDE EULER set D STUFF (useDouble = " << useDouble << ")\n";
 
             // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
+            // (these are input values required by other procs)
             if (useDouble) {
-                this->syncSetODouble(this->U_G, gpu_solution[INDX_IN]);
+                this->syncSetODouble(this->U_G, gpu_solution[INDX_OUT]);
             } else {
-                this->syncSetOSingle(this->U_G, gpu_solution[INDX_IN]);
+                this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]);
             }
 
             // 3) OVERLAP: Transmit between CPUs
             // NOTE: Require an MPI barrier here
             this->sendrecvUpdates(U_G, "U_G");
 
-
             // 4) OVERLAP: Update the input with set R
+            // (these are input values received from other procs)
             if (useDouble) {
-                this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
+                this->syncSetRDouble(this->U_G, gpu_solution[INDX_OUT]);
             } else {
-                this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]);
+                this->syncSetRSingle(this->U_G, gpu_solution[INDX_OUT]);
             }
-
-            // 6) Launch a SECOND kernel to complete set D for this step (NOTE: in
-            // higher order timeschemes we need to perform ADDITIONAL communication
-            // here. Also, this MIGHT modify the boundary value so we should enforce
-            // conditions AFTER this kernel)
-            this->launchEulerKernel(grid_ref.QmD.size(), grid_ref.D.size(), delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
         }
-        queue.finish();
 
         //this->syncCPUtoGPU();
-
-        // 5) FINAL: reset boundary solution on INDX_OUT
-        // COST: 0.3 ms
-        //TODO:     this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_OUT], cur_time);
 
         // Flip our ping pong buffers.
         swap(INDX_IN, INDX_OUT);

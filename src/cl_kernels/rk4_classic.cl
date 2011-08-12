@@ -17,7 +17,7 @@ evaluateRK4_classic(
     FLOAT dt,
     FLOAT cur_time,
     FLOAT k_scale,
-
+    
     // if we want to run this kernel on set QmD, offset is 0. To run kernel on set D, offset should be the offset in num elements to get to D
     uint offset_to_set,
     // This should not exceed the number of stencils in the set QmD, or set D
@@ -128,6 +128,8 @@ advanceRK4_classic(
         u_out[j] = sol + (k1 + 2.f*k2 + 2.f*k3 + k4) / 6.f;
     }
 }
+
+// e
 
 
 

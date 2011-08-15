@@ -783,36 +783,26 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
         // If we want to match the GPU we
         // should do: syncCPUtoGPU()
         if (useDouble) {
-            this->syncSetODouble(this->U_G, gpu_solution[indx_u_plus_scaled_k_in]);
+            this->syncSetODouble(this->cpu_buf, gpu_solution[indx_u_plus_scaled_k_in]);
         } else {
-            this->syncSetOSingle(this->U_G, gpu_solution[indx_u_plus_scaled_k_in]);
+            this->syncSetOSingle(this->cpu_buf, gpu_solution[indx_u_plus_scaled_k_in]);
         }
         queue.finish(); 
 
         // Should send intermediate steps by copying down from GPU, sending, then
         // copying back up to GPU. 
         // NOTE: we use U_G here because its scratch space
-        this->sendrecvUpdates(this->U_G, "u_plus_scaled_k_in");
+        this->sendrecvUpdates(this->cpu_buf, "u_plus_scaled_k_in");
 
         if (useDouble) {
-            this->syncSetRDouble(this->U_G, gpu_solution[indx_u_plus_scaled_k_in]);
+            this->syncSetRDouble(this->cpu_buf, gpu_solution[indx_u_plus_scaled_k_in]);
         } else {
-            this->syncSetRSingle(this->U_G, gpu_solution[indx_u_plus_scaled_k_in]);
+            this->syncSetRSingle(this->cpu_buf, gpu_solution[indx_u_plus_scaled_k_in]);
         }
         queue.finish(); 
-
-#if 0
-        this->launchRK4_eval(grid_ref.QmD.size(), grid_ref.D.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-        
-        queue.finish();
-#endif 
     }
 
-#if 0
-    this->launchRK4_eval(0, grid_ref.QmD.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-#else 
     this->launchRK4_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-#endif 
 
     queue.finish();
 

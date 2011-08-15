@@ -295,7 +295,7 @@ class VtuPDEWriter : public PDEWriter
          * Write the local solution, error, etc for a subdomain
          */
         virtual void writeLocal(int iter) { 
-            std::cout << "Iteration " << iter << ", writing local solution file.\n";
+            std::cout << "Iteration " << iter << ", writing local VTU file.\n";
             this->writeVTU(iter); 
         }
 
@@ -307,7 +307,7 @@ class VtuPDEWriter : public PDEWriter
             comm_unit->consolidateObjects(subdomain);
             comm_unit->barrier();
 
-            std::cout << "Iteration " << iter << ", writing global solution file.\n";
+            std::cout << "Iteration " << iter << ", writing global VTU file.\n";
             this->writeGlobalVTU(iter);
             //subdomain->writeGlobalSolutionToFile(iter);
         }

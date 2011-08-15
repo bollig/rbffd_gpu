@@ -81,6 +81,7 @@ class PDE : public MPISendable
         void checkLocalError(ExactSolution* exact, double rel_err_max=-1.) { 
             exact_ptr = exact;
             std::vector<SolutionType> exactSolution;
+            // Should synchronize the U_G on CPU and GPU
             this->syncCPUtoGPU(); 
             this->getExactSolution(exact, this->grid_ref.getNodeList(), &exactSolution); 
             this->checkError(exactSolution, this->U_G, this->grid_ref, rel_err_max); 
@@ -95,6 +96,9 @@ class PDE : public MPISendable
             std::vector<SolutionType> exactSolution(nodes.size());
             
             // TODO: call for all subdomains to send final to master
+
+            // Should synchronize the U_G on CPU and GPU
+            this->syncCPUtoGPU(); 
 
             this->getGlobalSolution(&sol);
             this->getExactSolution(exact, nodes, &exactSolution); 

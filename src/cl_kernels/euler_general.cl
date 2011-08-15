@@ -58,6 +58,7 @@ advanceEuler(
                 solution_out[j] = solution_in[j] + dt* ( feval1 );
 
 /*
+   e
                 // reset boundary solution
                 this->enforceBoundaryConditions(s, cur_time);
 */

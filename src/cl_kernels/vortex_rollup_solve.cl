@@ -9,7 +9,7 @@
 FLOAT solve(__global FLOAT* u_t,
 
             unsigned int indx,
-            float t,
+            double t,
             __global FLOAT4* nodes,
             __global uint* stencils,
             __global FLOAT* x_weights,
@@ -26,9 +26,9 @@ FLOAT solve(__global FLOAT* u_t,
             int useHyperviscosity
             )
 {
-    FLOAT rho0 = 3.f;
-    FLOAT gamma = 5.f;
-    FLOAT mach_eps = 0.00001f;
+    FLOAT rho0 = 3.;
+    FLOAT gamma = 5.;
+    FLOAT mach_eps = 0.00000001;
 
         FLOAT dh_dlambda= applyWeights(lambda_weights, u_t, indx, stencils, stencil_size);
 
@@ -47,9 +47,9 @@ FLOAT solve(__global FLOAT* u_t,
         // Natasha verified sqrt(3) is required
         // Also, for whatever reason sech is not defined in the C standard
         // math. I provide it in the cart2sph header. 
-        FLOAT Vt = (3.f* sqrt(3.f) / 2.f) * (sech(rho_p) * sech(rho_p)) * tanh(rho_p); 
+        FLOAT Vt = (3.* sqrt(3.) / 2.) * (sech(rho_p) * sech(rho_p)) * tanh(rho_p); 
         
-        FLOAT w_theta_P = (fabs(rho_p) < mach_eps) ? 0.f : Vt / rho_p;
+        FLOAT w_theta_P = (fabs(rho_p) < 4*mach_eps) ? 0. : Vt / rho_p;
 
         FLOAT f_out = - w_theta_P * dh_dlambda; 
 

@@ -427,7 +427,7 @@ int main(int argc, char** argv) {
 
     }
 #if 1
-    printf("after heat\n");
+    printf("DONE STEPPING\n");
 
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 
@@ -472,6 +472,7 @@ int main(int argc, char** argv) {
     printf("Cleaning up objects\n");
 
     // Writer first so we can dump final solution
+    std::cout << "Writing final solution\n";
     delete(writer);
     delete(pde);
 #endif 

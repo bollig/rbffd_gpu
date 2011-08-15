@@ -58,6 +58,11 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
 
         cl::Kernel midpoint_kernel;
 
+        std::vector<SolutionType> cpu_buf; 
+
+        // Flag to indicate if syncCPUtoGPU needs to copy down from GPU (should be set to 1 if advance is called)
+        int cpu_dirty;
+
     public: 
 
         TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool weightsComputed=false) 
@@ -68,7 +73,9 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
               euler_args_set(0), rk4_sub_args_set(0), rk4_adv_args_set(0),
               useDouble(true),
             // We maintain a ref to der here so we can keep it cast as an OpenCL RBFFD class
-            der_ref_gpu(*der), weightsPrecomputed(weightsComputed)
+            der_ref_gpu(*der), weightsPrecomputed(weightsComputed), 
+            cpu_buf(grid->G.size(), 0.f),
+            cpu_dirty(0)
         {;}
         
         // Fill in the initial conditions of the PDE. (overwrite the solution)
@@ -153,7 +160,10 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
 
     private: 
         virtual void setupTimers(); 
-        void swap(int& a, int& b) { int temp = a; a = b; b = temp; }
+        void swap(int& a, int& b) { 
+            std::cout << "Swapping " << b << "," << a << "\n"; 
+            int temp = a; a = b; b = temp; 
+        }
         unsigned int getFloatSize() { if (useDouble) { return sizeof(double); } return sizeof(float); }
 
 }; 

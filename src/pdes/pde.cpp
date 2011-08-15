@@ -207,6 +207,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
 
 int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label) 
 {
+    std::cout << "[PDE] SEND/RECEIVE\n";
 	vector<int> receiver_list; 
 	
 	// This is BAD: we should only send to CPUs in need. 
@@ -367,7 +368,6 @@ void PDE::getGlobalSolution(std::vector<double> *final) {
     // output vector and we're done.
     map<int, double>::iterator it;
     final->resize(global_U_G.size());
-    this->syncCPUtoGPU();
     unsigned int i = 0; 
     for (it = global_U_G.begin(); it != global_U_G.end(); it++, i++) {
         (*final)[i] = (*it).second;

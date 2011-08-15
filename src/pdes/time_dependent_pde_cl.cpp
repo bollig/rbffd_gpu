@@ -443,17 +443,6 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         // For explicit schemes we can just solve for our weights and have them stored in memory.
         this->assemble();
 
-#if 1
-        //-------- Overlap beweeen these: ------------
-        // NOTE: syncSet*** ONLY copies between CPU and GPU. It does not synchronize across CPUs.
-        // Use sendrecvUpdates to perform an interproc comm.
-        if (useDouble) {
-                this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
-        } else {
-                this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]);
-        }
-#endif
-
         // ----------------------------------
         //
         //    k1 = dt*func(DM_Lambda, DM_Theta, H, u, t, nodes, useHV);
@@ -781,15 +770,12 @@ void TimeDependentPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::B
 }
 
 //----------------------------------------------------------------------
-
+// NOTE: the communciation in this routine is to synchronize the input to the INTERMEDIATE STEPS, not the solution
 void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
 {
-
-    // This launch requires set R for u+s*K1, u+s*K2, u+s*K3 
-    this->launchRK4_eval(0, grid_ref.QmD.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-
     // NOTE: when run in serial only one kernel launch is required.
     if (comm_ref.getSize() > 1) {
+
         // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
         // the solution (i.e., sets O and R),
         // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
@@ -798,65 +784,74 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
         // If we want to match the GPU we
         // should do: syncCPUtoGPU()
         if (useDouble) {
+            this->syncSetODouble(this->U_G, gpu_solution[indx_u_plus_scaled_k_in]);
+        } else {
+            this->syncSetOSingle(this->U_G, gpu_solution[indx_u_plus_scaled_k_in]);
+        }
+        queue.finish(); 
+
+        // Should send intermediate steps by copying down from GPU, sending, then
+        // copying back up to GPU. 
+        // NOTE: we use U_G here because its scratch space
+        this->sendrecvUpdates(this->U_G, "u_plus_scaled_k_in");
+
+        if (useDouble) {
+            this->syncSetRDouble(this->U_G, gpu_solution[indx_u_plus_scaled_k_in]);
+        } else {
+            this->syncSetRSingle(this->U_G, gpu_solution[indx_u_plus_scaled_k_in]);
+        }
+        queue.finish(); 
+
+#if 0
+        this->launchRK4_eval(grid_ref.QmD.size(), grid_ref.D.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+        
+        queue.finish();
+#endif 
+    }
+
+#if 0
+    this->launchRK4_eval(0, grid_ref.QmD.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+#else 
+    this->launchRK4_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+#endif 
+
+    queue.finish();
+
+
+}
+
+//----------------------------------------------------------------------
+// NOTE: the communciation in this routine is to synchronize the solution OUTPUT (not intermediate steps)
+void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ) {
+
+    // Advane only needs K1[{Q}], K2[{Q}], K3[{Q}] and K4[{Q}]
+    // RK4 requires U[{Q, R}] going into the method. This implies we need to transfer U[{R}] at the end of the iteration.
+    this->launchRK4_adv(0, grid_ref.Q.size(), this->gpu_solution[indx_u_in], this->gpu_solution[indx_k1],this->gpu_solution[indx_k2],this->gpu_solution[indx_k3],this->gpu_solution[indx_k4],this->gpu_solution[indx_u_out]);
+        
+    queue.finish();
+
+#if 0
+    // Enforce boundary using GPU, but specify we want to use the intermediate buffer
+    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_K1], cur_time+0.5*delta_t);
+#endif 
+
+    // NOTE: when run in serial only one kernel launch is required.
+    if (comm_ref.getSize() > 1) {
+        if (useDouble) {
             this->syncSetODouble(this->U_G, gpu_solution[indx_u_out]);
         } else {
             this->syncSetOSingle(this->U_G, gpu_solution[indx_u_out]);
         }
-
-        // Should send intermediate steps by copying down from GPU, sending, then
-        // copying back up to GPU
-        this->sendrecvUpdates(this->U_G, "intermediate_U_G");
-
+        this->sendrecvUpdates(this->U_G, "u_out");
         if (useDouble) {
             this->syncSetRDouble(this->U_G, gpu_solution[indx_u_out]);
         } else {
             this->syncSetRSingle(this->U_G, gpu_solution[indx_u_out]);
         }
 
-        this->launchRK4_eval(grid_ref.QmD.size(), grid_ref.D.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-        
-        queue.finish();
-    }
-}
-
-//----------------------------------------------------------------------
-
-void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ) {
-
-    this->launchRK4_adv(0, grid_ref.QmD.size(), this->gpu_solution[indx_u_in], this->gpu_solution[indx_k1],this->gpu_solution[indx_k2],this->gpu_solution[indx_k3],this->gpu_solution[indx_k4],this->gpu_solution[indx_u_out]);
-#if 0
-    // Enforce boundary using GPU, but specify we want to use the intermediate buffer
-    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_K1], cur_time+0.5*delta_t);
-#endif
-
-    // NOTE: when run in serial only one kernel launch is required.
-    if (comm_ref.getSize() > 1) {
-        // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
-        // the solution (i.e., sets O and R),
-        // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
-        // the GPU calling syncSet*** on our INDX_OUT will overwrite any
-        // intermediate values stored there temporarily
-        // If we want to match the GPU we
-        // should do: syncCPUtoGPU()
-        if (useDouble) {
-            this->syncSetODouble(this->U_G, gpu_solution[indx_u_in]);
-        } else {
-            this->syncSetOSingle(this->U_G, gpu_solution[indx_u_in]);
-        }
-
-        // Should send intermediate steps by copying down from GPU, sending, then
-        // copying back up to GPU
-        this->sendrecvUpdates(this->U_G, "intermediate_U_G");
-
-        if (useDouble) {
-            this->syncSetRDouble(this->U_G, gpu_solution[indx_u_in]);
-        } else {
-            this->syncSetRSingle(this->U_G, gpu_solution[indx_u_in]);
-        }
-
-        this->launchRK4_adv(grid_ref.QmD.size(), grid_ref.D.size(), this->gpu_solution[indx_u_in], this->gpu_solution[indx_k1],this->gpu_solution[indx_k2],this->gpu_solution[indx_k3],this->gpu_solution[indx_k4],this->gpu_solution[indx_u_out]);
-        
-        queue.finish();
+        // At this point gpu_solution[indx_u_out] contains the complete
+        // solution u_out[{Q R}] which would allow us to compute the next
+        // iteration
     }
 }
 

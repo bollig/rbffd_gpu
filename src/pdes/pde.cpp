@@ -207,30 +207,32 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
 
 int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label) 
 {
-    std::cout << "[PDE] SEND/RECEIVE\n";
-	vector<int> receiver_list; 
-	
-	// This is BAD: we should only send to CPUs in need. 
-	for (int i = 0; i < comm_ref.getSize(); i++) {
-        // FIXME: we need an R_by_rank to knwo when to receive from another CPU
-        // unless we use some sort of BCAST mechanism in MPI and MPI determines the details. 
-        // For now we allow 0 byte transfers but this should be improved
-		if (i != comm_ref.getRank()) 
-		{
-				receiver_list.push_back(i); 	
-		}
-	}
-	
-	// Round robin: each CPU takes a turn at sending message to CPUs that need nodes
-	for (int j = 0; j < comm_ref.getSize(); j++) {
-		if (comm_ref.getRank() == j) {		// My turn
-			for (int i = 0; i < receiver_list.size(); i++) {
-				this->sendUpdate(vec, comm_ref.getRank(), receiver_list[i], label);
-			}
-		} else {						// All CPUs listen
-			this->receiveUpdate(vec, comm_ref.getRank(), j, label);
-		}
-	}
+    if (comm_ref.getSize() > 1) {
+        std::cout << "[PDE] SEND/RECEIVE\n";
+        vector<int> receiver_list; 
+
+        // This is BAD: we should only send to CPUs in need. 
+        for (int i = 0; i < comm_ref.getSize(); i++) {
+            // FIXME: we need an R_by_rank to knwo when to receive from another CPU
+            // unless we use some sort of BCAST mechanism in MPI and MPI determines the details. 
+            // For now we allow 0 byte transfers but this should be improved
+            if (i != comm_ref.getRank()) 
+            {
+                receiver_list.push_back(i); 	
+            }
+        }
+
+        // Round robin: each CPU takes a turn at sending message to CPUs that need nodes
+        for (int j = 0; j < comm_ref.getSize(); j++) {
+            if (comm_ref.getRank() == j) {		// My turn
+                for (int i = 0; i < receiver_list.size(); i++) {
+                    this->sendUpdate(vec, comm_ref.getRank(), receiver_list[i], label);
+                }
+            } else {						// All CPUs listen
+                this->receiveUpdate(vec, comm_ref.getRank(), j, label);
+            }
+        }
+    }
     return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 

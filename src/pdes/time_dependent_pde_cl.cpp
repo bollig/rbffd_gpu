@@ -79,7 +79,6 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
 void TimeDependentPDE_CL::assemble() 
 {
-    std::cout << "Assemble\n";
         if (!weightsPrecomputed) {
                 der_ref_gpu.computeAllWeightsForAllStencils();
                 weightsPrecomputed = true;
@@ -308,15 +307,6 @@ void TimeDependentPDE_CL::advance(TimeScheme which, double delta_t) {
 
 // FIXME: this is a single precision version
 void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
-    std::cout << "Advance Euler\n";
-        // Target (st5): 0.3991 ms
-        //        (st33): 1.2 ms
-        // GPU:
-        // Without diffusion, boundary or f(u) eval (st33): 0.3599
-        // Without boundary or f(u) eval (st33): 0.3562
-        // Without boundary (st33): 4.8389
-        // no boundary, K*Laplacian only (no gradK . gradU) (st33): 1.1898
-
         // If we need to assemble a matrix L for solving implicitly, this is the routine to do that.
         // For explicit schemes we can just solve for our weights and have them stored in memory.
         this->assemble();
@@ -329,8 +319,6 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
 
         // Synchronize the solution output
         if (comm_ref.getSize() > 1) {
-        //    std::cout << "INSIDE EULER set D STUFF (useDouble = " << useDouble << ")\n";
-#if 1
             // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
             // (these are input values required by other procs)
             if (useDouble) {
@@ -338,12 +326,11 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
             } else {
                 this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]);
             }
-#endif 
 
             // 3) OVERLAP: Transmit between CPUs
             // NOTE: Require an MPI barrier here
             this->sendrecvUpdates(this->U_G, "Euler Output");
-#if 1
+            
             // 4) OVERLAP: Update the input with set R
             // (these are input values received from other procs)
             if (useDouble) {
@@ -351,7 +338,6 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
             } else {
                 this->syncSetRSingle(this->U_G, gpu_solution[INDX_OUT]);
             }
-#endif 
         }
         
         // Copies from INDX_IN to U_G
@@ -458,26 +444,6 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         // For explicit schemes we can just solve for our weights and have them stored in memory.
         this->assemble();
 
-#if 1
-    // NOTE: when run in serial only one kernel launch is required.
-    if (comm_ref.getSize() > 1) {
-        if (useDouble) {
-            this->syncSetODouble(this->U_G, gpu_solution[INDX_IN]);
-        } else {
-            this->syncSetOSingle(this->U_G, gpu_solution[INDX_IN]);
-        }
-        this->sendrecvUpdates(this->U_G, "u_out");
-        if (useDouble) {
-            this->syncSetRDouble(this->U_G, gpu_solution[INDX_IN]);
-        } else {
-            this->syncSetRSingle(this->U_G, gpu_solution[INDX_IN]);
-        }
-
-        // At this point gpu_solution[indx_u_out] contains the complete
-        // solution u_out[{Q R}] which would allow us to compute the next
-        // iteration
-    }
-#endif 
         // ----------------------------------
         //
         //    k1 = dt*func(DM_Lambda, DM_Theta, H, u, t, nodes, useHV);
@@ -504,10 +470,6 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
 
         //this->syncCPUtoGPU();
         //this->sendrecvUpdates(U_G, "U_G");
-
-        //exit(EXIT_FAILURE);
-
-        swap(INDX_IN, INDX_OUT);
 }
 
 //----------------------------------------------------------------------
@@ -810,6 +772,12 @@ void TimeDependentPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::B
 // NOTE: the communciation in this routine is to synchronize the input to the INTERMEDIATE STEPS, not the solution
 void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
 {
+#if 0
+    this->launchRK4_eval(0, grid_ref.QmD.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+#else 
+    this->launchRK4_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+#endif 
+
     // NOTE: when run in serial only one kernel launch is required.
     if (comm_ref.getSize() > 1) {
 
@@ -845,12 +813,6 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
         queue.finish();
 #endif 
     }
-
-#if 0
-    this->launchRK4_eval(0, grid_ref.QmD.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-#else 
-    this->launchRK4_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-#endif 
 
     queue.finish();
 

@@ -161,7 +161,6 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
     private: 
         virtual void setupTimers(); 
         void swap(int& a, int& b) { 
-            std::cout << "Swapping " << b << "," << a << "\n"; 
             int temp = a; a = b; b = temp; 
         }
         unsigned int getFloatSize() { if (useDouble) { return sizeof(double); } return sizeof(float); }

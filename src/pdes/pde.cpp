@@ -237,6 +237,7 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
 int PDE::sendFinal(int my_rank, int receiver_rank) {
     
     if (my_rank != receiver_rank) {
+        this->syncCPUtoGPU();
         // This should match grid_ref.Q.size():
         unsigned int nb_stencils = grid_ref.getStencilsSize();
 

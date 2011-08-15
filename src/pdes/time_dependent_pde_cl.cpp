@@ -355,7 +355,7 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
         }
         
         // Copies from INDX_IN to U_G
-        this->syncCPUtoGPU();
+//        this->syncCPUtoGPU();
 }
 
 //----------------------------------------------------------------------

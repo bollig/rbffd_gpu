@@ -208,7 +208,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
 int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label) 
 {
     if (comm_ref.getSize() > 1) {
-        std::cout << "[PDE] SEND/RECEIVE\n";
+//        std::cout << "[PDE] SEND/RECEIVE\n";
         vector<int> receiver_list; 
 
         // This is BAD: we should only send to CPUs in need. 

@@ -243,7 +243,7 @@ void TimeDependentPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buf
 //----------------------------------------------------------------------
 
 void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
-    std::cout << "Download from GPU\n"; 
+//    std::cout << "Download from GPU\n"; 
         unsigned int nb_nodes = grid_ref.getNodeListSize();
         unsigned int set_G_size = grid_ref.G.size();
         unsigned int set_Q_size = grid_ref.Q.size();

@@ -383,7 +383,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // do an additional subtraction to guarantee that B\O == D
     set_union(D.begin(), D.end(), O.begin(), O.end(), inserter(B, B.end()));
 #if 0
-    // D = B\O (so we can arrange G = { Q\B O\D D R }
+    // D* = B\O (so we can arrange G = { Q\B O\D* D* R }
     // By ordering nodes this way, we have the OPTION of operating on {Q\B O\D} 
     // while communication happens for O and R. However, if we are on the GPU, O\D STILL require
     // GPU to CPU transfer before it can be completed. That is why we concentrate kernels on 

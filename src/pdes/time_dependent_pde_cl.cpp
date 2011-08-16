@@ -94,6 +94,35 @@ void TimeDependentPDE_CL::assemble()
 
 //----------------------------------------------------------------------
 
+int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
+
+    // Synchronize the solution output
+    if (comm_ref.getSize() > 1) {
+        // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
+        // (these are input values required by other procs)
+        if (useDouble) {
+            this->syncSetODouble(this->cpu_buf, buf);
+        } else {
+            this->syncSetOSingle(this->cpu_buf, buf);
+        }
+
+        // 3) OVERLAP: Transmit between CPUs
+        // NOTE: Require an MPI barrier here
+        this->sendrecvUpdates(this->cpu_buf, label);
+
+        // 4) OVERLAP: Update the input with set R
+        // (these are input values received from other procs)
+        if (useDouble) {
+            this->syncSetRDouble(this->cpu_buf, buf);
+        } else {
+            this->syncSetRSingle(this->cpu_buf, buf);
+        }
+    }
+
+}
+
+//----------------------------------------------------------------------
+
 void TimeDependentPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
     exit(EXIT_FAILURE);
         unsigned int nb_nodes = grid_ref.getNodeListSize();
@@ -135,10 +164,10 @@ void TimeDependentPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buf
 
 // General routine to copy the set R indices vec up to gpu_vec
 void TimeDependentPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
-    std::cout << "Upload Received\n"; 
         unsigned int nb_nodes = grid_ref.getNodeListSize();
         unsigned int set_G_size = grid_ref.G.size();
         unsigned int set_Q_size = grid_ref.Q.size();
+        unsigned int set_O_size = grid_ref.O.size();
         unsigned int set_R_size = grid_ref.R.size();
 
         unsigned int float_size = sizeof(double);
@@ -146,6 +175,7 @@ void TimeDependentPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buf
         // OUR SOLUTION IS ARRANGED IN THIS FASHION:
         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
         unsigned int offset_to_set_R = set_Q_size;
+        unsigned int offset_to_set_O = set_Q_size - set_O_size;
 
         unsigned int solution_mem_bytes = set_G_size*float_size;
         unsigned int set_R_bytes = set_R_size * float_size;
@@ -161,6 +191,12 @@ void TimeDependentPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buf
                 queue.finish();
 
         }
+#if 0
+
+        for (unsigned int i = offset_to_set_O - 5; i < set_G_size; i++) {
+            std::cout << "vec[" << set_O_size << "," << i << "] = " << vec[i] << std::endl;
+        }
+#endif 
 }
 
 //----------------------------------------------------------------------
@@ -195,7 +231,7 @@ void TimeDependentPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buf
                 // Probably dont need this if we want to overlap comm and comp.
                 queue.finish();
 
-                // NOTE: this is only required because we're calling a single precision
+                // NOTE: this is only required because we're calling a singlu precision
                 // kernel
                 for (unsigned int i = 0; i < set_O_size; i++) {
                         //    std::cout << "output u[" << i << "(global: " << grid_ref.l2g(offset_to_set_O+i) << ")] = " << U_G[offset_to_set_O + i] << "\t" << o_update_f[i] << std::endl;
@@ -217,16 +253,11 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
 
         // OUR SOLUTION IS ARRANGED IN THIS FASHION:
         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
+        //  Minus 1 because we start indexing at 0 
         unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
         unsigned int solution_mem_bytes = set_G_size*float_size;
         unsigned int set_O_bytes = set_O_size * float_size;
-
-#if 0
-        for (unsigned int i = offset_to_set_O - 5; i < set_G_size; i++) {
-            std::cout << "vec[" << set_O_size << "," << i << "] = " << vec[i] << std::endl;
-        }
-#endif 
 
         if (set_O_size > 0) {
                 // Pull only information required for neighboring domains back to the CPU
@@ -235,6 +266,12 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
 //
                 queue.finish();
         }
+
+#if 0
+        for (unsigned int i = offset_to_set_O - 5; i < set_G_size; i++) {
+            std::cout << "vec[" << set_O_size << "," << i << "] = " << vec[i] << std::endl;
+        }
+#endif 
 
 
 }
@@ -317,29 +354,8 @@ void TimeDependentPDE_CL::advanceFirstOrderEuler(double delta_t) {
         this->launchEulerKernel(0, grid_ref.Q.size(), delta_t, this->gpu_solution[INDX_IN], this->gpu_solution[INDX_OUT]);
         queue.finish();
 
-        // Synchronize the solution output
-        if (comm_ref.getSize() > 1) {
-            // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
-            // (these are input values required by other procs)
-            if (useDouble) {
-                this->syncSetODouble(this->U_G, gpu_solution[INDX_OUT]);
-            } else {
-                this->syncSetOSingle(this->U_G, gpu_solution[INDX_OUT]);
-            }
+        this->sendrecvBuf(gpu_solution[INDX_OUT]); 
 
-            // 3) OVERLAP: Transmit between CPUs
-            // NOTE: Require an MPI barrier here
-            this->sendrecvUpdates(this->U_G, "Euler Output");
-            
-            // 4) OVERLAP: Update the input with set R
-            // (these are input values received from other procs)
-            if (useDouble) {
-                this->syncSetRDouble(this->U_G, gpu_solution[INDX_OUT]);
-            } else {
-                this->syncSetRSingle(this->U_G, gpu_solution[INDX_OUT]);
-            }
-        }
-        
         // Copies from INDX_IN to U_G
 //        this->syncCPUtoGPU();
 }
@@ -468,7 +484,7 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
       
         queue.finish();
 
-        //this->syncCPUtoGPU();
+        this->sendrecvBuf(gpu_solution[INDX_OUT]); 
         //this->sendrecvUpdates(U_G, "U_G");
 }
 
@@ -772,41 +788,10 @@ void TimeDependentPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::B
 // NOTE: the communciation in this routine is to synchronize the input to the INTERMEDIATE STEPS, not the solution
 void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
 {
-    // NOTE: when run in serial only one kernel launch is required.
-    if (comm_ref.getSize() > 1) {
-
-        // Since our syncSet****(..) routines ONLY sync the sets at the tail end of
-        // the solution (i.e., sets O and R),
-        // we'll just re-use U_G as scratch space. So long as we dont copy U_G to
-        // the GPU calling syncSet*** on our INDX_OUT will overwrite any
-        // intermediate values stored there temporarily
-        // If we want to match the GPU we
-        // should do: syncCPUtoGPU()
-        if (useDouble) {
-            this->syncSetODouble(this->cpu_buf, gpu_solution[indx_u_plus_scaled_k_in]);
-        } else {
-            this->syncSetOSingle(this->cpu_buf, gpu_solution[indx_u_plus_scaled_k_in]);
-        }
-        queue.finish(); 
-
-        // Should send intermediate steps by copying down from GPU, sending, then
-        // copying back up to GPU. 
-        // NOTE: we use U_G here because its scratch space
-        this->sendrecvUpdates(this->cpu_buf, "u_plus_scaled_k_in");
-
-        if (useDouble) {
-            this->syncSetRDouble(this->cpu_buf, gpu_solution[indx_u_plus_scaled_k_in]);
-        } else {
-            this->syncSetRSingle(this->cpu_buf, gpu_solution[indx_u_plus_scaled_k_in]);
-        }
-        queue.finish(); 
-    }
-
     this->launchRK4_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
-
     queue.finish();
 
-
+    this->sendrecvBuf(gpu_solution[indx_u_plus_scaled_k_out]);
 }
 
 //----------------------------------------------------------------------
@@ -819,31 +804,7 @@ void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int i
         
     queue.finish();
 
-#if 0
-    // Enforce boundary using GPU, but specify we want to use the intermediate buffer
-    this->enforceBoundaryConditions(U_G, this->gpu_solution[INDX_K1], cur_time+0.5*delta_t);
-#endif 
-
-#if 0
-    // NOTE: when run in serial only one kernel launch is required.
-    if (comm_ref.getSize() > 1) {
-        if (useDouble) {
-            this->syncSetODouble(this->U_G, gpu_solution[indx_u_out]);
-        } else {
-            this->syncSetOSingle(this->U_G, gpu_solution[indx_u_out]);
-        }
-        this->sendrecvUpdates(this->U_G, "u_out");
-        if (useDouble) {
-            this->syncSetRDouble(this->U_G, gpu_solution[indx_u_out]);
-        } else {
-            this->syncSetRSingle(this->U_G, gpu_solution[indx_u_out]);
-        }
-
-        // At this point gpu_solution[indx_u_out] contains the complete
-        // solution u_out[{Q R}] which would allow us to compute the next
-        // iteration
-    }
-#endif 
+    this->sendrecvBuf(gpu_solution[indx_u_out]);
 }
 
 //----------------------------------------------------------------------

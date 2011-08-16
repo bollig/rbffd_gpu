@@ -74,7 +74,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
               useDouble(true),
             // We maintain a ref to der here so we can keep it cast as an OpenCL RBFFD class
             der_ref_gpu(*der), weightsPrecomputed(weightsComputed), 
-            cpu_buf(grid->G.size(), 0.f),
+            cpu_buf(grid->G.size(), -0.00000000001),
             cpu_dirty(0)
         {;}
         
@@ -112,6 +112,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         //  MPI+GPU related properties and routines
         // --------------------------------------
     protected:
+        virtual int sendrecvBuf(cl::Buffer& buf, std::string label=""); 
+
         // Sync set R from the vec into the gpu_vec (host to device)
         void syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec); 
         void syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec);

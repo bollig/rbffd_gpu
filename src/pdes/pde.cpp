@@ -130,7 +130,7 @@ int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_ra
 
         if (O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
             //	cout << "O_by_rank is NOT size(0)" << endl;
-            int i=0;
+            unsigned int i=0;
 
             for (oit = O_by_rank[receiver_rank].begin(); oit
                     != O_by_rank[receiver_rank].end(); oit++, i++) {

@@ -123,7 +123,9 @@ class PDE : public MPISendable
     protected: 
         // This is intended to be overridden by GPU based classes. when called,
         // its time to synchronize our solution with the results on the GPU
-        virtual void syncCPUtoGPU() { std::cout << "NOT DOING ANYTHING\n";} 
+        virtual void syncCPUtoGPU() { 
+            //std::cout << "NOT DOING ANYTHING\n";
+        } 
 
         // Fill vector with exact solution at provided nodes.
         // NOTE: override in time dependent PDE to leverage time-based solutions

@@ -13,6 +13,8 @@ ENDIF (CUDA_FOUND)
 
 # One or more dirs split by spaces. This is a command so it can be called multiple times
 INCLUDE_DIRECTORIES (
+    # RHEL location for openmpi
+    /usr/include/openmpi-x86_64/
 )
 
 # One or more dirs split by spaces. This is a command so it can be called multiple times

@@ -15,6 +15,7 @@ FLOAT solve(__global FLOAT* u_t,
             __global FLOAT* z_weights,
             __global FLOAT* lapl_weights,
             __global FLOAT* r_weights,
+
             __global FLOAT* lambda_weights,
             __global FLOAT* theta_weights,
             __global FLOAT* hv_weights,
@@ -56,5 +57,6 @@ FLOAT solve(__global FLOAT* u_t,
 
         return f_out;
 }
+// 2
 
 #endif 

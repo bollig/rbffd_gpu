@@ -38,6 +38,7 @@ evaluateRK4_classic(
 
     uint nb_nodes,
     uint stencil_size,
+
     int useHyperviscosity
 )
 {

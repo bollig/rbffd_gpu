@@ -71,6 +71,7 @@ evaluateRK4_block(
                          stencils,
                          x_weights,
                          y_weights,
+
                          z_weights,
                          lapl_weights,
                          r_weights,
@@ -83,8 +84,6 @@ evaluateRK4_block(
                          shared
                      );
 
-        barrier(CLK_GLOBAL_MEM_FENCE);
-
         // Master thread from warp will write global memory
         if (lid == 0) {
 
@@ -93,8 +92,6 @@ evaluateRK4_block(
             k_out[j] = dt * feval1;
             u_plus_scaled_k_out[j] = u_in[j] + k_scale * dt * feval1;
         }
-
-        barrier(CLK_GLOBAL_MEM_FENCE);
     }
 }
 // 1

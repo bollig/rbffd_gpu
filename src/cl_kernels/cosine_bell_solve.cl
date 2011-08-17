@@ -91,16 +91,16 @@ FLOAT solve_block(__global FLOAT* u_t,
         // Apply weights into shared memory. Note: the first element of each shared block
         // will contain the derivative value for the current stencil
         applyWeights_block(lambda_weights, u_t, indx, stencils, stencil_size, &shared[0]);
-        barrier(CLK_LOCAL_MEM_FENCE); 
         applyWeights_block(theta_weights, u_t, indx, stencils, stencil_size, &shared[block_size]);
-        barrier(CLK_LOCAL_MEM_FENCE); 
-        applyWeights_block(hv_weights, u_t, indx, stencils, stencil_size, &shared[2*block_size]);
+        if (useHyperviscosity) {
+            applyWeights_block(hv_weights, u_t, indx, stencils, stencil_size, &shared[2*block_size]);
+        }
+
         barrier(CLK_LOCAL_MEM_FENCE); 
 
         if (lid == 0) {
             FLOAT dh_dlambda = shared[0]; 
             FLOAT dh_dtheta = shared[block_size]; 
-            FLOAT hv_filter = shared[2*block_size]; 
 
             FLOAT4 spherical_coords = cart2sph(nodes[indx]);
             // longitude, latitude respectively:
@@ -116,6 +116,7 @@ FLOAT solve_block(__global FLOAT* u_t,
             FLOAT f_out = -((vel_u/(a * cos(theta))) * dh_dlambda + (vel_v/a) * dh_dtheta);
 
             if (useHyperviscosity) {
+                    FLOAT hv_filter = shared[2*block_size]; 
                     // Filter is ONLY applied after the rest of the RHS is evaluated
                     f_out += hv_filter;
             }

@@ -854,7 +854,7 @@ void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned i
 
                         i = this->setAdvanceArgs( rk4_substep_kernel, i);
                 
-                        // Shared memory:  (TODO: allow more than 4 lines)
+                        // Shared memory:  
                         rk4_substep_kernel.setArg(i++, cl::__local(local_work_size * sizeof(double) * 3));
 
                         rk4_sub_args_set++;

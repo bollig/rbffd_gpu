@@ -22,17 +22,22 @@ void applyWeights_block(__global FLOAT* weights, __global FLOAT* u, unsigned int
     uint lid = get_local_id(0); 
     uint block_size = get_local_size(0);
 
-    der_buf[lid] = 0.0;
+    der_buf[lid*2] = 0.0;
 
     uint i = 0; 
     uint count = 0; 
     // Repeat process until all weights are applied by block
     while (i < stencil_size) {
         uint j = count*block_size + lid; 
+        // (TODO): optimize this random access.
+        //      Strategies: 
+        //          a) (Avoid __global:) load u as an image so we have better caching
+        //          b) (Avoid conds here:) align stencils in memory so they index a u[N+1]==0 and st_weights[n+1] == 0
+        //          
+        FLOAT uval = (j < stencil_size) ? u[stencil[j]] : 0.;
+        FLOAT weight = (j < stencil_size) ? st_weights[j] : 0.;
         // Assuming we are under the stencil size, add combination to shared buffer
-        if (j < stencil_size) {
-            der_buf[lid] += u[stencil[j]] * st_weights[j];
-        }
+        der_buf[lid] += uval * weight;
         count++;
         i += block_size; 
     }
@@ -44,6 +49,5 @@ void applyWeights_block(__global FLOAT* weights, __global FLOAT* u, unsigned int
            der_buf[lid] += der_buf[i]; 
         }
     }
-    barrier(CLK_LOCAL_MEM_FENCE);
 }
 

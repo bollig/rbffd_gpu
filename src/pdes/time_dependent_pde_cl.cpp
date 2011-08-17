@@ -582,7 +582,7 @@ void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
 
 void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
 
-        std::string rk4_substep_kernel_name  = "evaluateRK4_classic";
+        std::string rk4_substep_kernel_name  = "evaluateRK4_block";
         std::string rk4_advance_substep_kernel_name = "advanceRK4_classic";
 
         if (!this->getDeviceFP64Extension().compare("")){
@@ -593,7 +593,7 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
         }
 
         // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
-        std::string my_source = this->loadFileContents("rk4_classic.cl", true);
+        std::string my_source = this->loadFileContents("rk4_warp_per_stencil.cl", true);
 
         //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
         this->loadProgram(my_source, useDouble);
@@ -647,7 +647,7 @@ void TimeDependentPDE_CL::allocateGPUMem() {
 
 //----------------------------------------------------------------------
 
-void TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
+int TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
 
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         unsigned int nb_nodes = grid_ref.getNodeListSize();
@@ -676,6 +676,7 @@ void TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
         } catch (cl::Error er) {
                 printf("[TimeDependentPDE_CL::setAdvanceArgs] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
         }
+        return i;
 }
 
 
@@ -791,11 +792,26 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
     this->launchRK4_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
     queue.finish();
 
+   //EVAN  
+
+#if 0
+    double* buf = new double[grid_ref.Q.size()]; 
+
+    err = queue.enqueueReadBuffer(gpu_solution[indx_k_out], CL_TRUE, 0, grid_ref.Q.size()*sizeof(double), &buf[0], NULL, &event);
+    queue.finish();
+
+    for (unsigned int i = 0; i < grid_ref.Q.size(); i++) {
+        std::cout << "vec[" << i << "] = " << buf[i] << std::endl;
+    }
+    delete [] buf; 
+    exit(EXIT_SUCCESS);
+#endif 
+
     this->sendrecvBuf(gpu_solution[indx_u_plus_scaled_k_out]);
 }
 
 //----------------------------------------------------------------------
-// NOTE: the communciation in this routine is to synchronize the solution OUTPUT (not intermediate steps)
+/// NOTE: the communciation in this routine is to synchronize the solution OUTPUT (not intermediate steps)
 void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ) {
 
     // Advane only needs K1[{Q}], K2[{Q}], K3[{Q}] and K4[{Q}]
@@ -816,6 +832,9 @@ void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned i
         float cur_time_f = (float) adjusted_t;
         float substep_scale_f = (float) substep_scale;
 
+        // Operate by warp:
+        unsigned int local_work_size = 32; 
+
         int i = 0;
 
         try {
@@ -833,12 +852,18 @@ void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned i
                         rk4_substep_kernel.setArg(i++, offset_to_set); 
                         rk4_substep_kernel.setArg(i++, nb_stencils_to_compute);
 
-                        this->setAdvanceArgs( rk4_substep_kernel, i);
+                        i = this->setAdvanceArgs( rk4_substep_kernel, i);
+                
+                        // Shared memory:  (TODO: allow more than 4 lines)
+                        rk4_substep_kernel.setArg(i++, cl::__local(local_work_size * sizeof(double) * 3));
+
                         rk4_sub_args_set++;
                 }
+                
                 err = queue.enqueueNDRangeKernel( rk4_substep_kernel, /* offset */ cl::NullRange,
-                                                 /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute),
-                                                 /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+                        /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute*local_work_size),
+                        /* LOCAL (work-items per work-group) */   cl::NDRange(local_work_size),
+                                                 NULL, &event);
 
 //                err = queue.flush();
                 if (err != CL_SUCCESS) {

@@ -101,7 +101,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         virtual void loadKernels(std::string& local_solve_source); 
         virtual void allocateGPUMem();
         // Set the default set of arguments for a kernel
-        virtual void setAdvanceArgs(cl::Kernel kern, int start_indx);
+        virtual int setAdvanceArgs(cl::Kernel kern, int start_indx);
 
         // Use RK4 scheme to advance
         virtual void advance(TimeScheme which, double delta_t); 

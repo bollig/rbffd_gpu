@@ -1,3 +1,6 @@
+// BAD : this doesnt work. Use rk4_classic or another rk4 instead
+
+
 #include "useDouble.cl"
 #include "solver.cl"
 

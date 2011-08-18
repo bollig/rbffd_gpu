@@ -44,20 +44,25 @@ MACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
     set (_destination ${_source_filename})
     set (_source ${_source_filename})
 
+    # I wanted to use the CMAKE_COMMAND make_directory but it does not work
+    # because it requires cmake to have been run in the dir already, and to 
+    # have generated a cache file.
     ADD_CUSTOM_COMMAND(
         OUTPUT ${_dest_dir}
         COMMAND mkdir -p ${_dest_dir}
+        #        COMMAND ${CMAKE_COMMAND} make_directory ${_dest_dir}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        #        DEPENDS ${_source_dir}/${_source_filename}
     )
  
+    # Second dep says if the dest directory is not made yet, go up to previous
+    # command and make it.
     ADD_CUSTOM_COMMAND(
-        OUTPUT ${_dest_dir}/${_destination}
+        OUTPUT ${_dest_dir}/tmp/${_destination}
         COMMAND #${CMAKE_COMMAND copy
-        cp ${_source_dir}/${_source_filename} ${_dest_dir}/${_source_filename}
+        cp ${_source_dir}/${_source_filename} ${_dest_dir}/tmp/${_source_filename}
         WORKING_DIRECTORY ${_soruce_dir}
         DEPENDS ${_source_dir}/${_source_filename}
-        ${_dest_dir}
+                ${_dest_dir}
     )
     SET (_which "${_source}_to_${_destination}")
     
@@ -68,9 +73,22 @@ MACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
 
     increment(TARGET_COUNT_${_which})
     SET (FULL_TARGET_NAME "Copy ${_source} to ${_destination} ${TARGET_COUNT_${_which}}")
-    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS "${_dest_dir}/${_destination}"
-        #        WORKING_DIRECTORY ${_dest_dir}
+    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS "${_dest_dir}/${_destination}")
+
+
+    # Now we preprocess the 
+ 
+    ADD_CUSTOM_COMMAND(
+        OUTPUT ${_dest_dir}/${_destination}
+        COMMAND #${CMAKE_COMMAND copy
+        g++ -E -x c++ ${_source_dir}/${_source_filename} > ${_dest_dir}/${_source_filename}
+        WORKING_DIRECTORY ${_soruce_dir}
+        DEPENDS ${_source_dir}/${_source_filename}
+                ${_dest_dir}
     )
+
+
+
 
 ENDMACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
 

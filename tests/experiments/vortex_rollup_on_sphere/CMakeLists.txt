@@ -24,8 +24,9 @@ require_config()   # Default is to require test.conf
 
 load_vtk()
 
-copy_kernels("$ENV{HOME}/repos-rbffd_gpu/src/cl_kernels")
-copy_kernel_solver_command("vortex_rollup_solve.cl")
+copy_kernels()
+
+#copy_kernel_solver_command("vortex_rollup_solve.cl")
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 

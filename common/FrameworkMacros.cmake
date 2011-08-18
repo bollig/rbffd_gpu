@@ -52,9 +52,10 @@ MACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
     )
  
     ADD_CUSTOM_COMMAND(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${_destination}
-        COMMAND cp ${_source_dir}/${_source_filename} ${_source_filename}
-        WORKING_DIRECTORY ${_dest_dir}
+        OUTPUT ${_dest_dir}/${_destination}
+        COMMAND #${CMAKE_COMMAND copy
+        cp ${_source_dir}/${_source_filename} ${_dest_dir}/${_source_filename}
+        WORKING_DIRECTORY ${_soruce_dir}
         DEPENDS ${_source_dir}/${_source_filename}
         ${_dest_dir}
     )
@@ -67,8 +68,8 @@ MACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
 
     increment(TARGET_COUNT_${_which})
     SET (FULL_TARGET_NAME "Copy ${_source} to ${_destination} ${TARGET_COUNT_${_which}}")
-    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS ${_destination}
-        WORKING_DIRECTORY ${_dest_dir}
+    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS "${_dest_dir}/${_destination}"
+        #        WORKING_DIRECTORY ${_dest_dir}
     )
 
 ENDMACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)

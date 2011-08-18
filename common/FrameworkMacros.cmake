@@ -9,61 +9,51 @@
 
 MACRO ( COPY_KERNELS _source_dir ) 
 
-    SET (_source_dir "${CMAKE_SOURCE_DIR}/src/cl_kernels")
+    SET (_source_base "${CMAKE_SOURCE_DIR}/src/") 
+    SET (_source_dir "${_source_base}/cl_kernels")
     SET (_dest_dir "${CMAKE_CURRENT_BINARY_DIR}/")
             
-    FILE(GLOB cl_src "${_source_dir}/*.cl")
-    MESSAGE("COPYING ${_source_dir}/*.cl")
-    MESSAGE("${cl_src}")
-    FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cl_kernels/tmp)
-
+    # Handle preprocessing a full tree
+    FILE(GLOB_RECURSE cl_src "${_source_dir}/*.cl")
+    MESSAGE("WORKING ON ${cl_src}")
     FOREACH(loop_var ${cl_src})
         get_filename_component(_filename ${loop_var} NAME)
-        MESSAGE (" DOING ${_filename} ")
-        if ( EXISTS ${_source_dir}/${_filename} )
-            
-            #copy_file_command( "${_filename}" "${_source_dir}" "${_filename}" "${_dest_dir}" )
-            preprocess_command(${_filename} "${CMAKE_SOURCE_DIR}/src/cl_kernels" "${CMAKE_CURRENT_BINARY_DIR}/cl_kernels")
+        get_filename_component(_file_path "${loop_var}" PATH)
+        string(REGEX REPLACE "${_source_base}" "" _relative_dir ${_file_path})
 
-        endif ( EXISTS ${_source_dir}/${_filename} )
-
+        MESSAGE("FOUND ${_relative_dir} for ${_filename}")
+        preprocess_command(${_source_base} ${CMAKE_CURRENT_BINARY_DIR} ${_relative_dir} ${_filename})
     ENDFOREACH(loop_var)
-    
-    #    FILE(GLOB cl_cpy "${CMAKE_CURRENT_BINARY_DIR}/cl_kernels/tmp/*")
-    #FOREACH(loop_var ${cl_cpy})
-    #    FILE(COPY ${loop_var} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/cl_kernels)
-    #ENDFOREACH(loop_var)
-
 ENDMACRO ( COPY_KERNELS _source_dir )
 
 
-
-
-MACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
-
-    set (_destination ${_source_filename})
-    set (_source ${_source_filename})
+MACRO ( PREPROCESS_COMMAND _src_base_dir _dest_base_dir _file_path _file_name)
 
     # I wanted to use the CMAKE_COMMAND make_directory but it does not work
     # because it requires cmake to have been run in the dir already, and to 
     # have generated a cache file.
     ADD_CUSTOM_COMMAND(
-        OUTPUT ${_dest_dir}
-        COMMAND mkdir -p ${_dest_dir}
+        OUTPUT ${_dest_base_dir}/${_file_path}
+        COMMAND mkdir -p ${_file_path}
         #        COMMAND ${CMAKE_COMMAND} make_directory ${_dest_dir}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        WORKING_DIRECTORY ${_dest_base_dir}
     )
  
+
     # Second dep says if the dest directory is not made yet, go up to previous
     # command and make it.
-    ADD_CUSTOM_COMMAND(
-        OUTPUT ${_dest_dir}/tmp/${_destination}
-        COMMAND #${CMAKE_COMMAND copy
-        cp ${_source_dir}/${_source_filename} ${_dest_dir}/tmp/${_source_filename}
-        WORKING_DIRECTORY ${_soruce_dir}
-        DEPENDS ${_source_dir}/${_source_filename}
-                ${_dest_dir}
-    )
+    #  ADD_CUSTOM_COMMAND(
+    #    OUTPUT ${_dest_base_dir}/tmp/${_file_path}/${_file_name}
+    #    COMMAND #${CMAKE_COMMAND copy
+    #    cp ${_src_base_dir}/${_file_path}/${_file_name} ${_dest_base_dir}/tmp/${_file_path}/${_file_name}
+    #    WORKING_DIRECTORY ${_src_base_dir}
+    #    DEPENDS ${_src_base_dir}/${_file_path}/${_file_name}
+    #            ${_dest_base_dir}/${_file_path}
+    # )
+
+    SET (_source ${_file_path}/${_file_name})
+    SET (_destination ${_dest_base_dir})
+
     SET (_which "${_source}_to_${_destination}")
     
     IF (NOT DEFINED ${TARGET_COUNT_${_which}})
@@ -73,24 +63,20 @@ MACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
 
     increment(TARGET_COUNT_${_which})
     SET (FULL_TARGET_NAME "Copy ${_source} to ${_destination} ${TARGET_COUNT_${_which}}")
-    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS "${_dest_dir}/${_destination}")
-
-
+    STRING(REPLACE "/" "_" FULL_TARGET_NAME ${FULL_TARGET_NAME})
+    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS "${_dest_base_dir}/${_file_path}/${_file_name}")
     # Now we preprocess the 
  
     ADD_CUSTOM_COMMAND(
-        OUTPUT ${_dest_dir}/${_destination}
+        OUTPUT ${_dest_base_dir}/${_file_path}/${_file_name}
         COMMAND #${CMAKE_COMMAND copy
-        g++ -E -x c++ ${_source_dir}/${_source_filename} > ${_dest_dir}/${_source_filename}
-        WORKING_DIRECTORY ${_soruce_dir}
-        DEPENDS ${_source_dir}/${_source_filename}
-                ${_dest_dir}
+        g++ -E -x c++ ${_src_base_dir}/${_file_path}/${_file_name} > ${_dest_base_dir}/${_file_path}/${_file_name}
+        WORKING_DIRECTORY ${_src_base_dir}
+        DEPENDS ${_src_base_dir}/${_file_path}/${_file_name}
+                ${_dest_base_dir}/${_file_path}
     )
 
-
-
-
-ENDMACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
+ENDMACRO ( PREPROCESS_COMMAND _source_file _source_dir _dest_dir)
 
 
 

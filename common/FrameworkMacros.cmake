@@ -18,10 +18,9 @@ MACRO ( COPY_KERNELS _source_dir )
     MESSAGE("WORKING ON ${cl_src}")
     FOREACH(loop_var ${cl_src})
         get_filename_component(_filename ${loop_var} NAME)
+        # Next two lines trim off path to make it relative from CMAKE_SOURCE_DIR
         get_filename_component(_file_path "${loop_var}" PATH)
         string(REGEX REPLACE "${_source_base}" "" _relative_dir ${_file_path})
-
-        MESSAGE("FOUND ${_relative_dir} for ${_filename}")
         preprocess_command(${_source_base} ${CMAKE_CURRENT_BINARY_DIR} ${_relative_dir} ${_filename})
     ENDFOREACH(loop_var)
 ENDMACRO ( COPY_KERNELS _source_dir )
@@ -38,18 +37,6 @@ MACRO ( PREPROCESS_COMMAND _src_base_dir _dest_base_dir _file_path _file_name)
         #        COMMAND ${CMAKE_COMMAND} make_directory ${_dest_dir}
         WORKING_DIRECTORY ${_dest_base_dir}
     )
- 
-
-    # Second dep says if the dest directory is not made yet, go up to previous
-    # command and make it.
-    #  ADD_CUSTOM_COMMAND(
-    #    OUTPUT ${_dest_base_dir}/tmp/${_file_path}/${_file_name}
-    #    COMMAND #${CMAKE_COMMAND copy
-    #    cp ${_src_base_dir}/${_file_path}/${_file_name} ${_dest_base_dir}/tmp/${_file_path}/${_file_name}
-    #    WORKING_DIRECTORY ${_src_base_dir}
-    #    DEPENDS ${_src_base_dir}/${_file_path}/${_file_name}
-    #            ${_dest_base_dir}/${_file_path}
-    # )
 
     SET (_source ${_file_path}/${_file_name})
     SET (_destination ${_dest_base_dir})
@@ -61,12 +48,20 @@ MACRO ( PREPROCESS_COMMAND _src_base_dir _dest_base_dir _file_path _file_name)
         MARK_AS_ADVANCED(TARGET_COUNT_${_which})
     ENDIF (NOT DEFINED ${TARGET_COUNT_${_which}})
 
+    # Use my increment to allow multiple (up to 9) targets with the exact same
+    # name (appends count # after name)
     increment(TARGET_COUNT_${_which})
     SET (FULL_TARGET_NAME "Copy ${_source} to ${_destination} ${TARGET_COUNT_${_which}}")
     STRING(REPLACE "/" "_" FULL_TARGET_NAME ${FULL_TARGET_NAME})
     ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS "${_dest_base_dir}/${_file_path}/${_file_name}")
-    # Now we preprocess the 
  
+    # Preprocess the text straight from its source to our destination
+    # The dependencies listed here create a chain to run this target that says:
+    #       - If the file is modified, or
+    #       - If the output directory structure is deleted, or
+    #       - If any files included by the file are modified, or 
+    #       - If the "OUTPUT" file is deleted, 
+    # re-run the target when the user executes "make"
     ADD_CUSTOM_COMMAND(
         OUTPUT ${_dest_base_dir}/${_file_path}/${_file_name}
         COMMAND #${CMAKE_COMMAND copy
@@ -74,11 +69,22 @@ MACRO ( PREPROCESS_COMMAND _src_base_dir _dest_base_dir _file_path _file_name)
         WORKING_DIRECTORY ${_src_base_dir}
         DEPENDS ${_src_base_dir}/${_file_path}/${_file_name}
                 ${_dest_base_dir}/${_file_path}
+        IMPLICIT_DEPENDS CXX ${_src_base_dir}/${_file_path}/${_file_name}
     )
 
-ENDMACRO ( PREPROCESS_COMMAND _source_file _source_dir _dest_dir)
+ENDMACRO ( PREPROCESS_COMMAND _src_base_dir _dest_base_dir _file_path _file_name)
 
 
+    # Second dep says if the dest directory is not made yet, go up to previous
+    # command and make it.
+    #  ADD_CUSTOM_COMMAND(
+    #    OUTPUT ${_dest_base_dir}/tmp/${_file_path}/${_file_name}
+    #    COMMAND #${CMAKE_COMMAND copy
+    #    cp ${_src_base_dir}/${_file_path}/${_file_name} ${_dest_base_dir}/tmp/${_file_path}/${_file_name}
+    #    WORKING_DIRECTORY ${_src_base_dir}
+    #    DEPENDS ${_src_base_dir}/${_file_path}/${_file_name}
+    #            ${_dest_base_dir}/${_file_path}
+    # )
 
 
 MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source )

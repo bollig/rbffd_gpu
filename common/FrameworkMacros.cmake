@@ -5,7 +5,95 @@
 #cmake_policy(POP)
 #CMAKE_POLICY(SET CMP0012 OLD) 
 
-#SET ( TEST_COUNT 0 ) 
+#SET ( TEST_COUNT 0 )
+
+MACRO ( COPY_KERNELS _source_dir ) 
+
+    SET (_source_dir "${CMAKE_SOURCE_DIR}/src/cl_kernels")
+    SET (_dest_dir "${CMAKE_CURRENT_BINARY_DIR}/")
+            
+    FILE(GLOB cl_src "${_source_dir}/*.cl")
+    MESSAGE("COPYING ${_source_dir}/*.cl")
+    MESSAGE("${cl_src}")
+    FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cl_kernels/tmp)
+
+    FOREACH(loop_var ${cl_src})
+        get_filename_component(_filename ${loop_var} NAME)
+        MESSAGE (" DOING ${_filename} ")
+        if ( EXISTS ${_source_dir}/${_filename} )
+            
+            #copy_file_command( "${_filename}" "${_source_dir}" "${_filename}" "${_dest_dir}" )
+            preprocess_command(${_filename} "${CMAKE_SOURCE_DIR}/src/cl_kernels" "${CMAKE_CURRENT_BINARY_DIR}/cl_kernels")
+
+        endif ( EXISTS ${_source_dir}/${_filename} )
+
+    ENDFOREACH(loop_var)
+    
+    #    FILE(GLOB cl_cpy "${CMAKE_CURRENT_BINARY_DIR}/cl_kernels/tmp/*")
+    #FOREACH(loop_var ${cl_cpy})
+    #    FILE(COPY ${loop_var} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/cl_kernels)
+    #ENDFOREACH(loop_var)
+
+ENDMACRO ( COPY_KERNELS _source_dir )
+
+
+
+
+MACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
+
+    set (_destination ${_source_filename})
+    set (_source ${_source_filename})
+
+    # I wanted to use the CMAKE_COMMAND make_directory but it does not work
+    # because it requires cmake to have been run in the dir already, and to 
+    # have generated a cache file.
+    ADD_CUSTOM_COMMAND(
+        OUTPUT ${_dest_dir}
+        COMMAND mkdir -p ${_dest_dir}
+        #        COMMAND ${CMAKE_COMMAND} make_directory ${_dest_dir}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+ 
+    # Second dep says if the dest directory is not made yet, go up to previous
+    # command and make it.
+    ADD_CUSTOM_COMMAND(
+        OUTPUT ${_dest_dir}/tmp/${_destination}
+        COMMAND #${CMAKE_COMMAND copy
+        cp ${_source_dir}/${_source_filename} ${_dest_dir}/tmp/${_source_filename}
+        WORKING_DIRECTORY ${_soruce_dir}
+        DEPENDS ${_source_dir}/${_source_filename}
+                ${_dest_dir}
+    )
+    SET (_which "${_source}_to_${_destination}")
+    
+    IF (NOT DEFINED ${TARGET_COUNT_${_which}})
+        SET(TARGET_COUNT_${_which} 0 CACHE TYPE INTERNAL)
+        MARK_AS_ADVANCED(TARGET_COUNT_${_which})
+    ENDIF (NOT DEFINED ${TARGET_COUNT_${_which}})
+
+    increment(TARGET_COUNT_${_which})
+    SET (FULL_TARGET_NAME "Copy ${_source} to ${_destination} ${TARGET_COUNT_${_which}}")
+    ADD_CUSTOM_TARGET(${FULL_TARGET_NAME} ALL DEPENDS "${_dest_dir}/${_destination}")
+
+
+    # Now we preprocess the 
+ 
+    ADD_CUSTOM_COMMAND(
+        OUTPUT ${_dest_dir}/${_destination}
+        COMMAND #${CMAKE_COMMAND copy
+        g++ -E -x c++ ${_source_dir}/${_source_filename} > ${_dest_dir}/${_source_filename}
+        WORKING_DIRECTORY ${_soruce_dir}
+        DEPENDS ${_source_dir}/${_source_filename}
+                ${_dest_dir}
+    )
+
+
+
+
+ENDMACRO ( PREPROCESS_COMMAND _source_filename _source_dir _dest_dir)
+
+
+
 
 MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source )
 
@@ -52,7 +140,7 @@ MACRO ( COPY_FILE_COMMAND _source_filename _source_dir _dest_filename _dest_dir)
         MARK_AS_ADVANCED(TARGET_COUNT_${_which})
     ENDIF (NOT DEFINED ${TARGET_COUNT_${_which}})
 
-    STRING(REPLACE "/" "_" _dest_dir_no_seps ${CMAKE_CURRENT_BINARY_DIR})
+    STRING(REPLACE "/" "_" _dest_dir_no_seps ${_dest_dir})
 
     increment(TARGET_COUNT_${_which})
     SET (FULL_TARGET_NAME "Copy ${_source_filename} to ${_dest_dir_no_seps}_${TARGET_COUNT_${_which}}")

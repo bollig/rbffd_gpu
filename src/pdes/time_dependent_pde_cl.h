@@ -63,6 +63,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // Flag to indicate if syncCPUtoGPU needs to copy down from GPU (should be set to 1 if advance is called)
         int cpu_dirty;
 
+        std::string kernel_source_file;
+
     public: 
 
         TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool weightsComputed=false) 
@@ -81,10 +83,11 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // Fill in the initial conditions of the PDE. (overwrite the solution)
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
 
-        void initialize(std::string solve_source)
+        void initialize(const char* solve_source_file)
         {
+            this->kernel_source_file = solve_source_file;
             this->setupTimers();
-            this->loadKernels(solve_source); 
+            this->loadKernels(); 
             this->allocateGPUMem(); 
         }
 
@@ -98,7 +101,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         };
 
         // Interfaces: 
-        virtual void loadKernels(std::string& local_solve_source); 
+        virtual void loadKernels(std::string local_solve_source=""); 
         virtual void allocateGPUMem();
         // Set the default set of arguments for a kernel
         virtual int setAdvanceArgs(cl::Kernel kern, int start_indx);

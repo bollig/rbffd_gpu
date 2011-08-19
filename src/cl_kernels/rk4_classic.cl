@@ -1,5 +1,7 @@
 #include "useDouble.cl"
-#include "solver.cl"
+//Assume that the "solver" will include this file instead of the other way around
+//#include "solver.cl"
+
 
 // -----------------------------------------------------------
 // 		CLASSIC RK4:

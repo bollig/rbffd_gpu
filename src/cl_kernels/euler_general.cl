@@ -1,6 +1,7 @@
 #include "useDouble.cl"
 //#include "constants.cl"
-#include "solver.cl"
+// Assume the "solver" includes this and not the other way around
+//#include "solver.cl"
 
 __kernel void
 advanceEuler(

@@ -10,7 +10,9 @@ class VortexRollup_CL : public TimeDependentPDE_CL
     public: 
         VortexRollup_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, int useHyperviscosity, bool weightsComputed=false) 
             : TimeDependentPDE_CL(grid, der, comm, weightsComputed)
-        { this->initialize(""); }
+        { 
+            this->initialize("vortex_rollup_solve.cl"); 
+        }
 
         virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t) { 
             //DO NOTHING;

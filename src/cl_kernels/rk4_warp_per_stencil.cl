@@ -1,5 +1,6 @@
 #include "useDouble.cl"
-#include "solver.cl"
+// Assume the "solver will include this instead of the other way around
+//#include "solver.cl"
 //1
 
 // -----------------------------------------------------------

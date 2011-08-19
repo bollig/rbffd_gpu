@@ -490,7 +490,7 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
 
 //----------------------------------------------------------------------
 
-void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
+void TimeDependentPDE_CL::loadKernels(std::string local_sources) {
         tm["loadAttach"]->start();
 
 #if 0
@@ -518,7 +518,7 @@ void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
         }
 
         // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
-        std::string my_source = this->loadFileContents("euler_general.cl", true);
+        std::string my_source = this->loadFileContents(kernel_source_file.c_str(), true);
 
         //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
         this->loadProgram(my_source, useDouble);
@@ -536,6 +536,7 @@ void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
 //----------------------------------------------------------------------
 
 void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
+#if 0
         std::string kernel_name = "advanceMidpoint";
 
         if (!this->getDeviceFP64Extension().compare("")){
@@ -575,6 +576,7 @@ void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
         catch (cl::Error er) {
                 printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
         }
+#endif 
 }
 
 
@@ -593,7 +595,7 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
         }
 
         // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
-        std::string my_source = this->loadFileContents("rk4_warp_per_stencil.cl", true);
+        std::string my_source = this->loadFileContents(kernel_source_file.c_str(), true);
 
         //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
         this->loadProgram(my_source, useDouble);

@@ -130,3 +130,9 @@ FLOAT solve_block(__global FLOAT* u_t,
 
 
 #endif 
+
+// These are included backwards because we want to define a general "solve" and
+// "solve_block" routine that can be used by any solver for any test problem. Sort
+// of a symbolic approacH
+#include "rk4_warp_per_stencil.cl"
+#include "euler_general.cl"

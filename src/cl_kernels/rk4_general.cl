@@ -1,5 +1,9 @@
+// BAD : this doesnt work. Use rk4_classic or another rk4 instead
+
+
 #include "useDouble.cl"
-#include "solver.cl"
+//Assume the "solver" will include this file instead of the other way around
+//#include "solver.cl"
 
 // -----------------------------------------------------------
 //  Evaluate substep 1, 2 or 3 and scale the output by "k_scale"

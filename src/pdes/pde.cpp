@@ -5,6 +5,11 @@
 #include <algorithm>
 #include <cmath>
 
+void PDE::setupTimers()
+{
+        tm["sendrecv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
+}
+ 
 int PDE::send(int my_rank, int receiver_rank) {
     // Initially we have nothing to send.
     return 0; 
@@ -207,6 +212,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
 
 int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label) 
 {
+    tm["sendrecv"]->start();
     if (comm_ref.getSize() > 1) {
 //        std::cout << "[PDE] SEND/RECEIVE\n";
         vector<int> receiver_list; 
@@ -233,6 +239,7 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
             }
         }
     }
+    tm["sendrecv"]->stop();
     return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 

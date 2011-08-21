@@ -5,8 +5,18 @@
 
 void TimeDependentPDE_CL::setupTimers()
 {
-        tm["advance_gpu"] = new EB::Timer("Advance the PDE one step on the GPU") ;
-        tm["loadAttach"] = new EB::Timer("Load the GPU Kernels for TimeDependentPDE_CL");
+        tm["advance_gpu"] = new EB::Timer("[T_PDE_CL] Advance the PDE one step on the GPU") ;
+        tm["rk4_adv"] = new EB::Timer("[T_PDE_CL] RK4 Advance on GPU") ;
+        tm["rk4_eval"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Substep on GPU"); 
+        tm["rk4_adv_setargs"] = new EB::Timer("[T_PDE_CL] RK4 Advance Setargs") ;
+        tm["rk4_eval_setargs"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Setargs"); 
+        tm["rk4_adv_kern"] = new EB::Timer("[T_PDE_CL] RK4 Advance Kernel Launch") ;
+        tm["rk4_eval_kern"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Kernel Launch"); 
+        tm["rk4_full_comm"] = new EB::Timer("[T_PDE_CL] RK4 Communicate GPU to CPU to CPU to GPU"); 
+        tm["rk4_O"] = new EB::Timer("[T_PDE_CL] RK4 Transfer Set O (GPU to CPU)"); 
+        tm["rk4_R"] = new EB::Timer("[T_PDE_CL] RK4 Transfer Set R (CPU to GPU)"); 
+        tm["rk4_gpu_comm"] = new EB::Timer("[T_PDE_CL] RK4 Communicate CPU to GPU");
+        tm["loadAttach"] = new EB::Timer("[T_PDE_CL] Load the GPU Kernels for TimeDependentPDE_CL");
 }
 
 //----------------------------------------------------------------------
@@ -96,20 +106,25 @@ void TimeDependentPDE_CL::assemble()
 
 int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
 
+    tm["rk4_full_comm"]->start();
     // Synchronize the solution output
     if (comm_ref.getSize() > 1) {
         // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
         // (these are input values required by other procs)
+        tm["rk4_O"]->start();
         if (useDouble) {
             this->syncSetODouble(this->cpu_buf, buf);
         } else {
             this->syncSetOSingle(this->cpu_buf, buf);
         }
+        tm["rk4_O"]->stop();
 
         // 3) OVERLAP: Transmit between CPUs
         // NOTE: Require an MPI barrier here
         this->sendrecvUpdates(this->cpu_buf, label);
 
+
+        tm["rk4_R"]->start();
         // 4) OVERLAP: Update the input with set R
         // (these are input values received from other procs)
         if (useDouble) {
@@ -117,7 +132,9 @@ int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
         } else {
             this->syncSetRSingle(this->cpu_buf, buf);
         }
+        tm["rk4_R"]->stop();
     }
+    tm["rk4_full_comm"]->stop();
 
 }
 
@@ -471,16 +488,26 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         // NOTE: INDX_IN maps to "u", INDX_K1 to "F1" and INDX_TEMP to "u+0.5*F1"
 
         // Compute K1, K2, K3 and K4 in separate kernel launches (required to ensure global barrier between evaluations)
+        tm["rk4_eval"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_IN, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);  
+        tm["rk4_eval"]->stop();
         // We use INDX_TEMP1 (== u+0.5*K1) to compute K2 and write INDX_TEMP2 with "u+0.5*K2"
+        tm["rk4_eval"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K2, INDX_TEMP2, delta_t, cur_time+0.5*delta_t, 0.5);  
+        tm["rk4_eval"]->stop();
         // We use INDX_TEMP2 (== u+0.5*K2) to compute K3 and write INDX_TEMP1 with "u+K3"
+        tm["rk4_eval"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP2, INDX_K3, INDX_TEMP1, delta_t, cur_time+0.5*delta_t, 1.0);  
+        tm["rk4_eval"]->stop();
         // We use INDX_TEMP1 (== u+K3) to compute K4 and write INDX_TEMP1 with "u" (we can test our logic 
+        tm["rk4_eval"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K4, INDX_TEMP2, delta_t, cur_time+delta_t, 0.0);  
+        tm["rk4_eval"]->stop();
 
         // Finally, we combine all terms to get the update to u
+        tm["rk4_adv"]->start();
         advanceRK4_WithComm(INDX_IN, INDX_K1, INDX_K2, INDX_K3, INDX_K4, INDX_OUT);
+        tm["rk4_adv"]->stop();
       
         queue.finish();
 
@@ -840,6 +867,7 @@ void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned i
         int i = 0;
 
         try {
+            tm["rk4_eval_setargs"]->start(); 
                 // These will change each iteration
                 rk4_substep_kernel.setArg(i++, u_in);
                 rk4_substep_kernel.setArg(i++, u_plus_scaled_k_in);
@@ -861,11 +889,14 @@ void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned i
 
                         rk4_sub_args_set++;
                 }
+            tm["rk4_eval_setargs"]->stop(); 
                 
+            tm["rk4_eval_kern"]->start(); 
                 err = queue.enqueueNDRangeKernel( rk4_substep_kernel, /* offset */ cl::NullRange,
                         /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute*local_work_size),
                         /* LOCAL (work-items per work-group) */   cl::NDRange(local_work_size),
                                                  NULL, &event);
+            tm["rk4_eval_kern"]->stop();
 
 //                err = queue.flush();
                 if (err != CL_SUCCESS) {
@@ -887,6 +918,7 @@ void TimeDependentPDE_CL::launchRK4_adv( unsigned int offset_to_set, unsigned in
         int i = 0;
 
         try {
+            tm["rk4_adv_setargs"]->start();
                 // These will change each iteration
                 rk4_advance_substep_kernel.setArg(i++, u_in);
                 rk4_advance_substep_kernel.setArg(i++, k1);
@@ -903,10 +935,14 @@ void TimeDependentPDE_CL::launchRK4_adv( unsigned int offset_to_set, unsigned in
                         this->setAdvanceArgs( rk4_advance_substep_kernel, i);
                         rk4_adv_args_set++;
                 }
+            tm["rk4_adv_setargs"]->stop();
+
+            tm["rk4_adv_kern"]->start();
                 err = queue.enqueueNDRangeKernel( rk4_advance_substep_kernel, /* offset */ cl::NullRange,
                                                  /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute),
                                                  /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
+            tm["rk4_adv_kern"]->stop();
 //                err = queue.flush();
                 if (err != CL_SUCCESS) {
                         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \

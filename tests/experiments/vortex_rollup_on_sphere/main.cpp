@@ -94,6 +94,7 @@ int main(int argc, char** argv) {
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
     double max_local_rel_error = settings->GetSettingAs<double>("MAX_LOCAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
 
+    // USE_GPU can be 0, 1, 2. If 0 done use GPU. if 1 use a block approach. if 2 use a thread per stencil approach
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
     
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
@@ -287,7 +288,7 @@ int main(int argc, char** argv) {
 
     // We need to provide comm_unit to pass ghost node info
     if (use_gpu) {
-        pde = new VortexRollup_CL(subdomain, (RBFFD_CL*)der, comm_unit, useHyperviscosity, true);
+        pde = new VortexRollup_CL(subdomain, (RBFFD_CL*)der, comm_unit, use_gpu, useHyperviscosity, true);
     } else {
         pde = new VortexRollup(subdomain, der, comm_unit, useHyperviscosity, true);
     }

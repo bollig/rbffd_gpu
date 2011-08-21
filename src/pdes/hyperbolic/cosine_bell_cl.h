@@ -6,9 +6,9 @@
 class CosineBell_CL : public TimeDependentPDE_CL
 {
     public:
-        CosineBell_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, double earth_radius, double velocity_angle, double one_revolution_in_seconds, int useHyperviscosity, bool weightsComputed=false) 
+        CosineBell_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, double earth_radius, double velocity_angle, double one_revolution_in_seconds, int useOneThreadPerStencil, int useHyperviscosity, bool weightsComputed=false) 
             :
-            TimeDependentPDE_CL(grid, der, comm, weightsComputed)
+            TimeDependentPDE_CL(grid, der, comm, useOneThreadPerStencil, weightsComputed)
     {
         // Fill in constants
         // Allocate GPU buffers for velocity

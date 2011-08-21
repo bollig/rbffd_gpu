@@ -301,7 +301,7 @@ int main(int argc, char** argv) {
     tm["heat_init"]->start(); 
 
     if (use_gpu) {
-        pde = new CosineBell_CL(subdomain, (RBFFD_CL*)der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, useHyperviscosity, true);
+        pde = new CosineBell_CL(subdomain, (RBFFD_CL*)der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, use_gpu, useHyperviscosity, true);
     } else {
         pde = new CosineBell(subdomain, der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, useHyperviscosity, true);
     }

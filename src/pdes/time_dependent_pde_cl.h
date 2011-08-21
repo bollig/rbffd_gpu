@@ -66,8 +66,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
 
         std::string kernel_source_file;
 
-        // 0/1: 1=use 1 thread per stencil; 0=use a block per stencil
-        int one_thread_per_stencil; 
+        int gpuType; 
 
     public: 
         // USE_GPU=0 (pass over this constructor), =1 (use a block approach per stencil), =2 (use a thread approach per stencil)
@@ -82,11 +81,11 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
             der_ref_gpu(*der), weightsPrecomputed(weightsComputed), 
             cpu_buf(grid->G.size(), -0.00000000001),
             cpu_dirty(0),
-            one_thread_per_stencil(gpu_type-1)
+            gpuType(gpu_type)
         {;}
 
-        void setOneThreadPerStencil(int tf) {
-            one_thread_per_stencil=tf;
+        void setGPUType(int type) {
+            gpuType=type;
         }
         
         // Fill in the initial conditions of the PDE. (overwrite the solution)

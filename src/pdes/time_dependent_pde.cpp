@@ -4,8 +4,8 @@
 
 void TimeDependentPDE::setupTimers() {
     tm["advance"] = new EB::Timer("[T_PDE] Advance timestep");
-    tm["rk4_eval"] = new EB::Timer("[T_PDE] RK4 Evaluation");
-    tm["rk4_adv"] = new EB::Timer("[T_PDE] RK4 Advance");
+    tm["rk4_eval"] = new EB::Timer("[T_PDE] RK4 Evaluate Substep on CPU");
+    tm["rk4_adv"] = new EB::Timer("[T_PDE] RK4 Advance on CPU");
 }
 
 void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {

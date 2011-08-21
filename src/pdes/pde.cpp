@@ -239,6 +239,7 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
             }
         }
     }
+    comm_ref.barrier();
     tm["sendrecv"]->stop();
     return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }

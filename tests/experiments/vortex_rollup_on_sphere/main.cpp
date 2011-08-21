@@ -99,6 +99,7 @@ int main(int argc, char** argv) {
     
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
+    int writeIntermediate = settings->GetSettingAs<int>("WRITE_INTERMEDIATE_FILES", ProjectSettings::optional, "0"); 
 
     int prompt_to_continue = settings->GetSettingAs<int>("PROMPT_TO_CONTINUE", ProjectSettings::optional, "0"); 
     int debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
@@ -136,7 +137,9 @@ int main(int argc, char** argv) {
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
-            grid->writeToFile(); 
+            if (writeIntermediate) {
+                grid->writeToFile(); 
+            }
         } 
         if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
             std::cout << "Generating stencils files\n";
@@ -146,8 +149,10 @@ int main(int argc, char** argv) {
 //            grid->generateStencils(Grid::ST_KDTREE);   
             grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
-            grid->writeToFile(); 
-            tm.writeToFile("gridgen_timer_log"); 
+            if (writeIntermediate) {
+                grid->writeToFile(); 
+            }
+            //tm.writeToFile("gridgen_timer_log"); 
         }
 
         int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
@@ -244,8 +249,10 @@ int main(int argc, char** argv) {
 
         cout << "end computing weights" << endl;
 
-        der->writeAllWeightsToFile(); 
-        cout << "end write weights to file" << endl;
+        if (writeIntermediate) {
+            der->writeAllWeightsToFile(); 
+            cout << "end write weights to file" << endl;
+        }
     }
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
@@ -376,7 +383,9 @@ int main(int argc, char** argv) {
     std::cout << "NUM_ITERS = " << num_iters << std::endl;
 
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
-        writer->update(iter);
+        if (writeIntermediate) {
+            writer->update(iter);
+        }
 #if 1
         if (!(iter % local_sol_dump_frequency)) {
 
@@ -439,7 +448,9 @@ int main(int argc, char** argv) {
     //    subdomain->writeGlobalSolutionToFile(-1); 
     std::cout << "Checking Solution on Master\n";
     if (comm_unit->getRank() == 0) {
-        pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
+        if(writeIntermediate) {
+            pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
+        }
 #if 0
         // NOTE: the final solution is assembled, but we have to use the 
         // GLOBAL node list instead of a local subdomain node list

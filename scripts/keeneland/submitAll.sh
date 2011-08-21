@@ -2,7 +2,9 @@
 
 prev_dir=${PWD}
 
-for d in 17 #31 50 101
+for d in 50
+    #17 31 
+    #50 101
 do
 
     for e in 04096  05184  06400  07225  08100  09216  10201  15129  20164  25600  27556
@@ -13,9 +15,11 @@ do
 #    for e in 25600  27556
     #for e in 4096
     do
-        for gpu_or_cpu in 0 1
+        # this allows us to reuse the weights (potentially)
+        # 0 = CPU, 1 = Block GPU, 2 = Thread GPU (per stencil)
+        for gpu_type in 0 1 2
         do
-            rundir="n${d}/USE_GPU_${gpu_or_cpu}"
+            rundir="n${d}/USE_GPU_${gpu_type}"
             mkdir -p ${rundir}
             runconf="test_${d}_md${e}.conf"
             echo "${rundir}/${runconf}"
@@ -24,7 +28,7 @@ do
 
             echo "GRID_FILENAME=${f}" > ${rundir}/${runconf} 
         #    echo "STENCIL_SIZE=$d" >> ${rundir}/${runconf}
-            echo "USE_GPU=${gpu_or_cpu}" >> ${rundir}/${runconf}
+            echo "USE_GPU=${gpu_type}" >> ${rundir}/${runconf}
             cat confs/test${d}.conf >> ${rundir}/${runconf}
 
 cat > "${rundir}/submit${e}.sh" <<EOF 
@@ -39,7 +43,7 @@ cat > "${rundir}/submit${e}.sh" <<EOF
 ## 'qsub -l walltime=hh:mm:ss,nodes=12:ppn=4'
 ##
 
-#PBS -l walltime=00:30:00
+#PBS -l walltime=00:45:00
 ## THIS IS FOUR PROCS TOTAL (i.e., 2x2): 
 #PBS -l nodes=1:ppn=1
 ##PBS -l feature=cudaworkshop 
@@ -65,7 +69,7 @@ mpirun --mca mpi_paffinity_alone 1 ${prev_dir}/vortex_rollup_on_sphere.x -c ${ru
 date
 
 # no need to keep bulk of files. We just want benchmarks and final accuracy
-rm ${e}/*.ascii ${e}/*.vtk ${e}/*.mtx
+rm ${e}/*.ascii ${e}/*.vtk ${e}/*.mtx ${e}/FINAL_SOLUTION.txt 
 
 EOF
 

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Make this a function and pass these params
-STENCIL_SIZES=(17)
-TEST_CASES=(04096 05184)
-USE_GPU=(0 1)
+STENCIL_SIZES=(101)
+TEST_CASES=(04096  05184  06400  07225  08100  09216  10201  15129  20164  25600  27556)
+USE_GPU=(0 1 2)
 
 
 function __get_summary() {
@@ -25,8 +25,6 @@ function __get_benchmark() {
 # $2 benchmark description
 # Assumes first match is what we want
 echo "${1}" | grep "${2}"  |  sed -n "1p" | sed -n "s/^.*avg: .* \([0-9].*\)|.*tot: .* \([0-9].*\) |.*count= \(.*\)/\1,     \2,     \3/p"
-#sed -n '/Advance One/,$p' |  sed -n "1p" | 
-#sed -n "s/^.*avg: .* \([0-9].*\)|.*tot: .* \([0-9].*\) |.*count= \(.*\)/\1,     \2, \3/p"
 }
 
 
@@ -49,7 +47,7 @@ for cpu_or_gpu in ${USE_GPU[@]}
             #runlog=n${sten_size}/${N}/runlog.0
             runlog="n${sten_size}/USE_GPU_${cpu_or_gpu}/${N}/runlog.0"
             echo "Processing ${runlog}"
-
+ 
             # Get summary of run: 
             summary=$( __get_summary "${runlog}" )
 
@@ -61,19 +59,31 @@ for cpu_or_gpu in ${USE_GPU[@]}
             new_l2_error=$( __get_line_num "${errors}" "2" ) 
             new_linf_error=$( __get_line_num "${errors}" "3" ) 
 
-            l1="${l1}\n${new_l1_error}"
-            l2="${l2}\n${new_l2_error}"
-            linf="${linf}\n${new_linf_error}"
+            l1="${l1}\n${N},     ${new_l1_error}"
+            l2="${l2}\n${N},     ${new_l2_error}"
+            linf="${linf}\n${N},     ${new_linf_error}"
 
             adv=$( __get_benchmark "${summary}" "Advance One" )
-            rk4e=$( __get_benchmark "${summary}" "Advance One" )
-            rk4adv=$( __get_benchmark "${summary}" "Advance One" )
-            srecv=$( __get_benchmark "${summary}" "Advance One" )
+            rk4e=$( __get_benchmark "${summary}" "RK4 Evaluate Substep on")
+            rk4adv=$( __get_benchmark "${summary}" "RK4 Advance on" )
+            srecv=$( __get_benchmark "${summary}" "MPI Communicate" )
 
-            advance="${advance}\n${adv}"
-            rk4_eval="${rk4_eval}\n${rk4e}"
-            rk4_adv="${rk4_adv}\n${rk4adv}"
-            sendrecv="${sendrecv}\n${srecv}"
+            advance="${advance}\n${N},     ${adv}"
+            rk4_eval="${rk4_eval}\n${N},     ${rk4e}"
+            rk4_adv="${rk4_adv}\n${N},     ${rk4adv}"
+            sendrecv="${sendrecv}\n${N},     ${srecv}"
+
+            # if the file exists then we exited prior to completion and need to resubmit
+            if [ -z "${adv}" ]
+            then 
+                prev_dir=`pwd`
+                cd "n${sten_size}/USE_GPU_${cpu_or_gpu}"
+                rm -r ${N}
+                echo "Re-submitting job ${N}"
+                qsub "submit${N}.sh"
+                cd "${prev_dir}"
+            fi
+
 
         done
 

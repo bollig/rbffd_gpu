@@ -197,11 +197,9 @@ void TimeDependentPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buf
 
         // OUR SOLUTION IS ARRANGED IN THIS FASHION:
         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
-        unsigned int offset_to_set_R = 0;//set_Q_size;
-        unsigned int offset_to_set_O = 0;//set_Q_size - set_O_size;
+        unsigned int offset_to_set_R = set_Q_size;
 
-        unsigned int solution_mem_bytes = set_G_size*float_size;
-        unsigned int set_R_bytes = set_G_size * float_size; //set_R_size * float_size;
+        unsigned int set_R_bytes = set_R_size * float_size; //set_R_size * float_size;
 
         if (set_R_size > 0) {
 
@@ -270,6 +268,10 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
         unsigned int nb_nodes = grid_ref.getNodeListSize();
         unsigned int set_G_size = grid_ref.G.size();
         unsigned int set_Q_size = grid_ref.Q.size();
+        unsigned int set_QmB_size = grid_ref.QmB.size();
+        unsigned int set_BmO_size = grid_ref.BmO.size();
+        unsigned int set_B_size = grid_ref.B.size();
+        unsigned int set_D_size = grid_ref.D.size();
         unsigned int set_O_size = grid_ref.O.size();
 
         unsigned int float_size = sizeof(double);
@@ -277,16 +279,15 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
         // OUR SOLUTION IS ARRANGED IN THIS FASHION:
         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
         //  Minus 1 because we start indexing at 0 
-        unsigned int offset_to_set_O = 0;// (set_Q_size - set_O_size);
 
-        unsigned int solution_mem_bytes = set_G_size*float_size;
-        unsigned int set_O_bytes = set_G_size * float_size; //set_O_size * float_size;
+        unsigned int offset_to_set_O = set_Q_size - set_O_size;
+        unsigned int set_O_bytes = set_O_size * float_size; 
 
         if (set_O_size > 0) {
                 // Pull only information required for neighboring domains back to the CPU
                 err = queue.enqueueReadBuffer(gpu_vec, CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &vec[offset_to_set_O], NULL, &event);
 //                queue.flush();
-//
+
                 queue.finish();
         }
 

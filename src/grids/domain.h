@@ -31,7 +31,7 @@ class Domain : public Grid, public MPISendable
         //----------------------------------------------------
         //
         // Sets in GLOBAL INDEXING: 
-        //   G, Q, D, O, B, QmD, R 
+        //   G, Q, D, O, B, QmD, QmB, BmO, R 
         //
         // Sets in LOCAL INDEXING: 
         //   node_list, boundary_indices, boundary_normals
@@ -51,6 +51,8 @@ class Domain : public Grid, public MPISendable
                                     // memcpy back to the CPU from the GPU. 
 
         std::set<int> QmD; 			// Interior stencil centers excluding stencils dependent on RECEIVING
+        std::set<int> QmB;
+        std::set<int> BmO;
         std::set<int> R;			// Nodes REQUIRED from other Domains (not stencil centers) 
 
         // 5) These are the maps between local and global indexing space

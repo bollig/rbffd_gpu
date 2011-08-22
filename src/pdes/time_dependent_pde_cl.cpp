@@ -120,14 +120,11 @@ int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
         } else {
             this->syncSetOSingle(this->cpu_buf, buf);
         }
-        queue.finish();
         tm["rk4_O"]->stop();
 
         // 3) OVERLAP: Transmit between CPUs
         // NOTE: Require an MPI barrier here
         this->sendrecvUpdates(this->cpu_buf, label);
-        comm_ref.barrier();
-
 
         tm["rk4_R"]->start();
         // 4) OVERLAP: Update the input with set R
@@ -137,7 +134,6 @@ int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
         } else {
             this->syncSetRSingle(this->cpu_buf, buf);
         }
-        queue.finish();
         tm["rk4_R"]->stop();
     }
     tm["rk4_full_comm"]->stop();

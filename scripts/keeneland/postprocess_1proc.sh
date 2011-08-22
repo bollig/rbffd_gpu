@@ -24,9 +24,17 @@ function __get_benchmark() {
 # $1 summary
 # $2 benchmark description
 # Assumes first match is what we want
-echo "${1}" | grep "${2}"  |  sed -n "1p" | sed -n "s/^.*avg: .* \([0-9].*\)|.*tot: .* \([0-9].*\) |.*count= \(.*\)/\1,     \2,     \3/p"
+echo "${1}" | grep "${2}"  |  sed -n "1p" | sed -n "s/^.*avg:\(.*\)|.*tot:\(.*\)|.*count=\(.*\)/\1,     \2,     \3/p"
 }
 
+function __restart_job() {
+    prev_dir=`pwd`
+    cd "n${sten_size}/USE_GPU_${cpu_or_gpu}"
+    rm -r ${N}
+    echo "Re-submitting job ${N}"
+    qsub "submit${N}.sh"
+    cd "${prev_dir}"
+}
 
 for sten_size in ${STENCIL_SIZES[@]}
     do 
@@ -63,6 +71,7 @@ for sten_size in ${STENCIL_SIZES[@]}
             l2="${l2}\n${N},     ${new_l2_error}"
             linf="${linf}\n${N},     ${new_linf_error}"
 
+
             adv=$( __get_benchmark "${summary}" "Advance One" )
             rk4e=$( __get_benchmark "${summary}" "RK4 Evaluate Substep on")
             rk4adv=$( __get_benchmark "${summary}" "RK4 Advance on" )
@@ -74,32 +83,28 @@ for sten_size in ${STENCIL_SIZES[@]}
             sendrecv="${sendrecv}\n${N},     ${srecv}"
 
             # if the file exists then we exited prior to completion and need to resubmit
-            #if [ -z "${adv}" ]
-            #then 
-            #    prev_dir=`pwd`
-            #    cd "n${sten_size}/USE_GPU_${cpu_or_gpu}"
-            #    rm -r ${N}
-            #    echo "Re-submitting job ${N}"
-            #     qsub "submit${N}.sh"
-            #    cd "${prev_dir}"
-            #fi
+            if [ -z "${adv}" ]
+            then 
+                __restart_job
+                echo "."
+            fi 
         done
 
      compiled_stats=$( 
-        echo  "% Absolute, Relative"  
-        echo  "n${sten_size}_gpu_${cpu_or_gpu}.l1_error=[${l1}\n];\n\n"
-        echo  "n${sten_size}_gpu_${cpu_or_gpu}.l2_error=[${l2}\n];\n\n"
-        echo  "n${sten_size}_gpu_${cpu_or_gpu}.linf_error=[${linf}\n];\n\n"
+        echo -e "% Absolute, Relative"  
+        echo -e "n${sten_size}_gpu_${cpu_or_gpu}.l1_error=[${l1}\n];\n\n"
+        echo -e "n${sten_size}_gpu_${cpu_or_gpu}.l2_error=[${l2}\n];\n\n"
+        echo -e "n${sten_size}_gpu_${cpu_or_gpu}.linf_error=[${linf}\n];\n\n"
 
-        echo  "% Benchmarks"
-        echo  "% Avg (in ms), Total, Count"
-        echo  "n${sten_size}_gpu_${cpu_or_gpu}.advance=[${advance}\n];\n\n"
-        echo  "n${sten_size}_gpu_${cpu_or_gpu}.rk4_eval=[${rk4_eval}\n];\n\n"
-        echo  "n${sten_size}_gpu_${cpu_or_gpu}.rk4_adv=[${rk4_adv}\n];\n\n"
-        echo  "n${sten_size}_gpu_${cpu_or_gpu}.sendrecv=[${sendrecv}\n];\n\n"
+        echo -e "% Benchmarks"
+        echo -e "% Avg (in ms), Total, Count"
+        echo -e "n${sten_size}_gpu_${cpu_or_gpu}.advance=[${advance}\n];\n\n"
+        echo -e "n${sten_size}_gpu_${cpu_or_gpu}.rk4_eval=[${rk4_eval}\n];\n\n"
+        echo -e "n${sten_size}_gpu_${cpu_or_gpu}.rk4_adv=[${rk4_adv}\n];\n\n"
+        echo -e "n${sten_size}_gpu_${cpu_or_gpu}.sendrecv=[${sendrecv}\n];\n\n"
     )
 
-    echo "${compiled_stats}" > "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
+    echo -e"${compiled_stats}" > "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
 
     done
 done

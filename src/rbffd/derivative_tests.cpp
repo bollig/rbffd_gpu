@@ -142,7 +142,7 @@ double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::st
     double denom = fabs(deriv_cpu); 
     double rel_error = (denom > 1e-10) ? fabs(deriv_gpu - deriv_cpu)/denom : 0.;
 
-    if (rel_error > 1e-4) 
+    if (abs_error > 1e-8) 
     {
         std::cout << "\nERROR! GPU DERIVATIVES ARE NOT WITHIN 1e-5 OF CPU. FIND A DOUBLE PRECISION GPU!\n";
         std::cout << "Test failed on" << std::endl;

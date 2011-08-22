@@ -25,7 +25,16 @@ function __get_benchmark() {
 # $1 summary
 # $2 benchmark description
 # Assumes first match is what we want
-echo "${1}" | grep "${2}"  |  sed -n "1p" | sed -n "s/^.*avg: .* \([0-9].*\)|.*tot: .* \([0-9].*\) |.*count= \(.*\)/\1,     \2,     \3/p"
+echo "${1}" | grep "${2}"  |  sed -n "1p" | sed -n "s/^.*avg:\(.*\)|.*tot:\(.*\)|.*count=\(.*\)/\1,     \2,     \3/p"
+}
+
+function __resubmit_test() {
+           prev_dir=`pwd`
+           cd "n${sten_size}/USE_GPU_${cpu_or_gpu}/${nprocs}procs"
+           rm -r ${N}
+           echo "Re-submitting job ${N}"
+           qsub "submit${N}.sh"
+           cd "${prev_dir}"
 }
 
 
@@ -81,15 +90,10 @@ do
         sendrecv[${indx}]="${sendrecv[${indx}]}\n${nprocs},      ${srecv}"
 
         # if the file exists then we exited prior to completion and need to resubmit
- #       if [ -z "${adv}" ]
- #       then 
- #           prev_dir=`pwd`
- #           cd "n${sten_size}/USE_GPU_${cpu_or_gpu}/${nprocs}procs"
- #           rm -r ${N}
- #           echo "Re-submitting job ${N}"
- #           qsub "submit${N}.sh"
- #           cd "${prev_dir}"
- #       fi
+        if [ -z "${adv}" ]
+        then 
+            __resubmit_test
+        fi
     done
 
     compiled_stats[${indx}]=$( 
@@ -110,7 +114,7 @@ do
         echo  "N${N}.sendrecv=[${sendrecv[${indx}]}\n];\n\n"
         echo  "\n\n\n"
         )
-    echo "${compiled_stats[${indx}]}" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
+    echo -e "${compiled_stats[${indx}]}" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
     
     cell_list="${cell_list} N${N}"
 
@@ -122,7 +126,10 @@ do
         rk4_adv[${indx}]=""
         sendrecv[${indx}]=""
     done
-        echo "n${sten_size}_gpu_${cpu_or_gpu} = {${cell_list}};" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
+    for cell in ${cell_list[@]} 
+do 
+        echo "n${sten_size}_gpu_${cpu_or_gpu}.${cell} = ${cell};" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
+done
         cell_list=""
         # Index arrays by N and nproc
 done

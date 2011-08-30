@@ -3,19 +3,12 @@
 
 #include "pdes/time_dependent_pde.h"
 
-#include <boost/numeric/ublas/vector.hpp>
-#include <boost/numeric/ublas/matrix_sparse.hpp>
-#include <boost/numeric/ublas/operation_sparse.hpp>
-#include <boost/numeric/ublas/io.hpp> 
-
 
 class VortexRollup : public TimeDependentPDE
 {
     protected: 
         // T/F : are the weights already computed so we can avoid that cost?
         bool weightsPrecomputed;
-
-        boost::numeric::ublas::compressed_matrix<FLOAT> D_N;
 
         int useHyperviscosity; 
 

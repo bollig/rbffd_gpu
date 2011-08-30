@@ -5,14 +5,27 @@
 
 void TimeDependentPDE_CL::setupTimers()
 {
-        tm["advance_gpu"] = new EB::Timer("Advance the PDE one step on the GPU") ;
-        tm["loadAttach"] = new EB::Timer("Load the GPU Kernels for TimeDependentPDE_CL");
+        tm["initialize"] = new EB::Timer("[T_PDE_CL] Fill initial conditions");
+        tm["gpu_dump"] = new EB::Timer("[T_PDE_CL] Full copy solution GPU to CPU");
+        tm["advance_gpu"] = new EB::Timer("[T_PDE_CL] Advance the PDE one step on the GPU") ;
+        tm["rk4_adv"] = new EB::Timer("[T_PDE_CL] RK4 Advance on GPU") ;
+        tm["rk4_eval"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Substep on GPU"); 
+        tm["rk4_adv_setargs"] = new EB::Timer("[T_PDE_CL] RK4 Advance Setargs") ;
+        tm["rk4_eval_setargs"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Setargs"); 
+        tm["rk4_adv_kern"] = new EB::Timer("[T_PDE_CL] RK4 Advance Kernel Launch") ;
+        tm["rk4_eval_kern"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Kernel Launch"); 
+        tm["rk4_full_comm"] = new EB::Timer("[T_PDE_CL] RK4 Communicate GPU to CPU to CPU to GPU"); 
+        tm["rk4_O"] = new EB::Timer("[T_PDE_CL] RK4 Transfer Set O (GPU to CPU)"); 
+        tm["rk4_R"] = new EB::Timer("[T_PDE_CL] RK4 Transfer Set R (CPU to GPU)"); 
+        tm["rk4_gpu_comm"] = new EB::Timer("[T_PDE_CL] RK4 Communicate CPU to GPU");
+        tm["loadAttach"] = new EB::Timer("[T_PDE_CL] Load the GPU Kernels for TimeDependentPDE_CL");
 }
 
 //----------------------------------------------------------------------
 
 #if 1
 void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
+    tm["initialize"]->start();
         // Fill U_G with initial conditions
         this->TimeDependentPDE::fillInitialConditions(exact);
 
@@ -64,12 +77,12 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
                 printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
         }
 #if 0
-        // FIXME: change all unsigned int to int. Or unsigned int. Size_t is not supported by GPU.
         std::vector<unsigned int>& bindices = grid_ref.getBoundaryIndices();
         unsigned int nb_bnd = bindices.size();
         err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_TRUE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
 //        queue.flush();
 #endif
+    tm["initialize"]->stop();
         std::cout << "[TimeDependentPDE_CL] Done\n";
 }
 #endif 
@@ -96,20 +109,24 @@ void TimeDependentPDE_CL::assemble()
 
 int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
 
+    tm["rk4_full_comm"]->start();
     // Synchronize the solution output
     if (comm_ref.getSize() > 1) {
         // 2) OVERLAP: Transfer set O from the input to the CPU for synchronization acros CPUs
         // (these are input values required by other procs)
+        tm["rk4_O"]->start();
         if (useDouble) {
             this->syncSetODouble(this->cpu_buf, buf);
         } else {
             this->syncSetOSingle(this->cpu_buf, buf);
         }
+        tm["rk4_O"]->stop();
 
         // 3) OVERLAP: Transmit between CPUs
         // NOTE: Require an MPI barrier here
         this->sendrecvUpdates(this->cpu_buf, label);
 
+        tm["rk4_R"]->start();
         // 4) OVERLAP: Update the input with set R
         // (these are input values received from other procs)
         if (useDouble) {
@@ -117,7 +134,9 @@ int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
         } else {
             this->syncSetRSingle(this->cpu_buf, buf);
         }
+        tm["rk4_R"]->stop();
     }
+    tm["rk4_full_comm"]->stop();
 
 }
 
@@ -175,10 +194,8 @@ void TimeDependentPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buf
         // OUR SOLUTION IS ARRANGED IN THIS FASHION:
         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
         unsigned int offset_to_set_R = set_Q_size;
-        unsigned int offset_to_set_O = set_Q_size - set_O_size;
 
-        unsigned int solution_mem_bytes = set_G_size*float_size;
-        unsigned int set_R_bytes = set_R_size * float_size;
+        unsigned int set_R_bytes = set_R_size * float_size; //set_R_size * float_size;
 
         if (set_R_size > 0) {
 
@@ -247,6 +264,10 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
         unsigned int nb_nodes = grid_ref.getNodeListSize();
         unsigned int set_G_size = grid_ref.G.size();
         unsigned int set_Q_size = grid_ref.Q.size();
+        unsigned int set_QmB_size = grid_ref.QmB.size();
+        unsigned int set_BmO_size = grid_ref.BmO.size();
+        unsigned int set_B_size = grid_ref.B.size();
+        unsigned int set_D_size = grid_ref.D.size();
         unsigned int set_O_size = grid_ref.O.size();
 
         unsigned int float_size = sizeof(double);
@@ -254,16 +275,15 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
         // OUR SOLUTION IS ARRANGED IN THIS FASHION:
         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
         //  Minus 1 because we start indexing at 0 
-        unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-        unsigned int solution_mem_bytes = set_G_size*float_size;
-        unsigned int set_O_bytes = set_O_size * float_size;
+        unsigned int offset_to_set_O = set_Q_size - set_O_size;
+        unsigned int set_O_bytes = set_O_size * float_size; 
 
         if (set_O_size > 0) {
                 // Pull only information required for neighboring domains back to the CPU
                 err = queue.enqueueReadBuffer(gpu_vec, CL_TRUE, offset_to_set_O * float_size, set_O_bytes, &vec[offset_to_set_O], NULL, &event);
 //                queue.flush();
-//
+
                 queue.finish();
         }
 
@@ -280,6 +300,7 @@ void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buf
 
 void TimeDependentPDE_CL::syncCPUtoGPU() {
 
+    tm["gpu_dump"]->start();
     if (cpu_dirty) {
         std::cout << "*************** FULL MEMCOPY DEVICE -> HOST ***************\n"; 
         unsigned int nb_nodes = grid_ref.getNodeListSize();
@@ -309,6 +330,7 @@ void TimeDependentPDE_CL::syncCPUtoGPU() {
         }
         cpu_dirty = 0;
     }
+    tm["gpu_dump"]->stop();
 }
 
 //----------------------------------------------------------------------
@@ -471,16 +493,26 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         // NOTE: INDX_IN maps to "u", INDX_K1 to "F1" and INDX_TEMP to "u+0.5*F1"
 
         // Compute K1, K2, K3 and K4 in separate kernel launches (required to ensure global barrier between evaluations)
+        tm["rk4_eval"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_IN, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);  
+        tm["rk4_eval"]->stop();
         // We use INDX_TEMP1 (== u+0.5*K1) to compute K2 and write INDX_TEMP2 with "u+0.5*K2"
+        tm["rk4_eval"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K2, INDX_TEMP2, delta_t, cur_time+0.5*delta_t, 0.5);  
+        tm["rk4_eval"]->stop();
         // We use INDX_TEMP2 (== u+0.5*K2) to compute K3 and write INDX_TEMP1 with "u+K3"
+        tm["rk4_eval"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP2, INDX_K3, INDX_TEMP1, delta_t, cur_time+0.5*delta_t, 1.0);  
+        tm["rk4_eval"]->stop();
         // We use INDX_TEMP1 (== u+K3) to compute K4 and write INDX_TEMP1 with "u" (we can test our logic 
+        tm["rk4_eval"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K4, INDX_TEMP2, delta_t, cur_time+delta_t, 0.0);  
+        tm["rk4_eval"]->stop();
 
         // Finally, we combine all terms to get the update to u
+        tm["rk4_adv"]->start();
         advanceRK4_WithComm(INDX_IN, INDX_K1, INDX_K2, INDX_K3, INDX_K4, INDX_OUT);
+        tm["rk4_adv"]->stop();
       
         queue.finish();
 
@@ -490,7 +522,7 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
 
 //----------------------------------------------------------------------
 
-void TimeDependentPDE_CL::loadKernels(std::string& local_sources) {
+void TimeDependentPDE_CL::loadKernels(std::string local_sources) {
         tm["loadAttach"]->start();
 
 #if 0
@@ -518,7 +550,7 @@ void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
         }
 
         // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
-        std::string my_source = this->loadFileContents("euler_general.cl", true);
+        std::string my_source = this->loadFileContents(kernel_source_file.c_str(), true);
 
         //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
         this->loadProgram(my_source, useDouble);
@@ -536,6 +568,7 @@ void TimeDependentPDE_CL::loadEulerKernel(std::string& local_sources) {
 //----------------------------------------------------------------------
 
 void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
+#if 0
         std::string kernel_name = "advanceMidpoint";
 
         if (!this->getDeviceFP64Extension().compare("")){
@@ -575,6 +608,7 @@ void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
         catch (cl::Error er) {
                 printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
         }
+#endif 
 }
 
 
@@ -583,6 +617,7 @@ void TimeDependentPDE_CL::loadMidpointKernel(std::string& local_sources) {
 void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
 
         std::string rk4_substep_kernel_name  = "evaluateRK4_classic";
+        std::string rk4_substep_block_kernel_name  = "evaluateRK4_block";
         std::string rk4_advance_substep_kernel_name = "advanceRK4_classic";
 
         if (!this->getDeviceFP64Extension().compare("")){
@@ -593,7 +628,7 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
         }
 
         // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
-        std::string my_source = this->loadFileContents("rk4_classic.cl", true);
+        std::string my_source = this->loadFileContents(kernel_source_file.c_str(), true);
 
         //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
         this->loadProgram(my_source, useDouble);
@@ -601,6 +636,9 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
         try{
                 std::cout << "Loading kernel \""<< rk4_substep_kernel_name << "\" with double precision = " << useDouble << "\n";
                 rk4_substep_kernel = cl::Kernel(program, rk4_substep_kernel_name.c_str(), &err);
+                
+                std::cout << "Loading kernel \""<< rk4_substep_block_kernel_name << "\" with double precision = " << useDouble << "\n";
+                rk4_substep_block_kernel = cl::Kernel(program, rk4_substep_block_kernel_name.c_str(), &err);
 
                 std::cout << "Loading kernel \""<< rk4_advance_substep_kernel_name << "\" with double precision = " << useDouble << "\n";
                 rk4_advance_substep_kernel = cl::Kernel(program, rk4_advance_substep_kernel_name.c_str(), &err);
@@ -647,7 +685,7 @@ void TimeDependentPDE_CL::allocateGPUMem() {
 
 //----------------------------------------------------------------------
 
-void TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
+int TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
 
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         unsigned int nb_nodes = grid_ref.getNodeListSize();
@@ -676,6 +714,7 @@ void TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
         } catch (cl::Error er) {
                 printf("[TimeDependentPDE_CL::setAdvanceArgs] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
         }
+        return i;
 }
 
 
@@ -788,14 +827,33 @@ void TimeDependentPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::B
 // NOTE: the communciation in this routine is to synchronize the input to the INTERMEDIATE STEPS, not the solution
 void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
 {
-    this->launchRK4_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+    if (gpuType>1) {
+        this->launchRK4_classic_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+    } else {
+        this->launchRK4_block_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+    }
     queue.finish();
+
+   //EVAN  
+
+#if 0
+    double* buf = new double[grid_ref.Q.size()]; 
+
+    err = queue.enqueueReadBuffer(gpu_solution[indx_k_out], CL_TRUE, 0, grid_ref.Q.size()*sizeof(double), &buf[0], NULL, &event);
+    queue.finish();
+
+    for (unsigned int i = 0; i < grid_ref.Q.size(); i++) {
+        std::cout << "vec[" << i << "] = " << buf[i] << std::endl;
+    }
+    delete [] buf; 
+    exit(EXIT_SUCCESS);
+#endif 
 
     this->sendrecvBuf(gpu_solution[indx_u_plus_scaled_k_out]);
 }
 
 //----------------------------------------------------------------------
-// NOTE: the communciation in this routine is to synchronize the solution OUTPUT (not intermediate steps)
+/// NOTE: the communciation in this routine is to synchronize the solution OUTPUT (not intermediate steps)
 void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ) {
 
     // Advane only needs K1[{Q}], K2[{Q}], K3[{Q}] and K4[{Q}]
@@ -807,18 +865,23 @@ void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int i
     this->sendrecvBuf(gpu_solution[indx_u_out]);
 }
 
+
 //----------------------------------------------------------------------
 
-void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale) {
+void TimeDependentPDE_CL::launchRK4_classic_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale) {
 
         unsigned int n_stencils = grid_ref.getStencilsSize();
         float dt_f = (float) dt;
         float cur_time_f = (float) adjusted_t;
         float substep_scale_f = (float) substep_scale;
 
+        // Operate by warp:
+        unsigned int local_work_size = 32; 
+
         int i = 0;
 
         try {
+            tm["rk4_eval_setargs"]->start(); 
                 // These will change each iteration
                 rk4_substep_kernel.setArg(i++, u_in);
                 rk4_substep_kernel.setArg(i++, u_plus_scaled_k_in);
@@ -833,12 +896,19 @@ void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned i
                         rk4_substep_kernel.setArg(i++, offset_to_set); 
                         rk4_substep_kernel.setArg(i++, nb_stencils_to_compute);
 
-                        this->setAdvanceArgs( rk4_substep_kernel, i);
+                        i = this->setAdvanceArgs( rk4_substep_kernel, i);
+
                         rk4_sub_args_set++;
                 }
+            tm["rk4_eval_setargs"]->stop(); 
+                
+            tm["rk4_eval_kern"]->start(); 
+            // Null range for local work-items tells opencl to schedule what it thinks is best
                 err = queue.enqueueNDRangeKernel( rk4_substep_kernel, /* offset */ cl::NullRange,
-                                                 /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute),
-                                                 /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+                        /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute),
+                        /* LOCAL (work-items per work-group) */   cl::NullRange,
+                                                 NULL, &event);
+            tm["rk4_eval_kern"]->stop();
 
 //                err = queue.flush();
                 if (err != CL_SUCCESS) {
@@ -848,7 +918,67 @@ void TimeDependentPDE_CL::launchRK4_eval( unsigned int offset_to_set, unsigned i
                         exit(EXIT_FAILURE);
                 }
         } catch (cl::Error er) {
-                printf("[launchRK4_eval] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
+                printf("[launchRK4_classic_eval] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
+        }
+
+}
+
+
+//----------------------------------------------------------------------
+
+void TimeDependentPDE_CL::launchRK4_block_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale) {
+
+        unsigned int n_stencils = grid_ref.getStencilsSize();
+        float dt_f = (float) dt;
+        float cur_time_f = (float) adjusted_t;
+        float substep_scale_f = (float) substep_scale;
+
+        // Operate by warp:
+        unsigned int local_work_size = 32; 
+
+        int i = 0;
+
+        try {
+            tm["rk4_eval_setargs"]->start(); 
+                // These will change each iteration
+                rk4_substep_block_kernel.setArg(i++, u_in);
+                rk4_substep_block_kernel.setArg(i++, u_plus_scaled_k_in);
+                rk4_substep_block_kernel.setArg(i++, k_out);
+                rk4_substep_block_kernel.setArg(i++, u_plus_scaled_k_out);
+                rk4_substep_block_kernel.setArg(i++, dt);
+                rk4_substep_block_kernel.setArg(i++, adjusted_t);
+                rk4_substep_block_kernel.setArg(i++, substep_scale);
+
+                // We should only do this on the first iter
+                if (!rk4_sub_args_set) {
+                        rk4_substep_block_kernel.setArg(i++, offset_to_set); 
+                        rk4_substep_block_kernel.setArg(i++, nb_stencils_to_compute);
+
+                        i = this->setAdvanceArgs( rk4_substep_block_kernel, i);
+                
+                        // Shared memory:  
+                        rk4_substep_block_kernel.setArg(i++, cl::__local(local_work_size * sizeof(double) * 3));
+
+                        rk4_sub_args_set++;
+                }
+            tm["rk4_eval_setargs"]->stop(); 
+                
+            tm["rk4_eval_kern"]->start(); 
+                err = queue.enqueueNDRangeKernel( rk4_substep_block_kernel, /* offset */ cl::NullRange,
+                        /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute*local_work_size),
+                        /* LOCAL (work-items per work-group) */   cl::NDRange(local_work_size),
+                                                 NULL, &event);
+            tm["rk4_eval_kern"]->stop();
+
+//                err = queue.flush();
+                if (err != CL_SUCCESS) {
+                        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+                                     " failed (" << err << ")\n";
+                        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+                        exit(EXIT_FAILURE);
+                }
+        } catch (cl::Error er) {
+                printf("[launchRK4_block_eval] ERROR: %s(%s) (arg index: %d)\n", er.what(), oclErrorString(er.err()), i);
         }
 
 }
@@ -860,6 +990,7 @@ void TimeDependentPDE_CL::launchRK4_adv( unsigned int offset_to_set, unsigned in
         int i = 0;
 
         try {
+            tm["rk4_adv_setargs"]->start();
                 // These will change each iteration
                 rk4_advance_substep_kernel.setArg(i++, u_in);
                 rk4_advance_substep_kernel.setArg(i++, k1);
@@ -876,10 +1007,14 @@ void TimeDependentPDE_CL::launchRK4_adv( unsigned int offset_to_set, unsigned in
                         this->setAdvanceArgs( rk4_advance_substep_kernel, i);
                         rk4_adv_args_set++;
                 }
+            tm["rk4_adv_setargs"]->stop();
+
+            tm["rk4_adv_kern"]->start();
                 err = queue.enqueueNDRangeKernel( rk4_advance_substep_kernel, /* offset */ cl::NullRange,
                                                  /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute),
                                                  /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
 
+            tm["rk4_adv_kern"]->stop();
 //                err = queue.flush();
                 if (err != CL_SUCCESS) {
                         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \

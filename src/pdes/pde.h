@@ -49,7 +49,9 @@ class PDE : public MPISendable
         {
             // We want our solution to match the number of nodes
             U_G.resize(grid_ref.getNodeListSize());
+            setupTimers();
         }
+
 
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble() =0; 
@@ -164,6 +166,7 @@ class PDE : public MPISendable
         int sendUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
         int sendrecvUpdates(std::vector<SolutionType>& vec, std::string label=""); 
 
+        void setupTimers();
     protected: 
         // FIXME: put these in another pure virtual interface class
 

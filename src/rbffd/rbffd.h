@@ -235,7 +235,7 @@ class RBFFD
             };
 
             // Epsilon as a function of condition number is a linear function: 
-            double eps = c1 * sqrt(grid_ref.getNodeListSize()) - c2; 
+            double eps = c1 * sqrt(grid_ref.getGlobalNodeListSize()) - c2; 
             this->setEpsilon(eps); 
         }
 

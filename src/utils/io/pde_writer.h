@@ -98,7 +98,7 @@ class PDEWriter
          * vectors, stencil indices, etc.)
          */
         virtual void writeFinal() {
-            this->writeGlobal(-1); 
+            //this->writeGlobal(-1); 
         }
 };
 

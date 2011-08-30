@@ -47,6 +47,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // it to the solution--this is the input for the next evaluation 
         // using the same routine (except k3). 
         cl::Kernel rk4_substep_kernel;
+        cl::Kernel rk4_substep_block_kernel;
         // The second kernel takes the 3 substep outputs from the above kernel
         // scales, and addes them to the solution to output the new solution
         // at t+dt.
@@ -63,9 +64,13 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // Flag to indicate if syncCPUtoGPU needs to copy down from GPU (should be set to 1 if advance is called)
         int cpu_dirty;
 
-    public: 
+        std::string kernel_source_file;
 
-        TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, bool weightsComputed=false) 
+        int gpuType; 
+
+    public: 
+        // USE_GPU=0 (pass over this constructor), =1 (use a block approach per stencil), =2 (use a thread approach per stencil)
+        TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, int gpu_type, bool weightsComputed=false) 
             : TimeDependentPDE(grid, der, comm),
               INDX_IN(0), INDX_OUT(1),
               INDX_K1(2), INDX_K2(3), INDX_K3(4), INDX_K4(5),
@@ -75,16 +80,22 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
             // We maintain a ref to der here so we can keep it cast as an OpenCL RBFFD class
             der_ref_gpu(*der), weightsPrecomputed(weightsComputed), 
             cpu_buf(grid->G.size(), -0.00000000001),
-            cpu_dirty(0)
+            cpu_dirty(0),
+            gpuType(gpu_type)
         {;}
+
+        void setGPUType(int type) {
+            gpuType=type;
+        }
         
         // Fill in the initial conditions of the PDE. (overwrite the solution)
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
 
-        void initialize(std::string solve_source)
+        void initialize(const char* solve_source_file)
         {
+            this->kernel_source_file = solve_source_file;
             this->setupTimers();
-            this->loadKernels(solve_source); 
+            this->loadKernels(); 
             this->allocateGPUMem(); 
         }
 
@@ -98,10 +109,10 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         };
 
         // Interfaces: 
-        virtual void loadKernels(std::string& local_solve_source); 
+        virtual void loadKernels(std::string local_solve_source=""); 
         virtual void allocateGPUMem();
         // Set the default set of arguments for a kernel
-        virtual void setAdvanceArgs(cl::Kernel kern, int start_indx);
+        virtual int setAdvanceArgs(cl::Kernel kern, int start_indx);
 
         // Use RK4 scheme to advance
         virtual void advance(TimeScheme which, double delta_t); 
@@ -155,7 +166,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         void launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol, cl::Buffer& sol_out, unsigned int n_stencils_in_set, unsigned int offset_to_set);
         void launchEulerKernel( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
 
-        void launchRK4_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale);
+        void launchRK4_classic_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale);
+        void launchRK4_block_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale);
         void launchRK4_adv( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, cl::Buffer& u_in, cl::Buffer& k1, cl::Buffer k2, cl::Buffer& k3, cl::Buffer& k4, cl::Buffer& u_out);
 
         virtual std::string className() {return "heat_cl";}

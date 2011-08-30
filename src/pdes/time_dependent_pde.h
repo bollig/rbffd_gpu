@@ -23,7 +23,7 @@ class TimeDependentPDE : public PDE
         TimeDependentPDE(Domain* grid, RBFFD* der, Communicator* comm) 
             : PDE(grid, der, comm), cur_time(0.) 
         {
-            tm["advance"] = new EB::Timer("[TimeDependentPDE] Advance timestep");
+            setupTimers();
         }
 
         // Fill in the initial conditions of the PDE. (overwrite the solution)
@@ -98,6 +98,8 @@ class TimeDependentPDE : public PDE
         }
 
     protected: 
+        void setupTimers(); 
+        
         virtual void advanceFirstOrderEuler(double dt);
         virtual void advanceSecondOrderMidpoint(double dt);
         virtual void advanceRungeKutta4(double dt);

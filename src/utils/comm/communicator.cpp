@@ -84,6 +84,7 @@ void Communicator::broadcastObjectUpdates(MPISendable* object)
 			object->receiveUpdate(this->getRank(), j);
 		}
 	}
+    this->barrier();
 }
 
 void Communicator::consolidateObjects(MPISendable* object)

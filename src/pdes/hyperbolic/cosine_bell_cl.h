@@ -15,7 +15,7 @@ class CosineBell_CL : public TimeDependentPDE_CL
         // load solve kernel
         //    std::string solve_str = #include "cosine_bell_solve.cl"
         // initialize the TimeDependentPDE_CL superclass
-        this->initialize("");
+        this->initialize("cosine_bell_solve.cl");
     }
 
         virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t) { 

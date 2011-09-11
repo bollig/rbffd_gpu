@@ -339,10 +339,14 @@ void TimeDependentPDE_CL::advance(TimeScheme which, double delta_t) {
         tm["advance_gpu"]->start();
         switch (which)
         {
+#if 0
+            // Only supports one thread per stencil: 
         case EULER: 
                 advanceFirstOrderEuler(delta_t);
                 break;
+#endif 
 #if 0
+                // INCOMPLETE: 
         case MIDPOINT: 
                 advanceSecondOrderMidpoint(delta_t);
                 break;

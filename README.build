@@ -1,0 +1,12 @@
+git clone ssh://efb06@pamd.sc.fsu.edu/~efb06/repos/rbffd_gpu.git
+
+
+Needs :q
+
+
+
+
+cd rbffd_gpu
+mkdir build
+cd build 
+cmake -DUSE_CUDA=off .. 

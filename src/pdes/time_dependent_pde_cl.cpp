@@ -8,8 +8,8 @@ void TimeDependentPDE_CL::setupTimers()
         tm["initialize"] = new EB::Timer("[T_PDE_CL] Fill initial conditions");
         tm["gpu_dump"] = new EB::Timer("[T_PDE_CL] Full copy solution GPU to CPU");
         tm["advance_gpu"] = new EB::Timer("[T_PDE_CL] Advance the PDE one step on the GPU") ;
-        tm["rk4_adv"] = new EB::Timer("[T_PDE_CL] RK4 Advance on GPU") ;
-        tm["rk4_eval"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Substep on GPU"); 
+        tm["rk4_adv_gpu"] = new EB::Timer("[T_PDE_CL] RK4 Advance on GPU") ;
+        tm["rk4_eval_gpu"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Substep on GPU"); 
         tm["rk4_adv_setargs"] = new EB::Timer("[T_PDE_CL] RK4 Advance Setargs") ;
         tm["rk4_eval_setargs"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Setargs"); 
         tm["rk4_adv_kern"] = new EB::Timer("[T_PDE_CL] RK4 Advance Kernel Launch") ;
@@ -493,26 +493,26 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         // NOTE: INDX_IN maps to "u", INDX_K1 to "F1" and INDX_TEMP to "u+0.5*F1"
 
         // Compute K1, K2, K3 and K4 in separate kernel launches (required to ensure global barrier between evaluations)
-        tm["rk4_eval"]->start();
+        tm["rk4_eval_gpu"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_IN, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);  
-        tm["rk4_eval"]->stop();
+        tm["rk4_eval_gpu"]->stop();
         // We use INDX_TEMP1 (== u+0.5*K1) to compute K2 and write INDX_TEMP2 with "u+0.5*K2"
-        tm["rk4_eval"]->start();
+        tm["rk4_eval_gpu"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K2, INDX_TEMP2, delta_t, cur_time+0.5*delta_t, 0.5);  
-        tm["rk4_eval"]->stop();
+        tm["rk4_eval_gpu"]->stop();
         // We use INDX_TEMP2 (== u+0.5*K2) to compute K3 and write INDX_TEMP1 with "u+K3"
-        tm["rk4_eval"]->start();
+        tm["rk4_eval_gpu"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP2, INDX_K3, INDX_TEMP1, delta_t, cur_time+0.5*delta_t, 1.0);  
-        tm["rk4_eval"]->stop();
+        tm["rk4_eval_gpu"]->stop();
         // We use INDX_TEMP1 (== u+K3) to compute K4 and write INDX_TEMP1 with "u" (we can test our logic 
-        tm["rk4_eval"]->start();
+        tm["rk4_eval_gpu"]->start();
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K4, INDX_TEMP2, delta_t, cur_time+delta_t, 0.0);  
-        tm["rk4_eval"]->stop();
+        tm["rk4_eval_gpu"]->stop();
 
         // Finally, we combine all terms to get the update to u
-        tm["rk4_adv"]->start();
+        tm["rk4_adv_gpu"]->start();
         advanceRK4_WithComm(INDX_IN, INDX_K1, INDX_K2, INDX_K3, INDX_K4, INDX_OUT);
-        tm["rk4_adv"]->stop();
+        tm["rk4_adv_gpu"]->stop();
       
         queue.finish();
 

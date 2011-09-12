@@ -6,6 +6,15 @@ TEST_CASES=(04096 06400  08100  10201  20164  27556)
 NUM_PROCS=(1 2 4 6 8 10)
 USE_GPU=(0 1)
 
+if [ "${USE_GPU}" == "0" ]
+then 
+    adv_key="Advance One"
+    rk4e_key="RK4 Evaluate Substep on"
+    rk4adv_key="RK4 Advance on" 
+    srecv_key="MPI Communicate"
+    tran_o_key="RK4 Transfer Set O"
+    tran_r_key="RK4 Transfer Set R" 
+fi 
 
 function __get_summary() {
     cat ${1} | sed -n '/Verify/,//p'
@@ -25,16 +34,7 @@ function __get_benchmark() {
 # $1 summary
 # $2 benchmark description
 # Assumes first match is what we want
-echo "${1}" | grep "${2}"  |  sed -n "1p" | sed -n "s/^.*avg:\(.*\)|.*tot:\(.*\)|.*count=\(.*\)/\1,     \2,     \3/p"
-}
-
-function __resubmit_test() {
-           prev_dir=`pwd`
-           cd "n${sten_size}/USE_GPU_${cpu_or_gpu}/${nprocs}procs"
-           rm -r ${N}
-           echo "Re-submitting job ${N}"
-           qsub "submit${N}.sh"
-           cd "${prev_dir}"
+echo "${1}" | grep "${2}"  |  sed -n "1p" | sed -n "s/^.*avg: .* \([0-9].*\)|.*tot: .* \([0-9].*\) |.*count= \(.*\)/\1,     \2,     \3/p"
 }
 
 
@@ -79,21 +79,41 @@ do
         l2[${indx}]="${l2[${indx}]}\n${nprocs},     ${new_l2_error}"
         linf[${indx}]="${linf[${indx}]}\n${nprocs},     ${new_linf_error}"
 
-        adv=$( __get_benchmark "${summary}" "Advance One" )
-        rk4e=$( __get_benchmark "${summary}" "RK4 Evaluate Substep on")
-        rk4adv=$( __get_benchmark "${summary}" "RK4 Advance on" )
-        srecv=$( __get_benchmark "${summary}" "MPI Communicate" )
+        adv=$( __get_benchmark "${summary}" ${adv_key} )
+        rk4e=$( __get_benchmark "${summary}" ${rk4e_key} )
+        rk4adv=$( __get_benchmark "${summary}" ${rk4adv_key})
+        srecv=$( __get_benchmark "${summary}" ${srecv_key} )
+        tran_o=$( __get_benchmark "${summary}" ${tran_o_key} )
+        tran_r=$( __get_benchmark "${summary}" ${tran_r_key} )
+
+        if [ "$tran_o" == "" ] 
+        then 
+            tran_o="0, 0, 0"
+        fi
+        
+        if [ "$tran_r" == "" ] 
+        then 
+            tran_r="0, 0, 0"
+        fi
+        
 
         advance[${indx}]="${advance[${indx}]}\n${nprocs},     ${adv}"
         rk4_eval[${indx}]="${rk4_eval[${indx}]}\n${nprocs},     ${rk4e}"
         rk4_adv[${indx}]="${rk4_adv[${indx}]}\n${nprocs},     ${rk4adv}"
         sendrecv[${indx}]="${sendrecv[${indx}]}\n${nprocs},      ${srecv}"
+        transferO[${indx}]="${transferO[${indx}]}\n${nprocs},     ${tran_o}"
+        transferR[${indx}]="${transferR[${indx}]}\n${nprocs},     ${tran_r}"
 
         # if the file exists then we exited prior to completion and need to resubmit
-        if [ -z "${adv}" ]
-        then 
-            __resubmit_test
-        fi
+ #       if [ -z "${adv}" ]
+ #       then 
+ #           prev_dir=`pwd`
+ #           cd "n${sten_size}/USE_GPU_${cpu_or_gpu}/${nprocs}procs"
+ #           rm -r ${N}
+ #           echo "Re-submitting job ${N}"
+ #           qsub "submit${N}.sh"
+ #           cd "${prev_dir}"
+ #       fi
     done
 
     compiled_stats[${indx}]=$( 
@@ -112,9 +132,16 @@ do
         echo  "N${N}.rk4_eval=[${rk4_eval[${indx}]}\n];\n\n"
         echo  "N${N}.rk4_adv=[${rk4_adv[${indx}]}\n];\n\n"
         echo  "N${N}.sendrecv=[${sendrecv[${indx}]}\n];\n\n"
+
+        if [ ${cpu_or_gpu} != 0 ]
+        then 
+            echo  "N${N}.transferO=[${transferO[${indx}]}\n];\n\n"
+            echo  "N${N}.transferR=[${transferR[${indx}]}\n];\n\n"
+        fi
+
         echo  "\n\n\n"
         )
-    echo -e "${compiled_stats[${indx}]}" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
+    echo "${compiled_stats[${indx}]}" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
     
     cell_list="${cell_list} N${N}"
 
@@ -125,12 +152,17 @@ do
         rk4_eval[${indx}]=""
         rk4_adv[${indx}]=""
         sendrecv[${indx}]=""
+        transferO[${indx}]=""
+        transferR[${indx}]=""
     done
-    for cell in ${cell_list[@]} 
-do 
+    for cell in ${cell_list[@]}
+    do
         echo "n${sten_size}_gpu_${cpu_or_gpu}.${cell} = ${cell};" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
-done
-        cell_list=""
+    done
+    cell_list=""
+
+    #     echo "n${sten_size}_gpu_${cpu_or_gpu} = {${cell_list}};" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
+    #        cell_list=""
         # Index arrays by N and nproc
 done
 done

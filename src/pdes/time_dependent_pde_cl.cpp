@@ -8,6 +8,7 @@ void TimeDependentPDE_CL::setupTimers()
         tm["initialize"] = new EB::Timer("[T_PDE_CL] Fill initial conditions");
         tm["gpu_dump"] = new EB::Timer("[T_PDE_CL] Full copy solution GPU to CPU");
         tm["advance_gpu"] = new EB::Timer("[T_PDE_CL] Advance the PDE one step on the GPU") ;
+        tm["assemble_gpu"] = new EB::Timer("[T_PDE_CL] Assemble (update weights if necessary");
         tm["rk4_adv_gpu"] = new EB::Timer("[T_PDE_CL] RK4 Advance on GPU") ;
         tm["rk4_eval_gpu"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Substep on GPU"); 
         tm["rk4_adv_setargs"] = new EB::Timer("[T_PDE_CL] RK4 Adv Setargs") ;
@@ -92,6 +93,7 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
 void TimeDependentPDE_CL::assemble() 
 {
+    tm["assemble_gpu"]->start(); 
         if (!weightsPrecomputed) {
                 der_ref_gpu.computeAllWeightsForAllStencils();
                 weightsPrecomputed = true;
@@ -103,6 +105,7 @@ void TimeDependentPDE_CL::assemble()
         // Flip our ping pong buffers.
         // NOTE: we need to initialize into INDX_OUT
         swap(INDX_IN, INDX_OUT);
+    tm["assemble_gpu"]->stop(); 
 }
 
 //----------------------------------------------------------------------

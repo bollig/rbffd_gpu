@@ -5,10 +5,10 @@
 
 void TimeDependentPDE_CL::setupTimers()
 {
-        tm["initialize"] = new EB::Timer("[T_PDE_CL] Fill initial conditions");
+        tm["initialize"] = new EB::Timer("[T_PDE_CL] Fill initial conditions, weights on GPU");
         tm["gpu_dump"] = new EB::Timer("[T_PDE_CL] Full copy solution GPU to CPU");
         tm["advance_gpu"] = new EB::Timer("[T_PDE_CL] Advance the PDE one step on the GPU") ;
-        tm["assemble_gpu"] = new EB::Timer("[T_PDE_CL] Assemble (update weights if necessary");
+        tm["assemble_gpu"] = new EB::Timer("[T_PDE_CL] Assemble (flip ping-pong buffers)");
         tm["rk4_adv_gpu"] = new EB::Timer("[T_PDE_CL] RK4 Advance on GPU") ;
         tm["rk4_eval_gpu"] = new EB::Timer("[T_PDE_CL] RK4 Evaluate Substep on GPU"); 
         tm["rk4_adv_setargs"] = new EB::Timer("[T_PDE_CL] RK4 Adv Setargs") ;
@@ -83,7 +83,20 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
         err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_TRUE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
 //        queue.flush();
 #endif
-    tm["initialize"]->stop();
+
+        if (!this->assembled) {
+            if (!weightsPrecomputed) {
+                der_ref_gpu.computeAllWeightsForAllStencils();
+                weightsPrecomputed = true;
+            }
+            // This will avoid multiple writes to GPU if the latest version is already in place
+            // FIXME: allow this to finish later
+            der_ref_gpu.updateWeightsOnGPU(false);
+            assembled = true;
+        }
+
+        
+        tm["initialize"]->stop();
         std::cout << "[TimeDependentPDE_CL] Done\n";
 }
 #endif 
@@ -93,18 +106,11 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
 void TimeDependentPDE_CL::assemble() 
 {
-    tm["assemble_gpu"]->start(); 
-        if (!weightsPrecomputed) {
-                der_ref_gpu.computeAllWeightsForAllStencils();
-                weightsPrecomputed = true;
-        }
-        // This will avoid multiple writes to GPU if the latest version is already in place
-        // FIXME: allow this to finish later
-        der_ref_gpu.updateWeightsOnGPU(false);
 
-        // Flip our ping pong buffers.
-        // NOTE: we need to initialize into INDX_OUT
-        swap(INDX_IN, INDX_OUT);
+   tm["assemble_gpu"]->start(); 
+    // Flip our ping pong buffers.
+    // NOTE: we need to initialize into INDX_OUT
+    swap(INDX_IN, INDX_OUT);
     tm["assemble_gpu"]->stop(); 
 }
 

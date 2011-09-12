@@ -31,6 +31,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         RBFFD_CL& der_ref_gpu;
 
         bool weightsPrecomputed; 
+        bool assembled; 
         bool useDouble;
 
         // These are buffers for RK4 evaluations. 
@@ -80,7 +81,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
             // We maintain a ref to der here so we can keep it cast as an OpenCL RBFFD class
             der_ref_gpu(*der), weightsPrecomputed(weightsComputed), 
             cpu_buf(grid->G.size(), -0.00000000001),
-            cpu_dirty(0),
+            cpu_dirty(0), assembled(false),
             gpuType(gpu_type)
         {;}
 

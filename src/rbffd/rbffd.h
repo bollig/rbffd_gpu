@@ -151,7 +151,13 @@ class RBFFD
         }
 
         double getHVScalar() {
-            return -hv_gamma / pow(grid_ref.getGlobalNodeListSize(), hv_k);
+            double scale = -hv_gamma * pow((double)grid_ref.getGlobalNodeListSize(), -hv_k);
+            static int printed = 0; 
+            if (!printed) {
+                std::cout << "HVSCALAR = " << scale << std::endl;
+                printed = 1; 
+            }
+            return scale; 
         }
 
         // Allow me to override the defaults. Right now, the scalars are set for cosine bell
@@ -225,9 +231,9 @@ class RBFFD
                 case 101:
                     c1 = 0.058; 
                     c2 = 0.16; 
-                    hv_k = 8; 
+                    hv_k = 6; 
                     //hv_gamma = 5;
-                    hv_gamma = 5e-2;
+                    hv_gamma = 5e-3;
                     break; 
                 default:
                     std::cout << "[RBFFD] Error: setEpsilonByStencilSize does not support stencil size " << st_size << " at this time. Try using 17, 31, 50, and 101\n"; 

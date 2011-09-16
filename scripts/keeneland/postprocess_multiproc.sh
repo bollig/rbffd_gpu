@@ -6,16 +6,6 @@ TEST_CASES=(04096 06400  08100  10201  20164  27556)
 NUM_PROCS=(1 2 4 6 8 10)
 USE_GPU=(0 1)
 
-if [ "${USE_GPU}" == "0" ]
-then 
-    adv_key="Advance One"
-    rk4e_key="RK4 Evaluate Substep on"
-    rk4adv_key="RK4 Advance on" 
-    srecv_key="MPI Communicate"
-    tran_o_key="RK4 Transfer Set O"
-    tran_r_key="RK4 Transfer Set R" 
-fi 
-
 function __get_summary() {
     cat ${1} | sed -n '/Verify/,//p'
 }
@@ -45,6 +35,24 @@ do
     for cpu_or_gpu in ${USE_GPU[@]}
     do   
         indx1=`expr ${indx1} + 1` 
+        
+        if [ "${cpu_or_gpu}" == "0" ]
+        then 
+            adv_key="Advance One"
+            rk4e_key="RK4 Evaluate Substep on"
+            rk4adv_key="RK4 Advance on" 
+            srecv_key="MPI Communicate"
+            tran_o_key="RK4 Transfer Set O"
+            tran_r_key="RK4 Transfer Set R" 
+        else 
+            adv_key="Advance One"
+            rk4e_key="RK4 Evaluate Substep on"
+            rk4adv_key="RK4 Advance on" 
+            srecv_key="RK4 MPI Comm"
+            tran_o_key="RK4 Transfer Set O"
+            tran_r_key="RK4 Transfer Set R" 
+        fi 
+
 
 
         # Start a fresh file
@@ -79,12 +87,17 @@ do
         l2[${indx}]="${l2[${indx}]}\n${nprocs},     ${new_l2_error}"
         linf[${indx}]="${linf[${indx}]}\n${nprocs},     ${new_linf_error}"
 
-        adv=$( __get_benchmark "${summary}" ${adv_key} )
-        rk4e=$( __get_benchmark "${summary}" ${rk4e_key} )
-        rk4adv=$( __get_benchmark "${summary}" ${rk4adv_key})
-        srecv=$( __get_benchmark "${summary}" ${srecv_key} )
-        tran_o=$( __get_benchmark "${summary}" ${tran_o_key} )
-        tran_r=$( __get_benchmark "${summary}" ${tran_r_key} )
+        adv=$( __get_benchmark "${summary}" "${adv_key}" )
+        rk4e=$( __get_benchmark "${summary}" "${rk4e_key}" )
+        rk4adv=$( __get_benchmark "${summary}" "${rk4adv_key}" )
+        srecv=$( __get_benchmark "${summary}" "${srecv_key}" )
+        tran_o=$( __get_benchmark "${summary}" "${tran_o_key}" )
+        tran_r=$( __get_benchmark "${summary}" "${tran_r_key}" )
+
+        if [ "$srecv" == "" ] 
+        then 
+            srecv="0, 0, 0"
+        fi
 
         if [ "$tran_o" == "" ] 
         then 
@@ -105,41 +118,41 @@ do
         transferR[${indx}]="${transferR[${indx}]}\n${nprocs},     ${tran_r}"
 
         # if the file exists then we exited prior to completion and need to resubmit
- #       if [ -z "${adv}" ]
- #       then 
- #           prev_dir=`pwd`
- #           cd "n${sten_size}/USE_GPU_${cpu_or_gpu}/${nprocs}procs"
- #           rm -r ${N}
- #           echo "Re-submitting job ${N}"
- #           qsub "submit${N}.sh"
- #           cd "${prev_dir}"
- #       fi
+        if [ -z "${adv}" ]
+        then 
+            prev_dir=`pwd`
+            cd "n${sten_size}/USE_GPU_${cpu_or_gpu}/${nprocs}procs"
+            rm -r ${N}
+            echo "Re-submitting job ${N}"
+            qsub "submit${N}.sh"
+            cd "${prev_dir}"
+        fi
     done
 
     compiled_stats[${indx}]=$( 
-        echo "\n\n\n% Absolute, Relative"  
-        echo "N${N}.N=${N};"
-        echo "N${N}.n=${sten_size};"
-        echo "N${N}.GPU=${cpu_or_gpu};"
-        echo "\n\n\n"
-        echo "N${N}.l1_error=[${l1[${indx}]}\n];\n\n"
-        echo "N${N}.l2_error=[${l2[${indx}]}\n];\n\n"
-        echo  "N${N}.linf_error=[${linf[${indx}]}\n];\n\n"
+        echo -e "\n\n\n% Absolute, Relative"  
+        echo -e "N${N}.N=${N};"
+        echo -e "N${N}.n=${sten_size};"
+        echo -e "N${N}.GPU=${cpu_or_gpu};"
+        echo -e "\n\n\n"
+        echo -e "N${N}.l1_error=[${l1[${indx}]}\n];\n\n"
+        echo -e "N${N}.l2_error=[${l2[${indx}]}\n];\n\n"
+        echo -e "N${N}.linf_error=[${linf[${indx}]}\n];\n\n"
 
-        echo  "% Benchmarks"
-        echo  "% Avg (in ms), Total, Count"
-        echo  "N${N}.advance=[${advance[${indx}]}\n];\n\n"
-        echo  "N${N}.rk4_eval=[${rk4_eval[${indx}]}\n];\n\n"
-        echo  "N${N}.rk4_adv=[${rk4_adv[${indx}]}\n];\n\n"
-        echo  "N${N}.sendrecv=[${sendrecv[${indx}]}\n];\n\n"
+        echo -e "% Benchmarks"
+        echo -e "% Avg (in ms), Total, Count"
+        echo -e "N${N}.advance=[${advance[${indx}]}\n];\n\n"
+        echo -e "N${N}.rk4_eval=[${rk4_eval[${indx}]}\n];\n\n"
+        echo -e "N${N}.rk4_adv=[${rk4_adv[${indx}]}\n];\n\n"
+        echo -e "N${N}.sendrecv=[${sendrecv[${indx}]}\n];\n\n"
 
         if [ ${cpu_or_gpu} != 0 ]
         then 
-            echo  "N${N}.transferO=[${transferO[${indx}]}\n];\n\n"
-            echo  "N${N}.transferR=[${transferR[${indx}]}\n];\n\n"
+            echo -e "N${N}.transferO=[${transferO[${indx}]}\n];\n\n"
+            echo -e "N${N}.transferR=[${transferR[${indx}]}\n];\n\n"
         fi
 
-        echo  "\n\n\n"
+        echo -e "\n\n\n"
         )
     echo "${compiled_stats[${indx}]}" >> "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
     

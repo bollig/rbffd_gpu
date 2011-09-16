@@ -154,7 +154,7 @@ class RBFFD
             double scale = -hv_gamma * pow((double)grid_ref.getGlobalNodeListSize(), -hv_k);
             static int printed = 0; 
             if (!printed) {
-                std::cout << "HVSCALAR = " << scale << std::endl;
+                std::cout << "HVSCALAR = " << scale << " (HV_K=" << hv_k << ", HV_GAMMA=" << hv_gamma << ")" << std::endl;
                 printed = 1; 
             }
             return scale; 
@@ -231,9 +231,16 @@ class RBFFD
                 case 101:
                     c1 = 0.058; 
                     c2 = 0.16; 
-                    hv_k = 6; 
-                    //hv_gamma = 5;
-                    hv_gamma = 5e-3;
+                    // These params get me hvscalar approx equal to 1e-39 at N=7225
+                    hv_k = 8; hv_gamma=5e-2;
+                    //hv_k = 10; hv_gamma=0.38;
+                   
+                    // These dont work yet: 
+                    //NO: hv_k = 6; hv_gamma=1.43e-12;
+                    //hv_k = 8; hv_gamma=7.43e-9;
+                    //NO: hv_k = 12; hv_gamma=2.03e7;
+                    //hv_gamma = 1e-39;
+                   // hv_gamma = 0.39;
                     break; 
                 default:
                     std::cout << "[RBFFD] Error: setEpsilonByStencilSize does not support stencil size " << st_size << " at this time. Try using 17, 31, 50, and 101\n"; 

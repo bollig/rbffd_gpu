@@ -2,8 +2,11 @@
 
 # Make this a function and pass these params
 STENCIL_SIZES=(17 31 50 101)
-TEST_CASES=(04096  05184  06400  07225  08100  09216  10201  15129  20164  25600  27556)
-USE_GPU=(0 1 2)
+#(101)
+
+TEST_CASES=(04096 05184  06400  07225  08100  09216  10201  15129  20164  25600  27556)
+USE_GPU=(1)
+# (0 1 2)
 
 
 function __get_summary() {
@@ -11,13 +14,13 @@ function __get_summary() {
 }
 
 function __get_errors() {
-   echo "${1}" | sed -n '/Interior & Boundary/,$p' | sed -n "s/^.*Absolute = \([0-9][0-9a-zA-Z.*].*\),.*\( [0-9e].*\)/\1,     \2/p" 
+   echo "${1}" | sed -n '/Interior & Boundary/,$p' | sed -n "s/^.*Absolute = \([0-9][0-9a-zA-Z.*].*\),.*\( [0-9e].*\)/\1,     \2/p"
 }
 
 function __get_line_num() {
     # $1 == input string
     # $2 == desired line
-    echo "${1}" | sed -n "${2}p" 
+    echo "${1}" | sed -n "${2}p"
 }
 
 function __get_benchmark() {
@@ -71,6 +74,7 @@ for sten_size in ${STENCIL_SIZES[@]}
             l2="${l2}\n${N},     ${new_l2_error}"
             linf="${linf}\n${N},     ${new_linf_error}"
 
+            echo "${new_l2_error}"
 
             adv=$( __get_benchmark "${summary}" "Advance One" )
             rk4e=$( __get_benchmark "${summary}" "RK4 Evaluate Substep on")
@@ -85,7 +89,7 @@ for sten_size in ${STENCIL_SIZES[@]}
             # if the file exists then we exited prior to completion and need to resubmit
             if [ -z "${adv}" ]
             then 
-                __restart_job
+                #__restart_job
                 echo "."
             fi 
         done
@@ -104,7 +108,7 @@ for sten_size in ${STENCIL_SIZES[@]}
         echo -e "n${sten_size}_gpu_${cpu_or_gpu}.sendrecv=[${sendrecv}\n];\n\n"
     )
 
-    echo -e"${compiled_stats}" > "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
+    echo -e "${compiled_stats}" > "stats_${sten_size}_use_gpu_${cpu_or_gpu}.m"
 
     done
 done

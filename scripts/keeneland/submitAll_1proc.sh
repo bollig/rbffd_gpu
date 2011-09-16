@@ -1,23 +1,19 @@
 #!/bin/bash
 
+BINARY=cosine_bell_on_sphere.x
+
 prev_dir=${PWD}
 
-for d in 101
+for d in 17 31 50 101
     #17 31 
     #50 101
 do
 
     for e in 04096  05184  06400  07225  08100  09216  10201  15129  20164  25600  27556
-    #for e in 01024  02116  03136  04096  05184  06400  07225  08100  09216  10201  15129  20164  25600  27556
-#    for e in 01024  02116  03136  04096  05184  06400  
-#    for e in 07225  08100  09216  10201  
-    #for e in 15129  20164  
-#    for e in 25600  27556
-    #for e in 4096
     do
         # this allows us to reuse the weights (potentially)
         # 0 = CPU, 1 = Block GPU, 2 = Thread GPU (per stencil)
-        for gpu_type in 0 1 2
+        for gpu_type in 1
         do
             rundir="n${d}/USE_GPU_${gpu_type}"
             mkdir -p ${rundir}
@@ -33,7 +29,7 @@ do
 
 cat > "${rundir}/submit${e}.sh" <<EOF 
 #!/bin/sh
-#PBS -N n${d}_md${e}_vortex_roll
+#PBS -N n${d}_md${e}_cos_bell
 #PBS -j oe
 #PBS -q batch
 #PBS -A UT-NTNL0051
@@ -64,7 +60,7 @@ export CL_KERNELS=${prev_dir}/cl_kernels
 which mpirun
 # mca option binds processes to lowest numbered processor and locks it in until
 # termination (i.e. no swtiching)
-mpirun --mca mpi_paffinity_alone 1 ${prev_dir}/vortex_rollup_on_sphere.x -c ${runconf} -o runlog -d "${prev_dir}/${rundir}/${e}"
+mpirun --mca mpi_paffinity_alone 1 ${prev_dir}/${BINARY} -c ${runconf} -o runlog -d "${prev_dir}/${rundir}/${e}"
 
 date
 

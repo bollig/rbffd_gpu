@@ -22,11 +22,14 @@ class ExactAdvection : public ExactSolution
         double theta_c; 
         double lambda_c;
 
+        // Minimum value in domain (typically 0, but try 1 if we want normalized errors).
+        double base_val; 
+
     public:
         ExactAdvection(double sphere_radius, double initial_peak_height=1.0)
             // param 3 => 3D
             : ExactSolution(3), 
-            a(sphere_radius), h0(1), 
+            a(sphere_radius), h0(1), base_val(1.),
             lambda_c((3.*M_PI)/2.), theta_c(0.)
     { R = a/3.; }
         ~ExactAdvection();
@@ -42,9 +45,10 @@ class ExactAdvection : public ExactSolution
 
             double r = a * acos(sin(theta_c) * sin(TI) + cos(theta_c) * cos(TI) * cos(LI - lambda_c));
 
-            double h = (h0/2.) * (1. + cos(M_PI * (r/R))); 
+            // All bell will be > 1
+            double h = (h0/2.) * (1. + cos(M_PI * (r/R))) + base_val; 
             if (r >= R) {       // Enforce the discontinuity
-                h = 0.;
+                h = base_val;
             }
             return h;
         }

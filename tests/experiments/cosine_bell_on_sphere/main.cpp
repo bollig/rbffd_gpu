@@ -245,9 +245,11 @@ int main(int argc, char** argv) {
 
     der->setUseHyperviscosity(useHyperviscosity);
     der->setEpsilonByStencilSize(stencil_size);
-    int hv_k = settings->GetSettingAs<int>("HV_K", ProjectSettings::optional, "4");
-    double hv_gamma = settings->GetSettingAs<double>("HV_GAMMA", ProjectSettings::optional, "800");
-    der->setHVScalars(hv_k, hv_gamma);
+    int hv_k = settings->GetSettingAs<int>("HV_K", ProjectSettings::optional, "-1");
+    double hv_gamma = settings->GetSettingAs<double>("HV_GAMMA", ProjectSettings::optional, "0");
+    if (hv_k != -1) {
+        der->setHVScalars(hv_k, hv_gamma);
+    }
     der->setWeightType((RBFFD::WeightType)weight_method);
     der->setComputeConditionNumber(true);
  

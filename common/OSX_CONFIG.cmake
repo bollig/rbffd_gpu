@@ -15,12 +15,12 @@ ENDIF (CUDA_FOUND)
 
 # One or more dirs split by spaces. This is a command so it can be called multiple times
 INCLUDE_DIRECTORIES (
-	/sw/include
+    #/sw/include
 )
 
 # One or more dirs split by spaces. This is a command so it can be called multiple times
 LINK_DIRECTORIES (
-	/sw/lib
+    #/sw/lib
 )
 	
 # Additional libraries required by this OS

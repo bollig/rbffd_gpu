@@ -58,6 +58,11 @@ class CosineBell : public TimeDependentPDE
             //DO NOTHING;
         }
 
+        virtual double getMaxVelocity(double at_time) { 
+            // The angular velocity is constant and will never be more than this. 
+            return u0; 
+        }
+
 #if 0
         virtual void advance(TimeScheme which, double delta_t);
 #endif 

@@ -492,22 +492,24 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
     // We want: || x_exact - x_approx ||_{1,2,inf} 
     // and  || x_exact - x_approx ||_{1,2,inf} / || x_exact ||_{1,2,inf}
 
+    // NOTE: for normalized error, If our denom is 0 we add 1 to it and get a relative err assuming the numer will be less than 1
     int nb_pts = sol_vec.size();
     double l1fabs = l1norm(sol_vec, sol_exact, 0, nb_pts); 
     double l1denom = l1norm(sol_exact, 0, nb_pts);
-    double l1rel = (l1denom > 1e-10) ? l1fabs/l1denom : 0.;
+    double l1rel = (l1denom > 1e-10) ? l1fabs/l1denom : (l1fabs+1.)/(l1denom+1.);
     double l2fabs = l2norm(sol_vec, sol_exact, 0, nb_pts); 
     double l2denom = l2norm(sol_exact, 0, nb_pts);
-    double l2rel = (l2denom > 1e-10) ? l2fabs/l2denom : 0.;
+    double l2rel = (l2denom > 1e-10) ? l2fabs/l2denom : (l2fabs+1.)/(l2denom+1.);
     double lifabs = linfnorm(sol_vec, sol_exact, 0, nb_pts); 
     double linfdenom = linfnorm(sol_exact, 0, nb_pts); 
-    double lirel = (linfdenom > 1e-10) ? lifabs/linfdenom : 0.;
+    double lirel = (linfdenom > 1e-10) ? lifabs/linfdenom : (lifabs+1.)/(linfdenom+1.);
 #define COMPONENTWISE_ERR 0
 #if COMPONENTWISE_ERR
     double comp_sum; 
     for (unsigned int i=0; i < nb_pts; i++) {
         double abserr = fabs(sol_vec[i] - sol_exact[i]); 
-        double relerr = (fabs(sol_exact[i]) > 1e-10) ? abserr / fabs(sol_exact[i]) : 0.;
+        // If our denom is 0 we add 1 to it and get a relative err assuming the numer will be less than 1
+        double relerr = (fabs(sol_exact[i]) > 1e-10) ? abserr / fabs(sol_exact[i]) : (abserr + 1.) / (fabs(sol_exact[i]) + 1.);
         std::cout <<  "AbsErr[" << i << "] = " << abserr << "\t" << sol_exact[i] << "\t";
         std::cout <<  "RelErr[" << i << "] = " << relerr << std::endl;
         comp_sum += abserr; 

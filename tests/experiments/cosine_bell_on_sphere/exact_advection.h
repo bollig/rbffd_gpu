@@ -29,7 +29,7 @@ class ExactAdvection : public ExactSolution
         ExactAdvection(double sphere_radius, double initial_peak_height=1.0)
             // param 3 => 3D
             : ExactSolution(3), 
-            a(sphere_radius), h0(1), base_val(1.),
+            a(sphere_radius), h0(1), base_val(0.),
             lambda_c((3.*M_PI)/2.), theta_c(0.)
     { R = a/3.; }
         ~ExactAdvection();

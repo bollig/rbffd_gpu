@@ -129,7 +129,7 @@ set(gca,'Box','off');
 xlabel('x');
 ylabel('y');
 zlab = sprintf('%s,  (%s = %g)', '$\phi (r)=e^{-(\epsilon r)^2} $', '$\epsilon$', epsilon);
-title(zlab, 'Interpreter', 'latex','FontSize',24);
+title(zlab, 'Interpreter', 'Latex','FontSize',24);
 axis tight
 grid on; 
 view(3);

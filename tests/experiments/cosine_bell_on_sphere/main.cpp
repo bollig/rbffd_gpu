@@ -122,7 +122,10 @@ int main(int argc, char** argv) {
     
     int local_err_dump_frequency = settings->GetSettingAs<int>("LOCAL_ERR_DUMP_FREQ", ProjectSettings::optional, "1"); 
     int global_err_dump_frequency = settings->GetSettingAs<int>("GLOBAL_ERR_DUMP_FREQ", ProjectSettings::optional, "5"); 
-    int sol_dump_frequency = settings->GetSettingAs<int>("SOL_DUMP_FREQ", ProjectSettings::optional, "10"); 
+    int sol_dump_frequency = settings->GetSettingAs<int>("SOL_DUMP_FREQ", ProjectSettings::optional, "-1"); 
+    if (sol_dump_frequency == -1) {
+        sol_dump_frequency = num_timesteps;
+    }
 
     int prompt_to_continue = settings->GetSettingAs<int>("PROMPT_TO_CONTINUE", ProjectSettings::optional, "0"); 
     int debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
@@ -343,33 +346,38 @@ int main(int argc, char** argv) {
 
     // Test DT: 
     // 1) get the minimum avg stencil radius (for stencil area--i.e., dx^2)
-    double avgdx = 1000.;
+    double min_dx = 1000.;
     std::vector<StencilType>& sten = subdomain->getStencils();
     for (size_t i=0; i < sten.size(); i++) {
         // In FD stencils we divide by h^2 for the laplacian. That is the 
         double dx = subdomain->getMinStencilRadius(i);
-        if (dx < avgdx) {
-            avgdx = dx; 
+        if (dx < min_dx) {
+            min_dx = dx; 
         }
     }
     // Laplacian = d^2/dx^2
-    double sten_area = avgdx*avgdx;
-#if 0
-    double max_dt = 0;//(0.5*sten_area)/decay;
+    double min_sten_area = min_dx*min_dx;
+    
+    // Get the max velocity at t=0.
+    double max_vel = pde->getMaxVelocity(start_time);
 
-    // Not sure where Gordon came up with this parameter.
-    // for second centered difference and euler time we have nu = 0.5
-    //          dt <= nu/dx^2 
-    // is valid for stability in some FD schemes. 
-   // double max_dt = 0.2*(sten_area);
-	printf("dt = %f, min h=%f\n", dt, avgdx); 
-    printf("(FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", max_dt, 0.5*sten_area);
+	printf("dt = %f, min dx=%f, abs(vel)= %f\n", dt, min_dx, max_vel); 
+    printf("CFL Number (for specified dt) = %f\n", max_vel * (dt / min_dx)); 
+
+    // Got this via trial and error for my code. Roughly 0.5 for RBF-FD + RK4.
+    double CFL_NUM = 0.40;
+    // The 2 here comes from RK4 CFL max
+    double cfl_dt = (CFL_NUM*min_dx) / max_vel;
+    printf("Max dt (for RK4-4) = %f\n", cfl_dt); 
 
     // Only use the CFL dt if our current choice is greater and we insist it be used
-    if (use_cfl_dt && dt > max_dt) {
-        dt = 0.9999*max_dt;
+    if (dt > cfl_dt) {
+        printf("ERROR: dt too high. Adjust and re-execute.\n");
+        exit(EXIT_FAILURE);
+//        dt = cfl_dt;
     }
 
+#if 0
     // This appears to be consistent with Chinchipatnam2006 (Thesis)
     // TODO: get more details on CFL for RBFFD
     // note: checking stability only works if we have all weights for all

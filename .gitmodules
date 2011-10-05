@@ -3,4 +3,7 @@
 	url = git://github.com/jedbrown/cmake-modules.git
 [submodule "doc"]
 	path = doc
-	url = ssh://pamd1.sc.fsu.edu/~/repos/rbffd_gpu_doc.git
+	url = ssh://pamd1.sc.fsu.edu/~efb06/repos/rbffd_gpu_doc.git
+[submodule "scripts"]
+	path = scripts
+	url = ssh://pamd1.sc.fsu.edu/~efb06/repos/rbffd_gpu_scripts.git

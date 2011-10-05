@@ -1,6 +1,0 @@
-This directory contains: 
-	- Matlab scripts for data visualization and verification
-
-
-Sources: 
-	- mmread.m, mmwrite.m and mminfo.m were downloaded and reused without modification from http://math.nist.gov/MatrixMarket/mmio/matlab/mmiomatlab.html

@@ -80,7 +80,7 @@ class PDE : public MPISendable
         virtual void getGlobalSolution(std::vector<double>* final);
 
 
-        virtual double getMaxVelocity(double at_time) =0; 
+//        virtual double getMaxVelocity(double at_time) =0; 
 
         // Check the error locally
         void checkLocalError(ExactSolution* exact, double rel_err_max=-1.) { 

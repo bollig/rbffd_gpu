@@ -164,6 +164,7 @@ class RBFFD
         double setHVScalars(int k, double gamma_c) {
             hv_gamma = gamma_c; 
             hv_k = k;
+            return hv_gamma;
         }
 
         void setComputeConditionNumber(bool tf) {

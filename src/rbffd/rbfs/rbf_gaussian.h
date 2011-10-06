@@ -236,10 +236,10 @@ class RBF_Gaussian : public RBF
             switch (k) {
                 case 0:
                     return 1.;
-                    break;
+                    //break;
                 case 1:
                     return 4.*(eps2r2) - 2.*this->dim;
-                    break;
+                    //break;
                 default: 
                     // Pass: 
                     break;

@@ -187,8 +187,8 @@ void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cusp::array1d<fl
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
     unsigned int offset_to_set_R = set_Q_size;
 
-    unsigned int solution_mem_bytes = set_G_size*float_size; 
-    unsigned int set_R_bytes = set_R_size * float_size;
+    //unsigned int solution_mem_bytes = set_G_size*float_size; 
+    //unsigned int set_R_bytes = set_R_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
     std::vector<float> r_update_f(set_R_size,-1.); 
@@ -221,10 +221,10 @@ void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cusp::array1d<fl
 
     // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
-    unsigned int offset_to_set_R = set_Q_size;
+    //unsigned int offset_to_set_R = set_Q_size;
 
-    unsigned int solution_mem_bytes = set_G_size*float_size; 
-    unsigned int set_R_bytes = set_R_size * float_size;
+    //unsigned int solution_mem_bytes = set_G_size*float_size; 
+    //unsigned int set_R_bytes = set_R_size * float_size;
 
     if (set_R_size > 0) {
 
@@ -251,8 +251,8 @@ void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cusp::array1d<fl
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
     unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-    unsigned int solution_mem_bytes = set_G_size*float_size; 
-    unsigned int set_O_bytes = set_O_size * float_size;
+    //unsigned int solution_mem_bytes = set_G_size*float_size; 
+    //unsigned int set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
     std::vector<float> o_update_f(set_O_size,1.);
@@ -285,10 +285,10 @@ void HeatPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cusp::array1d<fl
 
     // OUR SOLUTION IS ARRANGED IN THIS FASHION: 
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
-    unsigned int offset_to_set_O = (set_Q_size - set_O_size);
+    //unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-    unsigned int solution_mem_bytes = set_G_size*float_size; 
-    unsigned int set_O_bytes = set_O_size * float_size;
+    //unsigned int solution_mem_bytes = set_G_size*float_size; 
+    //unsigned int set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
     std::vector<float> o_update_f(set_O_size,1.);
@@ -647,7 +647,7 @@ void HeatPDE_CL::allocateGPUMem() {
 
     unsigned int solution_mem_bytes = nb_nodes * this->getFloatSize();
 
-    unsigned int bytesAllocated = 0;
+    //unsigned int bytesAllocated = 0;
 #if 0
     gpu_solution[INDX_IN] = cl::Buffer(context, CL_MEM_READ_WRITE, solution_mem_bytes, NULL, &err);
     bytesAllocated += solution_mem_bytes; 

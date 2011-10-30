@@ -439,6 +439,10 @@ int main(int argc, char** argv) {
 #if 1
     printf("DONE SOLVING\n");
 
+    if(writeIntermediate) {
+        writer->writeLocal(iter);
+    }
+
     // NOTE: all local subdomains have a U_G solution which is consolidated
     // into the MASTER process "global_U_G" solution. 
     tm["consolidate"]->start(); 

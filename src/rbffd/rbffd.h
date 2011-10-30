@@ -198,11 +198,21 @@ class RBFFD
         double computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output=NULL);
         
 
-        // Support parameter type 3 (variable depends on stencil size and might ONLY work on a sphere)
-        // These will be available as part of Natasha and Erik's new paper on shallow water. 
-        // Given a stencil size (right now we only have a few candidates), we know the support parameter
-        // can scale linearly to produce a constant average condition number. So we take the stencil size
-        // and automatically adjust the support. 
+        // Same as next routine below, but this allows manual override fo the c1, c2 parameters
+        void setEpsilonByParameters(double c1, double c2) {
+            // Epsilon as a function of condition number is a linear function: 
+            double eps = c1 * sqrt(grid_ref.getGlobalNodeListSize()) - c2; 
+            this->setEpsilon(eps); 
+        }
+
+
+
+        // Support parameter type 3 (variable depends on stencil size and might
+        // ONLY work on a sphere) These will be available as part of Natasha
+        // and Erik's new paper on shallow water.  Given a stencil size (right
+        // now we only have a few candidates), we know the support parameter
+        // can scale linearly to produce a constant average condition number.
+        // So we take the stencil size and automatically adjust the support. 
         void setEpsilonByStencilSize(unsigned int st_size) {
             double c1, c2; 
 

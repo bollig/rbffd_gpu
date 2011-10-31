@@ -280,7 +280,8 @@ class RBFFD
         // now we only have a few candidates), we know the support parameter
         // can scale linearly to produce a constant average condition number.
         // So we take the stencil size and automatically adjust the support. 
-        void setEpsilonByStencilSize(unsigned int st_size) {
+        void setEpsilonByStencilSize() {
+            unsigned int st_size = grid_ref.getMaxStencilSize();
             double c1, c2; 
 
             // NOTE: these are specific to the cosine bell. use

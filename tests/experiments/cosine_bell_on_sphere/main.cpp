@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
     }
 
     der->setUseHyperviscosity(useHyperviscosity);
-    der->setEpsilonByStencilSize(stencil_size);
+    der->setEpsilonByStencilSize();
     int hv_k = settings->GetSettingAs<int>("HV_K", ProjectSettings::optional, "-1");
     double hv_gamma = settings->GetSettingAs<double>("HV_GAMMA", ProjectSettings::optional, "0");
     if (hv_k != -1) {

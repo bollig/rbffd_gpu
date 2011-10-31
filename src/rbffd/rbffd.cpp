@@ -22,7 +22,9 @@
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
-    for (int i = 0; i < NUM_DERIV_TYPES; i++) {
+    numSelectedDerTypes = getNumSelectedDerTypes(typesToCompute); 
+
+    for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
         // Set all weights to point to NULL
         // If they do NOT point to NULL then they have been computed
         this->weights[i].resize(nb_rbfs, NULL);
@@ -58,7 +60,7 @@
 //--------------------------------------------------------------------
 
 RBFFD::~RBFFD() {
-    for (int j = 0; j < NUM_DERIV_TYPES; j++) {
+    for (int j = 0; j < NUM_DERIVATIVE_TYPES; j++) {
         //if (weights[j] != NULL) {
         for (int i = 0; i < weights[j].size(); i++) {
             if (weights[j][i] != NULL) {
@@ -219,7 +221,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     // Stencil center
     Vec3& x0v = rbf_centers[stencil[0]];
 
-    arma::mat rhs = arma::mat(n+np, NUM_DERIV_TYPES); 
+    arma::mat rhs = arma::mat(n+np, numSelectedDerTypes); 
     arma::mat lhs = arma::mat(n+np, n+np); 
 
     // We pass h (the minimum dist to nearest node) so we can potentially factor it out
@@ -248,58 +250,67 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     weights_new.print("weights");
 #endif 
 
-    // FIXME: do not save the extra NP coeffs
-    for (int i = 0; i < NUM_DERIV_TYPES; i++) {
-        // X,Y,Z weights should scale by 1/h
-        // FIXME: for 3D, h^2
-        double scale = 1.;// grid_ref.getStencilRadius(irbf);
+
+    int iterator = computedTypes; 
+    int which_i = 0;
+    int i       = 0;     
+    // Iterate until we get all 0s. This allows SOME shortcutting.
+    while (iterator) {
+        if (computedTypes & getDerType(i)) {    
+            // X,Y,Z weights should scale by 1/h
+            // FIXME: for 3D, h^2
+            double scale = 1.;// grid_ref.getStencilRadius(irbf);
 
 #if SCALE_OUT_BY_H
-        scale = 1./h;
-        // LAPL should scale by 1/h^2
-        if (i == LAPL) {
-            scale *= scale; 
-        }
-        if (i == INTERP) {
-            scale = 1.; 
-        }
+            scale = 1./h;
+            // LAPL should scale by 1/h^2
+            if (i == LAPL) {
+                scale *= scale; 
+            }
+            if (i == INTERP) {
+                scale = 1.; 
+            }
 #endif 
 
 #if 1
-        if (i == HV) {
-            scale = this->getHVScalar(); 
-        }
+            if (i == HV) {
+                scale = this->getHVScalar(); 
+            }
 #endif 
 
-        if (this->weights[i][irbf] == NULL) {
-            this->weights[i][irbf] = new double[n+np];
-        }
+            if (this->weights[i][irbf] == NULL) {
+                this->weights[i][irbf] = new double[n+np];
+            }
 
-        for (int j = 0; j < n+np; j++) {
-            this->weights[i][irbf][j] = weights_new(j, i) * scale;
-            //            this->weights[i][irbf][j] = scale;
-        }
+            for (int j = 0; j < n+np; j++) {
+                this->weights[i][irbf][j] = weights_new(j, which_i) * scale;
+            }
 
-#if DEBUG
-        double sum_nodes_only = 0.;
-        double sum_nodes_and_monomials = 0.;
-        for (int j = 0; j < n; j++) {
-            sum_nodes_only += weights_new(j,i);
-        }
-        sum_nodes_and_monomials = sum_nodes_only;
-        for (int j = n; j < n+np; j++) {
-            sum_nodes_and_monomials += weights_new(j,i);
-        }
+#if 0
+            double sum_nodes_only = 0.;
+            double sum_nodes_and_monomials = 0.;
+            for (int j = 0; j < n; j++) {
+                sum_nodes_only += weights_new(j,which_i);
+            }
+            sum_nodes_and_monomials = sum_nodes_only;
+            for (int j = n; j < n+np; j++) {
+                sum_nodes_and_monomials += weights_new(j,which_i);
+            }
 
-        cout << "(Stencil: " << irbf << ", DerivType: " << i << ") ";
-        //weights_new.print("lapl_weights");
-        cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
-        cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
-        if (sum_nodes_only > 1e-7) {
-            cout << "WARNING! SUM OF WEIGHTS FOR LAPL NODES IS NOT ZERO: " << sum_nodes_only << endl;
-            exit(EXIT_FAILURE);
-        }
+            cout << "(Stencil: " << irbf << ", DerivType: " << getDerType(i) << ") ";
+            //weights_new.print("lapl_weights");
+            cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
+            cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
+            if (sum_nodes_only > 1e-7) {
+                cout << "WARNING! SUM OF WEIGHTS FOR LAPL NODES IS NOT ZERO: " << sum_nodes_only << endl;
+                exit(EXIT_FAILURE);
+            }
 #endif // DEBUG
+
+            which_i+= 1; 
+        }
+        iterator >>= 1; 
+        i+= 1; 
     }
 
     tm["computeAllWeightsOne"]->end();
@@ -309,7 +320,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 
 //--------------------------------------------------------------------
 
-void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h) { 
+void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h) { 
 
     int np = num_monomials; 
     int n = stencil.size(); 
@@ -461,7 +472,7 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
 
     //--------------------------------------------------------------------
     //
-    void RBFFD::computeWeightsForAllStencils(DerTypeID which) {
+    void RBFFD::computeWeightsForAllStencils(DerType which) {
         unsigned int nb_stencils = grid_ref.getStencilsSize(); 
         for (unsigned int i = 0; i < nb_stencils; i++) {
             this->computeWeightsForStencil(which, i);
@@ -470,7 +481,7 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
 
     //--------------------------------------------------------------------
     //
-    void RBFFD::computeWeightsForStencil(DerTypeID which, int st_indx) {
+    void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
         switch (weightMethod) {
             case RBFFD::Direct:
                 this->computeWeightsForStencil_Direct(which, st_indx);
@@ -484,7 +495,7 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
         }
     }
 
-    void RBFFD::computeWeightsForStencil_Direct(DerTypeID which, int st_indx) {
+    void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
         // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
         tm["computeOneWeights"]->start(); 
 
@@ -587,8 +598,8 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
 
     //--------------------------------------------------------------------
     // NOTE: ignore isChangedU because we are on the CPU
-    void RBFFD::applyWeightsForDeriv(DerTypeID which, int npts, double* u, double* deriv, bool isChangedU) {
-        //    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
+    void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
+            std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << " (weights[" << getDerTypeIndx(which) << "])" << std::endl;
         tm["applyAll"]->start(); 
         unsigned int nb_stencils = grid_ref.getStencilsSize(); 
         double der;
@@ -621,7 +632,7 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
     // positive save for one eigenvalue equal to 0, or ALL negative save for one
     // equal to 0. If we have a mix of positive and negative we might have an
     // unstable laplace operator 
-    double RBFFD::computeEigenvalues(DerTypeID which, bool exit_on_fail, EigenvalueOutput* output) 
+    double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output) 
     {
         std::vector<double*>& weights_r = this->weights[getDerTypeIndx(which)];
 
@@ -890,7 +901,7 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
 
     //--------------------------------------------------------------------
 
-    int RBFFD::loadFromFile(DerTypeID which, std::string filename) {
+    int RBFFD::loadFromFile(DerType which, std::string filename) {
         int ret_code; 
         MM_typecode matcode;
         FILE *f;
@@ -1027,7 +1038,7 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
 
     //--------------------------------------------------------------------
 
-    void RBFFD::writeToFile(DerTypeID which, std::string filename) {
+    void RBFFD::writeToFile(DerType which, std::string filename) {
 
         // number of non-zeros (should be close to max_st_size*num_stencils)
         unsigned int nz = 0;
@@ -1128,7 +1139,7 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
 
 
 
-    void RBFFD::computeWeightsForStencil_ContourSVD(DerTypeID which, int st_indx) {
+    void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         //----------------------------------------------------------------------
         //void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, const char* choice)
         {
@@ -1277,14 +1288,14 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
 
 
     //----------------------------------------------------------------------------
-    std::string RBFFD::getFileDetailString(DerTypeID which) {
+    std::string RBFFD::getFileDetailString(DerType which) {
         std::stringstream ss(std::stringstream::out); 
         ss << derTypeStr[getDerTypeIndx(which)] << "_weights_" << weightTypeStr[weightMethod] << "_" << this->getEpsString() << "_" << this->getHVString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();  
         return ss.str();
     }
 
     //----------------------------------------------------------------------------
-    std::string RBFFD::getFilename(DerTypeID which, std::string base_filename) {
+    std::string RBFFD::getFilename(DerType which, std::string base_filename) {
         std::stringstream ss(std::stringstream::out);
         ss << this->getFileDetailString(which) << ".mtx";
         std::string filename = ss.str();
@@ -1292,7 +1303,7 @@ void RBFFD::getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, S
     }
 
     //----------------------------------------------------------------------------
-    std::string RBFFD::getFilename(DerTypeID which) {
+    std::string RBFFD::getFilename(DerType which) {
         std::stringstream ss(std::stringstream::out); 
         ss << "weights_" << this->className();
         return this->getFilename(which, ss.str()); 

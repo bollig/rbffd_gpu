@@ -127,11 +127,20 @@ void RBFFD_CL::allocateGPUMem() {
 
     gpu_function = cl::Buffer(context, CL_MEM_READ_ONLY, function_mem_bytes, NULL, &err);
 
-    for (int which = 0; which < NUM_DERIV_TYPES; which++) {
-        gpu_weights[which] = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_bytes, NULL, &err); 
-        bytesAllocated += weights_mem_bytes; 
-        gpu_deriv_out[which] = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
-        bytesAllocated += deriv_mem_bytes; 
+    int iterator = computedTypes; 
+    int which = 0;
+    int type_i       = 0;     
+    // Iterate until we get all 0s. This allows SOME shortcutting.
+    while (iterator) {
+        if (computedTypes & getDerType(which)) {
+            gpu_weights[which] = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_bytes, NULL, &err); 
+            bytesAllocated += weights_mem_bytes; 
+            gpu_deriv_out[which] = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
+            bytesAllocated += deriv_mem_bytes; 
+            type_i+=1; 
+        }
+        iterator >>= 1; 
+        which += 1;
     }
 
     gpu_nodes = cl::Buffer(context, CL_MEM_READ_ONLY, nodes_mem_bytes, NULL, &err);
@@ -217,8 +226,17 @@ void RBFFD_CL::clearCPUNodes() {
 void RBFFD_CL::clearCPUStencils() {
     // Clear out buffer. No need to keep it since this should only happen once
     // NOTE: make sure we delete only the single or double precision cpu side buffers;
-    for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
-        delete [] cpu_stencils;
+    int iterator = computedTypes; 
+    int which = 0;
+    int type_i       = 0;     
+    // Iterate until we get all 0s. This allows SOME shortcutting.
+    while (iterator) {
+        if (computedTypes & getDerType(which)) {
+            delete [] cpu_stencils;
+            type_i+=1; 
+        }
+        iterator >>= 1; 
+        which += 1;
     }
 }
 
@@ -227,17 +245,21 @@ void RBFFD_CL::clearCPUStencils() {
 void RBFFD_CL::clearCPUWeights() {
     // Clear out buffer. No need to keep it since this should only happen once
     // NOTE: make sure we delete only the single or double precision cpu side buffers;
-    // FIXME: change the 4 here to NUM_DERIV_TYPES (need to compute all deriv
-    // types and save them to disk, then load them from file. 
-    if (useDouble) {
-        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
-            delete [] cpu_weights_d[which];
+    int iterator = computedTypes; 
+    int which = 0;
+    int type_i       = 0;     
+    // Iterate until we get all 0s. This allows SOME shortcutting.
+    while (iterator) {
+        if (computedTypes & getDerType(which)) {
+            if (useDouble) {
+                delete [] cpu_weights_d[which];
+            } else {
+                delete [] cpu_weights_f[which];
+            }
+            type_i+=1; 
         }
-    } else {
-
-        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
-            delete [] cpu_weights_f[which];
-        }
+        iterator >>= 1; 
+        which += 1;
     }
 }
 
@@ -270,31 +292,41 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
         // Copy the std::vector<std::vector<..> > into a contiguous memory space
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost 
         // FIXME: copy more than just the 4 types of weights
-        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
-            cpu_weights_d[which] = new double[gpu_stencil_size]; 
-            for (unsigned int i = 0; i < nb_stencils; i++) {
-                unsigned int stencil_size = grid_ref.getStencilSize(i); 
-                unsigned int j = 0; 
-                for (j = 0; j < stencil_size; j++) {
-                    unsigned int indx = i*stencil_size + j; 
-                    cpu_weights_d[which][indx] = (double)weights[which][i][j]; 
-                    //  std::cout << cpu_weights[which][indx] << "   ";
-                }
-                // Pad end of the stencil with 0's so our linear combination
-                // excludes whatever function values are found at the end of
-                // the stencil (i.e., we can include extra terms in summation
-                // without added effect
-                for (; j < max_stencil_size; j++) {
-                    unsigned int indx = i*stencil_size + j; 
-                    cpu_weights_d[which][indx] = (double)0.;
-                    //  std::cout << cpu_weights[which][indx] << "   ";
+        int iterator = computedTypes; 
+        int which = 0;
+        int type_i = 0;     
+        // Iterate until we get all 0s. This allows SOME shortcutting.
+        while (iterator) {
+            if (computedTypes & getDerType(which)) {
+                cpu_weights_d[which] = new double[gpu_stencil_size]; 
+                for (unsigned int i = 0; i < nb_stencils; i++) {
+                    unsigned int stencil_size = grid_ref.getStencilSize(i); 
+                    unsigned int j = 0; 
+                    for (j = 0; j < stencil_size; j++) {
+                        unsigned int indx = i*stencil_size + j; 
+                        cpu_weights_d[which][indx] = (double)weights[which][i][j]; 
+                        //  std::cout << cpu_weights[which][indx] << "   ";
+                    }
+                    // Pad end of the stencil with 0's so our linear combination
+                    // excludes whatever function values are found at the end of
+                    // the stencil (i.e., we can include extra terms in summation
+                    // without added effect
+                    for (; j < max_stencil_size; j++) {
+                        unsigned int indx = i*stencil_size + j; 
+                        cpu_weights_d[which][indx] = (double)0.;
+                        //  std::cout << cpu_weights[which][indx] << "   ";
+                    }
+                    //std::cout << std::endl;
                 }
                 //std::cout << std::endl;
+                // Send to GPU
+                err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_d[which][0]), NULL, &event); 
+                //            queue.flush();
+
+                type_i+=1; 
             }
-            //std::cout << std::endl;
-            // Send to GPU
-            err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_d[which][0]), NULL, &event); 
-//            queue.flush();
+            iterator >>= 1; 
+            which += 1;
         }
 
         if (forceFinish) {
@@ -336,31 +368,41 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
         // Copy the std::vector<std::vector<..> > into a contiguous memory space
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost 
         // FIXME: we only pass four weights to the GPU
-        for (unsigned int which = 0; which < NUM_DERIV_TYPES; which++) {
-            cpu_weights_f[which] = new float[gpu_stencil_size]; 
-            for (unsigned int i = 0; i < nb_stencils; i++) {
-                unsigned int stencil_size = grid_ref.getStencilSize(i); 
-                unsigned int j = 0; 
-                for (j = 0; j < stencil_size; j++) {
-                    unsigned int indx = i*stencil_size + j; 
-                    cpu_weights_f[which][indx] = (float)weights[which][i][j]; 
-                    //  std::cout << cpu_weights[which][indx] << "   ";
-                }
-                // Pad end of the stencil with 0's so our linear combination
-                // excludes whatever function values are found at the end of
-                // the stencil (i.e., we can include extra terms in summation
-                // without added effect
-                for (; j < max_stencil_size; j++) {
-                    unsigned int indx = i*stencil_size + j; 
-                    cpu_weights_f[which][indx] = (float)0.f;
-                    //  std::cout << cpu_weights[which][indx] << "   ";
+
+        int iterator = computedTypes; 
+        int which   = 0;
+        int type_i  = 0;     
+        // Iterate until we get all 0s. This allows SOME shortcutting.
+        while (iterator) {
+            if (computedTypes & getDerType(which)) {   
+                cpu_weights_f[which] = new float[gpu_stencil_size]; 
+                for (unsigned int i = 0; i < nb_stencils; i++) {
+                    unsigned int stencil_size = grid_ref.getStencilSize(i); 
+                    unsigned int j = 0; 
+                    for (j = 0; j < stencil_size; j++) {
+                        unsigned int indx = i*stencil_size + j; 
+                        cpu_weights_f[which][indx] = (float)weights[which][i][j]; 
+                        //  std::cout << cpu_weights[which][indx] << "   ";
+                    }
+                    // Pad end of the stencil with 0's so our linear combination
+                    // excludes whatever function values are found at the end of
+                    // the stencil (i.e., we can include extra terms in summation
+                    // without added effect
+                    for (; j < max_stencil_size; j++) {
+                        unsigned int indx = i*stencil_size + j; 
+                        cpu_weights_f[which][indx] = (float)0.f;
+                        //  std::cout << cpu_weights[which][indx] << "   ";
+                    }
+                    //std::cout << std::endl;
                 }
                 //std::cout << std::endl;
+                // Send to GPU
+                err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_f[which][0]), NULL, &event); 
+                //            queue.flush();
+                type_i +=1;
             }
-            //std::cout << std::endl;
-            // Send to GPU
-            err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_f[which][0]), NULL, &event); 
-//            queue.flush();
+            iterator >>= 1; 
+            which+= 1; 
         }
 
         if (forceFinish) {
@@ -439,7 +481,7 @@ void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool force
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDerivDouble(DerTypeID which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
@@ -512,7 +554,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerTypeID which, unsigned int nb_nodes
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDerivSingle(DerTypeID which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 

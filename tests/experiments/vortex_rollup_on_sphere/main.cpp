@@ -219,9 +219,9 @@ int main(int argc, char** argv) {
 
     RBFFD* der;
     if (use_gpu) {
-        der = new RBFFD_CL(subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD_CL(RBFFD::THETA | RBFFD::LAMBDA | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
     } else {
-        der = new RBFFD(subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD(RBFFD::THETA | RBFFD::LAMBDA | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
     }
 
     der->setUseHyperviscosity(useHyperviscosity);

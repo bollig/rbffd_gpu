@@ -22,6 +22,7 @@
 #endif 
 
 std::string md_grid_filename;
+int         md_grid_num_cols;
 
 double sphere_radius; 
 double velocity_angle; 
@@ -36,6 +37,7 @@ int num_revolutions;
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     md_grid_filename = settings->GetSettingAs<string>("GRID_FILENAME", ProjectSettings::required); 
+    md_grid_num_cols = settings->GetSettingAs<int>("GRID_FILE_NUM_COLS", ProjectSettings::optional, "4"); 
     sphere_radius = settings->GetSettingAs<double>("SPHERE_RADIUS", ProjectSettings::optional, "1.0"); 
     double velocity_angle_denom = settings->GetSettingAs<double>("VELOCITY_ANGLE_DENOM", ProjectSettings::optional, "2"); 
     if (fabs(velocity_angle_denom) > 0.) {  
@@ -63,7 +65,7 @@ ExactSolution* getExactSolution(int dim_num) {
 
 // Choose a specific type of Grid for the test case
 Grid* getGrid(int dim_num) {
-    Grid* grid = new GridReader(md_grid_filename);
+    Grid* grid = new GridReader(md_grid_filename, md_grid_num_cols);
     return grid; 
 }
 
@@ -241,9 +243,9 @@ int main(int argc, char** argv) {
 
     RBFFD* der;
     if (use_gpu) {
-        der = new RBFFD_CL(subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD_CL(RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
     } else {
-        der = new RBFFD(subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD(RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
     }
 
     der->setUseHyperviscosity(useHyperviscosity);
@@ -359,7 +361,7 @@ int main(int argc, char** argv) {
     double min_sten_area = min_dx*min_dx;
     
     // Get the max velocity at t=0.
-    double max_vel = pde->getMaxVelocity(start_time);
+    double max_vel = ((CosineBell*)pde)->CosineBell::getMaxVelocity(start_time);
 
 	printf("dt = %f, min dx=%f, abs(vel)= %f\n", dt, min_dx, max_vel); 
     printf("CFL Number (for specified dt) = %f\n", max_vel * (dt / min_dx)); 

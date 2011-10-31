@@ -224,9 +224,9 @@ int main(int argc, char** argv) {
 
     RBFFD* der;
     if (use_gpu) {
-        der = new RBFFD_CL(subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD_CL(RBFFD::LAPL | RBFFD::X | RBFFD::Y | RBFFD::Z, subdomain, dim, comm_unit->getRank()); 
     } else {
-        der = new RBFFD(subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD(RBFFD::LAPL | RBFFD::X | RBFFD::Y | RBFFD::Z, subdomain, dim, comm_unit->getRank()); 
     }
 
     int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");

@@ -31,7 +31,7 @@ typedef RBF_InvMultiquadric IRBF;
 //enum RBF_Type {MQ=0, GA, IMQ, TPS, W2};
 
 // Should match how many DerTypes we have below
-#define NUM_DERIV_TYPES 10
+#define NUM_DERIV_TYPES 13
 
 class RBFFD
 {
@@ -42,7 +42,25 @@ class RBFFD
         // LAMBDA is longitude
         // THETA is latitude
         // SPH_LAPL is spherical laplacian (Laplace-Beltrami Operator)
-        enum DerType {X, Y, Z, LAPL, R, INTERP, LAMBDA, THETA, SPH_LAPL, HV};
+
+        enum DerType {
+            X       = 0x1,
+            Y       = 0x2,
+            Z       = 0x4,
+            LAPL    = 0x8,
+            R       = 0x10,
+            INTERP  = 0x20,
+            LAMBDA  = 0x40,
+            THETA   = 0x80, 
+            LSFC    = 0x100,
+            XSFC    = 0x200, 
+            YSFC    = 0x400, 
+            ZSFC    = 0x800, 
+            HV      = 0x1000
+        };
+
+        typedef unsigned int DerTypes; 
+
         std::string derTypeStr[NUM_DERIV_TYPES]; 
 
         enum WeightType {Direct, ContourSVD};
@@ -60,6 +78,10 @@ class RBFFD
 
 
     protected: 
+
+        // This stores a list of weights we need to compute or have computed
+        DerTypes computedTypes; 
+
         EB::TimerList tm; 
 
         WeightType weightMethod; 
@@ -114,13 +136,17 @@ class RBFFD
 
         int useHyperviscosity;
 
-        //TODO: add choice for RBF (only one option at the moment)
+    protected: 
+        DerType translateToDerType(int i) {
+            return (DerType) (0x1 << i);
+        }
 
-    public: 
+    public:
 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives
         // (up to 3 right now) 
-        RBFFD(Grid* grid, int dim_num, int rank=0);
+       // RBFFD(Grid* grid, int dim_num, int rank=0);
+        RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num, int rank=0); 
 
         virtual ~RBFFD(); 
 
@@ -147,7 +173,7 @@ class RBFFD
         }
 
         int getUseHyperviscosity() {
-                return useHyperviscosity;
+            return useHyperviscosity;
         }
 
         double getHVScalar() {
@@ -178,7 +204,7 @@ class RBFFD
 
         // Apply weights to an input solution vector and get the corresponding derivatives out
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
-//            std::cout << "CPU: ";
+            //            std::cout << "CPU: ";
             deriv.resize(u.size()); 
             RBFFD::applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0], isChangedU);
         }
@@ -196,7 +222,7 @@ class RBFFD
         // Returns MAXIMUM negative eigenvalue
         // Use output to obtain MINIMUM and MAXIMUM
         double computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output=NULL);
-        
+
 
         // Same as next routine below, but this allows manual override fo the c1, c2 parameters
         void setEpsilonByParameters(double c1, double c2) {
@@ -245,13 +271,13 @@ class RBFFD
                     // These params get me hvscalar approx equal to 1e-39 at N=7225
                     hv_k = 8; hv_gamma=5e-2;
                     //hv_k = 10; hv_gamma=0.38;
-                   
+
                     // These dont work yet: 
                     //NO: hv_k = 6; hv_gamma=1.43e-12;
                     //hv_k = 8; hv_gamma=7.43e-9;
                     //NO: hv_k = 12; hv_gamma=2.03e7;
                     //hv_gamma = 1e-39;
-                   // hv_gamma = 0.39;
+                    // hv_gamma = 0.39;
                     break; 
                 default:
                     std::cout << "[RBFFD] Error: setEpsilonByStencilSize does not support stencil size " << st_size << " at this time. Try using 17, 31, 50, and 101\n"; 
@@ -367,6 +393,48 @@ class RBFFD
 
         virtual std::string className() { return "rbffd"; }
         // =====================================================================
+
+        // ================= These control derivative type bits ================
+    public: 
+        void printCalculated() {
+            // Iterate through flags and prints which ones we are going to calculate
+            for (int i = 0; i < NUM_DERIV_TYPES; i++) {
+                DerType dt = translateToDerType(i); 
+                if (isSelected(dt)) {
+                    cout << "Will compute DerType: 0x" << hex << dt << endl;
+                }
+            }
+        }        
+
+        bool isSelected(DerType dt) {
+            return computedTypes & dt; 
+
+        }
+
+        // Set a collection of derivative types (only updates the existing)
+        void setDerTypes(DerTypes derTypeList) {
+            computedTypes = derTypeList;
+        }
+
+        // Set a collection of derivative types (only updates the existing)
+        void appendDerTypes(DerTypes& derTypeList) {
+            computedTypes |= derTypeList;
+        }
+
+        DerTypes getDerTypes() {
+            return computedTypes; 
+        }
+
+        // Flip a single bit for a specific dertype 
+        void switchDerType (DerType& dt) {
+            computedTypes ^= dt;
+        }
+
+        void removeDerType(DerType& dt) {
+            if ((computedTypes & dt) == dt) {
+                computedTypes ^= dt;
+            }
+        }
 
 };
 

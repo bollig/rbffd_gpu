@@ -13,8 +13,9 @@
 
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
-    RBFFD::RBFFD(Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
-: grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
+    RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
+:   computedTypes(typesToCompute),
+    grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
     weightsModified(false), weightMethod(RBFFD::Direct), 
     hv_k(2), hv_gamma(8e-4), useHyperviscosity(0), 
     eigenvalues_computed(false), computeCondNums(false)
@@ -35,7 +36,7 @@
     derTypeStr[R] = "r";   // radial deriv 
     derTypeStr[LAMBDA] = "lambda";   // Longitude
     derTypeStr[THETA] = "theta";   // Latitude
-    derTypeStr[SPH_LAPL] = "sph_lapl";   // Latitude
+    derTypeStr[LSFC] = "Lsfc";   // Surface laplacian of sphere (Laplace-Beltrami)
     derTypeStr[INTERP] = "interp";
 
 
@@ -392,7 +393,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                     }
                 }
                 break; 
-            case SPH_LAPL: 
+            case LSFC: 
                 {
                     double r2 = diff.square();
                     // Laplace-Beltrami Operator for surface of sphere (Equation 20 in Flyer,Wright,Yuen paper)

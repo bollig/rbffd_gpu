@@ -96,7 +96,8 @@ int main(int argc, char** argv) {
 
     // USE_GPU can be 0, 1, 2. If 0 done use GPU. if 1 use a block approach. if 2 use a thread per stencil approach
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
-    
+    int benchmark_only = settings->GetSettingAs<int>("BENCHMARK_ONLY", ProjectSettings::optional, "0"); 
+
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
     int writeIntermediate = settings->GetSettingAs<int>("WRITE_INTERMEDIATE_FILES", ProjectSettings::optional, "0"); 
@@ -133,7 +134,7 @@ int main(int argc, char** argv) {
         {
             printf("************** Generating new Grid **************\n"); 
             //grid->setSortBoundaryNodes(true); 
-//            grid->setSortBoundaryNodes(true); 
+            //            grid->setSortBoundaryNodes(true); 
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
@@ -145,8 +146,8 @@ int main(int argc, char** argv) {
             std::cout << "Generating stencils files\n";
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
-//            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
-//            grid->generateStencils(Grid::ST_KDTREE);   
+            //            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
+            //            grid->generateStencils(Grid::ST_KDTREE);   
             grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
             if (writeIntermediate) {
@@ -233,7 +234,7 @@ int main(int argc, char** argv) {
     der->setHVScalars(hv_k, hv_gamma);
     der->setWeightType((RBFFD::WeightType)weight_method);
     der->setComputeConditionNumber(true);
- 
+
     // Try loading all the weight files
     int err = der->loadAllWeightsFromFile();
 
@@ -277,7 +278,7 @@ int main(int argc, char** argv) {
                 // Test Y and 30 are > 0
                 // Test Z and 36 are > 0
                 // NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
-//                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);                
+                //                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);                
                 // NOTE: testHyperviscosity boolean allow us to write the
                 // effect of hyperviscosity on the eigenvalues
                 der_test->testEigen(RBFFD::LAMBDA, exitIfEigTestFailed, 0);
@@ -343,8 +344,8 @@ int main(int argc, char** argv) {
     // for second centered difference and euler time we have nu = 0.5
     //          dt <= nu/dx^2 
     // is valid for stability in some FD schemes. 
-   // double max_dt = 0.2*(sten_area);
-	printf("dt = %f, min h=%f\n", dt, avgdx); 
+    // double max_dt = 0.2*(sten_area);
+    printf("dt = %f, min h=%f\n", dt, avgdx); 
     printf("(FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", max_dt, 0.5*sten_area);
 
     // Only use the CFL dt if our current choice is greater and we insist it be used
@@ -361,7 +362,7 @@ int main(int argc, char** argv) {
         // Not sure why this is 2 (doesnt seem to be correct)
         max_dt = 2. / eigs.max_neg_eig;
         printf("Suggested max_dt based on eigenvalues (1/lambda_max)= %f\n", max_dt);
-        
+
         // CFL condition:
         if (dt > max_dt) {
             std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. According to eigenvalues, it must be less than " << max_dt << std::endl;
@@ -387,13 +388,13 @@ int main(int argc, char** argv) {
             writer->update(iter);
         }
 #if 1
-        if (!(iter % local_sol_dump_frequency)) {
+        if (!(iter % local_sol_dump_frequency) && !benchmark_only) {
 
             std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
             pde->checkLocalError(exact, max_local_rel_error); 
             pde->checkNorms();
         }
-        if (!(iter % global_sol_dump_frequency)) {
+        if (!(iter % global_sol_dump_frequency) && !benchmark_only) {
             tm["consolidate"]->start(); 
             comm_unit->consolidateObjects(pde);
             comm_unit->barrier();
@@ -475,10 +476,12 @@ int main(int argc, char** argv) {
         }
         fin.close();
 #endif 
-        std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-        std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
-        pde->checkGlobalError(exact, grid, max_global_rel_error); 
-        std::cout << "============== Solution Valid =============\n"; 
+        if (!benchmark_only) {
+            std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
+            std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+            pde->checkGlobalError(exact, grid, max_global_rel_error); 
+            std::cout << "============== Solution Valid =============\n"; 
+        }
 
         delete(grid);
     }

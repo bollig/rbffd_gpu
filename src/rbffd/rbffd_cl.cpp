@@ -10,8 +10,8 @@ using namespace std;
 
 //----------------------------------------------------------------------
 //
-    RBFFD_CL::RBFFD_CL(Grid* grid, int dim_num, int rank)
-: RBFFD(grid, dim_num, rank), CLBaseClass(rank), 
+    RBFFD_CL::RBFFD_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
+: RBFFD(typesToCompute, grid, dim_num, rank), CLBaseClass(rank), 
     useDouble(true)
 {
             this->setupTimers();
@@ -439,7 +439,7 @@ void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool force
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDerivDouble(DerTypeID which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
@@ -512,7 +512,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDerivSingle(DerTypeID which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 

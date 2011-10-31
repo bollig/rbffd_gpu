@@ -43,20 +43,36 @@ class RBFFD
         // THETA is latitude
         // SPH_LAPL is spherical laplacian (Laplace-Beltrami Operator)
 
-        enum DerType {
+        enum DerTypeID {
             X       = 0x1,
             Y       = 0x2,
             Z       = 0x4,
             LAPL    = 0x8,
             R       = 0x10,
-            INTERP  = 0x20,
+            HV      = 0x20,
             LAMBDA  = 0x40,
             THETA   = 0x80, 
             LSFC    = 0x100,
             XSFC    = 0x200, 
             YSFC    = 0x400, 
             ZSFC    = 0x800, 
-            HV      = 0x1000
+            INTERP  = 0x1000
+        };
+
+        enum DerTypeIndx {
+            X_i       = 0,
+            Y_i       ,
+            Z_i      ,
+            LAPL_i  ,
+            R_i    ,
+            INTERP_i,
+            LAMBDA_i,
+            THETA_i ,
+            LSFC_i   ,
+            XSFC_i   ,
+            YSFC_i   ,
+            ZSFC_i  ,  
+            HV_i     
         };
 
         typedef unsigned int DerTypes; 
@@ -78,9 +94,9 @@ class RBFFD
 
 
     protected: 
-
         // This stores a list of weights we need to compute or have computed
         DerTypes computedTypes; 
+        unsigned int numSelectedDerTypes;
 
         EB::TimerList tm; 
 
@@ -90,7 +106,9 @@ class RBFFD
 
         std::string eps_string;
 
-        // Weight array. Each element is associated with one DerType (see above). 
+        // Weight array. Each element is associated with one DerTypeID (see above). 
+        // But not all elements of this vector will be allocated. Only when a deriv type
+        // is computed will the element point to something valid 
         std::vector<double*> weights[NUM_DERIV_TYPES]; 
 
         // 0/1 (false/true) are the weights for the associated stencil computed yet? 
@@ -137,8 +155,23 @@ class RBFFD
         int useHyperviscosity;
 
     protected: 
-        DerType translateToDerType(int i) {
-            return (DerType) (0x1 << i);
+        inline DerTypeID getDerType(int i) {
+            return getDerType((DerTypeID)i); 
+        }
+
+        inline DerTypeID getDerType(DerTypeIndx i) {
+            return (DerTypeID) (0x1 << i);
+        }
+
+        inline DerTypeIndx getDerTypeIndx(DerTypeID dt) {
+            int iterator = dt; 
+            int i = -1; 
+            // Iterate until we get all 0s.
+            while (iterator) {
+                iterator >>= 1; 
+                i+= 1; 
+            }
+            return (DerTypeIndx) i;
         }
 
     public:
@@ -156,16 +189,16 @@ class RBFFD
         //
         void computeAllWeightsForAllStencils();
         void computeAllWeightsForStencil(int st_indx);
-        void computeWeightsForStencil(DerType deriv_type, int st_indx);
-        void computeWeightsForAllStencils(DerType deriv_type);
+        void computeWeightsForStencil(DerTypeID deriv_type, int st_indx);
+        void computeWeightsForAllStencils(DerTypeID deriv_type);
 
         // Compute Multiple RHS Direct
         void computeAllWeightsForStencil_Direct(int st_indx);
         // Single RHS Direct
-        void computeWeightsForStencil_Direct(DerType, int st_indx);
+        void computeWeightsForStencil_Direct(DerTypeID dt, int st_indx);
 
         // Single RHS ContourSVD
-        void computeWeightsForStencil_ContourSVD(DerType, int st_indx);
+        void computeWeightsForStencil_ContourSVD(DerTypeID dt, int st_indx);
 
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;
@@ -203,7 +236,7 @@ class RBFFD
 
 
         // Apply weights to an input solution vector and get the corresponding derivatives out
-        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
+        virtual void applyWeightsForDeriv(DerTypeID which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             //            std::cout << "CPU: ";
             deriv.resize(u.size()); 
             RBFFD::applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0], isChangedU);
@@ -216,12 +249,12 @@ class RBFFD
         //       local u with the one passed in (e.g., when using the GPU)
         // TODO: npts is unused at the momement. Could prove useful if we had a
         //      applyWeightsForDerivAtNode(i) routine
-        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDeriv(DerTypeID which, int npts, double* u, double* deriv, bool isChangedU=true);
 
 
         // Returns MAXIMUM negative eigenvalue
         // Use output to obtain MINIMUM and MAXIMUM
-        double computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output=NULL);
+        double computeEigenvalues(DerTypeID which, bool exit_on_fail, EigenvalueOutput* output=NULL);
 
 
         // Same as next routine below, but this allows manual override fo the c1, c2 parameters
@@ -331,18 +364,18 @@ class RBFFD
         double* getZWeights(int indx) { return (getZWeights())[indx]; }
         double* getLaplWeights(int indx) { return (getLaplWeights())[indx]; }
 
-        std::vector<double*>& getWeights(DerType choice) { return weights[choice]; }
+        std::vector<double*>& getWeights(DerTypeID choice) { return weights[getDerTypeIndx(choice)]; }
         std::vector<NodeType> getNodes() { return grid_ref.getNodeList(); }
-        double*& getStencilWeights(DerType choice, int st_indx) { return weights[choice][st_indx]; }
+        double*& getStencilWeights(DerTypeID choice, int st_indx) { return weights[getDerTypeIndx(choice)][st_indx]; }
 
 
 
         void writeAllWeightsToFile(); 
-        void writeToFile(DerType which, std::string filename);
-        void writeToFile(DerType which) { this->writeToFile(which, this->getFilename(which)); }
+        void writeToFile(DerTypeID which, std::string filename);
+        void writeToFile(DerTypeID which) { this->writeToFile(which, this->getFilename(which)); }
         int  loadAllWeightsFromFile();
-        int  loadFromFile(DerType which, std::string filename);
-        int  loadFromFile(DerType which){ return this->loadFromFile(which, this->getFilename(which)); }
+        int  loadFromFile(DerTypeID which, std::string filename);
+        int  loadFromFile(DerTypeID which){ return this->loadFromFile(which, this->getFilename(which)); }
 
         EigenvalueOutput getEigenvalues() {
             if (!eigenvalues_computed) {
@@ -357,24 +390,24 @@ class RBFFD
         void distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, int dim_num, arma::mat& d_matrix, double h); 
 
         void getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h);
-        void getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h);
+        void getStencilRHS(DerTypeID which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h);
         void getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& lhs, double h);
 
         // =====================================================================
         // Convert a basic filename like "output_file" to something more
         // descriptive and appropriate to the pde like
         // "output_file_ncar_poisson1_iteration_10.ascii" 
-        std::string getFilename(DerType which, std::string base_filename);
+        std::string getFilename(DerTypeID which, std::string base_filename);
 
         // Get a filename appropriate for output from this class
         // same as getFilename(std::string, int) however it uses 
         // the class's internal name instead of a user specified string. 
-        std::string getFilename(DerType which); 
+        std::string getFilename(DerTypeID which); 
 
         // Get a string that gives some detail about the grid (used by
         // expandFilename(...)) 
         // NOTE: replace spaces with '_'
-        virtual std::string getFileDetailString(DerType which); 
+        virtual std::string getFileDetailString(DerTypeID which); 
 
         virtual std::string getEpsString() {
             return eps_string; 
@@ -399,14 +432,14 @@ class RBFFD
         void printCalculated() {
             // Iterate through flags and prints which ones we are going to calculate
             for (int i = 0; i < NUM_DERIV_TYPES; i++) {
-                DerType dt = translateToDerType(i); 
+                DerTypeID dt = getDerType((DerTypeIndx)i); 
                 if (isSelected(dt)) {
                     cout << "Will compute DerType: 0x" << hex << dt << endl;
                 }
             }
         }        
 
-        bool isSelected(DerType dt) {
+        bool isSelected(DerTypeID dt) {
             return computedTypes & dt; 
 
         }
@@ -426,11 +459,11 @@ class RBFFD
         }
 
         // Flip a single bit for a specific dertype 
-        void switchDerType (DerType& dt) {
+        void switchDerType (DerTypeID& dt) {
             computedTypes ^= dt;
         }
 
-        void removeDerType(DerType& dt) {
+        void removeDerType(DerTypeID& dt) {
             if ((computedTypes & dt) == dt) {
                 computedTypes ^= dt;
             }

@@ -63,7 +63,7 @@ class DerivativeTests {
         //            -  (1/5) e^(-(9x-4)^2 - (9y-7)^2)  
         void testInterpolation(unsigned int nb_stencils_to_test=0, bool exitIfTestFails=true);
 
-        void testEigen(RBFFD::DerType which=RBFFD::LAPL, bool exitIfTestFails=true, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
+        void testEigen(RBFFD::DerTypeID which=RBFFD::LAPL, bool exitIfTestFails=true, unsigned int maxNumPerturbations=100, float maxPerturbation=0.05);
 
         //void testHyperviscosity();
 

@@ -54,7 +54,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         //TODO: - constructor should allocate the buffers on the GPU
         //      - onStart applyWeights... will check if(modified) { updateGPUstructs } 
 
-        RBFFD_CL(Grid* grid, int dim_num, int rank=0);
+        RBFFD_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank=0);
 
         virtual ~RBFFD_CL() { 
             if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} 
@@ -65,7 +65,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         cl::Buffer& getGPUStencils() { return gpu_stencils; }
         cl::Buffer& getGPUNodes() { return gpu_nodes; }
-        cl::Buffer& getGPUWeights(DerType which) { return gpu_weights[which]; }
+        cl::Buffer& getGPUWeights(DerTypeID which) { return gpu_weights[which]; }
 
 
         // FIXME: assumes size of buffers does not change (should check if it
@@ -80,20 +80,20 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // Compute the full set of derivative weights for all stencils 
         //TODO:        virtual int computeAllWeightsForAllDerivs();
         // Compute the full set of weights for a derivative type
-        //TODO:        virtual int computeAllWeightsForDeriv(DerType which); 
+        //TODO:        virtual int computeAllWeightsForDeriv(DerTypeID which); 
         // Compute the full set of derivative weights for a stencil
         //TODO:        virtual int computeAllWeightsForStencil(int st_indx); 
 
         // FIXME: HACK--> this routine is called in a situation where we want to access a superclass routine inside. 
         //                This override is how we hack this together.
         // Apply weights to an input solution vector and get the corresponding derivatives out
-        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
+        virtual void applyWeightsForDeriv(DerTypeID which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             std::cout << "[RBFFD_CL] Warning! Using GPU to apply weights, but NOT advance timestep\n";
             unsigned int nb_stencils = grid_ref.getStencilsSize();
             deriv.resize(nb_stencils); 
             applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
         }
-        virtual void applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true) {
+        virtual void applyWeightsForDeriv(DerTypeID which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true) {
             if (useDouble) {
                 this->applyWeightsForDerivDouble(which, nb_nodes, nb_stencils, u, deriv, isChangedU);
             } else {
@@ -101,9 +101,9 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             }
         }
 
-        virtual void applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDerivDouble(DerTypeID which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
-        virtual void applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDerivSingle(DerTypeID which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
         // forceFinish ==> should we fire a queue.finish() and make sure all
         // tasks are completed (synchronously) before returning

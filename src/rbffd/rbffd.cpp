@@ -290,14 +290,16 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
             double sum_nodes_only = 0.;
             double sum_nodes_and_monomials = 0.;
             for (int j = 0; j < n; j++) {
-                sum_nodes_only += weights_new(j,which_i);
+    //            sum_nodes_only += weights_new(j,which_i);
+                sum_nodes_only += this->weights[i][irbf][j];
             }
             sum_nodes_and_monomials = sum_nodes_only;
             for (int j = n; j < n+np; j++) {
-                sum_nodes_and_monomials += weights_new(j,which_i);
+                sum_nodes_and_monomials += this->weights[i][irbf][j];
+                //sum_nodes_and_monomials += weights_new(j,which_i);
             }
 
-            cout << "(Stencil: " << irbf << ", DerivType: " << getDerType(i) << ") ";
+            cout << "(Stencil: " << irbf << ", DerivType: " << getDerType(i) << " (" << derTypeStr[i] << ") ";
             //weights_new.print("lapl_weights");
             cout << "Sum of Stencil Node Weights: " << sum_nodes_only << endl;
             cout << "Sum of Node and Monomial Weights: " << sum_nodes_and_monomials << endl;
@@ -599,7 +601,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
     // NOTE: ignore isChangedU because we are on the CPU
     void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
-            std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << " (weights[" << getDerTypeIndx(which) << "])" << std::endl;
+        //    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << " (weights[" << getDerTypeIndx(which) << "])" << std::endl;
         tm["applyAll"]->start(); 
         unsigned int nb_stencils = grid_ref.getStencilsSize(); 
         double der;

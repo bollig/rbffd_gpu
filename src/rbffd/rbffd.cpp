@@ -22,8 +22,6 @@
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
-    numSelectedDerTypes = getNumSelectedDerTypes(typesToCompute); 
-
     for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
         // Set all weights to point to NULL
         // If they do NOT point to NULL then they have been computed
@@ -220,6 +218,8 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 
     // Stencil center
     Vec3& x0v = rbf_centers[stencil[0]];
+    
+    int numSelectedDerTypes = getNumSelectedDerTypes(); 
 
     arma::mat rhs = arma::mat(n+np, numSelectedDerTypes); 
     arma::mat lhs = arma::mat(n+np, n+np); 
@@ -264,16 +264,16 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 #if SCALE_OUT_BY_H
             scale = 1./h;
             // LAPL should scale by 1/h^2
-            if (i == LAPL) {
+            if (i == LAPL_i) {
                 scale *= scale; 
             }
-            if (i == INTERP) {
+            if (i == INTERP_i) {
                 scale = 1.; 
             }
 #endif 
 
 #if 1
-            if (i == HV) {
+            if (i == HV_i) {
                 scale = this->getHVScalar(); 
             }
 #endif 
@@ -550,18 +550,18 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 #if SCALE_OUT_BY_H
         scale = 1./h;
         // LAPL should scale by 1/h^2
-        if (which == LAPL) {
+        if (which == LAPL_i) {
             for (int i = 1; i < dim_num; i++) {
                 scale *= scale; 
             }
         }
-        if (which == INTERP) {
+        if (which == INTERP_i) {
             scale = 1.; 
         }
 #endif 
 
 #if 1
-        if (which == HV) {
+        if (which == HV_i) {
             scale = this->getHVScalar(); 
         }
 #endif 

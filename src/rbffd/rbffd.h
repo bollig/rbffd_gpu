@@ -100,7 +100,6 @@ class RBFFD
     protected: 
         // This stores a list of weights we need to compute or have computed
         DerTypes computedTypes; 
-        unsigned int numSelectedDerTypes;
 
         EB::TimerList tm; 
 
@@ -208,6 +207,7 @@ class RBFFD
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;
             useHyperviscosity = tf; 
+            this->appendDerTypes(HV); 
         }
 
         int getUseHyperviscosity() {
@@ -216,10 +216,13 @@ class RBFFD
 
         double getHVScalar() {
             double scale = -hv_gamma * pow((double)grid_ref.getGlobalNodeListSize(), -hv_k);
+
             static int printed = 0; 
             if (!printed) {
+#if 1
                 std::cout << "HVSCALAR = " << scale << " (HV_K=" << hv_k << ", HV_GAMMA=" << hv_gamma << ")" << std::endl;
-                printed = 1; 
+#endif 
+                printed = 1;
             }
             return scale; 
         }
@@ -456,7 +459,7 @@ class RBFFD
         }
 
         // Set a collection of derivative types (only updates the existing)
-        void appendDerTypes(DerTypes& derTypeList) {
+        void appendDerTypes(DerTypes derTypeList) {
             computedTypes |= derTypeList;
         }
 
@@ -465,18 +468,18 @@ class RBFFD
         }
 
         // Flip a single bit for a specific dertype 
-        void switchDerType (DerType& dt) {
+        void switchDerType (DerType dt) {
             computedTypes ^= dt;
         }
 
-        void removeDerType(DerType& dt) {
+        void removeDerType(DerType dt) {
             if ((computedTypes & dt) == dt) {
                 computedTypes ^= dt;
             }
         }
 
-        int getNumSelectedDerTypes(DerTypes typesToCompute) {
-            int iterator = typesToCompute; 
+        int getNumSelectedDerTypes() {
+            int iterator = computedTypes; 
             int j = 0;     // Counts the number of checks for derivative type flags
             int i = 0;      // Counts the number of types we will compute
             // Iterate until we get all 0s. This allows SOME shortcutting.

@@ -13,8 +13,9 @@ using namespace std;
 
 
 /*----------------------------------------------------------------------*/
-GridReader::GridReader(std::string filename_to_read, int n_nodes_to_read)
+GridReader::GridReader(std::string filename_to_read, int numCols, int n_nodes_to_read)
     : Grid(n_nodes), 
+    numExtraCols(numCols - 3),
     n_nodes(n_nodes_to_read),
     filename(filename_to_read),
     file_loaded(false)
@@ -37,7 +38,12 @@ int GridReader::readNodeList(int expect_num_extra_dbls_per_line) {
 
     std::cout << "[" << this->className() << "] \treading file: " << fpath << std::endl;
     std::ifstream fin(fpath);
-        
+       
+    if (expect_num_extra_dbls_per_line < 0) {
+        std::cout << "ERROR: FILES MUST CONTAIN AT LEAST 3 COLUMNS PER NODE" <<  std::endl;
+        exit(EXIT_FAILURE);
+    }
+
     unsigned int i = 0; 
 
     if (fin.is_open()) {
@@ -86,7 +92,7 @@ void GridReader::generate() {
 
     // Read 3 doubles per line and expect 1 extra (as junk for now);
     // FIXME: handle this better
-    this->readNodeList(1); 
+    this->readNodeList(numExtraCols); 
     /*
      * FIXME: for now we assume everything is boundary
      *

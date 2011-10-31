@@ -38,6 +38,8 @@ class DerivativeTests {
 
             // Only compute weights if we need to. 
             if (!weightsComputed) {
+                // We need to make sure that these types are available for the derivative tests.
+                der->appendDerTypes(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL); 
                 der->computeAllWeightsForAllStencils();
                 weightsComputed = true;
             }

@@ -23,11 +23,12 @@
 #endif 
 
 std::string md_grid_filename;
-
+int         md_grid_columns;
 
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     md_grid_filename = settings->GetSettingAs<string>("GRID_FILENAME", ProjectSettings::required); 
+    md_grid_columns = settings->GetSettingAs<int>("GRID_FILE_NUM_COLS", ProjectSettings::optional, "4"); 
 }
 
 
@@ -40,7 +41,7 @@ ExactSolution* getExactSolution(int dim_num) {
 
 // Choose a specific type of Grid for the test case
 Grid* getGrid(int dim_num) {
-    Grid* grid = new GridReader(md_grid_filename);
+    Grid* grid = new GridReader(md_grid_filename, md_grid_columns);
     return grid; 
 }
 
@@ -257,7 +258,7 @@ int main(int argc, char** argv) {
     }
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
-        bool weightsPreComputed = true; 
+        bool weightsPreComputed = false;    // X, Y, Z and LAPL are NOT precomputed
         bool exitIfTestFailed = settings->GetSettingAs<int>("BREAK_ON_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
         bool exitIfEigTestFailed = settings->GetSettingAs<int>("BREAK_ON_EIG_TESTS", ProjectSettings::optional, "1");
         tm["tests"]->start(); 

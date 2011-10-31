@@ -9,9 +9,10 @@ class GridReader : public Grid {
         std::string filename; 
         int n_nodes; 
 
+        int numExtraCols;
     public:
 
-        GridReader(std::string filename_to_load, int n_nodes_to_read = -1);
+        GridReader(std::string filename_to_load, int numCols, int n_nodes_to_read = -1);
         virtual ~GridReader();
 
         // Overrides Grid::generate()

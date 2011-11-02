@@ -135,15 +135,17 @@ void RBFFD_CL::allocateGPUMem() {
         if (computedTypes & getDerType(which)) {
             gpu_weights[which] = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_bytes, NULL, &err); 
             bytesAllocated += weights_mem_bytes; 
-            gpu_deriv_out[which] = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
-            bytesAllocated += deriv_mem_bytes; 
             type_i+=1; 
         }
         iterator >>= 1; 
         which += 1;
     }
 
+    gpu_deriv_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
+    bytesAllocated += deriv_mem_bytes; 
+
     gpu_nodes = cl::Buffer(context, CL_MEM_READ_ONLY, nodes_mem_bytes, NULL, &err);
+    bytesAllocated += nodes_mem_bytes;
 
     std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 }
@@ -499,7 +501,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
         kernel.setArg(i++, gpu_stencils);
         kernel.setArg(i++, gpu_weights[which]);
         kernel.setArg(i++, gpu_function);                 // COPY_IN
-        kernel.setArg(i++, gpu_deriv_out[which]);           // COPY_OUT
+        kernel.setArg(i++, gpu_deriv_out);           // COPY_OUT
         //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
         //unsigned int arguments at this time
         unsigned int nb_stencils = grid_ref.getStencilsSize(); 
@@ -529,7 +531,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
     }
 
     // Pull the computed derivative back to the CPU
-    err = queue.enqueueReadBuffer(gpu_deriv_out[which], CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
+    err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
 //    queue.flush();
 
     if (err != CL_SUCCESS) {
@@ -572,7 +574,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
         kernel.setArg(i++, gpu_stencils);
         kernel.setArg(i++, gpu_weights[which]);
         kernel.setArg(i++, gpu_function);                 // COPY_IN
-        kernel.setArg(i++, gpu_deriv_out[which]);           // COPY_OUT
+        kernel.setArg(i++, gpu_deriv_out);           // COPY_OUT
         //FIXME: we want to pass a size_t for maximum array lengths, but OpenCL does not allow
         //size_t arguments at this time
         unsigned int nb_stencils = grid_ref.getStencilsSize(); 
@@ -605,7 +607,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
     }
 
     // Pull the computed derivative back to the CPU
-    err = queue.enqueueReadBuffer(gpu_deriv_out[which], CL_TRUE, 0, deriv_mem_bytes, &deriv_temp[0], NULL, &event);
+    err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv_temp[0], NULL, &event);
     if (err != CL_SUCCESS) {
         std::cerr << " enequeue ERROR: " << err << std::endl; 
     }

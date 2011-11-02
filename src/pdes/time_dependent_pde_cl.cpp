@@ -760,7 +760,7 @@ void TimeDependentPDE_CL::launchEulerKernel( unsigned int offset_to_set, unsigne
                         euler_kernel.setArg(i++, nb_stencils_to_compute);
 
                         this->setAdvanceArgs(euler_kernel, i);
-                        euler_args_set++;
+                        euler_args_set=1;
                 }
                 err = queue.enqueueNDRangeKernel(euler_kernel, /* offset */ cl::NullRange,
                                                  /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils_to_compute),
@@ -921,7 +921,7 @@ void TimeDependentPDE_CL::launchRK4_classic_eval( unsigned int offset_to_set, un
 
                         i = this->setAdvanceArgs( rk4_substep_kernel, i);
 
-                        rk4_sub_args_set++;
+                        rk4_sub_args_set = 1;
                 }
             tm["rk4_eval_setargs"]->stop(); 
                 

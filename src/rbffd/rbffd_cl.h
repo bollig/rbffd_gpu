@@ -23,7 +23,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         cl::Buffer gpu_stencils; 
         unsigned int*    cpu_stencils;
 
-        cl::Buffer gpu_deriv_out[NUM_DERIVATIVE_TYPES]; 
+        cl::Buffer gpu_deriv_out; 
 
         cl::Buffer gpu_function; 
 
@@ -65,7 +65,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         cl::Buffer& getGPUStencils() { return gpu_stencils; }
         cl::Buffer& getGPUNodes() { return gpu_nodes; }
-        cl::Buffer& getGPUWeights(DerType which) { return gpu_weights[which]; }
+        cl::Buffer& getGPUWeights(DerType which) { return gpu_weights[getDerTypeIndx(which)]; }
 
 
         // FIXME: assumes size of buffers does not change (should check if it

@@ -227,8 +227,14 @@ int main(int argc, char** argv) {
 
     der->setUseHyperviscosity(useHyperviscosity);
 
-    // NOTE: must come before calling setHVScalars 
-    der->setEpsilonByStencilSize();
+    double eps_c1 = settings->GetSettingAs<double>("EPSILON_C1", ProjectSettings::optional, "0.");
+    double eps_c2 = settings->GetSettingAs<double>("EPSILON_C2", ProjectSettings::optional, "0.");
+    // If both are zero assume we havent set anything
+    if (eps_c1 || eps_c2) {
+        der->setEpsilonByParameters(eps_c1, eps_c2); 
+    } else {
+        der->setEpsilonByStencilSize();
+    }
 
     int hv_k = settings->GetSettingAs<int>("HV_K", ProjectSettings::optional, "4");
     double hv_gamma = settings->GetSettingAs<double>("HV_GAMMA", ProjectSettings::optional, "800");

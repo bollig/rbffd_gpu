@@ -77,12 +77,20 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         
         // This will apply the weights appropriately for an explicit (del_u =
         // L*u) or implicit (u = L^-1 del_u)
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n, double t) {
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t)
+        {
             // We done actually solve independent from the time stepper. The
             // stepper will internally call to a GPU device kernel to apply the
             // DM and "solve" 
             std::cout << "[HeatPDE_CL] Error: solve should not be called. The time stepper should call a device kernel for solving\n";
-        };
+            exit(EXIT_FAILURE); 
+        }
+        
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes)
+        { 
+            std::cout << "[HeatPDE_CL] Error: solve should not be called. The time stepper should call a device kernel for solving\n";
+            exit(EXIT_FAILURE); 
+        } 
     
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
         virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, cl::Buffer& sol, double t);
@@ -133,6 +141,13 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         virtual void advanceFirstOrderEuler(double dt);
         virtual void advanceSecondOrderMidpoint(double dt);
         virtual void advanceRungeKutta4(double dt);
+        
+        
+    protected: 
+        virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t) {
+            std::cout << "[HeatPDE_CL] Error wrong enforce boundary conditions called \n"; exit(EXIT_FAILURE); 
+        }
+
 }; 
 #endif 
 

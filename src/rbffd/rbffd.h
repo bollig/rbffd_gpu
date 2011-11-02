@@ -240,7 +240,8 @@ class RBFFD
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             //            std::cout << "CPU: ";
             deriv.resize(u.size()); 
-            RBFFD::applyWeightsForDeriv(which, u.size(), &u[0], &deriv[0], isChangedU);
+            unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+            RBFFD::applyWeightsForDeriv(which, u.size(), nb_stencils, &u[0], &deriv[0], isChangedU);
         }
 
         // Can be CPU or GPU depending on Subclasses
@@ -250,7 +251,8 @@ class RBFFD
         //       local u with the one passed in (e.g., when using the GPU)
         // TODO: npts is unused at the momement. Could prove useful if we had a
         //      applyWeightsForDerivAtNode(i) routine
-        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
+//        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
 
         // Returns MAXIMUM negative eigenvalue

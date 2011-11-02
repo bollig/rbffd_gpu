@@ -71,6 +71,9 @@ class CosineBell : public TimeDependentPDE
 
     protected: 
         virtual std::string className() {return "cosine_bell";}
+        
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes)
+        { std::cout << "[CosineBell] ERROR! SHOULD CALL THE TIME BASED SOLVE ROUTINE\n"; exit(EXIT_FAILURE); } 
 }; 
 #endif 
 

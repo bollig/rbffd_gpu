@@ -149,6 +149,7 @@ int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
     }
     tm["rk4_full_comm"]->stop();
 
+    return 0; 
 }
 
 //----------------------------------------------------------------------

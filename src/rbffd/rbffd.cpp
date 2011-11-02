@@ -606,10 +606,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
     //--------------------------------------------------------------------
     // NOTE: ignore isChangedU because we are on the CPU
-    void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
+    // void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
+    void RBFFD::applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU) {
         //    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << " (weights[" << getDerTypeIndx(which) << "])" << std::endl;
         tm["applyAll"]->start(); 
-        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+//        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
         double der;
 
         // TODO: this if we took advantage of a sparse matrix container, we might be able to

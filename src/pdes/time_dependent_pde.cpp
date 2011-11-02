@@ -188,7 +188,6 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // and store the results in k1 
     tm["rk4_eval"]->start();
     this->solve(input_sol, &k1, nb_stencils, nb_nodes, cur_time); 
-    //this->sendrecvUpdates(k1, "k1");
 
     // ------------------- K2 ------------------------
     for (unsigned int i = 0; i < nb_stencils; i++) {
@@ -206,13 +205,12 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // FIXME: might not be necessary unless we strictly believe that enforcing
     // BC can only be done by controlling CPU
     // NOTE: increases s from nb_stencils to nb_nodes
-    this->sendrecvUpdates(s, "s");
+    this->sendrecvUpdates(s, "k1");
 //*********
     // y*(t) = y(t) + h * k2
     // but k2 = lapl[ y(t) + h/2 * k1 ] (content between [..] was computed above)
     tm["rk4_eval"]->start();
     this->solve(s, &k2, nb_stencils, nb_nodes, cur_time+0.5*dt); 
-    //    this->sendrecvUpdates(k2, "k2");
 
     // ------------------- K3 ------------------------
     for (unsigned int i = 0; i < nb_stencils; i++) {
@@ -229,12 +227,11 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
 
     // FIXME: might not be necessary unless we strictly believe that enforcing
     // BC can only be done by controlling CPU
-    this->sendrecvUpdates(s, "s");
+    this->sendrecvUpdates(s, "k2");
 
 //*********
     tm["rk4_eval"]->start();
     this->solve(s, &k3, nb_stencils, nb_nodes, cur_time+0.5*dt); 
-    //    this->sendrecvUpdates(k3, "k3");
 
     // ------------------- K4 ------------------------
     for (unsigned int i = 0; i < nb_stencils; i++) {
@@ -251,12 +248,13 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
 
     // FIXME: might not be necessary unless we strictly believe that enforcing
     // BC can only be done by controlling CPU
-    this->sendrecvUpdates(s, "s");
+    this->sendrecvUpdates(s, "K3");
 
 //*********
     tm["rk4_eval"]->start();
     this->solve(s, &k4, nb_stencils, nb_nodes, cur_time+dt); 
     tm["rk4_eval"]->stop();
+    // NOTE: No more communication is required for evaluations:  
    //    this->sendrecvUpdates(k4, "k4");
 
     // ------------------- FINAL ------------------------

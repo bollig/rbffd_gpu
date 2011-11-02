@@ -834,9 +834,13 @@ rowvec ContourSVD::solver(rowvec& A, mat& B)
 cx_rowvec ContourSVD::solver(cx_rowvec& A, cx_mat& B)
     // right / operator:  A * inv(B)
 {
-    cx_mat ac = htrans(A); // htrans?
+    // htrans is deprecated.
+    // after v1.2 of armadillo, the htrans (Hermitian transpose) is no longer needed 
+    // because the trans() routine does Hermitian for complex and strans does simple transpose
+    // without conjugates 
+    cx_mat ac = trans(A); // htrans?
 
-    cx_mat c = solve(htrans(B), ac);
+    cx_mat c = solve(trans(B), ac);
 
     if (!(c.n_cols > 0 && c.n_rows > 0)) {
         printf("\n!!!!!!!!!!!!!!\nERROR! Linear System could not be solved! Possibly singular!\n!!!!!!!!!!!!!!\n\n");
@@ -850,7 +854,7 @@ cx_rowvec ContourSVD::solver(cx_rowvec& A, cx_mat& B)
     // wrong value of determinant of a complex matrix
     // printf("det(B)= (%f,%f)\n", real(dt), imag(dt));
 
-    return htrans(c); // htrans?
+    return trans(c); // htrans?
 }
 //----------------------------------------------------------------------
     template <class T>

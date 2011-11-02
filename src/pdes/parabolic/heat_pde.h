@@ -52,6 +52,10 @@ class HeatPDE : public TimeDependentPDE
     protected: 
         void solveDivGrad(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t);
         void solveRewrittenLaplacian(std::vector<SolutionType>& u_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t);
+        
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes)
+        { std::cout << "[HeatPDE] ERROR! SHOULD CALL THE TIME BASED SOLVE ROUTINE\n"; exit(EXIT_FAILURE); } 
+
 
         virtual std::string className() {return "heat";}
 }; 

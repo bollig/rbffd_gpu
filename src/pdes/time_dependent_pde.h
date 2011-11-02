@@ -117,7 +117,8 @@ class TimeDependentPDE : public PDE
         }
 
        // We'll hide this routine because we want one based on time (see above)
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) { std::cout << "ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 
+        { std::cout << "[TimeDependentPDE] ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
 
 
 };

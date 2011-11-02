@@ -79,7 +79,8 @@ class HeatPDE_CL : public HeatPDE
         
         // This will apply the weights appropriately for an explicit (del_u =
         // L*u) or implicit (u = L^-1 del_u)
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n, double t) {
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t)        
+        {
             // We done actually solve independent from the time stepper. The
             // stepper will internally call to a GPU device kernel to apply the
             // DM and "solve" 
@@ -124,6 +125,15 @@ class HeatPDE_CL : public HeatPDE
 
 
         void fillGPUMat(RBFFD::DerType which, cusp::csr_matrix<unsigned int, float, cusp::device_memory>& gpu_buffer);
+
+         
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) { std::cout << "[HeatPDECusp] ERROR! SHOULD CALL THE TIME BASED SOLVE ROUTINE\n"; exit(EXIT_FAILURE); } 
+
+        virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t) 
+        {
+            std::cout << "[HeatPDECusp] ERROR! SHOULD CALL THE OTHER enforceBoundaryConditions!\n";
+        } 
+        
 }; 
 #endif 
 

@@ -33,7 +33,7 @@ int main(void)
 	}
     }
 
-	cusp::print_matrix(A); 
+	cusp::print(A); 
 
     // Convert the 2D memory block to a sparse representation
     cusp::coo_matrix<int, float, cusp::device_memory> B(A);
@@ -52,8 +52,8 @@ int main(void)
 
     // monitor will report solver progress and results
 
-    cusp::print_matrix(A);
-    cusp::print_matrix(B);
+    cusp::print(A);
+    cusp::print(B);
 
 
     return EXIT_SUCCESS;

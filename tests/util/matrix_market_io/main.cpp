@@ -54,7 +54,7 @@ int test_mm_read(std::string filename)
     int M, N, nz;   
     int i, *I, *J;
     double *val;    
-    int err; 
+    int err=0; 
 
     if ((f = fopen(filename.c_str(), "r")) == NULL) 
         return -1;
@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
     if (argc > 1) {
         fname = argv[1]; 
     }
-    int err; 
+    int err=0; 
 
     err += test_mm_write(fname); 
     err += test_mm_read(fname); 

@@ -2,7 +2,7 @@ MESSAGE(STATUS "LINUX detected.")
 
 IF (CUDA_FOUND) 
     get_filename_component(_compiler ${CMAKE_CXX_COMPILER} NAME)
-    IF (${_compiler} EQUALS "icpc")
+    IF (${_compiler} STREQUAL "icpc")
     	SET(CUDA_NVCC_FLAGS "-ccbin;icc;-arch=sm_13")
     ENDIF ()
     IF (USE_ICC) 

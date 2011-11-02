@@ -8,8 +8,13 @@
 #include <cusp/array1d.h>
 #include <cusp/print.h>
 
+
+//#include "rbffd/rbffd.h"
+
+
 #include "pdes/parabolic/heat_pde.h"
-#include "rbffd/rbffd.h"
+
+class RBFFD; 
 
 class HeatPDE_CL : public HeatPDE
 {

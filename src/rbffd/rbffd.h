@@ -5,33 +5,26 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <complex> 
+
 #include "Vec3.h"
-#include "rbffd/rbfs/rbf_gaussian.h"
-#include "rbffd/rbfs/rbf_multiquadric.h"
-#include "rbffd/rbfs/rbf_inv_multiquadric.h"
 
 #include "utils/conf/projectsettings.h"
 #include "timer_eb.h"
 #include "common_typedefs.h"
-#include <armadillo> 
+
+// Armadillo is causing compile errors in NVCC. I use forward declarations here to
+// avoid interping all the arma content in NVCC (it works fine with GCC).
+namespace arma
+{
+template <class T>
+class Mat;
+typedef Mat<double> mat; 
+}
+
+typedef std::complex<double> CMPLX;
 
 #include "grids/domain.h"
-
-#if 1
-typedef RBF_Gaussian IRBF;
-#else 
-#if 0
-typedef RBF_Multiquadric IRBF;
-#else 
-typedef RBF_InvMultiquadric IRBF;
-#endif 
-#endif 
-
-// TODO: put this in rbf.h and have all rbf types available
-//enum RBF_Type {MQ=0, GA, IMQ, TPS, W2};
-
-// Should match how many DerTypes we have below
-//#define NUM_DERIV_TYPES 13
 
 class RBFFD
 {

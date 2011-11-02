@@ -8,8 +8,14 @@
 #include "utils/geom/cart2sph.h"
 
 #include "rbffd.h"
+#include "rbfs/rbf_gaussian.h"
 // For writing weights in (sparse) matrix market format
 #include "mmio.h"
+
+
+
+typedef RBF_Gaussian IRBF;
+
 
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
@@ -550,18 +556,18 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 #if SCALE_OUT_BY_H
         scale = 1./h;
         // LAPL should scale by 1/h^2
-        if (which == LAPL_i) {
+        if (which & LAPL) {
             for (int i = 1; i < dim_num; i++) {
                 scale *= scale; 
             }
         }
-        if (which == INTERP_i) {
+        if (which & INTERP) {
             scale = 1.; 
         }
 #endif 
 
 #if 1
-        if (which == HV_i) {
+        if (which & HV) {
             scale = this->getHVScalar(); 
         }
 #endif 

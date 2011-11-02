@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
     } else 
 #endif 
     {
-        der = new RBFFD(subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, subdomain, dim, comm_unit->getRank()); 
     }
 
     int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");

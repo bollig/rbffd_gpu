@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream> 
+#include <fstream> 
 
 void PDE::setupTimers()
 {

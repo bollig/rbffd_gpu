@@ -24,6 +24,15 @@ OPTION (USE_VTK "Enable/Disable the use of VTK (if required by a test)" ON)
 OPTION (USE_CUDA "Enable/Disable the use of CUDA" ON)
 OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
 OPTION (USE_ICC "Enable/Disable the use of Intel ICC compiler for CUDA" OFF)
+OPTION (USE_MPI "Enable/Disable parallel build and linking with MPI" ON)
+
+MESSAGE (STATUS "USE_VTK = ${USE_VTK}")
+MESSAGE (STATUS "USE_CUDA = ${USE_CUDA}")
+MESSAGE (STATUS "USE_OPENCL = ${USE_OPENCL}")
+MESSAGE (STATUS "USE_ICC = ${USE_ICC}")
+MESSAGE (STATUS "USE_MPI = ${USE_MPI}")
+
+
 
 	FIND_PACKAGE (OPENCL)
     IF (NOT USE_OPENCL)
@@ -114,7 +123,6 @@ OPTION (USE_ICC "Enable/Disable the use of Intel ICC compiler for CUDA" OFF)
 # Setup MPI 
 ###############################################
 
-OPTION (USE_MPI "Enable/Disable parallel build and linking with MPI" ON)
 IF (MPI_FOUND AND USE_MPI)
 	SET (CMAKE_CXX_FLAGS ${MPI_COMPILE_FLAGS})
 	SET (CMAKE_C_FLAGS ${MPI_COMPILE_FLAGS})

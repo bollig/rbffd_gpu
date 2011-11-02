@@ -8,10 +8,8 @@ SET( CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_SOURCE_DIR}/common/external/armadillo
 )
 
-
 # Setup any external libraries we might need
 ADD_SUBDIRECTORY (${CMAKE_CURRENT_SOURCE_DIR}/external)
-
 # Get common build instructions used by all operating systems
 INCLUDE (COMMON_CONFIG)
 

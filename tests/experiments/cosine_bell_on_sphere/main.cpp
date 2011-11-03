@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
     }
 
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
-        bool weightsPreComputed = true; 
+        bool weightsPreComputed = false; // X,Y,Z and LAPL are required for tests and were not selected
         bool exitIfTestFailed = settings->GetSettingAs<int>("BREAK_ON_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
         bool exitIfEigTestFailed = settings->GetSettingAs<int>("BREAK_ON_EIG_TESTS", ProjectSettings::optional, "1");
         tm["tests"]->start(); 

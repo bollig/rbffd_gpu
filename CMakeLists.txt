@@ -72,8 +72,9 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 )
 
 #add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -no-vec -opt-report -vec-report -par-report)
-add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -opt-report -vec-report -par-report)
 #add_definitions( -DUSE_KDTREE -DUSE_CONTOURSVD )
+add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O3 -ftree-vectorizer-verbose=2 -opt-report )
+
 
 #INCLUDE_DIRECTORIES($ENV{EXTERNAL_INCLUDE_DIRS})
 

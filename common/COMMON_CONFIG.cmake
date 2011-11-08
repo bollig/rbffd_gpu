@@ -19,7 +19,6 @@ if (USE_MKL)
     include(ARMA_FindMKL)
     message(STATUS "MKL_FOUND     = ${MKL_FOUND}")
     include_directories(${MKL_INCLUDE_DIRS})
-    message(WARNING "MKL LIBRARIES: ${MKL_LIBRARIES}")
     SET (ENV{EXTERNAL_LIB_DEPENDENCIES} "$ENV{EXTERNAL_LIB_DEPENDENCIES};${MKL_LIBRARIES}")
 endif(USE_MKL)
 

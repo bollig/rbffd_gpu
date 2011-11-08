@@ -3,6 +3,12 @@ IF (USE_GCC)
     set (CMAKE_CXX_COMPILER "g++")      
 ENDIF (USE_GCC)
 
+IF (USE_GCC44) 
+    set (CMAKE_C_COMPILER "gcc44")
+    set (CMAKE_CXX_COMPILER "g++44")      
+ENDIF (USE_GCC44)
+
+
 IF (USE_ICC)
     set (CMAKE_C_COMPILER "icc")
     set (CMAKE_CXX_COMPILER "icpc")

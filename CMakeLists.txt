@@ -1,3 +1,16 @@
+IF (USE_GCC) 
+    set (CMAKE_C_COMPILER "gcc")
+    set (CMAKE_CXX_COMPILER "g++")      
+ENDIF (USE_GCC)
+
+IF (USE_ICC)
+    set (CMAKE_C_COMPILER "icc")
+    set (CMAKE_CXX_COMPILER "icpc")
+ENDIF (USE_ICC) 
+
+
+
+
 PROJECT(RBF_framework)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 	

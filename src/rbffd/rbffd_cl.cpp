@@ -12,16 +12,16 @@ using namespace std;
 //
     RBFFD_CL::RBFFD_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
 : RBFFD(typesToCompute, grid, dim_num, rank), CLBaseClass(rank), 
-    useDouble(true)
+    useDouble(true), alignWeights32(true)
 {
-            this->setupTimers();
-            this->loadKernel();
-            this->allocateGPUMem();
-            this->updateStencilsOnGPU(false);
-            std::cout << "Done copying stencils\n"; 
-            
-            this->updateNodesOnGPU(false);
-            std::cout << "Done copying nodes\n"; 
+    this->setupTimers();
+    this->loadKernel();
+    this->allocateGPUMem();
+    this->updateStencilsOnGPU(false);
+    std::cout << "Done copying stencils\n"; 
+
+    this->updateNodesOnGPU(false);
+    std::cout << "Done copying nodes\n"; 
 }
 
 
@@ -48,7 +48,7 @@ void RBFFD_CL::loadKernel() {
     // Split the kernels by __kernel keyword and do not discards the keyword.
     // TODO: support extensions declared for kernels (this class can add FP64
     // support)
-   // std::vector<std::string> separated_kernels = this->split(kernel_source, "__kernel", true);
+    // std::vector<std::string> separated_kernels = this->split(kernel_source, "__kernel", true);
 
     std::string kernel_name = "computeDerivKernel"; 
 
@@ -95,10 +95,16 @@ void RBFFD_CL::allocateGPUMem() {
 
     cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
 
-    gpu_stencil_size = 0; 
+    if (alignWeights32) {
+        unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
+        gpu_stencil_size = this->getNextMultipleOf32(max_stencil_size) * stencil_map.size();  
 
-    for (unsigned int i = 0; i < stencil_map.size(); i++) {
-        gpu_stencil_size += stencil_map[i].size(); 
+    } else {
+        gpu_stencil_size = 0; 
+
+        for (unsigned int i = 0; i < stencil_map.size(); i++) {
+            gpu_stencil_size += stencil_map[i].size(); 
+        }
     }
 
     unsigned int float_size; 
@@ -152,26 +158,26 @@ void RBFFD_CL::allocateGPUMem() {
 
 //----------------------------------------------------------------------
 void RBFFD_CL::updateNodesOnGPU(bool forceFinish) {
-        unsigned int nb_nodes = grid_ref.getNodeListSize();
-        std::vector<NodeType>& nodes = grid_ref.getNodeList();
+    unsigned int nb_nodes = grid_ref.getNodeListSize();
+    std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
-        cpu_nodes = new double4[nb_nodes];
+    cpu_nodes = new double4[nb_nodes];
 
-        for (unsigned int i = 0; i < nb_nodes; i++) {
-            cpu_nodes[i] = double4( nodes[i].x(),
-                                    nodes[i].y(),
-                                    nodes[i].z(),
-                                    0.0 );
-        }
-        err = queue.enqueueWriteBuffer(gpu_nodes, CL_TRUE, 0, nodes_mem_bytes, &cpu_nodes[0], NULL, &event);
-//        queue.flush();
-        if (forceFinish) {
-                queue.finish();
-                this->clearCPUWeights();
-                deleteCPUNodesBuffer= false;
-        } else {
-                deleteCPUNodesBuffer = true;
-        }
+    for (unsigned int i = 0; i < nb_nodes; i++) {
+        cpu_nodes[i] = double4( nodes[i].x(),
+                nodes[i].y(),
+                nodes[i].z(),
+                0.0 );
+    }
+    err = queue.enqueueWriteBuffer(gpu_nodes, CL_TRUE, 0, nodes_mem_bytes, &cpu_nodes[0], NULL, &event);
+    //        queue.flush();
+    if (forceFinish) {
+        queue.finish();
+        this->clearCPUWeights();
+        deleteCPUNodesBuffer= false;
+    } else {
+        deleteCPUNodesBuffer = true;
+    }
 }
 
 //----------------------------------------------------------------------
@@ -209,7 +215,7 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
 
     //    std::cout << "Writing GPU Stencils buffer: (bytes)" << stencil_mem_bytes << std::endl;
     err = queue.enqueueWriteBuffer(gpu_stencils, CL_TRUE, 0, stencil_mem_bytes, &cpu_stencils[0], NULL, &event);
-//    queue.flush();
+    //    queue.flush();
     if (forceFinish) {
         queue.finish();
         this->clearCPUWeights();
@@ -221,7 +227,7 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
 }
 
 void RBFFD_CL::clearCPUNodes() {
-        delete [] cpu_nodes;
+    delete [] cpu_nodes;
 }
 
 
@@ -279,7 +285,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
 
         tm["sendWeights"]->start();
         unsigned int weights_mem_size = gpu_stencil_size * sizeof(double);  
-        
+
         std::cout << "Writing weights to GPU memory\n"; 
 
         unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
@@ -355,7 +361,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
         tm["sendWeights"]->start();
         unsigned int weights_mem_size = gpu_stencil_size * sizeof(float);  
-        
+
         std::cout << "Writing weights to GPU memory\n"; 
 
         unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
@@ -442,7 +448,7 @@ void RBFFD_CL::updateFunctionDouble(unsigned int nb_nodes, double* u, bool force
 
     // TODO: mask off fields not update
     err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, 0, function_mem_bytes, &u[0], NULL, &event);
-//    queue.flush();
+    //    queue.flush();
 
     if (forceFinish) {
         queue.finish(); 
@@ -471,9 +477,9 @@ void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool force
 
     err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, 0, function_mem_bytes, &cpu_u[0], NULL, &event);
 
-//    if (forceFinish) {
-        queue.finish(); 
-  //  }
+    //    if (forceFinish) {
+    queue.finish(); 
+    //  }
     delete [] cpu_u;
 }
 
@@ -497,7 +503,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
     this->updateWeightsOnGPU(false);
 
     try {
-            int i = 0;
+        int i = 0;
         kernel.setArg(i++, gpu_stencils);
         kernel.setArg(i++, gpu_weights[which]);
         kernel.setArg(i++, gpu_function);                 // COPY_IN
@@ -517,7 +523,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange, 
             /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils), 
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
-//    queue.flush();
+    //    queue.flush();
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
             " failed (" << err << ")\n";
@@ -532,7 +538,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
 
     // Pull the computed derivative back to the CPU
     err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
-//    queue.flush();
+    //    queue.flush();
 
     if (err != CL_SUCCESS) {
         std::cerr << " enequeue ERROR: " << err << std::endl; 
@@ -615,7 +621,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
 
     err = queue.finish();
 
-//    std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
+    //    std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
 
     for (int i = 0; i < nb_stencils; i++) {
 

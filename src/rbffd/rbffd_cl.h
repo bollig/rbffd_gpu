@@ -45,7 +45,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // Is a double precision extension available on the unit? 
         bool useDouble; 
 
-
+        bool alignWeights32;
 
     public: 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives        
@@ -137,6 +137,15 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         void updateWeightsSingle(bool forceFinish);
         void updateFunctionDouble(unsigned int nb_nodes, double* u, bool forceFinish);
         void updateFunctionSingle(unsigned int nb_nodes, double* u, bool forceFinish);
+
+
+    protected: 
+        int getNextMultipleOf32(unsigned int stencil_size) {
+            int nearest = 32; 
+            while (stencil_size > nearest) 
+                nearest += 32; 
+            return nearest;
+        }
 };
 
 #endif 

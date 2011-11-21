@@ -35,6 +35,11 @@ int main(int argc, char** argv) {
 
     double inner_r = settings->GetSettingAs<double>("INNER_RADIUS", ProjectSettings::optional, "0.5"); 
     double outer_r = settings->GetSettingAs<double>("OUTER_RADIUS", ProjectSettings::optional, "1.0"); 
+    
+    double inner_axis_major = settings->GetSettingAs<double>("INNER_AXIS_MAJOR", ProjectSettings::optional, "0."); 
+    double inner_axis_minor = settings->GetSettingAs<double>("INNER_AXIS_MINOR", ProjectSettings::optional, "0."); 
+    double outer_axis_major = settings->GetSettingAs<double>("OUTER_AXIS_MAJOR", ProjectSettings::optional, "0."); 
+    double outer_axis_minor = settings->GetSettingAs<double>("OUTER_AXIS_MINOR", ProjectSettings::optional, "0."); 
 
     int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
     int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
@@ -75,8 +80,15 @@ int main(int argc, char** argv) {
         grid = new NestedEllipseCVT(nb_total, dim, new UniformDensity(), 0, nb_samples, it_max_interior); 
     }
     grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
-    grid->setInnerRadius(inner_r); 
-    grid->setOuterRadius(outer_r); 
+
+    if (!inner_axis_minor) {
+        grid->setInnerRadius(inner_r); 
+        grid->setOuterRadius(outer_r); 
+    } else {
+        grid->setInnerAxes(inner_axis_major, inner_axis_minor); 
+        grid->setOuterAxes(outer_axis_major, outer_axis_minor); 
+    }
+
     grid->setDebug(debug);
     grid->setMaxStencilSize(stencil_size);
     grid->setNSHashDims(ns_nx, ns_ny, ns_nz);

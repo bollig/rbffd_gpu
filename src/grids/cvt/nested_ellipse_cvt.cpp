@@ -18,7 +18,7 @@ using namespace std;
 // For CVT:: this samples randomly in unit circle
 //void NestedEllipseCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) { 
 void NestedEllipseCVT::user_init(int dim_num, int n, int *seed, double r[]) {
-    
+
     if (guess_nb_boundary) {
         // Fill our initial boundary points
         this->guessBoundaryPoints(dim_num, n, seed, &r[0]);
@@ -93,7 +93,7 @@ void NestedEllipseCVT::generateBoundaryPoints(int dim_num, int nb_nodes, int *se
     std::vector<double> intg2;
 
     unsigned int high_nb_pts = 200;
-    
+
     double outer_bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg1, outer_axis_major, outer_axis_minor);
     double inner_bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg2, inner_axis_major, inner_axis_minor);
 
@@ -113,8 +113,8 @@ void NestedEllipseCVT::generateBoundaryPoints(int dim_num, int nb_nodes, int *se
     int nb_bnd_1 = (int)(1. + 16. * tot_nb_pts * dom_intg / (outer_bnd_intg * outer_bnd_intg));
     nb_bnd_1 = (int)(-outer_bnd_intg * outer_bnd_intg / (4. * dom_intg) * (1. - sqrt(nb_bnd_1)));
     int nb_computed_outer_bnd = nb_bnd_1; // more accurate formula
-    
-    
+
+
     int nb_bnd_2 = (int)(1. + 16. * tot_nb_pts * dom_intg / (inner_bnd_intg * inner_bnd_intg));
     nb_bnd_2 = (int)(-inner_bnd_intg * inner_bnd_intg / (4. * dom_intg) * (1. - sqrt(nb_bnd_2)));
     int nb_computed_inner_bnd = nb_bnd_2; // more accurate formula
@@ -176,7 +176,7 @@ Vec3 NestedEllipseCVT::singleRejection2d(double area, double weighted_area, Dens
         // We're using he implicit definition of the geometry. 
         r2_o = xs * xs * maj2o + ys * ys*min2o;
         r2_i = xs * xs * maj2i + ys * ys*min2i;
-        
+
         // In the case of the implicit we exit geometry at 1.
         if (r2_o > 1.) continue; // outside outer boundary
         if (r2_i < 1.) continue; // inside inner boundary
@@ -196,19 +196,6 @@ Vec3 NestedEllipseCVT::singleRejection2d(double area, double weighted_area, Dens
 
 
 //****************************************************************************80
-
-bool NestedEllipseCVT::reject_point(NodeType& point, int ndim) {
-    NodeType sphere_center((xmax+xmin)/2., (ymax+ymin)/2., (zmax+zmin)/2.); 
-    double r = (point - sphere_center).magnitude();  
-    //    std::cout << r << ">" << outer_r << "----" << point << "----" << sphere_center << std::endl;
-    // If the sample does not lie within the bounds of our geometry we
-    // reject it. 
-    if ((r < inner_r) || (r > outer_r)) {
-        return true;
-    }
-    // Otherwise we keep it.
-    return false;
-}
 
 std::string NestedEllipseCVT::getFileDetailString() {
     std::stringstream ss(std::stringstream::out); 
@@ -254,7 +241,7 @@ void NestedEllipseCVT::guessBoundaryPoints(int dim_num, int nb_nodes, int *seed,
     std::vector<double> intg2;
 
     unsigned int high_nb_pts = 200;
-    
+
     double outer_bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg1, outer_axis_major, outer_axis_minor);
     double inner_bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg2, inner_axis_major, inner_axis_minor);
 
@@ -270,12 +257,12 @@ void NestedEllipseCVT::guessBoundaryPoints(int dim_num, int nb_nodes, int *seed,
     printf("inner boundary integral = %f\n", inner_bnd_intg);
 
     //int nb_computed_bnd = (int)(outer_bnd_intg * sqrt(tot_nb_pts / dom_intg));
-    
+
     int nb_bnd_1 = (int)(1. + 16. * tot_nb_pts * dom_intg / (outer_bnd_intg * outer_bnd_intg));
     nb_bnd_1 = (int)(-outer_bnd_intg * outer_bnd_intg / (4. * dom_intg) * (1. - sqrt(nb_bnd_1)));
     int nb_computed_outer_bnd = nb_bnd_1; // more accurate formula
-    
-    
+
+
     int nb_bnd_2 = (int)(1. + 16. * tot_nb_pts * dom_intg / (inner_bnd_intg * inner_bnd_intg));
     nb_bnd_2 = (int)(-inner_bnd_intg * inner_bnd_intg / (4. * dom_intg) * (1. - sqrt(nb_bnd_2)));
     int nb_computed_inner_bnd = nb_bnd_2; // more accurate formula
@@ -385,7 +372,7 @@ double NestedEllipseCVT::computeDomainIntegral(unsigned int npts, Density& rho) 
     major = inner_axis_major; 
     minor = inner_axis_minor;
     dx = 2. * major / (npts - 1);
-    
+
     for (int i = 0; i < (npts - 1); i++) {
         double xa = -1. + (i + 0.5) * dx / major;
         double y1 = -minor * sqrt(1. - xa * xa);
@@ -465,7 +452,7 @@ void NestedEllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_
         if (dim_num > 2) {
             bnd[i*dim_num + 2] = 0.;
         }
- //       printf("(%d) x,y= %f, %f, theta= %f\n", i, bnd[i*dim_num+0], bnd[i*dim_num + 1], theta[i]);
+        //       printf("(%d) x,y= %f, %f, theta= %f\n", i, bnd[i*dim_num+0], bnd[i*dim_num + 1], theta[i]);
     }
 
     //    printf("print length intervals: should be equal\n");

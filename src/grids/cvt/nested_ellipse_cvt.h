@@ -1,5 +1,5 @@
-#ifndef _NESTED_SPHERE_CVT_H_
-#define _NESTED_SPHERE_CVT_H_
+#ifndef _NESTED_ELLIPSE_CVT_H_
+#define _NESTED_ELLIPSE_CVT_H_
 
 #include <vector>
 #include "Vec3.h"
@@ -74,7 +74,7 @@ class NestedEllipseCVT : public CVT {
         void project_to_sphere(double generator[], int k, int ndim, double radius);
 
 };
-#endif // __NESTED_SPHERE_CVT_H__
+#endif // __NESTED_ELLIPSE_CVT_H__
 
 #if 0
 
@@ -153,4 +153,4 @@ virtual bool reject_point(double point[], int ndim);
 virtual void project_to_sphere(double generator[], int n, int ndim, double radius);
 };
 
-#endif //_NESTED_SPHERE_CVT_H_
+#endif //_NESTED_ELLIPSE_CVT_H_

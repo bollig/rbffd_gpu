@@ -9,7 +9,7 @@
 #include <math.h>
 #include <vector>
 
-#include "nested_sphere_cvt.h"
+#include "nested_ellipse_cvt.h"
 
 using namespace std;
 

@@ -1,3 +1,22 @@
+IF (USE_GCC) 
+    set (CMAKE_C_COMPILER "gcc")
+    set (CMAKE_CXX_COMPILER "g++")      
+ENDIF (USE_GCC)
+
+IF (USE_GCC44) 
+    set (CMAKE_C_COMPILER "gcc44")
+    set (CMAKE_CXX_COMPILER "g++44")      
+ENDIF (USE_GCC44)
+
+
+IF (USE_ICC)
+    set (CMAKE_C_COMPILER "icc")
+    set (CMAKE_CXX_COMPILER "icpc")
+ENDIF (USE_ICC) 
+
+
+
+
 PROJECT(RBF_framework)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 	
@@ -45,12 +64,6 @@ SET(FRAMEWORK_CUDA_LIBRARY ${FRAMEWORK_LIBRARY}_cuda)
 SET(FRAMEWORK_OPENCL_LIBRARY ${FRAMEWORK_LIBRARY}_opencl)
 SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# Use Armadillos MKL stuff
-include(ARMA_FindMKL)
-
-message(STATUS "MKL_FOUND     = ${MKL_FOUND}")
-
-include_directories(${MKL_INCLUDE_DIRS})
 STRING(REPLACE ":" ";" inc_paths "$ENV{INCLUDE_PATH}:.")
 include_directories(${inc_paths})
 
@@ -58,7 +71,6 @@ include_directories(${inc_paths})
 # Its name should not change
 SET( FRAMEWORK_DEPENDENCIES
 	$ENV{EXTERNAL_LIB_DEPENDENCIES}
-    #    ${MKL_LIBRARIES}
 	#${CUDA_LIBRARIES}
 )
 
@@ -73,8 +85,8 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 
 #add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -no-vec -opt-report -vec-report -par-report)
 #ICC:  add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -opt-report -vec-report -par-report)
-add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O3)# -ftree-vectorizer-verbose=2 -opt-report )
-#add_definitions( -DUSE_KDTREE -DUSE_CONTOURSVD )
+add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE ) 
+
 
 #INCLUDE_DIRECTORIES($ENV{EXTERNAL_INCLUDE_DIRS})
 

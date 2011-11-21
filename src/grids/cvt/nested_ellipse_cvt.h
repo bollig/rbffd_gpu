@@ -37,7 +37,7 @@ class NestedEllipseCVT : public CVT {
             nb_outer(nb_nodes_outer_boundary),
             nb_inner(nb_nodes_inner_boundary), 
             guess_nb_boundary(false),
-            outer_axis_major(2*outer_r), outer_axis_minor(outer_r), 
+            outer_axis_major(outer_r), outer_axis_minor(outer_r), 
             inner_axis_major(inner_r), inner_axis_minor(inner_r)
     {
         if (dimension > 2) { 

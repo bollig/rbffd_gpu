@@ -40,12 +40,10 @@
 		util/surface_integral
 		util/surface_projection
 		util/viennacl_simple_example	# Needs macro for add_cl_test
-		#P3		util/vtk_stencil_visualizer
+        #util/vtk_stencil_visualizer
 		util/test_complex
 		util/test_template_macros
-        #        util/petsc_test
         util/gpu_compute_derivs
-        #        util/cl_file_loader
         util/matrix_market_io
 
 

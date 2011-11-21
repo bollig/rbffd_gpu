@@ -22,19 +22,18 @@ class NestedEllipseCVT : public CVT {
 
     public: 
 
-    NestedEllipseCVT (size_t nb_nodes_interior, 
+    NestedEllipseCVT (size_t total_nb_nodes, 
                 size_t nb_nodes_inner_boundary, size_t nb_nodes_outer_boundary, 
                 size_t dimension, Density* density_func, size_t nb_locked=0, size_t num_samples=2000, 
                 size_t max_num_iters=10, size_t write_frequency=20, 
                 size_t sample_batch_size=800
                 )
-            : CVT(nb_nodes_interior + nb_nodes_inner_boundary +
-                    nb_nodes_outer_boundary, dimension,
+            : CVT(total_nb_nodes, dimension,
                     nb_nodes_outer_boundary+nb_nodes_inner_boundary
                     /*nb_locked*/, density_func, num_samples,
                     max_num_iters, write_frequency, sample_batch_size),
             inner_r(0.5), outer_r(1.0), 
-            nb_int(nb_nodes_interior),
+            nb_int(total_nb_nodes - nb_nodes_outer_boundary - nb_nodes_inner_boundary),
             nb_outer(nb_nodes_outer_boundary),
             nb_inner(nb_nodes_inner_boundary), 
             guess_nb_boundary(false),
@@ -47,16 +46,17 @@ class NestedEllipseCVT : public CVT {
     }
 
 
-     NestedEllipseCVT (size_t nb_nodes_interior, 
+     NestedEllipseCVT (size_t total_nb_nodes, 
                 size_t dimension, Density* density_func, size_t nb_locked=0, size_t num_samples=2000, 
                 size_t max_num_iters=10, size_t write_frequency=20, 
                 size_t sample_batch_size=800
                 )
-            : CVT(nb_nodes_interior, dimension,
+            : CVT(total_nb_nodes, dimension,
                     0/*nb_locked*/, density_func, num_samples,
                     max_num_iters, write_frequency, sample_batch_size),
             inner_r(0.5), outer_r(1.0), 
-            nb_int(nb_nodes_interior),
+            nb_int(total_nb_nodes),
+            nb_inner(0), nb_outer(0), 
             guess_nb_boundary(true),
             outer_axis_major(outer_r), outer_axis_minor(outer_r), 
             inner_axis_major(inner_r), inner_axis_minor(inner_r)

@@ -23,9 +23,10 @@ int main(int argc, char** argv) {
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     int nb_interior = settings->GetSettingAs<int>("NB_INTERIOR", ProjectSettings::required); 
-    int nb_inner_boundary = settings->GetSettingAs<int>("NB_INNER_BOUNDARY", ProjectSettings::required); 
-    int nb_outer_boundary = settings->GetSettingAs<int>("NB_OUTER_BOUNDARY", ProjectSettings::required); 
+    int nb_inner_boundary = settings->GetSettingAs<int>("NB_INNER_BOUNDARY", ProjectSettings::optional, "0"); 
+    int nb_outer_boundary = settings->GetSettingAs<int>("NB_OUTER_BOUNDARY", ProjectSettings::optional, "0"); 
     int nb_boundary = nb_inner_boundary + nb_outer_boundary; 
+    int nb_total = nb_interior + nb_boundary;
 
     if (dim > 3) {
         cout << "ERROR! Dim > 3 Not supported!" << endl;
@@ -65,7 +66,14 @@ int main(int argc, char** argv) {
     int it_max_interior = settings->GetSettingAs<int>("NB_CVT_ITERATIONS", ProjectSettings::required); 
     // Generate a CVT with nx*ny*nz nodes, in 1, 2 or 3D with 0 locked boundary nodes, 
     // 20000 samples per iteration for 30 iterations
-    NestedEllipseCVT* grid = new NestedEllipseCVT(nb_interior, nb_inner_boundary, nb_outer_boundary, dim, new ExpDensity(), 0, nb_samples, it_max_interior); 
+    NestedEllipseCVT* grid;
+    if (nb_boundary) {
+        // Specify the exact number of nodes on the boundary
+        grid = new NestedEllipseCVT(nb_total, nb_inner_boundary, nb_outer_boundary, dim, new ExpDensity(), 0, nb_samples, it_max_interior); 
+    } else {
+        // Guess the number of nodes on the boundary (usually looks nicer)
+        grid = new NestedEllipseCVT(nb_total, dim, new UniformDensity(), 0, nb_samples, it_max_interior); 
+    }
     grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
     grid->setInnerRadius(inner_r); 
     grid->setOuterRadius(outer_r); 

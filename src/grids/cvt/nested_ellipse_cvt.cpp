@@ -286,7 +286,10 @@ void NestedEllipseCVT::guessBoundaryPoints(int dim_num, int nb_nodes, int *seed,
     // Now that we know how many boundary nodes we want out of the total
     // number of nodes in the domain, resize to that value
     this->nb_bnd = nb_computed_outer_bnd + nb_computed_inner_bnd;
+    this->nb_inner = nb_computed_inner_bnd; 
+    this->nb_outer = nb_computed_outer_bnd; 
     this->resizeBoundary(this->nb_bnd);
+    this->nb_int -= nb_bnd; 
     //bndry_pts.resize(this->nb_bnd);
 
     // Now compute the actual boundary nodes: 

@@ -98,9 +98,9 @@ int main(int argc, char** argv) {
 
     RBFFD* der;
     if (use_gpu) {
-        der = new RBFFD_CL(grid, dim); 
+        der = new RBFFD_CL(RBFFD::X|RBFFD::Y|RBFFD::Z|RBFFD::LAPL,grid, dim); 
     } else {
-        der = new RBFFD(grid, dim); 
+        der = new RBFFD(RBFFD::X|RBFFD::Y|RBFFD::Z|RBFFD::LAPL,grid, dim); 
     }
 
 
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     der->computeAllWeightsForAllStencils();
 
     if (run_derivative_tests) {
-        DerivativeTests* der_test = new DerivativeTests(der, grid, true);
+        DerivativeTests* der_test = new DerivativeTests(dim, der, grid, true);
         if (use_gpu) {
             // Applies weights on both GPU and CPU and compares results for the first 10 stencils
             der_test->compareGPUandCPUDerivs(10);

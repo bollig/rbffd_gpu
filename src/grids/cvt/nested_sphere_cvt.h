@@ -14,6 +14,10 @@ class NestedSphereCVT : public CVT {
     protected:
         double inner_r, outer_r;
         size_t nb_inner, nb_outer, nb_int;
+        double outer_axis_major; 
+        double outer_axis_minor; 
+        double inner_axis_major; 
+        double inner_axis_minor; 
 
     public: 
         NestedSphereCVT (size_t nb_nodes_interior, 
@@ -29,7 +33,9 @@ class NestedSphereCVT : public CVT {
                     max_num_iters, write_frequency, sample_batch_size),
             inner_r(0.5), outer_r(1.0), nb_int(nb_nodes_interior),
             nb_outer(nb_nodes_outer_boundary),
-            nb_inner(nb_nodes_inner_boundary)
+            nb_inner(nb_nodes_inner_boundary), 
+            outer_axis_major(outer_r), outer_axis_minor(outer_r), 
+            inner_axis_major(inner_r), inner_axis_minor(inner_r)
     {
         if (dimension > 2) { 
             std::cout << "ERROR: 3D Nested spheres not supported yet. This code assumes direct placement of nodes on inner and outer boundary. Code needs changes to do CVT on surface of 3D sphere." << std::endl;
@@ -57,6 +63,9 @@ class NestedSphereCVT : public CVT {
         virtual void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
         virtual Vec3 singleRejection2d(double area, double weighted_area, Density& density);
 
+        double computeBoundaryIntegral(Density& rho, unsigned int npts, std::vector<double>& intg, double axis_major, double axis_minor);
+        double computeDomainIntegral(unsigned int npts, Density& rho);
+        void computeBoundaryPointDistribution(int dim_num, double tot_length, double major, double minor, int npts, int nb_bnd, std::vector<double> intg, double bndry_pts[]);
 
     protected: 
         bool reject_point(NodeType &point, int ndim);

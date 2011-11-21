@@ -18,7 +18,9 @@ class NestedSphereCVT : public CVT {
     public: 
         NestedSphereCVT (size_t nb_nodes_interior, size_t nb_nodes_inner_boundary, size_t nb_nodes_outer_boundary, size_t dimension, size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=20, size_t sample_batch_size=800)
             : CVT(nb_nodes_interior + nb_nodes_inner_boundary + nb_nodes_outer_boundary, 
-                    dimension, nb_nodes_outer_boundary+nb_nodes_inner_boundary /*nb_locked*/, NULL /*TODO: allow Density*/, num_samples, max_num_iters, write_frequency, sample_batch_size),
+                    dimension, 
+                    nb_nodes_outer_boundary+nb_nodes_inner_boundary /*nb_locked*/,
+                    NULL /*TODO: allow Density*/, num_samples, max_num_iters, write_frequency, sample_batch_size),
             inner_r(0.5), outer_r(1.0), 
             nb_int(nb_nodes_interior),
             nb_outer(nb_nodes_outer_boundary), 
@@ -44,7 +46,7 @@ class NestedSphereCVT : public CVT {
          * OVERRIDES GRID:: and CVT::
          *******************/
         // Overrides Grid::generate()
-        virtual void generate(); 
+//        virtual void generate(); 
 
         // Overrides Grid::getFileDetailString()
         //ONLY REPLACE IF WE WANT A MORE VERBOSE FILENAME FOR # OF BOUNDARY NODES
@@ -61,10 +63,14 @@ class NestedSphereCVT : public CVT {
         //
 
         // For CVT:: this samples randomly in unit circle
-        virtual void user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
+       // virtual void user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
 
         // For CVT:: this samples randomly in unit circle
-        virtual void user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
+//        virtual void user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
+
+        virtual void user_init(int dim_num, int n, int *seed, double r[]);
+        virtual void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
+    
 
     protected: 
         virtual bool reject_point(NodeType &point, int ndim);

@@ -10,6 +10,7 @@ using namespace std;
 
 #include "utils/random.h"
 
+#if 0
 void NestedSphereCVT::generate() {
 
     // TODO: initialize boundary
@@ -101,7 +102,9 @@ void NestedSphereCVT::generate() {
 
     std::cout << "CVT GENERATE NOT IMPLEMENTED" << std::endl;
 }
+#endif 
 
+#if 0
 //****************************************************************************80
 void NestedSphereCVT::user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) {
     for (int j = indx_start; j < indx_start + n_now; j++) {
@@ -125,13 +128,78 @@ void NestedSphereCVT::user_sample(std::vector<NodeType>& user_node_list, int ind
 
     return;
 }
+#endif 
 //****************************************************************************80
 // For CVT:: this samples randomly in unit circle
-void NestedSphereCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) { 
-    user_sample(user_node_list, indx_start, n_now, init_rand);
+//void NestedSphereCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) { 
+void NestedSphereCVT::user_init(int dim_num, int n, int *seed, double r[]) {
+    
+    // Fill our initial boundary points
+    this->fillBoundaryPoints(dim_num, n, seed, &r[0]);
+    // Then sample the interior using our singleRejection2d defined routine
+    this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
+
 
     return;
 }
+
+
+
+void NestedSphereCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[])
+{
+    this->nb_bnd = nb_inner + nb_outer;
+    this->resizeBoundary(this->nb_bnd);
+
+
+    // NOTE: 2D only we can assume that nodes on boundary do not need Lloyd's
+    // method because it would take too long with our sampling. Just distribute
+    // them uniformly
+    if (dim_num == 2) {
+        // Fill circles based on arclength subdivision (exact) rather than CVT
+        // (saves iteraitons).
+        double inner_arc_seg = (2.*M_PI) / nb_inner;
+        double outer_arc_seg = (2.*M_PI) / nb_outer;
+
+        NodeType sphere_center((xmax+xmin)/2., (ymax+ymin)/2., (zmax+zmin)/2.); 
+
+        boundary_indices.resize(nb_inner + nb_outer);
+        boundary_normals.resize(nb_inner + nb_outer);
+
+        int j = 0; 
+        //cout << "inner_r = " << inner_r << " nb_inner = " << nb_inner << " inner_arc_seg = " << inner_arc_seg << endl;
+        for (int i = 0; i < nb_inner; i++) {
+            // r = 0.5
+            double theta = inner_arc_seg*i;
+            // Convert to (x,y,z) = (r cos(theta), r sin(theta), 0.)
+            bndry_nodes[i*dim_num + 0] = inner_r * cos(theta);
+            bndry_nodes[i*dim_num + 1] = inner_r * sin(theta);
+            bndry_nodes[i*dim_num + 2] = 0.;
+            j++;
+        }
+        for (int i = 0; i < nb_outer; i++) {
+            // r = 1.0
+            // add 0.001*PI to slightly shift the outer boundary in an attempt
+            // to avoid alignment with the inner boundary.
+            // HERE: See top of NOTES for an idea of why we shift by PI/3
+            double theta = outer_arc_seg*i + (M_PI / 3.);// + 0.001 * this->PI;
+            // offset i by nb_inner because we already filled those.
+            bndry_nodes[(nb_inner + i)*dim_num + 0] = outer_r * cos(theta);
+            bndry_nodes[(nb_inner + i)*dim_num + 1] = outer_r * sin(theta);
+            bndry_nodes[(nb_inner + i)*dim_num + 2] = 0.;
+        }
+
+        //    std::cout << "NRMLS: " << boundary_normals.size() << std::endl;
+    } else if (dim_num == 3) {
+
+        std::cout << "TODO: 3D nested sphere cvt" << std::endl;
+        exit(EXIT_FAILURE);
+    } else {
+        std::cout << "ONLY 2D annulus cvt supported at this time" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+
 
 //****************************************************************************80
 

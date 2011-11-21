@@ -3,9 +3,9 @@
 
 #include <vector>
 #include "Vec3.h"
+//#include "parametric_patch.h"
 #include "density.h"
 #include "cvt.h"
-#include "utils/conf/projectsettings.h"
 
 // Create a constrained CVT
 // in the volume created by two nested spheres.
@@ -70,6 +70,7 @@ class NestedSphereCVT : public CVT {
 
         virtual void user_init(int dim_num, int n, int *seed, double r[]);
         virtual void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
+        virtual Vec3 singleRejection2d(double area, double weighted_area, Density& density);
     
 
     protected: 

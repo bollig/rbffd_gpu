@@ -1,14 +1,17 @@
-#include <stdio.h>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
+#include <string.h>
 
 #include <math.h>
-
-using namespace std;
+#include <vector>
 
 #include "nested_sphere_cvt.h"
 
-#include "utils/random.h"
+using namespace std;
 
 #if 0
 void NestedSphereCVT::generate() {
@@ -197,6 +200,77 @@ void NestedSphereCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, d
         std::cout << "ONLY 2D annulus cvt supported at this time" << std::endl;
         exit(EXIT_FAILURE);
     }
+}
+
+//****************************************************************************80
+Vec3 NestedSphereCVT::singleRejection2d(double area, double weighted_area, Density& density) {
+    // Apparently not used in this file
+    // 3D version should be written though, but the ellipse is a special case
+    // (no hurry)
+
+    double xs, ys;
+    double u;
+    double r2;
+    double r_inner;
+    double maxrhoi = 1.;
+    if (rho != NULL) {
+        double maxrhoi = 1. / density.getMax();
+    }
+    //printf("maxrhoi= %f\n", maxrhoi);
+
+    double axis_major = 1.;
+    double axis_minor = 1.;
+
+    double maj2i = 1. / axis_major / axis_major;
+    double min2i = 1. / axis_minor / axis_minor;
+    //printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
+
+    double xc = 0.1; 
+    double yc = 0.1; 
+//double inner_cir_radius = 0.15;
+
+#if 0
+    bool is_rejected = true;
+    Vec3 sample(0.f,0.f,0.f);
+    while (is_rejected) {
+        // This is Gordon Erlebacher's random(,) routine from random.h
+        sample[0] = randf(xmin, xmax); 
+        if (dim_num > 1) {
+            sample[1] = randf(ymin, ymax); 
+            if (dim_num > 2) {
+                sample[2] = randf(zmin, zmax); 
+            }
+        }
+
+        // We have a sample point in the bounding box, so lets try to
+        // reject it (e.g., if its outside the geometry contained by bounding
+        // box.
+        is_rejected = reject_point(user_node_list[j], dim_num);
+    }
+#endif 
+
+    while (1) {
+        xs = random(-axis_major, axis_major);
+        ys = random(-axis_major, axis_major); // to make sure that cells are all same size
+        //printf("xs,ys= %f, %f\n", xs, ys);
+        r2 = xs * xs * maj2i + ys * ys*min2i;
+        
+//        r_inner = sqrt((xs-xc)*(xs-xc) + (ys - yc)*(ys-yc));
+
+        //printf("r2= %f\n", r2);
+        if (sqrt(r2) > outer_r) continue; // outside outer boundary
+        if (sqrt(r2) < inner_r) continue; // inside inner boundary
+
+        // rejection part if non-uniform distribution
+        u = random(0., 1.);
+        if (rho != NULL) {
+            //printf("rho= %f\n", density(xs,ys));
+            if (u < (density(xs, ys, 0.)) * maxrhoi) break;
+        } else {
+            break; 
+        }
+    }
+    return Vec3(xs, ys);
 }
 
 

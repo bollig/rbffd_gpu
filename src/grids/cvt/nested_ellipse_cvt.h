@@ -10,7 +10,7 @@
 // Create a constrained CVT
 // in the volume created by two nested spheres.
 
-class NestedSphereCVT : public CVT {
+class NestedEllipseCVT : public CVT {
     protected:
         double inner_r, outer_r;
         size_t nb_inner, nb_outer, nb_int;
@@ -20,7 +20,8 @@ class NestedSphereCVT : public CVT {
         double inner_axis_minor; 
 
     public: 
-        NestedSphereCVT (size_t nb_nodes_interior, 
+
+    NestedEllipseCVT (size_t nb_nodes_interior, 
                 size_t nb_nodes_inner_boundary, size_t nb_nodes_outer_boundary, 
                 size_t dimension, Density* density_func, size_t nb_locked=0, size_t num_samples=2000, 
                 size_t max_num_iters=10, size_t write_frequency=20, 
@@ -29,21 +30,22 @@ class NestedSphereCVT : public CVT {
             : CVT(nb_nodes_interior + nb_nodes_inner_boundary +
                     nb_nodes_outer_boundary, dimension,
                     nb_nodes_outer_boundary+nb_nodes_inner_boundary
-                    /*nb_locked*/, density_func /*TODO: allow Density*/, 2*num_samples,
+                    /*nb_locked*/, density_func, num_samples,
                     max_num_iters, write_frequency, sample_batch_size),
-            inner_r(0.5), outer_r(1.0), nb_int(nb_nodes_interior),
+            inner_r(0.5), outer_r(1.0), 
+            nb_int(nb_nodes_interior),
             nb_outer(nb_nodes_outer_boundary),
             nb_inner(nb_nodes_inner_boundary), 
-            outer_axis_major(2*outer_r), outer_axis_minor(outer_r), 
-            inner_axis_major(inner_r), inner_axis_minor(1.2*inner_r)
+            outer_axis_major(outer_r), outer_axis_minor(outer_r), 
+            inner_axis_major(inner_r), inner_axis_minor(inner_r)
     {
         if (dimension > 2) { 
             std::cout << "ERROR: 3D Nested spheres not supported yet. This code assumes direct placement of nodes on inner and outer boundary. Code needs changes to do CVT on surface of 3D sphere." << std::endl;
         }
     }
 
-        void setInnerRadius(double inner_r_) { inner_r = inner_r_; }
-        void setOuterRadius(double outer_r_) { outer_r = outer_r_; }
+    void setInnerRadius(double inner_r_) { inner_r = inner_r_; }
+    void setOuterRadius(double outer_r_) { outer_r = outer_r_; }
 
 
         /*******************
@@ -82,8 +84,8 @@ int it_max_interior, it_max_boundary;
 int it_num_interior, it_num_boundary;
 
 public:
-NestedSphereCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int sample_num_, int it_max_bndry=60, int it_max_inter = 240, int dimension = 3, double inner_radius = 0.5, double outer_radius = 1.0, int DEBUG_ = 0);
-NestedSphereCVT(ProjectSettings* settings);
+NestedEllipseCVT(const char* file_name, int nb_inner_bnd, int nb_outer_bnd, int nb_interior, int sample_num_, int it_max_bndry=60, int it_max_inter = 240, int dimension = 3, double inner_radius = 0.5, double outer_radius = 1.0, int DEBUG_ = 0);
+NestedEllipseCVT(ProjectSettings* settings);
 
 
 // Generate the boundary nodes first as an independent CVT

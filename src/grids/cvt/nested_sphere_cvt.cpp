@@ -194,7 +194,8 @@ Vec3 NestedSphereCVT::singleRejection2d(double area, double weighted_area, Densi
 
     double xs, ys;
     double u;
-    double r2;
+    double r2_o;
+    double r2_i;
     double r_inner;
     double maxrhoi = 1.;
     if (rho != NULL) {
@@ -202,22 +203,27 @@ Vec3 NestedSphereCVT::singleRejection2d(double area, double weighted_area, Densi
     }
     //printf("maxrhoi= %f\n", maxrhoi);
 
-    double maj2i = 1. / outer_axis_major / outer_axis_major;
-    double min2i = 1. / outer_axis_minor / outer_axis_minor;
+    double maj2o = 1. / (outer_axis_major * outer_axis_major);
+    double min2o = 1. / (outer_axis_minor * outer_axis_minor);
+    double maj2i = 1. / (inner_axis_major * inner_axis_major);
+    double min2i = 1. / (inner_axis_minor * inner_axis_minor);
     //printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
 
     double xc = 0.1; 
     double yc = 0.1; 
 
     while (1) {
-        xs = random(-outer_axis_major, outer_axis_major);
-        ys = random(-outer_axis_major, outer_axis_major); // to make sure that cells are all same size
+        xs = random(-1.5*outer_axis_major, 1.5*outer_axis_major);
+        ys = random(-1.5*outer_axis_major, 1.5*outer_axis_major); // to make sure that cells are all same size
         //printf("xs,ys= %f, %f\n", xs, ys);
-        r2 = xs * xs * maj2i + ys * ys*min2i;
+        //
+        // We're using he implicit definition of the geometry. 
+        r2_o = xs * xs * maj2o + ys * ys*min2o;
+        r2_i = xs * xs * maj2i + ys * ys*min2i;
         
-        //printf("r2= %f\n", r2);
-        if (sqrt(r2) > outer_r) continue; // outside outer boundary
-        if (sqrt(r2) < inner_r) continue; // inside inner boundary
+        // In the case of the implicit we exit geometry at 1.
+        if (sqrt(r2_o) > 1.) continue; // outside outer boundary
+        if (sqrt(r2_i) < 1.) continue; // inside inner boundary
 
         // rejection part if non-uniform distribution
         u = random(0., 1.);

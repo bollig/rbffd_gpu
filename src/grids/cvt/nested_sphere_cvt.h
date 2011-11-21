@@ -29,13 +29,13 @@ class NestedSphereCVT : public CVT {
             : CVT(nb_nodes_interior + nb_nodes_inner_boundary +
                     nb_nodes_outer_boundary, dimension,
                     nb_nodes_outer_boundary+nb_nodes_inner_boundary
-                    /*nb_locked*/, density_func /*TODO: allow Density*/, num_samples,
+                    /*nb_locked*/, density_func /*TODO: allow Density*/, 2*num_samples,
                     max_num_iters, write_frequency, sample_batch_size),
             inner_r(0.5), outer_r(1.0), nb_int(nb_nodes_interior),
             nb_outer(nb_nodes_outer_boundary),
             nb_inner(nb_nodes_inner_boundary), 
-            outer_axis_major(outer_r), outer_axis_minor(outer_r), 
-            inner_axis_major(inner_r), inner_axis_minor(inner_r)
+            outer_axis_major(2*outer_r), outer_axis_minor(outer_r), 
+            inner_axis_major(inner_r), inner_axis_minor(1.2*inner_r)
     {
         if (dimension > 2) { 
             std::cout << "ERROR: 3D Nested spheres not supported yet. This code assumes direct placement of nodes on inner and outer boundary. Code needs changes to do CVT on surface of 3D sphere." << std::endl;

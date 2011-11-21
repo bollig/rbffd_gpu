@@ -19,8 +19,13 @@ using namespace std;
 //void NestedEllipseCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) { 
 void NestedEllipseCVT::user_init(int dim_num, int n, int *seed, double r[]) {
     
-    // Fill our initial boundary points
-    this->fillBoundaryPoints(dim_num, n, seed, &r[0]);
+    if (guess_nb_boundary) {
+        // Fill our initial boundary points
+        this->guessBoundaryPoints(dim_num, n, seed, &r[0]);
+    } else {
+        this->generateBoundaryPoints(dim_num, n, seed, &r[0]);
+    }
+
     // Then sample the interior using our singleRejection2d defined routine
     this->user_sample(dim_num, n-nb_bnd, seed, &r[nb_bnd*dim_num]);
 
@@ -29,12 +34,12 @@ void NestedEllipseCVT::user_init(int dim_num, int n, int *seed, double r[]) {
 }
 
 
-#if 0
-void NestedEllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[])
+void NestedEllipseCVT::generateBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[])
 {
+
+#if 0
     this->nb_bnd = nb_inner + nb_outer;
     this->resizeBoundary(this->nb_bnd);
-
 
     // NOTE: 2D only we can assume that nodes on boundary do not need Lloyd's
     // method because it would take too long with our sampling. Just distribute
@@ -56,8 +61,8 @@ void NestedEllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, 
             // r = 0.5
             double theta = inner_arc_seg*i;
             // Convert to (x,y,z) = (r cos(theta), r sin(theta), 0.)
-            bndry_nodes[i*dim_num + 0] = inner_r * cos(theta);
-            bndry_nodes[i*dim_num + 1] = inner_r * sin(theta);
+            bndry_nodes[i*dim_num + 0] = inner_axis_major * cos(theta);
+            bndry_nodes[i*dim_num + 1] = inner_axis_minor * sin(theta);
             bndry_nodes[i*dim_num + 2] = 0.;
             j++;
         }
@@ -68,8 +73,8 @@ void NestedEllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, 
             // HERE: See top of NOTES for an idea of why we shift by PI/3
             double theta = outer_arc_seg*i + (M_PI / 3.);// + 0.001 * this->PI;
             // offset i by nb_inner because we already filled those.
-            bndry_nodes[(nb_inner + i)*dim_num + 0] = outer_r * cos(theta);
-            bndry_nodes[(nb_inner + i)*dim_num + 1] = outer_r * sin(theta);
+            bndry_nodes[(nb_inner + i)*dim_num + 0] = outer_axis_major * cos(theta);
+            bndry_nodes[(nb_inner + i)*dim_num + 1] = outer_axis_minor * sin(theta);
             bndry_nodes[(nb_inner + i)*dim_num + 2] = 0.;
         }
 
@@ -82,13 +87,58 @@ void NestedEllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, 
         std::cout << "ONLY 2D annulus cvt supported at this time" << std::endl;
         exit(EXIT_FAILURE);
     }
-}
-
 #endif 
 
+    std::vector<double> intg1;
+    std::vector<double> intg2;
 
+    unsigned int high_nb_pts = 200;
+    
+    double outer_bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg1, outer_axis_major, outer_axis_minor);
+    double inner_bnd_intg = computeBoundaryIntegral(*rho, high_nb_pts, intg2, inner_axis_major, inner_axis_minor);
 
+    double dom_intg = computeDomainIntegral(high_nb_pts, *rho);
 
+    // total nb points used to compute Voronoi mesh. 
+    // Only (nb_interior_pts-nb_bnd) will be able to move freely
+    int tot_nb_pts = nb_nodes;
+    // number of boundary points, automatically calculated
+    printf("tot_nb_pts= %d\n", tot_nb_pts);
+    printf("domain integral = %f\n", dom_intg);
+    printf("outer boundary integral = %f\n", outer_bnd_intg);
+    printf("inner boundary integral = %f\n", inner_bnd_intg);
+
+    //int nb_computed_bnd = (int)(outer_bnd_intg * sqrt(tot_nb_pts / dom_intg));
+#if 0 
+    int nb_bnd_1 = (int)(1. + 16. * tot_nb_pts * dom_intg / (outer_bnd_intg * outer_bnd_intg));
+    nb_bnd_1 = (int)(-outer_bnd_intg * outer_bnd_intg / (4. * dom_intg) * (1. - sqrt(nb_bnd_1)));
+    int nb_computed_outer_bnd = nb_bnd_1; // more accurate formula
+    
+    
+    int nb_bnd_2 = (int)(1. + 16. * tot_nb_pts * dom_intg / (inner_bnd_intg * inner_bnd_intg));
+    nb_bnd_2 = (int)(-inner_bnd_intg * inner_bnd_intg / (4. * dom_intg) * (1. - sqrt(nb_bnd_2)));
+    int nb_computed_inner_bnd = nb_bnd_2; // more accurate formula
+
+    printf("calculated nb outer boundary pts: %d\n", nb_computed_outer_bnd);
+    printf("calculated nb inner boundary pts: %d\n", nb_computed_inner_bnd);
+#endif 
+
+    // Now that we know how many boundary nodes we want out of the total
+    // number of nodes in the domain, resize to that value
+    this->nb_bnd = nb_inner + nb_outer; 
+    this->resizeBoundary(this->nb_bnd);
+    //bndry_pts.resize(this->nb_bnd);
+
+    // Now compute the actual boundary nodes: 
+    this->computeBoundaryPointDistribution(dim_num, outer_bnd_intg, outer_axis_major, outer_axis_minor, high_nb_pts, nb_outer, intg1, bndry_nodes);
+    this->computeBoundaryPointDistribution(dim_num, inner_bnd_intg, inner_axis_major, inner_axis_minor, high_nb_pts, nb_inner, intg2, &bndry_nodes[nb_outer*dim_num]);
+
+    // Verify that things match
+    //		printf("nb_bnd= %d, bndry_pts.size= %d\n", nb_bnd, (int) bndry_pts.size());
+    //        printf("node_list.size= %d\n" , this->node_list.size());
+    //
+
+}
 
 
 //****************************************************************************80
@@ -198,7 +248,7 @@ void NestedEllipseCVT::project_to_sphere(double generator[], int k, int ndim, do
 
 //----------------------------------------------------------------------
 
-void NestedEllipseCVT::fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[])
+void NestedEllipseCVT::guessBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[])
 {
     std::vector<double> intg1;
     std::vector<double> intg2;

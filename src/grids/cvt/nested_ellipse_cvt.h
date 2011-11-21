@@ -12,6 +12,7 @@
 
 class NestedEllipseCVT : public CVT {
     protected:
+        bool guess_nb_boundary; 
         double inner_r, outer_r;
         size_t nb_inner, nb_outer, nb_int;
         double outer_axis_major; 
@@ -36,6 +37,27 @@ class NestedEllipseCVT : public CVT {
             nb_int(nb_nodes_interior),
             nb_outer(nb_nodes_outer_boundary),
             nb_inner(nb_nodes_inner_boundary), 
+            guess_nb_boundary(false),
+            outer_axis_major(2*outer_r), outer_axis_minor(outer_r), 
+            inner_axis_major(inner_r), inner_axis_minor(inner_r)
+    {
+        if (dimension > 2) { 
+            std::cout << "ERROR: 3D Nested spheres not supported yet. This code assumes direct placement of nodes on inner and outer boundary. Code needs changes to do CVT on surface of 3D sphere." << std::endl;
+        }
+    }
+
+
+     NestedEllipseCVT (size_t nb_nodes_interior, 
+                size_t dimension, Density* density_func, size_t nb_locked=0, size_t num_samples=2000, 
+                size_t max_num_iters=10, size_t write_frequency=20, 
+                size_t sample_batch_size=800
+                )
+            : CVT(nb_nodes_interior, dimension,
+                    0/*nb_locked*/, density_func, num_samples,
+                    max_num_iters, write_frequency, sample_batch_size),
+            inner_r(0.5), outer_r(1.0), 
+            nb_int(nb_nodes_interior),
+            guess_nb_boundary(true),
             outer_axis_major(outer_r), outer_axis_minor(outer_r), 
             inner_axis_major(inner_r), inner_axis_minor(inner_r)
     {
@@ -43,6 +65,7 @@ class NestedEllipseCVT : public CVT {
             std::cout << "ERROR: 3D Nested spheres not supported yet. This code assumes direct placement of nodes on inner and outer boundary. Code needs changes to do CVT on surface of 3D sphere." << std::endl;
         }
     }
+
 
     void setInnerRadius(double inner_r_) { inner_r = inner_r_; }
     void setOuterRadius(double outer_r_) { outer_r = outer_r_; }
@@ -62,7 +85,8 @@ class NestedEllipseCVT : public CVT {
          * OVERRIDES CVT.h ROUTINES:
          ***********************/
         virtual void user_init(int dim_num, int n, int *seed, double r[]);
-        virtual void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
+        virtual void guessBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
+        virtual void generateBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
         virtual Vec3 singleRejection2d(double area, double weighted_area, Density& density);
 
         double computeBoundaryIntegral(Density& rho, unsigned int npts, std::vector<double>& intg, double axis_major, double axis_minor);

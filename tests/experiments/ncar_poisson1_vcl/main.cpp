@@ -12,6 +12,7 @@
 #include "rbffd/rbffd_cl.h"
 #include "rbffd/rbffd.h"
 #include "rbffd/derivative_tests.h"
+#include "grids/cvt/density.h"
 
 using namespace std;
 
@@ -64,7 +65,7 @@ int main(int argc, char** argv) {
     int it_max_interior = settings->GetSettingAs<int>("NB_CVT_ITERATIONS", ProjectSettings::required); 
     // Generate a CVT with nx*ny*nz nodes, in 1, 2 or 3D with 0 locked boundary nodes, 
     // 20000 samples per iteration for 30 iterations
-    NestedSphereCVT* grid = new NestedSphereCVT(nb_interior, nb_inner_boundary, nb_outer_boundary, dim, 0, nb_samples, it_max_interior); 
+    NestedSphereCVT* grid = new NestedSphereCVT(nb_interior, nb_inner_boundary, nb_outer_boundary, dim, new ExpDensity(), 0, nb_samples, it_max_interior); 
     grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
     grid->setInnerRadius(inner_r); 
     grid->setOuterRadius(outer_r); 

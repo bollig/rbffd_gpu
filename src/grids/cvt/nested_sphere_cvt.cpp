@@ -107,31 +107,8 @@ void NestedSphereCVT::generate() {
 }
 #endif 
 
-#if 0
-//****************************************************************************80
-void NestedSphereCVT::user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) {
-    for (int j = indx_start; j < indx_start + n_now; j++) {
-        bool is_rejected = true;
-        while (is_rejected) {
-            // This is Gordon Erlebacher's random(,) routine from random.h
-            user_node_list[j][0] = randf(xmin, xmax); 
-            if (dim_num > 1) {
-                user_node_list[j][1] = randf(ymin, ymax); 
-                if (dim_num > 2) {
-                    user_node_list[j][2] = randf(zmin, zmax); 
-                }
-            }
 
-            // We have a sample point in the bounding box, so lets try to
-            // reject it (e.g., if its outside the geometry contained by bounding
-            // box.
-            is_rejected = reject_point(user_node_list[j], dim_num);
-        }
-    }
 
-    return;
-}
-#endif 
 //****************************************************************************80
 // For CVT:: this samples randomly in unit circle
 //void NestedSphereCVT::user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand) { 
@@ -227,27 +204,6 @@ Vec3 NestedSphereCVT::singleRejection2d(double area, double weighted_area, Densi
 
     double xc = 0.1; 
     double yc = 0.1; 
-//double inner_cir_radius = 0.15;
-
-#if 0
-    bool is_rejected = true;
-    Vec3 sample(0.f,0.f,0.f);
-    while (is_rejected) {
-        // This is Gordon Erlebacher's random(,) routine from random.h
-        sample[0] = randf(xmin, xmax); 
-        if (dim_num > 1) {
-            sample[1] = randf(ymin, ymax); 
-            if (dim_num > 2) {
-                sample[2] = randf(zmin, zmax); 
-            }
-        }
-
-        // We have a sample point in the bounding box, so lets try to
-        // reject it (e.g., if its outside the geometry contained by bounding
-        // box.
-        is_rejected = reject_point(user_node_list[j], dim_num);
-    }
-#endif 
 
     while (1) {
         xs = random(-axis_major, axis_major);
@@ -297,7 +253,7 @@ std::string NestedSphereCVT::getFileDetailString() {
 }
 
 
-#if 0
+#if 1
 // Project k generators to the surface of the sphere of specified radius
 // WARNING! Modifies the first k elements of generator[]! so pass a pointer
 // to whatever element you want to start projecting from!

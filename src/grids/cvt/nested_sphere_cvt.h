@@ -16,27 +16,25 @@ class NestedSphereCVT : public CVT {
         size_t nb_inner, nb_outer, nb_int;
 
     public: 
-        NestedSphereCVT (size_t nb_nodes_interior, size_t nb_nodes_inner_boundary, size_t nb_nodes_outer_boundary, size_t dimension, size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=20, size_t sample_batch_size=800)
-            : CVT(nb_nodes_interior + nb_nodes_inner_boundary + nb_nodes_outer_boundary, 
-                    dimension, 
-                    nb_nodes_outer_boundary+nb_nodes_inner_boundary /*nb_locked*/,
-                    NULL /*TODO: allow Density*/, num_samples, max_num_iters, write_frequency, sample_batch_size),
-            inner_r(0.5), outer_r(1.0), 
-            nb_int(nb_nodes_interior),
-            nb_outer(nb_nodes_outer_boundary), 
+        NestedSphereCVT (size_t nb_nodes_interior, 
+                size_t nb_nodes_inner_boundary, size_t nb_nodes_outer_boundary, 
+                size_t dimension, Density* density_func, size_t nb_locked=0, size_t num_samples=2000, 
+                size_t max_num_iters=10, size_t write_frequency=20, 
+                size_t sample_batch_size=800
+                )
+            : CVT(nb_nodes_interior + nb_nodes_inner_boundary +
+                    nb_nodes_outer_boundary, dimension,
+                    nb_nodes_outer_boundary+nb_nodes_inner_boundary
+                    /*nb_locked*/, density_func /*TODO: allow Density*/, num_samples,
+                    max_num_iters, write_frequency, sample_batch_size),
+            inner_r(0.5), outer_r(1.0), nb_int(nb_nodes_interior),
+            nb_outer(nb_nodes_outer_boundary),
             nb_inner(nb_nodes_inner_boundary)
     {
         if (dimension > 2) { 
             std::cout << "ERROR: 3D Nested spheres not supported yet. This code assumes direct placement of nodes on inner and outer boundary. Code needs changes to do CVT on surface of 3D sphere." << std::endl;
         }
     }
-
-        // TODO: havent figured out what I want to do here yet.
-        //	NestedSphereCVT (std::vector<NodeType>& nodes, size_t dimension, size_t nb_locked=0, size_t num_samples=2000, size_t max_num_iters=10, size_t write_frequency=5, size_t sample_batch_size=800) {     
-        //  }
-
-        // TODO:
-        //	virtual ~NestedSphereCVT(); 
 
         void setInnerRadius(double inner_r_) { inner_r = inner_r_; }
         void setOuterRadius(double outer_r_) { outer_r = outer_r_; }
@@ -45,36 +43,24 @@ class NestedSphereCVT : public CVT {
         /*******************
          * OVERRIDES GRID:: and CVT::
          *******************/
-        // Overrides Grid::generate()
-//        virtual void generate(); 
-
         // Overrides Grid::getFileDetailString()
         //ONLY REPLACE IF WE WANT A MORE VERBOSE FILENAME FOR # OF BOUNDARY NODES
         virtual std::string getFileDetailString(); 
-        
+
         virtual std::string className() {return "nested_sphere_cvt";}
 
 
         /***********************
          * OVERRIDES CVT.h ROUTINES:
          ***********************/
-        // Customized initial sampling of domain could be redirected to the user_sample
-        // so both node initialization and cvt sampling are the same
-        //
-
-        // For CVT:: this samples randomly in unit circle
-       // virtual void user_sample(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
-
-        // For CVT:: this samples randomly in unit circle
-//        virtual void user_init(std::vector<NodeType>& user_node_list, int indx_start, int n_now, bool init_rand); 
-
         virtual void user_init(int dim_num, int n, int *seed, double r[]);
         virtual void fillBoundaryPoints(int dim_num, int nb_nodes, int *seed, double bndry_nodes[]);
         virtual Vec3 singleRejection2d(double area, double weighted_area, Density& density);
-    
+
 
     protected: 
-        virtual bool reject_point(NodeType &point, int ndim);
+        bool reject_point(NodeType &point, int ndim);
+        void project_to_sphere(double generator[], int k, int ndim, double radius);
 
 };
 #endif // __NESTED_SPHERE_CVT_H__

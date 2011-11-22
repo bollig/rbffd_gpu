@@ -46,9 +46,6 @@
         util/gpu_compute_derivs
         util/matrix_market_io
 
-
-
-
 		template
 	)
 

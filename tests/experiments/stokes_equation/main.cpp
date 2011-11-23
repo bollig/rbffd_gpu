@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <map> 
 
-#include "pdes/hyperbolic/vortex_rollup_cl.h"
-#include "pdes/hyperbolic/vortex_rollup.h"
-
+#if 0
+#include "pdes/elliptic/stokes_steady.h"
+#endif 
 
 #include "grids/grid_reader.h"
 
@@ -296,6 +296,7 @@ int main(int argc, char** argv) {
 
     // SOLVE HEAT EQUATION
 
+#if 0
     ExactSolution* exact = getExactSolution(dim); 
 
     TimeDependentPDE* pde; 
@@ -303,9 +304,9 @@ int main(int argc, char** argv) {
 
     // We need to provide comm_unit to pass ghost node info
     if (use_gpu) {
-        pde = new VortexRollup_CL(subdomain, (RBFFD_CL*)der, comm_unit, use_gpu, useHyperviscosity, true);
+        pde = new StokesSteady_CL(subdomain, (RBFFD_CL*)der, comm_unit, use_gpu, useHyperviscosity, true);
     } else {
-        pde = new VortexRollup(subdomain, der, comm_unit, useHyperviscosity, true);
+        pde = new StokesSteady(subdomain, der, comm_unit, useHyperviscosity, true);
     }
 
     // This should not influence anything. 
@@ -511,6 +512,7 @@ int main(int argc, char** argv) {
     tm["total"]->writeAllToFile();
 
     printf("\n\nREACHED THE END OF MAIN\n\n");
+#endif 
 
     return 0;
 }

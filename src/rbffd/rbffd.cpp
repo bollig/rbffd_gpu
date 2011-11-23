@@ -974,7 +974,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         for (i=0; i<nz; i++)
         {
             //        fscanf(f, "%d %d %24le\n", &I[i], &J[i], &val[i]);
-            fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
+            int err = fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
             I[i]--;  /* adjust from 1-based to 0-based */
             J[i]--;
         }

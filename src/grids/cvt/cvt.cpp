@@ -3386,7 +3386,12 @@ Vec3 CVT::singleRejection2d(double area, double weighted_area, Density& density)
     double xs, ys, zs;
     double u;
     double r2;
-    double maxrhoi = 1. / rho->getMax();
+    double maxrhoi; 
+    if (rho != NULL) {
+        maxrhoi = 1. / rho->getMax();
+    } else {
+        maxrhoi = 1.; 
+    }
 
     while (1) {
         xs = random(xmin, xmax);
@@ -3395,8 +3400,12 @@ Vec3 CVT::singleRejection2d(double area, double weighted_area, Density& density)
 
         // rejection part if non-uniform distribution
         u = random(0.,1.);
+        if (rho != NULL) {
         //printf("rho= %f\n", density(xs,ys));
-        if (u < (density(xs,ys,zs))*maxrhoi) break;
+            if (u < (density(xs,ys,zs))*maxrhoi) break;
+        } else {
+            break; 
+        }
     }
     return Vec3(xs,ys, zs);
 }

@@ -2,7 +2,8 @@
 # Build Options (Definitions and compiler flags)
 ###############################################
 # Used by ALL compilers
-ADD_DEFINITIONS(-g -O3)
+#ADD_DEFINITIONS(-g -O3)
+ADD_DEFINITIONS(-O3)
 
 
 ###############################################
@@ -43,10 +44,10 @@ ENDIF (NOT USE_OPENCL)
 
 unset(CUDA_CUDA_LIBRARY CACHE)
 FIND_PACKAGE (CUDA)
-IF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
-    MESSAGE (WARNING "\nWARNING! Dep: libcuda was NOT FOUND. Disabling cuda support for framework. Please install NVidia proprietary driver and verify you have an NVidia GPU if you want it enabled.\n")
-    set(CUDA_FOUND false)
-ENDIF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
+#IF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
+#    MESSAGE (WARNING "\nWARNING! Dep: libcuda was NOT FOUND. Disabling cuda support for framework. Please install NVidia proprietary driver and verify you have an NVidia GPU if you want it enabled.\n")
+#    set(CUDA_FOUND false)
+#ENDIF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
 IF (NOT USE_CUDA)
     set (CUDA_FOUND false)
 ENDIF (NOT USE_CUDA)

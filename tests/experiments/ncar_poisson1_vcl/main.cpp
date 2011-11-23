@@ -2,7 +2,7 @@
 
 #include "utils/conf/projectsettings.h"
 
-#include "grids/cvt/nested_sphere_cvt.h"
+#include "grids/cvt/nested_ellipse_cvt.h"
 
 #include "utils/comm/communicator.h"
 
@@ -12,6 +12,7 @@
 #include "rbffd/rbffd_cl.h"
 #include "rbffd/rbffd.h"
 #include "rbffd/derivative_tests.h"
+#include "grids/cvt/density.h"
 
 using namespace std;
 
@@ -22,9 +23,10 @@ int main(int argc, char** argv) {
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     int nb_interior = settings->GetSettingAs<int>("NB_INTERIOR", ProjectSettings::required); 
-    int nb_inner_boundary = settings->GetSettingAs<int>("NB_INNER_BOUNDARY", ProjectSettings::required); 
-    int nb_outer_boundary = settings->GetSettingAs<int>("NB_OUTER_BOUNDARY", ProjectSettings::required); 
+    int nb_inner_boundary = settings->GetSettingAs<int>("NB_INNER_BOUNDARY", ProjectSettings::optional, "0"); 
+    int nb_outer_boundary = settings->GetSettingAs<int>("NB_OUTER_BOUNDARY", ProjectSettings::optional, "0"); 
     int nb_boundary = nb_inner_boundary + nb_outer_boundary; 
+    int nb_total = nb_interior + nb_boundary;
 
     if (dim > 3) {
         cout << "ERROR! Dim > 3 Not supported!" << endl;
@@ -33,6 +35,11 @@ int main(int argc, char** argv) {
 
     double inner_r = settings->GetSettingAs<double>("INNER_RADIUS", ProjectSettings::optional, "0.5"); 
     double outer_r = settings->GetSettingAs<double>("OUTER_RADIUS", ProjectSettings::optional, "1.0"); 
+    
+    double inner_axis_major = settings->GetSettingAs<double>("INNER_AXIS_MAJOR", ProjectSettings::optional, "0."); 
+    double inner_axis_minor = settings->GetSettingAs<double>("INNER_AXIS_MINOR", ProjectSettings::optional, "0."); 
+    double outer_axis_major = settings->GetSettingAs<double>("OUTER_AXIS_MAJOR", ProjectSettings::optional, "0."); 
+    double outer_axis_minor = settings->GetSettingAs<double>("OUTER_AXIS_MINOR", ProjectSettings::optional, "0."); 
 
     int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
     int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
@@ -64,10 +71,24 @@ int main(int argc, char** argv) {
     int it_max_interior = settings->GetSettingAs<int>("NB_CVT_ITERATIONS", ProjectSettings::required); 
     // Generate a CVT with nx*ny*nz nodes, in 1, 2 or 3D with 0 locked boundary nodes, 
     // 20000 samples per iteration for 30 iterations
-    NestedSphereCVT* grid = new NestedSphereCVT(nb_interior, nb_inner_boundary, nb_outer_boundary, dim, 0, nb_samples, it_max_interior); 
+    NestedEllipseCVT* grid;
+    if (nb_boundary) {
+        // Specify the exact number of nodes on the boundary
+        grid = new NestedEllipseCVT(nb_total, nb_inner_boundary, nb_outer_boundary, dim, new ExpDensity(), 0, nb_samples, it_max_interior); 
+    } else {
+        // Guess the number of nodes on the boundary (usually looks nicer)
+        grid = new NestedEllipseCVT(nb_total, dim, new UniformDensity(), 0, nb_samples, it_max_interior); 
+    }
     grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ);
-    grid->setInnerRadius(inner_r); 
-    grid->setOuterRadius(outer_r); 
+
+    if (!inner_axis_minor) {
+        grid->setInnerRadius(inner_r); 
+        grid->setOuterRadius(outer_r); 
+    } else {
+        grid->setInnerAxes(inner_axis_major, inner_axis_minor); 
+        grid->setOuterAxes(outer_axis_major, outer_axis_minor); 
+    }
+
     grid->setDebug(debug);
     grid->setMaxStencilSize(stencil_size);
     grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
@@ -98,9 +119,9 @@ int main(int argc, char** argv) {
 
     RBFFD* der;
     if (use_gpu) {
-        der = new RBFFD_CL(grid, dim); 
+        der = new RBFFD_CL(RBFFD::X|RBFFD::Y|RBFFD::Z|RBFFD::LAPL,grid, dim); 
     } else {
-        der = new RBFFD(grid, dim); 
+        der = new RBFFD(RBFFD::X|RBFFD::Y|RBFFD::Z|RBFFD::LAPL,grid, dim); 
     }
 
 
@@ -119,7 +140,7 @@ int main(int argc, char** argv) {
     der->computeAllWeightsForAllStencils();
 
     if (run_derivative_tests) {
-        DerivativeTests* der_test = new DerivativeTests(der, grid, true);
+        DerivativeTests* der_test = new DerivativeTests(dim, der, grid, true);
         if (use_gpu) {
             // Applies weights on both GPU and CPU and compares results for the first 10 stencils
             der_test->compareGPUandCPUDerivs(10);

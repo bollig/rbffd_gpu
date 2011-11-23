@@ -203,7 +203,7 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                     cli_filename.append(&optarg[1]);
                 } else if (optarg[0] == '.') {
                     char rpat[PATH_MAX]; 
-                    realpath(optarg,rpat); 
+                    char* p = realpath(optarg,rpat); 
                     //printf("<--%s-->file\n", rpat);
                     cli_filename = rpat; 
                 } else { 
@@ -272,7 +272,7 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
         rfile.append("/"); 
         rfile.append(log_file); 
         printf("Redirecting STDOUT to file: `%s'\n", rfile.c_str());
-        freopen(rfile.c_str(), "w", stdout);
+        FILE* f = freopen(rfile.c_str(), "w", stdout);
         atexit(closeLogFile);
     }
 

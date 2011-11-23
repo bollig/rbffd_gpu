@@ -41,7 +41,10 @@ void evaluateRK4_substep(
     __global FLOAT* hv_weights,
 
     uint nb_nodes,
+    // This is the actual stencil size (i.e., 31)
     uint stencil_size,
+    // This is the padded stencil size in memory (i.e., 32)
+    uint stencil_padded_size,
     int useHyperviscosity
 )  
 {   
@@ -63,7 +66,8 @@ void evaluateRK4_substep(
                                  hv_weights,
                                  nb_nodes,
                                  stencil_size,
-                                useHyperviscosity
+                                 stencil_padded_size,
+                                 useHyperviscosity
                                  );
 
 
@@ -124,6 +128,7 @@ advanceRK4_substeps(
 
     uint nb_nodes,
     uint stencil_size,
+    uint stencil_padded_size,
     int useHyperviscosity
 )  
 {   
@@ -153,6 +158,7 @@ advanceRK4_substeps(
                              hv_weights,
                              nb_nodes,
                              stencil_size,
+                             stencil_padded_size,
                              useHyperviscosity
                              );
 

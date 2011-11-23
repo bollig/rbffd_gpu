@@ -23,6 +23,7 @@ FLOAT solve(__global FLOAT* u_t,
 
             uint nb_nodes,
             uint stencil_size,
+            uint stencil_padded_size,
             int useHyperviscosity
             )
 {
@@ -81,6 +82,7 @@ FLOAT solve_block(__global FLOAT* u_t,
 
             uint nb_nodes,
             uint stencil_size,
+            uint stencil_padded_size,
             int useHyperviscosity,
 
             __local FLOAT* shared

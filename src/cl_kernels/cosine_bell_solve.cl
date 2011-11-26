@@ -22,6 +22,7 @@ FLOAT solve(__global FLOAT* u_t,
 
             uint nb_nodes,
             uint stencil_size,
+            uint stencil_padded_size, 
             int useHyperviscosity
             )
 {
@@ -32,8 +33,8 @@ FLOAT solve(__global FLOAT* u_t,
         FLOAT u0 = 2.f*pi*a/1036800.f; // The initial velocity (scalar in denom is 12days in seconds)
 
 
-        FLOAT dh_dlambda= applyWeights(lambda_weights, u_t, indx, stencils, stencil_size);
-        FLOAT dh_dtheta = applyWeights(theta_weights, u_t, indx, stencils, stencil_size);
+        FLOAT dh_dlambda= applyWeights(lambda_weights, u_t, indx, stencils, stencil_size, stencil_padded_size);
+        FLOAT dh_dtheta = applyWeights(theta_weights, u_t, indx, stencils, stencil_size, stencil_padded_size);
 
 //        __global FLOAT4* node = nodes[indx];
         FLOAT4 spherical_coords = cart2sph(nodes[indx]);
@@ -50,7 +51,7 @@ FLOAT solve(__global FLOAT* u_t,
         FLOAT f_out = -((vel_u/(a * cos(theta))) * dh_dlambda + (vel_v/a) * dh_dtheta);
 
         if (useHyperviscosity) {
-                FLOAT hv_filter = applyWeights(hv_weights, u_t, indx, stencils, stencil_size);
+                FLOAT hv_filter = applyWeights(hv_weights, u_t, indx, stencils, stencil_size, stencil_padded_size);
                 // Filter is ONLY applied after the rest of the RHS is evaluated
                 f_out += hv_filter;
         }
@@ -77,6 +78,7 @@ FLOAT solve_block(__global FLOAT* u_t,
 
             uint nb_nodes,
             uint stencil_size,
+            uint stencil_padded_size,
             int useHyperviscosity,
             __local FLOAT* shared
             )
@@ -92,10 +94,10 @@ FLOAT solve_block(__global FLOAT* u_t,
 
         // Apply weights into shared memory. Note: the first element of each shared block
         // will contain the derivative value for the current stencil
-        applyWeights_block(lambda_weights, u_t, indx, stencils, stencil_size, &shared[0]);
-        applyWeights_block(theta_weights, u_t, indx, stencils, stencil_size, &shared[block_size]);
+        applyWeights_block(lambda_weights, u_t, indx, stencils, stencil_size, stencil_padded_size, &shared[0]);
+        applyWeights_block(theta_weights, u_t, indx, stencils, stencil_size, stencil_padded_size, &shared[block_size]);
         if (useHyperviscosity) {
-            applyWeights_block(hv_weights, u_t, indx, stencils, stencil_size, &shared[2*block_size]);
+            applyWeights_block(hv_weights, u_t, indx, stencils, stencil_size, stencil_padded_size, &shared[2*block_size]);
         }
 
         barrier(CLK_LOCAL_MEM_FENCE); 

@@ -1,5 +1,13 @@
 #include "useDouble.cl"
-    
+
+// Compare: 
+//  1) Stencil unpadded and loop over all elements
+//  2) Stencil padded but loop ends at stencil_size
+//  3) Stencil padded and loop extends to stencil_padded_size (assume 0 weights, and index points to stencil center. The 0s wont cause NaNs)
+//  4) For padded cases we need to try BOTH multiple of 16 and 32 padding. 16 because thats the number of DOUBLES in a memop; 32 because its the warp size. 
+//  5) For all cases we need to test on LARGE data sizes. We should be able to use the Sphere CVT code or the datasets that I already have. Also, the stencils will be large epsilon which will produce bad derivatives, but will avoid NaNs due to illconditioning in the stencil weight calculations.
+
+
 FLOAT applyWeights(__global FLOAT* weights, __global FLOAT* u, unsigned int indx, __global uint* stencils, uint stencil_size, uint stencil_padded_size)
 {
         // This __global will change to __constant if we can fit the weight into const memory (OPTIMIZATION TODO)

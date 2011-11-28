@@ -34,20 +34,105 @@ class StokesSteadyPDE : public PDE
 
             L_host = new MatType(nrows, ncols); 
             F_host = new VecType(ncols);
-#if 0
+#if 1
             // Fill L
+
+
+            // U (block)  row
             for (unsigned int i = 0; i < nb_stencils; i++) {
                 StencilType& st = grid_ref.getStencil(i);
 
                 // TODO: change these to *SFC weights (when computed)
-                std::vector<double*>& ddx = getStencilWeights(RBFFD::X, i);
-                std::vector<double*>& ddy = getStencilWeights(RBFFD::Y, i); 
-                std::vector<double*>& ddz = getStencilWeights(RBFFD::Z, i); 
+                std::vector<double*>& ddx = getStencilWeights(RBFFD::XSFC, i);
+                std::vector<double*>& lapl = getStencilWeights(RBFFD::LSFC, i); 
+
                 for (unsigned int j = 0; j < st.size(); j++) {
-                    L_host(i,st[j]) = ddx[j];  
+                    unsigned int diag_row_ind = i + 0*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 0*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+                }
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_row_ind = i + 0*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 3*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = ddx[j];  
                 }
             }
 
+            // V (block)  row
+            for (unsigned int i = 0; i < nb_stencils; i++) {
+                StencilType& st = grid_ref.getStencil(i);
+
+                // TODO: change these to *SFC weights (when computed)
+                std::vector<double*>& ddy = getStencilWeights(RBFFD::YSFC, i);
+                std::vector<double*>& lapl = getStencilWeights(RBFFD::LSFC, i); 
+
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_row_ind = i + 1*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 1*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+                }
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_row_ind = i + 1*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 3*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = ddy[j];  
+                }
+            }
+
+            // W (block)  row
+            for (unsigned int i = 0; i < nb_stencils; i++) {
+                StencilType& st = grid_ref.getStencil(i);
+
+                // TODO: change these to *SFC weights (when computed)
+                std::vector<double*>& ddz = getStencilWeights(RBFFD::ZSFC, i);
+                std::vector<double*>& lapl = getStencilWeights(RBFFD::LSFC, i); 
+
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_row_ind = i + 2*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 2*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+                }
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_row_ind = i + 2*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 3*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = ddz[j];  
+                }
+            }
+
+
+            // P (block)  row
+            for (unsigned int i = 0; i < nb_stencils; i++) {
+                StencilType& st = grid_ref.getStencil(i);
+
+                // TODO: change these to *SFC weights (when computed)
+                std::vector<double*>& ddx = getStencilWeights(RBFFD::YSFC, i);
+                std::vector<double*>& ddy = getStencilWeights(RBFFD::YSFC, i);
+                std::vector<double*>& ddz = getStencilWeights(RBFFD::YSFC, i);
+
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_row_ind = i + 3*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 0*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = ddx[j];  
+                }
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_row_ind = i + 3*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 1*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = ddy[j];  
+                }
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_row_ind = i + 3*nb_nodes;
+                    unsigned int diag_col_ind = st[j] + 2*nb_nodes;
+
+                    L_host(diag_row_ind, diag_col_ind) = ddz[j];  
+                }
+            }
 
             // Fill F
             // Write both to disk (spy them in Matlab)

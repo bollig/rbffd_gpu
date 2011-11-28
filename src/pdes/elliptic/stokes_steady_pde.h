@@ -11,8 +11,8 @@ typedef boost::numeric::ublas::vector<FLOAT>            VecType;
 class StokesSteadyPDE : public PDE
 {
 
-    MatType L_host; 
-    VecType F_host; 
+    MatType *L_host; 
+    VecType *F_host; 
 
     public: 
         StokesSteadyPDE(Domain* grid, RBFFD* der, Communicator* comm) 
@@ -24,7 +24,31 @@ class StokesSteadyPDE : public PDE
 
         virtual void assemble() {
         
+            std::cout << "Assembling...." << std::endl;
+
+            unsigned int nb_stencils = grid_ref.getStencilsSize();
+            unsigned int nb_nodes = grid_ref.getNodeListSize(); 
+
+            unsigned int nrows = 4 * nb_stencils; 
+            unsigned int ncols = 4 * nb_nodes; 
+
+            L_host = new MatType(nrows, ncols); 
+            F_host = new VecType(ncols);
+
             // Fill L
+            for (unsigned int i = 0; i < nb_stencils; i++) {
+                StencilType& st = grid_ref.getStencil(i);
+
+                // d/dx
+                std::vector<double*>& ddx = getStencilWeights(RBFFD::X, i); 
+                std::vector<double*>& ddy = getStencilWeights(RBFFD::Y, i); 
+                std::vector<double*>& ddz = getStencilWeights(RBFFD::Z, i); 
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    L_host(i,st[j]) = ddx[j];  
+                }
+            }
+
+
             // Fill F
             // Write both to disk (spy them in Matlab)
         
@@ -33,6 +57,7 @@ class StokesSteadyPDE : public PDE
         
         virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 
         {
+            std::cout << "Solving...." << std::endl;
             // Solve L u = F
             // Write solution to disk
             

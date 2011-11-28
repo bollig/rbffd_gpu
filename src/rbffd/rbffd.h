@@ -46,10 +46,10 @@ class RBFFD
             LAMBDA  = 0x40,
             THETA   = 0x80, 
             LSFC    = 0x100,
-            INTERP  = 0x200
-//            XSFC    = 0x200, 
-//            YSFC    = 0x400, 
-//            ZSFC    = 0x800, 
+            XSFC    = 0x200, 
+            YSFC    = 0x400, 
+            ZSFC    = 0x800, 
+            INTERP  = 0x1000
         };
 
         // THIS ***MUST*** MIRROR THE ORDER IN DerType 
@@ -63,10 +63,10 @@ class RBFFD
             LAMBDA_i,
             THETA_i ,
             LSFC_i   ,
+            XSFC_i   ,
+            YSFC_i   ,
+            ZSFC_i  ,  
             INTERP_i, 
-            //XSFC_i   ,
-            //YSFC_i   ,
-            //ZSFC_i  ,  
             //
             // Leave this at the end
             NUM_DERIVATIVE_TYPES

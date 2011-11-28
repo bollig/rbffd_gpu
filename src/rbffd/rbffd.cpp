@@ -43,10 +43,10 @@ typedef RBF_Gaussian IRBF;
     derTypeStr[LAMBDA_i] = "lambda";   // Longitude
     derTypeStr[THETA_i] = "theta";   // Latitude
     derTypeStr[LSFC_i] = "Lsfc";   // Surface laplacian of sphere (Laplace-Beltrami)
-#if 0
+#if 1
     derTypeStr[XSFC_i] = "Xsfc";   // Surface gradient (x direction) of sphere 
-    derTypeStr[YSFC_i] = "Xsfc";   // Surface gradient (x direction) of sphere 
-    derTypeStr[ZSFC_i] = "Xsfc";   // Surface gradient (x direction) of sphere 
+    derTypeStr[YSFC_i] = "Ysfc";   // Surface gradient (y direction) of sphere 
+    derTypeStr[ZSFC_i] = "Zsfc";   // Surface gradient (z direction) of sphere 
 #endif 
     derTypeStr[INTERP_i] = "interp";
 

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <map> 
 
+
 #include "pdes/elliptic/stokes_steady_pde.h"
 
 #include "grids/grid_reader.h"
@@ -218,9 +219,9 @@ int main(int argc, char** argv) {
 
     RBFFD* der;
     if (use_gpu) {
-        der = new RBFFD_CL(RBFFD::THETA | RBFFD::LAMBDA | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD_CL(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
     } else {
-        der = new RBFFD(RBFFD::THETA | RBFFD::LAMBDA | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
+        der = new RBFFD(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
     }
 
     der->setUseHyperviscosity(useHyperviscosity);

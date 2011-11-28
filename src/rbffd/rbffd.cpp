@@ -21,6 +21,7 @@ typedef RBF_Gaussian IRBF;
 // (up to 3 right now) 
     RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
 :   computedTypes(typesToCompute),
+    computeSFCoperators(false),
     grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
     weightsModified(false), weightMethod(RBFFD::Direct), 
     hv_k(2), hv_gamma(8e-4), useHyperviscosity(0), 
@@ -81,6 +82,9 @@ RBFFD::~RBFFD() {
 
 // Compute the full set of derivative weights for all stencils 
 void RBFFD::computeAllWeightsForAllStencils() {
+
+    adjustForSFCTypes(); 
+    printComputedTypes();
 
     std::vector<StencilType>& st_map = grid_ref.getStencils(); 
     unsigned int nb_st = st_map.size(); 
@@ -247,7 +251,6 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     // We dont need the transpose of the RHS because we fill it in column form already
     // Also we use the multiple rhs solver for improved efficiency (BLAS3).
     arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
-    int irbf = st_indx;
 
 #if 0
     char buf[256]; 
@@ -258,6 +261,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     weights_new.print("weights");
 #endif 
 
+    int irbf = st_indx;
 
     int iterator = computedTypes; 
     int which_i = 0;
@@ -265,6 +269,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     // Iterate until we get all 0s. This allows SOME shortcutting.
     while (iterator) {
         if (computedTypes & getDerType(i)) {    
+
             // X,Y,Z weights should scale by 1/h
             // FIXME: for 3D, h^2
             double scale = 1.;// grid_ref.getStencilRadius(irbf);
@@ -321,6 +326,18 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
         }
         iterator >>= 1; 
         i+= 1; 
+    }
+
+    if (computeSFCoperators) {
+        NodeType center = rbf_centers[irbf]; 
+        double xx = center.x(); 
+        double yy = center.y(); 
+        double zz = center.z(); 
+        for (int j = 0; j < n; j++) {
+            this->weights[XSFC_i][irbf][j] = (1-xx*xx) * this->weights[X_i][irbf][j] + (-xx*yy) * this->weights[Y_i][irbf][j] + (-xx*zz) * this->weights[Z_i][irbf][j]; 
+            this->weights[YSFC_i][irbf][j] = (-xx*yy) * this->weights[X_i][irbf][j] + (1-yy*yy) * this->weights[Y_i][irbf][j] + (-yy*zz) * this->weights[Z_i][irbf][j]; 
+            this->weights[ZSFC_i][irbf][j] = (-xx*zz) * this->weights[X_i][irbf][j] + (-yy*zz) * this->weights[Y_i][irbf][j] + (1-zz*zz) * this->weights[Z_i][irbf][j];  
+        }
     }
 
     tm["computeAllWeightsOne"]->end();
@@ -436,6 +453,13 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                     // Laplace-Beltrami Operator for surface of sphere (Equation 20 in Flyer,Wright,Yuen paper)
                     rhs(j,0) = (1./4.) * ( (4.-r2)*rbf.rderiv2(diff) + (4. - 3.*r2)*rbf.rderiv_over_r(diff) );
                 }
+                break;
+            case XSFC: 
+            case YSFC: 
+            case ZSFC: 
+                // We'll fill with 0s. Then we'll overwrite the solution with the merged X,Y,Z weights. 
+                rhs(j, 0) = 0.;
+                break ;
             case HV: 
                 // FIXME: this is only for 2D right now
                 rhs(j,0) = rbf.hyperviscosity(diff, hv_k);
@@ -492,6 +516,8 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
     //
     void RBFFD::computeWeightsForStencil(DerType which, int st_indx) {
+        std::cout << "RBFFD::computeWeightsForStencil temporarily disabled.\n";
+        exit(EXIT_FAILURE);
         switch (weightMethod) {
             case RBFFD::Direct:
                 this->computeWeightsForStencil_Direct(which, st_indx);
@@ -522,7 +548,6 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
         // Stencil center
         Vec3& x0v = rbf_centers[stencil[0]];
-
         arma::mat rhs(n+np, 1); 
         rhs.zeros();
         arma::mat lhs(n+np, n+np); 

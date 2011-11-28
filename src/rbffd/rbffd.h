@@ -17,9 +17,9 @@
 // avoid interping all the arma content in NVCC (it works fine with GCC).
 namespace arma
 {
-template <class T>
-class Mat;
-typedef Mat<double> mat; 
+    template <class T>
+        class Mat;
+    typedef Mat<double> mat; 
 }
 
 typedef std::complex<double> CMPLX;
@@ -150,6 +150,8 @@ class RBFFD
 
         int useHyperviscosity;
 
+        bool computeSFCoperators;
+
     protected: 
 #if 0
         DerType getDerType(int i) {
@@ -175,7 +177,7 @@ class RBFFD
 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives
         // (up to 3 right now) 
-       // RBFFD(Grid* grid, int dim_num, int rank=0);
+        // RBFFD(Grid* grid, int dim_num, int rank=0);
         RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num, int rank=0); 
 
         virtual ~RBFFD(); 
@@ -251,7 +253,7 @@ class RBFFD
         //       local u with the one passed in (e.g., when using the GPU)
         // TODO: npts is unused at the momement. Could prove useful if we had a
         //      applyWeightsForDerivAtNode(i) routine
-//        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
+        //        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
         virtual void applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
 
@@ -433,17 +435,16 @@ class RBFFD
 
         // ================= These control derivative type bits ================
     public: 
-#if 0
-        void printCalculated() {
+        void printComputedTypes() {
             // Iterate through flags and prints which ones we are going to calculate
-            for (int i = 0; i < NUM_DERIV_TYPES; i++) {
+            for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
                 DerType dt = getDerType((DerTypeIndx)i); 
                 if (isSelected(dt)) {
-                    cout << "Will compute DerType: 0x" << hex << dt << endl;
+                    cout << "Will compute DerType: 0x" << hex << dt << " (" << derTypeStr[i] << ")" << endl;
                 }
             }
         }        
-#endif 
+
         bool isSelected(DerType dt) {
             return computedTypes & dt; 
 
@@ -474,7 +475,29 @@ class RBFFD
             }
         }
 
+        // Returns T/F whether the SFC types were found
+        bool adjustForSFCTypes() {
+            // If ANY of the SFC types are requested we'll need X Y and Z. 
+            if ((computedTypes & XSFC) | (computedTypes & YSFC) | (computedTypes & ZSFC)) {
+                std::cout << "Adjusting for the SFC types\n";
+                // IF we compute for one type of SFC we make sure to compute for them all
+                this->appendDerTypes(X | Y | Z | XSFC | YSFC | ZSFC); 
+                
+#if 0
+                this->removeDerType(XSFC);
+                this->removeDerType(YSFC);
+                this->removeDerType(ZSFC);
+#endif 
+
+                this->computeSFCoperators = true; 
+                return true; 
+            }
+            return false; 
+        }
+
+
         int getNumSelectedDerTypes() {
+
             int iterator = computedTypes; 
             int j = 0;     // Counts the number of checks for derivative type flags
             int i = 0;      // Counts the number of types we will compute

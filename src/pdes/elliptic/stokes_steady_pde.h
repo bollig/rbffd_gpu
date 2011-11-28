@@ -1,7 +1,8 @@
 #ifndef __STOKES_STEADY_PDE_H__
 #define __STOKES_STEADY_PDE_H__
 
-#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/vector_sparse.hpp>
+#include <boost/numeric/ublas/matrix_sparse.hpp>
 
 #include "pdes/pde.h"
 
@@ -19,7 +20,6 @@ class StokesSteadyPDE : public PDE
             : PDE(grid, der, comm) 
         {
             std::cout << "INSIDE STOKES CONSTRUCTOR" << std::endl;
-
         }
 
         virtual void assemble() {
@@ -34,13 +34,13 @@ class StokesSteadyPDE : public PDE
 
             L_host = new MatType(nrows, ncols); 
             F_host = new VecType(ncols);
-
+#if 0
             // Fill L
             for (unsigned int i = 0; i < nb_stencils; i++) {
                 StencilType& st = grid_ref.getStencil(i);
 
-                // d/dx
-                std::vector<double*>& ddx = getStencilWeights(RBFFD::X, i); 
+                // TODO: change these to *SFC weights (when computed)
+                std::vector<double*>& ddx = getStencilWeights(RBFFD::X, i);
                 std::vector<double*>& ddy = getStencilWeights(RBFFD::Y, i); 
                 std::vector<double*>& ddz = getStencilWeights(RBFFD::Z, i); 
                 for (unsigned int j = 0; j < st.size(); j++) {
@@ -51,7 +51,7 @@ class StokesSteadyPDE : public PDE
 
             // Fill F
             // Write both to disk (spy them in Matlab)
-        
+#endif
         }
 
         

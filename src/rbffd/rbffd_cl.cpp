@@ -12,7 +12,7 @@ using namespace std;
 //
     RBFFD_CL::RBFFD_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
 : RBFFD(typesToCompute, grid, dim_num, rank), CLBaseClass(rank), 
-    useDouble(true), alignWeights(true), alignMultiple(16)
+    useDouble(true), alignWeights(true), alignMultiple(32)
 {
     this->setupTimers();
     this->loadKernel();

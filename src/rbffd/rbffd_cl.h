@@ -46,6 +46,12 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         bool useDouble; 
 
         bool alignWeights32;
+        // This will be either the MAX_STENCIL_SIZE (computed by
+        // GridInterface), or the stencil size rounded to nearest
+        // multiple of 16 or 32. Any stencils that do not meet the
+        // stencil_padded_size are padded with 0s for weights and 
+        // the stencil center index for the padded indices. 
+        unsigned int stencil_padded_size; 
 
     public: 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives        
@@ -123,6 +129,10 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         void updateNodesOnGPU(bool forceFinish);
 
         bool areGPUKernelsDouble() { return useDouble; }
+        
+        unsigned int getStencilPaddedSize() {
+            return stencil_padded_size;
+        }
 
     protected: 
         void setupTimers(); 

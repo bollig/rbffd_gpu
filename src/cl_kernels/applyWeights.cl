@@ -11,8 +11,8 @@
 FLOAT applyWeights(__global FLOAT* weights, __global FLOAT* u, unsigned int indx, __global uint* stencils, uint stencil_size, uint stencil_padded_size)
 {
         // This __global will change to __constant if we can fit the weight into const memory (OPTIMIZATION TODO)
-    __global uint* stencil = stencils + indx * stencil_size;
-    __global FLOAT* st_weights = weights + indx * stencil_size;
+    __global uint* stencil = stencils + indx * stencil_padded_size;
+    __global FLOAT* st_weights = weights + indx * stencil_padded_size;
 
     FLOAT der = 0.0f;       
     for (uint j = 0; j < stencil_size; j++) {        
@@ -24,8 +24,8 @@ FLOAT applyWeights(__global FLOAT* weights, __global FLOAT* u, unsigned int indx
 
 void applyWeights_block(__global FLOAT* weights, __global FLOAT* u, unsigned int indx, __global uint* stencils, uint stencil_size, uint stencil_padded_size, __local FLOAT* der_buf)
 {
-    __global uint* stencil = stencils + indx * stencil_size;
-    __global FLOAT* st_weights = weights + indx * stencil_size;
+    __global uint* stencil = stencils + indx * stencil_padded_size;
+    __global FLOAT* st_weights = weights + indx * stencil_padded_size;
 
     uint lid = get_local_id(0); 
     uint block_size = get_local_size(0);

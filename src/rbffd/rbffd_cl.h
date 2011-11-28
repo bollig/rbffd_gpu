@@ -45,7 +45,10 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // Is a double precision extension available on the unit? 
         bool useDouble; 
 
-        bool alignWeights32;
+        // Set this to control the weight padding/alignment 
+        bool alignWeights; 
+        unsigned int alignMultiple;
+
         // This will be either the MAX_STENCIL_SIZE (computed by
         // GridInterface), or the stencil size rounded to nearest
         // multiple of 16 or 32. Any stencils that do not meet the
@@ -150,6 +153,13 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
 
     protected: 
+        int getNextMultiple(unsigned int stencil_size) {
+            int nearest = alignMultiple; 
+            while (stencil_size > nearest) 
+                nearest += alignMultiple; 
+            return nearest;
+        }
+        
         int getNextMultipleOf32(unsigned int stencil_size) {
             int nearest = 32; 
             while (stencil_size > nearest) 

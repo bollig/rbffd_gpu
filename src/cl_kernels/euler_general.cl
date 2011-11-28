@@ -30,6 +30,7 @@ advanceEuler(
 
         uint nb_nodes,
         uint stencil_size,
+        uint stencil_padded_size,
         int useHyperviscosity
         )
 {
@@ -53,6 +54,7 @@ advanceEuler(
                                      hv_weights,
                                      nb_nodes,
                                      stencil_size,
+                                     stencil_padded_size,
                                      useHyperviscosity
                                      );
 
@@ -94,6 +96,7 @@ advanceEuler_block(
 
         uint nb_nodes,
         uint stencil_size,
+        uint stencil_padded_size,
         int useHyperviscosity,
     
         __local FLOAT* shared
@@ -119,6 +122,7 @@ advanceEuler_block(
                                      hv_weights,
                                      nb_nodes,
                                      stencil_size,
+                                     stencil_padded_size,
                                      useHyperviscosity
                                      );
 

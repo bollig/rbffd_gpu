@@ -1,9 +1,7 @@
 #include <stdlib.h>
 #include <map> 
 
-#if 0
-#include "pdes/elliptic/stokes_steady.h"
-#endif 
+#include "pdes/elliptic/stokes_steady_pde.h"
 
 #include "grids/grid_reader.h"
 
@@ -295,6 +293,10 @@ int main(int argc, char** argv) {
     }
 
     // SOLVE HEAT EQUATION
+
+    PDE* pde; 
+
+    pde = new StokesSteadyPDE(subdomain, der, comm_unit); 
 
 #if 0
     ExactSolution* exact = getExactSolution(dim); 

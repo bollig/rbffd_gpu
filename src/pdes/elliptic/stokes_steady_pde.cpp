@@ -100,9 +100,9 @@ void StokesSteadyPDE::assemble() {
         StencilType& st = grid_ref.getStencil(i);
 
         // TODO: change these to *SFC weights (when computed)
-        double* ddx = der_ref.getStencilWeights(RBFFD::YSFC, i);
+        double* ddx = der_ref.getStencilWeights(RBFFD::XSFC, i);
         double* ddy = der_ref.getStencilWeights(RBFFD::YSFC, i);
-        double* ddz = der_ref.getStencilWeights(RBFFD::YSFC, i);
+        double* ddz = der_ref.getStencilWeights(RBFFD::ZSFC, i);
 
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_row_ind = i + 3*N;

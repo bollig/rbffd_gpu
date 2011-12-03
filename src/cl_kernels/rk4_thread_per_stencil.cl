@@ -39,7 +39,10 @@ evaluateRK4_classic(
     __global FLOAT* hv_weights,
 
     uint nb_nodes,
+    // This would be the true stencil size (i.e., 17)
     uint stencil_size,
+    // And this is the padded/aligned stencil size (i.e., 32)
+    uint stencil_padded_size,
 
     int useHyperviscosity
 )
@@ -62,6 +65,7 @@ evaluateRK4_classic(
                                  hv_weights,
                                  nb_nodes,
                                  stencil_size,
+                                 stencil_padded_size,
                                  useHyperviscosity
                                  );
 
@@ -112,6 +116,7 @@ advanceRK4_classic(
 
     uint nb_nodes,
     uint stencil_size,
+    uint stencil_padded_size,
     int useHyperviscosity
 )
 {

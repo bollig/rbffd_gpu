@@ -43,6 +43,7 @@ evaluateRK4_block(
 
     uint nb_nodes,
     uint stencil_size,
+    uint stencil_padded_size,
     int useHyperviscosity,
 
     __local FLOAT* shared
@@ -82,6 +83,7 @@ evaluateRK4_block(
                          hv_weights,
                          nb_nodes,
                          stencil_size,
+                         stencil_padded_size,
                          useHyperviscosity, 
                          shared
                      );
@@ -98,7 +100,7 @@ evaluateRK4_block(
 }
 
 // We'll re-use the existing kernels
-#include "rk4_classic.cl"
+#include "rk4_thread_per_stencil.cl"
 
 
 

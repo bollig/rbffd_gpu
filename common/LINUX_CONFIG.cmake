@@ -21,6 +21,10 @@ ELSE (${_compiler} STREQUAL "icpc")
     ENDIF(${_hostname} MATCHES "kid.*")
     	
     SET(CUDA_NVCC_FLAGS "-ccbin;g++;-arch=sm_13")
+    
+    if (USE_GCC44) 
+        SET(CUDA_NVCC_FLAGS "-ccbin;g++-4.4;-arch=sm_13")
+    endif (USE_GCC44) 
 
 ENDIF (${_compiler} STREQUAL "icpc")
 

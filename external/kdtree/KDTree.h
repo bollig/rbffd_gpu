@@ -13,7 +13,7 @@
 #include "timer_eb.h" 
 #include "Vec3.h"
 
-using namespace EB;
+//using namespace EB;
 
 using namespace std;
 
@@ -51,7 +51,8 @@ class Node {
 
 class KDTree {
     private:
-        Timer t1, t2, t3, t4, t5, t6;
+
+        EB::Timer *t1, *t2, *t3, *t4, *t5, *t6;
 
         // Core data contained in the tree
     private:
@@ -85,7 +86,7 @@ class KDTree {
         ~KDTree() {
             for (unsigned int i = 0; i < nodesPtrs.size(); i++)
                 delete nodesPtrs[i];
-            t1.printAll();
+            t1->printAll();
         }
 
         /// Heapsort algorithm used by fast KDtree construction
@@ -150,37 +151,42 @@ class KDTree {
          * 				   the number of points and the dimensionality is inferred 
          *                 by the data
          */
+    protected: 
+        void setupTimers() {
+            t1 = new EB::Timer("[kdtree_t1] Update Recursively");
+            t2 = new EB::Timer("[kdtree_t2] Build Recursively");
+            t3 = new EB::Timer("[kdtree_t3] Init_common");
+            t4 = new EB::Timer("[kdtree_t4] Heapsort Input Points (before Partitioning)");
+            t5 = new EB::Timer("[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)");
+            t6 = new EB::Timer("[kdtree_t6] Nearest N-neighbors query");
+        }
+
 
     public:
 
         KDTree(const double dpoints[], int nbpts, int dim_num) 
-            : t1("[kdtree_t1] Update Recursively"),
-            t2("[kdtree_t2] Build Recursively"),
-            t3("[kdtree_t3] Init_common"),
-            t4("[kdtree_t4] Heapsort Input Points (before Partitioning)"),
-            t5("[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)"),
-            t6("[kdtree_t6] Nearest N-neighbors query")
-    {
-        cout << "BUILDING NEW KDTREE : " << nbpts << "pts " << dim_num << "d" << endl;
-        vector<Point> vector_points;
-        for (int i = 0; i < nbpts; i++) {
-            Point p(dim_num);
-            for (int j = 0; j < dim_num; j++) {
-                p[j] = dpoints[i * dim_num + j];
+        {
+            setupTimers();   
+            cout << "BUILDING NEW KDTREE : " << nbpts << "pts " << dim_num << "d" << endl;
+            vector<Point> vector_points;
+            for (int i = 0; i < nbpts; i++) {
+                Point p(dim_num);
+                for (int j = 0; j < dim_num; j++) {
+                    p[j] = dpoints[i * dim_num + j];
+                }
+                vector_points.push_back(p);
             }
-            vector_points.push_back(p);
+
+            std::cout << "VECTOR_POINTS.size = " << vector_points.size() << std::endl;;
+
+            this -> npoints = vector_points.size();
+            this -> ndim = dim_num; //vector_points[0].size();
+            this -> points = vector_points;
+
+            t3->start();
+            init_common();
+            t3->end();
         }
-
-        std::cout << "VECTOR_POINTS.size = " << vector_points.size() << std::endl;;
-
-        this -> npoints = vector_points.size();
-        this -> ndim = dim_num; //vector_points[0].size();
-        this -> points = vector_points;
-
-        t3.start();
-        init_common();
-        t3.end();
-    }
 
 
         /**
@@ -193,22 +199,17 @@ class KDTree {
     public:
 
         KDTree(const vector<Point>& points)
-            : t1("[kdtree_t1] Update Recursively"),
-            t2("[kdtree_t2] Build Recursively"),
-            t3( "[kdtree_t3] Init_common"),
-            t4( "[kdtree_t4] Heapsort Input Points (before Partitioning)"),
-            t5( "[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)"),
-            t6("[kdtree_t6] Nearest N-neighbors query")
-    {
-        // initialize data
-        this -> npoints = points.size();
-        this -> ndim = (points[0]).size();
-        this -> points = points;
+        {
+            setupTimers();   
+            // initialize data
+            this -> npoints = points.size();
+            this -> ndim = (points[0]).size();
+            this -> points = points;
 
-        t3.start();
-        init_common();
-        t3.end();
-    }
+            t3->start();
+            init_common();
+            t3->end();
+        }
 
     private:
 
@@ -227,9 +228,9 @@ class KDTree {
             // indexes[dim][i]: in dimension dim, which is the index of the i-th smallest element?
             vector< vector<int> > indexes(ndim, vector<int>(npoints, 0));
             for (int dIdx = 0; dIdx < ndim; dIdx++) {
-                t4.start();
+                t4->start();
                 heaps[dIdx].heapsort(indexes[dIdx]);
-                t4.end();
+                t4->end();
             }
 
             // Invert the indexing structure!!
@@ -259,9 +260,9 @@ class KDTree {
             // First partition is on every single point ([1:npoints])
             vector<int> pidx(npoints, 0);
             for (int i = 0; i < npoints; i++) pidx[i] = i;
-            t2.start();
+            t2->start();
             build_recursively(srtidx, pidx, 0);
-            t2.end();
+            t2->end();
         }
 
     public:
@@ -295,9 +296,9 @@ class KDTree {
             // indexes[dim][i]: in dimension dim, which is the index of the i-th smallest element?
             vector< vector<int> > indexes(ndim, vector<int>(npoints, 0));
             for (int dIdx = 0; dIdx < ndim; dIdx++) {
-                t4.start();
+                t4->start();
                 heaps[dIdx].heapsort(indexes[dIdx]);
-                t4.end();
+                t4->end();
             }
 
             // Invert the indexing structure!!
@@ -316,9 +317,9 @@ class KDTree {
             }
             globalNodeIndx = 0; // Start indexing the nodesPtrs from the front
 
-            t1.start();
+            t1->start();
             updateTree_recursively(srtidx, pidx, 0);
-            t1.end();
+            t1->end();
         }
 
         // @return the number of points in the kd-tree
@@ -393,9 +394,9 @@ class KDTree {
             if ((double) pidx.size() * log((double) pidx.size()) < npoints) {
                 Larray.resize(pidx.size() / 2 + (pidx.size() % 2 == 0 ? 0 : 1), -1);
                 Rarray.resize(pidx.size() / 2, -1);
-                t5.start();
+                t5->start();
                 heapsort(dim, pidx, pidx.size());
-                t5.end();
+                t5->end();
                 std::copy(pidx.begin(), pidx.begin() + Larray.size(), Larray.begin());
                 std::copy(pidx.begin() + Larray.size(), pidx.end(), Rarray.begin());
                 pivot = pidx[(pidx.size() - 1) / 2];
@@ -508,9 +509,9 @@ class KDTree {
             if ((double) pidx.size() * log((double) pidx.size()) < npoints) {
                 Larray.resize(pidx.size() / 2 + (pidx.size() % 2 == 0 ? 0 : 1), -1);
                 Rarray.resize(pidx.size() / 2, -1);
-                t5.start();
+                t5->start();
                 heapsort(dim, pidx, pidx.size());
-                t5.end();
+                t5->end();
                 std::copy(pidx.begin(), pidx.begin() + Larray.size(), Larray.begin());
                 std::copy(pidx.begin() + Larray.size(), pidx.end(), Rarray.begin());
                 pivot = pidx[(pidx.size() - 1) / 2];
@@ -673,7 +674,7 @@ class KDTree {
     public:
 
         void k_closest_points(const Point& Xq, int k, vector<int>& idxs, vector<double>& distances) {
-            t6.start();
+            t6->start();
             // initialize search data
 #if 1
             Bmin = Point(-DBL_MAX, -DBL_MAX, -DBL_MAX);//vector<double>(ndim, -DBL_MAX);
@@ -705,7 +706,7 @@ class KDTree {
             // invert the vector, passing first closest results
             std::reverse(idxs.begin(), idxs.end());
             std::reverse(distances.begin(), distances.end());
-            t6.stop();
+            t6->stop();
         }
 
     private:
@@ -1042,6 +1043,3 @@ class KDTree {
 };
 
 #endif
-
-
-

@@ -120,6 +120,7 @@ int main(int argc, char** argv) {
 
     if (comm_unit->isMaster()) {
 
+        int stencil_gen_type = settings->GetSettingAs<int>("STENCIL_GEN_TYPE", ProjectSettings::optional, "2"); 
         int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10"); 
         int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
         int ns_nz = settings->GetSettingAs<int>("NS_NB_Z", ProjectSettings::optional, "10");
@@ -146,10 +147,23 @@ int main(int argc, char** argv) {
         if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
             std::cout << "Generating stencils files\n";
             tm["stencils"]->start(); 
-            grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
-            //            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
-            //            grid->generateStencils(Grid::ST_KDTREE);   
-            grid->generateStencils(Grid::ST_HASH);   
+
+            switch (stencil_gen_type) {
+                case 0: 
+                    std::cout << "GRID::ST_BRUTE_FORCE\n";
+                    grid->generateStencils(Grid::ST_BRUTE_FORCE);   
+                    break;
+                case 1: 
+                    std::cout << "GRID::ST_KDTREE\n";
+                    grid->generateStencils(Grid::ST_KDTREE);   
+                    break; 
+                case 2:
+                default:
+                    std::cout << "GRID::ST_HASH\n";
+                    grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
+                    grid->generateStencils(Grid::ST_HASH);   
+            }
+
             tm["stencils"]->stop();
             if (writeIntermediate) {
                 grid->writeToFile(); 

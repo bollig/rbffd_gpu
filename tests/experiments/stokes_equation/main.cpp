@@ -299,6 +299,7 @@ int main(int argc, char** argv) {
 
     pde = new StokesSteadyPDE(subdomain, der, comm_unit); 
     pde->assemble();
+    pde->solve();
 
 #if 0
     ExactSolution* exact = getExactSolution(dim); 

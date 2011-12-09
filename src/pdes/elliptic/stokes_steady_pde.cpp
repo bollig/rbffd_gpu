@@ -1,6 +1,7 @@
 #include "stokes_steady_pde.h"
 
 #include <boost/numeric/ublas/io.hpp>
+#include <boost/numeric/ublas/matrix_proxy.hpp>
 #include "viennacl/io/matrix_market.hpp"
 
 
@@ -25,7 +26,10 @@ void StokesSteadyPDE::assemble() {
     unsigned int num_nonzeros = 9*max_stencil_size*N+2*(4*N)+2*(3*N);  
 
     L_host = new MatType(nrows, ncols, num_nonzeros); 
+//    div_op = new MatType(nb_stencils+4, ncols, 3*max_stencil_size*N + 4*N + 3*N); 
     F_host = new VecType(ncols);
+    u_host = new VecType(ncols);
+
     // -----------------  Fill LHS --------------------
     //
     // U (block)  row
@@ -229,6 +233,11 @@ void StokesSteadyPDE::assemble() {
 
     this->write_to_file(*F_host, "F.mtx");
     std::cout << "Wrote F_host.mtx\n"; 
+
+//    boost::numeric::ublas::matrix_range<MatType> submat(*L_host, boost::numeric::ublas::range(3*N, 0), boost::numeric::ublas::range(0, 3*N));
+    viennacl::io::write_matrix_market_file(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)), "DIV_operator.mtx"); 
+//    viennacl::io::write_matrix_market_file(submat, "DIV_operator.mtx");
+
 }
 
 

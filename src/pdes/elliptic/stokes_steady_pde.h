@@ -10,16 +10,17 @@
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 #include <boost/geometry.hpp>
 
-#define VIENNACL_HAVE_UBLAS 
+#define VIENNACL_HAVE_UBLAS 1
 #include "viennacl/linalg/bicgstab.hpp"
 
-typedef boost::numeric::ublas::compressed_matrix<FLOAT> MatType;
-typedef boost::numeric::ublas::vector<FLOAT>            VecType;
+typedef boost::numeric::ublas::compressed_matrix<double> MatType;
+typedef boost::numeric::ublas::vector<double>            VecType;
 
 class StokesSteadyPDE : public PDE
 {
 
     MatType *L_host; 
+    MatType *div_op; 
     VecType *F_host; 
     VecType *u_host; 
 
@@ -31,8 +32,14 @@ class StokesSteadyPDE : public PDE
         }
 
         virtual void assemble();  
-        
-        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 
+       
+        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) {
+
+}
+
+
+//        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 
+        virtual void solve()
         {
             std::cout << "Solving...." << std::endl;
             // Solve L u = F
@@ -43,7 +50,13 @@ class StokesSteadyPDE : public PDE
             // SCALAR  std::copy(u_vec.begin(), u_vec.end(), U_G.begin()); 
 
             // Solve system using Stabilized BiConjugate Gradients from ViennaCL
-            //*u_host = solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag());
+//            *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
+            *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-2,2));
+            //*u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-6,20));
+            std::cout << "Done with solve\n"; 
+            
+            this->write_to_file(*u_host, "u.mtx");
+            std::cout << "Wrote u_host.mtx\n"; 
         }
 
 

@@ -10,13 +10,7 @@
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 #include <boost/geometry.hpp>
 
-
 #define VIENNACL_HAVE_UBLAS 
-#include "viennacl/scalar.hpp"
-#include "viennacl/vector.hpp"
-//#include "viennacl/coordinate_matrix.hpp"
-//#include "viennacl/compressed_matrix.hpp"
-#include "viennacl/linalg/prod.hpp"
 #include "viennacl/linalg/bicgstab.hpp"
 
 typedef boost::numeric::ublas::compressed_matrix<FLOAT> MatType;

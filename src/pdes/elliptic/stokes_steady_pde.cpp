@@ -234,9 +234,10 @@ void StokesSteadyPDE::assemble() {
     this->write_to_file(*F_host, "F.mtx");
     std::cout << "Wrote F_host.mtx\n"; 
 
-//    boost::numeric::ublas::matrix_range<MatType> submat(*L_host, boost::numeric::ublas::range(3*N, 0), boost::numeric::ublas::range(0, 3*N));
-    viennacl::io::write_matrix_market_file(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)), "DIV_operator.mtx"); 
-//    viennacl::io::write_matrix_market_file(submat, "DIV_operator.mtx");
+
+    div_op = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)));
+
+    viennacl::io::write_matrix_market_file(div_op, "DIV_operator.mtx"); 
 
 }
 

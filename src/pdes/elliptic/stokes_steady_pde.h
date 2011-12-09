@@ -5,10 +5,13 @@
 
 #include "utils/geom/cart2sph.h"
 
+#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector_sparse.hpp>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 #include <boost/geometry.hpp>
+#include <boost/numeric/ublas/lu.hpp>
+#include <boost/numeric/ublas/triangular.hpp>
 
 #define VIENNACL_HAVE_UBLAS 1
 #include "viennacl/linalg/bicgstab.hpp"
@@ -20,7 +23,7 @@ class StokesSteadyPDE : public PDE
 {
 
     MatType *L_host; 
-    MatType *div_op; 
+    MatType div_op; 
     VecType *F_host; 
     VecType *u_host; 
 
@@ -51,12 +54,14 @@ class StokesSteadyPDE : public PDE
 
             // Solve system using Stabilized BiConjugate Gradients from ViennaCL
 //            *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
-            *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-2,2));
-            //*u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-6,20));
+           *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-24,200));
             std::cout << "Done with solve\n"; 
             
             this->write_to_file(*u_host, "u.mtx");
             std::cout << "Wrote u_host.mtx\n"; 
+
+            this->write_to_file(VecType(prod(div_op, *u_host)), "div.mtx"); 
+            std::cout << "Wrote div.mtx\n"; 
         }
 
 

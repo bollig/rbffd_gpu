@@ -3,8 +3,21 @@
 
 #include "pdes/pde.h"
 
+#include "utils/geom/cart2sph.h"
+
 #include <boost/numeric/ublas/vector_sparse.hpp>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/math/special_functions/spherical_harmonic.hpp>
+#include <boost/geometry.hpp>
+
+
+#define VIENNACL_HAVE_UBLAS 
+#include "viennacl/scalar.hpp"
+#include "viennacl/vector.hpp"
+//#include "viennacl/coordinate_matrix.hpp"
+//#include "viennacl/compressed_matrix.hpp"
+#include "viennacl/linalg/prod.hpp"
+#include "viennacl/linalg/bicgstab.hpp"
 
 typedef boost::numeric::ublas::compressed_matrix<FLOAT> MatType;
 typedef boost::numeric::ublas::vector<FLOAT>            VecType;
@@ -14,6 +27,7 @@ class StokesSteadyPDE : public PDE
 
     MatType *L_host; 
     VecType *F_host; 
+    VecType *u_host; 
 
     public: 
         StokesSteadyPDE(Domain* grid, RBFFD* der, Communicator* comm) 
@@ -34,15 +48,34 @@ class StokesSteadyPDE : public PDE
             // (reshape to fit into U_G. For stokes we assume we're in a vector type <u,v,w,p>)
             // SCALAR  std::copy(u_vec.begin(), u_vec.end(), U_G.begin()); 
 
-
-
-
-
+            // Solve system using Stabilized BiConjugate Gradients from ViennaCL
+            //*u_host = solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag());
         }
 
 
         virtual std::string className() { return "stokes_steady"; }
 
+        template<typename T>
+            void write_to_file(boost::numeric::ublas::vector<T> vec, std::string filename);
+
+        // Temperature profile function (Spherical Harmonic for now)
+        double Temperature (int node_indx) {
+            int m = 2; 
+            unsigned int l = 3; 
+
+            NodeType& node = grid_ref.getNode(node_indx);
+
+            // Use Boost to transform coord system
+            boost::geometry::model::point<double, 3, boost::geometry::cs::cartesian> p(node.x(), node.y(), node.z());
+            boost::geometry::model::point<double, 3, boost::geometry::cs::spherical<boost::geometry::radian> > p_sph;
+            boost::geometry::transform(p, p_sph);
+
+            double lambdaP_j = p_sph.get<1>();
+            double thetaP_j = p_sph.get<0>();
+
+            // See equation: http://www.boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_poly/sph_harm.html
+            return boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
+        }
 };
 
 #endif  // __STOKES_STEADY_PDE_H__

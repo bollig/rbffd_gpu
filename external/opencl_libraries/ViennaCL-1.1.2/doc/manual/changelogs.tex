@@ -1,0 +1,110 @@
+
+\chapter*{Change Logs} \addcontentsline{toc}{chapter}{Change Logs}
+
+\section*{Version 1.1.x}
+
+\subsection*{Version 1.1.2}
+This final release of the {\ViennaCL} 1.1.x family focuses on refurbishing existing functionality:
+\begin{itemize}
+ \item Fixed a bug with partial vector copies from CPU to GPU (thanks to sourceforge.net user kaiwen).
+ \item Corrected error estimations in CG and BiCGStab iterative solvers (thanks to Riccardo Rossi for the hint).
+ \item Improved performance of CG and BiCGStab as well as Jacobi and row-scaling preconditioners considerably (thanks to Farshid Mossaiby and Riccardo Rossi for a lot of input).
+ \item Corrected linker statements in CMakeLists.txt for MacOS (thanks to Eric Christiansen).
+ \item Improved handling of {\ViennaCL} types (direct construction, output streaming of matrix- and vector-expressions, etc.).
+ \item Updated old code in the \texttt{coordinate\_matrix} type and improved performance (thanks to Dongdong Li for finding this).
+ \item Using \lstinline|size_t| instead of \lstinline|unsigned int| for the size type on the host.
+ \item Updated double precision support detection for AMD hardware.
+ \item Fixed a name clash in direct\_solve.hpp and ilu.hpp (thanks to sourceforge.net user random).
+ \item Prevented unsupported assignments and copies of sparse matrix types (thanks to sourceforge.net user kszyh).
+\end{itemize}
+
+\subsection*{Version 1.1.1}
+This new revision release has a focus on better interaction with other linear algebra libraries. The few known glitches with version 1.1.0 are now removed.
+\begin{itemize}
+ \item Fixed compilation problems on MacOS X and {\OpenCL} 1.0 header files due to undefined an preprocessor constant (thanks to Vlad-Andrei Lazar and Evan Bollig for reporting this)
+ \item Removed the accidental external linkage for three functions (we appreciate the report by Gordon Stevenson).
+ \item New out-of-the-box support for {\Eigen} \cite{eigen} and {\MTL} \cite{mtl4} libraries. Iterative solvers from ViennaCL can now directly be used with both libraries.
+ \item Fixed a problem with GMRES when system matrix is smaller than the maximum Krylov space dimension.
+ \item Better default parameter for BLAS3 routines leads to higher performance for matrix-matrix-products.
+ \item Added benchmark for dense matrix-matrix products (BLAS3 routines).
+ \item Added viennacl-info example that displays infos about the {\OpenCL} backend used by {\ViennaCL}.
+ \item Cleaned up CMakeLists.txt in order to selectively enable builds that rely on external libraries.
+ \item More than one installed {\OpenCL} platform is now allowed (thanks to Aditya Patel).
+\end{itemize}
+
+
+\subsection*{Version 1.1.0}
+A large number of new features and improvements over the 1.0.5 release are now available:
+\begin{itemize}
+ \item The completely rewritten {\OpenCL} back-end allows for multiple contexts, multiple devices and even to wrap existing OpenCL resources into ViennaCL objects. A tutorial demonstrates the new functionality. Thanks to Josip Basic for pushing us into that direction.
+ \item The tutorials are now named according to their purpose.
+ \item The dense matrix type now supports both row-major and column-major
+storage.
+ \item Dense and sparse matrix types now now be filled using STL-emulated types (\lstinline|std::vector< std::vector<NumericT> >| and \lstinline|std::vector< std::map< unsigned int, NumericT> >|)
+ \item BLAS level 3 functionality is now complete. We are very happy with the general out-of-the-box performance of matrix-matrix-products, even though it cannot beat the extremely tuned implementations tailored to certain matrix sizes on a particular device yet.
+ \item An automated performance tuning environment allows an optimization of the kernel parameters for the library user's machine. Best parameters can be obtained from a tuning run and stored in a XML file and read at program startup using pugixml.
+ \item Two now preconditioners are now included: A Jacobi preconditioner and a row-scaling preconditioner. In contrast to ILUT, they are applied on the OpenCL device directly.
+ \item Clean compilation of all examples under Visual Studio 2005 (we recommend newer compilers though...).
+ \item Error handling is now carried out using C++ exceptions.
+ \item Matrix Market now uses index base 1 per default (thanks to Evan Bollig for reporting that)
+ \item Improved performance of norm\_X kernels.
+ \item Iterative solver tags now have consistent constructors: First argument is the relative tolerance, second argument is the maximum number of total iterations. Other arguments depend on the respective solver.
+ \item A few minor improvements here and there (thanks go to Riccardo Rossi and anonymous sourceforge.net users for reporting the issues)
+\end{itemize}
+
+\section*{Version 1.0.x}
+
+\subsection*{Version 1.0.5} 
+This is the last 1.0.x release. The main changes are as follows:
+\begin{itemize}
+ \item Added a reader and writer for MatrixMarket files (thanks to Evan Bollig for suggesting that)
+ \item Eliminated a bug that caused the upper triangular direct solver to fail on NVIDIA hardware for large matrices (thanks to Andrew Melfi for finding that)
+ \item The number of iterations and the final estimated error can now be obtained from iterative solver tags.
+ \item Improvements provided by Klaus Schnass are included in the developer converter script (OpenCL kernels to C++ header)
+ \item Disabled the use of reference counting for OpenCL handles on Mac OS X (caused seg faults on program exit)
+\end{itemize}
+
+\subsection*{Version 1.0.4} 
+The changes in this release are:
+\begin{itemize}
+ \item All tutorials now work out-of the box with Visual Studio 2008.
+ \item Eliminated all {\ViennaCL} related warnings when compiling with Visual Studio 2008.
+ \item Better (experimental) support for double precision on ATI GPUs, but no \texttt{norm\_1}, \texttt{norm\_2}, \texttt{norm\_inf} and \texttt{index\_norm\_inf} functions using ATI Stream SDK on GPUs in double precision.
+ \item Fixed a bug in GMRES that caused segmentation faults under Windows.
+ \item Fixed a bug in \texttt{const\_sparse\_matrix\_adapter} (thanks to Abhinav Golas and Nico Galoppo for almost simultaneous emails on that)
+ \item Corrected incorrect return values in the sparse matrix regression test suite (thanks to Klaus Schnass for the hint)
+\end{itemize}
+
+\subsection*{Version 1.0.3} 
+The main improvements in this release are:
+\begin{itemize}
+ \item Support for multi-core CPUs with ATI Stream SDK (thanks to Riccardo Rossi, UPC. BARCELONA TECH, for suggesting this)
+ \item \lstinline|inner_prod| is now up to a factor of four faster (thanks to Serban Georgescu, ETH, for pointing the poor performance of the old implementation out)
+ \item Fixed a bug with \lstinline|plane_rotation| that caused system freezes with ATI GPUs.
+ \item Extended the doxygen generated reference documentation 
+\end{itemize}
+
+\subsection*{Version 1.0.2} 
+A bug-fix release that resolves some problems with the Visual C++ compiler.
+\begin{itemize}
+ \item Fixed some compilation problems under Visual C++ (version 2005 and 2008).
+ \item All tutorials accidentally relied on {\ublas}. Now \texttt{tut1} and \texttt{tut5} can be compiled without {\ublas}
+ \item Renamed \texttt{aux/} folder to \texttt{auxiliary/} (caused some problems on windows machines)
+\end{itemize}
+
+\subsection*{Version 1.0.1} 
+This is a quite large revision of \texttt{ViennaCL 1.0.0}, but mainly improves things under the hood.
+\begin{itemize}
+ \item Fixed a bug in lu\_substitute for dense matrices
+ \item Changed iterative solver behavior to stop if a certain relative residual is reached
+ \item ILU preconditioning is now fully done on the CPU, because this gives best overall performance
+ \item All OpenCL handles of {\ViennaCL} types can now be accessed via member function \texttt{handle()}
+ \item Improved GPU performance of GMRES by about a factor of two.
+ \item Added generic \texttt{norm\_2} function in header file \texttt{norm\_2.hpp}
+ \item Wrapper for \texttt{clFlush()} and \texttt{clFinish()} added
+ \item Device information can be queried by \texttt{device.info()}
+ \item Extended documentation and tutorials
+\end{itemize}
+
+\subsection*{Version 1.0.0}
+First release

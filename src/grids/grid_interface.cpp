@@ -663,10 +663,10 @@ void Grid::generateStencilsKDTree()
     int nb_rbf = node_list.size();
     int nb_bnd = boundary_indices.size();
 
-    // It might not be up to date, but we'll trust someone else to deal
+    // The KDTree might not be up to date, but we'll trust someone else to deal
     // with that problem
     if (node_list_kdtree == NULL) {        
-        // It hasnt been constructed yet
+        // The KDTree hasnt been constructed yet
         node_list_kdtree = new KDTree(node_list);
     }
 

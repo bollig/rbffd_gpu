@@ -699,6 +699,7 @@ void TimeDependentPDE_CL::allocateGPUMem() {
 int TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
 
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
+        unsigned int stencil_padded_size = der_ref_gpu.getStencilPaddedSize();
         unsigned int nb_nodes = grid_ref.getNodeListSize();
 
         // Subtract 1 to make sure our ++ below works out correctly;
@@ -720,6 +721,7 @@ int TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
 
                 kern.setArg(i++, nb_nodes);
                 kern.setArg(i++, stencil_size);
+                kern.setArg(i++, stencil_padded_size);
                 kern.setArg(i++, der_ref.getUseHyperviscosity());
 
         } catch (cl::Error er) {

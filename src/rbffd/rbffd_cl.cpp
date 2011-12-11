@@ -12,7 +12,7 @@ using namespace std;
 //
     RBFFD_CL::RBFFD_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
 : RBFFD(typesToCompute, grid, dim_num, rank), CLBaseClass(rank), 
-    useDouble(true), alignWeights32(true)
+    useDouble(true), alignWeights(true), alignMultiple(32)
 {
     this->setupTimers();
     this->loadKernel();
@@ -95,17 +95,23 @@ void RBFFD_CL::allocateGPUMem() {
 
     cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
 
-    if (alignWeights32) {
-        unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
-        gpu_stencil_size = this->getNextMultipleOf32(max_stencil_size) * stencil_map.size();  
-
+    unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
+    if (alignWeights) {
+        stencil_padded_size =  this->getNextMultiple(max_stencil_size);  
+        std::cout << "STENCIL ALIGNED TO SIZE: " << stencil_padded_size << std::endl;
     } else {
-        gpu_stencil_size = 0; 
-
+        stencil_padded_size = max_stencil_size;  
+#if 0
+        // No need to assume we're goign to have non-uniform stencil sizes. If we do, we'll pad them all to be 
+        // the max_stencil_size. 
+       gpu_stencil_size = 0; 
         for (unsigned int i = 0; i < stencil_map.size(); i++) {
             gpu_stencil_size += stencil_map[i].size(); 
         }
+#endif 
     }
+
+    gpu_stencil_size = stencil_padded_size * stencil_map.size();  
 
     unsigned int float_size; 
     if (useDouble) {
@@ -192,11 +198,10 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
     //  (figure out the stencil size to target)
     //  NOTE: its not essential since we only put stencils on GPU one time.
     cpu_stencils = new unsigned int[gpu_stencil_size];  
-    unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
     for (unsigned int i = 0; i < nb_stencils; i++) {
         unsigned int j; 
         for (j = 0; j < stencil_map[i].size(); j++) {
-            unsigned int indx = i*max_stencil_size+j; 
+            unsigned int indx = i*stencil_padded_size+j; 
             cpu_stencils[indx] = stencil_map[i][j];
             //std::cout << cpu_stencils[indx] << "   ";
         }
@@ -205,8 +210,8 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
         // values from showing up beyond our stencil index.
         // NOTE: another failsafe is to have the weights set to 0 beyond this
         // point so we dont add any values from outside indices
-        for (; j < max_stencil_size; j++) {
-            unsigned int indx = i*max_stencil_size+j; 
+        for (; j < stencil_padded_size; j++) {
+            unsigned int indx = i*stencil_padded_size+j; 
             cpu_stencils[indx] = stencil_map[i][0];
             //std::cout << cpu_stencils[indx] << "   ";
         }
@@ -288,12 +293,11 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
 
         std::cout << "Writing weights to GPU memory\n"; 
 
-        unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
         unsigned int nb_stencils = grid_ref.getStencilsSize();
 
-        if ((nb_stencils * max_stencil_size) != gpu_stencil_size) {
+        if ((nb_stencils * stencil_padded_size) != gpu_stencil_size) {
             // Critical error between allocate and update
-            std::cout << "nb_stencils*max_stencil_size != gpu_stencil_size" << std::endl;
+            std::cout << "nb_stencils*stencil_padded_size != gpu_stencil_size" << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -311,7 +315,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
                     unsigned int stencil_size = grid_ref.getStencilSize(i); 
                     unsigned int j = 0; 
                     for (j = 0; j < stencil_size; j++) {
-                        unsigned int indx = i*stencil_size + j; 
+                        unsigned int indx = i*stencil_padded_size + j; 
                         cpu_weights_d[which][indx] = (double)weights[which][i][j]; 
                         //  std::cout << cpu_weights[which][indx] << "   ";
                     }
@@ -319,8 +323,8 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
                     // excludes whatever function values are found at the end of
                     // the stencil (i.e., we can include extra terms in summation
                     // without added effect
-                    for (; j < max_stencil_size; j++) {
-                        unsigned int indx = i*stencil_size + j; 
+                    for (; j < stencil_padded_size; j++) {
+                        unsigned int indx = i*stencil_padded_size + j; 
                         cpu_weights_d[which][indx] = (double)0.;
                         //  std::cout << cpu_weights[which][indx] << "   ";
                     }
@@ -364,12 +368,11 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
         std::cout << "Writing weights to GPU memory\n"; 
 
-        unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
         unsigned int nb_stencils = grid_ref.getStencilsSize();
 
-        if ((nb_stencils * max_stencil_size) != gpu_stencil_size) {
+        if ((nb_stencils * stencil_padded_size) != gpu_stencil_size) {
             // Critical error between allocate and update
-            std::cout << "nb_stencils*max_stencil_size != gpu_stencil_size" << std::endl;
+            std::cout << "nb_stencils*stencil_padded_size != gpu_stencil_size" << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -388,7 +391,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
                     unsigned int stencil_size = grid_ref.getStencilSize(i); 
                     unsigned int j = 0; 
                     for (j = 0; j < stencil_size; j++) {
-                        unsigned int indx = i*stencil_size + j; 
+                        unsigned int indx = i*stencil_padded_size + j; 
                         cpu_weights_f[which][indx] = (float)weights[which][i][j]; 
                         //  std::cout << cpu_weights[which][indx] << "   ";
                     }
@@ -396,8 +399,8 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
                     // excludes whatever function values are found at the end of
                     // the stencil (i.e., we can include extra terms in summation
                     // without added effect
-                    for (; j < max_stencil_size; j++) {
-                        unsigned int indx = i*stencil_size + j; 
+                    for (; j < stencil_padded_size; j++) {
+                        unsigned int indx = i*stencil_padded_size + j; 
                         cpu_weights_f[which][indx] = (float)0.f;
                         //  std::cout << cpu_weights[which][indx] << "   ";
                     }
@@ -514,6 +517,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
+        kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
         std::cout << "Set " << i << " kernel args\n";
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
@@ -587,6 +591,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
+        kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
 
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));

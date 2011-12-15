@@ -27,7 +27,7 @@ void StokesSteadyPDE::assemble() {
 
     L_host = new MatType(nrows, ncols, num_nonzeros); 
     L_reordered = new MatType(nrows, ncols, num_nonzeros); 
-//    div_op = new MatType(nb_stencils+4, ncols, 3*max_stencil_size*N + 4*N + 3*N); 
+    //    div_op = new MatType(nb_stencils+4, ncols, 3*max_stencil_size*N + 4*N + 3*N); 
     F_host = new VecType(ncols);
     F_reordered = new VecType(ncols);
     u_host = new VecType(ncols);
@@ -105,7 +105,7 @@ void StokesSteadyPDE::assemble() {
 
             (*L_host)(diag_row_ind, diag_col_ind) = ddz[j];  
         }
-        
+
         // Added constraint to square mat and close nullspace
         (*L_host)(diag_row_ind, 4*N+2) = 1.; 
     }
@@ -141,7 +141,7 @@ void StokesSteadyPDE::assemble() {
         // Added constraint to square mat and close nullspace
         (*L_host)(diag_row_ind, 4*N+3) = 1.;  
     }
-    
+
     // ------ EXTRA CONSTRAINT ROWS -----
     unsigned int diag_row_ind = 4*N;
     // U
@@ -199,7 +199,7 @@ void StokesSteadyPDE::assemble() {
 
         (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
     }
-    
+
     // W
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 2*N;
@@ -235,15 +235,16 @@ void StokesSteadyPDE::assemble() {
     std::cout << "Wrote L_host.mtx\n"; 
 
     this->write_to_file(*F_host, "F.mtx");
-    
+
 #if 1
     L_graph = new GraphType( ncols-4 );
-    
+
     // Reorder within the standard blocks (exclude constraints)
     MatType submat = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(0,nrows-4), boost::numeric::ublas::range(0,ncols-4)));
     this->build_graph(submat, *L_graph);
-    
+
     m_lookup = new boost::numeric::ublas::vector<size_t>( ncols );
+    std::cout << "Reordering interior of matrix (excluding the 4 extra constraints)\n";
     this->get_cuthill_mckee_order(*L_graph, *m_lookup ); 
 
     for (int i = 0; i < 4; i++) {
@@ -258,16 +259,71 @@ void StokesSteadyPDE::assemble() {
     this->write_to_file(*m_lookup, "CuthillMckeeOrder.mtx");
 #endif    
 
- 
+
     // TODO: figure out ordering here
     div_op = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)));
     viennacl::io::write_matrix_market_file(div_op, "DIV_operator.mtx"); 
 
 }
 
+
+void StokesSteadyPDE::solve() 
+{
+    std::cout << "Solving...." << std::endl;
+    // Solve L u = F
+    // Write solution to disk
+
+    // Update U_G with the content from U
+    // (reshape to fit into U_G. For stokes we assume we're in a vector type <u,v,w,p>)
+    // SCALAR  std::copy(u_vec.begin(), u_vec.end(), U_G.begin()); 
+
+    // Solve system using Stabilized BiConjugate Gradients from ViennaCL
+    // *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
+
+    // NOTE: the preconditioners dont work on our current structure. We need to
+    // reorder the matrix to get entries on the diagonal in order for ilut to work. Im
+    // sure this is why the jacobi also fails. 
+#if 0
+    viennacl::linalg::ilut_precond< MatType >  ublas_ilut(*L_host, viennacl::linalg::ilut_tag());
+    *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-6, 20), ublas_ilut);
+#else 
+#if 0
+    viennacl::linalg::jacobi_precond< MatType > ublas_jacobi(*L_host, viennacl::linalg::jacobi_tag());
+    *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
+#else 
+#if 1
+    *u_reordered = viennacl::linalg::solve(*L_reordered, *F_reordered, viennacl::linalg::gmres_tag(1e-12, 40));
+#endif 
+#endif 
+#endif 
+#if 0
+    // LU with Partial Pivoting
+    *u_host = *F_host; 
+    ublas::permutation_matrix<double> P1(L_host->size1());
+
+    ublas::lu_factorize(*L_host, P1);
+    ublas::lu_substitute(*L_host, P1, *u_host);
+#else 
+
+#endif 
+
+    std::cout << "Done with solve\n"; 
+
+    this->write_to_file(*u_reordered, "u_reordered.mtx");
+
+    this->get_original_order(*u_reordered, *u_host);
+
+    this->write_to_file(*u_host, "u.mtx");
+
+    this->write_to_file(VecType(prod(div_op, *u_host)), "div.mtx"); 
+}
+
+
+
+
 void StokesSteadyPDE::get_reordered_system(MatType& in_mat, VecType& in_vec, boost::numeric::ublas::vector<size_t>& order, MatType& out_mat, VecType& out_vec) {
     inv_m_lookup = new boost::numeric::ublas::vector<size_t>( order.size() );
-    
+
     boost::numeric::ublas::vector<size_t>& inv_lookup = *inv_m_lookup;     
 
 
@@ -276,7 +332,7 @@ void StokesSteadyPDE::get_reordered_system(MatType& in_mat, VecType& in_vec, boo
         inv_lookup(order(i)) = i; 
     }
 
-     for (MatType::const_iterator1 row_it = in_mat.begin1();
+    for (MatType::const_iterator1 row_it = in_mat.begin1();
             row_it != in_mat.end1();
             ++row_it) {
         for (MatType::const_iterator2 col_it = row_it.begin();
@@ -286,7 +342,7 @@ void StokesSteadyPDE::get_reordered_system(MatType& in_mat, VecType& in_vec, boo
             // is permuted to the new index given by (R(i),R(j))
             size_t row_ind = inv_lookup(col_it.index1()); 
             size_t col_ind = inv_lookup(col_it.index2());
-            
+
             out_mat(row_ind, col_ind) = *col_it; 
         }
     }
@@ -299,7 +355,7 @@ void StokesSteadyPDE::get_reordered_system(MatType& in_mat, VecType& in_vec, boo
 }
 
 void StokesSteadyPDE::get_original_order(VecType& in_vec, VecType& out_vec) {
-     for (VecType::const_iterator row_it = in_vec.begin();
+    for (VecType::const_iterator row_it = in_vec.begin();
             row_it != in_vec.end(); 
             ++row_it) {
         size_t row_ind = (*m_lookup)(row_it.index());

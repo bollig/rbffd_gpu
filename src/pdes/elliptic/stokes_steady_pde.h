@@ -79,57 +79,7 @@ class StokesSteadyPDE : public PDE
 
 
 //        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 
-        virtual void solve()
-        {
-            std::cout << "Solving...." << std::endl;
-            // Solve L u = F
-            // Write solution to disk
-            
-            // Update U_G with the content from U
-            // (reshape to fit into U_G. For stokes we assume we're in a vector type <u,v,w,p>)
-            // SCALAR  std::copy(u_vec.begin(), u_vec.end(), U_G.begin()); 
-
-            // Solve system using Stabilized BiConjugate Gradients from ViennaCL
-            // *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
-
-            // NOTE: the preconditioners dont work on our current structure. We need to
-            // reorder the matrix to get entries on the diagonal in order for ilut to work. Im
-            // sure this is why the jacobi also fails. 
-#if 0
-            viennacl::linalg::ilut_precond< MatType >  ublas_ilut(*L_host, viennacl::linalg::ilut_tag());
-            *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-6, 20), ublas_ilut);
-#else 
-#if 0
-            viennacl::linalg::jacobi_precond< MatType > ublas_jacobi(*L_host, viennacl::linalg::jacobi_tag());
-            *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
-#else 
-#if 1
-            *u_reordered = viennacl::linalg::solve(*L_reordered, *F_reordered, viennacl::linalg::gmres_tag(1e-12, 40));
-#endif 
-#endif 
-#endif 
-        #if 0
-            // LU with Partial Pivoting
-            *u_host = *F_host; 
-            ublas::permutation_matrix<double> P1(L_host->size1());
-
-            ublas::lu_factorize(*L_host, P1);
-            ublas::lu_substitute(*L_host, P1, *u_host);
-        #else 
-
-        #endif 
-
-            std::cout << "Done with solve\n"; 
-
-            this->write_to_file(*u_reordered, "u_reordered.mtx");
-
-            this->get_original_order(*u_reordered, *u_host);
-            
-            this->write_to_file(*u_host, "u.mtx");
-
-            this->write_to_file(VecType(prod(div_op, *u_host)), "div.mtx"); 
-        }
-
+        virtual void solve();
 
         virtual std::string className() { return "stokes_steady"; }
 

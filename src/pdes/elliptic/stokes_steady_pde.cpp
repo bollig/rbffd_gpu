@@ -26,6 +26,7 @@ void StokesSteadyPDE::assemble() {
     unsigned int num_nonzeros = 9*max_stencil_size*N+2*(4*N)+2*(3*N);  
 
     L_host = new MatType(nrows, ncols, num_nonzeros); 
+    L_graph = new GraphType( ncols );
 //    div_op = new MatType(nb_stencils+4, ncols, 3*max_stencil_size*N + 4*N + 3*N); 
     F_host = new VecType(ncols);
     u_host = new VecType(ncols);
@@ -234,6 +235,12 @@ void StokesSteadyPDE::assemble() {
     this->write_to_file(*F_host, "F.mtx");
     std::cout << "Wrote F_host.mtx\n"; 
 
+    this->build_graph(*L_host, *L_graph); 
+    boost::numeric::ublas::vector<size_t> r( ncols );
+    this->get_cuthill_mckee_order(*L_graph, r); 
+
+    this->write_to_file(r, "CuthillMckeeOrder.mtx");
+
 
     div_op = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)));
 
@@ -241,6 +248,44 @@ void StokesSteadyPDE::assemble() {
 
 }
 
+
+// Fill an adjacency graph based on the matrix
+void StokesSteadyPDE::build_graph(MatType& mat, GraphType& G) {
+
+    for (MatType::const_iterator1 row_it = mat.begin1();
+            row_it != mat.end1();
+            ++row_it) {
+        for (MatType::const_iterator2 col_it = row_it.begin();
+                col_it != row_it.end();
+                ++col_it) {
+            boost::add_edge( col_it.index1(), col_it.index2(), G);
+        }
+    }
+}
+
+
+void StokesSteadyPDE::get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart) {
+
+    boost::property_map<GraphType,boost::vertex_index_t>::type
+        index_map = get(boost::vertex_index, G);
+
+    std::cout << "-> CutHill McKee Starting Bandwidth: " << boost::bandwidth(G) << "\n";
+
+    // Solving for CutHill McKee
+    std::vector<VertexType> inv_perm(boost::num_vertices(G));
+    std::vector<size_type> perm(boost::num_vertices(G));
+    cuthill_mckee_ordering(G, inv_perm.rbegin(), get(boost::vertex_color,G), make_degree_map(G));
+
+    // Building new lookup chart
+    for ( size_t i = 0; i < inv_perm.size(); i++ )
+        lookup_chart[i] = index_map[inv_perm[i]];
+
+    // Finding new bandwidth for debug purposes
+    for (size_type c = 0; c != inv_perm.size(); ++c )
+        perm[index_map[inv_perm[c]]] = c;
+    std::cout << "-> CutHill McKee Ending Bandwidth: " << boost::bandwidth(G, make_iterator_property_map(&perm[0], index_map, perm[0])) << "\n";
+
+}
 
 //----------------------------------------------------------------------
 

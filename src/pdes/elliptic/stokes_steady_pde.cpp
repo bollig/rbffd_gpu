@@ -26,7 +26,7 @@ void StokesSteadyPDE::assemble() {
     unsigned int num_nonzeros = 9*max_stencil_size*N+2*(4*N)+2*(3*N);  
 
     L_host = new MatType(nrows, ncols, num_nonzeros); 
-    L_graph = new GraphType( ncols );
+    L_reordered = new MatType(nrows, ncols, num_nonzeros); 
 //    div_op = new MatType(nb_stencils+4, ncols, 3*max_stencil_size*N + 4*N + 3*N); 
     F_host = new VecType(ncols);
     u_host = new VecType(ncols);
@@ -233,21 +233,54 @@ void StokesSteadyPDE::assemble() {
     std::cout << "Wrote L_host.mtx\n"; 
 
     this->write_to_file(*F_host, "F.mtx");
-    std::cout << "Wrote F_host.mtx\n"; 
+    
+    L_graph = new GraphType( ncols-4 );
+    
+    // Reorder within the standard blocks (exclude constraints)
+    MatType submat = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(0,nrows-4), boost::numeric::ublas::range(0,ncols-4)));
+    this->build_graph(submat, *L_graph);
+    
+    boost::numeric::ublas::vector<size_t> new_order( ncols );
+    this->get_cuthill_mckee_order(*L_graph, new_order); 
 
-    this->build_graph(*L_host, *L_graph); 
-    boost::numeric::ublas::vector<size_t> r( ncols );
-    this->get_cuthill_mckee_order(*L_graph, r); 
+    for (int i = 0; i < 4; i++) {
+        new_order((ncols-4) + i) = (ncols-4)+i; 
+    }
+    this->get_reordered_matrix(*L_host, new_order, *L_reordered); 
 
-    this->write_to_file(r, "CuthillMckeeOrder.mtx");
+    viennacl::io::write_matrix_market_file(*L_reordered, "L_reordered.mtx");
+    std::cout << "Wrote L_reordered.mtx\n"; 
 
-
+    this->write_to_file(new_order, "CuthillMckeeOrder.mtx");
+    
+    // TODO: figure out ordering here
     div_op = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)));
-
     viennacl::io::write_matrix_market_file(div_op, "DIV_operator.mtx"); 
 
 }
 
+void StokesSteadyPDE::get_reordered_matrix(MatType& in, boost::numeric::ublas::vector<size_t>& order, MatType& out) {
+    boost::numeric::ublas::vector<size_t> inv_lookup(order.size()); 
+    
+    for (size_t i = 0; i < order.size(); i++) {
+        inv_lookup(order(i)) = i; 
+    }
+
+     for (MatType::const_iterator1 row_it = in.begin1();
+            row_it != in.end1();
+            ++row_it) {
+        for (MatType::const_iterator2 col_it = row_it.begin();
+                col_it != row_it.end();
+                ++col_it) {
+            // We use the reordering as LHS(R,R). So that means every non-zero (i,j)
+            // is permuted to the new index given by (R(i),R(j))
+            size_t row_ind = inv_lookup(col_it.index1()); //order(col_it.index1()); 
+            size_t col_ind = inv_lookup(col_it.index2()); //order(col_it.index2()); 
+            
+            out(row_ind, col_ind) = 1;; 
+        }
+    }
+}
 
 // Fill an adjacency graph based on the matrix
 void StokesSteadyPDE::build_graph(MatType& mat, GraphType& G) {

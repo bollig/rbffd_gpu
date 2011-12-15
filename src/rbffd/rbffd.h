@@ -440,7 +440,8 @@ class RBFFD
             for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
                 DerType dt = getDerType((DerTypeIndx)i); 
                 if (isSelected(dt)) {
-                    cout << "Will compute DerType: 0x" << hex << dt << " (" << derTypeStr[i] << ")" << endl;
+                    std::cout << "Will compute DerType: 0x" << hex << dt << " (" << derTypeStr[i] << ")" << endl;
+                    std::cout << dec; 
                 }
             }
         }        

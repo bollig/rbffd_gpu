@@ -47,6 +47,7 @@ class StokesSteadyPDE : public PDE
 {
 
     MatType *L_host; 
+    MatType *L_reordered; 
     GraphType *L_graph; 
     MatType div_op; 
     VecType *F_host; 
@@ -63,6 +64,7 @@ class StokesSteadyPDE : public PDE
        
         void build_graph(MatType& mat, GraphType& G);
         void get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart);
+        void get_reordered_matrix(MatType& in, boost::numeric::ublas::vector<size_t>& order, MatType& out);
 
         virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) {
 

@@ -51,7 +51,13 @@ class StokesSteadyPDE : public PDE
     GraphType *L_graph; 
     MatType div_op; 
     VecType *F_host; 
+    VecType *F_reordered; 
     VecType *u_host; 
+    VecType *u_reordered; 
+    
+    // Lookup table to find our reorderings
+    boost::numeric::ublas::vector<size_t> *inv_m_lookup; 
+    boost::numeric::ublas::vector<size_t> *m_lookup; 
 
     public: 
         StokesSteadyPDE(Domain* grid, RBFFD* der, Communicator* comm) 
@@ -64,7 +70,8 @@ class StokesSteadyPDE : public PDE
        
         void build_graph(MatType& mat, GraphType& G);
         void get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart);
-        void get_reordered_matrix(MatType& in, boost::numeric::ublas::vector<size_t>& order, MatType& out);
+        void get_reordered_system(MatType& in_mat, VecType& in_vec, boost::numeric::ublas::vector<size_t>& order, MatType& out_mat, VecType& out_vec);
+        void get_original_order(VecType& in_vec, VecType& out_vec);
 
         virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) {
 
@@ -97,11 +104,10 @@ class StokesSteadyPDE : public PDE
             *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
 #else 
 #if 1
-            *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-12, 40));
+            *u_reordered = viennacl::linalg::solve(*L_reordered, *F_reordered, viennacl::linalg::gmres_tag(1e-12, 40));
 #endif 
 #endif 
 #endif 
-
         #if 0
             // LU with Partial Pivoting
             *u_host = *F_host; 
@@ -114,12 +120,14 @@ class StokesSteadyPDE : public PDE
         #endif 
 
             std::cout << "Done with solve\n"; 
+
+            this->write_to_file(*u_reordered, "u_reordered.mtx");
+
+            this->get_original_order(*u_reordered, *u_host);
             
             this->write_to_file(*u_host, "u.mtx");
-            std::cout << "Wrote u_host.mtx\n"; 
 
             this->write_to_file(VecType(prod(div_op, *u_host)), "div.mtx"); 
-            std::cout << "Wrote div.mtx\n"; 
         }
 
 

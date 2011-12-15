@@ -29,7 +29,9 @@ void StokesSteadyPDE::assemble() {
     L_reordered = new MatType(nrows, ncols, num_nonzeros); 
 //    div_op = new MatType(nb_stencils+4, ncols, 3*max_stencil_size*N + 4*N + 3*N); 
     F_host = new VecType(ncols);
+    F_reordered = new VecType(ncols);
     u_host = new VecType(ncols);
+    u_reordered = new VecType(ncols);
 
     // -----------------  Fill LHS --------------------
     //
@@ -234,41 +236,48 @@ void StokesSteadyPDE::assemble() {
 
     this->write_to_file(*F_host, "F.mtx");
     
+#if 1
     L_graph = new GraphType( ncols-4 );
     
     // Reorder within the standard blocks (exclude constraints)
     MatType submat = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(0,nrows-4), boost::numeric::ublas::range(0,ncols-4)));
     this->build_graph(submat, *L_graph);
     
-    boost::numeric::ublas::vector<size_t> new_order( ncols );
-    this->get_cuthill_mckee_order(*L_graph, new_order); 
+    m_lookup = new boost::numeric::ublas::vector<size_t>( ncols );
+    this->get_cuthill_mckee_order(*L_graph, *m_lookup ); 
 
     for (int i = 0; i < 4; i++) {
-        new_order((ncols-4) + i) = (ncols-4)+i; 
+        (*m_lookup)((ncols-4) + i) = (ncols-4)+i; 
     }
-    this->get_reordered_matrix(*L_host, new_order, *L_reordered); 
+    this->get_reordered_system(*L_host, *F_host, *m_lookup, *L_reordered, *F_reordered); 
 
     viennacl::io::write_matrix_market_file(*L_reordered, "L_reordered.mtx");
     std::cout << "Wrote L_reordered.mtx\n"; 
+    this->write_to_file(*F_reordered, "F_reordered.mtx");
 
-    this->write_to_file(new_order, "CuthillMckeeOrder.mtx");
-    
+    this->write_to_file(*m_lookup, "CuthillMckeeOrder.mtx");
+#endif    
+
+ 
     // TODO: figure out ordering here
     div_op = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)));
     viennacl::io::write_matrix_market_file(div_op, "DIV_operator.mtx"); 
 
 }
 
-void StokesSteadyPDE::get_reordered_matrix(MatType& in, boost::numeric::ublas::vector<size_t>& order, MatType& out) {
-    boost::numeric::ublas::vector<size_t> inv_lookup(order.size()); 
+void StokesSteadyPDE::get_reordered_system(MatType& in_mat, VecType& in_vec, boost::numeric::ublas::vector<size_t>& order, MatType& out_mat, VecType& out_vec) {
+    inv_m_lookup = new boost::numeric::ublas::vector<size_t>( order.size() );
     
+    boost::numeric::ublas::vector<size_t>& inv_lookup = *inv_m_lookup;     
+
+
     // We construct an inverse lookup table so we can iterate over ONLY the nonzero elements
     for (size_t i = 0; i < order.size(); i++) {
         inv_lookup(order(i)) = i; 
     }
 
-     for (MatType::const_iterator1 row_it = in.begin1();
-            row_it != in.end1();
+     for (MatType::const_iterator1 row_it = in_mat.begin1();
+            row_it != in_mat.end1();
             ++row_it) {
         for (MatType::const_iterator2 col_it = row_it.begin();
                 col_it != row_it.end();
@@ -278,8 +287,23 @@ void StokesSteadyPDE::get_reordered_matrix(MatType& in, boost::numeric::ublas::v
             size_t row_ind = inv_lookup(col_it.index1()); 
             size_t col_ind = inv_lookup(col_it.index2());
             
-            out(row_ind, col_ind) = *col_it; 
+            out_mat(row_ind, col_ind) = *col_it; 
         }
+    }
+    for (VecType::const_iterator row_it = in_vec.begin();
+            row_it != in_vec.end(); 
+            ++row_it) {
+        size_t row_ind = inv_lookup(row_it.index());
+        out_vec(row_ind) = *row_it; 
+    }
+}
+
+void StokesSteadyPDE::get_original_order(VecType& in_vec, VecType& out_vec) {
+     for (VecType::const_iterator row_it = in_vec.begin();
+            row_it != in_vec.end(); 
+            ++row_it) {
+        size_t row_ind = (*m_lookup)(row_it.index());
+        out_vec(row_ind) = *row_it; 
     }
 }
 
@@ -332,5 +356,6 @@ void StokesSteadyPDE::write_to_file(boost::numeric::ublas::vector<T> vec, std::s
         fout << std::scientific << vec[i] << std::endl;
     }
     fout.close();
+    std::cout << "Wrote " << filename << std::endl;
 }
 

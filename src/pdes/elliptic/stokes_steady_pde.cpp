@@ -262,6 +262,7 @@ void StokesSteadyPDE::assemble() {
 void StokesSteadyPDE::get_reordered_matrix(MatType& in, boost::numeric::ublas::vector<size_t>& order, MatType& out) {
     boost::numeric::ublas::vector<size_t> inv_lookup(order.size()); 
     
+    // We construct an inverse lookup table so we can iterate over ONLY the nonzero elements
     for (size_t i = 0; i < order.size(); i++) {
         inv_lookup(order(i)) = i; 
     }
@@ -274,10 +275,10 @@ void StokesSteadyPDE::get_reordered_matrix(MatType& in, boost::numeric::ublas::v
                 ++col_it) {
             // We use the reordering as LHS(R,R). So that means every non-zero (i,j)
             // is permuted to the new index given by (R(i),R(j))
-            size_t row_ind = inv_lookup(col_it.index1()); //order(col_it.index1()); 
-            size_t col_ind = inv_lookup(col_it.index2()); //order(col_it.index2()); 
+            size_t row_ind = inv_lookup(col_it.index1()); 
+            size_t col_ind = inv_lookup(col_it.index2());
             
-            out(row_ind, col_ind) = 1;; 
+            out(row_ind, col_ind) = *col_it; 
         }
     }
 }

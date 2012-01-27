@@ -292,7 +292,7 @@ void StokesSteadyPDE::solve()
     *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
 #else 
 #if 1
-    *u_reordered = viennacl::linalg::solve(*L_reordered, *F_reordered, viennacl::linalg::gmres_tag(1e-12, 40));
+    *u_reordered = viennacl::linalg::solve(*L_reordered, *F_reordered, viennacl::linalg::gmres_tag(1e-8, 100));
 #endif 
 #endif 
 #endif 

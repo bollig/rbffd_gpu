@@ -1,13 +1,18 @@
-#include "stokes_steady_pde.h"
+
 
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include "viennacl/io/matrix_market.hpp"
 
+#include "stokes_steady_pde.h"
 
+//#include <cusp/hyb_matrix.h>
 
 void StokesSteadyPDE::assemble() {
 
+
+
+#if 1
     std::cout << "Assembling...." << std::endl;
 
     double eta = 1.;
@@ -258,6 +263,11 @@ void StokesSteadyPDE::assemble() {
 
     this->write_to_file(*m_lookup, "CuthillMckeeOrder.mtx");
 #endif    
+
+#endif
+
+
+
 
 
     // TODO: figure out ordering here

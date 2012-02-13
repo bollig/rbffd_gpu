@@ -1,12 +1,10 @@
-The subdirs 
-	cusp
-	thrust
-contain the headers from
-	cusp-v0.1.2.zip (http://cusp-library.googlecode.com/files/cusp-v0.1.2.zip)
-	thrust-v1.3.0.zip (http://thrust.googlecode.com/files/thrust-v1.3.0.zip)
-Both packages are licensed under the Apache v2 license. Details of their licenses
-are available in respective directories. 
+Works with CUDA 4.0: 
+---------------------
+cusp-v0.2 is stable release
 
-NO modifications were made to the source trees of either package. 
+Works with CUDA 4.1: 
+--------------------
+cusp-nightly-01262012 is direct from the mercurial repo (no release), checked out 1/26/12 
 
--Evan Bollig 11/29/2010
+
+Create a symbolic link "cusp" to the proper version for the required version of cuda

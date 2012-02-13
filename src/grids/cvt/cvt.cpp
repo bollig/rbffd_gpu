@@ -14,7 +14,7 @@
 #include "cvt.h"
 
 using namespace std;
-
+using namespace EB;
 void CVT::setupTimers() {
     timers["total"] = new Timer("[CVT] Total time in CVT::generate()");
     timers["iter"] = new Timer("[CVT] perform one iteraton of Lloyd's");

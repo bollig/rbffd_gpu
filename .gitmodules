@@ -6,7 +6,7 @@
 	url = ssh://pamd1.sc.fsu.edu/~efb06/repos/rbffd_gpu_doc.git
 [submodule "scripts"]
 	path = scripts
-	url = ssh://pamd1.sc.fsu.edu/~efb06/repos/rbffd_gpu_scripts.git
+	url = git@github.com:bollig/rbffd_gpu_scripts.git
 [submodule "external/boost-numeric-bindings"]
 	path = external/boost-numeric-bindings
 	url = http://git.tiker.net/trees/boost-numeric-bindings.git

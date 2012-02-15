@@ -982,7 +982,9 @@ void TimeDependentPDE_CL::launchRK4_block_eval( unsigned int offset_to_set, unsi
 
                         i = this->setAdvanceArgs( rk4_substep_block_kernel, i);
                 
-                        // Shared memory:  
+                        // Shared memory: we multiply by 3 because we use a different line of local mem for each sparse vec multiply 
+                        // we multiply by the nubmer of banks to ensure that we are working without bank conflicts
+                        // At most this uses 24KB of smem. 
                         rk4_substep_block_kernel.setArg(i++, cl::__local(local_work_size * sizeof(double) * 3));
 
                         rk4_sub_args_set++;

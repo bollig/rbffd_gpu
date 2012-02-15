@@ -58,6 +58,17 @@ ENDIF (NOT USE_CUDA)
 ###############################################
 # Find library: find_library(<VAR> name1 [path1 path2 ...])
 
+if (DEFINED ARMADILLO_ROOT )
+    set(ARMADILLO_INCLUDE "${ARMADILLO_ROOT}/include" )
+    set(ARMADILLO_LIB "${ARMADILLO_ROOT}/lib ${ARMADILLO_ROOT}/lib64")
+    set (ARMA_FOUND true) 
+endif()
+if (DEFINED ARMADILLOROOT )
+    set(ARMADILLO_INCLUDE "${ARMADILLOROOT}/include" )
+    set(ARMADILLO_LIB "${ARMADILLOROOT}/lib ${ARMADILLOROOT}/lib64")
+    set (ARMA_FOUND true)
+endif() 
+
 # Download and install Armadillo separately. 
 # Specify local installation dir here. If installed globally the dir is unnecessary.
 FIND_LIBRARY (armadillo armadillo PATHS
@@ -71,9 +82,18 @@ FIND_LIBRARY (armadillo armadillo PATHS
     /usr/local/lib
     /usr/lib64
     /usr/local/lib64
+    ${ARMADILLO_LIB}
     NO_DEFAULT_PATH
     )
-MESSAGE(STATUS "Found armadillo in: ${armadillo}")
+if (DEFINED armadillo) 
+    SET(ARMADILLO_FOUND true)
+endif()
+
+if (ARMADILLO_FOUND)
+ MESSAGE(STATUS "Found armadillo in: ${armadillo} (Include: ${ARMADILLO_INCLUDE})")
+else() 
+    MESSAGE(FATAL_ERROR " Armadillo Not Found! ")
+endif() 
 
 SET(CMAKE_FIND_LIBRARY_SUFFIXES_SAVED ${CMAKE_FIND_LIBRARY_SUFFIXES}) #Backup
 LIST(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.3")
@@ -101,9 +121,6 @@ MESSAGE(STATUS "Found fftw3 in: ${fftw3}")
 ###############################################
 
 
-
-
-
 ###############################################
 # External dependency search paths
 ###############################################
@@ -117,6 +134,7 @@ SET (RBF_INCLUDE_DIRS
     /opt/local/include   # for boost
     ~/local/include
     ~/local/usr/include
+    ${ARMADILLO_INCLUDE}
     )
 
 INCLUDE_DIRECTORIES ( ${RBF_INCLUDE_DIRS} )

@@ -57,6 +57,7 @@ class CosineBell_CL : public TimeDependentPDE_CL
 
     protected:
         virtual std::string className() {return "cosine_bell_cl";}
+        virtual void solve() {;}
 }; 
 #endif 
 

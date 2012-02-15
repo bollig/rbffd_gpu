@@ -257,7 +257,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         //x_device = viennacl::linalg::prod(L_device, F_device);
         x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
 
-        viennacl::ocl::finish();
+        viennacl::ocl::get_queue().finish();
         t5.end();
 
         cout << "Done with solve" << endl;

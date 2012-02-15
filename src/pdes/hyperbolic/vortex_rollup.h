@@ -35,6 +35,8 @@ class VortexRollup : public TimeDependentPDE
 
         virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes)
         { std::cout << "[VortexRollup] ERROR! SHOULD CALL THE TIME BASED SOLVE ROUTINE\n"; exit(EXIT_FAILURE); } 
+
+        virtual void solve() {;}
 }; 
 #endif 
 

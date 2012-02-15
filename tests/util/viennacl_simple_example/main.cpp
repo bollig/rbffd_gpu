@@ -27,6 +27,8 @@
 
 //include the generic norm_2 functions of ViennaCL
 #include "viennacl/linalg/norm_2.hpp"
+#include "viennacl/linalg/norm_1.hpp"
+#include "viennacl/linalg/norm_inf.hpp"
 
 // Some helper functions for this tutorial:
 #include "Random.hpp"

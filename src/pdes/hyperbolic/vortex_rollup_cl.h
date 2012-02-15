@@ -20,6 +20,7 @@ class VortexRollup_CL : public TimeDependentPDE_CL
 
     protected: 
         virtual std::string className() {return "vortex_rollup_cl";}
+        virtual void solve() {; }
 }; 
 #endif 
 

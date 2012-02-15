@@ -161,6 +161,7 @@ SET (RBF_INCLUDE_DIRS
     ~/local/include
     ~/local/usr/include
     ${ARMADILLO_INCLUDE}
+    ${Boost_INCLUDE_DIRS}
     )
 
 INCLUDE_DIRECTORIES ( ${RBF_INCLUDE_DIRS} )

@@ -53,21 +53,47 @@ IF (NOT USE_CUDA)
 ENDIF (NOT USE_CUDA)
 
 
+# This makes finding boost more robust when we have custom installs
+set ( Boost_NO_BOOST_CMAKE  true ) 
+find_package(Boost)
+
+if(Boost_FOUND)
+  
+  message(STATUS "Boost_MAJOR_VERSION = ${Boost_MAJOR_VERSION}")
+  message(STATUS "Boost_MINOR_VERSION = ${Boost_MINOR_VERSION}")
+  
+  message(STATUS "Boost_INCLUDE_DIR = ${Boost_INCLUDE_DIR}")
+  
+endif()
+
+
+
 ###############################################
 # Locate Required Libraries
 ###############################################
 # Find library: find_library(<VAR> name1 [path1 path2 ...])
+if (DEFINED ENV{ARMADILLO_ROOT})
+    set(ARMADILLO_INCLUDE "${ARMADILLO_INCLUDE};$ENV{ARMADILLO_ROOT}/include" )
+    set(ARMADILLO_LIB_PATH "${ARMADILLO_LIB_PATH};$ENV{ARMADILLO_ROOT}/lib;$ENV{ARMADILLO_ROOT}/lib64")
+endif()
+
+if (DEFINED ENV{ARMADILLOROOT})
+    set(ARMADILLO_INCLUDE "${ARMADILLO_INCLUDE};$ENV{ARMADILLOROOT}/include" )
+    set(ARMADILLO_LIB_PATH "${ARMADILLO_LIB_PATH};$ENV{ARMADILLOROOT}/lib;$ENV{ARMADILLOROOT}/lib64")
+endif()
+
 
 if (DEFINED ARMADILLO_ROOT )
-    set(ARMADILLO_INCLUDE "${ARMADILLO_ROOT}/include" )
-    set(ARMADILLO_LIB "${ARMADILLO_ROOT}/lib ${ARMADILLO_ROOT}/lib64")
-    set (ARMA_FOUND true) 
+    set(ARMADILLO_INCLUDE "${ARMADILLO_ROOT}/include;${ARMADILLO_INCLUDE}" )
+    set(ARMADILLO_LIB_PATH "${ARMADILLO_ROOT}/lib;${ARMADILLO_ROOT}/lib64;${ARMADILLO_LIB_PATH}")
 endif()
 if (DEFINED ARMADILLOROOT )
-    set(ARMADILLO_INCLUDE "${ARMADILLOROOT}/include" )
-    set(ARMADILLO_LIB "${ARMADILLOROOT}/lib ${ARMADILLOROOT}/lib64")
-    set (ARMA_FOUND true)
+    set(ARMADILLO_INCLUDE "${ARMADILLOROOT}/include;${ARMADILLO_INCLUDE}" )
+    set(ARMADILLO_LIB_PATH "${ARMADILLOROOT}/lib;${ARMADILLOROOT}/lib64;${ARMADILLO_LIB_PATH}")
 endif() 
+
+MESSAGE(STATUS "SEARCHING FOR ARMADILLO IN LIB PATH: ${ARMADILLO_LIB_PATH}")
+
 
 # Download and install Armadillo separately. 
 # Specify local installation dir here. If installed globally the dir is unnecessary.
@@ -82,7 +108,7 @@ FIND_LIBRARY (armadillo armadillo PATHS
     /usr/local/lib
     /usr/lib64
     /usr/local/lib64
-    ${ARMADILLO_LIB}
+    ${ARMADILLO_LIB_PATH}
     NO_DEFAULT_PATH
     )
 if (DEFINED armadillo) 

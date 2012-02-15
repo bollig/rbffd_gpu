@@ -22,13 +22,13 @@ SET (ARGV
 
 require_config()
 
-FIND_PACKAGE(Boost) 
+#FIND_PACKAGE(Boost) 
 
-IF(Boost_FOUND) 
+#IF(Boost_FOUND) 
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
-ELSE (Boost_FOUND)
-    Message(WARNING "Boost not found. Disabling test ${PROJECT_NAME}")
-ENDIF(Boost_FOUND)
+#ELSE (Boost_FOUND)
+#    Message(WARNING "Boost not found. Disabling test ${PROJECT_NAME}")
+#ENDIF(Boost_FOUND)

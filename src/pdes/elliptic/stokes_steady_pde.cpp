@@ -1,17 +1,10 @@
-
-
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include "viennacl/io/matrix_market.hpp"
 
 #include "stokes_steady_pde.h"
 
-//#include <cusp/hyb_matrix.h>
-
 void StokesSteadyPDE::assemble() {
-
-
-
 #if 1
     std::cout << "Assembling...." << std::endl;
 

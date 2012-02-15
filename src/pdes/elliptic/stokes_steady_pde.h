@@ -54,56 +54,54 @@ class StokesSteadyPDE : public PDE
     VecType *F_reordered; 
     VecType *u_host; 
     VecType *u_reordered; 
-    
+
     // Lookup table to find our reorderings
     boost::numeric::ublas::vector<size_t> *inv_m_lookup; 
     boost::numeric::ublas::vector<size_t> *m_lookup; 
 
     public: 
-        StokesSteadyPDE(Domain* grid, RBFFD* der, Communicator* comm) 
-            : PDE(grid, der, comm) 
-        {
-            std::cout << "INSIDE STOKES CONSTRUCTOR" << std::endl;
-        }
+    StokesSteadyPDE(Domain* grid, RBFFD* der, Communicator* comm) 
+        : PDE(grid, der, comm) 
+    {
+        std::cout << "INSIDE STOKES CONSTRUCTOR" << std::endl;
+    }
 
-        virtual void assemble();  
-       
-        void build_graph(MatType& mat, GraphType& G);
-        void get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart);
-        void get_reordered_system(MatType& in_mat, VecType& in_vec, boost::numeric::ublas::vector<size_t>& order, MatType& out_mat, VecType& out_vec);
-        void get_original_order(VecType& in_vec, VecType& out_vec);
+    virtual void assemble();  
 
-        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) {
+    void build_graph(MatType& mat, GraphType& G);
+    void get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart);
+    void get_reordered_system(MatType& in_mat, VecType& in_vec, boost::numeric::ublas::vector<size_t>& order, MatType& out_mat, VecType& out_vec);
+    void get_original_order(VecType& in_vec, VecType& out_vec);
 
-}
+    virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) {
 
+    }
 
-//        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 
-        virtual void solve();
+    virtual void solve();
 
-        virtual std::string className() { return "stokes_steady"; }
+    virtual std::string className() { return "stokes_steady"; }
 
-        template<typename T>
-            void write_to_file(boost::numeric::ublas::vector<T> vec, std::string filename);
+    template<typename T>
+        void write_to_file(boost::numeric::ublas::vector<T> vec, std::string filename);
 
-        // Temperature profile function (Spherical Harmonic for now)
-        double Temperature (int node_indx) {
-            int m = 2; 
-            unsigned int l = 3; 
+    // Temperature profile function (Spherical Harmonic for now)
+    double Temperature (int node_indx) {
+        int m = 2; 
+        unsigned int l = 3; 
 
-            NodeType& node = grid_ref.getNode(node_indx);
+        NodeType& node = grid_ref.getNode(node_indx);
 
-            // Use Boost to transform coord system
-            boost::geometry::model::point<double, 3, boost::geometry::cs::cartesian> p(node.x(), node.y(), node.z());
-            boost::geometry::model::point<double, 3, boost::geometry::cs::spherical<boost::geometry::radian> > p_sph;
-            boost::geometry::transform(p, p_sph);
+        // Use Boost to transform coord system
+        boost::geometry::model::point<double, 3, boost::geometry::cs::cartesian> p(node.x(), node.y(), node.z());
+        boost::geometry::model::point<double, 3, boost::geometry::cs::spherical<boost::geometry::radian> > p_sph;
+        boost::geometry::transform(p, p_sph);
 
-            double lambdaP_j = p_sph.get<1>();
-            double thetaP_j = p_sph.get<0>();
+        double lambdaP_j = p_sph.get<1>();
+        double thetaP_j = p_sph.get<0>();
 
-            // See equation: http://www.boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_poly/sph_harm.html
-            return boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
-        }
+        // See equation: http://www.boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_poly/sph_harm.html
+        return boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
+    }
 
 };
 

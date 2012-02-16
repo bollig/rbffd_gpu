@@ -4,6 +4,36 @@
 
 #include "stokes_steady_pde.h"
 
+void StokesSteadyPDE::reorder() {
+
+    L_reordered = new MatType(nrows, ncols, NNZ); 
+    F_reordered = new VecType(ncols);
+    u_reordered = new VecType(ncols);
+
+    L_graph = new GraphType( ncols-4 );
+
+    // Reorder within the standard blocks (exclude constraints)
+    MatType submat = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(0,nrows-4), boost::numeric::ublas::range(0,ncols-4)));
+    this->build_graph(submat, *L_graph);
+
+    m_lookup = new boost::numeric::ublas::vector<size_t>( ncols );
+
+    std::cout << "Reordering interior of matrix (excluding the 4 extra constraints)\n";
+
+    this->get_cuthill_mckee_order(*L_graph, *m_lookup ); 
+
+    for (int i = 0; i < 4; i++) {
+        (*m_lookup)((ncols-4) + i) = (ncols-4)+i; 
+    }
+    this->get_reordered_system(*L_host, *F_host, *m_lookup, *L_reordered, *F_reordered); 
+
+    viennacl::io::write_matrix_market_file(*L_reordered, "L_reordered.mtx");
+    std::cout << "Wrote L_reordered.mtx\n"; 
+    this->write_to_file(*F_reordered, "F_reordered.mtx");
+
+    this->write_to_file(*m_lookup, "CuthillMckeeOrder.mtx");
+}
+
 void StokesSteadyPDE::assemble() {
 #if 1
     std::cout << "Assembling...." << std::endl;
@@ -11,25 +41,21 @@ void StokesSteadyPDE::assemble() {
     double eta = 1.;
     double Ra = 1.e6;
 
+    // We have different nb_stencils and nb_nodes when we parallelize. The subblocks might not be full
     unsigned int nb_stencils = grid_ref.getStencilsSize();
     unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
 
     // Add 4 for extra constraint cols and rows to close nullspace
-    unsigned int nrows = 4 * nb_stencils + 4; 
-    unsigned int ncols = 4 * nb_nodes + 4; 
+    // --------- THESE 4 VARS ARE CLASS PROPS ------------
+    nrows = 4 * nb_stencils + 4; 
+    ncols = 4 * nb_nodes + 4; 
+    N = nb_nodes;
+    NNZ = 9*max_stencil_size*N+2*(4*N)+2*(3*N);  
+    // ---------------------------------------------------
 
-    unsigned int N = nb_nodes;
-
-    unsigned int num_nonzeros = 9*max_stencil_size*N+2*(4*N)+2*(3*N);  
-
-    L_host = new MatType(nrows, ncols, num_nonzeros); 
-    L_reordered = new MatType(nrows, ncols, num_nonzeros); 
-    //    div_op = new MatType(nb_stencils+4, ncols, 3*max_stencil_size*N + 4*N + 3*N); 
-    F_host = new VecType(ncols);
-    F_reordered = new VecType(ncols);
+    L_host = new MatType(nrows, ncols, NNZ); 
     u_host = new VecType(ncols);
-    u_reordered = new VecType(ncols);
 
     // -----------------  Fill LHS --------------------
     //
@@ -174,10 +200,14 @@ void StokesSteadyPDE::assemble() {
     }
 
 
+    fillRHS(); 
 
+}
 
-
+void StokesSteadyPDE::fillRHS() {
     //------------- Fill F -------------
+    F_host = new VecType(ncols);
+
     // U
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 0*N;
@@ -185,7 +215,7 @@ void StokesSteadyPDE::assemble() {
         double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
         double dir = node.x();
 
-        (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
+        (*F_host)(row_ind) = sph32(j); 
     }
 
     // V
@@ -195,7 +225,8 @@ void StokesSteadyPDE::assemble() {
         double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
         double dir = node.y();
 
-        (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
+        // (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
+        (*F_host)(row_ind) = sph105(j); 
     }
 
     // W
@@ -205,14 +236,14 @@ void StokesSteadyPDE::assemble() {
         double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
         double dir = node.z();
 
-        (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
+        (*F_host)(row_ind) = sph2020(j); 
     }
 
     // P
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 3*N;
 
-        (*F_host)(row_ind) = 0;  
+    //    (*F_host)(row_ind) = 0;  
     }
 
     // Sum of U
@@ -227,6 +258,11 @@ void StokesSteadyPDE::assemble() {
     // Sum of P
     (*F_host)(4*N+3) = 0.;
 
+    std::cout << "Done." << std::endl;
+}
+
+void StokesSteadyPDE::writeToFile() 
+{
     // Write both to disk (spy them in Matlab)
 
     viennacl::io::write_matrix_market_file(*L_host, "L_host.mtx");
@@ -234,34 +270,11 @@ void StokesSteadyPDE::assemble() {
 
     this->write_to_file(*F_host, "F.mtx");
 
-#if 1
-    L_graph = new GraphType( ncols-4 );
-
-    // Reorder within the standard blocks (exclude constraints)
-    MatType submat = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(0,nrows-4), boost::numeric::ublas::range(0,ncols-4)));
-    this->build_graph(submat, *L_graph);
-
-    m_lookup = new boost::numeric::ublas::vector<size_t>( ncols );
-    std::cout << "Reordering interior of matrix (excluding the 4 extra constraints)\n";
-    this->get_cuthill_mckee_order(*L_graph, *m_lookup ); 
-
-    for (int i = 0; i < 4; i++) {
-        (*m_lookup)((ncols-4) + i) = (ncols-4)+i; 
-    }
-    this->get_reordered_system(*L_host, *F_host, *m_lookup, *L_reordered, *F_reordered); 
-
-    viennacl::io::write_matrix_market_file(*L_reordered, "L_reordered.mtx");
-    std::cout << "Wrote L_reordered.mtx\n"; 
-    this->write_to_file(*F_reordered, "F_reordered.mtx");
-
-    this->write_to_file(*m_lookup, "CuthillMckeeOrder.mtx");
-#endif    
-
+    std::cout << "*** NOTE: If you want to visualize F or U you need to load the reordered grid produced by the stencil generator ***\n"; 
 #endif
+}
 
-
-
-
+void StokesSteadyPDE::getDivOperator() {
 
     // TODO: figure out ordering here
     div_op = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)));

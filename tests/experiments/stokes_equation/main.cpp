@@ -295,11 +295,12 @@ int main(int argc, char** argv) {
 
     // SOLVE HEAT EQUATION
 
-    PDE* pde; 
+    StokesSteadyPDE* pde; 
 
     pde = new StokesSteadyPDE(subdomain, der, comm_unit); 
     pde->assemble();
-    pde->solve();
+    pde->writeToFile();
+   // pde->solve();
 
 #if 0
     ExactSolution* exact = getExactSolution(dim); 

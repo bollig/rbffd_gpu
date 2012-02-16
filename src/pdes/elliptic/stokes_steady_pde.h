@@ -45,6 +45,10 @@ typedef boost::graph_traits<GraphType>::vertices_size_type size_type;
 
 class StokesSteadyPDE : public PDE
 {
+    unsigned int N; 
+    unsigned int nrows; 
+    unsigned int ncols; 
+    unsigned int NNZ; 
 
     MatType *L_host; 
     MatType *L_reordered; 
@@ -67,6 +71,7 @@ class StokesSteadyPDE : public PDE
     }
 
     virtual void assemble();  
+    virtual void fillRHS();  
 
     void build_graph(MatType& mat, GraphType& G);
     void get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart);
@@ -78,6 +83,9 @@ class StokesSteadyPDE : public PDE
     }
 
     virtual void solve();
+    virtual void getDivOperator();
+    virtual void reorder();
+    virtual void writeToFile(); 
 
     virtual std::string className() { return "stokes_steady"; }
 
@@ -87,7 +95,77 @@ class StokesSteadyPDE : public PDE
     // Temperature profile function (Spherical Harmonic for now)
     double Temperature (int node_indx) {
         int m = 2; 
-        unsigned int l = 3; 
+        int l = 3; 
+
+        NodeType& node = grid_ref.getNode(node_indx);
+
+        // Use Boost to transform coord system
+        boost::geometry::model::point<double, 3, boost::geometry::cs::cartesian> p(node.x(), node.y(), node.z());
+        boost::geometry::model::point<double, 3, boost::geometry::cs::spherical<boost::geometry::radian> > p_sph;
+        boost::geometry::transform(p, p_sph);
+
+        double lambdaP_j = p_sph.get<1>();
+        double thetaP_j = p_sph.get<0>();
+
+        // See equation: http://www.boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_diy2st/html/math_toolkit/special/sf_poly/sph_harm.html
+        // NOTE: the extra scale of sqrt(2) is to be consistent with the sph(...) routine in MATLAB
+        return sqrt(2)*boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
+    }
+
+    // Temperature profile function (Spherical Harmonic for now)
+    double sph32(unsigned int node_indx) {
+        int m = 2; 
+        int l = 3; 
+
+        NodeType node = grid_ref.getNode(node_indx);
+
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        // From Mathematica script: SphericalHarmonics_Cartesian.nb 
+        double cart_sph32_mathematica = (sqrt(105/M_PI)*(Xx - Yy)*(Xx + Yy)*Zz)/(4*pow(Xx*Xx + Yy*Yy + Zz*Zz,1.5));
+        
+        return cart_sph32_mathematica; 
+    }
+
+    // Temperature profile function (Spherical Harmonic for now)
+    double sph105(unsigned int node_indx) {
+        int m = 2; 
+        int l = 3; 
+
+        NodeType& node = grid_ref.getNode(node_indx);
+
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        // From Mathematica script: SphericalHarmonics_Cartesian.nb 
+        double cart_sph32_mathematica = 
+        
+        return cart_sph32_mathematica; 
+
+#if 0
+        // Use Boost to transform coord system
+        boost::geometry::model::point<double, 3, boost::geometry::cs::cartesian> p(node.x(), node.y(), node.z());
+        boost::geometry::model::point<double, 3, boost::geometry::cs::spherical<boost::geometry::radian> > p_sph;
+        boost::geometry::transform(p, p_sph);
+
+        double lambdaP_j = p_sph.get<1>();
+        double thetaP_j = p_sph.get<0>();
+
+        // See equation: http://www.boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_diy2st/html/math_toolkit/special/sf_poly/sph_harm.html
+        // NOTE: the extra scale of sqrt(2) is to be consistent with the sph(...) routine in MATLAB
+        return sqrt(2)*boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
+
+#endif 
+
+    }
+
+    // Temperature profile function (Spherical Harmonic for now)
+    double sph2020(unsigned int node_indx) {
+        int m = 20; 
+        int l = 20; 
 
         NodeType& node = grid_ref.getNode(node_indx);
 
@@ -100,8 +178,12 @@ class StokesSteadyPDE : public PDE
         double thetaP_j = p_sph.get<0>();
 
         // See equation: http://www.boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_poly/sph_harm.html
-        return boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
+        // NOTE: the extra scale of sqrt(2) is to be consistent with the sph(...) routine in MATLAB
+        return sqrt(2)*boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
     }
+
+
+
 
 };
 

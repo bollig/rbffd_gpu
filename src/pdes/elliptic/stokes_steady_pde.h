@@ -1,6 +1,8 @@
 #ifndef __STOKES_STEADY_PDE_H__
 #define __STOKES_STEADY_PDE_H__
 
+#include "utils/spherical_harmonics.h"
+
 #include "pdes/pde.h"
 
 #include "utils/geom/cart2sph.h"
@@ -56,6 +58,7 @@ class StokesSteadyPDE : public PDE
     MatType div_op; 
     VecType *F_host; 
     VecType *F_reordered; 
+    VecType *U_exact_host; 
     VecType *u_host; 
     VecType *u_reordered; 
 
@@ -140,11 +143,9 @@ class StokesSteadyPDE : public PDE
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        // From Mathematica script: SphericalHarmonics_Cartesian.nb 
-        double cart_sph32_mathematica = 
+        SphericalHarmonic::Sph32 mysph32; 
+        return mysph32(Xx,Yy,Zz); 
         
-        return cart_sph32_mathematica; 
-
 #if 0
         // Use Boost to transform coord system
         boost::geometry::model::point<double, 3, boost::geometry::cs::cartesian> p(node.x(), node.y(), node.z());

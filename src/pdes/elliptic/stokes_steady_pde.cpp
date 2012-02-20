@@ -205,45 +205,67 @@ void StokesSteadyPDE::assemble() {
 }
 
 void StokesSteadyPDE::fillRHS() {
+
+    // This is our manufactured solution:
+    SphericalHarmonic::SphericalHarmonicBase* UU = new SphericalHarmonic::Sph32(); 
+    SphericalHarmonic::SphericalHarmonicBase* VV = new SphericalHarmonic::Sph105(); 
+    SphericalHarmonic::SphericalHarmonicBase* WW = new SphericalHarmonic::Sph32105(); 
+    SphericalHarmonic::SphericalHarmonicBase* PP = new SphericalHarmonic::Sph32(); 
+
+   
     //------------- Fill F -------------
     F_host = new VecType(ncols);
+    U_exact_host = new VecType(ncols);
 
     // U
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 0*N;
         NodeType& node = grid_ref.getNode(j); 
-        double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
-        double dir = node.x();
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
 
-        (*F_host)(row_ind) = sph32(j); 
+        (*U_exact_host)(row_ind) = UU->eval(Xx,Yy,Zz); 
+        (*F_host)(row_ind) = -UU->lapl(Xx,Yy,Zz) + PP->d_dx(Xx,Yy,Zz);  
     }
 
     // V
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 1*N;
         NodeType& node = grid_ref.getNode(j); 
-        double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
-        double dir = node.y();
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+        //double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
+        //double dir = node.y();
 
         // (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
-        (*F_host)(row_ind) = sph105(j); 
+        (*U_exact_host)(row_ind) = VV->eval(Xx,Yy,Zz); 
+        (*F_host)(row_ind) = -VV->lapl(Xx,Yy,Zz) + PP->d_dy(Xx,Yy,Zz);  
     }
 
     // W
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 2*N;
         NodeType& node = grid_ref.getNode(j); 
-        double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
-        double dir = node.z();
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
 
-        (*F_host)(row_ind) = sph2020(j); 
+        (*U_exact_host)(row_ind) = WW->eval(Xx,Yy,Zz); 
+        (*F_host)(row_ind) = -WW->lapl(Xx,Yy,Zz) + PP->d_dz(Xx,Yy,Zz);  
     }
 
     // P
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 3*N;
+        NodeType& node = grid_ref.getNode(j); 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
 
-    //    (*F_host)(row_ind) = 0;  
+        (*U_exact_host)(row_ind) = PP->eval(Xx,Yy,Zz); 
+        (*F_host)(row_ind) = UU->d_dx(Xx,Yy,Zz) + VV->d_dy(Xx,Yy,Zz) + WW->d_dz(Xx,Yy,Zz);  
     }
 
     // Sum of U
@@ -265,10 +287,11 @@ void StokesSteadyPDE::writeToFile()
 {
     // Write both to disk (spy them in Matlab)
 
-    viennacl::io::write_matrix_market_file(*L_host, "L_host.mtx");
+//    viennacl::io::write_matrix_market_file(*L_host, "L_host.mtx");
     std::cout << "Wrote L_host.mtx\n"; 
 
     this->write_to_file(*F_host, "F.mtx");
+    this->write_to_file(*U_exact_host, "U_exact.mtx");
 
     std::cout << "*** NOTE: If you want to visualize F or U you need to load the reordered grid produced by the stencil generator ***\n"; 
 #endif

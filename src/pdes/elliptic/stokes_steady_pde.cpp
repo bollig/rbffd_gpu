@@ -204,12 +204,100 @@ void StokesSteadyPDE::assemble() {
 
 }
 
-void StokesSteadyPDE::fillRHS() {
+
+void StokesSteadyPDE::fillRHS_ConstViscosity() {
+    if (constantViscosity) {
+        this->fillRHS_ConstViscosity(); 
+    } else {
+        this->fillRHS_VarViscosity(); 
+    }
+}
+
+void StokesSteadyPDE::fillRHS_ConstViscosity() {
 
     // This is our manufactured solution:
     SphericalHarmonic::SphericalHarmonicBase* UU = new SphericalHarmonic::Sph32(); 
     SphericalHarmonic::SphericalHarmonicBase* VV = new SphericalHarmonic::Sph105(); 
-    SphericalHarmonic::SphericalHarmonicBase* WW = new SphericalHarmonic::Sph32105(); 
+    SphericalHarmonic::SphericalHarmonicBase* WW = new SphericalHarmonic::Sph2020(); 
+    SphericalHarmonic::SphericalHarmonicBase* PP = new SphericalHarmonic::Sph32(); 
+
+   
+    //------------- Fill F -------------
+    F_host = new VecType(ncols);
+    U_exact_host = new VecType(ncols);
+
+    // U
+    for (unsigned int j = 0; j < N; j++) {
+        unsigned int row_ind = j + 0*N;
+        NodeType& node = grid_ref.getNode(j); 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        (*U_exact_host)(row_ind) = UU->eval(Xx,Yy,Zz); 
+        (*F_host)(row_ind) = -UU->lapl(Xx,Yy,Zz) + PP->d_dx(Xx,Yy,Zz);  
+    }
+
+    // V
+    for (unsigned int j = 0; j < N; j++) {
+        unsigned int row_ind = j + 1*N;
+        NodeType& node = grid_ref.getNode(j); 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+        //double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
+        //double dir = node.y();
+
+        // (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
+        (*U_exact_host)(row_ind) = VV->eval(Xx,Yy,Zz); 
+        (*F_host)(row_ind) = -VV->lapl(Xx,Yy,Zz) + PP->d_dy(Xx,Yy,Zz);  
+    }
+
+    // W
+    for (unsigned int j = 0; j < N; j++) {
+        unsigned int row_ind = j + 2*N;
+        NodeType& node = grid_ref.getNode(j); 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        (*U_exact_host)(row_ind) = WW->eval(Xx,Yy,Zz); 
+        (*F_host)(row_ind) = -WW->lapl(Xx,Yy,Zz) + PP->d_dz(Xx,Yy,Zz);  
+    }
+
+    // P
+    for (unsigned int j = 0; j < N; j++) {
+        unsigned int row_ind = j + 3*N;
+        NodeType& node = grid_ref.getNode(j); 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        (*U_exact_host)(row_ind) = PP->eval(Xx,Yy,Zz); 
+        (*F_host)(row_ind) = UU->d_dx(Xx,Yy,Zz) + VV->d_dy(Xx,Yy,Zz) + WW->d_dz(Xx,Yy,Zz);  
+    }
+
+    // Sum of U
+    (*F_host)(4*N+0) = 0.;
+
+    // Sum of V
+    (*F_host)(4*N+1) = 0.;
+
+    // Sum of W
+    (*F_host)(4*N+2) = 0.;
+
+    // Sum of P
+    (*F_host)(4*N+3) = 0.;
+
+    std::cout << "Done." << std::endl;
+}
+
+void StokesSteadyPDE::fillRHS_ConstViscosity() {
+
+    // This is our manufactured solution:
+    SphericalHarmonic::SphericalHarmonicBase* UU = new SphericalHarmonic::Sph32(); 
+    SphericalHarmonic::SphericalHarmonicBase* VV = new SphericalHarmonic::Sph105(); 
+    SphericalHarmonic::SphericalHarmonicBase* WW = new SphericalHarmonic::Sph2020(); 
     SphericalHarmonic::SphericalHarmonicBase* PP = new SphericalHarmonic::Sph32(); 
 
    

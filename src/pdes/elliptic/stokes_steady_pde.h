@@ -76,11 +76,6 @@ class StokesSteadyPDE : public PDE
     virtual void assemble();  
     virtual void fillRHS();  
 
-    void build_graph(MatType& mat, GraphType& G);
-    void get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart);
-    void get_reordered_system(MatType& in_mat, VecType& in_vec, boost::numeric::ublas::vector<size_t>& order, MatType& out_mat, VecType& out_vec);
-    void get_original_order(VecType& in_vec, VecType& out_vec);
-
     virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) {
 
     }
@@ -115,75 +110,14 @@ class StokesSteadyPDE : public PDE
         return sqrt(2)*boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
     }
 
-    // Temperature profile function (Spherical Harmonic for now)
-    double sph32(unsigned int node_indx) {
-        int m = 2; 
-        int l = 3; 
+    protected:
+    virtual void fillRHS_ConstViscosity();  
+    virtual void fillRHS_VarViscosity();  
 
-        NodeType node = grid_ref.getNode(node_indx);
-
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
-
-        // From Mathematica script: SphericalHarmonics_Cartesian.nb 
-        double cart_sph32_mathematica = (sqrt(105/M_PI)*(Xx - Yy)*(Xx + Yy)*Zz)/(4*pow(Xx*Xx + Yy*Yy + Zz*Zz,1.5));
-        
-        return cart_sph32_mathematica; 
-    }
-
-    // Temperature profile function (Spherical Harmonic for now)
-    double sph105(unsigned int node_indx) {
-        int m = 2; 
-        int l = 3; 
-
-        NodeType& node = grid_ref.getNode(node_indx);
-
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
-
-        SphericalHarmonic::Sph32 mysph32; 
-        return mysph32(Xx,Yy,Zz); 
-        
-#if 0
-        // Use Boost to transform coord system
-        boost::geometry::model::point<double, 3, boost::geometry::cs::cartesian> p(node.x(), node.y(), node.z());
-        boost::geometry::model::point<double, 3, boost::geometry::cs::spherical<boost::geometry::radian> > p_sph;
-        boost::geometry::transform(p, p_sph);
-
-        double lambdaP_j = p_sph.get<1>();
-        double thetaP_j = p_sph.get<0>();
-
-        // See equation: http://www.boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_diy2st/html/math_toolkit/special/sf_poly/sph_harm.html
-        // NOTE: the extra scale of sqrt(2) is to be consistent with the sph(...) routine in MATLAB
-        return sqrt(2)*boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
-
-#endif 
-
-    }
-
-    // Temperature profile function (Spherical Harmonic for now)
-    double sph2020(unsigned int node_indx) {
-        int m = 20; 
-        int l = 20; 
-
-        NodeType& node = grid_ref.getNode(node_indx);
-
-        // Use Boost to transform coord system
-        boost::geometry::model::point<double, 3, boost::geometry::cs::cartesian> p(node.x(), node.y(), node.z());
-        boost::geometry::model::point<double, 3, boost::geometry::cs::spherical<boost::geometry::radian> > p_sph;
-        boost::geometry::transform(p, p_sph);
-
-        double lambdaP_j = p_sph.get<1>();
-        double thetaP_j = p_sph.get<0>();
-
-        // See equation: http://www.boost.org/doc/libs/1_35_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/sf_poly/sph_harm.html
-        // NOTE: the extra scale of sqrt(2) is to be consistent with the sph(...) routine in MATLAB
-        return sqrt(2)*boost::math::spherical_harmonic_r<double>(l, m, lambdaP_j, thetaP_j); 
-    }
-
-
+    void build_graph(MatType& mat, GraphType& G);
+    void get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart);
+    void get_reordered_system(MatType& in_mat, VecType& in_vec, boost::numeric::ublas::vector<size_t>& order, MatType& out_mat, VecType& out_vec);
+    void get_original_order(VecType& in_vec, VecType& out_vec);
 
 
 };

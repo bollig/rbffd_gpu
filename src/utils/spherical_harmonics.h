@@ -8,12 +8,47 @@
 // given any l,m. Is it possible with the derivatives? Must be, but it'll be
 // difficult. 
 
+
+
+/***** 
+ * All of these classes are filled by CForm output from the SphericalHarmonics_Cartesian.nb script. 
+ * To create a new spherical harmonic: 
+ *  - Create a class inheriting from SphericalHarmonicBase (Template for this follows)
+ *  - Inside mathematica, constructed the spherical harmonic
+ *              Sph2020 = sphFullCart[20,20]
+ *              {pdx2020, pdy2020, pdz2020} = sphGradCart[20,20]
+ *              LSph2020 = sphLaplCart[20,20]
+ *  - Get the CForm expressions:
+ *              CForm[Sph2020]
+ *              CForm[pdx2020]
+ *              ...
+ *  - Copy the output from CForm and paste it directly into the matching routines within your new class
+ */ 
+
+#if 0
+    // Template for Y_l^m (replace LL and MM with l,m resp.)
+    class SphLLMM : public SphericalHarmonicBase
+    {
+        virtual double eval(double Xx, double Yy, double Zz) {
+            return 
+        }
+        virtual double d_dx(double Xx, double Yy, double Zz) {
+            return 
+        }
+        virtual double d_dy(double Xx, double Yy, double Zz) {
+            return 
+        }
+        virtual double d_dz(double Xx, double Yy, double Zz) {
+            return 
+        }
+        virtual double lapl(double Xx, double Yy, double Zz) {
+            return 
+        }
+    };
+#endif 
+
 namespace SphericalHarmonic
 {
-
-    // Used templates here because we could have real or complex functions.
-    // Of course the complex are not yet defined in here. 
-    //    template <typename double>
     class SphericalHarmonicBase
     {
         public:
@@ -53,7 +88,7 @@ namespace SphericalHarmonic
             /***********   END MATHEMATICA mdefs.h PROVIDED ************/
     };
 
-    // Continue to use the templating but assume we are working with double
+    // Y_3^2
     class Sph32 : public SphericalHarmonicBase
     {
         virtual double eval(double Xx, double Yy, double Zz) {
@@ -73,7 +108,7 @@ namespace SphericalHarmonic
         }
     };
 
-
+    // Y_10^5
     class Sph105 : public SphericalHarmonicBase
     {
         virtual double eval(double Xx, double Yy, double Zz) {
@@ -110,6 +145,8 @@ namespace SphericalHarmonic
         }
     }; 
 
+
+    // Y_3^2 + Y_10^5
     class Sph32105 : public SphericalHarmonicBase
     {
         virtual double eval(double Xx, double Yy, double Zz) {
@@ -151,7 +188,32 @@ namespace SphericalHarmonic
         }
     };
 
-
+    // Y_20^20
+    class Sph2020 : public SphericalHarmonicBase
+    {
+        virtual double eval(double Xx, double Yy, double Zz) {
+            return (3*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),10)*Cos(20*ArcTan(Xx,Yy)))/
+                   (524288.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),10));
+        }
+        virtual double d_dx(double Xx, double Yy, double Zz) {
+            return (15*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),9)*
+                         (Xx*Power(Zz,2)*Cos(20*ArcTan(Xx,Yy)) + Yy*(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))*Sin(20*ArcTan(Xx,Yy))))/
+                   (131072.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),11));
+        }
+        virtual double d_dy(double Xx, double Yy, double Zz) {
+            return (-15*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),9)*
+                         (-(Yy*Power(Zz,2)*Cos(20*ArcTan(Xx,Yy))) + Xx*(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))*Sin(20*ArcTan(Xx,Yy))))/
+                   (131072.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),11));
+        }
+        virtual double d_dz(double Xx, double Yy, double Zz) {
+            return (-15*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),10)*Zz*Cos(20*ArcTan(Xx,Yy)))/
+                   (131072.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),11));
+        }
+        virtual double lapl(double Xx, double Yy, double Zz) {
+            return (-315*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),10)*Cos(20*ArcTan(Xx,Yy)))/
+                   (131072.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),11));
+        }
+    };
 
 };
 

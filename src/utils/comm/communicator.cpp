@@ -77,7 +77,7 @@ void Communicator::broadcastObjectUpdates(MPISendable* object)
 	// Round robin: each CPU takes a turn at sending message to CPUs that need nodes
 	for (int j = 0; j < this->getSize(); j++) {
 		if (this->getRank() == j) {		// My turn
-			for (int i = 0; i < receiver_list.size(); i++) {
+			for (size_t i = 0; i < receiver_list.size(); i++) {
 				object->sendUpdate(this->getRank(), receiver_list[i]);
 			}
 		} else {						// All CPUs listen

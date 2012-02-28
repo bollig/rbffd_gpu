@@ -89,10 +89,10 @@ void ContourSVD::init(RBF* rbf, mat& rd2, rowvec& ep, mat& rr0, mat& rrd, ArrayT
         crp[i] = rp[i];
     }
 
-    const int* dims = rrdvec->getDims();
+    //const int* dims = rrdvec->getDims();
     //printf("dims= %d, %d, %d\n", dims[0], dims[1], dims[2]);
 
-    const int* cdims = crrdvec->getDims();
+    //const int* cdims = crrdvec->getDims();
     //printf("(crrdec cdims= %d, %d, %d\n", cdims[0], cdims[1], cdims[2]);
 
     //exit(0);
@@ -234,7 +234,7 @@ void ContourSVD::execute(int N_)
     // This trick works since only the first mg*mc elements of both arrays are required
     // Extract
     ArrayT<double> negPows1(negPows.getDataPtr(), mg,mc);
-    const int* dims = negPows1.getDims();
+    //const int* dims = negPows1.getDims();
     ArrayT<double> negPowsTest1(&negPowsTest(0,0,0), mg,mc);
     result = valsAgree(negPows1, negPowsTest1, COEFF_COMPARISON_TOL);
 
@@ -243,7 +243,7 @@ void ContourSVD::execute(int N_)
     for (int j=0; j < mc; j++) {
         columnCoeffsCounter(j) = 0;
         for (int i=0; i < mg; i++) {
-            int b = (fabs(negPows(i,j)) > COEFF_MAGNITUDE_TOL) ? TRUE : FALSE;
+            unsigned int b = (fabs(negPows(i,j)) > COEFF_MAGNITUDE_TOL) ? TRUE : FALSE;
             b = (b == TRUE) && (result(i,j) == TRUE) ? TRUE : FALSE;
             columnCoeffsCounter(j) = columnCoeffsCounter(j) + b;
         }
@@ -293,10 +293,10 @@ void ContourSVD::execute(int N_)
         //[mx2,id2] = max(mx1);
         double mx2;
 
-        int id2=0;
+        unsigned int id2=0;
         mx2 = mx1[0];
 
-        for (int i=1; i <  mx1.size(); i++) {
+        for (size_t i=1; i <  mx1.size(); i++) {
             if (mx1[i] > mx2) {
                 mx2 = mx1[i];
                 id2 = i;
@@ -374,7 +374,7 @@ void ContourSVD::execute(int N_)
 
         //printSize(svdcoefs, "svdcoefs");
 
-        for (int i=0; i < svdcoefs.n_elem; i++) {
+        for (unsigned int i=0; i < svdcoefs.n_elem; i++) {
             vcoefs.push_back(svdcoefs(i));
         }
 
@@ -393,7 +393,7 @@ void ContourSVD::execute(int N_)
     //----------------------------------------------------------------------
     if (numColsComputeDenom > 0) {
         vector<CMPLX> cx_vcoefs;
-        for (int i=0; i < vcoefs.size(); i++) {
+        for (unsigned int i=0; i < vcoefs.size(); i++) {
             cx_vcoefs.push_back(vcoefs[i]);
         }
 
@@ -474,7 +474,7 @@ void ContourSVD::execute(int N_)
                     // MUST IMPLEMENT THIS LINE. Last line I believe
                     posPows(:,:,numCoeffs+1:end) = flipdim(negPows2,3);
 #endif
-                    int l1 = k-numCoeffs;
+                    //int l1 = k-numCoeffs;
                     int l2 = M-1-1 - (k-numCoeffs);
                     // k goes to 63, but 3rd dimension of posPows is only 33
                     //printf("k=%d, l2= %d\n", k, l2);
@@ -543,7 +543,7 @@ void ContourSVD::execute(int N_)
             //print(v, "v from polyval2");
             //denom.print("denom");
             //printSize(denom, "denom");
-            for (int k=0; k < ep.n_elem; k++) {
+            for (unsigned int k=0; k < ep.n_elem; k++) {
                 Ceps(ii,jj,k) = v[k] / denom(0,k);
                 fd_coeffs(ii+jj*mg, k) = v[k] / denom(0,k);
             }
@@ -949,7 +949,7 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
                */
 
             // Slow way of doing it
-            fftw_plan p;
+            fftw_plan p = NULL;
             for (int j=0; j < mc; j++) {
                 for (int i=0; i < mg; i++) {
                     CMPLX si[M];
@@ -1392,7 +1392,7 @@ vector<T> ContourSVD::polyval2(vector<T> p, vector<T> x)
         y[i] = 0.0;
     }
 
-    for (int i=0; i < x.size(); i++) {
+    for (size_t i=0; i < x.size(); i++) {
         x[i] = x[i] * x[i]; // elementwise multiplication
     }
 
@@ -1410,33 +1410,33 @@ void ContourSVD::print(vector<T> v, const char* msg)
 {
     const char *txt = (msg == 0) ? "" : msg;
     for (int i=0; i < v.size(); i++) {
-        printf("%s, vec[%d]= %g\n", msg, i, (double) v[i]);
+        printf("%s, vec[%d]= %g\n", txt, i, (double) v[i]);
     }
 }
 //----------------------------------------------------------------------
 void ContourSVD::print(vector<CMPLX> v, const char* msg)
 {
     const char *txt = (msg == 0) ? "" : msg;
-    for (int i=0; i < v.size(); i++) {
-        printf("%s, vec[%d]= (%g,%g)\n", msg, i, real(v[i]), imag(v[i]));
+    for (size_t i=0; i < v.size(); i++) {
+        printf("%s, vec[%d]= (%g,%g)\n", txt, (int)i, real(v[i]), imag(v[i]));
     }
 }
 //----------------------------------------------------------------------
 void ContourSVD::print(cx_mat& v, const char* msg)
 {
     const char *txt = (msg == 0) ? "" : msg;
-    for (int j=0; j < v.n_cols; j++) {
-        for (int i=0; i < v.n_rows; i++) {
-            printf("%s(%d,%d)= (%21.14g,%21.14g)\n", msg, i, j, real(v(i,j)), imag(v(i,j)));
+    for (size_t j=0; j < v.n_cols; j++) {
+        for (size_t i=0; i < v.n_rows; i++) {
+            printf("%s(%d,%d)= (%21.14g,%21.14g)\n", txt, (int)i, (int)j, real(v(i,j)), imag(v(i,j)));
         }}
 }
 //----------------------------------------------------------------------
 void ContourSVD::print(mat& v, const char* msg)
 {
     const char *txt = (msg == 0) ? "" : msg;
-    for (int j=0; j < v.n_cols; j++) {
-        for (int i=0; i < v.n_rows; i++) {
-            printf("%s(%d,%d)= %21.14g\n", msg, i, j, (double) v(i,j));
+    for (size_t j=0; j < v.n_cols; j++) {
+        for (size_t i=0; i < v.n_rows; i++) {
+            printf("%s(%d,%d)= %21.14g\n", txt, (int)i, (int)j, (double) v(i,j));
         }}
 }
 //----------------------------------------------------------------------

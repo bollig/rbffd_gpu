@@ -9,7 +9,7 @@ double minimum(std::vector<double>& vec)
 {
         double min = 1.e10;
 
-        for (int i=0; i < vec.size(); i++) {
+        for (size_t i=0; i < vec.size(); i++) {
                 if (vec[i] < min) {
                         min = vec[i];
                 }

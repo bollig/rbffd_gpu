@@ -28,7 +28,7 @@ Vec3& ParametricPatch::nearest(Vec3& pt)
 {
 	double min_dist2 = 1.e10;
 	double dist2; // distance squared
-	int imin;
+	int imin = 0;
 
 	int npts = boundary_pts.size();
 	for (int i=0; i < npts; i++) {
@@ -165,7 +165,7 @@ Vec3 ParametricPatch::singleIteration(Vec3& pt_off_surface, Vec3& pt_on_surface)
 #endif 
 		Vec3 pti = planeIntersect(rsd, dir, pt, normal);
 
-		double dist = pti.distance2(rsd);
+		//double dist = pti.distance2(rsd);
 
 		// new point on the surface
 		return projectToBoundary(pti, normal);

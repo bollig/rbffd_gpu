@@ -181,7 +181,7 @@ int MPISendable::sendSTL(const std::vector<std::vector<unsigned int> > *origin, 
     int offset = 0; 
     for (std::vector<std::vector<unsigned int> >::const_iterator it=origin->begin(); it != origin->end(); it++) {
         const std::vector<unsigned int> *vint = &(*it);
-        for (int i = 0; i < vint->size(); i++) {
+        for (unsigned int i = 0; i < vint->size(); i++) {
             buff2[offset + i] = (*vint)[i];
         }
         offset += vint->size(); 
@@ -224,7 +224,7 @@ int MPISendable::sendSTL(const std::vector<std::vector<int> > *origin, int myran
     int offset = 0; 
     for (std::vector<std::vector<int> >::const_iterator it=origin->begin(); it != origin->end(); it++) {
         const std::vector<int> *vint = &(*it);
-        for (int i = 0; i < vint->size(); i++) {
+        for (unsigned int i = 0; i < vint->size(); i++) {
             buff2[offset + i] = (*vint)[i];
         }
         offset += vint->size(); 
@@ -266,7 +266,7 @@ int MPISendable::sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank,
     int offset = 0; 
     for (set<std::vector<Vec3> >::const_iterator it=origin->begin(); it != origin->end(); it++) {
         const std::vector<Vec3> *vint = &(*it);
-        for (int i = 0; i < vint->size(); i++) {
+        for (unsigned int i = 0; i < vint->size(); i++) {
             buff2[(offset + i)*3 + 0] = (*vint)[i].x();
             buff2[(offset + i)*3 + 1] = (*vint)[i].y();
             buff2[(offset + i)*3 + 2] = (*vint)[i].z();
@@ -287,7 +287,7 @@ int MPISendable::sendSTL(const std::set<std::vector<Vec3> > *origin, int myrank,
 
 int MPISendable::sendSTL(const unsigned int *destination, int myrank, int recv_rank) const
 {
-    MPI_Status stat; 
+    //MPI_Status stat; 
 
     MPI_Datatype type = MPI::UNSIGNED; 
     unsigned int buf = (*destination); 
@@ -303,7 +303,7 @@ int MPISendable::sendSTL(const unsigned int *destination, int myrank, int recv_r
 
 int MPISendable::sendSTL(const int *destination, int myrank, int recv_rank) const
 {
-    MPI_Status stat; 
+    //MPI_Status stat; 
 
     MPI_Datatype type = MPI::INT; 
     int buf = (*destination); 

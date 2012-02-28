@@ -13,7 +13,7 @@ using namespace std;
 
 
 /*----------------------------------------------------------------------*/
-GridReader::GridReader(std::string filename_to_read, int numCols, int n_nodes_to_read)
+GridReader::GridReader(std::string filename_to_read, int numCols, unsigned int n_nodes_to_read)
     : Grid(n_nodes), 
     numExtraCols(numCols - 3),
     n_nodes(n_nodes_to_read),

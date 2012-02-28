@@ -5,14 +5,13 @@
 
 class GridReader : public Grid {
     protected: 
-        bool file_loaded;
-        std::string filename; 
-        int n_nodes; 
-
         int numExtraCols;
+        unsigned int n_nodes; 
+        std::string filename; 
+        bool file_loaded;
     public:
 
-        GridReader(std::string filename_to_load, int numCols, int n_nodes_to_read = -1);
+        GridReader(std::string filename_to_load, int numCols, unsigned int n_nodes_to_read = 0);
         virtual ~GridReader();
 
         // Overrides Grid::generate()

@@ -42,7 +42,7 @@ extern "C" {
 /*
  * For each extension, follow this template
  * // cl_VEN_extname extension  //
-/* #define cl_VEN_extname 1
+ * #define cl_VEN_extname 1
  * ... define new types, if any
  * ... define new tokens, if any
  * ... define new APIs, if any

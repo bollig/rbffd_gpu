@@ -11,11 +11,11 @@ class ContourSVD
 {
     private:
         int N;
-        int NUM_AGREEING_COEFFS;
+        unsigned int NUM_AGREEING_COEFFS;
         double COEFF_COMPARISON_TOL;
         double COEFF_MAGNITUDE_TOL;
-        int FALSE;
-        int TRUE;
+        unsigned int FALSE;
+        unsigned int TRUE;
         std::string DEBUG;
         int numCoeffs;
         RBF* rbf;

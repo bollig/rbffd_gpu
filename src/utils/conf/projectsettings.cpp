@@ -101,7 +101,7 @@ void ProjectSettings::ParseFile(const std::string filename)
             // Replace line with the substring preceeding comments (e.g., "this is beforer # this is after")
             line = line.substr(0, line.find(comment));
 
-            int sepIndx = line.find(separator);
+            size_t sepIndx = line.find(separator);
 
             if (sepIndx < line.size()) { // Implies separator exists
                 std::string key = line.substr(0, sepIndx);
@@ -203,7 +203,7 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                     cli_filename.append(&optarg[1]);
                 } else if (optarg[0] == '.') {
                     char rpat[PATH_MAX]; 
-                    char* p = realpath(optarg,rpat); 
+                    //char* p = realpath(optarg,rpat); 
                     //printf("<--%s-->file\n", rpat);
                     cli_filename = rpat; 
                 } else { 
@@ -272,7 +272,7 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
         rfile.append("/"); 
         rfile.append(log_file); 
         printf("Redirecting STDOUT to file: `%s'\n", rfile.c_str());
-        FILE* f = freopen(rfile.c_str(), "w", stdout);
+        freopen(rfile.c_str(), "w", stdout);
         atexit(closeLogFile);
     }
 

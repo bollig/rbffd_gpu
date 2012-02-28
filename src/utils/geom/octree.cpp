@@ -223,7 +223,7 @@ void Node::subdivide()
 		next[i].level = level+1;
 		//printf("subdivid: level= %d\n", level);
 		//printf("node %d, level %d\n", i, next[i].level);
-		Node& n = next[i];
+		//Node& n = next[i];
 		//printf("node bounds: x: %f, %f\n", n.x[0], n.x[1]);
 		//printf("           : y: %f, %f\n", n.y[0], n.y[1]);
 		//printf("           : z: %f, %f\n", n.z[0], n.z[1]);
@@ -339,7 +339,7 @@ void TreeParsePrintBoundaryPts::operator()(Node* node)
 	if (node->level != Node::max_level) return;
 	//if (node->hit != 1) return;
 
-	Node& n = *node;
+	//Node& n = *node;
 	//printf("node bounds: x: %f, %f\n", n.x[0], n.x[1]);
 	//printf("           : y: %f, %f\n", n.y[0], n.y[1]);
 	//printf("           : z: %f, %f\n", n.z[0], n.z[1]);
@@ -350,7 +350,7 @@ void TreeParsePrintBoundaryPts::operator()(Node* node)
 	Node::nb_nodes++;
 
 	printf("------- Boundary points in node ------\n");
-	for (int i=0; i < node->boundary_pts.size(); i++) {
+	for (unsigned int i=0; i < node->boundary_pts.size(); i++) {
 		node->boundary_pts[i].print("bndry pt");
 		nb_prints++;
 	}

@@ -97,7 +97,7 @@ class PDE : public MPISendable
         void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1.) {
             exact_ptr = exact;
             std::vector<NodeType>& nodes = global_grid->getNodeList();
-            std::vector<unsigned int>& bounds = global_grid->getBoundaryIndices();
+            //std::vector<unsigned int>& bounds = global_grid->getBoundaryIndices();
 
             std::vector<SolutionType> sol(nodes.size(), 0.);
             std::vector<SolutionType> exactSolution(nodes.size());

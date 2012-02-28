@@ -333,7 +333,7 @@ class RBFFD
             modified = 1;
             use_var_eps = 1; 
             std::cout << "DERIVATIVE:: SET UNIFORM EPSILON = " << eps << std::endl;
-            for (int i = 0; i < var_epsilon.size(); i++) {
+            for (size_t i = 0; i < var_epsilon.size(); i++) {
                 this->var_epsilon[i] = eps; 
             }
             std::stringstream ss(std::stringstream::out); 
@@ -348,7 +348,7 @@ class RBFFD
                 std::cout << "ERROR! length of support params list does not match" << std::endl;
                 exit(EXIT_FAILURE); 
             }
-            for (int i = 0; i < var_epsilon.size(); i++) {
+            for (size_t i = 0; i < var_epsilon.size(); i++) {
                 this->var_epsilon[i] = lst_of_epsilon[i]; 
             }
             eps_string = "manual_epsilon";
@@ -471,7 +471,8 @@ class RBFFD
         }
 
         void removeDerType(DerType dt) {
-            if ((computedTypes & dt) == dt) {
+            DerTypes dd = computedTypes & dt;  
+            if ( dd == (unsigned int) dt) {
                 computedTypes ^= dt;
             }
         }

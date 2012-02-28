@@ -100,7 +100,7 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
 #endif 
         std::ofstream fout(fname.c_str()); 
         if (fout.is_open()) {
-            for (int i = 0; i < global_U_G.size(); i++) {
+            for (size_t i = 0; i < global_U_G.size(); i++) {
                 fout << global_U_G[i] << std::endl; 
             }
         } else {
@@ -197,9 +197,9 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
 
         // Then we integrate the values as an update: 
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
-            int g_indx = *rit; 
             int l_indx = grid_ref.g2l(*rit);
 #if 0 
+            int g_indx = *rit; 
             cout << label << "\t(Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")\tOld vec[" << l_indx << "]: " << vec[l_indx] << "\t New U_G[" << l_indx << "]: " << U_R[i] << endl;
 #endif 
             // Global to local mapping required
@@ -233,7 +233,7 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
         // Round robin: each CPU takes a turn at sending message to CPUs that need nodes
         for (int j = 0; j < comm_ref.getSize(); j++) {
             if (comm_ref.getRank() == j) {		// My turn
-                for (int i = 0; i < receiver_list.size(); i++) {
+                for (size_t i = 0; i < receiver_list.size(); i++) {
                     this->sendUpdate(vec, comm_ref.getRank(), receiver_list[i], label);
                 }
             } else {						// All CPUs listen
@@ -418,7 +418,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
     std::set<unsigned int>& i_indices = grid.getSortedInteriorSet(); 
     unsigned int nb_bnd = b_indices.size();
     unsigned int nb_int = i_indices.size();
-    int nb_centers = grid.getNodeListSize();
+    //int nb_centers = grid.getNodeListSize();
     int nb_stencils = grid.getStencilsSize();
 
 
@@ -467,7 +467,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
             for (unsigned int sz = 0; sz < st.size(); sz ++) {
                 for(std::set<unsigned int>::iterator bit = b_indices.begin(); bit != b_indices.end(); bit++) 
                 {
-                    if (st[sz] == *bit){
+                    if ((unsigned int)st[sz] == *bit){
                         dep_boundary=true;
                         //break;
                     }

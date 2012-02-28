@@ -110,7 +110,8 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
 
         double prev_eps = left_eps;
 
-        bool goodDirection, wentRight;
+        bool goodDirection = true; 
+        bool wentRight = false;
 
         arma::colvec exact(nn);
         arma::colvec approx_sol(nn);
@@ -200,7 +201,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
                 Vec3& center = subdomain->getNode(subdomain->getStencils()[i][0]);
                 double r = center.magnitude();
                 //  r = 1.;
-                for (int j = 0; j < subdomain->getStencils()[i].size(); j++) {
+                for (size_t j = 0; j < subdomain->getStencils()[i].size(); j++) {
                     //L(subdomain->getStencils()[i][0],subdomain->getStencils()[i][j]) = r_weights(j);        // Block 1 (weights for d/dr)
                     L(subdomain->getStencils()[i][0],subdomain->getStencils()[i][j]) = (center.x() / r) * x_weights[j] + (center.y()/r) * y_weights[j] + (center.z()/r) * z_weights[j];        // Block 1 (weights for d/dr)
                 }
@@ -219,7 +220,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             for (int i = 0; i < ni; i++) {
                 int indx = i + nb; // offset into getStencils() to get the interior stencils only
                 double* l_weights = der->getLaplWeights(subdomain->getStencils()[indx][0]);
-                for (int j = 0; j < subdomain->getStencils()[indx].size(); j++) {
+                for (size_t j = 0; j < subdomain->getStencils()[indx].size(); j++) {
                     L(subdomain->getStencils()[indx][0],subdomain->getStencils()[indx][j]) = l_weights[j];        // Block 1 (weights for laplacian)
                 }
             }
@@ -321,7 +322,7 @@ void NCARPoisson1::initialConditions(std::vector<double> *solution) {
 
     //printf("%d, %d\n", s.size(), rbf_centers.size()); exit(0);
 
-    for (int i = 0; i < s.size(); i++) {
+    for (size_t i = 0; i < s.size(); i++) {
         Vec3& v = (*rbf_centers)[i];
         //s[i] = exp(-alpha*v.square());
         //s[i] = 1. - v.square();
@@ -333,7 +334,7 @@ void NCARPoisson1::initialConditions(std::vector<double> *solution) {
 
     if (solution != NULL) {
         //cout << "Filling solution parameter in addition to internal solution vector (initial condition)" << endl;
-        for (int i = 0; i < s.size(); i++) {
+        for (size_t i = 0; i < s.size(); i++) {
             (*solution)[i] = s[i];
         }
     }
@@ -345,7 +346,7 @@ void NCARPoisson1::initialConditions(std::vector<double> *solution) {
 
 double NCARPoisson1::maxNorm() {
     double nrm = 0.;
-    for (int i = 0; i < sol[0].size(); i++) {
+    for (size_t i = 0; i < sol[0].size(); i++) {
         double s = fabs(sol[0][i]);
         if (s > nrm)
             nrm = s;
@@ -359,7 +360,7 @@ double NCARPoisson1::maxNorm() {
 
 double NCARPoisson1::maxNorm(vector<double> sol) {
     double nrm = 0.;
-    for (int i = 0; i < sol.size(); i++) {
+    for (size_t i = 0; i < sol.size(); i++) {
         double s = fabs(sol[i]);
         if (s > nrm)
             nrm = s;

@@ -13,7 +13,7 @@ void HeatPDE::fillBoundaryConditions(ExactSolution* exact) {
     boundary_values.resize(nb_bnd);
 
     printf("Copying solution to bnd_sol (boundary solution buffer)\n"); 
-    for (int i = 0; i < nb_bnd; i++) {
+    for (size_t i = 0; i < nb_bnd; i++) {
         NodeType& v = nodes[bnd_index[i]];
         boundary_values[i] = exact->at(v, 0.);
         // printf("boundary: %f %f %f ==> %f\n", v.x(), v.y(), v.z(),bnd_sol[i]);

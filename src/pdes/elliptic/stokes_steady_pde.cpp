@@ -51,7 +51,7 @@ void StokesSteadyPDE::assemble() {
 void StokesSteadyPDE::fillLHS_ConstViscosity() { 
 
     double eta = 1.;
-    double Ra = 1.e6;
+    //double Ra = 1.e6;
 
     // We have different nb_stencils and nb_nodes when we parallelize. The subblocks might not be full
     unsigned int nb_stencils = grid_ref.getStencilsSize();
@@ -454,7 +454,7 @@ void StokesSteadyPDE::write_to_file(boost::numeric::ublas::vector<T> vec, std::s
 {
     std::ofstream fout;
     fout.open(filename.c_str());
-    for (int i = 0; i < vec.size(); i++) {
+    for (size_t i = 0; i < vec.size(); i++) {
         fout << std::scientific << vec[i] << std::endl;
     }
     fout.close();

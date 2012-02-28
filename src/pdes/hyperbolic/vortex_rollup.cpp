@@ -8,7 +8,7 @@ void VortexRollup::assemble() {
         der_ref.computeAllWeightsForAllStencils();
     }
 
-    static int assembled = 0; 
+    //static int assembled = 0; 
 }
 
 
@@ -29,7 +29,7 @@ void VortexRollup::solve(std::vector<SolutionType>& u_t, std::vector<SolutionTyp
     // with B_i,j = cos(theta_p_i) cos(theta_p_j) * sin(lambda_i - lambda_j) (1/r)(d theta / dr)
     //
     double rho0 = 3.;
-    double gamma = 5.;
+    //double gamma = 5.;
 
     std::vector<SolutionType> dh_d_lambda(n_stencils);  
     
@@ -40,8 +40,10 @@ void VortexRollup::solve(std::vector<SolutionType>& u_t, std::vector<SolutionTyp
         
         sph_coords_type spherical_coords = cart2sph(v.x(), v.y(), v.z());
         double theta_p = spherical_coords.phi; 
+#if 0
         double phi_p = spherical_coords.theta; 
         double temp = spherical_coords.r; 
+#endif 
 
         // From Natasha's email: 
         // 7/7/11 4:46 pm

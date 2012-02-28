@@ -10,6 +10,13 @@ class HeatPDE : public TimeDependentPDE
         std::vector<SolutionType> boundary_values; 
         // T/F : are the weights already computed so we can avoid that cost?
         bool weightsPrecomputed;
+
+        
+        // T/F:  laplacian(u) = du^2/dx^2 + du^2/dy^2 + du^2/dz^2. Should we
+        // apply 1 set of weights for laplacian(u) directly or apply 3 sets of
+        // weights to the the second derivatives independently?
+        bool splitLaplacian; 
+
         // T/F: do we assume uniform diffusion coefficient K in the PDE: du/dt - K Laplacian(u) = 0 
         // NOTE: if false, then we have:  du/dt - div(K .dot. grad(u)) = 0
         //       which we rewrite then as:  du/dt - ( grad(K)*grad(U) + K * laplacian(u) ) = 0
@@ -18,11 +25,6 @@ class HeatPDE : public TimeDependentPDE
         //       but for now we assume Cartesian coordinates which reduces the vec_laplacian 
         //       to the same as scalar across the three variables
         bool uniformDiffusion; 
-
-        // T/F:  laplacian(u) = du^2/dx^2 + du^2/dy^2 + du^2/dz^2. Should we
-        // apply 1 set of weights for laplacian(u) directly or apply 3 sets of
-        // weights to the the second derivatives independently?
-        bool splitLaplacian; 
 
     public: 
         HeatPDE(Domain* grid, RBFFD* der, Communicator* comm, bool useUniformDiffusion, bool weightsComputed=false) 

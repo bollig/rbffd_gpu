@@ -14,11 +14,20 @@ class NCARPoisson1
     protected:
         std::vector<double> sol[2];
 
+
+        int dim_num;
+
+        ExactSolution* exactSolution; 
+
+
+
         std::vector<Vec3>* rbf_centers;
         std::vector<unsigned int>* boundary_set; 		// The indices of rbf_centers that correspond to global domain boundary nodes (i.e. boundaries of the PDE)
 
-        Grid* subdomain;
         RBFFD* der;
+        int id; 		// Comm rank or comm id
+        Grid* subdomain;
+
 
         std::vector<double> lapl_deriv;
         std::vector<double> x_deriv;
@@ -40,11 +49,7 @@ class NCARPoisson1
         int nb_rbf;
         int nb_stencils;
 
-        ExactSolution* exactSolution; 
-
-        int id; 		// Comm rank or comm id
-
-        int dim_num;
+        bool weightsPrecomputed;
 
         EB::TimerList tm;
         EB::Timer t1, t2, t3, t4, t5;
@@ -56,9 +61,6 @@ class NCARPoisson1
         bool use_uniform_diffusivity;// Disable non-uniform diffusion coefficients provided by exact solutions
         bool test_dirichlet_lockdown;// Lockdown the boundaries by specifying one node for each boundary with its dirichlet condition?
         enum boundary_condition_type {DIRICHLET=0, NEUMANN=1, ROBIN=2};
-
-
-        bool weightsPrecomputed;
 
     public:
         NCARPoisson1(ExactSolution* _solution, Grid* subdomain_, RBFFD* der_, int rank, int dim_num_, bool weightsPrecomputed=false);

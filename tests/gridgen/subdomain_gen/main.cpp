@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
         double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1.");
         double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1.");
 
-        int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::optional, "15");
+        //int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::optional, "15");
 
         int sort_nodes = settings->GetSettingAs<int>("SORT_NODES", ProjectSettings::optional, "0");
         double debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0");
@@ -57,30 +57,30 @@ int main(int argc, char** argv) {
         grid->generateStencils(Grid::ST_BRUTE_FORCE);	// populates the stencil map stored inside the grid class
         grid->writeToFile();
 
-	int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
-	int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
+        int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
+        int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
 
-	Domain* original_domain = new Domain(dim, grid, comm_unit->getSize()); 
-	//domain_decomp->printVerboseDependencyGraph(); 
+        Domain* original_domain = new Domain(dim, grid, comm_unit->getSize()); 
+        //domain_decomp->printVerboseDependencyGraph(); 
 
-	// pre allocate pointers to all of the subdivisions
-	std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
-	// allocate and fill in details on subdivisions
+        // pre allocate pointers to all of the subdivisions
+        std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
+        // allocate and fill in details on subdivisions
         original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
 
-	subdomain = subdomain_list[0]; 
-	for (int i = 1; i < comm_unit->getSize(); i++) {
-		std::cout << "Sending subdomain[" << i << "]\n";
-		comm_unit->sendObject(subdomain_list[i], i); 
-	}
+        subdomain = subdomain_list[0]; 
+        for (int i = 1; i < comm_unit->getSize(); i++) {
+            std::cout << "Sending subdomain[" << i << "]\n";
+            comm_unit->sendObject(subdomain_list[i], i); 
+        }
 
         delete(grid);
 
     } else {
         cout << "MPI RANK " << comm_unit->getRank() << ": waiting to receive subdomain" << endl;
-        
-	subdomain = new Domain(); // EMPTY object that will be filled by MPI
-        int status = comm_unit->receiveObject(subdomain, Communicator::MASTER); // Receive from CPU (0)
+
+        subdomain = new Domain(); // EMPTY object that will be filled by MPI
+        comm_unit->receiveObject(subdomain, Communicator::MASTER); // Receive from CPU (0)
     }
 
 

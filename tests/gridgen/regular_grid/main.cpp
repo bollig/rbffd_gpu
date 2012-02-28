@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
     double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
     double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
 
-    Grid* grid; 
+    Grid* grid = NULL; 
 
     if (dim == 1) {
 	    grid = new RegularGrid(nx, minX, maxX); 

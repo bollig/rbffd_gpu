@@ -17,13 +17,13 @@ class ExactAdvection : public ExactSolution
         double h0;
         // Radius of cosine bell
         double R; 
-
-        // Center point of sphere (relative to Equator+GreenwhichMeanTime)
-        double theta_c; 
-        double lambda_c;
-
+        
         // Minimum value in domain (typically 0, but try 1 if we want normalized errors).
         double base_val; 
+
+        // Center point of sphere (relative to Equator+GreenwhichMeanTime)
+        double lambda_c;
+        double theta_c; 
 
     public:
         ExactAdvection(double sphere_radius, double initial_peak_height=1.0)

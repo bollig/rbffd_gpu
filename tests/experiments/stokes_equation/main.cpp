@@ -90,30 +90,28 @@ int main(int argc, char** argv) {
     fillGlobalProjectSettings(dim, settings);
     //-----------------
 
+#if 0
     int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
     double max_local_rel_error = settings->GetSettingAs<double>("MAX_LOCAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
-
-    // USE_GPU can be 0, 1, 2. If 0 done use GPU. if 1 use a block approach. if 2 use a thread per stencil approach
-    int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
     int benchmark_only = settings->GetSettingAs<int>("BENCHMARK_ONLY", ProjectSettings::optional, "0"); 
-
     int local_sol_dump_frequency = settings->GetSettingAs<int>("LOCAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "100"); 
     int global_sol_dump_frequency = settings->GetSettingAs<int>("GLOBAL_SOL_DUMP_FREQUENCY", ProjectSettings::optional, "200"); 
-    int writeIntermediate = settings->GetSettingAs<int>("WRITE_INTERMEDIATE_FILES", ProjectSettings::optional, "0"); 
-
     int prompt_to_continue = settings->GetSettingAs<int>("PROMPT_TO_CONTINUE", ProjectSettings::optional, "0"); 
-    int debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
-
     double start_time = settings->GetSettingAs<double>("START_TIME", ProjectSettings::optional, "0.0"); 
     double end_time = settings->GetSettingAs<double>("END_TIME", ProjectSettings::optional, "1.0"); 
     double dt = settings->GetSettingAs<double>("DT", ProjectSettings::optional, "1e-5"); 
     int timescheme = settings->GetSettingAs<int>("TIME_SCHEME", ProjectSettings::optional, "1"); 
+    int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
+    int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
+#endif 
+    // USE_GPU can be 0, 1, 2. If 0 done use GPU. if 1 use a block approach. if 2 use a thread per stencil approach
+    int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
+    int writeIntermediate = settings->GetSettingAs<int>("WRITE_INTERMEDIATE_FILES", ProjectSettings::optional, "0"); 
+    int debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0"); 
     int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "1"); 
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
     int useHyperviscosity = settings->GetSettingAs<int>("USE_HYPERVISCOSITY", ProjectSettings::optional, "0");
-    int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
-    int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
 
     int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
@@ -191,7 +189,7 @@ int main(int argc, char** argv) {
 
         tm["receive"]->start(); 
         subdomain = new Domain(); // EMPTY object that will be filled by MPI
-        int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
+        comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
         tm["receive"]->stop(); 
         //subdomain->writeToFile();
     }
@@ -203,7 +201,7 @@ int main(int argc, char** argv) {
         subdomain->printNodeList("All Centers Needed by This Process"); 
 
         printf("CHECKING STENCILS: ");
-        for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
+        for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
             //  printf("Stencil[%d] = ", irbf);
             StencilType& s = subdomain->getStencil(irbf); 
             if (irbf == s[0]) {

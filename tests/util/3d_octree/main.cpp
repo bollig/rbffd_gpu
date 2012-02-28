@@ -37,7 +37,12 @@ int main (int argc, char** argv)
 	oct.parseTree(*check);  // argument: function to execute on each node
 
 	BaseCheck* bnd_check = new TreeParseProject;
-	oct.parseTree(*check);
+    // TODO: Figure out if this is correct. Was first case here
+#if 0
+    oct.parseTree(*check);
+#else 
+    oct.parseTree(*bnd_check);
+#endif 
 
 	// create lists of boundary points in each leaf node
 	vector<Vec3> boundary_pts = ep->getBoundaryPoints();

@@ -95,7 +95,8 @@ int main(int argc, char** argv) {
     tm["oneWeight"] = new Timer("[Main] Compute single stencil weights"); 
     tm["heat_init"] = new Timer("[Main] Initialize heat"); 
     // grid should only be valid instance for MASTER
-    Grid* grid; 
+    
+    Grid* grid = NULL; 
     Domain* subdomain; 
 
     tm["total"]->start(); 
@@ -115,7 +116,7 @@ int main(int argc, char** argv) {
     fillGlobalProjectSettings(dim, settings);
     //-----------------
 
-    int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
+    //int max_num_iters = settings->GetSettingAs<int>("MAX_NUM_ITERS", ProjectSettings::required); 
     double max_global_rel_error = settings->GetSettingAs<double>("MAX_GLOBAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
     double max_local_rel_error = settings->GetSettingAs<double>("MAX_LOCAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
 
@@ -136,8 +137,8 @@ int main(int argc, char** argv) {
     int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "0"); 
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
     int useHyperviscosity = settings->GetSettingAs<int>("USE_HYPERVISCOSITY", ProjectSettings::optional, "0");
-    int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
-    int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
+    //int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
+    //int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
 
     int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
@@ -215,7 +216,7 @@ int main(int argc, char** argv) {
 
         tm["receive"]->start(); 
         subdomain = new Domain(); // EMPTY object that will be filled by MPI
-        int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
+        comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
         tm["receive"]->stop(); 
         //subdomain->writeToFile();
     }
@@ -227,7 +228,7 @@ int main(int argc, char** argv) {
         subdomain->printNodeList("All Centers Needed by This Process"); 
 
         printf("CHECKING STENCILS: ");
-        for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
+        for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
             //  printf("Stencil[%d] = ", irbf);
             StencilType& s = subdomain->getStencil(irbf); 
             if (irbf == s[0]) {
@@ -365,7 +366,7 @@ int main(int argc, char** argv) {
         }
     }
     // Laplacian = d^2/dx^2
-    double min_sten_area = min_dx*min_dx;
+    //double min_sten_area = min_dx*min_dx;
     
     // Get the max velocity at t=0.
     double max_vel = ((CosineBell*)pde)->CosineBell::getMaxVelocity(start_time);

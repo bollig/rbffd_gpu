@@ -11,8 +11,8 @@
 class ExactRollup : public ExactSolution
 {
     private:
-        double rho0; 
         double gamma; 
+        double rho0; 
 
     public:
         ExactRollup()
@@ -30,7 +30,7 @@ class ExactRollup : public ExactSolution
             sph_coords_type spherical_coords = cart2sph(x, y, z);
             double theta_p = spherical_coords.phi; 
             double phi_p = spherical_coords.theta; 
-            double temp = spherical_coords.r; 
+            //double temp = spherical_coords.r; 
 
 //            std::cout << "CART(" << x << ",  " << y << ", " << z << ") => SPH(" << theta_p << ", " << phi_p << ", " << temp << ")\n"; 
 

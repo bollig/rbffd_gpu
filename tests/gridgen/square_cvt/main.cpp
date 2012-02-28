@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
 	// 20000 samples per iteration for 30 iterations
     Grid* grid = new CVT(nx * ny * nz, dim, 0, NULL, 20000, 60); 
     grid->setDebug(debug);
+    grid->setExtents(minX, maxX, minY, maxY, minZ, maxZ); 
     grid->generate(); 
     grid->writeToFile(); 
     

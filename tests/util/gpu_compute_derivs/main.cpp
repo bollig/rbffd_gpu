@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
 
-    Grid* grid; 
+    Grid* grid = NULL; 
  
     if (dim == 1) {
 	    grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     grid->writeToFile(); 
 
     // 0: 2D problem; 1: 3D problem
-    ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
+    //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
 
     RBFFD* der;
     if (use_gpu) {
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
     der->setEpsilon(epsilon);
 
     printf("start computing weights\n");
-    vector<StencilType>& stencil = grid->getStencils();
+    //vector<StencilType>& stencil = grid->getStencils();
     vector<NodeType>& rbf_centers = grid->getNodeList();
     der->computeAllWeightsForAllStencils();
     cout << "end computing weights" << endl;
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false);
     der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
 
-    for (int i = 0; i < rbf_centers.size(); i++) {
+    for (size_t i = 0; i < rbf_centers.size(); i++) {
 //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
         if ( (xderiv_gpu[i] - xderiv_cpu[i] > 1e-5) 
         || (yderiv_gpu[i] - yderiv_cpu[i] > 1e-5) 

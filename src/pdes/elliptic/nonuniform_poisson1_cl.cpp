@@ -55,7 +55,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         // The first nb getStencils() should be the global boundary nodes
         int ni = subdomain->getStencils().size() - nb;
 
-        int nn = (nb + ni) ;
+        //int nn = (nb + ni) ;
 
         // TODO: solve this in parallel
         //     comm_unit->broadcastObjectUpdates(subdomain);
@@ -276,7 +276,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         for (int i = 0; i < nb + ni; i++) {
             exact_host(subdomain->getStencil(i)[0]) = (FLOAT) (exactSolution->at(subdomain->getNode( subdomain->getStencil(i)[0] ), 0.));
         }
-        for (int i = nb+ni; i < exact_host.size(); i++) {
+        for (size_t i = nb+ni; i < exact_host.size(); i++) {
             exact_host(i) = 0.;
         }
 
@@ -372,7 +372,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             normal *= -1;
         }
 
-        for (int j = 0; j < stencil.size(); j++) {
+        for (size_t j = 0; j < stencil.size(); j++) {
 
             double value = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
             // When j == 0 we should have i = Q_stencil[i][j] (i.e., its the center element
@@ -401,7 +401,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             //F_host(i) = (FLOAT)0.;
             double discrete_condition = 0.;
 
-            for (int j = 0; j < stencil.size(); j++) {
+            for (unsigned int j = 0; j < stencil.size(); j++) {
                 double weight = (normal.x() * x_weights[j] + normal.y() * y_weights[j] + normal.z() * z_weights[j]);
                 Vec3& vj = centers[stencil[j]];
                 discrete_condition += weight * exactSolution->at(vj,0);  //   laplacian(vj.x(), vj.y(), vj.z(), 0.));
@@ -442,7 +442,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             normal *= -1;
         }
 
-        for (int j = 0; j < stencil.size(); j++) {
+        for (unsigned int j = 0; j < stencil.size(); j++) {
 
             // The Robin boundary condition says:
             //      n .dot. d(Phi/r)/dr = f
@@ -482,7 +482,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
             // Discrete Robin
             double discrete_condition = 0.;
-            for (int j = 0; j < stencil.size(); j++) {
+            for (unsigned int j = 0; j < stencil.size(); j++) {
                 // [(x*d/dx + y*d/dy + z*d/dz)(1/r) - (1/r^2)]*(\Phi) {Handle the 1/r^2 below}
                 //
                 // Use quotient rule:
@@ -513,7 +513,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         int indx = 0;
 
         //--------- BOUNDARY NODE ENTRIES -----------
-        for (int j = 0; j < stencil.size(); j++) {
+        for (unsigned int j = 0; j < stencil.size(); j++) {
             if (j == 0) {
                 L(stencil[0],stencil[j]) = (FLOAT)1.;
             } else {
@@ -650,7 +650,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
     int NonUniformPoisson1_CL::fillInteriorLHS(MatType& L, VecType& F, StencilType& stencil, CenterListType& centers)
     {
-        int indx = 0;
+        unsigned int indx = 0;
         Vec3 st_center = centers[stencil[0]];
         // Do I want the gradK at each stencil node or only the center?
         double diffusivity = exactSolution->diffuseCoefficient(st_center);
@@ -660,7 +660,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         // Fill Interior weights (LHS)
         if (use_uniform_diffusivity) {
             double* lapl_weights = der->getLaplWeights(stencil[0]);
-            for (int j = 0; j < stencil.size(); j++) {
+            for (unsigned int j = 0; j < stencil.size(); j++) {
                 L(stencil[0],stencil[j]) = (FLOAT) lapl_weights[j];
                 //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
                 indx++;
@@ -671,7 +671,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             double* z_weights = der->getZWeights(stencil[0]);
             double* lapl_weights = der->getLaplWeights(stencil[0]);
 
-            for (int j = 0; j < stencil.size(); j++) {
+            for (unsigned int j = 0; j < stencil.size(); j++) {
 
                 double grad_k_grad_phi_weight = gradK.x()*x_weights[j] + gradK.y()*y_weights[j] + gradK.z()*z_weights[j];
                 double k_lapl_phi_weight = diffusivity*lapl_weights[j];
@@ -717,7 +717,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             double exact = 0.;
             if (use_uniform_diffusivity) {
                 double discrete_rhs = 0.;
-                for (int j = 0; j < stencil.size(); j++) {
+                for (unsigned int j = 0; j < stencil.size(); j++) {
                     Vec3& vj = centers[stencil[j]];
                     discrete_rhs += lapl_weights[j] * exactSolution->at(vj);
                 }
@@ -726,7 +726,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
                 exact = exactSolution->laplacian(v);
             } else {
                 double discrete_rhs = 0.;
-                for (int j = 0; j < stencil.size(); j++) {
+                for (unsigned int j = 0; j < stencil.size(); j++) {
                     Vec3& vj = centers[stencil[j]];
                     double xderiv_approx = x_weights[j] * exactSolution->at(vj);
                     double yderiv_approx = y_weights[j] * exactSolution->at(vj);
@@ -749,7 +749,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             }
 
             // Print error in discrete laplacian approximation:
-            Vec3& v2 = centers[stencil[0]];
+            //Vec3& v2 = centers[stencil[0]];
             double diff = fabs(exact - F[i]);
             double rel_diff = diff / fabs(exact);
             if (diff > 1e-9) {
@@ -769,7 +769,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         {
             std::ofstream fout;
             fout.open(filename.c_str());
-            for (int i = 0; i < vec.size(); i++) {
+            for (unsigned int i = 0; i < vec.size(); i++) {
                 fout << std::scientific << vec[i] << std::endl;
             }
             fout.close();

@@ -74,8 +74,8 @@ int main(int argc, char** argv) {
     if (debug) {
         std::vector<StencilType>& stencil2 = grid->getStencils();    
         std::cout << "ALL STENCILS: " << std::endl;	
-        for (int i = 0; i < stencil2.size(); i++) {
-            for (int j = 0; j < stencil2[i].size(); j++) {
+        for (size_t i = 0; i < stencil2.size(); i++) {
+            for (size_t j = 0; j < stencil2[i].size(); j++) {
                 std::cout << " [" << stencil2[i][j] << "] "; 
             }
             std::cout << std::endl;
@@ -92,8 +92,8 @@ int main(int argc, char** argv) {
     if (debug) {
         std::vector<StencilType>& stencil2 = grid->getStencils();    
         std::cout << "ALL STENCILS: " << std::endl;	
-        for (int i = 0; i < stencil2.size(); i++) {
-            for (int j = 0; j < stencil2[i].size(); j++) {
+        for (size_t i = 0; i < stencil2.size(); i++) {
+            for (size_t j = 0; j < stencil2[i].size(); j++) {
                 std::cout << " [" << stencil2[i][j] << "] "; 
             }
             std::cout << std::endl;
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
 
     grid->writeToFile(); 
 
-    std::vector<StencilType>& stencil = grid->getStencils();    
+    //std::vector<StencilType>& stencil = grid->getStencils();    
     StencilType& sten = grid->getStencil(0); 
 
     if (dim == 1) {

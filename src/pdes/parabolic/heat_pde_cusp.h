@@ -127,7 +127,12 @@ class HeatPDE_CL : public HeatPDE
         void fillGPUMat(RBFFD::DerType which, cusp::csr_matrix<unsigned int, float, cusp::device_memory>& gpu_buffer);
 
          
-        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) { std::cout << "[HeatPDECusp] ERROR! SHOULD CALL THE TIME BASED SOLVE ROUTINE\n"; exit(EXIT_FAILURE); } 
+        virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 
+        { std::cout << "[HeatPDECusp] ERROR! SHOULD CALL THE TIME BASED SOLVE ROUTINE\n"; exit(EXIT_FAILURE); } 
+
+
+        virtual void solve() 
+        { std::cout << "[HeatPDECusp] ERROR! SHOULD CALL THE TIME BASED SOLVE ROUTINE\n"; exit(EXIT_FAILURE); } 
 
         virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t) 
         {

@@ -806,7 +806,7 @@ ArrayT<T> operator*(ArrayT<T>& a, double b)   //  array * T
 	return result;
 	*/
 
-	const int* dims = a.getDims();
+	//const int* dims = a.getDims();
 	int nbPts = a.getSize();
 	T* ap = a.getDataPtr();
 	ArrayT<T> r(a.getTotPoints(), a.getOrigin());

@@ -59,7 +59,7 @@ class RBF_Gaussian : public RBF
 
         //------------------------------------------------
         virtual double xderiv(const Vec3& x) { 
-            double r2 = x.square();
+            //double r2 = x.square();
             double xeps = x.x() * eps2;
             return -2. * xeps * this->eval(x);
         }
@@ -71,7 +71,7 @@ class RBF_Gaussian : public RBF
         }
         //------------------------------------------------
         virtual double yderiv(const Vec3& x) { 
-            double r2 = x.square();
+            //double r2 = x.square();
             double yeps = x.y() * eps2;
             return -2. * yeps * this->eval(x);
         }
@@ -83,7 +83,7 @@ class RBF_Gaussian : public RBF
         }
         //------------------------------------------------
         virtual double zderiv(const Vec3& x) { 
-            double r2 = x.square();
+            //double r2 = x.square();
             double zeps = x.z() * eps2;
             return -2. * zeps * this->eval(x);
         }
@@ -110,7 +110,7 @@ class RBF_Gaussian : public RBF
          //------------------------------------------------
          //ANalytically remove r/r
         virtual double rderiv_over_r(const Vec3& x) { 
-            double r2 = x.square();
+            //double r2 = x.square();
             return -2. * eps2 * this->eval(x);
         }
 
@@ -198,7 +198,7 @@ class RBF_Gaussian : public RBF
         //  p_1(r) = 4(eps*r)^2 - 2d
         //  p_{k+1}(r) = 4( (eps*r)^2 - 2k - d/2 ) * p_k(r) - 8k(2k - 2 + d) * p_{k-1}(r)
         virtual double hyperviscosity(const Vec3& x, const int k) {
-            double eps2r2 = eps2 * x.square();
+            //double eps2r2 = eps2 * x.square();
             double r2 = x.square(); 
 #if 0
             double hv_fact1; 

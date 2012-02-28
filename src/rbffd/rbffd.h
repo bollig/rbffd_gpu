@@ -96,8 +96,6 @@ class RBFFD
 
         EB::TimerList tm; 
 
-        WeightType weightMethod; 
-
         Grid& grid_ref;
 
         std::string eps_string;
@@ -134,22 +132,23 @@ class RBFFD
         int modified; 
         bool weightsModified;
 
-
-        bool computeCondNums; 
+        WeightType weightMethod; 
 
         std::vector<CMPLX> condNums; 
 
         EigenvalueOutput cachedEigenvalues;
-        bool eigenvalues_computed;
-
 
         // Parameters for hyperviscosity: 
         // recall that we get the hyperviscosity at -(gamma * N^{-k} * (lapl)^{k})
-        double hv_gamma;
         double hv_k; 
+        double hv_gamma;
+
 
         int useHyperviscosity;
 
+
+        bool eigenvalues_computed;
+        bool computeCondNums; 
         bool computeSFCoperators;
 
     protected: 

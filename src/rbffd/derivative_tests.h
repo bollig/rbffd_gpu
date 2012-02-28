@@ -15,9 +15,9 @@ class DerivativeTests {
 
     protected:
         bool weightsComputed;
+        int dim_num;
         RBFFD* der;
         Grid* grid;
-        int dim_num;
 
     public:
         DerivativeTests(int dim, RBFFD* derivative_ptr, Grid* grid_ptr, bool weightsPreComputed=false)

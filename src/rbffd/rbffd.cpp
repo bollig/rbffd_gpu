@@ -19,13 +19,14 @@ typedef RBF_Gaussian IRBF;
 
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
 // (up to 3 right now) 
-    RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
-:   computedTypes(typesToCompute),
-    computeSFCoperators(false),
-    grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
-    weightsModified(false), weightMethod(RBFFD::Direct), 
-    hv_k(2), hv_gamma(8e-4), useHyperviscosity(0), 
-    eigenvalues_computed(false), computeCondNums(false)
+RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
+    :   
+        computedTypes(typesToCompute),
+        grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
+        weightsModified(false), weightMethod(RBFFD::Direct), 
+        hv_k(2), hv_gamma(8e-4), useHyperviscosity(0), 
+        eigenvalues_computed(false), computeCondNums(false),
+        computeSFCoperators(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
@@ -69,7 +70,7 @@ typedef RBF_Gaussian IRBF;
 RBFFD::~RBFFD() {
     for (int j = 0; j < NUM_DERIVATIVE_TYPES; j++) {
         //if (weights[j] != NULL) {
-        for (int i = 0; i < weights[j].size(); i++) {
+        for (size_t i = 0; i < weights[j].size(); i++) {
             if (weights[j][i] != NULL) {
                 delete [] weights[j][i];
             }
@@ -229,8 +230,8 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
 
     // Stencil center
-    Vec3& x0v = rbf_centers[stencil[0]];
-    
+    //Vec3& x0v = rbf_centers[stencil[0]];
+
     int numSelectedDerTypes = getNumSelectedDerTypes(); 
 
     arma::mat rhs = arma::mat(n+np, numSelectedDerTypes); 
@@ -303,7 +304,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
             double sum_nodes_only = 0.;
             double sum_nodes_and_monomials = 0.;
             for (int j = 0; j < n; j++) {
-    //            sum_nodes_only += weights_new(j,which_i);
+                //            sum_nodes_only += weights_new(j,which_i);
                 sum_nodes_only += this->weights[i][irbf][j];
             }
             sum_nodes_and_monomials = sum_nodes_only;
@@ -398,12 +399,12 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         sph_coords_type spherical_coords_j = cart2sph(xjv.x(), xjv.y(), xjv.z());
         double lambdaP_j = spherical_coords_j.theta; 
         double thetaP_j = spherical_coords_j.phi; 
-        double r_j = spherical_coords_j.r; 
+        //double r_j = spherical_coords_j.r; 
 
         sph_coords_type spherical_coords_i = cart2sph(x0v.x(), x0v.y(), x0v.z());
         double lambdaP_i = spherical_coords_i.theta; 
         double thetaP_i = spherical_coords_i.phi; 
-        double r_i = spherical_coords_i.r; 
+        //double r_i = spherical_coords_i.r; 
 
         switch (which) {
             case X:
@@ -547,7 +548,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         int n = stencil.size();
 
         // Stencil center
-        Vec3& x0v = rbf_centers[stencil[0]];
+        //Vec3& x0v = rbf_centers[stencil[0]];
         arma::mat rhs(n+np, 1); 
         rhs.zeros();
         arma::mat lhs(n+np, n+np); 
@@ -637,7 +638,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     void RBFFD::applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU) {
         //    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << " (weights[" << getDerTypeIndx(which) << "])" << std::endl;
         tm["applyAll"]->start(); 
-//        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+        //        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
         double der;
 
         // TODO: this if we took advantage of a sparse matrix container, we might be able to
@@ -676,10 +677,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         std::set<unsigned int>& b_indices = grid_ref.getSortedBoundarySet();
         std::set<unsigned int>& i_indices = grid_ref.getSortedInteriorSet(); 
         unsigned int nb_bnd = b_indices.size();
+#if 0
         unsigned int nb_int = i_indices.size();
         int nb_centers = grid_ref.getNodeListSize();
         int nb_stencils = grid_ref.getStencilsSize();
-
+#endif 
         // compute eigenvalues of derivative operator
         unsigned int sz = weights_r.size();
 
@@ -709,7 +711,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 double* w = this->getStencilWeights(which, *it);
                 double* hv = this->getStencilWeights(HV, *it); //weights_hv[*it]; 
                 StencilType& st = grid_ref.getStencil(*it);
-                for (int j=0; j < st.size(); j++) {
+                for (size_t j=0; j < st.size(); j++) {
                     eigmat(*it,st[j])  = w[j] + hv[j];
                 }
             }
@@ -719,7 +721,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
                 double* w = weights_r[*it];
                 StencilType& st = grid_ref.getStencil(*it);
-                for (int j=0; j < st.size(); j++) {
+                for (size_t j=0; j < st.size(); j++) {
                     eigmat(*it,st[j])  = w[j];
                     // 	printf ("eigmat(%d, st[%d]) = w[%d] = %g\n", i, j, j, eigmat(i,st[j]));
                 }
@@ -746,7 +748,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         double min_neg_eig = fabs(real(eigval(0)));
 
 
-        int err = 0; 
+        //int err = 0; 
         FILE *f; 
         std::string filename = "eigenvalues_"; 
         filename.append(this->getFileDetailString(which));
@@ -756,7 +758,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // Compute number of unstable modes
         // Also compute the largest and smallest (in magnitude) eigenvalue
         //for (int i=0; i < (sz-nb_bnd); i++) {
-        for (int i=0; i < sz; i++) {
+        for (size_t i=0; i < sz; i++) {
             double e = real(eigval(i));
             if (e > 1.e-8) {
                 pos_count++;
@@ -854,9 +856,9 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
     void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, int dim_num, arma::mat& ar, double h) {
         // We assume that all stencils are centered around the first node in the Stencil node list.
-        unsigned int irbf = stencil[0]; 
-        Vec3& c = rbf_centers[irbf];
-        unsigned int n = stencil.size();
+        int irbf = stencil[0]; 
+        //Vec3& c = rbf_centers[irbf];
+        int n = (int)stencil.size();
         //printf("stencil size= %d\n", n);
 
         //printf("stencil size(%d): n= %d\n", irbf, n);
@@ -883,7 +885,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         int st_center = -1;
 
         // which stencil point is irbf
-        for (int i=0; i < n; i++) {
+        for (int i=0; i < (int)n; i++) {
             if (irbf == stencil[i]) {
                 st_center = i;
                 break;
@@ -944,8 +946,6 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         int M, N, nz;   
         int i, *I, *J;
         double *val;    
-        int err; 
-
         if ((f = fopen(filename.c_str(), "r")) == NULL)
         {
             std::cout << "File not found: " << filename << std::endl;
@@ -976,12 +976,12 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         }
         fprintf(stdout, "Attempting to read %u weights (%u, %u) from %s\n", expected_nz, M, N, filename.c_str()); 
 
-        if (M != expected_M) {
+        if (M != (int) expected_M) {
             std::cout << "Error! not enough stencils in the file" << std::endl;
             return 5;
         }
 
-        if (nz != expected_nz) {
+        if (nz != (int) expected_nz) {
             std::cout << "Error! not enough weights in the file" << std::endl;
             return 5;
         }
@@ -999,7 +999,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         for (i=0; i<nz; i++)
         {
             //        fscanf(f, "%d %d %24le\n", &I[i], &J[i], &val[i]);
-            int err = fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
+            fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
             I[i]--;  /* adjust from 1-based to 0-based */
             J[i]--;
         }
@@ -1008,11 +1008,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         fclose(f);
 
         // Convert to our weights: 
-        for (unsigned int irbf = 0; irbf < N; irbf++) {
+        for (int irbf = 0; irbf < N; irbf++) {
             this->weights[getDerTypeIndx(which)][irbf] = new double[M]; 
         }
-        unsigned int j = 0; 
-        unsigned int local_i = 0; 
+        int j = 0; 
+        int local_i = 0; 
         for (i = 0; i < nz; i++) {
             if (local_i != I[i]) {
                 j = 0; 
@@ -1137,7 +1137,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // Types: 0 : Mine. 1 : Sarler2006 
 #define VARIABLE_EPS_TYPE 1
         var_epsilon.resize(nb_stencils);
-        for (int i=0; i < nb_stencils; i++) {
+        for (unsigned int i=0; i < nb_stencils; i++) {
             StencilType& stencil = grid_ref.getStencil(i);
 #if 0
             var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
@@ -1188,7 +1188,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
             int st_center = -1;
             // which stencil point is irbf
-            for (int i=0; i < stencil.size(); i++) {
+            for (int i=0; i < (int)stencil.size(); i++) {
                 if (st_indx == stencil[i]) {
                     st_center = i;
                     break;
@@ -1208,7 +1208,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             // estimate radius for contour-svd method
             // distance matrix: each entry is the square of the internode distance
             arma::mat xd(stencil.size(), 3);
-            for (int i=0; i < stencil.size(); i++) {
+            for (int i=0; i < (int)stencil.size(); i++) {
                 Vec3& rc = rbf_centers[stencil[i]];
                 xd(i,0) = rc[0];
                 xd(i,1) = rc[1];
@@ -1294,7 +1294,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             if (this->weights[getDerTypeIndx(which)][irbf] == NULL) {
                 this->weights[getDerTypeIndx(which)][irbf] = new double[n+np];
             }
-            for (int j = 0; j < n+np; j++) {
+            for (unsigned int j = 0; j < n+np; j++) {
                 this->weights[getDerTypeIndx(which)][irbf][j] = weights_new[j];
             }
 

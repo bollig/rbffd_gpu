@@ -44,7 +44,7 @@ class Stencils
             rd2 = computeDistMatrix2(*xd, *xd); // unnormalized
             //rd2 *= 1./this->h; 
 //            rd2.print("RD2");
-            double maxStencilDist = sqrt(matMax(rd2));
+            //double maxStencilDist = sqrt(matMax(rd2));
             //} else {
             // RDVEC is the partial DISTANCE matrix where each entry is a Vec3(x-x_0, y-y0, z-z0)
             rdvec = computeDistMatrixVec(*xd, *xd); // unnormalized
@@ -53,7 +53,7 @@ class Stencils
             const int* dims = rdvec.getDims();
             //printf("before rdvec size: %d, %d, %d\n", dims[0], dims[1], dims[2]);
             rdvec.resize(1,dims[1]); // only keep first row
-            const int* dims2 = rdvec.getDims();
+            //const int* dims2 = rdvec.getDims();
             //printf("after rdvec size: %d, %d\n", dims2[0], dims2[1]);
             //}
             
@@ -88,7 +88,7 @@ class Stencils
             arma::mat rr0_norm = rd2 * (rad*rad); // normalized
 
             ArrayT<Vec3> rdvec_norm = rdvec * rad;  // each element is only proportional to r
-            const int* dims1 = rdvec_norm.getDims();
+            //const int* dims1 = rdvec_norm.getDims();
             //printf("dims1(rdvec_norm)= %d, %d, %d\n", dims1[0], dims1[1], dims1[2]);
             //exit(0);
 

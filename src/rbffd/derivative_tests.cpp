@@ -112,7 +112,7 @@ void DerivativeTests::compareGPUandCPUDerivs(unsigned int nb_stencils_to_test) {
     der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
 
     //cout << "start derivative comparison" << endl;
-    for (int i = 0; i < nb_stencils; i++) {
+    for (unsigned int i = 0; i < nb_stencils; i++) {
 #if 0
         std::cout << "cpu: " << xderiv_cpu[i] << " - gpu: " << xderiv_gpu[i] << " = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
         std::cout << "cpu: " << yderiv_cpu[i] << " - gpu: " << yderiv_gpu[i] << " = " << yderiv_cpu[i] - yderiv_gpu[i] << std::endl;
@@ -180,8 +180,8 @@ void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, 
     std::set<unsigned int>& i_indices = grid->getSortedInteriorSet(); 
     unsigned int nb_bnd = b_indices.size();
     unsigned int nb_int = i_indices.size();
-    int nb_centers = grid->getNodeListSize();
-    int nb_stencils = grid->getStencilsSize();
+    unsigned int nb_centers = grid->getNodeListSize();
+    unsigned int nb_stencils = grid->getStencilsSize();
 
    // std::cout << "BINDICES.size= " << b_indices.size();
    // std::cout << "IINDICES.size= " << i_indices.size();
@@ -401,7 +401,7 @@ void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, 
     }
 #if 1
     double inter_error=0.;
-    for (int i= 0; i < nb_int; i++) {
+    for (unsigned int i= 0; i < nb_int; i++) {
         inter_error += (dulapl_ex_int[i]-lapl_deriv_int[i])*(dulapl_ex_int[i]-lapl_deriv_int[i]);
         //    std::cout << i << "dulapl_ex_int " << dulapl_ex_int[i] << ", " << lapl_deriv_int[i] << std::endl;
         //printf("inter error[%d] = %14.7g\n", i, du_ex[i]-lapl_deriv[i]);
@@ -409,7 +409,7 @@ void DerivativeTests::testDerivativeOfFunction(DerivativeTests::TESTFUN choice, 
    // inter_error /= nb_int;
 
     double bnd_error=0.;
-    for (int i=0; i < nb_bnd; i++) {
+    for (unsigned int i=0; i < nb_bnd; i++) {
         bnd_error += (dulapl_ex_bnd[i]-lapl_deriv_bnd[i])*(dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
         //     printf("bnd error[%d] = %14.7g\n", i, dulapl_ex_bnd[i]-lapl_deriv_bnd[i]);
     }
@@ -466,123 +466,123 @@ void DerivativeTests::fillTestFunction(DerivativeTests::TESTFUN which, unsigned 
 
     switch(which) {
         case C:
-            for (int i=0; i < nb_stencils; i++) {
+            for (unsigned int i=0; i < nb_stencils; i++) {
                 dux_ex[i] = 0.;
                 duy_ex[i] = 0.;
                 dulapl_ex[i] = 0.;
             }
 
-            for (int i =0; i < nb_centers; i++) {
-                Vec3& v = rbf_centers[i];
+            for (unsigned int i =0; i < nb_centers; i++) {
+                //Vec3& v = rbf_centers[i];
                 u[i] = 1.;
             }
             break;
         case X:
             printf("nb_stencils= %u\n", nb_stencils);
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
+            for (unsigned int i=0; i < nb_stencils; i++) {
+                //Vec3& v = rbf_centers[i];
                 dux_ex[i] = 1.;
                 duy_ex[i] = 0.;
                 dulapl_ex[i] = 0.;
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.x();
             }
             printf("u.size= %d\n", (int) u.size());
             break;
         case Y:
-            for (int i=0; i < nb_stencils; i++) {
-                Vec3& v = rbf_centers[i];
+            for (unsigned int i=0; i < nb_stencils; i++) {
+                //Vec3& v = rbf_centers[i];
                 dux_ex[i] = 0.;
                 duy_ex[i] = 1.;
                 dulapl_ex[i] = 0.;
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.y();
             }
             break;
         case X2:
-            for (int i=0; i < nb_stencils; i++) {
+            for (unsigned int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex[i] = 2.*v.x();
                 duy_ex[i] = 0.;
                 dulapl_ex[i] = 2.;
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.x()*v.x();
             }
             break;
         case XY:
-            for (int i=0; i < nb_stencils; i++) {
+            for (unsigned int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex[i] = v.y();
                 duy_ex[i] = v.x();
                 dulapl_ex[i] = 0.;
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.x()*v.y();
             }
             break;
         case Y2:
-            for (int i=0; i < nb_stencils; i++) {
+            for (unsigned int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex[i] = 0.;
                 duy_ex[i] = 2.*v.y();
                 dulapl_ex[i] = 2.;
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.y()*v.y();
             }
             break;
         case X3:
-            for (int i=0; i < nb_stencils; i++) {
+            for (unsigned int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex[i] = 3.*v.x()*v.x();
                 duy_ex[i] = 0.;
                 dulapl_ex[i] = 6.*v.x();
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.x()*v.x()*v.x();
             }
             break;
         case X2Y:
-            for (int i=0; i < nb_stencils; i++) {
+            for (unsigned int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex[i] = 2.*v.x()*v.y();
                 duy_ex[i] = v.x()*v.x();
                 dulapl_ex[i] = 2.*v.y();
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.x()*v.x()*v.y();
             }
             break;
         case XY2:
-            for (int i=0; i < nb_stencils; i++) {
+            for (unsigned int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex[i] = v.y()*v.y();
                 duy_ex[i] = 2.*v.x()*v.y();
                 dulapl_ex[i] = 2.*v.x();
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.x()*v.y()*v.y();
             }
             break;
         case Y3:
-            for (int i=0; i < nb_stencils; i++) {
+            for (unsigned int i=0; i < nb_stencils; i++) {
                 Vec3& v = rbf_centers[i];
                 dux_ex[i] = 0.;
                 duy_ex[i] = 3.*v.y()*v.y();
                 dulapl_ex[i] = 6.*v.y();
             }
-            for (int i =0; i < nb_centers; i++) {
+            for (unsigned int i =0; i < nb_centers; i++) {
                 Vec3& v = rbf_centers[i];
                 u[i] = v.y()*v.y()*v.y();
             }
@@ -597,13 +597,13 @@ void DerivativeTests::testEigen(RBFFD::DerType which, bool exitIfTestFails, unsi
 {
 
     int nb_stencils = grid->getStencilsSize();
-    int nb_bnd = grid->getBoundaryIndicesSize();
+    //int nb_bnd = grid->getBoundaryIndicesSize();
     int tot_nb_pts = grid->getNodeListSize();
 
     std::vector<double> u(tot_nb_pts);
     std::vector<double> deriv(nb_stencils);
 
-    std::vector<StencilType>& stencil = grid->getStencils();
+    //std::vector<StencilType>& stencil = grid->getStencils();
     std::vector<NodeType>& rbf_centers = grid->getNodeList();
     std::vector<double>& avg_stencil_radius = grid->getStencilRadii(); // get average stencil radius for each point
 

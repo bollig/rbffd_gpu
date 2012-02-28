@@ -13,13 +13,17 @@ class Exact2D : public ExactSolution
         double n;
         double m;
         double B;
-        double diffuseConst; 
+        
+        double xmin;
+        double ymin;
+
         // maxX
         double L; 
-        double xmin;
+
         // maxY
         double H;
-        double ymin;
+
+        double diffuseConst; 
     public:
         Exact2D(double minX, double maxX, double minY, double maxY, double alpha)
             // 2D
@@ -47,10 +51,10 @@ class Exact2D : public ExactSolution
         virtual double laplacian(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t); 
             double initialConst = B; 
-            double spatial_x = sin((n * M_PI * (x-xmin))/L);
+            //double spatial_x = sin((n * M_PI * (x-xmin))/L);
             double spatial_y = sin((m * M_PI * (y-ymin))/H);
             double d2_spatial_xx = -sin((n * M_PI * (x-xmin))/L) * spatial_y * (n*n*M_PI*M_PI) / L*L;
-            double d2_spatial_yy = -sin((m * M_PI * (y-ymin))/H) * spatial_x * (m*m*M_PI*M_PI) / H*H;
+            //double d2_spatial_yy = -sin((m * M_PI * (y-ymin))/H) * spatial_x * (m*m*M_PI*M_PI) / H*H;
             double lambda = ((n * n * M_PI * M_PI)/(L*L)) + ((m * m * M_PI * M_PI)/(H*H));
             double temporal = exp(-alpha * t * lambda);
 
@@ -96,7 +100,7 @@ class Exact2D : public ExactSolution
             double spatial_x = sin((n * M_PI * (x-xmin))/L);
             double spatial_y = sin((m * M_PI * (y-ymin))/H);
             double lambda = ((n * n * M_PI * M_PI)/(L*L)) + ((m * m * M_PI * M_PI)/(H*H));
-            double temporal = exp(-alpha * t * lambda);
+            //double temporal = exp(-alpha * t * lambda);
 
             // Changed from operator()
             double d_temporal = exp(-alpha * t * lambda) * -alpha * lambda; 

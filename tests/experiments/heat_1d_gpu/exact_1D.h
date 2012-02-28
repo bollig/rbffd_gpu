@@ -12,9 +12,10 @@ class Exact1D : public ExactSolution
             // See Haberman p47,48 for details
         double n;
         double B;
-        double decay; 
-        double L;
         double xmin;
+        double L;
+        double decay; 
+
     public:
         Exact1D(double minX, double maxX, double alpha)
             : ExactSolution(1), 

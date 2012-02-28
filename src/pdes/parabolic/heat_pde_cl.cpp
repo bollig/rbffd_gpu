@@ -67,10 +67,12 @@ void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, cl::B
     // FIXME: should we mirror the CPU first?
 //    this->HeatPDE::enforceBoundaryConditions(u_t, t);
     
+#if 0
     unsigned int nb_stencils = grid_ref.getStencilsSize(); 
     unsigned int stencil_size = grid_ref.getMaxStencilSize(); 
-    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
     unsigned int nb_nodes = grid_ref.getNodeListSize(); 
+#endif
+    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
     float cur_time_f = (float) cur_time;
     
     try {
@@ -139,8 +141,8 @@ void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
 }
 
 void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
-    unsigned int nb_nodes = grid_ref.getNodeListSize();
-    unsigned int set_G_size = grid_ref.G.size();
+    //unsigned int nb_nodes = grid_ref.getNodeListSize();
+    //unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size(); 
     unsigned int set_R_size = grid_ref.R.size();
 
@@ -150,7 +152,7 @@ void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
     unsigned int offset_to_set_R = set_Q_size;
 
-    unsigned int solution_mem_bytes = set_G_size*float_size; 
+    //unsigned int solution_mem_bytes = set_G_size*float_size; 
     unsigned int set_R_bytes = set_R_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
@@ -161,7 +163,7 @@ void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_
         // Update CPU mem with R; 
         // NOTE: This is a single precision kernel call so we need to convert
         // the U_G to single precision
-        for (int i = 0 ; i < set_R_size; i++) {
+        for (unsigned int i = 0 ; i < set_R_size; i++) {
             r_update_f[i] = (float)vec[offset_to_set_R + i]; 
         }
 
@@ -175,8 +177,8 @@ void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_
 
 // General routine to copy the set R indices vec up to gpu_vec
 void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
-    unsigned int nb_nodes = grid_ref.getNodeListSize();
-    unsigned int set_G_size = grid_ref.G.size();
+    //unsigned int nb_nodes = grid_ref.getNodeListSize();
+    //unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size(); 
     unsigned int set_R_size = grid_ref.R.size();
 
@@ -186,7 +188,7 @@ void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
     unsigned int offset_to_set_R = set_Q_size;
 
-    unsigned int solution_mem_bytes = set_G_size*float_size; 
+    //unsigned int solution_mem_bytes = set_G_size*float_size; 
     unsigned int set_R_bytes = set_R_size * float_size;
 
     if (set_R_size > 0) {
@@ -202,8 +204,8 @@ void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_
 
 // General routine to copy the set O indices from gpu_vec down to vec
 void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
-    unsigned int nb_nodes = grid_ref.getNodeListSize();
-    unsigned int set_G_size = grid_ref.G.size();
+    //unsigned int nb_nodes = grid_ref.getNodeListSize();
+    //unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size(); 
     unsigned int set_O_size = grid_ref.O.size();
 
@@ -213,7 +215,7 @@ void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
     unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-    unsigned int solution_mem_bytes = set_G_size*float_size; 
+    //unsigned int solution_mem_bytes = set_G_size*float_size; 
     unsigned int set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
@@ -238,8 +240,8 @@ void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_
 
 
 void HeatPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
-    unsigned int nb_nodes = grid_ref.getNodeListSize();
-    unsigned int set_G_size = grid_ref.G.size();
+    //unsigned int nb_nodes = grid_ref.getNodeListSize();
+    //unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size(); 
     unsigned int set_O_size = grid_ref.O.size();
 
@@ -249,7 +251,7 @@ void HeatPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_
     //  { Q\B D O R } where B = union(O, D) and Q = union(Q\B D O)
     unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-    unsigned int solution_mem_bytes = set_G_size*float_size; 
+    //unsigned int solution_mem_bytes = set_G_size*float_size; 
     unsigned int set_O_bytes = set_O_size * float_size;
 
     // backup the current solution so we can perform intermediate steps
@@ -801,7 +803,7 @@ void HeatPDE_CL::loadRK4Kernels(std::string& local_sources) {
 void HeatPDE_CL::allocateGPUMem() {
 #if 1
     unsigned int nb_nodes = grid_ref.getNodeListSize();
-    unsigned int nb_stencils = grid_ref.getStencilsSize();
+    //unsigned int nb_stencils = grid_ref.getStencilsSize();
     unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
     cout << "Allocating GPU memory for HeatPDE\n";

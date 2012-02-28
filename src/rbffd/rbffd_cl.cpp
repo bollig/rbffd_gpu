@@ -467,7 +467,7 @@ void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool force
     // TODO: mask off fields not update
     // update the GPU's view of our solution 
     float* cpu_u = new float[nb_nodes]; 
-    for (int i = 0; i < nb_nodes; i++) {
+    for (unsigned int i = 0; i < nb_nodes; i++) {
         cpu_u[i] = (float)u[i]; 
         //  std::cout << cpu_u[i] << "  "; 
     }
@@ -628,7 +628,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
 
     //    std::cout << "WARNING! derivatives are only computed in single precision.\n"; 
 
-    for (int i = 0; i < nb_stencils; i++) {
+    for (unsigned int i = 0; i < nb_stencils; i++) {
 
 #if 0
         std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;

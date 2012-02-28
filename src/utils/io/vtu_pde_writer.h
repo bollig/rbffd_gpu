@@ -100,7 +100,7 @@ class VtuPDEWriter : public PDEWriter
             //            stns = vtkCellArray::New(); 
             //            stns->SetNumberOfCells(subdomain->getStencilsSize());
             vtkCellArray* cell_array = vtkCellArray::New(); 
-            vtkIdType cell_type;  
+            vtkIdType cell_type = NULL;  
             for (unsigned int i = 0; i < subdomain->getStencilsSize(); i++){
                 unsigned int ssize = subdomain->getStencilSize(i); 
                 StencilType& st = subdomain->getStencil(i);
@@ -132,7 +132,7 @@ class VtuPDEWriter : public PDEWriter
             }
 #endif
 #if 1
-                for (int j = 0; j < ssize; j++) {
+                for (unsigned int j = 0; j < ssize; j++) {
                     vtkLine* cell = vtkLine::New();
                     cell_type = cell->GetCellType();
                     cell->GetPointIds()->SetNumberOfIds(2);

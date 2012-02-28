@@ -153,15 +153,15 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
 
     protected: 
-        int getNextMultiple(unsigned int stencil_size) {
-            int nearest = alignMultiple; 
+        unsigned int getNextMultiple(unsigned int stencil_size) {
+            unsigned int nearest = alignMultiple; 
             while (stencil_size > nearest) 
                 nearest += alignMultiple; 
             return nearest;
         }
         
-        int getNextMultipleOf32(unsigned int stencil_size) {
-            int nearest = 32; 
+        unsigned int getNextMultipleOf32(unsigned int stencil_size) {
+            unsigned int nearest = 32; 
             while (stencil_size > nearest) 
                 nearest += 32; 
             return nearest;

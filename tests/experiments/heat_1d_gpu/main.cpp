@@ -41,7 +41,7 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
 // source as part of the programs we build.
 std::string getLocalGPUFuncs() {
    CLBaseClass clLoader;  
-   bool useDouble = false;
+   //bool useDouble = false;
                
    // Defines std::string diffusivity_source 
 #include "diffusivity.cl"
@@ -57,7 +57,7 @@ std::string getLocalGPUFuncs() {
 ExactSolution* getExactSolution(int dim_num) {
 //    double Re = 10;
 //    decay = 1.0/Re;
-    double L = maxX - minX; 
+    //double L = maxX - minX; 
     ExactSolution* exact = new Exact1D(minX, maxX, decay);
     // NOTE: we must make sure the diffusivity in the local kernel matches the
     // exact solution or our error will look abnormally large
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     tm["oneWeight"] = new Timer("[Main] Compute single stencil weights"); 
     tm["heat_init"] = new Timer("[Main] Initialize heat"); 
     // grid should only be valid instance for MASTER
-    Grid* grid; 
+    Grid* grid=NULL; 
     Domain* subdomain; 
 
     tm["total"]->start(); 
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
 
         tm["receive"]->start(); 
         subdomain = new Domain(); // EMPTY object that will be filled by MPI
-        int status = comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
+        comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
         tm["receive"]->stop(); 
         //subdomain->writeToFile();
     }
@@ -224,7 +224,7 @@ int main(int argc, char** argv) {
         subdomain->printNodeList("All Centers Needed by This Process"); 
 
         printf("CHECKING STENCILS: ");
-        for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
+        for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
             //  printf("Stencil[%d] = ", irbf);
             StencilType& s = subdomain->getStencil(irbf); 
             if (irbf == s[0]) {
@@ -411,8 +411,8 @@ int main(int argc, char** argv) {
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
-        char label[256]; 
 #if 0
+        char label[256]; 
         sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
         pde->printSolution(label); 
 #endif 

@@ -48,14 +48,14 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         //  solution out
         cl::Buffer gpu_boundary_indices;
 
+        RBFFD_CL& der_ref_gpu; 
+        bool useDouble;
+
         int INDX_IN;
         int INDX_OUT;
         int INDX_INTERMEDIATE_1;
         int INDX_INTERMEDIATE_2;
         int INDX_INTERMEDIATE_3;
-
-        RBFFD_CL& der_ref_gpu; 
-        bool useDouble;
 
     public: 
         // Note: we specifically require the OpenCL version of RBFFD

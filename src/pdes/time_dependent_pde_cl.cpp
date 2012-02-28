@@ -156,8 +156,8 @@ int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
 
 void TimeDependentPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
     exit(EXIT_FAILURE);
-        unsigned int nb_nodes = grid_ref.getNodeListSize();
-        unsigned int set_G_size = grid_ref.G.size();
+        //unsigned int nb_nodes = grid_ref.getNodeListSize();
+        //unsigned int set_G_size = grid_ref.G.size();
         unsigned int set_Q_size = grid_ref.Q.size();
         unsigned int set_R_size = grid_ref.R.size();
 
@@ -167,7 +167,7 @@ void TimeDependentPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buf
         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
         unsigned int offset_to_set_R = set_Q_size;
 
-        unsigned int solution_mem_bytes = set_G_size*float_size;
+        //unsigned int solution_mem_bytes = set_G_size*float_size;
         unsigned int set_R_bytes = set_R_size * float_size;
 
         // backup the current solution so we can perform intermediate steps
@@ -178,7 +178,7 @@ void TimeDependentPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buf
                 // Update CPU mem with R;
                 // NOTE: This is a single precision kernel call so we need to convert
                 // the U_G to single precision
-                for (int i = 0 ; i < set_R_size; i++) {
+                for (unsigned int i = 0 ; i < set_R_size; i++) {
                         r_update_f[i] = (float)vec[offset_to_set_R + i];
                 }
 
@@ -195,10 +195,10 @@ void TimeDependentPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buf
 
 // General routine to copy the set R indices vec up to gpu_vec
 void TimeDependentPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
-        unsigned int nb_nodes = grid_ref.getNodeListSize();
-        unsigned int set_G_size = grid_ref.G.size();
+        //unsigned int nb_nodes = grid_ref.getNodeListSize();
+        //unsigned int set_G_size = grid_ref.G.size();
         unsigned int set_Q_size = grid_ref.Q.size();
-        unsigned int set_O_size = grid_ref.O.size();
+        //unsigned int set_O_size = grid_ref.O.size();
         unsigned int set_R_size = grid_ref.R.size();
 
         unsigned int float_size = sizeof(double);
@@ -234,8 +234,8 @@ void TimeDependentPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cl::Buf
 void TimeDependentPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
 
     exit(EXIT_FAILURE);
-        unsigned int nb_nodes = grid_ref.getNodeListSize();
-        unsigned int set_G_size = grid_ref.G.size();
+        //unsigned int nb_nodes = grid_ref.getNodeListSize();
+        //unsigned int set_G_size = grid_ref.G.size();
         unsigned int set_Q_size = grid_ref.Q.size();
         unsigned int set_O_size = grid_ref.O.size();
 
@@ -245,7 +245,7 @@ void TimeDependentPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buf
         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
         unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-        unsigned int solution_mem_bytes = set_G_size*float_size;
+        //unsigned int solution_mem_bytes = set_G_size*float_size;
         unsigned int set_O_bytes = set_O_size * float_size;
 
         // backup the current solution so we can perform intermediate steps
@@ -273,13 +273,13 @@ void TimeDependentPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cl::Buf
 
 void TimeDependentPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
 //    std::cout << "Download from GPU\n"; 
-        unsigned int nb_nodes = grid_ref.getNodeListSize();
-        unsigned int set_G_size = grid_ref.G.size();
+        //unsigned int nb_nodes = grid_ref.getNodeListSize();
+        //unsigned int set_G_size = grid_ref.G.size();
         unsigned int set_Q_size = grid_ref.Q.size();
-        unsigned int set_QmB_size = grid_ref.QmB.size();
-        unsigned int set_BmO_size = grid_ref.BmO.size();
-        unsigned int set_B_size = grid_ref.B.size();
-        unsigned int set_D_size = grid_ref.D.size();
+        //unsigned int set_QmB_size = grid_ref.QmB.size();
+        //unsigned int set_BmO_size = grid_ref.BmO.size();
+        //unsigned int set_B_size = grid_ref.B.size();
+        //unsigned int set_D_size = grid_ref.D.size();
         unsigned int set_O_size = grid_ref.O.size();
 
         unsigned int float_size = sizeof(double);
@@ -664,8 +664,8 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
 //
 void TimeDependentPDE_CL::allocateGPUMem() {
         unsigned int nb_nodes = grid_ref.getNodeListSize();
-        unsigned int nb_stencils = grid_ref.getStencilsSize();
-        unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
+        //unsigned int nb_stencils = grid_ref.getStencilsSize();
+        //unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
         cout << "Allocating GPU memory for TimeDependentPDE\n";
 
@@ -743,9 +743,9 @@ int TimeDependentPDE_CL::setAdvanceArgs(cl::Kernel kern, int argc_start) {
 void TimeDependentPDE_CL::launchEulerKernel( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out) {
 
     std::cout << "Launch Euler Kernel\n";
-        unsigned int n_stencils = grid_ref.getStencilsSize();
-        float dt_f = (float) dt;
-        float cur_time_f = (float) cur_time;
+        //unsigned int n_stencils = grid_ref.getStencilsSize();
+        //float dt_f = (float) dt;
+        //float cur_time_f = (float) cur_time;
 
         int i = 0;
 
@@ -895,13 +895,13 @@ void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int i
 
 void TimeDependentPDE_CL::launchRK4_classic_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale) {
 
-        unsigned int n_stencils = grid_ref.getStencilsSize();
-        float dt_f = (float) dt;
-        float cur_time_f = (float) adjusted_t;
-        float substep_scale_f = (float) substep_scale;
+        //unsigned int n_stencils = grid_ref.getStencilsSize();
+        //float dt_f = (float) dt;
+        //float cur_time_f = (float) adjusted_t;
+        //float substep_scale_f = (float) substep_scale;
 
         // Operate by warp:
-        unsigned int local_work_size = 32; 
+        //unsigned int local_work_size = 32; 
 
         int i = 0;
 
@@ -954,10 +954,10 @@ void TimeDependentPDE_CL::launchRK4_classic_eval( unsigned int offset_to_set, un
 
 void TimeDependentPDE_CL::launchRK4_block_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale) {
 
-        unsigned int n_stencils = grid_ref.getStencilsSize();
-        float dt_f = (float) dt;
-        float cur_time_f = (float) adjusted_t;
-        float substep_scale_f = (float) substep_scale;
+        //unsigned int n_stencils = grid_ref.getStencilsSize();
+        //float dt_f = (float) dt;
+        //float cur_time_f = (float) adjusted_t;
+        //float substep_scale_f = (float) substep_scale;
 
         // Operate by warp:
         unsigned int local_work_size = 32; 

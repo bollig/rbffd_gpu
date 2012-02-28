@@ -12,11 +12,14 @@ class PDEWriter
 {
 
     protected:
-        int local_write_freq; 
-        int global_write_freq; 
+        
         Domain* subdomain; 
         TimeDependentPDE* pde; 
         Communicator* comm_unit;
+
+        int local_write_freq; 
+        int global_write_freq; 
+
         EB::TimerList tm; 
 
     public: 

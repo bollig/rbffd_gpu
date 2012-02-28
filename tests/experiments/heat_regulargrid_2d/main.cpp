@@ -88,7 +88,7 @@ ExactSolution* getExactSolution(int dim_num) {
 
 // Choose a specific type of Grid for the test case
 Grid* getGrid(int dim_num) {
-    Grid* grid;
+    Grid* grid = NULL;
     if (dim_num == 1) {
         grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
     } else if (dim_num == 2) {
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
     tm["oneWeight"] = new Timer("[Main] Compute single stencil weights"); 
     tm["heat_init"] = new Timer("[Main] Initialize heat"); 
     // grid should only be valid instance for MASTER
-    Grid* grid; 
+    Grid* grid = NULL; 
     Domain* subdomain; 
 
     tm["total"]->start(); 
@@ -259,7 +259,7 @@ int main(int argc, char** argv) {
         subdomain->printNodeList("All Centers Needed by This Process"); 
 
         printf("CHECKING STENCILS: ");
-        for (int irbf = 0; irbf < subdomain->getStencilsSize(); irbf++) {
+        for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
             //  printf("Stencil[%d] = ", irbf);
             StencilType& s = subdomain->getStencil(irbf); 
             if (irbf == s[0]) {
@@ -441,8 +441,9 @@ int main(int argc, char** argv) {
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
         writer->update(iter);
 
-        char label[256]; 
+
 #if 0
+        char label[256]; 
         sprintf(label, "LOCAL INPUT SOLUTION [local_indx (global_indx)] FOR ITERATION %d", iter); 
         pde->printSolution(label); 
 #endif 

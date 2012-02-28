@@ -28,11 +28,18 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         int rk4_sub_args_set;
         int rk4_adv_args_set;
 
+        bool useDouble;
+
         RBFFD_CL& der_ref_gpu;
 
         bool weightsPrecomputed; 
+        
+        std::vector<SolutionType> cpu_buf; 
+        
+        // Flag to indicate if syncCPUtoGPU needs to copy down from GPU (should be set to 1 if advance is called)
+        int cpu_dirty;
+        
         bool assembled; 
-        bool useDouble;
 
         // These are buffers for RK4 evaluations. 
         // Each of these is NB_STENCILS long
@@ -60,10 +67,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
 
         cl::Kernel midpoint_kernel;
 
-        std::vector<SolutionType> cpu_buf; 
 
-        // Flag to indicate if syncCPUtoGPU needs to copy down from GPU (should be set to 1 if advance is called)
-        int cpu_dirty;
 
         std::string kernel_source_file;
 

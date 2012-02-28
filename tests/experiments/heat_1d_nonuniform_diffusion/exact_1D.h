@@ -12,9 +12,10 @@ class Exact1D : public ExactSolution
             // See Haberman p47,48 for details
         double n;
         double B;
-        double decay; 
-        double L;
         double xmin;
+        double L;
+        double decay; 
+
     public:
         Exact1D(double minX, double maxX, double alpha)
             : ExactSolution(1), 
@@ -55,7 +56,7 @@ class Exact1D : public ExactSolution
 
         virtual double tderiv(double x, double y, double z, double t) {
             double alpha = this->diffuseCoefficient(x,y,z,0.,t);  
-            double alpha_deriv = this->diffuse_xderiv(x,y,z,0.,t);
+            //double alpha_deriv = this->diffuse_xderiv(x,y,z,0.,t);
             double val = - ( (B * n*n * M_PI*M_PI * alpha * sin((n * M_PI * (x-xmin))/L)) * exp(-alpha * t * ((n * n * M_PI * M_PI)/(L*L))) ) / (L*L); 
 
             return val; 

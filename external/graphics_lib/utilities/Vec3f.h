@@ -48,7 +48,7 @@ class Vec3f
             if(pt.size() > 3) {
                 std::cout << "Warning! Vec3f can only accept std::vector<double> with size 3!\n"; 
             } 
-            for (int i = 0; i < pt.size() && i < 3; i++) 
+            for (unsigned int i = 0; i < pt.size() && i < 3; i++) 
                 vec[i] = pt[i]; 
         }
 

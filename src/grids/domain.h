@@ -13,9 +13,12 @@
 class Domain : public Grid, public MPISendable
 {
     public: 		// Member Properties
+
+        int dim_num;
+
         int id; 		// which Domain
         int comm_size; 	// Total number of Domains
-        int dim_num;
+
 #if 0
         double xmin;
         double xmax;
@@ -223,7 +226,7 @@ class Domain : public Grid, public MPISendable
         // Not memory safe.
         StencilType& convert_g2l(StencilType& stencil) {
             StencilType* local_stencil = new StencilType(stencil);
-            for (int j = 0; j < stencil.size(); j++) {
+            for (unsigned int j = 0; j < stencil.size(); j++) {
                 (*local_stencil)[j] = g2l(stencil[j]);
             }
             return *local_stencil;

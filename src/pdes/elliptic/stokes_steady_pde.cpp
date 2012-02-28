@@ -6,37 +6,49 @@
 
 void StokesSteadyPDE::reorder() {
 
-    L_reordered = new MatType(nrows, ncols, NNZ); 
-    F_reordered = new VecType(ncols);
-    u_reordered = new VecType(ncols);
+    LHS_reordered = new MatType(nrows, ncols, NNZ); 
+    RHS_reordered = new VecType(ncols);
+    U_reordered = new VecType(ncols);
 
-    L_graph = new GraphType( ncols-4 );
+    LHS_graph = new GraphType( ncols-4 );
 
     // Reorder within the standard blocks (exclude constraints)
-    MatType submat = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(0,nrows-4), boost::numeric::ublas::range(0,ncols-4)));
-    this->build_graph(submat, *L_graph);
+    MatType submat = MatType(boost::numeric::ublas::project(*LHS, boost::numeric::ublas::range(0,nrows-4), boost::numeric::ublas::range(0,ncols-4)));
+    this->build_graph(submat, *LHS_graph);
 
     m_lookup = new boost::numeric::ublas::vector<size_t>( ncols );
 
     std::cout << "Reordering interior of matrix (excluding the 4 extra constraints)\n";
 
-    this->get_cuthill_mckee_order(*L_graph, *m_lookup ); 
+    this->get_cuthill_mckee_order(*LHS_graph, *m_lookup ); 
 
     for (int i = 0; i < 4; i++) {
         (*m_lookup)((ncols-4) + i) = (ncols-4)+i; 
     }
-    this->get_reordered_system(*L_host, *F_host, *m_lookup, *L_reordered, *F_reordered); 
+    this->get_reordered_system(*LHS, *RHS_continuous, *m_lookup, *LHS_reordered, *RHS_reordered); 
 
-    viennacl::io::write_matrix_market_file(*L_reordered, "L_reordered.mtx");
-    std::cout << "Wrote L_reordered.mtx\n"; 
-    this->write_to_file(*F_reordered, "F_reordered.mtx");
+    viennacl::io::write_matrix_market_file(*LHS_reordered, "LHS_reordered.mtx");
+    std::cout << "Wrote LHS_reordered.mtx\n"; 
+    this->write_to_file(*RHS_reordered, "RHS_reordered.mtx");
 
     this->write_to_file(*m_lookup, "CuthillMckeeOrder.mtx");
 }
 
 void StokesSteadyPDE::assemble() {
-#if 1
     std::cout << "Assembling...." << std::endl;
+    if (constantViscosity) {
+        this->fillLHS_ConstViscosity(); 
+        this->fillRHS_ConstViscosity(); 
+    } else {
+//        this->fillLHS_VarViscosity(); 
+//        this->fillRHS_VarViscosity(); 
+    }
+    std::cout << "Done." << std::endl;
+}
+
+/**************  LHS *****************/ 
+
+void StokesSteadyPDE::fillLHS_ConstViscosity() { 
 
     double eta = 1.;
     double Ra = 1.e6;
@@ -54,8 +66,8 @@ void StokesSteadyPDE::assemble() {
     NNZ = 9*max_stencil_size*N+2*(4*N)+2*(3*N);  
     // ---------------------------------------------------
 
-    L_host = new MatType(nrows, ncols, NNZ); 
-    u_host = new VecType(ncols);
+    LHS = new MatType(nrows, ncols, NNZ); 
+    U_computed = new VecType(ncols);
 
     // -----------------  Fill LHS --------------------
     //
@@ -72,16 +84,16 @@ void StokesSteadyPDE::assemble() {
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 0*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
         }
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 3*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = ddx[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = ddx[j];  
         }
 
         // Added constraint to square mat and close nullspace
-        (*L_host)(diag_row_ind, 4*N+0) = 1.; 
+        (*LHS)(diag_row_ind, 4*N+0) = 1.; 
     }
 
     // V (block)  row
@@ -97,16 +109,16 @@ void StokesSteadyPDE::assemble() {
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 1*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
         }
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 3*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = ddy[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = ddy[j];  
         }
 
         // Added constraint to square mat and close nullspace
-        (*L_host)(diag_row_ind, 4*N+1) = 1.; 
+        (*LHS)(diag_row_ind, 4*N+1) = 1.; 
     }
 
     // W (block)  row
@@ -122,16 +134,16 @@ void StokesSteadyPDE::assemble() {
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 2*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
         }
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 3*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = ddz[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = ddz[j];  
         }
 
         // Added constraint to square mat and close nullspace
-        (*L_host)(diag_row_ind, 4*N+2) = 1.; 
+        (*LHS)(diag_row_ind, 4*N+2) = 1.; 
     }
 
 
@@ -149,21 +161,21 @@ void StokesSteadyPDE::assemble() {
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 0*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = ddx[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = ddx[j];  
         }
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 1*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = ddy[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = ddy[j];  
         }
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 2*N;
 
-            (*L_host)(diag_row_ind, diag_col_ind) = ddz[j];  
+            (*LHS)(diag_row_ind, diag_col_ind) = ddz[j];  
         }
 
         // Added constraint to square mat and close nullspace
-        (*L_host)(diag_row_ind, 4*N+3) = 1.;  
+        (*LHS)(diag_row_ind, 4*N+3) = 1.;  
     }
 
     // ------ EXTRA CONSTRAINT ROWS -----
@@ -172,7 +184,7 @@ void StokesSteadyPDE::assemble() {
     for (unsigned int j = 0; j < N; j++) {
         unsigned int diag_col_ind = j + 0*N;
 
-        (*L_host)(diag_row_ind, diag_col_ind) = 1.;  
+        (*LHS)(diag_row_ind, diag_col_ind) = 1.;  
     }
 
     diag_row_ind++; 
@@ -180,7 +192,7 @@ void StokesSteadyPDE::assemble() {
     for (unsigned int j = 0; j < N; j++) {
         unsigned int diag_col_ind = j + 1*N;
 
-        (*L_host)(diag_row_ind, diag_col_ind) = 1.;  
+        (*LHS)(diag_row_ind, diag_col_ind) = 1.;  
     }
 
     diag_row_ind++; 
@@ -188,7 +200,7 @@ void StokesSteadyPDE::assemble() {
     for (unsigned int j = 0; j < N; j++) {
         unsigned int diag_col_ind = j + 2*N;
 
-        (*L_host)(diag_row_ind, diag_col_ind) = 1.;  
+        (*LHS)(diag_row_ind, diag_col_ind) = 1.;  
     }
 
     diag_row_ind++; 
@@ -196,22 +208,11 @@ void StokesSteadyPDE::assemble() {
     for (unsigned int j = 0; j < N; j++) {
         unsigned int diag_col_ind = j + 3*N;
 
-        (*L_host)(diag_row_ind, diag_col_ind) = 1.;  
-    }
-
-
-    fillRHS(); 
-
-}
-
-
-void StokesSteadyPDE::fillRHS_ConstViscosity() {
-    if (constantViscosity) {
-        this->fillRHS_ConstViscosity(); 
-    } else {
-        this->fillRHS_VarViscosity(); 
+        (*LHS)(diag_row_ind, diag_col_ind) = 1.;  
     }
 }
+
+/**************  RHS *****************/ 
 
 void StokesSteadyPDE::fillRHS_ConstViscosity() {
 
@@ -223,8 +224,8 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
 
    
     //------------- Fill F -------------
-    F_host = new VecType(ncols);
-    U_exact_host = new VecType(ncols);
+    RHS_discrete = new VecType(ncols);
+    U_continuous = new VecType(ncols);
 
     // U
     for (unsigned int j = 0; j < N; j++) {
@@ -234,8 +235,8 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        (*U_exact_host)(row_ind) = UU->eval(Xx,Yy,Zz); 
-        (*F_host)(row_ind) = -UU->lapl(Xx,Yy,Zz) + PP->d_dx(Xx,Yy,Zz);  
+        (*U_continuous)(row_ind) = UU->eval(Xx,Yy,Zz); 
+        (*RHS_discrete)(row_ind) = -UU->lapl(Xx,Yy,Zz) + PP->d_dx(Xx,Yy,Zz);  
     }
 
     // V
@@ -248,9 +249,9 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
         //double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
         //double dir = node.y();
 
-        // (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
-        (*U_exact_host)(row_ind) = VV->eval(Xx,Yy,Zz); 
-        (*F_host)(row_ind) = -VV->lapl(Xx,Yy,Zz) + PP->d_dy(Xx,Yy,Zz);  
+        // (*RHS_discrete)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
+        (*U_continuous)(row_ind) = VV->eval(Xx,Yy,Zz); 
+        (*RHS_discrete)(row_ind) = -VV->lapl(Xx,Yy,Zz) + PP->d_dy(Xx,Yy,Zz);  
     }
 
     // W
@@ -261,8 +262,8 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        (*U_exact_host)(row_ind) = WW->eval(Xx,Yy,Zz); 
-        (*F_host)(row_ind) = -WW->lapl(Xx,Yy,Zz) + PP->d_dz(Xx,Yy,Zz);  
+        (*U_continuous)(row_ind) = WW->eval(Xx,Yy,Zz); 
+        (*RHS_discrete)(row_ind) = -WW->lapl(Xx,Yy,Zz) + PP->d_dz(Xx,Yy,Zz);  
     }
 
     // P
@@ -273,123 +274,41 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        (*U_exact_host)(row_ind) = PP->eval(Xx,Yy,Zz); 
-        (*F_host)(row_ind) = UU->d_dx(Xx,Yy,Zz) + VV->d_dy(Xx,Yy,Zz) + WW->d_dz(Xx,Yy,Zz);  
+        (*U_continuous)(row_ind) = PP->eval(Xx,Yy,Zz); 
+        (*RHS_discrete)(row_ind) = UU->d_dx(Xx,Yy,Zz) + VV->d_dy(Xx,Yy,Zz) + WW->d_dz(Xx,Yy,Zz);  
     }
 
     // Sum of U
-    (*F_host)(4*N+0) = 0.;
+    (*RHS_discrete)(4*N+0) = 0.;
 
     // Sum of V
-    (*F_host)(4*N+1) = 0.;
+    (*RHS_discrete)(4*N+1) = 0.;
 
     // Sum of W
-    (*F_host)(4*N+2) = 0.;
+    (*RHS_discrete)(4*N+2) = 0.;
 
     // Sum of P
-    (*F_host)(4*N+3) = 0.;
-
-    std::cout << "Done." << std::endl;
-}
-
-void StokesSteadyPDE::fillRHS_ConstViscosity() {
-
-    // This is our manufactured solution:
-    SphericalHarmonic::SphericalHarmonicBase* UU = new SphericalHarmonic::Sph32(); 
-    SphericalHarmonic::SphericalHarmonicBase* VV = new SphericalHarmonic::Sph105(); 
-    SphericalHarmonic::SphericalHarmonicBase* WW = new SphericalHarmonic::Sph2020(); 
-    SphericalHarmonic::SphericalHarmonicBase* PP = new SphericalHarmonic::Sph32(); 
-
-   
-    //------------- Fill F -------------
-    F_host = new VecType(ncols);
-    U_exact_host = new VecType(ncols);
-
-    // U
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int row_ind = j + 0*N;
-        NodeType& node = grid_ref.getNode(j); 
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
-
-        (*U_exact_host)(row_ind) = UU->eval(Xx,Yy,Zz); 
-        (*F_host)(row_ind) = -UU->lapl(Xx,Yy,Zz) + PP->d_dx(Xx,Yy,Zz);  
-    }
-
-    // V
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int row_ind = j + 1*N;
-        NodeType& node = grid_ref.getNode(j); 
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
-        //double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
-        //double dir = node.y();
-
-        // (*F_host)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
-        (*U_exact_host)(row_ind) = VV->eval(Xx,Yy,Zz); 
-        (*F_host)(row_ind) = -VV->lapl(Xx,Yy,Zz) + PP->d_dy(Xx,Yy,Zz);  
-    }
-
-    // W
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int row_ind = j + 2*N;
-        NodeType& node = grid_ref.getNode(j); 
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
-
-        (*U_exact_host)(row_ind) = WW->eval(Xx,Yy,Zz); 
-        (*F_host)(row_ind) = -WW->lapl(Xx,Yy,Zz) + PP->d_dz(Xx,Yy,Zz);  
-    }
-
-    // P
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int row_ind = j + 3*N;
-        NodeType& node = grid_ref.getNode(j); 
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
-
-        (*U_exact_host)(row_ind) = PP->eval(Xx,Yy,Zz); 
-        (*F_host)(row_ind) = UU->d_dx(Xx,Yy,Zz) + VV->d_dy(Xx,Yy,Zz) + WW->d_dz(Xx,Yy,Zz);  
-    }
-
-    // Sum of U
-    (*F_host)(4*N+0) = 0.;
-
-    // Sum of V
-    (*F_host)(4*N+1) = 0.;
-
-    // Sum of W
-    (*F_host)(4*N+2) = 0.;
-
-    // Sum of P
-    (*F_host)(4*N+3) = 0.;
-
-    std::cout << "Done." << std::endl;
+    (*RHS_discrete)(4*N+3) = 0.;
 }
 
 void StokesSteadyPDE::writeToFile() 
 {
     // Write both to disk (spy them in Matlab)
+//    viennacl::io::write_matrix_market_file(*LHS, "LHS.mtx");
+    std::cout << "Wrote LHS.mtx\n"; 
 
-//    viennacl::io::write_matrix_market_file(*L_host, "L_host.mtx");
-    std::cout << "Wrote L_host.mtx\n"; 
+    this->write_to_file(*RHS_discrete, "RHS_discrete.mtx");
+    this->write_to_file(*RHS_continuous, "RHS_continuous.mtx");
+    this->write_to_file(*U_continuous, "U_continuous.mtx");
 
-    this->write_to_file(*F_host, "F.mtx");
-    this->write_to_file(*U_exact_host, "U_exact.mtx");
-
-    std::cout << "*** NOTE: If you want to visualize F or U you need to load the reordered grid produced by the stencil generator ***\n"; 
-#endif
+    std::cout << "*** NOTE: If you want to visualize RHS or Solution (U) you need to load the reordered grid produced by the stencil generator ***\n"; 
 }
 
 void StokesSteadyPDE::getDivOperator() {
 
     // TODO: figure out ordering here
-    div_op = MatType(boost::numeric::ublas::project(*L_host, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)));
-    viennacl::io::write_matrix_market_file(div_op, "DIV_operator.mtx"); 
+    DIV_operator = new MatType(boost::numeric::ublas::project(*LHS, boost::numeric::ublas::range(3*N,4*N+4), boost::numeric::ublas::range(0,4*N+4)));
+    viennacl::io::write_matrix_market_file(*DIV_operator, "DIV_operatorerator.mtx"); 
 
 }
 
@@ -402,47 +321,47 @@ void StokesSteadyPDE::solve()
 
     // Update U_G with the content from U
     // (reshape to fit into U_G. For stokes we assume we're in a vector type <u,v,w,p>)
-    // SCALAR  std::copy(u_vec.begin(), u_vec.end(), U_G.begin()); 
+    // SCALAR  std::copy(U_vec.begin(), U_vec.end(), U_G.begin()); 
 
     // Solve system using Stabilized BiConjugate Gradients from ViennaCL
-    // *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
+    // *U_computed = viennacl::linalg::solve(*LHS, *RHS_discrete, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
 
     // NOTE: the preconditioners dont work on our current structure. We need to
     // reorder the matrix to get entries on the diagonal in order for ilut to work. Im
     // sure this is why the jacobi also fails. 
 #if 0
-    viennacl::linalg::ilut_precond< MatType >  ublas_ilut(*L_host, viennacl::linalg::ilut_tag());
-    *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-6, 20), ublas_ilut);
+    viennacl::linalg::ilut_precond< MatType >  ublas_ilut(*LHS, viennacl::linalg::ilut_tag());
+    *U_computed = viennacl::linalg::solve(*LHS, *RHS_discrete, viennacl::linalg::gmres_tag(1e-6, 20), ublas_ilut);
 #else 
 #if 0
-    viennacl::linalg::jacobi_precond< MatType > ublas_jacobi(*L_host, viennacl::linalg::jacobi_tag());
-    *u_host = viennacl::linalg::solve(*L_host, *F_host, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
+    viennacl::linalg::jacobi_precond< MatType > ublas_jacobi(*LHS, viennacl::linalg::jacobi_tag());
+    *U_computed = viennacl::linalg::solve(*LHS, *RHS_discrete, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
 #else 
 #if 1
-    *u_reordered = viennacl::linalg::solve(*L_reordered, *F_reordered, viennacl::linalg::gmres_tag(1e-8, 100));
+    *U_reordered = viennacl::linalg::solve(*LHS_reordered, *RHS_reordered, viennacl::linalg::gmres_tag(1e-8, 100));
 #endif 
 #endif 
 #endif 
 #if 0
     // LU with Partial Pivoting
-    *u_host = *F_host; 
-    ublas::permutation_matrix<double> P1(L_host->size1());
+    *U_computed = *RHS_discrete; 
+    ublas::permutation_matrix<double> P1(LHS->size1());
 
-    ublas::lu_factorize(*L_host, P1);
-    ublas::lu_substitute(*L_host, P1, *u_host);
+    ublas::lU_factorize(*LHS, P1);
+    ublas::lU_substitute(*LHS, P1, *U_computed);
 #else 
 
 #endif 
 
     std::cout << "Done with solve\n"; 
 
-    this->write_to_file(*u_reordered, "u_reordered.mtx");
+    this->write_to_file(*U_reordered, "U_reordered.mtx");
 
-    this->get_original_order(*u_reordered, *u_host);
+    this->get_original_order(*U_reordered, *U_computed);
 
-    this->write_to_file(*u_host, "u.mtx");
+    this->write_to_file(*U_computed, "u.mtx");
 
-    this->write_to_file(VecType(prod(div_op, *u_host)), "div.mtx"); 
+    this->write_to_file(VecType(prod(*DIV_operator, *U_computed)), "div.mtx"); 
 }
 
 

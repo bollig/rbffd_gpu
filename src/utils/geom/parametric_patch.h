@@ -87,9 +87,11 @@ public:
     }
 
 	virtual double surfaceElement(double u, double v) {
-		double xx = x(u,v);
+#if 0
+        double xx = x(u,v);
 		double yy = y(u,v);
 		double zz = z(u,v);
+#endif 
 		ru.setValue(xu(u,v), yu(u,v), zu(u,v));
 		rv.setValue(xv(u,v), yv(u,v), zv(u,v));
 		//ru.print("ru");

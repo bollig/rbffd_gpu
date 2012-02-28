@@ -52,29 +52,35 @@ class StokesSteadyPDE : public PDE
     unsigned int ncols; 
     unsigned int NNZ; 
 
-    MatType *L_host; 
-    MatType *L_reordered; 
-    GraphType *L_graph; 
-    MatType div_op; 
-    VecType *F_host; 
-    VecType *F_reordered; 
-    VecType *U_exact_host; 
-    VecType *u_host; 
-    VecType *u_reordered; 
+    // See matching variable names for use in rbf_prototypes.git
+    MatType* LHS; 
+    VecType* RHS_continuous; 
+    VecType* RHS_discrete; 
+    VecType* U_continuous; 
+    VecType* U_computed; 
+    VecType* eta; 
+    MatType* DIV_operator; 
+
+    // For Cuthill Mckee reordering
+    MatType* LHS_reordered; 
+    GraphType* LHS_graph; 
+    VecType *RHS_reordered; 
+    VecType *U_reordered; 
 
     // Lookup table to find our reorderings
     boost::numeric::ublas::vector<size_t> *inv_m_lookup; 
     boost::numeric::ublas::vector<size_t> *m_lookup; 
 
+    bool constantViscosity;
+
     public: 
     StokesSteadyPDE(Domain* grid, RBFFD* der, Communicator* comm) 
-        : PDE(grid, der, comm) 
+        : PDE(grid, der, comm), constantViscosity(true)
     {
         std::cout << "INSIDE STOKES CONSTRUCTOR" << std::endl;
     }
 
     virtual void assemble();  
-    virtual void fillRHS();  
 
     virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) {
 
@@ -111,8 +117,11 @@ class StokesSteadyPDE : public PDE
     }
 
     protected:
+    virtual void fillLHS_ConstViscosity();  
+    //    virtual void fillLHS_VarViscosity();  
+
     virtual void fillRHS_ConstViscosity();  
-    virtual void fillRHS_VarViscosity();  
+    //    virtual void fillRHS_VarViscosity();  
 
     void build_graph(MatType& mat, GraphType& G);
     void get_cuthill_mckee_order(GraphType& G, boost::numeric::ublas::vector<size_t>& lookup_chart);

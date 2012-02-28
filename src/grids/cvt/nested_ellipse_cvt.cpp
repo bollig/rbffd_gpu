@@ -151,11 +151,15 @@ Vec3 NestedEllipseCVT::singleRejection2d(double area, double weighted_area, Dens
     double u;
     double r2_o;
     double r2_i;
-    double r_inner;
+    //double r_inner;
     double maxrhoi = 1.;
+
+    // NOT SURE IF THIS WAS WORKING>..... 
+#if 0
     if (rho != NULL) {
-        double maxrhoi = 1. / density.getMax();
+        maxrhoi = 1. / density.getMax();
     }
+#endif 
     //printf("maxrhoi= %f\n", maxrhoi);
 
     double maj2o = 1. / (outer_axis_major * outer_axis_major);
@@ -164,9 +168,10 @@ Vec3 NestedEllipseCVT::singleRejection2d(double area, double weighted_area, Dens
     double min2i = 1. / (inner_axis_minor * inner_axis_minor);
     //printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
 
+#if 0
     double xc = 0.1; 
     double yc = 0.1; 
-
+#endif 
     while (1) {
         xs = random(-1.5*outer_axis_major, 1.5*outer_axis_major);
         ys = random(-1.5*outer_axis_major, 1.5*outer_axis_major); // to make sure that cells are all same size
@@ -314,7 +319,7 @@ double NestedEllipseCVT::computeBoundaryIntegral(Density& rho, unsigned int npts
 
     // npts-1 is the number of intervals
 
-    for (int i = 0; i < (npts - 1); i++) {
+    for (unsigned int i = 0; i < (npts - 1); i++) {
         double t1 = i * dtheta;
         double t2 = (i + 1) * dtheta;
         //printf("t1,t2= %f, %f\n", t1, t2);
@@ -357,11 +362,11 @@ double NestedEllipseCVT::computeDomainIntegral(unsigned int npts, Density& rho) 
     double dx = 2. * major / (npts - 1);
     double integ = 0.;
 
-    for (int i = 0; i < (npts - 1); i++) {
+    for (unsigned int i = 0; i < (npts - 1); i++) {
         double xa = -1. + (i + 0.5) * dx / major;
         double y1 = -minor * sqrt(1. - xa * xa);
         double dy = 2. * fabs(y1) / (npts - 1);
-        for (int j = 0; j < (npts - 1); j++) {
+        for (unsigned int j = 0; j < (npts - 1); j++) {
             double x = xa * major;
             double y = y1 + (j + 0.5) * dy;
             integ += sqrt(rho(x, y, 0.)) * dx * dy;
@@ -373,11 +378,11 @@ double NestedEllipseCVT::computeDomainIntegral(unsigned int npts, Density& rho) 
     minor = inner_axis_minor;
     dx = 2. * major / (npts - 1);
 
-    for (int i = 0; i < (npts - 1); i++) {
+    for (unsigned int i = 0; i < (npts - 1); i++) {
         double xa = -1. + (i + 0.5) * dx / major;
         double y1 = -minor * sqrt(1. - xa * xa);
         double dy = 2. * fabs(y1) / (npts - 1);
-        for (int j = 0; j < (npts - 1); j++) {
+        for (unsigned int j = 0; j < (npts - 1); j++) {
             double x = xa * major;
             double y = y1 + (j + 0.5) * dy;
             integ -= sqrt(rho(x, y, 0.)) * dx * dy;
@@ -392,7 +397,7 @@ double NestedEllipseCVT::computeDomainIntegral(unsigned int npts, Density& rho) 
 //
 void NestedEllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length, double major, double minor, int npts, int nb_bnd, std::vector<double> intg, double bnd[]) {
 
-    double tot_intv = tot_length / (npts - 1.);
+    //double tot_intv = tot_length / (npts - 1.);
     vector<double> equ_dist, theta;
     //bnd.resize(0);
 
@@ -405,7 +410,7 @@ void NestedEllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_
     theta.resize(n);
 
     double intv_length = tot_length / (n - 1);
-    for (int i = 0; i < (n - 1); i++) {
+    for (unsigned int i = 0; i < (n - 1); i++) {
         equ_dist[i] = i * intv_length;
         //theta[i] = i*dtheta;
     }
@@ -421,7 +426,7 @@ void NestedEllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_
 
 
     theta[0] = 0.;
-    for (int i = 1; i < (n - 1); i++) {
+    for (unsigned int i = 1; i < (n - 1); i++) {
         theta[i] = -1.;
         //        printf("-----i= %d------\n", i);
         for (int j = 1; j < npts; j++) { // npts >> n

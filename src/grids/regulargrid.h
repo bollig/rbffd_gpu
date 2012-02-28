@@ -5,7 +5,7 @@
 
 class RegularGrid : public Grid {
 	protected: 
-		int nx, ny, nz; 
+		unsigned int nx, ny, nz; 
 		double dx, dy, dz;
 		
 public:

@@ -122,7 +122,7 @@ double Q = decay;
     // Below is directly from Mathematica's "CForm[...]" except Power(E,Q*t) has been changed to exp(Q*t)
     double Xx = x;
     double Yy = y;
-    double Zz = z;
+    //double Zz = z;
     double A = princ_axis1;
     double B = princ_axis2;
     double P = freq;

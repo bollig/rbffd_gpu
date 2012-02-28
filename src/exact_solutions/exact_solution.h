@@ -7,11 +7,12 @@
 //----------------------------------------------------------------------
 class ExactSolution
 {
-    protected:
-        double Pi; 
 
-        // NOTE: our laplacian terms might depend on knowledge of the dimensionality (see e.g., ExactUniformLaplacian)
+   protected:
+         // NOTE: our laplacian terms might depend on knowledge of the dimensionality (see e.g., ExactUniformLaplacian)
         int dim_num; 
+
+        double Pi; 
 
     public:
 

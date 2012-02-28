@@ -29,9 +29,16 @@ class Grid
         enum GridLoadErrType {GRID_AND_STENCILS_LOADED=0, NO_GRID_FILES, NO_STENCIL_FILES, NO_EXTRA_FILES, NOT_ENOUGH_NODES_IN_FILE};
 
     protected: 
-        // 0 = Debug output off; 1 = Verbose output and write intermediate
-        // files
-        int DEBUG;
+
+        // Maximum number of nodes to allow in a stencil (can be equal to
+        // nb_nodes if we want to define a global function across a stencil)
+        unsigned int max_st_size; 
+
+        // Maximum radius allowed when searching stencil nodes
+        double max_st_radius; 
+        
+        // Perturbation offsets for generated points
+        double pert; 
 
         // Number of nodes this class is configured for. If this does not 
         // match the node_list.size() then we need to regenerate the node
@@ -43,19 +50,28 @@ class Grid
         // expect the union of all subdomains to be this number of nodes.
         unsigned int global_num_nodes;
 
-        // Maximum number of nodes to allow in a stencil (can be equal to
-        // nb_nodes if we want to define a global function across a stencil)
-        unsigned int max_st_size; 
+        // An internal KDTree representation of the nodes. Useful for CVT
+        // sampling (if updated) and also for neighbor queries
+        KDTree* node_list_kdtree; 
 
-        // Maximum radius allowed when searching stencil nodes
-        double max_st_radius; 
+        // Have the stencils been generated yet? 
+        bool stencilsComputed;
 
-        // Perturbation offsets for generated points
-        double pert; 
+        // Sorted list of indices on the boundary and interior. This helps when
+        // we dont have nodes sorted boundary first and want to access
+        // boundary/interior only nodes. By default these are EMPTY. fill them
+        // by calling partitionIndices()
+        std::set<unsigned int> b_indices;
+        std::set<unsigned int> i_indices; 
+        bool partitioned_indices;
 
         // Should we sort our nodes when generating so boundary nodes appear
         // first in the list?  0 = NO, non-zero = YES 
         int boundary_nodes_first;
+
+        // 0 = Debug output off; 1 = Verbose output and write intermediate
+        // files
+        int DEBUG;
 
         // A list of nodes that are N-dimensional and have no connectivity
         // NOTE: the Node type can determine its own coordinate system but all
@@ -84,20 +100,8 @@ class Grid
         // The longest distance for each stencil
         std::vector<double> max_stencil_radii; 
 
-        // An internal KDTree representation of the nodes. Useful for CVT
-        // sampling (if updated) and also for neighbor queries
-        KDTree* node_list_kdtree; 
 
 
-        // Sorted list of indices on the boundary and interior. This helps when
-        // we dont have nodes sorted boundary first and want to access
-        // boundary/interior only nodes. By default these are EMPTY. fill them
-        // by calling partitionIndices()
-        std::set<unsigned int> b_indices;
-        std::set<unsigned int> i_indices; 
-        bool partitioned_indices;
-
-        bool stencilsComputed;
 
     public:
         Grid() : 

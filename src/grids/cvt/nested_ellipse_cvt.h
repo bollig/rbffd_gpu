@@ -12,8 +12,13 @@
 
 class NestedEllipseCVT : public CVT {
     protected:
+
+        size_t nb_int;
+        size_t nb_outer; 
+        size_t nb_inner; 
+
         bool guess_nb_boundary; 
-        size_t nb_inner, nb_outer, nb_int;
+
         double outer_axis_major; 
         double outer_axis_minor; 
         double inner_axis_major; 
@@ -78,7 +83,8 @@ class NestedEllipseCVT : public CVT {
                     0/*nb_locked*/, density_func, num_samples,
                     max_num_iters, write_frequency, sample_batch_size),
             nb_int(total_nb_nodes),
-            nb_inner(0), nb_outer(0), 
+            nb_outer(0), 
+            nb_inner(0), 
             guess_nb_boundary(true),
             outer_axis_major(1.0), outer_axis_minor(1.0), 
             inner_axis_major(0.5), inner_axis_minor(0.5)
@@ -100,7 +106,8 @@ class NestedEllipseCVT : public CVT {
                     0/*nb_locked*/, density_func, num_samples,
                     max_num_iters, write_frequency, sample_batch_size),
             nb_int(total_nb_nodes),
-            nb_inner(0), nb_outer(0), 
+            nb_outer(0), 
+            nb_inner(0), 
             guess_nb_boundary(true),
             outer_axis_major(o_axis_major), outer_axis_minor(o_axis_minor), 
             inner_axis_major(i_axis_major), inner_axis_minor(i_axis_minor)

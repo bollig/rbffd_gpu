@@ -45,13 +45,13 @@ Vec3 EllipseCVT::singleRejection2d_EllipseMinusCircle(double area, double weight
         ys = random(-axis_major, axis_major); // to make sure that cells are all same size
         //printf("xs,ys= %f, %f\n", xs, ys);
         r2 = xs * xs * maj2i + ys * ys*min2i;
-        
+
         r_inner = sqrt((xs-xc)*(xs-xc) + (ys - yc)*(ys-yc));
 
         //printf("r2= %f\n", r2);
         if (r2 > 1.) continue; // outside outer boundary
-       // TODO: inheriting class that adds this feature:  
-       if (r_inner < inner_cir_radius) continue; // inside inner boundary
+        // TODO: inheriting class that adds this feature:  
+        if (r_inner < inner_cir_radius) continue; // inside inner boundary
 
         // rejection part if non-uniform distribution
         u = random(0., 1.);
@@ -69,7 +69,7 @@ Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& d
     double xs, ys;
     double u;
     double r2;
-    double r_inner;
+    //double r_inner;
     double maxrhoi = 1. / rho->getMax();
     //printf("maxrhoi= %f\n", maxrhoi);
 
@@ -77,21 +77,21 @@ Vec3 EllipseCVT::singleRejection2d(double area, double weighted_area, Density& d
     double min2i = 1. / axis_minor / axis_minor;
     //printf("maj2i,min2i= %f, %f\n", maj2i, min2i);
 
-    double xc = 0.1; 
-    double yc = 0.1; 
-    double inner_cir_radius = 0.15;
+    //double xc = 0.1; 
+    //double yc = 0.1; 
+    //double inner_cir_radius = 0.15;
 
     while (1) {
         xs = random(-axis_major, axis_major);
         ys = random(-axis_major, axis_major); // to make sure that cells are all same size
         //printf("xs,ys= %f, %f\n", xs, ys);
         r2 = xs * xs * maj2i + ys * ys*min2i;
-        
-//        r_inner = sqrt((xs-xc)*(xs-xc) + (ys - yc)*(ys-yc));
+
+        //        r_inner = sqrt((xs-xc)*(xs-xc) + (ys - yc)*(ys-yc));
 
         //printf("r2= %f\n", r2);
         if (r2 > 1.) continue; // outside outer boundary
-//        if (r_inner < inner_cir_radius) continue; // inside inner boundary
+        //        if (r_inner < inner_cir_radius) continue; // inside inner boundary
 
         // rejection part if non-uniform distribution
         u = random(0., 1.);
@@ -177,30 +177,33 @@ double EllipseCVT::computeBoundaryIntegral(Density& rho, unsigned int npts, vect
     intg[0] = 0.;
 
     // npts-1 is the number of intervals
+    if (npts > 0) {
+        for (unsigned int i = 0; i < (npts - 1); i++) {
+            double t1 = i * dtheta;
+            double t2 = (i + 1) * dtheta;
+            //printf("t1,t2= %f, %f\n", t1, t2);
+            double tm = 0.5 * (t1 + t2);
+            double x1 = major * cos(t1);
+            double x2 = major * cos(t2);
+            double xm = major * cos(tm);
+            double y1 = minor * sin(t1);
+            double y2 = minor * sin(t2);
+            double ym = minor * sin(tm);
+            double dl = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+            double rhom = rho(xm, ym, 0.);
+            intg[i + 1] = intg[i] + pow(rhom, 0.25) * dl;
+        }
 
-    for (int i = 0; i < (npts - 1); i++) {
-        double t1 = i * dtheta;
-        double t2 = (i + 1) * dtheta;
-        //printf("t1,t2= %f, %f\n", t1, t2);
-        double tm = 0.5 * (t1 + t2);
-        double x1 = major * cos(t1);
-        double x2 = major * cos(t2);
-        double xm = major * cos(tm);
-        double y1 = minor * sin(t1);
-        double y2 = minor * sin(t2);
-        double ym = minor * sin(tm);
-        double dl = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-        double rhom = rho(xm, ym, 0.);
-        intg[i + 1] = intg[i] + pow(rhom, 0.25) * dl;
+        // new boundary will have n points (n << npts)
+        // divide into (n-1) equal length intervals
+        double tot_length = intg[npts - 1];
+
+        printf("boundary integral: %f\n", tot_length);
+
+        return tot_length;
+
     }
-
-    // new boundary will have n points (n << npts)
-    // divide into (n-1) equal length intervals
-    double tot_length = intg[npts - 1];
-
-    printf("boundary integral: %f\n", tot_length);
-
-    return tot_length;
+    return 0; 
 }
 
 //----------------------------------------------------------------------
@@ -220,18 +223,21 @@ double EllipseCVT::computeDomainIntegral(unsigned int npts, Density& rho) {
     double dx = 2. * major / (npts - 1);
     double integ = 0.;
 
-    for (int i = 0; i < (npts - 1); i++) {
-        double xa = -1. + (i + 0.5) * dx / major;
-        double y1 = -minor * sqrt(1. - xa * xa);
-        double dy = 2. * fabs(y1) / (npts - 1);
-        for (int j = 0; j < (npts - 1); j++) {
-            double x = xa * major;
-            double y = y1 + (j + 0.5) * dy;
-            integ += sqrt(rho(x, y, 0.)) * dx * dy;
+    if (npts > 0) {
+        for (unsigned int i = 0; i < (npts - 1); i++) {
+            double xa = -1. + (i + 0.5) * dx / major;
+            double y1 = -minor * sqrt(1. - xa * xa);
+            double dy = 2. * fabs(y1) / (npts - 1);
+            for (unsigned int j = 0; j < (npts - 1); j++) {
+                double x = xa * major;
+                double y = y1 + (j + 0.5) * dy;
+                integ += sqrt(rho(x, y, 0.)) * dx * dy;
+            }
         }
-    }
 
-    return integ;
+        return integ;
+    }
+    return 0; 
 }
 
 //----------------------------------------------------------------------
@@ -242,7 +248,7 @@ void EllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length
     double major = axis_major; 
     double minor = axis_minor;
 
-    double tot_intv = tot_length / (npts - 1.);
+    //double tot_intv = tot_length / (npts - 1.);
     vector<double> equ_dist, theta;
     //bnd.resize(0);
 
@@ -255,7 +261,7 @@ void EllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length
     theta.resize(n);
 
     double intv_length = tot_length / (n - 1);
-    for (int i = 0; i < (n - 1); i++) {
+    for (unsigned int i = 0; i < (n - 1); i++) {
         equ_dist[i] = i * intv_length;
         //theta[i] = i*dtheta;
     }
@@ -271,7 +277,7 @@ void EllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length
 
 
     theta[0] = 0.;
-    for (int i = 1; i < (n - 1); i++) {
+    for (unsigned int i = 1; i < (n - 1); i++) {
         theta[i] = -1.;
         //        printf("-----i= %d------\n", i);
         for (int j = 1; j < npts; j++) { // npts >> n
@@ -302,7 +308,7 @@ void EllipseCVT::computeBoundaryPointDistribution(int dim_num, double tot_length
         if (dim_num > 2) {
             bnd[i*dim_num + 2] = 0.;
         }
- //       printf("(%d) x,y= %f, %f, theta= %f\n", i, bnd[i*dim_num+0], bnd[i*dim_num + 1], theta[i]);
+        //       printf("(%d) x,y= %f, %f, theta= %f\n", i, bnd[i*dim_num+0], bnd[i*dim_num + 1], theta[i]);
     }
 
     //    printf("print length intervals: should be equal\n");

@@ -15,9 +15,12 @@ class CVT : public Grid
 {
     protected:
         //  std::vector<double> rd;
-        int nb_bnd; // number of seeds on the boundary
-        int nb_pts; // total number of seeds
-        Density* rho;
+        unsigned int nb_pts; // total number of seeds
+        unsigned int nb_bnd; // number of seeds on the boundary
+
+        int dim_num;
+
+
         std::vector<Vec3> bndry_pts;
 
         // 0 = Debug output off; 1 = Verbose output and write intermediate files
@@ -29,15 +32,24 @@ class CVT : public Grid
 
         double *generators;
 
-        int dim_num;
-
-        // These correspond to John Burkardts CVT implementation parameters
-        int seed, batch, it_fixed;
         // NOTE: we dont have support for changing "init","sample" and their
         // corresponding strings. 
-        int init, sample;
-        unsigned int sample_num, it_max; 
+        int init; 
+        int sample;
+
+        // These correspond to John Burkardts CVT implementation parameters
+        int seed;
+
+        unsigned int sample_num;
+        
+        int batch;
+
+        unsigned int it_max; 
+        int it_fixed;
+
         unsigned int writeFreq;
+
+        Density* rho;
 
     public:
         /*******************
@@ -163,15 +175,15 @@ class CVT : public Grid
 
         // INPUT ONLY : sample_num, it_max
         // OUTPUT ONLY: r, it_num, it_diff, energy
-        virtual void cvt(int *it_num, double *it_diff, double *energy);
+        virtual void cvt(unsigned int *it_num, double *it_diff, double *energy);
 
         // generate cvt using provided memory array r;
-        void cvt(int *it_num, double *it_diff, double *energy, double r[]) {
+        void cvt(unsigned int *it_num, double *it_diff, double *energy, double r[]) {
             delete [] generators;
             generators = &r[0];
             this->cvt(it_num, it_diff, energy);
         }
-        virtual void cvt(int dim_num_, int n, int batch_, int init_, int sample_, int sample_num_, int it_max_, int it_fixed_, int *seed_, double r[], int *it_num, double *it_diff, double *energy) {
+        virtual void cvt(int dim_num_, int n, int batch_, int init_, int sample_, int sample_num_, int it_max_, int it_fixed_, int *seed_, double r[], unsigned int *it_num, double *it_diff, double *energy) {
             dim_num = dim_num_;
             nb_pts = n;
             seed = *seed_;

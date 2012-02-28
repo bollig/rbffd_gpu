@@ -122,7 +122,7 @@ void EllipsoidCVT::ellipsoid_init ( int dim_num, int& n, int *seed, double r[] )
     printf("n= %d, nb_bnd= %d\n", n, nb_bnd);
     //exit(0);
 
-    for (int j = 0; j < nb_bnd; j++) {
+    for (unsigned int j = 0; j < nb_bnd; j++) {
         Vec3 projected = geom->project(samples[j]); 
         for (int i=0; i < dim_num; i++) {
             r[i+j*dim_num] = projected[i];
@@ -222,7 +222,7 @@ void EllipsoidCVT::rejection3d(int nb_samples, Density& density, vector<Vec3>& s
     for (int i=0; i < nb_samples; i++) {
         samples[i] = singleRejection3d(density);
         //		samples[i].print("samples3d");
-        Vec3& s = samples[i];
+        //Vec3& s = samples[i];
         //		printf("dist=%f\n", outer_geom->how_far(s.x(), s.y(), s.z()));
     }
 }
@@ -236,7 +236,7 @@ Vec3 EllipsoidCVT::singleRejection3d(Density& density)
 
     double xs, ys, zs;
     double u;
-    double r2;
+    //double r2;
     double maxrhoi = 1. / rho->getMax();
 
     double dist;
@@ -737,11 +737,13 @@ double EllipsoidCVT::computeDomainIntegral(unsigned int npts, Density& rho) {
 
 void EllipsoidCVT::computeBoundaryPointDistribution(int dim_num, double tot_length, int npts, int nb_bnd, std::vector<double> intg, double bnd[]) {
 
+#if 0
     double major = axis_major; 
     double minor = axis_minor;
     double midax = axis_midax;
 
     double tot_intv = tot_length / (npts - 1.);
+#endif 
     vector<double> equ_dist, theta, phi;
 
     int n = nb_bnd + 1; // space so that first and last point are the same

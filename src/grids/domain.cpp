@@ -18,10 +18,11 @@ Domain::Domain(const Domain& subdomain) {
     exit(EXIT_FAILURE);
 }
 
-    Domain::Domain(int dimension, Grid* grid, int _comm_size)
-: comm_size(_comm_size), id(0), 
-    inclMX(true),inclMY(true),inclMZ(true),
-    dim_num(dimension)
+Domain::Domain(int dimension, Grid* grid, int _comm_size)
+    : 
+        dim_num(dimension),
+        id(0), comm_size(_comm_size),
+        inclMX(true),inclMY(true),inclMZ(true)
 {
     xmin = grid->xmin;
     xmax = grid->xmax;
@@ -44,18 +45,19 @@ Domain::Domain(int dimension, unsigned int global_nb_nodes,
         double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, 
         int _comm_rank, int _comm_size) :
     dim_num(dimension),
-    inclMX(false),inclMY(false),inclMZ(false),
-    id(_comm_rank), comm_size(_comm_size) {
+    id(_comm_rank), comm_size(_comm_size),
+    inclMX(false),inclMY(false),inclMZ(false)
+{
 
-        // These are props of Grid inherited by Domain
-        global_num_nodes = global_nb_nodes;
-        xmin = _xmin;
-        xmax = _xmax;
-        ymin = _ymin; 
-        ymax = _ymax;
-        zmin = _zmin;
-        zmax = _zmax;
-    }
+    // These are props of Grid inherited by Domain
+    global_num_nodes = global_nb_nodes;
+    xmin = _xmin;
+    xmax = _xmax;
+    ymin = _ymin; 
+    ymax = _ymax;
+    zmin = _zmin;
+    zmax = _zmax;
+}
 
 
 void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions, int z_divisions) 
@@ -99,16 +101,16 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
     // Figure out the sets Bi, Oi Qi
 
     printf("nb subdomains: %d\n", (int) subdomains.size());
-    for (int i = 0; i < subdomains.size(); i++) {
+    for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** CPU %d ***************** \n", i);
         // Forms sets (Q,O,R) and l2g/g2l maps
         std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
         subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii); 
     }
 
-    for (int i = 0; i < subdomains.size(); i++) {
+    for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** FILLING O_by_rank for CPU%d ***************** \n", i);
-        for (int j = 0; j < subdomains.size(); j++) {
+        for (unsigned int j = 0; j < subdomains.size(); j++) {
             subdomains[i]->fillDependencyList(subdomains[j]->R, j); // appends to O_by_rank any nodes required by subdomain[j]
         }
     }
@@ -121,7 +123,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
 int Domain::send(int my_rank, int receiver_rank) {
 
     sendSTL(&id, my_rank, receiver_rank);  
-    
+
     MPI_Send(&global_num_nodes, 1, MPI::UNSIGNED, receiver_rank, TAG, MPI_COMM_WORLD);
 
     double buff[6] = { xmin, xmax, ymin, ymax, zmin, zmax };
@@ -161,7 +163,7 @@ int Domain::receive(int my_rank, int sender_rank) {
 
     // Start by identifying the subdomain ID
     recvSTL(&id, my_rank, sender_rank);  
-    
+
     MPI_Recv(&global_num_nodes, 1, MPI::UNSIGNED, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
     // Get the subdomain bounds 
@@ -235,7 +237,7 @@ void Domain::printVerboseDependencyGraph() {
 // Append to O_by_rank (find what subset of O is needed by rank subdomain_rank)
 void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) {
     set<int>::iterator qit;
-    int i = 0;
+    //int i = 0;
 
     if (O_by_rank.size() == 0) {
 #if 0
@@ -245,7 +247,7 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
         O_by_rank.resize(comm_size);
     }
 
-//        printSetG2L(subdomain_R, "R-by-rank");
+    //        printSetG2L(subdomain_R, "R-by-rank");
 
 #if 1
     set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end())); 
@@ -262,18 +264,20 @@ void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) 
     sprintf(label, "Rank %d O_by_rank[%d]", id, subdomain_rank);
     std::cout << label << " = {" << std::endl;
 #endif 
-    for (int i = 0; i < O_by_rank[subdomain_rank].size(); i++) {
+#if 0
+    for (unsigned int i = 0; i < O_by_rank[subdomain_rank].size(); i++) {
         int g_indx = O_by_rank[subdomain_rank][i];
         int l_indx = this->g2l(g_indx);
-#if 0
+
         std::cout << "\t" << g_indx << " (l_indx: " << l_indx << ")\n";
-#endif 
     }
+#endif 
+
 #if 0
     std::cout << "}\n";
     // O_by_rank is still in global indices, but the g2l wont be able to map it 
     //printVectorG2L(this->O_by_rank[subdomain_rank], label);
-//    printVectorG2L(this->O_by_rank[subdomain_rank], label);
+    //    printVectorG2L(this->O_by_rank[subdomain_rank], label);
 #endif 
 
     return;
@@ -299,9 +303,9 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
     printf("Domain %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f (Checking %dD)\n", id, xmin, xmax,
             ymin, ymax, zmin, zmax, dim_num);
-//    printf("NB_NODES: %d\n", rbf_centers.size());
- //   printf("Q_NODES: %d\n", Q.size());
- //   printf("NB_STENCILS: %d\n", stencils.size());
+    //    printf("NB_NODES: %d\n", rbf_centers.size());
+    //   printf("Q_NODES: %d\n", Q.size());
+    //   printf("NB_STENCILS: %d\n", stencils.size());
 
     // Generate sets Q and D
     for (unsigned int i = 0; i < rbf_centers.size(); i++) {
@@ -316,17 +320,17 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
         // Now, if the center is in Q but it depends on nodes in R then we need to distinguish
         depR = 0;
-//        std::cout << "begin stencil" << std::endl;
-        for (int j = 1; j < st.size(); j++) { // Check all nodes in corresponding stencil
+        //        std::cout << "begin stencil" << std::endl;
+        for (unsigned int j = 1; j < st.size(); j++) { // Check all nodes in corresponding stencil
             unsigned int indx = st[j];
             NodeType& pt2 = rbf_centers[indx];
-//            std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2) << std::endl;
+            //            std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2) << std::endl;
             // If any stencil node is outside the domain, then set this to true
             if (!this->isInsideSubdomain(pt2)) {
                 depR = 1;  
             }
         }
-//        std::cout << "end stencil" << std::endl;
+        //        std::cout << "end stencil" << std::endl;
         if (depR) {
             D.insert(*qit);
         }
@@ -354,8 +358,8 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
     // ALL STENCILS "set A"
     std::set<int> A;
-    for (int i = 0; i < rbf_centers.size(); i++) {
-        A.insert(i);
+    for (unsigned int i = 0; i < rbf_centers.size(); i++) {
+        A.insert((int)i);
     }
     std::cout << "A.size after difference: " << A.size() << std::endl;
 
@@ -370,7 +374,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     std::cout << "SAmQ.size before stencilSet: " << SAmQ.size() << std::endl;
     stencilSet(AmQ, stencils, SAmQ);
     std::cout << "SAmQ.size after stencilSet: " << SAmQ.size() << std::endl;
-    
+
     std::cout << "O.size before stencilSet: " << O.size() << std::endl;
     // O = S(A\Q) intersect Q
     set_intersection(SAmQ.begin(), SAmQ.end(), Q.begin(), Q.end(), inserter(O,O.end()));
@@ -383,7 +387,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // R   contains all nodes we receive
     // 
     // NOTE: by using QmD we can operate on stencils in kernels that do not break to RECEIVE
-    
+
     //      SENDING can happen without kernels breaking, so we dont need to worry about that.
     // B = O U D, this used to be B=O U, But B\O is NOT_GUARANTEED_EQUAL to Dep, so we
     // do an additional subtraction to guarantee that B\O == D
@@ -406,7 +410,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     printf("Q size= %d\n", (int) Q.size());
     printf("O.size= %d\n", (int) O.size());
     printf("D.size= %d\n", (int) D.size());
-//    printf("OmD.size= %d\n", (int) OmD.size());
+    //    printf("OmD.size= %d\n", (int) OmD.size());
     printf("B.size= %d\n", (int) B.size());
     printf("QmD.size= %d\n", (int) QmD.size());
     printf("QmB.size= %d\n", (int) QmB.size());
@@ -417,7 +421,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
 //----------------------------------------------------------------------
 void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<unsigned int>& boundary, vector<double>& avg_dist, vector<double>& max_dist, vector<double>& min_dist) {
-    
+
     // Generate stencil membership lists (i.e., which set each stencil center belongs to)
     this->fillCenterSets(rbf_centers, stencil);
 
@@ -467,14 +471,14 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
     }
 
     // global to local map
-    for (int i = 0; i < loc_to_glob.size(); i++) {
+    for (int i = 0; i < (int)loc_to_glob.size(); i++) {
         glob_to_loc[l2g(i)] = i;
     }
 
     std::cout << "Domain stencils size = " << stencil_map.size() << std::endl;
     // Convert all stencils to local indexing.
-    for (int i = 0; i < stencil_map.size(); i++) {
-        for (int j = 0; j < stencil_map[i].size(); j++) {
+    for (int i = 0; i < (int)stencil_map.size(); i++) {
+        for (int j = 0; j < (int)stencil_map[i].size(); j++) {
             stencil_map[i][j] = g2l(stencil_map[i][j]);
         }
     }
@@ -485,7 +489,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
     set_intersection(Q.begin(), Q.end(), boundary.begin(), boundary.end(),
             inserter(boundary_indices, boundary_indices.end()));
     printf("SUBDOMAIN BOUNDARY.size= %d\n", (int)boundary_indices.size());
-    for (int i = 0; i < boundary_indices.size(); i++) {
+    for (int i = 0; i < (int)boundary_indices.size(); i++) {
         //EVAN: 
 #if 0
         cout << "Subdomain Adding Boundary Node[" << i << "] = " << boundary_indices[i]
@@ -516,12 +520,12 @@ void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>& Sse
     for (qit = s.begin(); qit != s.end(); qit++) {
         int qi = *qit;
         StencilType& si = stencil[qi];
-//        std::cout << "Working on stencil: " << qi << std::endl;
-        for (int j = 0; j < si.size(); j++) {
-   //         std::cout << si[j] << " "; 
+        //        std::cout << "Working on stencil: " << qi << std::endl;
+        for (unsigned int j = 0; j < si.size(); j++) {
+            //         std::cout << si[j] << " "; 
             Sset.insert(si[j]);
         }
- //       std::cout << std::endl;
+        //       std::cout << std::endl;
     }
     //return *Sset;
 }
@@ -530,9 +534,9 @@ void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>& Sse
 
 
 void Domain::printStencilNodesIn(const vector<StencilType>& stencils, const set<int>& center_set, std::string display_char) {
-    for (int i = 0; i < stencils.size(); i++) {
+    for (int i = 0; i < (int)stencils.size(); i++) {
         cout << "Stencil[local:" << i << " (global: " << l2g(i) << ")] = ";
-        for (int j = 0; j < stencils[i].size(); j++) {
+        for (int j = 0; j < (int)stencils[i].size(); j++) {
             cout << " ";
             if (isInSet(l2g(stencils[i][j]), center_set)) {
                 cout << display_char;
@@ -645,11 +649,11 @@ bool Domain::isInVector(const unsigned int center, const vector<unsigned int>& c
 
 bool Domain::dependsOnSet(const int local_stencil_id, const set<int>& center_set) {
     // stencil_map are in local indices
-    if (local_stencil_id >= stencil_map.size()) {
+    if (local_stencil_id >= (int)stencil_map.size()) {
         return true;
     }
     StencilType& stencil = stencil_map[local_stencil_id];
-    for (int i = 0; i < stencil.size(); i++) {
+    for (int i = 0; i < (int)stencil.size(); i++) {
         if (isInSet(stencil[i], center_set)) {
             return true;
         } // short circuit return
@@ -718,7 +722,7 @@ void Domain::printVectorL2G(const vector<int>& center_set, std::string set_label
     for (vector<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
-            cout << "\t" << *setiter << " (l2g=" << l2g(*setiter) << ") " << endl;
+        cout << "\t" << *setiter << " (l2g=" << l2g(*setiter) << ") " << endl;
     }
     cout << "}" << endl;
 }
@@ -728,7 +732,7 @@ void Domain::printVectorG2L(const vector<int>& center_set, std::string set_label
     for (vector<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
-            cout << "\t" << *setiter << " (g2l=" << g2l(*setiter) << ") " << endl;
+        cout << "\t" << *setiter << " (g2l=" << g2l(*setiter) << ") " << endl;
     }
     cout << "}" << endl;
 }

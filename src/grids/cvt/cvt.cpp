@@ -80,7 +80,7 @@ CVT::CVT (std::vector<NodeType>& nodes, unsigned int dimension, unsigned int nb_
 //****************************************************************************80
 void CVT::generate() {
     double energy;
-    int it_num;
+    unsigned int it_num;
     double it_diff; 
     this->resizeNodeList(nb_pts);
     this->cvt(&it_num, &it_diff, &energy);
@@ -220,7 +220,7 @@ int CVT::ch_to_digit(char c)
 }
 //****************************************************************************80
 
-void CVT::cvt(int *it_num, double *it_diff, double *energy)
+void CVT::cvt(unsigned int *it_num, double *it_diff, double *energy)
 
     //****************************************************************************80
     //
@@ -304,9 +304,9 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
     //
 {
     timers["total"]->start();
-    int i;
+    //int i;
     bool initialize;
-    int seed_base;
+    int seed_base = 0;
     int seed_init;
     double *r = &generators[0];
 
@@ -414,7 +414,7 @@ void CVT::cvt(int *it_num, double *it_diff, double *energy)
         // 	not the same as DEBUG
 
         if ((*it_num) % 20 == 0) {
-            char intermediate_file[80];
+            //char intermediate_file[80];
             //sprintf(intermediate_file, "voronoi_tmp_%.5d.txt", *it_num);
 
             cout << "  "
@@ -634,7 +634,7 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
     int *nearest;
     double *r2;
     double *s;
-    bool success;
+    //bool success;
     double term;
     //
     //  Take each generator as the first sample point for its region.
@@ -832,7 +832,7 @@ void CVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize,
     int halton_step;
     int i;
     int j;
-    int k;
+    //int k;
     static int ngrid;
     static int rank;
     int rank_max;
@@ -1010,7 +1010,7 @@ void CVT::cvt_init(int dim_num, int n, int n_now, int sample, bool initialize,
     int halton_step;
     int i;
     int j;
-    int k;
+    //int k;
     static int ngrid;
     static int rank;
     int rank_max;
@@ -1283,7 +1283,7 @@ int CVT::get_seed(void)
 #define I_MAX 2147483647
 
     time_t clock;
-    int i;
+    //int i;
     int ihour;
     int imin;
     int isec;
@@ -1551,7 +1551,7 @@ bool CVT::halham_step_check(int step)
     //    Output, bool HALHAM_STEP_CHECK, is true if STEP is legal.
     //
 {
-    int i;
+    //int i;
     bool value;
 
     if (step < 0) {
@@ -2973,10 +2973,10 @@ bool CVT::s_to_r8vec(const char *s, int n, double rvec[])
     //    Output, bool S_TO_R8VEC, is true if an error occurred.
     //
 {
-    bool error;
+    bool error = false;
     int i;
     int lchar;
-    double x;
+    //double x;
 
     for (i = 0; i < n; i++) {
         rvec[i] = s_to_r8(s, &lchar, &error);
@@ -3385,7 +3385,7 @@ Vec3 CVT::singleRejection2d(double area, double weighted_area, Density& density)
 {
     double xs, ys, zs;
     double u;
-    double r2;
+    //double r2;
     double maxrhoi; 
     if (rho != NULL) {
         maxrhoi = 1. / rho->getMax();

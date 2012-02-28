@@ -369,7 +369,7 @@ int Grid::loadStencilsFromFile(std::string filename) {
                 unsigned int st_size; 
                 fin >> st_size; 
                 StencilType st; 
-                for (int i = 0; i < st_size; i++) {
+                for (unsigned int i = 0; i < st_size; i++) {
                     int st_el; 
                     fin >> st_el; 
                     st.push_back(st_el); 
@@ -404,7 +404,7 @@ int Grid::loadExtraFromFile(std::string filename) {
 //----------------------------------------------------------------------------
 
 void Grid::sortNodes() {
-    for (int i = 0; i < this->boundary_indices.size(); i++) {
+    for (unsigned int i = 0; i < this->boundary_indices.size(); i++) {
         // We only need to roughly sort the nodes so the boundary is first and the
         // interior is second
 
@@ -546,7 +546,7 @@ void Grid::computeStencilRadii() {
         }
 
         // Now iterate over the ith stencil and query distance to neighbors
-        for (int k = 1; k < st.size(); k++) {
+        for (unsigned int k = 1; k < st.size(); k++) {
             double ss = (rbf_centers[st[k]] - rbf_centers[st[0]]).magnitude();
 
             avg_stencil_radii[i] += ss;
@@ -581,7 +581,7 @@ void Grid::computeStencilRadii() {
     printf("[Grid] avg_bnd.size() = %d\n", (int) avg_bnd.size());
 
     if (nb_rbf - nb_bnd > 0) {
-        for (int i = 0; i < avg_int.size(); i++) {
+        for (unsigned int i = 0; i < avg_int.size(); i++) {
             avgint += avg_int[i];
         }
         avgint /= avg_int.size();
@@ -591,7 +591,7 @@ void Grid::computeStencilRadii() {
 
     if (avg_bnd.size() > 0) {
         // There should always be boundary point(s)
-        for (int i = 0; i < avg_bnd.size(); i++) {
+        for (unsigned int i = 0; i < avg_bnd.size(); i++) {
             avgbnd += avg_bnd[i];
         }
         avgbnd /= avg_bnd.size();
@@ -609,7 +609,7 @@ void Grid::generateStencilsBruteForce() {
     this->checkStencilSize(); 
 
     int nb_rbf = node_list.size();
-    int nb_bnd = boundary_indices.size();
+    //int nb_bnd = boundary_indices.size();
     std::vector<NodeType>& rbf_centers = node_list;
 
     // O(n^2) algorithm, whose cost is independent of the number of nearest sought
@@ -641,7 +641,7 @@ void Grid::generateStencilsBruteForce() {
         seii++; // I now access first point
 
         // stencil_size = max stencil_size
-        for (int k = 0; k < max_st_size; k++) {
+        for (unsigned int k = 0; k < max_st_size; k++) {
             double ss = (rbf_centers[*sei] - rbf_centers[i]).magnitude();
 
             if (ss < max_st_radius) {
@@ -660,8 +660,8 @@ void Grid::generateStencilsKDTree()
 {
     this->checkStencilSize(); 
 
-    int nb_rbf = node_list.size();
-    int nb_bnd = boundary_indices.size();
+    //int nb_rbf = node_list.size();
+    //int nb_bnd = boundary_indices.size();
 
     // The KDTree might not be up to date, but we'll trust someone else to deal
     // with that problem
@@ -826,7 +826,7 @@ void Grid::generateStencilsHash()
         unsigned int zc = (unsigned int)floor((node.z() - zmin) / cdz);
         zc = (zc == hnz) ? zc-1 : zc; 
 
-        unsigned int node_cell_id = ((xc*hny) + yc)*hnz + zc; 
+        //unsigned int node_cell_id = ((xc*hny) + yc)*hnz + zc; 
 
         // List of cell indices we will check
         // NOTE: we leverage set here because it does NOT allow duplicates,
@@ -859,15 +859,15 @@ void Grid::generateStencilsHash()
 
 #if 1
                         // If the neighbor cell is outside our overlay we ignore the task
-                        if ((xc_o < 0) || (xc_o >= hnx)) {
+                        if ((xc_o < 0) || ((unsigned int) xc_o >= hnx)) {
                             continue;
                         }
 
-                        if ((yc_o < 0) || (yc_o >= hny)) {
+                        if ((yc_o < 0) || ((unsigned int) yc_o >= hny)) {
                             continue;
                         }
 
-                        if ((zc_o < 0) || (zc_o >= hny)) {
+                        if ((zc_o < 0) || ((unsigned int) zc_o >= hny)) {
                             continue;
                         }
 #endif 
@@ -935,8 +935,8 @@ void Grid::generateStencilsHash()
 
 
 void Grid::checkStencilSize() {
-    int nb_rbf = node_list.size();
-    int nb_bnd = boundary_indices.size();
+    unsigned int nb_rbf = node_list.size();
+    unsigned int nb_bnd = boundary_indices.size();
 
     if (max_st_size < 1) {
         std::cout << "[Grid] ERROR! Stencil size must be >= 1" << std::endl;
@@ -963,7 +963,7 @@ void Grid::checkStencilSize() {
         std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
         stencil_map.reserve(nb_rbf);
         stencil_map.resize(nb_rbf);
-        for (int i =0 ; i < nb_rbf; i++) {
+        for (unsigned int i =0 ; i < nb_rbf; i++) {
             stencil_map[i].reserve(nb_rbf); 
             stencil_map[i].resize(nb_rbf); 
         }
@@ -980,7 +980,7 @@ void Grid::partitionIndices() {
     std::vector<NodeType>& nodes = this->getNodeList(); 
     std::vector<unsigned int>& boundary_indx = this->getBoundaryIndices();
     unsigned int nb_bnd = boundary_indx.size();
-    unsigned int nb_stencils = this->getStencilsSize();
+    //unsigned int nb_stencils = this->getStencilsSize();
     unsigned int nb_nodes = nodes.size();
 
     b_indices.clear();

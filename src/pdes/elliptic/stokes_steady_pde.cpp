@@ -4,6 +4,16 @@
 
 #include "stokes_steady_pde.h"
 
+
+void StokesSteadyPDE::setupTimers() {
+    tm["RHS_discrete"] = new EB::Timer("[StokesSteadyPDE] Fill RHS Discrete"); 
+    tm["RHS_continuous"] = new EB::Timer("[StokesSteadyPDE] Fill RHS Continuous"); 
+    tm["LHS"] = new EB::Timer("[StokesSteadyPDE] Fill LHS"); 
+    tm["gmres"] = new EB::Timer("[StokesSteadyPDE] Compute GMRES (1e-8, 200)"); 
+
+}
+
+
 void StokesSteadyPDE::reorder() {
 
     LHS_reordered = new MatType(nrows, ncols, NNZ); 
@@ -50,6 +60,7 @@ void StokesSteadyPDE::assemble() {
 
 void StokesSteadyPDE::fillLHS_ConstViscosity() { 
 
+    tm["LHS"]->start(); 
     double eta = 1.;
     //double Ra = 1.e6;
 
@@ -67,7 +78,8 @@ void StokesSteadyPDE::fillLHS_ConstViscosity() {
     // ---------------------------------------------------
 
     LHS = new MatType(nrows, ncols, NNZ); 
-    U_computed = new VecType(ncols);
+
+    std::cout << "Filling LHS\n";
 
     // -----------------  Fill LHS --------------------
     //
@@ -210,91 +222,111 @@ void StokesSteadyPDE::fillLHS_ConstViscosity() {
 
         (*LHS)(diag_row_ind, diag_col_ind) = 1.;  
     }
+
+    tm["LHS"]->stop(); 
 }
 
 /**************  RHS *****************/ 
 
 void StokesSteadyPDE::fillRHS_ConstViscosity() {
 
+    tm["RHS_continuous"]->start(); 
     // This is our manufactured solution:
     SphericalHarmonic::SphericalHarmonicBase* UU = new SphericalHarmonic::Sph32(); 
-    SphericalHarmonic::SphericalHarmonicBase* VV = new SphericalHarmonic::Sph105(); 
-    SphericalHarmonic::SphericalHarmonicBase* WW = new SphericalHarmonic::Sph2020(); 
+    SphericalHarmonic::SphericalHarmonicBase* VV = new SphericalHarmonic::Sph32105(); 
+    SphericalHarmonic::SphericalHarmonicBase* WW = new SphericalHarmonic::Sph32(); 
     SphericalHarmonic::SphericalHarmonicBase* PP = new SphericalHarmonic::Sph32(); 
 
-   
+    std::vector<NodeType>& nodes = grid_ref.getNodeList(); 
+
     //------------- Fill F -------------
+    RHS_continuous = new VecType(ncols);
     RHS_discrete = new VecType(ncols);
     U_continuous = new VecType(ncols);
 
+    std::cout << "Filling continuous RHS\n";
     // U
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 0*N;
-        NodeType& node = grid_ref.getNode(j); 
+        NodeType& node = nodes[j]; 
         double Xx = node.x(); 
         double Yy = node.y(); 
         double Zz = node.z(); 
 
         (*U_continuous)(row_ind) = UU->eval(Xx,Yy,Zz); 
-        (*RHS_discrete)(row_ind) = -UU->lapl(Xx,Yy,Zz) + PP->d_dx(Xx,Yy,Zz);  
+        (*RHS_continuous)[row_ind] = -UU->lapl(Xx,Yy,Zz) + PP->d_dx(Xx,Yy,Zz);  
     }
+#if 1
 
     // V
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 1*N;
-        NodeType& node = grid_ref.getNode(j); 
+        NodeType& node = nodes[j]; 
         double Xx = node.x(); 
         double Yy = node.y(); 
         double Zz = node.z(); 
         //double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
         //double dir = node.y();
 
-        // (*RHS_discrete)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
+        // (*RHS_continuous)(row_ind) = (Ra * Temperature(j) * dir) / rr;  
         (*U_continuous)(row_ind) = VV->eval(Xx,Yy,Zz); 
-        (*RHS_discrete)(row_ind) = -VV->lapl(Xx,Yy,Zz) + PP->d_dy(Xx,Yy,Zz);  
+        (*RHS_continuous)(row_ind) = -VV->lapl(Xx,Yy,Zz) + PP->d_dy(Xx,Yy,Zz);  
     }
 
     // W
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 2*N;
-        NodeType& node = grid_ref.getNode(j); 
+        NodeType& node = nodes[j];
         double Xx = node.x(); 
         double Yy = node.y(); 
         double Zz = node.z(); 
 
         (*U_continuous)(row_ind) = WW->eval(Xx,Yy,Zz); 
-        (*RHS_discrete)(row_ind) = -WW->lapl(Xx,Yy,Zz) + PP->d_dz(Xx,Yy,Zz);  
+        (*RHS_continuous)(row_ind) = -WW->lapl(Xx,Yy,Zz) + PP->d_dz(Xx,Yy,Zz);  
     }
 
     // P
     for (unsigned int j = 0; j < N; j++) {
         unsigned int row_ind = j + 3*N;
-        NodeType& node = grid_ref.getNode(j); 
+        NodeType& node = nodes[j]; 
         double Xx = node.x(); 
         double Yy = node.y(); 
         double Zz = node.z(); 
 
         (*U_continuous)(row_ind) = PP->eval(Xx,Yy,Zz); 
-        (*RHS_discrete)(row_ind) = UU->d_dx(Xx,Yy,Zz) + VV->d_dy(Xx,Yy,Zz) + WW->d_dz(Xx,Yy,Zz);  
+        (*RHS_continuous)(row_ind) = UU->d_dx(Xx,Yy,Zz) + VV->d_dy(Xx,Yy,Zz) + WW->d_dz(Xx,Yy,Zz);  
     }
-
+#endif
     // Sum of U
-    (*RHS_discrete)(4*N+0) = 0.;
+    (*RHS_continuous)(4*N+0) = 0.;
 
     // Sum of V
-    (*RHS_discrete)(4*N+1) = 0.;
+    (*RHS_continuous)(4*N+1) = 0.;
 
     // Sum of W
-    (*RHS_discrete)(4*N+2) = 0.;
+    (*RHS_continuous)(4*N+2) = 0.;
 
     // Sum of P
-    (*RHS_discrete)(4*N+3) = 0.;
+    (*RHS_continuous)(4*N+3) = 0.;
+    tm["RHS_continuous"]->stop();
+
+    if (discreteRHS) {
+        this->fillRHS_discrete();
+    }
+}
+    
+void StokesSteadyPDE::fillRHS_discrete() {
+    std::cout << "Filling discrete RHS\n";
+    tm["RHS_discrete"]->start();
+    // This takes 21832.6 ms for N=10201.  Slow. But its the same for ublas and viennacl.
+    *RHS_discrete = viennacl::linalg::prod(*LHS, *U_continuous); 
+    tm["RHS_discrete"]->stop();
 }
 
 void StokesSteadyPDE::writeToFile() 
 {
     // Write both to disk (spy them in Matlab)
-//    viennacl::io::write_matrix_market_file(*LHS, "LHS.mtx");
+    viennacl::io::write_matrix_market_file(*LHS, "LHS.mtx");
     std::cout << "Wrote LHS.mtx\n"; 
 
     this->write_to_file(*RHS_discrete, "RHS_discrete.mtx");
@@ -315,6 +347,70 @@ void StokesSteadyPDE::getDivOperator() {
 
 void StokesSteadyPDE::solve() 
 {
+    if (cuthillMckeeReordering) {
+        this->solve_reordered(); 
+    } else {
+        this->solve_original();
+    }
+}
+
+
+void StokesSteadyPDE::solve_original() 
+{
+    U_computed = new VecType(ncols);
+    std::cout << "Solving...." << std::endl;
+    // Solve L u = F
+    // Write solution to disk
+
+    // Update U_G with the content from U
+    // (reshape to fit into U_G. For stokes we assume we're in a vector type <u,v,w,p>)
+    // SCALAR  std::copy(U_vec.begin(), U_vec.end(), U_G.begin()); 
+
+    // Solve system using Stabilized BiConjugate Gradients from ViennaCL
+    tm["gmres"]->start(); 
+    *U_computed = viennacl::linalg::solve(*LHS, *RHS_continuous, viennacl::linalg::gmres_tag(1.e-8, 200));
+    tm["gmres"]->stop(); 
+
+    // NOTE: the preconditioners dont work on our current structure. We need to
+    // reorder the matrix to get entries on the diagonal in order for ilut to work. Im
+    // sure this is why the jacobi also fails. 
+#if 0
+    viennacl::linalg::ilut_precond< MatType >  ublas_ilut(*LHS, viennacl::linalg::ilut_tag());
+    *U_computed = viennacl::linalg::solve(*LHS, *RHS_discrete, viennacl::linalg::gmres_tag(1e-6, 20), ublas_ilut);
+#else 
+#if 0
+    viennacl::linalg::jacobi_precond< MatType > ublas_jacobi(*LHS, viennacl::linalg::jacobi_tag());
+    *U_computed = viennacl::linalg::solve(*LHS, *RHS_discrete, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
+#else 
+#if 0
+    *U_reordered = viennacl::linalg::solve(*LHS_reordered, *RHS_reordered, viennacl::linalg::gmres_tag(1e-8, 100));
+    this->write_to_file(*U_reordered, "U_reordered.mtx");
+    this->get_original_order(*U_reordered, *U_computed);
+#endif 
+#endif 
+#endif 
+#if 0
+    // LU with Partial Pivoting
+    *U_computed = *RHS_discrete; 
+    ublas::permutation_matrix<double> P1(LHS->size1());
+
+    ublas::lU_factorize(*LHS, P1);
+    ublas::lU_substitute(*LHS, P1, *U_computed);
+#else 
+
+#endif 
+
+    std::cout << "Done with solve\n"; 
+
+    this->write_to_file(*U_computed, "U_computed.mtx");
+
+//    this->write_to_file(VecType(prod(*DIV_operator, *U_computed)), "div.mtx"); 
+}
+
+
+void StokesSteadyPDE::solve_reordered() 
+{
+    U_computed = new VecType(ncols);
     std::cout << "Solving...." << std::endl;
     // Solve L u = F
     // Write solution to disk
@@ -338,7 +434,9 @@ void StokesSteadyPDE::solve()
     *U_computed = viennacl::linalg::solve(*LHS, *RHS_discrete, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
 #else 
 #if 1
-    *U_reordered = viennacl::linalg::solve(*LHS_reordered, *RHS_reordered, viennacl::linalg::gmres_tag(1e-8, 100));
+    *U_reordered = viennacl::linalg::solve(*LHS_reordered, *RHS_reordered, viennacl::linalg::gmres_tag(1e-8, 200));
+    this->write_to_file(*U_reordered, "U_reordered.mtx");
+    this->get_original_order(*U_reordered, *U_computed);
 #endif 
 #endif 
 #endif 
@@ -355,13 +453,9 @@ void StokesSteadyPDE::solve()
 
     std::cout << "Done with solve\n"; 
 
-    this->write_to_file(*U_reordered, "U_reordered.mtx");
+    this->write_to_file(*U_computed, "U_computed.mtx");
 
-    this->get_original_order(*U_reordered, *U_computed);
-
-    this->write_to_file(*U_computed, "u.mtx");
-
-    this->write_to_file(VecType(prod(*DIV_operator, *U_computed)), "div.mtx"); 
+//    this->write_to_file(VecType(prod(*DIV_operator, *U_computed)), "div.mtx"); 
 }
 
 

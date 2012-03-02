@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
     tm["oneWeight"] = new Timer("[Main] Compute single stencil weights"); 
     tm["heat_init"] = new Timer("[Main] Initialize heat"); 
     // grid should only be valid instance for MASTER
-    Grid* grid; 
+    Grid* grid = NULL; 
     Domain* subdomain; 
 
     tm["total"]->start(); 
@@ -145,8 +145,8 @@ int main(int argc, char** argv) {
             tm["stencils"]->start(); 
             grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
             //            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
-            //            grid->generateStencils(Grid::ST_KDTREE);   
-            grid->generateStencils(Grid::ST_HASH);   
+            grid->generateStencils(Grid::ST_KDTREE);   
+            //grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
             if (writeIntermediate) {
                 grid->writeToFile(); 
@@ -298,9 +298,10 @@ int main(int argc, char** argv) {
     pde = new StokesSteadyPDE(subdomain, der, comm_unit); 
     pde->assemble();
     pde->writeToFile();
-   // pde->solve();
+    pde->solve();
 
 #if 0
+
     ExactSolution* exact = getExactSolution(dim); 
 
     TimeDependentPDE* pde; 
@@ -505,8 +506,10 @@ int main(int argc, char** argv) {
     // Writer first so we can dump final solution
     std::cout << "Writing final solution\n";
     delete(writer);
-    delete(pde);
 #endif 
+#endif 
+    delete(pde);
+
     delete(subdomain);
     delete(settings);
     delete(comm_unit); 
@@ -516,7 +519,7 @@ int main(int argc, char** argv) {
     tm["total"]->writeAllToFile();
 
     printf("\n\nREACHED THE END OF MAIN\n\n");
-#endif 
+
 
     return 0;
 }

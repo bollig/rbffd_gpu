@@ -34,7 +34,6 @@
 #include "viennacl/linalg/prod.hpp"       //generic matrix-vector product
 #include "viennacl/linalg/norm_2.hpp"     //generic l2-norm for vectors
 
-using namespace boost::numeric; 
 
 typedef boost::numeric::ublas::compressed_matrix<double> MatType;
 typedef boost::numeric::ublas::vector<double>            VecType;
@@ -72,13 +71,20 @@ class StokesSteadyPDE : public PDE
     boost::numeric::ublas::vector<size_t> *m_lookup; 
 
     bool constantViscosity;
+    bool discreteRHS;
+    bool cuthillMckeeReordering;
 
     public: 
     StokesSteadyPDE(Domain* grid, RBFFD* der, Communicator* comm) 
-        : PDE(grid, der, comm), constantViscosity(true)
+        : PDE(grid, der, comm), 
+        constantViscosity(true), discreteRHS(false),
+        cuthillMckeeReordering(false)
     {
         std::cout << "INSIDE STOKES CONSTRUCTOR" << std::endl;
+        setupTimers();
     }
+
+    virtual void setupTimers();
 
     virtual void assemble();  
 
@@ -87,6 +93,8 @@ class StokesSteadyPDE : public PDE
     }
 
     virtual void solve();
+    virtual void solve_reordered();
+    virtual void solve_original();
     virtual void getDivOperator();
     virtual void reorder();
     virtual void writeToFile(); 
@@ -121,6 +129,7 @@ class StokesSteadyPDE : public PDE
     //    virtual void fillLHS_VarViscosity();  
 
     virtual void fillRHS_ConstViscosity();  
+    virtual void fillRHS_discrete();  
     //    virtual void fillRHS_VarViscosity();  
 
     void build_graph(MatType& mat, GraphType& G);

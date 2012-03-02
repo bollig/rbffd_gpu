@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <limits.h>
 #include <stdio.h>
 #include <iostream> 
 #include <fstream> 
@@ -72,8 +73,10 @@ int GridReader::readNodeList(int expect_num_extra_dbls_per_line) {
     }
     fin.close(); 
 
+//    std::cout << "-1 = " << (unsigned int) -1 << "\t UINT_MAX = " << UINT_MAX << std::endl;
     nb_nodes = node_list.size(); 
-    if ((n_nodes > 0) && (nb_nodes < n_nodes)) {
+    // If we have read in a number of nodes and if the number is less than desired, and our desired is NOT -1 (max unsigned int) 
+    if ((n_nodes > 0) && (nb_nodes < n_nodes) && (n_nodes != (unsigned int)-1)) {
         std::cout << "[" << this->className() << "] \tERROR: Found only " << i << " nodes \t" << filename << ". Check your configuration." << std::endl;
         exit(EXIT_FAILURE); 
         return -2; 

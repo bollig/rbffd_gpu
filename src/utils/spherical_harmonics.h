@@ -62,7 +62,21 @@ namespace SphericalHarmonic
 
             /***********   MATHEMATICA mdefs.h PROVIDED MOST OF THESE ************/
             // Its ok to directly use their definitions
+            
+            // NOTE: I found that RHEL6 (not sure if its just this version) was
+            // MUCH slower when using the double precision version of
+            // pow(double,double) vs pow(float,float). For spherical harmonics,
+            // we do not see a noticable difference in the harmonic
+            // approximations caused by downcasting to float here. However, the
+            // impact on performance is 1000x speedup for 10201 nodes. This
+            // casting causes 1e-5 error in production of sph32105, no noticeable
+            // error in sph32 or sph2020.  Presumably the lack of error is
+            // because the pow is integer, not double/float.  
+#if 0
             double Power(double x, double y) { return    (pow((double)(x), (double)(y))) ; }
+#else 
+            double Power(double x, double y) { return    (double)(pow((float)(x), (float)(y))) ; }
+#endif 
             double Sqrt(double x)  { return (sqrt((double)(x))) ; }
 
             double Abs(double x)   { return (fabs((double)(x))) ; }
@@ -92,19 +106,19 @@ namespace SphericalHarmonic
     class Sph32 : public SphericalHarmonicBase
     {
         virtual double eval(double Xx, double Yy, double Zz) {
-            return (Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*Zz)/(4.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),1.5));
+            return (Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*Zz)/(4.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),1.5));
         }
         virtual double d_dx(double Xx, double Yy, double Zz) {
-            return -(Sqrt(105/Pi)*Xx*Zz*(Power(Xx,2) - 5*Power(Yy,2) - 2*Power(Zz,2)))/(4.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),2.5));
+            return -(Sqrt(105/Pi)*Xx*Zz*((Xx*Xx) - 5*(Yy*Yy) - 2*(Zz*Zz)))/(4.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),2.5));
         }
         virtual double d_dy(double Xx, double Yy, double Zz) {
-            return (Sqrt(105/Pi)*Yy*Zz*(-5*Power(Xx,2) + Power(Yy,2) - 2*Power(Zz,2)))/(4.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),2.5));
+            return (Sqrt(105/Pi)*Yy*Zz*(-5*(Xx*Xx) + (Yy*Yy) - 2*(Zz*Zz)))/(4.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),2.5));
         }
         virtual double d_dz(double Xx, double Yy, double Zz) {
-            return (Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*(Power(Xx,2) + Power(Yy,2) - 2*Power(Zz,2)))/(4.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),2.5));
+            return (Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*((Xx*Xx) + (Yy*Yy) - 2*(Zz*Zz)))/(4.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),2.5));
         }
         virtual double lapl(double Xx, double Yy, double Zz) {
-            return (-3*Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*Zz)/Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),2.5);
+            return (-3*Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*Zz)/Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),2.5);
         }
     };
 
@@ -112,36 +126,36 @@ namespace SphericalHarmonic
     class Sph105 : public SphericalHarmonicBase
     {
         virtual double eval(double Xx, double Yy, double Zz) {
-            return (-3*Sqrt(1001/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),2.5)*Zz*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                    (15*Power(Power(Xx,2) + Power(Yy,2),2) - 140*(Power(Xx,2) + Power(Yy,2))*Power(Zz,2) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy)))/
-                (128.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),4.5)); 
+            return (-3*Sqrt(1001/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),2.5)*Zz*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                    (15*Power((Xx*Xx) + (Yy*Yy),2) - 140*((Xx*Xx) + (Yy*Yy))*(Zz*Zz) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy)))/
+                (128.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),4.5)); 
         }
         virtual double d_dx(double Xx, double Yy, double Zz) {
-            return  (15*Sqrt(1001/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),1.5)*Zz*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                    (Xx*(3*Power(Power(Xx,2) + Power(Yy,2),3) - 111*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                         364*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)) - 
-                     Yy*(15*Power(Power(Xx,2) + Power(Yy,2),3) - 125*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                         28*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) + 168*Power(Zz,6))*Sin(5*ArcTan(Xx,Yy))))/
-                (128.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),5.5)); 
+            return  (15*Sqrt(1001/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),1.5)*Zz*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                    (Xx*(3*Power((Xx*Xx) + (Yy*Yy),3) - 111*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                         364*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)) - 
+                     Yy*(15*Power((Xx*Xx) + (Yy*Yy),3) - 125*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                         28*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) + 168*Power(Zz,6))*Sin(5*ArcTan(Xx,Yy))))/
+                (128.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),5.5)); 
         }
         virtual double d_dy(double Xx, double Yy, double Zz) {
-            return (15*Sqrt(1001/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),1.5)*Zz*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                    (Yy*(3*Power(Power(Xx,2) + Power(Yy,2),3) - 111*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                         364*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)) + 
-                     Xx*(15*Power(Power(Xx,2) + Power(Yy,2),3) - 125*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                         28*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) + 168*Power(Zz,6))*Sin(5*ArcTan(Xx,Yy))))/
-                (128.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),5.5));
+            return (15*Sqrt(1001/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),1.5)*Zz*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                    (Yy*(3*Power((Xx*Xx) + (Yy*Yy),3) - 111*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                         364*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)) + 
+                     Xx*(15*Power((Xx*Xx) + (Yy*Yy),3) - 125*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                         28*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) + 168*Power(Zz,6))*Sin(5*ArcTan(Xx,Yy))))/
+                (128.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),5.5));
         }
         virtual double d_dz(double Xx, double Yy, double Zz) {
-            return (-15*Sqrt(1001/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),2.5)*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                    (3*Power(Power(Xx,2) + Power(Yy,2),3) - 111*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                     364*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)))/
-                (128.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),5.5)); 
+            return (-15*Sqrt(1001/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),2.5)*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                    (3*Power((Xx*Xx) + (Yy*Yy),3) - 111*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                     364*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)))/
+                (128.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),5.5)); 
         }
         virtual double lapl(double Xx, double Yy, double Zz) {
-            return (165*Sqrt(1001/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),2.5)*Zz*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                    (15*Power(Power(Xx,2) + Power(Yy,2),2) - 140*(Power(Xx,2) + Power(Yy,2))*Power(Zz,2) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy)))/
-                (64.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),5.5));
+            return (165*Sqrt(1001/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),2.5)*Zz*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                    (15*Power((Xx*Xx) + (Yy*Yy),2) - 140*((Xx*Xx) + (Yy*Yy))*(Zz*Zz) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy)))/
+                (64.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),5.5));
         }
     }; 
 
@@ -150,41 +164,41 @@ namespace SphericalHarmonic
     class Sph32105 : public SphericalHarmonicBase
     {
         virtual double eval(double Xx, double Yy, double Zz) {
-            return (Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*Zz)/(4.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),1.5)) - 
-                (3*Sqrt(1001/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),2.5)*Zz*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                 (15*Power(Power(Xx,2) + Power(Yy,2),2) - 140*(Power(Xx,2) + Power(Yy,2))*Power(Zz,2) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy)))/
-                (128.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),4.5));
+            return (Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*Zz)/(4.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),1.5)) - 
+                (3*Sqrt(1001/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),2.5)*Zz*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                 (15*Power((Xx*Xx) + (Yy*Yy),2) - 140*((Xx*Xx) + (Yy*Yy))*(Zz*Zz) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy)))/
+                (128.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),4.5));
         }
         virtual double d_dx(double Xx, double Yy, double Zz) {
-            return (Sqrt(7/Pi)*Zz*(-64*Sqrt(15)*Xx*(Power(Xx,2) - 5*Power(Yy,2) - 2*Power(Zz,2))*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),3) + 
-                        15*Sqrt(286)*Power(Power(Xx,2) + Power(Yy,2),1.5)*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                        (Xx*(3*Power(Power(Xx,2) + Power(Yy,2),3) - 111*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                             364*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)) - 
-                         Yy*(15*Power(Power(Xx,2) + Power(Yy,2),3) - 125*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                             28*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) + 168*Power(Zz,6))*Sin(5*ArcTan(Xx,Yy)))))/
-                (256.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),5.5)); 
+            return (Sqrt(7/Pi)*Zz*(-64*Sqrt(15)*Xx*((Xx*Xx) - 5*(Yy*Yy) - 2*(Zz*Zz))*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),3) + 
+                        15*Sqrt(286)*Power((Xx*Xx) + (Yy*Yy),1.5)*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                        (Xx*(3*Power((Xx*Xx) + (Yy*Yy),3) - 111*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                             364*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)) - 
+                         Yy*(15*Power((Xx*Xx) + (Yy*Yy),3) - 125*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                             28*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) + 168*Power(Zz,6))*Sin(5*ArcTan(Xx,Yy)))))/
+                (256.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),5.5)); 
         }
         virtual double d_dy(double Xx, double Yy, double Zz) {
-            return (Sqrt(7/Pi)*Zz*(64*Sqrt(15)*Yy*(-5*Power(Xx,2) + Power(Yy,2) - 2*Power(Zz,2))*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),3) + 
-                        15*Sqrt(286)*Power(Power(Xx,2) + Power(Yy,2),1.5)*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                        (Yy*(3*Power(Power(Xx,2) + Power(Yy,2),3) - 111*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                             364*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)) + 
-                         Xx*(15*Power(Power(Xx,2) + Power(Yy,2),3) - 125*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                             28*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) + 168*Power(Zz,6))*Sin(5*ArcTan(Xx,Yy)))))/
-                (256.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),5.5));
+            return (Sqrt(7/Pi)*Zz*(64*Sqrt(15)*Yy*(-5*(Xx*Xx) + (Yy*Yy) - 2*(Zz*Zz))*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),3) + 
+                        15*Sqrt(286)*Power((Xx*Xx) + (Yy*Yy),1.5)*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                        (Yy*(3*Power((Xx*Xx) + (Yy*Yy),3) - 111*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                             364*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy)) + 
+                         Xx*(15*Power((Xx*Xx) + (Yy*Yy),3) - 125*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                             28*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) + 168*Power(Zz,6))*Sin(5*ArcTan(Xx,Yy)))))/
+                (256.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),5.5));
         }
         virtual double d_dz(double Xx, double Yy, double Zz) {
-            return (Sqrt(7/Pi)*(64*Sqrt(15)*(Xx - Yy)*(Xx + Yy)*(Power(Xx,2) + Power(Yy,2) - 2*Power(Zz,2))*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),3) - 
-                        15*Sqrt(286)*Power(Power(Xx,2) + Power(Yy,2),2.5)*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                        (3*Power(Power(Xx,2) + Power(Yy,2),3) - 111*Power(Power(Xx,2) + Power(Yy,2),2)*Power(Zz,2) + 
-                         364*(Power(Xx,2) + Power(Yy,2))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy))))/
-                (256.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),5.5));
+            return (Sqrt(7/Pi)*(64*Sqrt(15)*(Xx - Yy)*(Xx + Yy)*((Xx*Xx) + (Yy*Yy) - 2*(Zz*Zz))*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),3) - 
+                        15*Sqrt(286)*Power((Xx*Xx) + (Yy*Yy),2.5)*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                        (3*Power((Xx*Xx) + (Yy*Yy),3) - 111*Power((Xx*Xx) + (Yy*Yy),2)*(Zz*Zz) + 
+                         364*((Xx*Xx) + (Yy*Yy))*Power(Zz,4) - 168*Power(Zz,6))*Cos(5*ArcTan(Xx,Yy))))/
+                (256.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),5.5));
         }
         virtual double lapl(double Xx, double Yy, double Zz) {
-            return (-3*Sqrt(7/Pi)*Zz*(128*Sqrt(15)*(Xx - Yy)*(Xx + Yy)*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),3) - 
-                        55*Sqrt(286)*Power(Power(Xx,2) + Power(Yy,2),2.5)*Sqrt(1/(Power(Xx,2) + Power(Yy,2) + Power(Zz,2)))*
-                        (15*Power(Power(Xx,2) + Power(Yy,2),2) - 140*(Power(Xx,2) + Power(Yy,2))*Power(Zz,2) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy))))/
-                (128.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),5.5));
+            return (-3*Sqrt(7/Pi)*Zz*(128*Sqrt(15)*(Xx - Yy)*(Xx + Yy)*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),3) - 
+                        55*Sqrt(286)*Power((Xx*Xx) + (Yy*Yy),2.5)*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
+                        (15*Power((Xx*Xx) + (Yy*Yy),2) - 140*((Xx*Xx) + (Yy*Yy))*(Zz*Zz) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy))))/
+                (128.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),5.5));
         }
     };
 
@@ -192,26 +206,26 @@ namespace SphericalHarmonic
     class Sph2020 : public SphericalHarmonicBase
     {
         virtual double eval(double Xx, double Yy, double Zz) {
-            return (3*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),10)*Cos(20*ArcTan(Xx,Yy)))/
-                   (524288.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),10));
+            return (3*Sqrt(156991880045/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),10)*Cos(20*ArcTan(Xx,Yy)))/
+                   (524288.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),10));
         }
         virtual double d_dx(double Xx, double Yy, double Zz) {
-            return (15*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),9)*
-                         (Xx*Power(Zz,2)*Cos(20*ArcTan(Xx,Yy)) + Yy*(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))*Sin(20*ArcTan(Xx,Yy))))/
-                   (131072.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),11));
+            return (15*Sqrt(156991880045/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),9)*
+                         (Xx*(Zz*Zz)*Cos(20*ArcTan(Xx,Yy)) + Yy*((Xx*Xx) + (Yy*Yy) + (Zz*Zz))*Sin(20*ArcTan(Xx,Yy))))/
+                   (131072.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),11));
         }
         virtual double d_dy(double Xx, double Yy, double Zz) {
-            return (-15*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),9)*
-                         (-(Yy*Power(Zz,2)*Cos(20*ArcTan(Xx,Yy))) + Xx*(Power(Xx,2) + Power(Yy,2) + Power(Zz,2))*Sin(20*ArcTan(Xx,Yy))))/
-                   (131072.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),11));
+            return (-15*Sqrt(156991880045/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),9)*
+                         (-(Yy*(Zz*Zz)*Cos(20*ArcTan(Xx,Yy))) + Xx*((Xx*Xx) + (Yy*Yy) + (Zz*Zz))*Sin(20*ArcTan(Xx,Yy))))/
+                   (131072.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),11));
         }
         virtual double d_dz(double Xx, double Yy, double Zz) {
-            return (-15*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),10)*Zz*Cos(20*ArcTan(Xx,Yy)))/
-                   (131072.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),11));
+            return (-15*Sqrt(156991880045/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),10)*Zz*Cos(20*ArcTan(Xx,Yy)))/
+                   (131072.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),11));
         }
         virtual double lapl(double Xx, double Yy, double Zz) {
-            return (-315*Sqrt(156991880045/(2.*Pi))*Power(Power(Xx,2) + Power(Yy,2),10)*Cos(20*ArcTan(Xx,Yy)))/
-                   (131072.*Power(Power(Xx,2) + Power(Yy,2) + Power(Zz,2),11));
+            return (-315*Sqrt(156991880045/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),10)*Cos(20*ArcTan(Xx,Yy)))/
+                   (131072.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),11));
         }
     };
 

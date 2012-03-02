@@ -148,7 +148,7 @@ namespace viennacl
         viennacl::tools::traits::resize(U[k], problem_size);
       }
 
-      std::cout << "Starting GMRES..." << std::endl;
+      //std::cout << "Starting GMRES..." << std::endl;
       tag.iters(0);
 
       for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
@@ -162,7 +162,7 @@ namespace viennacl
 
         if (rho_0 / norm_rhs < tag.tolerance())
         {
-          std::cout << "Allowed Error reached at begin of loop" << std::endl;
+          //std::cout << "Allowed Error reached at begin of loop" << std::endl;
           tag.error(rho_0 / norm_rhs);
           return result;
         }
@@ -223,7 +223,7 @@ namespace viennacl
 
           if (std::fabs(rho * rho_0 / norm_rhs) < tag.tolerance())
           {
-            std::cout << "Krylov space big enough" << endl;
+            //std::cout << "Krylov space big enough" << endl;
             tag.error( std::fabs(rho*rho_0 / norm_rhs) );
             break;
           }
@@ -258,16 +258,16 @@ namespace viennacl
 
         if ( std::fabs(rho*rho_0 / norm_rhs) < tag.tolerance() )
         {
-          std::cout << "Allowed Error reached at end of loop" << std::endl;
+          //std::cout << "Allowed Error reached at end of loop" << std::endl;
           tag.error(std::fabs(rho*rho_0 / norm_rhs));
           return result;
         }
 
         res = rhs;
         res -= viennacl::linalg::prod(matrix, result);
-        std::cout << "norm_2(res)=" << norm_2(res) << std::endl;
-        std::cout << "std::abs(rho*rho_0)=" << std::abs(rho*rho_0) << std::endl;
-        std::cout << res << std::endl; 
+        //std::cout << "norm_2(r)=" << norm_2(r) << std::endl;
+        //std::cout << "std::abs(rho*rho_0)=" << std::abs(rho*rho_0) << std::endl;
+        //std::cout << r << std::endl; 
 
         tag.error(std::fabs(rho*rho_0));
       }

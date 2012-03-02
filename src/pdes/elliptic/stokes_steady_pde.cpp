@@ -368,8 +368,15 @@ void StokesSteadyPDE::solve_original()
 
     // Solve system using Stabilized BiConjugate Gradients from ViennaCL
     tm["gmres"]->start(); 
-    *U_computed = viennacl::linalg::solve(*LHS, *RHS_continuous, viennacl::linalg::gmres_tag(1.e-8, 200));
+
+    viennacl::linalg::gmres_tag custom_gmres(1e-8, 100, 30);
+    
+    *U_computed = viennacl::linalg::solve(*LHS, *RHS_continuous, custom_gmres);
     tm["gmres"]->stop(); 
+    
+    std::cout << "No. of iters: " << custom_gmres.iters() << std::endl;
+    std::cout << "Est. error: " << custom_gmres.error() << std::endl;
+
 
     // NOTE: the preconditioners dont work on our current structure. We need to
     // reorder the matrix to get entries on the diagonal in order for ilut to work. Im

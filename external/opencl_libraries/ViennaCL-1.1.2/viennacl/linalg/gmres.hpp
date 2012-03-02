@@ -148,11 +148,12 @@ namespace viennacl
         viennacl::tools::traits::resize(U[k], problem_size);
       }
 
-      //std::cout << "Starting GMRES..." << std::endl;
+      std::cout << "Starting GMRES..." << std::endl;
       tag.iters(0);
 
       for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
       {
+        std::cout << ".\n"; 
         res = rhs;
         res -= viennacl::linalg::prod(matrix, result);  //initial guess zero
         precond.apply(res);

@@ -35,13 +35,13 @@
 #include "viennacl/linalg/norm_2.hpp"     //generic l2-norm for vectors
 
 
-typedef boost::numeric::ublas::compressed_matrix<double> MatType;
-typedef boost::numeric::ublas::vector<double>            VecType;
+typedef boost::numeric::ublas::compressed_matrix<double>                        MatType;
+typedef boost::numeric::ublas::vector<double>                                   VecType;
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS,
         boost::property<boost::vertex_color_t, boost::default_color_type,
-        boost::property<boost::vertex_degree_t, size_t> > > GraphType;
-typedef boost::graph_traits<GraphType>::vertex_descriptor VertexType;
-typedef boost::graph_traits<GraphType>::vertices_size_type size_type;
+        boost::property<boost::vertex_degree_t, size_t> > >                     GraphType;
+typedef boost::graph_traits<GraphType>::vertex_descriptor                       VertexType;
+typedef boost::graph_traits<GraphType>::vertices_size_type                      size_type;
 
 
 class StokesSteadyPDE : public PDE

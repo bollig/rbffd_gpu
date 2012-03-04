@@ -47,6 +47,10 @@
         util/gpu_compute_derivs
         util/matrix_market_io
 
+
+		util/cusp_spmv_benchmark
+
+
 		template
 	)
 

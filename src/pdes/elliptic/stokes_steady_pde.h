@@ -77,7 +77,7 @@ class StokesSteadyPDE : public PDE
     public: 
     StokesSteadyPDE(Domain* grid, RBFFD* der, Communicator* comm) 
         : PDE(grid, der, comm), 
-        constantViscosity(true), discreteRHS(false),
+        constantViscosity(true), discreteRHS(true),
         cuthillMckeeReordering(false)
     {
         std::cout << "INSIDE STOKES CONSTRUCTOR" << std::endl;

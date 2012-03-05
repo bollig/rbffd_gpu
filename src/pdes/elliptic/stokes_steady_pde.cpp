@@ -241,7 +241,6 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
 
     //------------- Fill F -------------
     RHS_continuous = new VecType(ncols);
-    RHS_discrete = new VecType(ncols);
     U_continuous = new VecType(ncols);
 
     std::cout << "Filling continuous RHS\n";
@@ -317,9 +316,14 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
     
 void StokesSteadyPDE::fillRHS_discrete() {
     std::cout << "Filling discrete RHS\n";
+    RHS_discrete = new VecType(ncols);
     tm["RHS_discrete"]->start();
     // This takes 21832.6 ms for N=10201.  Slow. But its the same for ublas and viennacl.
+#if 0 
     *RHS_discrete = viennacl::linalg::prod(*LHS, *U_continuous); 
+#else 
+    axpy_prod(*LHS, *U_continuous, *RHS_discrete, false); 
+#endif 
     tm["RHS_discrete"]->stop();
 }
 

@@ -138,7 +138,7 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
         for (unsigned int j = 0; j < n; j++) {
             A.row_indices[ind] =  i; 
             A.column_indices[ind] =  sten[j]; 
-            A.values[ind] = -lapl[j]; 
+            A.values[ind] = i; // -lapl[j]; 
             ind++; 
         }
     }
@@ -200,7 +200,7 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
             A.column_indices[ind] =  sten[j]; 
-            A.values[ind] = -lapl[j]; 
+            A.values[ind] = i; // -lapl[j]; 
             ind++; 
         }
     }
@@ -264,7 +264,7 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
             A.column_indices(i, j) =  sten[j]; 
-            A.values(i, j) = -lapl[j]; 
+            A.values(i, j) = i; // -lapl[j]; 
         }
     }
     tm[assemble_timer_name]->stop();
@@ -334,7 +334,7 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
             A.ell.column_indices(i, j) =  sten[j]; 
-            A.ell.values(i, j) = -lapl[j]; 
+            A.ell.values(i, j) = i; // -lapl[j]; 
             // A.coo.row_indices[ind] = 0; ...
         }
     }

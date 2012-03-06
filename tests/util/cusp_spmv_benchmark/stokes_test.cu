@@ -140,7 +140,7 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
         for (unsigned int j = 0; j < n; j++) {
             A.row_indices[ind] =  i; 
             A.column_indices[ind] =  sten[j]; 
-            A.values[ind] =  -lapl[j]; 
+            A.values[ind] = 1.; // -lapl[j]; 
             ind++; 
         }
     }
@@ -206,7 +206,7 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
             A.column_indices[ind] =  sten[j]; 
-            A.values[ind] =  -lapl[j]; 
+            A.values[ind] = 1.; // -lapl[j]; 
             ind++; 
         }
     }
@@ -216,8 +216,9 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
     std::cout << "N = " << N << "\t n = " << n << std::endl;
     cusp::array2d<double, cusp::host_memory> A_full(A); 
     cusp::print(A_full); 
-    cusp::print(A); 
+
 #endif 
+    cusp::print(A); 
     tm[multiply_timer_name.str()]->start();
     if (platform) {
         MatTypeGPU A_gpu(A); 
@@ -270,7 +271,7 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
             A.column_indices(i, j) =  sten[j]; 
-            A.values(i, j) =  -lapl[j]; 
+            A.values(i, j) = 1.; // -lapl[j]; 
         }
     }
     tm[assemble_timer_name.str()]->stop();
@@ -342,7 +343,7 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
             A.ell.column_indices(i, j) =  sten[j]; 
-            A.ell.values(i, j) =  -lapl[j]; 
+            A.ell.values(i, j) = 1.; // -lapl[j]; 
             // A.coo.row_indices[ind] = 0; ...
         }
     }
@@ -394,7 +395,7 @@ int main(void)
 
     std::vector<std::string> grids; 
 #if 0
-    grids.push_back("~/GRIDS/md/md003.00016"); 
+    grids.push_back("~/GRIDS/md/md005.00036"); 
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
@@ -403,7 +404,8 @@ int main(void)
     grids.push_back("~/GRIDS/md/md165.27556"); 
 #endif 
 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
+    grids.push_back("~/GRIDS/md/md031.01024"); 
+    //grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
 
 
     for (size_t i = 0; i < grids.size(); i++) {
@@ -464,11 +466,14 @@ int main(void)
         // enum MAT_TYPES {COO, CSR, ELL, HYB};
         // enum PLATFORMS {CPU, GPU}; 
         // j indexes MAT_TYPES. 
-        for (int k = 0; k < 5; k++) {
-#if 1
+#if 0
+        for (int k = 0; k < 5; k++) 
+#endif 
+        {
+#if 0
             for (int j = 0; j < 4; j++) 
 #else 
-                int j = 3;
+                int j = 1;
 #endif 
             {
                 // CPU: 

@@ -4,6 +4,8 @@
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
 
+#include <cusp/hyb_matrix.h>
+#include <cusp/ell_matrix.h>
 #include <cusp/csr_matrix.h>
 #include <cusp/coo_matrix.h>
 #include <cusp/monitor.h>
@@ -24,8 +26,6 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
-    std::cout << "N = " << N << "\t n = " << n << std::endl;
-
     MatType A( N , N , N*n ); 
 
     unsigned int ind = 0; 
@@ -41,7 +41,8 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
             ind++; 
         }
     }
-#if 1
+#if 0
+    std::cout << "N = " << N << "\t n = " << n << std::endl;
     cusp::array2d<double, cusp::host_memory> A_full(A); 
     cusp::print(A_full); 
     cusp::print(A); 
@@ -53,8 +54,6 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
-
-    std::cout << "N = " << N << "\t n = " << n << std::endl;
 
     MatType A( N , N , N*n ); 
 
@@ -72,12 +71,79 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
             ind++; 
         }
     }
-#if 1
+#if 0
+    std::cout << "N = " << N << "\t n = " << n << std::endl;
     cusp::array2d<double, cusp::host_memory> A_full(A); 
     cusp::print(A_full); 
     cusp::print(A); 
 #endif 
+}
 
+
+void test_ELL ( RBFFD& der, Grid& grid, int platform) {
+    typedef cusp::ell_matrix<int, double, cusp::host_memory> MatType; 
+
+    unsigned int N = grid.getNodeListSize(); 
+    unsigned int n = grid.getMaxStencilSize(); 
+
+    // Allocate a (N,N) matrix with (N*n) total nonzeros and at most (n) nonzero per row
+    MatType A( N , N , N*n , n ); 
+
+    for (int i = 0; i < A.num_rows; i++) {
+        StencilType& sten = grid.getStencil(i); 
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+
+        // Off diagonals
+        for (unsigned int j = 0; j < n; j++) {
+            A.column_indices(i, j) =  sten[j]; 
+            A.values(i, j) =  -lapl[j]; 
+        }
+    }
+#if 0
+    std::cout << "N = " << N << "\t n = " << n << std::endl;
+    cusp::array2d<double, cusp::host_memory> A_full(A); 
+    cusp::print(A_full); 
+    cusp::print(A); 
+#endif 
+}
+
+void test_HYB ( RBFFD& der, Grid& grid, int platform) {
+
+    // The HYB format has both an ELL (where ALL rows have n nonzeros) and a
+    // COO (surplus nonzeros per row. In our case we know we will ALWAYS have n
+    // nonzeros for stencil weights per row, unless a weight computes to 0.
+    // This means HYB is equivalent to ELL for us. If we convert from ELL to
+    // HYB we *might* see a performance boost if their constructor is smart
+    // enough to check for 0's, but I doubt it. We will still fill a HYB matrix
+    // and test performance. perhaps there are other efficiency differences
+    // between the two formats. 
+
+    typedef cusp::hyb_matrix<int, double, cusp::host_memory> MatType; 
+
+    unsigned int N = grid.getNodeListSize(); 
+    unsigned int n = grid.getMaxStencilSize(); 
+
+    // Allocate a (N,N) matrix with (N*n) total nonzeros and at most (n) nonzero per row
+    // and 0 extra non-zeros per row
+    MatType A( N , N , N*n , 0 , n ); 
+
+    for (int i = 0; i < A.num_rows; i++) {
+        StencilType& sten = grid.getStencil(i); 
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+
+        // Off diagonals
+        for (unsigned int j = 0; j < n; j++) {
+            A.ell.column_indices(i, j) =  sten[j]; 
+            A.ell.values(i, j) =  -lapl[j]; 
+            // A.coo.row_indices[ind] = 0; ...
+        }
+    }
+#if 0
+    std::cout << "N = " << N << "\t n = " << n << std::endl;
+    cusp::array2d<double, cusp::host_memory> A_full(A); 
+    cusp::print(A_full); 
+    cusp::print(A); 
+#endif 
 }
 
 
@@ -90,6 +156,12 @@ void testSPMV(int MAT_TYPE, int PLATFORM, RBFFD& der, Grid& grid) {
             break; 
         case 1: 
             test_CSR(der, grid, PLATFORM); 
+            break; 
+        case 2: 
+            test_ELL(der, grid, PLATFORM); 
+            break; 
+        case 3: 
+            test_HYB(der, grid, PLATFORM); 
             break; 
         default: 
             break;  
@@ -160,7 +232,7 @@ int main(void)
         // enum PLATFORMS {CPU, GPU}; 
         // j indexes MAT_TYPES. 
         //for (int j = 0; j < 4; j++) 
-        int j = 0; 
+        int j = 3; 
         {
             // CPU: 
             testSPMV(j, 0, der, grid); 

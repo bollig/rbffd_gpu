@@ -26,7 +26,7 @@ class Grid
     public: 
         // We allow multiple types of stencil generators (for backwards compat)
         enum st_generator_t {ST_BRUTE_FORCE=0, ST_KDTREE, ST_HASH};
-        enum GridLoadErrType {GRID_AND_STENCILS_LOADED=0, NO_GRID_FILES, NO_STENCIL_FILES, NO_EXTRA_FILES, NOT_ENOUGH_NODES_IN_FILE};
+        enum GridLoadErrType {GRID_AND_STENCILS_LOADED=0, NO_GRID_FILES, NO_BOUNDARY_FILES, NO_NORMAL_FILES, NO_STENCIL_FILES, NO_RADII_FILES, NO_EXTRA_FILES, NOT_ENOUGH_NODES_IN_FILE};
 
     protected: 
 
@@ -181,12 +181,13 @@ class Grid
         Grid::GridLoadErrType loadFromFile(int iter=-1); 
         virtual GridLoadErrType loadFromFile(std::string filename); 
 
-        int loadNodesFromFile(std::string grid_filename); 
-        int loadBoundaryFromFile(std::string grid_filename); 
-        int loadNormalsFromFile(std::string grid_filename); 
-        int loadAvgRadiiFromFile(std::string grid_filename); 
-        int loadStencilsFromFile(std::string grid_filename); 
-        virtual int loadExtraFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadNodesFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadBoundaryFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadNormalsFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadAvgRadiiFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadStencilsFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadStencilsFromFile(int iter=-1); 
+        virtual Grid::GridLoadErrType loadExtraFromFile(std::string grid_filename); 
 
         // Sort the nodes so boundary nodes are first in the lists
         virtual void sortNodes(); 

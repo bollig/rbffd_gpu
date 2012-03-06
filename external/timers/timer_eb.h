@@ -11,9 +11,9 @@
 #include "gtod_windows.h"
 #else
 #if (__PGI)
-    #include <time.h>
+#include <time.h>
 #else 
-    #include <sys/time.h>
+#include <sys/time.h>
 #endif
 #endif
 
@@ -89,6 +89,13 @@ namespace EB {
     class TimerList : public std::map<std::string, EB::Timer*>
     {
         public: 
+            bool contains (std::string timer_name) { 
+                std::map<std::string, EB::Timer*>::iterator iter = this->find(timer_name);
+                if ( this->end() != iter ) {
+                    return true; 
+                } 
+                return false; 
+            }
             void writeToFile(std::string filename="timer_log") {
                 (*(this->begin())).second->writeAllToFile(filename); 
             } 

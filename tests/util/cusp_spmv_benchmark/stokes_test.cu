@@ -24,38 +24,80 @@
 #include <thrust/generate.h>
 
 #include <iostream>
+#include <sstream> 
 using namespace std;
 
-// PT is platform type
-template <class MatT, class PT>
-void benchmarkMultiply(MatT& A) {
+// TODO: 
+//  benchmark assembly
+//  benchmark spmv
+//  benchmark CPU vs GPU spmv
+
+EB::TimerList tm;
+
+template <typename MatT>
+void benchmarkMultiplyHost(MatT& A) {
     // If we multiply a vector of 1s we should see our result equal 0 (if our
     // RBF-FD weights are good)
-    cusp::array1d<double, PT> x(A.num_rows, 1);
-#if 1
-    // generate random data on the host
+    cusp::array1d<double, cusp::host_memory> x(A.num_rows, 1);
+#if 0
+    // generate random data on the host to make sure when we multiply we
+    // actually replace b
     thrust::host_vector<double> h_vec(A.num_rows);
     thrust::generate(h_vec.begin(), h_vec.end(), rand);
 
     // transfer to device and compute sum
-    cusp::array1d<double, PT> b = h_vec;
+    cusp::array1d<double, cusp::host_memory> b = h_vec;
+    x = h_vec;
 #else 
-    cusp::array1d<double, PT> b(A.num_rows, 1);
+    cusp::array1d<double, cusp::host_memory> b(A.num_rows, 1);
 #endif 
     cusp::multiply(A, x, b); 
 
+
+    std::cout << "l1   Norm: " << cusp::blas::nrm1(b) << std::endl;  
+    std::cout << "l2   Norm: " << cusp::blas::nrm2(b) << std::endl;  
+    std::cout << "linf Norm: " << cusp::blas::nrmmax(b) << std::endl;  
+
+#if 0
     cusp::array1d<double, cusp::host_memory> b_host = b;
     std::cout << "l1   Norm: " << cusp::blas::nrm1(b_host) << std::endl;  
-    std::cout << "l1   Norm: " << cusp::blas::nrm1(b) << std::endl;  
     std::cout << "l2   Norm: " << cusp::blas::nrm2(b_host) << std::endl;  
-    std::cout << "l2   Norm: " << cusp::blas::nrm2(b) << std::endl;  
     std::cout << "linf Norm: " << cusp::blas::nrmmax(b_host) << std::endl;  
-    std::cout << "linf Norm: " << cusp::blas::nrmmax(b) << std::endl;  
+#endif 
 #if 0
     cusp::print(b); 
 #endif 
 }
 
+template <typename MatT>
+void benchmarkMultiplyDevice(MatT& A) {
+    // If we multiply a vector of 1s we should see our result equal 0 (if our
+    // RBF-FD weights are good)
+    cusp::array1d<double, cusp::device_memory> x(A.num_rows, 1);
+#if 0
+    // generate random data on the host to make sure when we multiply we
+    // actually replace b
+    thrust::host_vector<double> h_vec(A.num_rows);
+    thrust::generate(h_vec.begin(), h_vec.end(), rand);
+
+    // transfer to device and compute sum
+    cusp::array1d<double, cusp::device_memory> b = h_vec;
+    x = h_vec;
+#else 
+    cusp::array1d<double, cusp::device_memory> b(A.num_rows, 1);
+#endif 
+    cusp::multiply(A, x, b); 
+
+#if 1
+    std::cout << "l1   Norm: " << cusp::blas::nrm1(b) << std::endl;  
+    std::cout << "l2   Norm: " << cusp::blas::nrm2(b) << std::endl;  
+    std::cout << "linf Norm: " << cusp::blas::nrmmax(b) << std::endl;  
+#endif 
+    cudaThreadSynchronize();
+#if 0
+    cusp::print(b); 
+#endif 
+}
 
 void test_COO ( RBFFD& der, Grid& grid, int platform) {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> MatType; 
@@ -63,6 +105,29 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
+
+    std::ostringstream timer_basic_name; 
+    timer_basic_name << N; 
+    timer_basic_name << "_COO"; 
+    if (platform) {
+        timer_basic_name << "_GPU"; 
+    } else {
+        timer_basic_name << "_CPU"; 
+    }
+
+    std::ostringstream assemble_timer_name(timer_basic_name.str()); 
+    std::ostringstream multiply_timer_name(timer_basic_name.str()); 
+    assemble_timer_name << "_assemble"; 
+    std::string assemble_label = timer_basic_name.str() + " Assemble"; 
+    multiply_timer_name << "_multiply"; 
+    std::string multiply_label = timer_basic_name.str() + " Multiply"; 
+
+    if (!tm.contains(assemble_timer_name.str())) {
+        tm[assemble_timer_name.str()] = new EB::Timer(assemble_label.c_str());  
+        tm[multiply_timer_name.str()] = new EB::Timer(multiply_label.c_str());
+    }
+    std::cout << "WORKING ON: " << assemble_label.c_str() << std::endl;
+    tm[assemble_timer_name.str()]->start();
 
     MatType A( N , N , N*n ); 
 
@@ -79,18 +144,22 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
             ind++; 
         }
     }
+    tm[assemble_timer_name.str()]->stop();
 #if 0
     std::cout << "N = " << N << "\t n = " << n << std::endl;
     cusp::array2d<double, cusp::host_memory> A_full(A); 
     cusp::print(A_full); 
     cusp::print(A); 
 #endif
+    std::cout << "\t\t\tMultiply\n";
+    tm[multiply_timer_name.str()]->start();
     if (platform) {
         MatTypeGPU A_gpu(A); 
-        benchmarkMultiply<MatTypeGPU, cusp::device_memory>(A_gpu); 
+        benchmarkMultiplyDevice<MatTypeGPU>(A_gpu); 
     } else { 
-        benchmarkMultiply<MatType, cusp::host_memory>(A); 
+        benchmarkMultiplyHost<MatType>(A); 
     }
+    tm[multiply_timer_name.str()]->stop();
 }
 
 void test_CSR ( RBFFD& der, Grid& grid, int platform) {
@@ -99,6 +168,31 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
+
+    std::ostringstream timer_basic_name; 
+    timer_basic_name << N; 
+    timer_basic_name << "_CSR"; 
+    if (platform) {
+        timer_basic_name << "_GPU"; 
+    } else {
+        timer_basic_name << "_CPU"; 
+    }
+
+    std::ostringstream assemble_timer_name(timer_basic_name.str()); 
+    std::ostringstream multiply_timer_name(timer_basic_name.str()); 
+    assemble_timer_name << "_assemble"; 
+    std::string assemble_label = timer_basic_name.str() + " Assemble"; 
+    multiply_timer_name << "_multiply"; 
+    std::string multiply_label = timer_basic_name.str() + " Multiply"; 
+
+
+    if (!tm.contains(assemble_timer_name.str())) {
+        tm[assemble_timer_name.str()] = new EB::Timer(assemble_label.c_str());  
+        tm[multiply_timer_name.str()] = new EB::Timer(multiply_label.c_str());
+    }
+
+    std::cout << "WORKING ON: " << assemble_label.c_str() << std::endl;
+    tm[assemble_timer_name.str()]->start();
 
     MatType A( N , N , N*n ); 
 
@@ -116,18 +210,22 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
             ind++; 
         }
     }
+    tm[assemble_timer_name.str()]->stop();
+    std::cout << "\t\t\tMultiply\n"; 
 #if 0
     std::cout << "N = " << N << "\t n = " << n << std::endl;
     cusp::array2d<double, cusp::host_memory> A_full(A); 
     cusp::print(A_full); 
     cusp::print(A); 
 #endif 
+    tm[multiply_timer_name.str()]->start();
     if (platform) {
         MatTypeGPU A_gpu(A); 
-        benchmarkMultiply<MatTypeGPU, cusp::device_memory>(A_gpu); 
+        benchmarkMultiplyDevice<MatTypeGPU>(A_gpu); 
     } else { 
-        benchmarkMultiply<MatType, cusp::host_memory>(A); 
+        benchmarkMultiplyHost<MatType>(A); 
     }
+    tm[multiply_timer_name.str()]->stop();
 }
 
 
@@ -137,6 +235,30 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
+
+    std::ostringstream timer_basic_name; 
+    timer_basic_name << N; 
+    timer_basic_name << "_ELL"; 
+    if (platform) {
+        timer_basic_name << "_GPU"; 
+    } else {
+        timer_basic_name << "_CPU"; 
+    }
+
+    std::ostringstream assemble_timer_name(timer_basic_name.str()); 
+    std::ostringstream multiply_timer_name(timer_basic_name.str()); 
+    assemble_timer_name << "_assemble"; 
+    std::string assemble_label = timer_basic_name.str() + " Assemble"; 
+    multiply_timer_name << "_multiply"; 
+    std::string multiply_label = timer_basic_name.str() + " Multiply"; 
+
+    if (!tm.contains(assemble_timer_name.str())) {
+        tm[assemble_timer_name.str()] = new EB::Timer(assemble_label.c_str());  
+        tm[multiply_timer_name.str()] = new EB::Timer(multiply_label.c_str());
+    }
+
+    std::cout << "WORKING ON: " << assemble_label.c_str() << std::endl;
+    tm[assemble_timer_name.str()]->start();
 
     // Allocate a (N,N) matrix with (N*n) total nonzeros and at most (n) nonzero per row
     MatType A( N , N , N*n , n ); 
@@ -151,18 +273,22 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
             A.values(i, j) =  -lapl[j]; 
         }
     }
+    tm[assemble_timer_name.str()]->stop();
 #if 0
     std::cout << "N = " << N << "\t n = " << n << std::endl;
     cusp::array2d<double, cusp::host_memory> A_full(A); 
     cusp::print(A_full); 
     cusp::print(A); 
 #endif 
+    std::cout << "\t\t\tMultiply\n";
+    tm[multiply_timer_name.str()]->start();
     if (platform) {
         MatTypeGPU A_gpu(A); 
-        benchmarkMultiply<MatTypeGPU, cusp::device_memory>(A_gpu); 
+        benchmarkMultiplyDevice<MatTypeGPU>(A_gpu); 
     } else { 
-        benchmarkMultiply<MatType, cusp::host_memory>(A); 
+        benchmarkMultiplyHost<MatType>(A); 
     }
+    tm[multiply_timer_name.str()]->stop();
 }
 
 void test_HYB ( RBFFD& der, Grid& grid, int platform) {
@@ -182,6 +308,29 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
+    std::ostringstream timer_basic_name; 
+    timer_basic_name << N; 
+    timer_basic_name << "_HYB"; 
+    if (platform) {
+        timer_basic_name << "_GPU"; 
+    } else {
+        timer_basic_name << "_CPU"; 
+    }
+
+    std::ostringstream assemble_timer_name(timer_basic_name.str()); 
+    std::ostringstream multiply_timer_name(timer_basic_name.str()); 
+    assemble_timer_name << "_assemble"; 
+    std::string assemble_label = timer_basic_name.str() + " Assemble"; 
+    multiply_timer_name << "_multiply"; 
+    std::string multiply_label = timer_basic_name.str() + " Multiply"; 
+
+    if (!tm.contains(assemble_timer_name.str())) {
+        tm[assemble_timer_name.str()] = new EB::Timer(assemble_label.c_str());  
+        tm[multiply_timer_name.str()] = new EB::Timer(multiply_label.c_str());
+    }
+
+    std::cout << "WORKING ON: " << assemble_label.c_str() << std::endl;
+    tm[assemble_timer_name.str()]->start();
     // Allocate a (N,N) matrix with (N*n) total nonzeros and at most (n) nonzero per row
     // and 0 extra non-zeros per row
     MatType A( N , N , N*n , 0 , n ); 
@@ -197,18 +346,22 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
             // A.coo.row_indices[ind] = 0; ...
         }
     }
+    tm[assemble_timer_name.str()]->stop();
 #if 0
     std::cout << "N = " << N << "\t n = " << n << std::endl;
     cusp::array2d<double, cusp::host_memory> A_full(A); 
     cusp::print(A_full); 
     cusp::print(A); 
 #endif 
+    std::cout << "\t\t\tMultiply\n";
+    tm[multiply_timer_name.str()]->start();
     if (platform) {
         MatTypeGPU A_gpu(A); 
-        benchmarkMultiply<MatTypeGPU, cusp::device_memory>(A_gpu); 
+        benchmarkMultiplyDevice<MatTypeGPU>(A_gpu); 
     } else { 
-        benchmarkMultiply<MatType, cusp::host_memory>(A); 
-    }
+        benchmarkMultiplyHost<MatType>(A); 
+    } 
+    tm[multiply_timer_name.str()]->stop();
 }
 
 
@@ -229,8 +382,8 @@ void testSPMV(int MAT_TYPE, int PLATFORM, RBFFD& der, Grid& grid) {
             test_HYB(der, grid, PLATFORM); 
             break; 
         default: 
+            std::cout << "INVALID SPMV TYPE\n"; 
             break;  
-
     }
 }
 
@@ -240,6 +393,7 @@ int main(void)
     bool writeIntermediate = true; 
 
     std::vector<std::string> grids; 
+#if 0
     grids.push_back("~/GRIDS/md/md003.00016"); 
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
@@ -247,12 +401,21 @@ int main(void)
     grids.push_back("~/GRIDS/md/md089.08100"); 
     grids.push_back("~/GRIDS/md/md127.16384"); 
     grids.push_back("~/GRIDS/md/md165.27556"); 
+#endif 
+
+    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
 
 
     for (size_t i = 0; i < grids.size(); i++) {
-        std::string grid_name = grids[i]; 
+        std::string& grid_name = grids[i]; 
+
+        std::string weight_timer_name = grid_name + " Calc Weights";  
+
+        tm[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
+
+
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
-        unsigned int stencil_size = 5;
+        unsigned int stencil_size = 40;
         double eps_c1 = 0.027;
         double eps_c2 = 0.274;
 
@@ -269,9 +432,12 @@ int main(void)
                 grid.writeToFile(); 
             }
         } 
-        if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
+        std::cout << "Generate Stencils\n";
+        Grid::GridLoadErrType st_err = grid.loadStencilsFromFile(); 
+        if (st_err == Grid::NO_STENCIL_FILES) {
             //            grid.generateStencils(Grid::ST_BRUTE_FORCE);   
             grid.generateStencils(Grid::ST_KDTREE);   
+            //grid.setNSHashDims(10, 10,10);  
             //grid.generateStencils(Grid::ST_HASH);   
             if (writeIntermediate) {
                 grid.writeToFile(); 
@@ -280,12 +446,14 @@ int main(void)
 
 
         std::cout << "Generate RBFFD Weights\n"; 
+        tm[weight_timer_name]->start(); 
         RBFFD der(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, &grid, 3, 0); 
         der.setEpsilonByParameters(eps_c1, eps_c2);
         int der_err = der.loadAllWeightsFromFile(); 
         if (der_err) {
             der.computeAllWeightsForAllStencils(); 
 
+            tm[weight_timer_name]->start(); 
             if (writeIntermediate) {
                 der.writeAllWeightsToFile(); 
             }
@@ -296,15 +464,19 @@ int main(void)
         // enum MAT_TYPES {COO, CSR, ELL, HYB};
         // enum PLATFORMS {CPU, GPU}; 
         // j indexes MAT_TYPES. 
-        //for (int j = 0; j < 4; j++) 
-        int j = 3;
-        {
-            // CPU: 
-            testSPMV(j, 0, der, grid); 
-            // GPU: 
-            testSPMV(j, 1, der, grid); 
+        for (int k = 0; k < 5; k++) {
+#if 1
+            for (int j = 0; j < 4; j++) 
+#else 
+                int j = 3;
+#endif 
+            {
+                // CPU: 
+                testSPMV(j, 1, der, grid); 
+                // GPU: 
+                testSPMV(j, 0, der, grid); 
+            }
         }
-
 
 #if 0
         cusp::array1d<double, cusp::host_memory> x(A.num_rows, 1); 
@@ -337,6 +509,7 @@ int main(void)
 
     // monitor will report solver progress and results
 #endif 
+    tm.printAll();
     return EXIT_SUCCESS;
 }
 

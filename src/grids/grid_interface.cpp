@@ -183,6 +183,11 @@ Grid::GridLoadErrType Grid::loadFromFile(int iter) {
     return this->loadFromFile(this->getFilename(iter)); 
 }
 
+Grid::GridLoadErrType Grid::loadStencilsFromFile(int iter) {
+    return this->loadStencilsFromFile(this->getFilename(iter)); 
+}
+
+
 
 //----------------------------------------------------------------------------
 
@@ -197,12 +202,12 @@ Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
     
     if (this->loadBoundaryFromFile(filename)) {
         printf("Error loading boundary nodes\n"); 
-        return NO_GRID_FILES;
+        return NO_BOUNDARY_FILES;
     }
 
     if (this->loadNormalsFromFile(filename)) {
         printf("Error loading normals\n"); 
-        return NO_GRID_FILES;
+        return NO_NORMAL_FILES;
     }
 #if 0
     if (this->loadAvgRadiiFromFile(filename)) {
@@ -231,7 +236,7 @@ Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
     return GRID_AND_STENCILS_LOADED;
 }
 
-int Grid::loadNodesFromFile(std::string filename) {
+Grid::GridLoadErrType Grid::loadNodesFromFile(std::string filename) {
     std::cout << "[" << this->className() << "] \treading file: " << filename << std::endl;
     std::ifstream fin(filename.c_str());
 
@@ -245,19 +250,19 @@ int Grid::loadNodesFromFile(std::string filename) {
         }
     } else {
         printf("Error opening node file to read\n"); 
-        return -1;
+        return NO_GRID_FILES;
     }
     fin.close(); 
     nb_nodes = node_list.size(); 
     std::cout << "[" << this->className() << "] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
     this->refreshExtents();
-    return 0;    
+    return GRID_AND_STENCILS_LOADED;    
 }
 
 
 //----------------------------------------------------------------------------
 
-int Grid::loadBoundaryFromFile(std::string filename) {
+Grid::GridLoadErrType Grid::loadBoundaryFromFile(std::string filename) {
     std::string fname = "bndry_"; 
     fname.append(filename);
     std::cout << "[" << this->className() << "] \treading boundary file: " << fname << std::endl;    
@@ -276,19 +281,19 @@ int Grid::loadBoundaryFromFile(std::string filename) {
         }
     } else {
         printf("Error opening boundary file to read\n"); 
-        return -1;
+        return NO_BOUNDARY_FILES;
         //		exit(EXIT_FAILURE);
     }
 
     fin.close(); 
 
     std::cout << "[" << this->className() << "] \tLoaded " << boundary_indices.size() << " boundary indices from \t" << fname << std::endl;
-    return 0; 
+    return GRID_AND_STENCILS_LOADED; 
 }
 
 //----------------------------------------------------------------------------
 
-int Grid::loadNormalsFromFile(std::string filename) {
+Grid::GridLoadErrType Grid::loadNormalsFromFile(std::string filename) {
     std::string fname = "nrmls_"; 
     fname.append(filename);
     std::cout << "[" << this->className() << "] \treading normals file: " << fname << std::endl;    
@@ -307,19 +312,19 @@ int Grid::loadNormalsFromFile(std::string filename) {
         }
     } else {
         printf("Error opening normals file to read\n"); 
-        return -1;
+        return NO_NORMAL_FILES;
         //		exit(EXIT_FAILURE);
     }
 
     fin.close(); 
 
     std::cout << "[" << this->className() << "] \tLoaded " << boundary_normals.size() << " boundary normals from \t" << fname << std::endl;
-    return 0; 
+    return GRID_AND_STENCILS_LOADED; 
 }
 
 //----------------------------------------------------------------------------
 
-int Grid::loadAvgRadiiFromFile(std::string filename) {
+Grid::GridLoadErrType Grid::loadAvgRadiiFromFile(std::string filename) {
     std::string fname = "avg_radii_"; 
     fname.append(filename);
     std::cout << "[" << this->className() << "] \treading average stencil radii file: " << fname << std::endl;    
@@ -338,19 +343,19 @@ int Grid::loadAvgRadiiFromFile(std::string filename) {
         }
     } else {
         printf("Error opening average stencil radii file to read\n"); 
-        return -1;
+        return NO_RADII_FILES;
         //		exit(EXIT_FAILURE);
     }
 
     fin.close(); 
 
     std::cout << "[" << this->className() << "] \tLoaded " << avg_stencil_radii.size() << " average stencil radii from \t" << fname << std::endl;
-    return 0; 
+    return GRID_AND_STENCILS_LOADED; 
 }
 
 //----------------------------------------------------------------------------
 
-int Grid::loadStencilsFromFile(std::string filename) {
+Grid::GridLoadErrType Grid::loadStencilsFromFile(std::string filename) {
     if (max_st_size > 0) {
         std::ostringstream prefix; 
         prefix << "stencils_maxsz" << this->max_st_size << "_" << filename; 
@@ -381,7 +386,7 @@ int Grid::loadStencilsFromFile(std::string filename) {
             }
         } else {
             printf("Error opening stencil file to read\n"); 
-            return -1;
+            return NO_STENCIL_FILES;
             //		exit(EXIT_FAILURE);
         }
 
@@ -391,14 +396,14 @@ int Grid::loadStencilsFromFile(std::string filename) {
     } else {
         std::cout << "[" << this->className() << "] \tMax stencil size not set. No stencils to read from disk" << std::endl;
     }
-    return 0;
+    return GRID_AND_STENCILS_LOADED; 
 }
 
 //----------------------------------------------------------------------------
 
-int Grid::loadExtraFromFile(std::string filename) {
+Grid::GridLoadErrType Grid::loadExtraFromFile(std::string filename) {
     std::cout << "No extra loads from disk required." << std::endl;
-    return 0; 
+    return GRID_AND_STENCILS_LOADED; 
 }
 
 //----------------------------------------------------------------------------
@@ -669,6 +674,8 @@ void Grid::generateStencilsKDTree()
         // The KDTree hasnt been constructed yet
         node_list_kdtree = new KDTree(node_list);
     }
+    std::cout << "DONE CONSTRUCTION TREE\n"; 
+    sleep(15); 
 
     for (unsigned int i = 0; i < node_list.size(); i++) {
         StencilType& st = stencil_map[i]; 
@@ -960,12 +967,12 @@ void Grid::checkStencilSize() {
 
     // for each node, a vector of stencil nodes (global indexing)
     if (stencil_map.size() < nb_rbf) {
-        std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory!" << std::endl;
+        std::cout << "[Grid] WARNING! stencil_map.size() < node_list.size(). Resizing this vector and possibly corrupting memory! (Reserving: " << nb_rbf << " * " << max_st_size << " * 8 = " << nb_rbf * max_st_size * 8 << " bytes)" << std::endl;
         stencil_map.reserve(nb_rbf);
         stencil_map.resize(nb_rbf);
         for (unsigned int i =0 ; i < nb_rbf; i++) {
-            stencil_map[i].reserve(nb_rbf); 
-            stencil_map[i].resize(nb_rbf); 
+            stencil_map[i].reserve(max_st_size); 
+            stencil_map[i].resize(max_st_size); 
         }
     }
 }

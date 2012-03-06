@@ -28,9 +28,9 @@
 using namespace std;
 
 // TODO: 
-//  benchmark assembly
-//  benchmark spmv
-//  benchmark CPU vs GPU spmv
+// Sort CSR, ELL, HYB by column. (use std::pair<unsigned int, unsigned int>
+// (sten[j], j) and sort on sten[j]. Then use the sorted j's to index sten[]
+// and lapl[]
 
 EB::TimerList tm;
 
@@ -138,7 +138,7 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
         for (unsigned int j = 0; j < n; j++) {
             A.row_indices[ind] =  i; 
             A.column_indices[ind] =  sten[j]; 
-            A.values[ind] = i; // -lapl[j]; 
+            A.values[ind] = -lapl[j]; 
             ind++; 
         }
     }
@@ -193,14 +193,15 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
     unsigned int ind = 0; 
     for (int i = 0; i < A.num_rows; i++) {
         StencilType& sten = grid.getStencil(i); 
+        std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         A.row_offsets[i] = ind;
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A.column_indices[ind] =  sten[j]; 
-            A.values[ind] = i; // -lapl[j]; 
+            A.column_indices[ind] =  sten[sort_ind[j]]; 
+            A.values[ind] = -lapl[j]; 
             ind++; 
         }
     }
@@ -259,12 +260,13 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
 
     for (int i = 0; i < A.num_rows; i++) {
         StencilType& sten = grid.getStencil(i); 
+        std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A.column_indices(i, j) =  sten[j]; 
-            A.values(i, j) = i; // -lapl[j]; 
+            A.column_indices(i, j) =  sten[sort_ind[j]]; 
+            A.values(i, j) = -lapl[j]; 
         }
     }
     tm[assemble_timer_name]->stop();
@@ -329,12 +331,13 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
 
     for (int i = 0; i < A.num_rows; i++) {
         StencilType& sten = grid.getStencil(i); 
+        std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A.ell.column_indices(i, j) =  sten[j]; 
-            A.ell.values(i, j) = i; // -lapl[j]; 
+            A.ell.column_indices(i, j) =  sten[sort_ind[j]]; 
+            A.ell.values(i, j) = -lapl[j]; 
             // A.coo.row_indices[ind] = 0; ...
         }
     }
@@ -387,12 +390,14 @@ int main(void)
     std::vector<std::string> grids; 
 #if 1
     grids.push_back("~/GRIDS/md/md005.00036"); 
+    #if 1
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/md/md089.08100"); 
     grids.push_back("~/GRIDS/md/md127.16384"); 
     grids.push_back("~/GRIDS/md/md165.27556"); 
+    #endif 
 #else
 
     grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 

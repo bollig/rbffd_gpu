@@ -10,6 +10,15 @@
 
 #include "common_typedefs.h"
 
+class ltind {
+    public: 
+        bool operator() (const std::pair<unsigned int,unsigned int> i, const std::pair<unsigned int,unsigned int> j)
+        {
+            return i.first <= j.first; 
+        }
+};
+
+
 class Grid 
 {
     public: 
@@ -256,6 +265,25 @@ class Grid
         { return stencil_map; }
         StencilType& getStencil(int indx)
         { return stencil_map[indx]; }
+        std::vector<unsigned int> getSortedStencilInd(int indx)
+        { 
+            std::set< std::pair<unsigned int, unsigned int> , ltind> sten_ind;
+            unsigned int i = 0; 
+            for (StencilType::iterator it = stencil_map[indx].begin(); it != stencil_map[indx].end(); it++) {
+                sten_ind.insert(std::pair<unsigned int,unsigned int>( *it, i ) ); 
+                i++; 
+            }
+            
+            //std::set< std::pair<unsigned int,unsigned int> , ltind>::iterator sorted_ids = sten_ind.begin(); 
+            std::vector<unsigned int> sorted_stencil_ind(stencil_map[indx].size());  
+            unsigned int j = 0; 
+            for (std::set< std::pair<unsigned int,unsigned int> , ltind>::iterator sorted_ids = sten_ind.begin(); sorted_ids != sten_ind.end(); sorted_ids++) {
+                sorted_stencil_ind[j] = sorted_ids->second; 
+                j++; 
+            }
+            return sorted_stencil_ind; 
+//            st[j] = (*sorted_ids).second; 
+        }
 
         std::vector<double>& getStencilRadii()
         { return avg_stencil_radii; }
@@ -399,6 +427,7 @@ class ltvec {
             return d1 <= d2;
         }
 };
+
 
 // allow insertion sort of <distance, node_indx> pairs for std::set
 class ltdist {

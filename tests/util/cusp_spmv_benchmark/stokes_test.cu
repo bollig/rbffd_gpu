@@ -15,13 +15,33 @@
 #include <cusp/print.h>
 #include <cusp/array2d.h>
 #include <cusp/multiply.h>
+#include <cusp/blas.h>
 
 #include <iostream>
 using namespace std;
 
+// PT is platform type
+template <class MatT, class PT>
+void benchmarkMultiply(MatT& A) {
+    // If we multiply a vector of 1s we should see our result equal 0 (if our
+    // RBF-FD weights are good)
+    cusp::array1d<double, PT> x(A.num_rows, 1); 
+    cusp::array1d<double, PT> b(A.num_rows, 10); 
+    cusp::multiply(A, x, b); 
+
+    cusp::array1d<double, cusp::host_memory> b_host = b;
+   std::cout << "l1   Norm: " << cusp::blas::nrm1(b_host) << std::endl;  
+   std::cout << "l2   Norm: " << cusp::blas::nrm2(b_host) << std::endl;  
+   std::cout << "linf Norm: " << cusp::blas::nrmmax(b_host) << std::endl;  
+#if 0
+    cusp::print(b); 
+#endif 
+}
+
 
 void test_COO ( RBFFD& der, Grid& grid, int platform) {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> MatType; 
+    typedef cusp::coo_matrix<int, double, cusp::device_memory> MatTypeGPU; 
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
@@ -46,11 +66,18 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
     cusp::array2d<double, cusp::host_memory> A_full(A); 
     cusp::print(A_full); 
     cusp::print(A); 
-#endif 
+#endif
+    if (platform) {
+        MatTypeGPU A_gpu(A); 
+        benchmarkMultiply<MatTypeGPU, cusp::device_memory>(A_gpu); 
+    } else { 
+        benchmarkMultiply<MatType, cusp::host_memory>(A); 
+    }
 }
 
 void test_CSR ( RBFFD& der, Grid& grid, int platform) {
     typedef cusp::csr_matrix<int, double, cusp::host_memory> MatType; 
+    typedef cusp::csr_matrix<int, double, cusp::device_memory> MatTypeGPU; 
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
@@ -77,11 +104,18 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
     cusp::print(A_full); 
     cusp::print(A); 
 #endif 
+    if (platform) {
+        MatTypeGPU A_gpu(A); 
+        benchmarkMultiply<MatTypeGPU, cusp::device_memory>(A_gpu); 
+    } else { 
+        benchmarkMultiply<MatType, cusp::host_memory>(A); 
+    }
 }
 
 
 void test_ELL ( RBFFD& der, Grid& grid, int platform) {
     typedef cusp::ell_matrix<int, double, cusp::host_memory> MatType; 
+    typedef cusp::ell_matrix<int, double, cusp::device_memory> MatTypeGPU; 
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
@@ -105,6 +139,12 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
     cusp::print(A_full); 
     cusp::print(A); 
 #endif 
+    if (platform) {
+        MatTypeGPU A_gpu(A); 
+        benchmarkMultiply<MatTypeGPU, cusp::device_memory>(A_gpu); 
+    } else { 
+        benchmarkMultiply<MatType, cusp::host_memory>(A); 
+    }
 }
 
 void test_HYB ( RBFFD& der, Grid& grid, int platform) {
@@ -119,6 +159,7 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
     // between the two formats. 
 
     typedef cusp::hyb_matrix<int, double, cusp::host_memory> MatType; 
+    typedef cusp::hyb_matrix<int, double, cusp::device_memory> MatTypeGPU; 
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
@@ -144,6 +185,12 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
     cusp::print(A_full); 
     cusp::print(A); 
 #endif 
+    if (platform) {
+        MatTypeGPU A_gpu(A); 
+        benchmarkMultiply<MatTypeGPU, cusp::device_memory>(A_gpu); 
+    } else { 
+        benchmarkMultiply<MatType, cusp::host_memory>(A); 
+    }
 }
 
 
@@ -232,11 +279,10 @@ int main(void)
         // enum PLATFORMS {CPU, GPU}; 
         // j indexes MAT_TYPES. 
         //for (int j = 0; j < 4; j++) 
-        int j = 3; 
+        int j = 0;
         {
             // CPU: 
             testSPMV(j, 0, der, grid); 
-            exit(-1);
             // GPU: 
             testSPMV(j, 1, der, grid); 
         }

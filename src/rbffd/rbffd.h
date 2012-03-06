@@ -263,6 +263,7 @@ class RBFFD
 
         // Same as next routine below, but this allows manual override fo the c1, c2 parameters
         void setEpsilonByParameters(double c1, double c2) {
+            std::cout << "Global Node List Size: " << grid_ref.getGlobalNodeListSize() << std::endl;
             // Epsilon as a function of condition number is a linear function: 
             double eps = c1 * sqrt(grid_ref.getGlobalNodeListSize()) - c2; 
             this->setEpsilon(eps); 

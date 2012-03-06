@@ -84,6 +84,7 @@ int GridReader::readNodeList(int expect_num_extra_dbls_per_line) {
     } else {
         std::cout << "[" << this->className() << "] \tLoaded " << nb_nodes << " nodes from \t" << filename << std::endl;
         n_nodes = nb_nodes;
+        global_num_nodes = n_nodes; 
     }
  
     // By default we dont try to load stencil files

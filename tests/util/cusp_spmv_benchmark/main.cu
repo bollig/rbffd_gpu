@@ -35,7 +35,7 @@ int main(void)
 
         // Off diagonals
         for (int j = 1; j < stencil_size; j++) {
-//            int k = rand() % A.num_cols;
+            //            int k = rand() % A.num_cols;
             int k = (i + j) % A.num_cols;
             // A(i,k) = -1;
             A.row_indices[ind] =  i; 
@@ -54,11 +54,11 @@ int main(void)
 
     cusp::array1d<double, cusp::host_memory> x(A.num_rows, 1); 
     cusp::array1d<double, cusp::host_memory> b = x; 
-    
+
     std::cout << "Multiplying matrices\n";
     cusp::multiply(A,x,b); 
 
-exit(-1);
+    exit(-1);
     // Convert the 2D memory block to a sparse representation
     cusp::coo_matrix<int, double, cusp::device_memory> A_dev(A);
 

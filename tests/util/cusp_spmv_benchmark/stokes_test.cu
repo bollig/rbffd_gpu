@@ -3,6 +3,7 @@
 
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
+#include "timer_eb.h" 
 
 #include <cusp/hyb_matrix.h>
 #include <cusp/ell_matrix.h>
@@ -17,6 +18,11 @@
 #include <cusp/multiply.h>
 #include <cusp/blas.h>
 
+
+#include <thrust/host_vector.h> 
+#include <thrust/device_vector.h>
+#include <thrust/generate.h>
+
 #include <iostream>
 using namespace std;
 
@@ -25,14 +31,26 @@ template <class MatT, class PT>
 void benchmarkMultiply(MatT& A) {
     // If we multiply a vector of 1s we should see our result equal 0 (if our
     // RBF-FD weights are good)
-    cusp::array1d<double, PT> x(A.num_rows, 1); 
-    cusp::array1d<double, PT> b(A.num_rows, 10); 
+    cusp::array1d<double, PT> x(A.num_rows, 1);
+#if 1
+    // generate random data on the host
+    thrust::host_vector<double> h_vec(A.num_rows);
+    thrust::generate(h_vec.begin(), h_vec.end(), rand);
+
+    // transfer to device and compute sum
+    cusp::array1d<double, PT> b = h_vec;
+#else 
+    cusp::array1d<double, PT> b(A.num_rows, 1);
+#endif 
     cusp::multiply(A, x, b); 
 
     cusp::array1d<double, cusp::host_memory> b_host = b;
-   std::cout << "l1   Norm: " << cusp::blas::nrm1(b_host) << std::endl;  
-   std::cout << "l2   Norm: " << cusp::blas::nrm2(b_host) << std::endl;  
-   std::cout << "linf Norm: " << cusp::blas::nrmmax(b_host) << std::endl;  
+    std::cout << "l1   Norm: " << cusp::blas::nrm1(b_host) << std::endl;  
+    std::cout << "l1   Norm: " << cusp::blas::nrm1(b) << std::endl;  
+    std::cout << "l2   Norm: " << cusp::blas::nrm2(b_host) << std::endl;  
+    std::cout << "l2   Norm: " << cusp::blas::nrm2(b) << std::endl;  
+    std::cout << "linf Norm: " << cusp::blas::nrmmax(b_host) << std::endl;  
+    std::cout << "linf Norm: " << cusp::blas::nrmmax(b) << std::endl;  
 #if 0
     cusp::print(b); 
 #endif 

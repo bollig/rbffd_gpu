@@ -436,9 +436,9 @@ int main(void)
         Grid::GridLoadErrType st_err = grid.loadStencilsFromFile(); 
         if (st_err == Grid::NO_STENCIL_FILES) {
             //            grid.generateStencils(Grid::ST_BRUTE_FORCE);   
-            grid.generateStencils(Grid::ST_KDTREE);   
-            //grid.setNSHashDims(10, 10,10);  
-            //grid.generateStencils(Grid::ST_HASH);   
+            //grid.generateStencils(Grid::ST_KDTREE);   
+            grid.setNSHashDims(50, 50,50);  
+            grid.generateStencils(Grid::ST_HASH);   
             if (writeIntermediate) {
                 grid.writeToFile(); 
             }
@@ -510,6 +510,7 @@ int main(void)
     // monitor will report solver progress and results
 #endif 
     tm.printAll();
+    tm.writeToFile();
     return EXIT_SUCCESS;
 }
 

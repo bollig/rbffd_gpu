@@ -297,7 +297,7 @@ int main(void)
         // enum PLATFORMS {CPU, GPU}; 
         // j indexes MAT_TYPES. 
         //for (int j = 0; j < 4; j++) 
-        int j = 0;
+        int j = 3;
         {
             // CPU: 
             testSPMV(j, 0, der, grid); 

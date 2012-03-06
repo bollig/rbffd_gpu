@@ -4,7 +4,7 @@ get_filename_component(_compiler ${CMAKE_CXX_COMPILER} NAME)
 
 IF (${_compiler} STREQUAL "icpc")
     add_definitions(-vec-report ) #-opt-report -par-report -vec-report ) 
-    SET(CUDA_NVCC_FLAGS "-ccbin;icc;-arch=sm_13")
+    SET(CUDA_NVCC_FLAGS "-ccbin;icc;-arch=sm_20")
 ELSE (${_compiler} STREQUAL "icpc")
     # ASSUME WE'RE USING GCC
     # auto-vectorize was added to -O3 in 2008. The old way of adding it was with the ftree-vectorize
@@ -20,10 +20,10 @@ ELSE (${_compiler} STREQUAL "icpc")
         set (ADDITIONAL_REQUIRED_LIBRARIES "${ADDITIONAL_REQUIRED_LIBRARIES};${iomp5}")
     ENDIF(${_hostname} MATCHES "kid.*")
     	
-    SET(CUDA_NVCC_FLAGS "-ccbin;g++;-arch=sm_13")
+    SET(CUDA_NVCC_FLAGS "-ccbin;g++;-arch=sm_20")
     
     if (USE_GCC44) 
-        SET(CUDA_NVCC_FLAGS "-ccbin;g++-4.4;-arch=sm_13")
+        SET(CUDA_NVCC_FLAGS "-ccbin;g++-4.4;-arch=sm_20")
     endif (USE_GCC44) 
 
 ENDIF (${_compiler} STREQUAL "icpc")

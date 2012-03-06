@@ -193,14 +193,14 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
     unsigned int ind = 0; 
     for (int i = 0; i < A.num_rows; i++) {
         StencilType& sten = grid.getStencil(i); 
-        std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
+        // std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         A.row_offsets[i] = ind;
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A.column_indices[ind] =  sten[sort_ind[j]]; 
+            A.column_indices[ind] =  sten[j]; 
             A.values[ind] = -lapl[j]; 
             ind++; 
         }
@@ -260,12 +260,12 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
 
     for (int i = 0; i < A.num_rows; i++) {
         StencilType& sten = grid.getStencil(i); 
-        std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
+        // std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A.column_indices(i, j) =  sten[sort_ind[j]]; 
+            A.column_indices(i, j) =  sten[j]; 
             A.values(i, j) = -lapl[j]; 
         }
     }
@@ -331,12 +331,12 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
 
     for (int i = 0; i < A.num_rows; i++) {
         StencilType& sten = grid.getStencil(i); 
-        std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
+        // std::vector<unsigned int> sort_ind = grid.getSortedStencilInd(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A.ell.column_indices(i, j) =  sten[sort_ind[j]]; 
+            A.ell.column_indices(i, j) =  sten[j]; 
             A.ell.values(i, j) = -lapl[j]; 
             // A.coo.row_indices[ind] = 0; ...
         }

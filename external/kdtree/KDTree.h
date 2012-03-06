@@ -153,12 +153,14 @@ class KDTree {
          */
     protected: 
         void setupTimers() {
+#ifdef BENCHMARK_KDTREE 
             t1 = new EB::Timer("[kdtree_t1] Update Recursively");
             t2 = new EB::Timer("[kdtree_t2] Build Recursively");
             t3 = new EB::Timer("[kdtree_t3] Init_common");
             t4 = new EB::Timer("[kdtree_t4] Heapsort Input Points (before Partitioning)");
             t5 = new EB::Timer("[kdtree_t5] Heapsort Remaining Points by Dimension (during Partitioning)");
             t6 = new EB::Timer("[kdtree_t6] Nearest N-neighbors query");
+#endif 
         }
 
 
@@ -183,9 +185,14 @@ class KDTree {
             this -> ndim = dim_num; //vector_points[0].size();
             this -> points = vector_points;
 
+#ifdef BENCHMARK_KDTREE 
             t3->start();
+#endif 
             init_common();
+
+#ifdef BENCHMARK_KDTREE 
             t3->end();
+#endif 
         }
 
 
@@ -206,9 +213,13 @@ class KDTree {
             this -> ndim = (points[0]).size();
             this -> points = points;
 
+#ifdef BENCHMARK_KDTREE 
             t3->start();
+#endif 
             init_common();
+#ifdef BENCHMARK_KDTREE 
             t3->end();
+#endif 
         }
 
     private:
@@ -228,9 +239,13 @@ class KDTree {
             // indexes[dim][i]: in dimension dim, which is the index of the i-th smallest element?
             vector< vector<int> > indexes(ndim, vector<int>(npoints, 0));
             for (int dIdx = 0; dIdx < ndim; dIdx++) {
+#ifdef BENCHMARK_KDTREE 
                 t4->start();
+#endif 
                 heaps[dIdx].heapsort(indexes[dIdx]);
+#ifdef BENCHMARK_KDTREE 
                 t4->end();
+#endif 
             }
 
             // Invert the indexing structure!!
@@ -260,9 +275,13 @@ class KDTree {
             // First partition is on every single point ([1:npoints])
             vector<int> pidx(npoints, 0);
             for (int i = 0; i < npoints; i++) pidx[i] = i;
+#ifdef BENCHMARK_KDTREE 
             t2->start();
+#endif 
             build_recursively(srtidx, pidx, 0);
+#ifdef BENCHMARK_KDTREE 
             t2->end();
+#endif 
         }
 
     public:
@@ -296,9 +315,13 @@ class KDTree {
             // indexes[dim][i]: in dimension dim, which is the index of the i-th smallest element?
             vector< vector<int> > indexes(ndim, vector<int>(npoints, 0));
             for (int dIdx = 0; dIdx < ndim; dIdx++) {
+#ifdef BENCHMARK_KDTREE 
                 t4->start();
+#endif 
                 heaps[dIdx].heapsort(indexes[dIdx]);
+#ifdef BENCHMARK_KDTREE 
                 t4->end();
+#endif 
             }
 
             // Invert the indexing structure!!
@@ -317,9 +340,13 @@ class KDTree {
             }
             globalNodeIndx = 0; // Start indexing the nodesPtrs from the front
 
+#ifdef BENCHMARK_KDTREE 
             t1->start();
+#endif 
             updateTree_recursively(srtidx, pidx, 0);
+#ifdef BENCHMARK_KDTREE 
             t1->end();
+#endif
         }
 
         // @return the number of points in the kd-tree
@@ -394,9 +421,13 @@ class KDTree {
             if ((double) pidx.size() * log((double) pidx.size()) < npoints) {
                 Larray.resize(pidx.size() / 2 + (pidx.size() % 2 == 0 ? 0 : 1), -1);
                 Rarray.resize(pidx.size() / 2, -1);
+#ifdef BENCHMARK_KDTREE 
                 t5->start();
+#endif 
                 heapsort(dim, pidx, pidx.size());
+#ifdef BENCHMARK_KDTREE 
                 t5->end();
+#endif 
                 std::copy(pidx.begin(), pidx.begin() + Larray.size(), Larray.begin());
                 std::copy(pidx.begin() + Larray.size(), pidx.end(), Rarray.begin());
                 pivot = pidx[(pidx.size() - 1) / 2];
@@ -509,7 +540,9 @@ class KDTree {
             if ((double) pidx.size() * log((double) pidx.size()) < npoints) {
                 Larray.resize(pidx.size() / 2 + (pidx.size() % 2 == 0 ? 0 : 1), -1);
                 Rarray.resize(pidx.size() / 2, -1);
+#ifdef BENCHMARK_KDTREE 
                 t5->start();
+#endif 
                 heapsort(dim, pidx, pidx.size());
                 t5->end();
                 std::copy(pidx.begin(), pidx.begin() + Larray.size(), Larray.begin());
@@ -674,7 +707,9 @@ class KDTree {
     public:
 
         void k_closest_points(const Point& Xq, int k, vector<int>& idxs, vector<double>& distances) {
+#ifdef BENCHMARK_KDTREE 
             t6->start();
+#endif 
             // initialize search data
 #if 1
             Bmin = Point(-DBL_MAX, -DBL_MAX, -DBL_MAX);//vector<double>(ndim, -DBL_MAX);
@@ -706,7 +741,9 @@ class KDTree {
             // invert the vector, passing first closest results
             std::reverse(idxs.begin(), idxs.end());
             std::reverse(distances.begin(), distances.end());
+#ifdef BENCHMARK_KDTREE 
             t6->stop();
+#endif 
         }
 
     private:

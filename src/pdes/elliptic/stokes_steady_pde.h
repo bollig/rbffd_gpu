@@ -35,7 +35,12 @@
 #include "viennacl/linalg/norm_2.hpp"     //generic l2-norm for vectors
 
 
+#if 0
+// This type is SLOW to assemble. The compressed works faster, but is slow in a product
+typedef boost::numeric::ublas::coordinate_matrix<double>                        MatType;
+#else
 typedef boost::numeric::ublas::compressed_matrix<double>                        MatType;
+#endif 
 typedef boost::numeric::ublas::vector<double>                                   VecType;
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS,
         boost::property<boost::vertex_color_t, boost::default_color_type,

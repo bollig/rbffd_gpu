@@ -319,11 +319,7 @@ void StokesSteadyPDE::fillRHS_discrete() {
     RHS_discrete = new VecType(ncols);
     tm["RHS_discrete"]->start();
     // This takes 21832.6 ms for N=10201.  Slow. But its the same for ublas and viennacl.
-#if 0 
-    *RHS_discrete = viennacl::linalg::prod(*LHS, *U_continuous); 
-#else 
-    axpy_prod(*LHS, *U_continuous, *RHS_discrete, false); 
-#endif 
+    *RHS_discrete = prod(*LHS, *U_continuous); 
     tm["RHS_discrete"]->stop();
 }
 
@@ -361,6 +357,7 @@ void StokesSteadyPDE::solve()
 
 void StokesSteadyPDE::solve_original() 
 {
+#if 0
     U_computed = new VecType(ncols);
     std::cout << "Solving...." << std::endl;
     // Solve L u = F
@@ -416,6 +413,7 @@ void StokesSteadyPDE::solve_original()
     this->write_to_file(*U_computed, "U_computed.mtx");
 
 //    this->write_to_file(VecType(prod(*DIV_operator, *U_computed)), "div.mtx"); 
+#endif
 }
 
 
@@ -444,7 +442,7 @@ void StokesSteadyPDE::solve_reordered()
     viennacl::linalg::jacobi_precond< MatType > ublas_jacobi(*LHS, viennacl::linalg::jacobi_tag());
     *U_computed = viennacl::linalg::solve(*LHS, *RHS_discrete, viennacl::linalg::gmres_tag(1e-6, 20), ublas_jacobi);
 #else 
-#if 1
+#if 0
     *U_reordered = viennacl::linalg::solve(*LHS_reordered, *RHS_reordered, viennacl::linalg::gmres_tag(1e-8, 200));
     this->write_to_file(*U_reordered, "U_reordered.mtx");
     this->get_original_order(*U_reordered, *U_computed);

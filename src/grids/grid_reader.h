@@ -2,6 +2,7 @@
 #define _GRID_READER_GRID_H_
 
 #include "grid_interface.h"
+#include "limits.h"
 
 class GridReader : public Grid {
     protected: 
@@ -11,8 +12,7 @@ class GridReader : public Grid {
         bool file_loaded;
     public:
 
-        // NOTE: the -1 here represents "UINT_MAX" from limits.h
-        GridReader(std::string filename_to_load, int numCols, unsigned int n_nodes_to_read = -1);
+        GridReader(std::string filename_to_load, int numCols, unsigned int n_nodes_to_read = UINT_MAX);
         virtual ~GridReader();
 
         // Overrides Grid::generate()

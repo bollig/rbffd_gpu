@@ -416,7 +416,7 @@ int main(void)
     bool writeIntermediate = true; 
 
     std::vector<std::string> grids; 
-#if 0
+#if 1
     grids.push_back("~/GRIDS/md/md005.00036"); 
 #if 1
     grids.push_back("~/GRIDS/md/md031.01024"); 

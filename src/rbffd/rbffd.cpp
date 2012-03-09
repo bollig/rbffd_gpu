@@ -1027,6 +1027,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         delete [] J; 
         delete [] val;
 
+        std::cout << "Loaded.\n";
         // let routines like RBFFD_CL::updateWeights(..) know that its time for
         // them to do some work
         weightsModified = true;

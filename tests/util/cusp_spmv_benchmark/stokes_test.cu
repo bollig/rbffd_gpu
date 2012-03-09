@@ -88,12 +88,13 @@ void benchmarkMultiplyDevice(MatT& A) {
 #endif 
     cusp::multiply(A, x, b); 
 
+    cudaThreadSynchronize();
 #if 1
     std::cout << "l1   Norm: " << cusp::blas::nrm1(b) << std::endl;  
     std::cout << "l2   Norm: " << cusp::blas::nrm2(b) << std::endl;  
     std::cout << "linf Norm: " << cusp::blas::nrmmax(b) << std::endl;  
 #endif 
-    cudaThreadSynchronize();
+
 #if 0
     cusp::print(b); 
 #endif 
@@ -115,13 +116,16 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
     unsigned int n = grid.getMaxStencilSize(); 
 
     char assemble_timer_name[256]; 
+    char copy_timer_name[256]; 
     char multiply_timer_name[256]; 
 
     sprintf(assemble_timer_name, "%u %s %s Assemble", N, matString, platformString); 
+    sprintf(copy_timer_name,     "%u %s %s Send2Dev", N, matString, platformString); 
     sprintf(multiply_timer_name, "%u %s %s Multiply", N, matString, platformString); 
 
     if (!tm.contains(assemble_timer_name)) {
         tm[assemble_timer_name] = new EB::Timer(assemble_timer_name);  
+        tm[copy_timer_name] = new EB::Timer(copy_timer_name);  
         tm[multiply_timer_name] = new EB::Timer(multiply_timer_name);
     }
     std::cout << "WORKING ON: " << assemble_timer_name << std::endl;
@@ -150,11 +154,15 @@ void test_COO ( RBFFD& der, Grid& grid, int platform) {
     cusp::print(A); 
 #endif
     std::cout << "\t\t\tMultiply\n";
-    tm[multiply_timer_name]->start();
+
     if (platform) {
+        tm[copy_timer_name]->start();
         MatTypeGPU A_gpu(A); 
+        tm[copy_timer_name]->stop();
+        tm[multiply_timer_name]->start();
         benchmarkMultiplyDevice<MatTypeGPU>(A_gpu); 
     } else { 
+        tm[multiply_timer_name]->start();
         benchmarkMultiplyHost<MatType>(A); 
     }
     tm[multiply_timer_name]->stop();
@@ -176,13 +184,16 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
     }
 
     char assemble_timer_name[256]; 
+    char copy_timer_name[256]; 
     char multiply_timer_name[256]; 
 
     sprintf(assemble_timer_name, "%u %s %s Assemble", N, matString, platformString); 
+    sprintf(copy_timer_name, "%u %s %s Send2Dev", N, matString, platformString); 
     sprintf(multiply_timer_name, "%u %s %s Multiply", N, matString, platformString); 
 
     if (!tm.contains(assemble_timer_name)) {
         tm[assemble_timer_name] = new EB::Timer(assemble_timer_name);  
+        tm[copy_timer_name] = new EB::Timer(copy_timer_name);  
         tm[multiply_timer_name] = new EB::Timer(multiply_timer_name);
     }
     std::cout << "WORKING ON: " << assemble_timer_name << std::endl;
@@ -215,11 +226,15 @@ void test_CSR ( RBFFD& der, Grid& grid, int platform) {
     cusp::print(A_full); 
     cusp::print(A); 
 #endif 
-    tm[multiply_timer_name]->start();
+
     if (platform) {
+        tm[copy_timer_name]->start();
         MatTypeGPU A_gpu(A); 
+        tm[copy_timer_name]->stop();
+        tm[multiply_timer_name]->start();
         benchmarkMultiplyDevice<MatTypeGPU>(A_gpu); 
     } else { 
+        tm[multiply_timer_name]->start();
         benchmarkMultiplyHost<MatType>(A); 
     }
     tm[multiply_timer_name]->stop();
@@ -242,17 +257,20 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
     }
 
     char assemble_timer_name[256]; 
+    char copy_timer_name[256]; 
     char multiply_timer_name[256]; 
 
     sprintf(assemble_timer_name, "%u %s %s Assemble", N, matString, platformString); 
+    sprintf(copy_timer_name, "%u %s %s Send2Dev", N, matString, platformString); 
     sprintf(multiply_timer_name, "%u %s %s Multiply", N, matString, platformString); 
 
     if (!tm.contains(assemble_timer_name)) {
         tm[assemble_timer_name] = new EB::Timer(assemble_timer_name);  
+        tm[copy_timer_name] = new EB::Timer(copy_timer_name);  
         tm[multiply_timer_name] = new EB::Timer(multiply_timer_name);
     }
     std::cout << "WORKING ON: " << assemble_timer_name << std::endl;
- 
+
     tm[assemble_timer_name]->start();
 
     // Allocate a (N,N) matrix with (N*n) total nonzeros and at most (n) nonzero per row
@@ -277,11 +295,14 @@ void test_ELL ( RBFFD& der, Grid& grid, int platform) {
     cusp::print(A); 
 #endif 
     std::cout << "\t\t\tMultiply\n";
-    tm[multiply_timer_name]->start();
     if (platform) {
+        tm[copy_timer_name]->start();
         MatTypeGPU A_gpu(A); 
+        tm[copy_timer_name]->stop();
+        tm[multiply_timer_name]->start();
         benchmarkMultiplyDevice<MatTypeGPU>(A_gpu); 
     } else { 
+        tm[multiply_timer_name]->start();
         benchmarkMultiplyHost<MatType>(A); 
     }
     tm[multiply_timer_name]->stop();
@@ -313,17 +334,20 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
     }
 
     char assemble_timer_name[256]; 
+    char copy_timer_name[256]; 
     char multiply_timer_name[256]; 
 
     sprintf(assemble_timer_name, "%u %s %s Assemble", N, matString, platformString); 
+    sprintf(copy_timer_name, "%u %s %s Send2Dev", N, matString, platformString); 
     sprintf(multiply_timer_name, "%u %s %s Multiply", N, matString, platformString); 
 
     if (!tm.contains(assemble_timer_name)) {
         tm[assemble_timer_name] = new EB::Timer(assemble_timer_name);  
+        tm[copy_timer_name] = new EB::Timer(copy_timer_name);  
         tm[multiply_timer_name] = new EB::Timer(multiply_timer_name);
     }
     std::cout << "WORKING ON: " << assemble_timer_name << std::endl;
- 
+
     tm[assemble_timer_name]->start();
     // Allocate a (N,N) matrix with (N*n) total nonzeros and at most (n) nonzero per row
     // and 0 extra non-zeros per row
@@ -349,11 +373,15 @@ void test_HYB ( RBFFD& der, Grid& grid, int platform) {
     cusp::print(A); 
 #endif 
     std::cout << "\t\t\tMultiply\n";
-    tm[multiply_timer_name]->start();
+
     if (platform) {
+        tm[copy_timer_name]->start();
         MatTypeGPU A_gpu(A); 
+        tm[copy_timer_name]->stop();
+        tm[multiply_timer_name]->start();
         benchmarkMultiplyDevice<MatTypeGPU>(A_gpu); 
     } else { 
+        tm[multiply_timer_name]->start();
         benchmarkMultiplyHost<MatType>(A); 
     } 
     tm[multiply_timer_name]->stop();
@@ -388,19 +416,19 @@ int main(void)
     bool writeIntermediate = true; 
 
     std::vector<std::string> grids; 
-#if 1
+#if 0
     grids.push_back("~/GRIDS/md/md005.00036"); 
-    #if 1
+#if 1
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/md/md089.08100"); 
     grids.push_back("~/GRIDS/md/md127.16384"); 
     grids.push_back("~/GRIDS/md/md165.27556"); 
-    #endif 
+#endif 
 #else
 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
+//    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
     grids.push_back("~/GRIDS/geoff/scvtmesh_500k_nodes.ascii"); 
     grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #endif 
@@ -419,34 +447,34 @@ int main(void)
         double eps_c2 = 0.274;
 
 
-        GridReader grid(grid_name, 4); 
-        grid.setMaxStencilSize(stencil_size); 
+        GridReader* grid = new GridReader(grid_name, 4); 
+        grid->setMaxStencilSize(stencil_size); 
         // We do not read until generate is called: 
 
-        Grid::GridLoadErrType err = grid.loadFromFile(); 
+        Grid::GridLoadErrType err = grid->loadFromFile(); 
         if (err == Grid::NO_GRID_FILES) 
         {
-            grid.generate();
+            grid->generate();
             if (writeIntermediate) {
-                grid.writeToFile(); 
+                grid->writeToFile(); 
             }
         } 
         std::cout << "Generate Stencils\n";
-        Grid::GridLoadErrType st_err = grid.loadStencilsFromFile(); 
+        Grid::GridLoadErrType st_err = grid->loadStencilsFromFile(); 
         if (st_err == Grid::NO_STENCIL_FILES) {
-            //            grid.generateStencils(Grid::ST_BRUTE_FORCE);   
-            //grid.generateStencils(Grid::ST_KDTREE);   
-            grid.setNSHashDims(50, 50,50);  
-            grid.generateStencils(Grid::ST_HASH);   
+            //            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
+            //grid->generateStencils(Grid::ST_KDTREE);   
+            grid->setNSHashDims(50, 50,50);  
+            grid->generateStencils(Grid::ST_HASH);   
             if (writeIntermediate) {
-                grid.writeToFile(); 
+                grid->writeToFile(); 
             }
         }
 
 
         std::cout << "Generate RBFFD Weights\n"; 
         tm[weight_timer_name]->start(); 
-        RBFFD der(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, &grid, 3, 0); 
+        RBFFD der(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, grid, 3, 0); 
         der.setEpsilonByParameters(eps_c1, eps_c2);
         int der_err = der.loadAllWeightsFromFile(); 
         if (der_err) {
@@ -459,10 +487,6 @@ int main(void)
         }
 
         cout << "Allocating device memory\n" << std::endl;
-
-        // enum MAT_TYPES {COO, CSR, ELL, HYB};
-        // enum PLATFORMS {CPU, GPU}; 
-        // j indexes MAT_TYPES. 
 #if 0
         for (int k = 0; k < 5; k++) 
 #endif 
@@ -470,19 +494,13 @@ int main(void)
             for (int j = 0; j < 4; j++) 
             {
                 // CPU: 
-                testSPMV(j, 0, der, grid); 
+                testSPMV(j, 0, der, *grid); 
                 // GPU: 
-                testSPMV(j, 1, der, grid); 
+                testSPMV(j, 1, der, *grid); 
             }
         }
 
-#if 0
-        cusp::array1d<double, cusp::host_memory> x(A.num_rows, 1); 
-        cusp::array1d<double, cusp::host_memory> b = x; 
-
-        std::cout << "Multiplying matrices\n";
-        cusp::multiply(A,x,b); 
-#endif 
+        delete(grid); 
     }
 #if 0
     exit(-1);

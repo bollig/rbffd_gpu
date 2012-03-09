@@ -41,6 +41,7 @@
 		util/surface_integral
 		util/surface_projection
 		util/viennacl_simple_example	# Needs macro for add_cl_test
+		util/viennacl_spmv_benchmark
         #util/vtk_stencil_visualizer
 		util/test_complex
 		util/test_template_macros

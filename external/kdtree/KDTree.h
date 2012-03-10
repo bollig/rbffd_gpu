@@ -86,7 +86,7 @@ class KDTree {
         ~KDTree() {
             for (unsigned int i = 0; i < nodesPtrs.size(); i++)
                 delete nodesPtrs[i];
-            t1->printAll();
+//            t1->printAll();
         }
 
         /// Heapsort algorithm used by fast KDtree construction

@@ -49,6 +49,9 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
     derTypeStr[XSFC_i] = "Xsfc";   // Surface gradient (x direction) of sphere 
     derTypeStr[YSFC_i] = "Ysfc";   // Surface gradient (y direction) of sphere 
     derTypeStr[ZSFC_i] = "Zsfc";   // Surface gradient (z direction) of sphere 
+    derTypeStr[ALT_XSFC_i] = "Alt_Xsfc";   // Surface gradient (z direction) of sphere 
+    derTypeStr[ALT_YSFC_i] = "Alt_Ysfc";   // Surface gradient (z direction) of sphere 
+    derTypeStr[ALT_ZSFC_i] = "Alt_Zsfc";   // Surface gradient (z direction) of sphere 
 #endif 
     derTypeStr[INTERP_i] = "interp";
 
@@ -335,9 +338,9 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
         double yy = center.y(); 
         double zz = center.z(); 
         for (int j = 0; j < n; j++) {
-            this->weights[XSFC_i][irbf][j] = (1-xx*xx) * this->weights[X_i][irbf][j] + (-xx*yy) * this->weights[Y_i][irbf][j] + (-xx*zz) * this->weights[Z_i][irbf][j]; 
-            this->weights[YSFC_i][irbf][j] = (-xx*yy) * this->weights[X_i][irbf][j] + (1-yy*yy) * this->weights[Y_i][irbf][j] + (-yy*zz) * this->weights[Z_i][irbf][j]; 
-            this->weights[ZSFC_i][irbf][j] = (-xx*zz) * this->weights[X_i][irbf][j] + (-yy*zz) * this->weights[Y_i][irbf][j] + (1-zz*zz) * this->weights[Z_i][irbf][j];  
+            this->weights[ALT_XSFC_i][irbf][j] = (1-xx*xx) * this->weights[X_i][irbf][j] + (-xx*yy) * this->weights[Y_i][irbf][j] + (-xx*zz) * this->weights[Z_i][irbf][j]; 
+            this->weights[ALT_YSFC_i][irbf][j] = (-xx*yy) * this->weights[X_i][irbf][j] + (1-yy*yy) * this->weights[Y_i][irbf][j] + (-yy*zz) * this->weights[Z_i][irbf][j]; 
+            this->weights[ALT_ZSFC_i][irbf][j] = (-xx*zz) * this->weights[X_i][irbf][j] + (-yy*zz) * this->weights[Y_i][irbf][j] + (1-zz*zz) * this->weights[Z_i][irbf][j];  
         }
     }
 
@@ -456,11 +459,35 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 }
                 break;
             case XSFC: 
+                {
+                // Dot product
+                double xTx_k = xjv * x0v; 
+                //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z(); 
+                double xdv = x0v.x() * xTx_k - xjv.x(); 
+                rhs(j,0) = xdv * rbf.rderiv_over_r(diff); 
+                }
+                break; 
             case YSFC: 
+                {
+                double xTx_k = xjv * x0v; 
+                //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z(); 
+                double ydv = x0v.y() * xTx_k - xjv.y(); 
+                rhs(j,0) = ydv * rbf.rderiv_over_r(diff); 
+                }
+                break; 
             case ZSFC: 
-                // We'll fill with 0s. Then we'll overwrite the solution with the merged X,Y,Z weights. 
-                rhs(j, 0) = 0.;
+                {
+                double xTx_k = xjv * x0v; 
+                //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z(); 
+                double zdv = x0v.z() * xTx_k - xjv.z(); 
+                rhs(j,0) = zdv * rbf.rderiv_over_r(diff);            
+                }
                 break ;
+            case ALT_XSFC:
+            case ALT_YSFC:
+            case ALT_ZSFC:
+                rhs(j,0) = 0; 
+                break;
             case HV: 
                 // FIXME: this is only for 2D right now
                 rhs(j,0) = rbf.hyperviscosity(diff, hv_k);

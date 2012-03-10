@@ -675,7 +675,7 @@ void Grid::generateStencilsKDTree()
         node_list_kdtree = new KDTree(node_list);
     }
     std::cout << "DONE CONSTRUCTION TREE\n"; 
-    sleep(15); 
+    //sleep(15); 
 
     for (unsigned int i = 0; i < node_list.size(); i++) {
         StencilType& st = stencil_map[i]; 

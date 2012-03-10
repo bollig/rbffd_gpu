@@ -35,21 +35,28 @@ class RBFFD
         // LAMBDA is longitude
         // THETA is latitude
         // SPH_LAPL is spherical laplacian (Laplace-Beltrami Operator)
+        //
+        // NOTE: the ALT_* are alternative ways to express derivative weights
+        // as linear combinations of other weights (i.e. ALT_XSFC can be
+        // obtained by linear combinations of X, Y, and Z)
 
         enum DerType {
-            X       = 0x1,
-            Y       = 0x2,
-            Z       = 0x4,
-            LAPL    = 0x8,
-            R       = 0x10,
-            HV      = 0x20,
-            LAMBDA  = 0x40,
-            THETA   = 0x80, 
-            LSFC    = 0x100,
-            XSFC    = 0x200, 
-            YSFC    = 0x400, 
-            ZSFC    = 0x800, 
-            INTERP  = 0x1000
+            X       =    0x1,
+            Y       =    0x2,
+            Z       =    0x4,
+            LAPL    =    0x8,
+            R       =   0x10,
+            HV      =   0x20,
+            LAMBDA  =   0x40,
+            THETA   =   0x80, 
+            LSFC    =  0x100,
+            XSFC    =  0x200, 
+            YSFC    =  0x400, 
+            ZSFC    =  0x800, 
+            ALT_XSFC= 0x1000, 
+            ALT_YSFC= 0x2000, 
+            ALT_ZSFC= 0x4000, 
+            INTERP  = 0x8000
         };
 
         // THIS ***MUST*** MIRROR THE ORDER IN DerType 
@@ -66,6 +73,9 @@ class RBFFD
             XSFC_i   ,
             YSFC_i   ,
             ZSFC_i  ,  
+            ALT_XSFC_i  ,  
+            ALT_YSFC_i  ,  
+            ALT_ZSFC_i  ,  
             INTERP_i, 
             //
             // Leave this at the end
@@ -480,10 +490,10 @@ class RBFFD
         // Returns T/F whether the SFC types were found
         bool adjustForSFCTypes() {
             // If ANY of the SFC types are requested we'll need X Y and Z. 
-            if ((computedTypes & XSFC) | (computedTypes & YSFC) | (computedTypes & ZSFC)) {
+            if ((computedTypes & ALT_XSFC) | (computedTypes & ALT_YSFC) | (computedTypes & ALT_ZSFC)) {
                 std::cout << "Adjusting for the SFC types\n";
                 // IF we compute for one type of SFC we make sure to compute for them all
-                this->appendDerTypes(X | Y | Z | XSFC | YSFC | ZSFC); 
+                this->appendDerTypes(X | Y | Z | ALT_XSFC | ALT_YSFC | ALT_ZSFC); 
                 
 #if 0
                 this->removeDerType(XSFC);

@@ -78,9 +78,10 @@ void benchmark_GMRES_Host(MatT& A, VecT& F, VecT& U_exact) {
     VecT F_discrete(A.size(), 1);
     F_discrete = viennacl::linalg::prod(A, U_exact); 
 
-    std::cout << "l1   Norm: " << boost::numeric::ublas::norm_1(F_discrete - F) << std::endl;  
-    std::cout << "l2   Norm: " << boost::numeric::ublas::norm_2(F_discrete - F) << std::endl;  
-    std::cout << "linf Norm: " << boost::numeric::ublas::norm_inf(F_discrete - F) << std::endl;  
+
+    std::cout << "Rel l1   Norm: " << boost::numeric::ublas::norm_1(F_discrete - F) / boost::numeric::ublas::norm_1(F) << std::endl;  
+    std::cout << "Rel l2   Norm: " << boost::numeric::ublas::norm_2(F_discrete - F) / boost::numeric::ublas::norm_2(F) << std::endl;  
+    std::cout << "Rel linf Norm: " << boost::numeric::ublas::norm_inf(F_discrete - F) / boost::numeric::ublas::norm_inf(F) << std::endl;  
 }
 
 template <typename MatT, typename VecT>
@@ -94,9 +95,9 @@ void benchmark_GMRES_Device(MatT& A, VecT& F, VecT& U_exact) {
 #endif 
     //viennacl::ocl::current_context().get_queue().finish();
 
-    std::cout << "l1   Norm: " << viennacl::linalg::norm_1(F_discrete - F) << std::endl;  
-    std::cout << "l2   Norm: " << viennacl::linalg::norm_2(F_discrete - F) << std::endl;  
-    std::cout << "linf Norm: " << viennacl::linalg::norm_inf(F_discrete - F) << std::endl;  
+    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(F_discrete - F) / viennacl::linalg::norm_1(F) << std::endl;  
+    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(F_discrete - F) / viennacl::linalg::norm_2(F) << std::endl;  
+    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(F_discrete - F) / viennacl::linalg::norm_inf(F) << std::endl;  
 }
 
 template <class MatType=STL_Sparse_Mat>

@@ -66,7 +66,7 @@ namespace viennacl
         }
         
         // Step 2: Set up matrix data:
-        std::cout << "Number of entries: " << num_entries << std::endl;
+       // std::cout << "Number of entries: " << num_entries << std::endl;
         gpu_matrix.nonzeros_ = num_entries;
         gpu_matrix.rows_ = cpu_matrix.size1();
         gpu_matrix.cols_ = cpu_matrix.size2();

@@ -17,13 +17,17 @@
 #include <viennacl/vector.hpp> 
 
 #include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/io.hpp>
+
+#include "utils/spherical_harmonics.h"
 
 #include <CL/opencl.h>
 
 #include <iostream>
 #include <sstream> 
 #include <map>
+#include <fstream> 
 #include <typeinfo> 
 using namespace std;
 
@@ -36,12 +40,16 @@ typedef std::vector< std::map< unsigned int, double> > STL_Sparse_Mat;
 typedef viennacl::compressed_matrix<double> VCL_CSR_Mat; 
 typedef viennacl::coordinate_matrix<double> VCL_COO_Mat; 
 
+//typedef std::vector<double> STL_Vec; 
+typedef boost::numeric::ublas::vector<double> STL_Vec; 
+typedef viennacl::vector<double> VCL_Vec; 
+
 enum MatrixType : int
 {
     COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, DUMMY
 };
 
-const char* matTypeStrings[] = 
+const char* assemble_t_eStrings[] = 
 {
     //stringify( COO_CPU ), //STL_Sparse_Mat ), 
     stringify( STL_Sparse_Mat ), 
@@ -65,29 +73,20 @@ EB::TimerList tm;
 
 //---------------------------------
 
-template <typename MatT>
-void benchmarkMultiplyHost(MatT& A) {
-    // If we multiply a vector of 1s we should see our result equal 0 (if our
-    // RBF-FD weights are good)
-    std::vector<double> x(A.size(), 1);
-    std::vector<double> b(A.size(), 1);
-    b = viennacl::linalg::prod(A, x); 
+template <typename MatT, typename VecT>
+void benchmark_GMRES_Host(MatT& A, VecT& F, VecT& U_exact) {
+    VecT F_discrete(A.size(), 1);
+    F_discrete = viennacl::linalg::prod(A, U_exact); 
 
-    std::cout << "l1   Norm: " << viennacl::linalg::norm_1(b) << std::endl;  
-    std::cout << "l2   Norm: " << viennacl::linalg::norm_2(b) << std::endl;  
-    std::cout << "linf Norm: " << viennacl::linalg::norm_inf(b) << std::endl;  
+    std::cout << "l1   Norm: " << boost::numeric::ublas::norm_1(F_discrete - F) << std::endl;  
+    std::cout << "l2   Norm: " << boost::numeric::ublas::norm_2(F_discrete - F) << std::endl;  
+    std::cout << "linf Norm: " << boost::numeric::ublas::norm_inf(F_discrete - F) << std::endl;  
 }
 
-template <typename MatT>
-void benchmarkMultiplyDevice(MatT& A) {
-    // If we multiply a vector of 1s we should see our result equal 0 (if our
-    // RBF-FD weights are good)
-    std::vector<double> x_host(A.size1(), 1);
-    viennacl::vector<double> x(A.size1());
-    viennacl::copy(x_host.begin(), x_host.end(), x.begin());
-
-    viennacl::vector<double> b(A.size1());
-    b = viennacl::linalg::prod(A, x); 
+template <typename MatT, typename VecT>
+void benchmark_GMRES_Device(MatT& A, VecT& F, VecT& U_exact) {
+    VecT F_discrete(F.size());
+    F_discrete = viennacl::linalg::prod(A, U_exact); 
 
 #if 0
     std::vector<double> b_host(A.size1(), 1);
@@ -95,9 +94,9 @@ void benchmarkMultiplyDevice(MatT& A) {
 #endif 
     //viennacl::ocl::current_context().get_queue().finish();
 
-    std::cout << "l1   Norm: " << viennacl::linalg::norm_1(b) << std::endl;  
-    std::cout << "l2   Norm: " << viennacl::linalg::norm_2(b) << std::endl;  
-    std::cout << "linf Norm: " << viennacl::linalg::norm_inf(b) << std::endl;  
+    std::cout << "l1   Norm: " << viennacl::linalg::norm_1(F_discrete - F) << std::endl;  
+    std::cout << "l2   Norm: " << viennacl::linalg::norm_2(F_discrete - F) << std::endl;  
+    std::cout << "linf Norm: " << viennacl::linalg::norm_inf(F_discrete - F) << std::endl;  
 }
 
 template <class MatType=STL_Sparse_Mat>
@@ -120,66 +119,100 @@ void assemble_LHS ( RBFFD& der, Grid& grid, MatType& A){
     }
 }
 
-template <class MatType, class MultMatType, MatrixType matType, MatrixType multType>
+template <class MatType, class VecType=STL_Vec>
+void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
+    SphericalHarmonic::Sph32 UU; 
+
+    unsigned int N = grid.getNodeListSize(); 
+    //unsigned int n = grid.getMaxStencilSize(); 
+    std::vector<NodeType>& nodes = grid.getNodeList(); 
+
+    for (unsigned int i = 0; i < N; i++) {
+        NodeType& node = nodes[i]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        U_exact[i] = UU.eval(Xx, Yy, Zz); 
+        // Solving -lapl(u) = f
+        F[i] = -UU.lapl(Xx, Yy, Zz); 
+    }
+}
+
+template <class MatType, class OpMatType, MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_SpMV(RBFFD& der, Grid& grid) {
     unsigned int N = grid.getNodeListSize(); 
 
     char test_name[256]; 
     char assemble_timer_name[256]; 
     char copy_timer_name[512]; 
-    char multiply_timer_name[256]; 
+    char test_timer_name[256]; 
 
-    sprintf(test_name, "%u SpMV (%s -> %s)", N, matTypeStrings[matType], matTypeStrings[multType]); 
-    sprintf(assemble_timer_name, "%u %s Assemble", N, matTypeStrings[matType]); 
-    sprintf(copy_timer_name,     "%u %s Copy To %s", N, matTypeStrings[matType], matTypeStrings[multType]); 
-    sprintf(multiply_timer_name, "%u %s Multiply", N, matTypeStrings[multType]);
+    sprintf(test_name, "%u SpMV (%s -> %s)", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]); 
+    sprintf(assemble_timer_name, "%u %s Assemble", N, assemble_t_eStrings[assemble_t_e]); 
+    sprintf(copy_timer_name,     "%u %s Copy To %s", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]); 
+    sprintf(test_timer_name, "%u %s test", N, assemble_t_eStrings[operate_t_e]);
 
     if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
     if (!tm.contains(copy_timer_name)) { tm[copy_timer_name] = new EB::Timer(copy_timer_name); } 
-    if (!tm.contains(multiply_timer_name)) { tm[multiply_timer_name] = new EB::Timer(multiply_timer_name); } 
+    if (!tm.contains(test_timer_name)) { tm[test_timer_name] = new EB::Timer(test_timer_name); } 
 
 
     std::cout << test_name << std::endl;
 
     MatType* A = NULL; 
-    MultMatType* A_mult = NULL; 
+    OpMatType* A_op = NULL; 
 
     // Assemble the matrix
     // ----------------------
     tm[assemble_timer_name]->start(); 
     A = new MatType(N); 
     assemble_LHS<MatType>(der, grid, *A);  
+    
+    STL_Vec* F = new STL_Vec(N, 1);
+    STL_Vec* U_exact = new STL_Vec(N, 1);
+    assemble_RHS<MatType>(der, grid, *F, *U_exact);  
     tm[assemble_timer_name]->stop(); 
 
     tm[copy_timer_name]->start();
-    A_mult = new MultMatType(N,N); 
-    copy(*A, *A_mult);
+    A_op = new OpMatType(N,N); 
+    copy(*A, *A_op);
+
+    VCL_Vec* F_op = new VCL_Vec(N);
+    VCL_Vec* U_exact_op = new VCL_Vec(N);
+    viennacl::copy(F->begin(), F->end(), F_op->begin());
+    viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_op->begin());
     tm[copy_timer_name]->stop();
 
-    tm[multiply_timer_name]->start();
-    benchmarkMultiplyDevice<MultMatType>(*A_mult);
-    tm[multiply_timer_name]->stop();
+    tm[test_timer_name]->start();
+    // Use GMRES to solve A*u = F
+    benchmark_GMRES_Device<OpMatType>(*A_op, *F_op, *U_exact_op);
+    tm[test_timer_name]->stop();
 
     // Cleanup
     delete(A);
-    delete(A_mult);
+    delete(A_op);
+    delete(F);
+    delete(U_exact);
+    delete(F_op);
+    delete(U_exact_op);
 }
 
-template <class MatType, MatrixType matType, MatrixType multType>
+template <class MatType, MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_SpMV(RBFFD& der, Grid& grid) {
 
     unsigned int N = grid.getNodeListSize(); 
 
     char test_name[256]; 
     char assemble_timer_name[256]; 
-    char multiply_timer_name[256]; 
+    char test_timer_name[256]; 
 
-    sprintf(test_name, "%u SpMV (%s -> %s)", N, matTypeStrings[matType], matTypeStrings[multType]); 
-    sprintf(assemble_timer_name, "%u %s Assemble", N, matTypeStrings[matType]); 
-    sprintf(multiply_timer_name, "%u %s Multiply", N, matTypeStrings[matType]);
+    sprintf(test_name, "%u SpMV (%s -> %s)", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]); 
+    sprintf(assemble_timer_name, "%u %s Assemble", N, assemble_t_eStrings[assemble_t_e]); 
+    sprintf(test_timer_name, "%u %s test", N, assemble_t_eStrings[assemble_t_e]);
 
     if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
-    if (!tm.contains(multiply_timer_name)) { tm[multiply_timer_name] = new EB::Timer(multiply_timer_name); } 
+    if (!tm.contains(test_timer_name)) { tm[test_timer_name] = new EB::Timer(test_timer_name); } 
 
     std::cout << test_name << std::endl;
 
@@ -188,44 +221,55 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     tm[assemble_timer_name]->start(); 
     MatType* A = new MatType(N); 
     assemble_LHS<MatType>(der, grid, *A);  
+
+    STL_Vec* F = new STL_Vec(N, 1);
+    STL_Vec* U_exact = new STL_Vec(N, 1);
+    assemble_RHS<MatType>(der, grid, *F, *U_exact);  
     tm[assemble_timer_name]->stop(); 
 
-    
-    tm[multiply_timer_name]->start();
-    benchmarkMultiplyHost<MatType>(*A);
-    tm[multiply_timer_name]->stop();
+#if 0
+    std::ofstream f_out("F.mtx"); 
+    for (unsigned int i = 0; i < N; i++) {
+        f_out << (*F)[i] << std::endl;
+    }
+    f_out.close();
+#endif 
+
+    tm[test_timer_name]->start();
+    benchmark_GMRES_Host<MatType>(*A, *F, *U_exact);
+    tm[test_timer_name]->stop();
 
     // Cleanup
     delete(A);
     }
 
-template <class MatType, MatrixType matType, MatrixType multType>
+template <class MatType, MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_test(RBFFD& der, Grid& grid) {
-    switch (multType) {
+    switch (operate_t_e) {
         case COO_GPU: 
-            run_SpMV<MatType, VCL_COO_Mat, matType, multType>(der, grid); 
+            run_SpMV<MatType, VCL_COO_Mat, assemble_t_e, operate_t_e>(der, grid); 
             break;
         case CSR_GPU:
-            run_SpMV<MatType, VCL_CSR_Mat, matType, multType>(der, grid); 
+            run_SpMV<MatType, VCL_CSR_Mat, assemble_t_e, operate_t_e>(der, grid); 
             break; 
         case COO_CPU: 
         case CSR_CPU: 
-            run_SpMV<MatType, matType, multType>(der, grid); 
+            run_SpMV<MatType, assemble_t_e, operate_t_e>(der, grid); 
             break; 
         default: 
-            std::cout << "ERROR! Unsupported multiply type\n"; 
+            std::cout << "ERROR! Unsupported GMRES type\n"; 
     }
 }
 
-template <MatrixType matType, MatrixType multType>
+template <MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_test(RBFFD& der, Grid& grid) {
-    switch (matType) {
+    switch (assemble_t_e) {
         case COO_CPU:
         case CSR_CPU:
-            run_test<STL_Sparse_Mat, matType, multType>(der, grid); 
+            run_test<STL_Sparse_Mat, assemble_t_e, operate_t_e>(der, grid); 
             break;
         case DUMMY: 
-            run_SpMV<STL_Sparse_Mat, VCL_COO_Mat, matType, matType>(der, grid); 
+            run_SpMV<STL_Sparse_Mat, VCL_COO_Mat, assemble_t_e, assemble_t_e>(der, grid); 
             break; 
         default: 
             std::cout << "ERROR! Unsupported assembly type\n"; 
@@ -239,9 +283,9 @@ int main(void)
 
     std::vector<std::string> grids; 
 
-#if 1 
     //grids.push_back("~/GRIDS/md/md005.00036"); 
     grids.push_back("~/GRIDS/md/md031.01024"); 
+#if 1 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/md/md089.08100"); 
@@ -320,10 +364,12 @@ int main(void)
         {
             run_test<COO_CPU, COO_CPU>(der, *grid); 
             run_test<COO_CPU, COO_GPU>(der, *grid); 
+#if 1
             run_test<CSR_CPU, CSR_CPU>(der, *grid); 
             run_test<CSR_CPU, CSR_GPU>(der, *grid); 
             run_test<COO_CPU, CSR_GPU>(der, *grid); 
             run_test<CSR_CPU, COO_GPU>(der, *grid); 
+#endif 
         }
 
         delete(grid); 

@@ -105,6 +105,7 @@ namespace SphericalHarmonic
     // Y_3^2
     class Sph32 : public SphericalHarmonicBase
     {
+        public: 
         virtual double eval(double Xx, double Yy, double Zz) {
             return (Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*Zz)/(4.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),1.5));
         }
@@ -125,6 +126,7 @@ namespace SphericalHarmonic
     // Y_10^5
     class Sph105 : public SphericalHarmonicBase
     {
+        public: 
         virtual double eval(double Xx, double Yy, double Zz) {
             return (-3*Sqrt(1001/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),2.5)*Zz*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
                     (15*Power((Xx*Xx) + (Yy*Yy),2) - 140*((Xx*Xx) + (Yy*Yy))*(Zz*Zz) + 168*Power(Zz,4))*Cos(5*ArcTan(Xx,Yy)))/
@@ -163,6 +165,7 @@ namespace SphericalHarmonic
     // Y_3^2 + Y_10^5
     class Sph32105 : public SphericalHarmonicBase
     {
+        public: 
         virtual double eval(double Xx, double Yy, double Zz) {
             return (Sqrt(105/Pi)*(Xx - Yy)*(Xx + Yy)*Zz)/(4.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),1.5)) - 
                 (3*Sqrt(1001/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),2.5)*Zz*Sqrt(1/((Xx*Xx) + (Yy*Yy) + (Zz*Zz)))*
@@ -205,6 +208,7 @@ namespace SphericalHarmonic
     // Y_20^20
     class Sph2020 : public SphericalHarmonicBase
     {
+        public: 
         virtual double eval(double Xx, double Yy, double Zz) {
             return (3*Sqrt(156991880045/(2.*Pi))*Power((Xx*Xx) + (Yy*Yy),10)*Cos(20*ArcTan(Xx,Yy)))/
                    (524288.*Power((Xx*Xx) + (Yy*Yy) + (Zz*Zz),10));

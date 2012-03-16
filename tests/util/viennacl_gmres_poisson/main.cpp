@@ -37,11 +37,13 @@ using namespace std;
 // Then we can templatize most routines and specialize as necessary 
 
 typedef std::vector< std::map< unsigned int, double> > STL_Sparse_Mat; 
+typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_CSR_Mat; 
+typedef boost::numeric::ublas::coordinate_matrix<double> UBLAS_COO_Mat; 
 typedef viennacl::compressed_matrix<double> VCL_CSR_Mat; 
 typedef viennacl::coordinate_matrix<double> VCL_COO_Mat; 
 
-//typedef std::vector<double> STL_Vec; 
-typedef boost::numeric::ublas::vector<double> STL_Vec; 
+//typedef std::vector<double> UBLAS_Vec; 
+typedef boost::numeric::ublas::vector<double> UBLAS_Vec; 
 typedef viennacl::vector<double> VCL_Vec; 
 
 enum MatrixType : int
@@ -52,9 +54,9 @@ enum MatrixType : int
 const char* assemble_t_eStrings[] = 
 {
     //stringify( COO_CPU ), //STL_Sparse_Mat ), 
-    stringify( STL_Sparse_Mat ), 
+    stringify( UBLAS_CSR_CPU ), 
     stringify( VCL_COO_GPU ), 
-    stringify( STL_Sparse_Mat ), 
+    stringify( UBLAS_COO_CPU ), 
     //stringify( CSR_CPU ), //STL_Sparse_Mat ), 
     stringify( VCL_CSR_GPU ), 
     stringify( DUMMY )
@@ -74,10 +76,9 @@ EB::TimerList tm;
 //---------------------------------
 
 template <typename MatT, typename VecT>
-void benchmark_GMRES_Host(MatT& A, VecT& F, VecT& U_exact) {
+void benchmark_Multiply_Host(MatT& A, VecT& F, VecT& U_exact) {
     VecT F_discrete(A.size(), 1);
     F_discrete = viennacl::linalg::prod(A, U_exact); 
-
 
     std::cout << "Rel l1   Norm: " << boost::numeric::ublas::norm_1(F_discrete - F) / boost::numeric::ublas::norm_1(F) << std::endl;  
     std::cout << "Rel l2   Norm: " << boost::numeric::ublas::norm_2(F_discrete - F) / boost::numeric::ublas::norm_2(F) << std::endl;  
@@ -85,31 +86,49 @@ void benchmark_GMRES_Host(MatT& A, VecT& F, VecT& U_exact) {
 }
 
 template <typename MatT, typename VecT>
-void benchmark_GMRES_Device(MatT& A, VecT& F, VecT& U_exact) {
+void benchmark_Multiply_Device(MatT& A, VecT& F, VecT& U_exact) {
     VecT F_discrete(F.size());
     F_discrete = viennacl::linalg::prod(A, U_exact); 
-
-#if 0
-    std::vector<double> b_host(A.size1(), 1);
-    viennacl::copy(b.begin(), b.end(), b_host.begin());
-#endif 
-    //viennacl::ocl::current_context().get_queue().finish();
 
     std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(F_discrete - F) / viennacl::linalg::norm_1(F) << std::endl;  
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(F_discrete - F) / viennacl::linalg::norm_2(F) << std::endl;  
     std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(F_discrete - F) / viennacl::linalg::norm_inf(F) << std::endl;  
 }
 
-template <class MatType=STL_Sparse_Mat>
-void assemble_LHS ( RBFFD& der, Grid& grid, MatType& A){
+template <typename MatT, typename VecT>
+void benchmark_GMRES_Host(MatT& A, VecT& F, VecT& U_exact) {
+    VecT U_approx(U_exact.size());
+    viennacl::linalg::gmres_tag tag(1e-8, 100); 
+   //U_approx = viennacl::linalg::solve(A, U_exact, tag); 
+
+    std::cout << "Rel l1   Norm: " << boost::numeric::ublas::norm_1(U_approx - U_exact) / boost::numeric::ublas::norm_1(U_exact) << std::endl;  
+    std::cout << "Rel l2   Norm: " << boost::numeric::ublas::norm_2(U_approx - U_exact) / boost::numeric::ublas::norm_2(U_exact) << std::endl;  
+    std::cout << "Rel linf Norm: " << boost::numeric::ublas::norm_inf(U_approx - U_exact) / boost::numeric::ublas::norm_inf(U_exact) << std::endl;  
+}
+
+template <typename MatT, typename VecT>
+void benchmark_GMRES_Device(MatT& A, VecT& F, VecT& U_exact) {
+    VecT U_approx(U_exact.size());
+    viennacl::linalg::gmres_tag tag(1e-8, 100); 
+    U_approx = viennacl::linalg::solve(A, F, tag); 
+
+
+    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(U_approx - U_exact) / viennacl::linalg::norm_1(U_exact) << std::endl;  
+    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(U_approx - U_exact) / viennacl::linalg::norm_2(U_exact) << std::endl;  
+    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(U_approx - U_exact) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
+}
+
+void assemble_LHS(RBFFD& der, Grid& grid, STL_Sparse_Mat& A){
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
+    unsigned int n_bnd = grid.getBoundaryIndicesSize();
+    std::cout << "Boundary nodes: " << n_bnd << std::endl;
     //A_ptr = new MatType( N ); 
     //    MatType& A     = *A_ptr; 
 
-    for (unsigned int i = 0; i < N; i++) {
+    for (unsigned int i = n_bnd; i < N; i++) {
         StencilType& sten = grid.getStencil(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
@@ -120,7 +139,50 @@ void assemble_LHS ( RBFFD& der, Grid& grid, MatType& A){
     }
 }
 
-template <class MatType, class VecType=STL_Vec>
+void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_COO_Mat& A){
+
+    unsigned int N = grid.getNodeListSize(); 
+    unsigned int n = grid.getMaxStencilSize(); 
+
+    unsigned int n_bnd = grid.getBoundaryIndicesSize();
+    std::cout << "Boundary nodes: " << n_bnd << std::endl;
+    //A_ptr = new MatType( N ); 
+    //    MatType& A     = *A_ptr; 
+
+    for (unsigned int i = n_bnd; i < N; i++) {
+        StencilType& sten = grid.getStencil(i); 
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+
+        // Off diagonals
+        for (unsigned int j = 0; j < n; j++) {
+            A(i,sten[j]) = -lapl[j]; 
+        }
+    }
+}
+
+void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_CSR_Mat& A){
+
+    unsigned int N = grid.getNodeListSize(); 
+    unsigned int n = grid.getMaxStencilSize(); 
+
+    unsigned int n_bnd = grid.getBoundaryIndicesSize();
+    std::cout << "Boundary nodes: " << n_bnd << std::endl;
+    //A_ptr = new MatType( N ); 
+    //    MatType& A     = *A_ptr; 
+
+    for (unsigned int i = n_bnd; i < N; i++) {
+        StencilType& sten = grid.getStencil(i); 
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+
+        // Off diagonals
+        for (unsigned int j = 0; j < n; j++) {
+            A(i,sten[j]) = -lapl[j]; 
+        }
+    }
+}
+
+
+template <class MatType, class VecType=UBLAS_Vec>
 void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
     SphericalHarmonic::Sph32 UU; 
 
@@ -143,6 +205,7 @@ void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
 template <class MatType, class OpMatType, MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_SpMV(RBFFD& der, Grid& grid) {
     unsigned int N = grid.getNodeListSize(); 
+    unsigned int n = grid.getMaxStencilSize(); 
 
     char test_name[256]; 
     char assemble_timer_name[256]; 
@@ -152,7 +215,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     sprintf(test_name, "%u SpMV (%s -> %s)", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]); 
     sprintf(assemble_timer_name, "%u %s Assemble", N, assemble_t_eStrings[assemble_t_e]); 
     sprintf(copy_timer_name,     "%u %s Copy To %s", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]); 
-    sprintf(test_timer_name, "%u %s test", N, assemble_t_eStrings[operate_t_e]);
+    sprintf(test_timer_name, "%u %s GMRES test", N, assemble_t_eStrings[operate_t_e]);
 
     if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
     if (!tm.contains(copy_timer_name)) { tm[copy_timer_name] = new EB::Timer(copy_timer_name); } 
@@ -162,21 +225,23 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     std::cout << test_name << std::endl;
 
     MatType* A = NULL; 
-    OpMatType* A_op = NULL; 
+    // OpMatType* A_op = NULL; 
+    VCL_CSR_Mat* A_op; 
 
     // Assemble the matrix
     // ----------------------
     tm[assemble_timer_name]->start(); 
-    A = new MatType(N); 
-    assemble_LHS<MatType>(der, grid, *A);  
-    
-    STL_Vec* F = new STL_Vec(N, 1);
-    STL_Vec* U_exact = new STL_Vec(N, 1);
+    A = new MatType(N, N, n*N); 
+    assemble_LHS(der, grid, *A);  
+
+    UBLAS_Vec* F = new UBLAS_Vec(N, 1);
+    UBLAS_Vec* U_exact = new UBLAS_Vec(N, 1);
     assemble_RHS<MatType>(der, grid, *F, *U_exact);  
     tm[assemble_timer_name]->stop(); 
 
     tm[copy_timer_name]->start();
-    A_op = new OpMatType(N,N); 
+    // A_op = new OpMatType(N,N); 
+    A_op = new VCL_CSR_Mat(N,N);
     copy(*A, *A_op);
 
     VCL_Vec* F_op = new VCL_Vec(N);
@@ -187,7 +252,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F
-    benchmark_GMRES_Device<OpMatType>(*A_op, *F_op, *U_exact_op);
+    benchmark_GMRES_Device<VCL_CSR_Mat>(*A_op, *F_op, *U_exact_op);
     tm[test_timer_name]->stop();
 
     // Cleanup
@@ -203,6 +268,7 @@ template <class MatType, MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_SpMV(RBFFD& der, Grid& grid) {
 
     unsigned int N = grid.getNodeListSize(); 
+    unsigned int n = grid.getMaxStencilSize(); 
 
     char test_name[256]; 
     char assemble_timer_name[256]; 
@@ -220,11 +286,11 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     // Assemble the matrix
     // ----------------------
     tm[assemble_timer_name]->start(); 
-    MatType* A = new MatType(N); 
-    assemble_LHS<MatType>(der, grid, *A);  
+    MatType* A = new MatType(N,N, n*N); 
+    assemble_LHS(der, grid, *A);  
 
-    STL_Vec* F = new STL_Vec(N, 1);
-    STL_Vec* U_exact = new STL_Vec(N, 1);
+    UBLAS_Vec* F = new UBLAS_Vec(N, 1);
+    UBLAS_Vec* U_exact = new UBLAS_Vec(N, 1);
     assemble_RHS<MatType>(der, grid, *F, *U_exact);  
     tm[assemble_timer_name]->stop(); 
 
@@ -242,7 +308,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 
     // Cleanup
     delete(A);
-    }
+}
 
 template <class MatType, MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_test(RBFFD& der, Grid& grid) {
@@ -266,11 +332,13 @@ template <MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_test(RBFFD& der, Grid& grid) {
     switch (assemble_t_e) {
         case COO_CPU:
+            run_test<UBLAS_COO_Mat, assemble_t_e, operate_t_e>(der, grid); 
+            break; 
         case CSR_CPU:
-            run_test<STL_Sparse_Mat, assemble_t_e, operate_t_e>(der, grid); 
+            run_test<UBLAS_CSR_Mat, assemble_t_e, operate_t_e>(der, grid); 
             break;
         case DUMMY: 
-            run_SpMV<STL_Sparse_Mat, VCL_COO_Mat, assemble_t_e, assemble_t_e>(der, grid); 
+            run_SpMV<UBLAS_CSR_Mat, VCL_COO_Mat, assemble_t_e, assemble_t_e>(der, grid); 
             break; 
         default: 
             std::cout << "ERROR! Unsupported assembly type\n"; 
@@ -286,7 +354,7 @@ int main(void)
 
     //grids.push_back("~/GRIDS/md/md005.00036"); 
     grids.push_back("~/GRIDS/md/md031.01024"); 
-#if 1 
+#if 0 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/md/md089.08100"); 
@@ -363,9 +431,11 @@ int main(void)
 
         cout << "Running Tests\n" << std::endl;
         {
+            run_test<CSR_CPU, CSR_GPU>(der, *grid); 
+#if 0
+            run_test<CSR_CPU, CSR_CPU>(der, *grid); 
             run_test<COO_CPU, COO_CPU>(der, *grid); 
             run_test<COO_CPU, COO_GPU>(der, *grid); 
-#if 1
             run_test<CSR_CPU, CSR_CPU>(der, *grid); 
             run_test<CSR_CPU, CSR_GPU>(der, *grid); 
             run_test<COO_CPU, CSR_GPU>(der, *grid); 

@@ -57,7 +57,7 @@ typedef viennacl::vector<double> VCL_Vec;
 
 enum MatrixType : int
 {
-    COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, STL_Sparse_mat, DUMMY
+    COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, DUMMY
 };
 
 const char* assemble_t_eStrings[] = 
@@ -66,7 +66,6 @@ const char* assemble_t_eStrings[] =
     stringify( VCL_COO_GPU ), 
     stringify( UBLAS_CSR_CPU ), 
     stringify( VCL_CSR_GPU ), 
-    stringify( STL_Sparse_Mat ), 
     stringify( DUMMY )
 };
 
@@ -101,28 +100,6 @@ void benchmark_Multiply_Device(MatT& A, VecT& F, VecT& U_exact) {
     std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(F_discrete - F) / viennacl::linalg::norm_1(F) << std::endl;  
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(F_discrete - F) / viennacl::linalg::norm_2(F) << std::endl;  
     std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(F_discrete - F) / viennacl::linalg::norm_inf(F) << std::endl;  
-}
-
-template <typename MatT, typename VecT>
-void benchmark_GMRES_Host(MatT& A, VecT& F, VecT& U_exact) {
-    VecT U_approx(U_exact.size());
-    viennacl::linalg::gmres_tag tag(1e-8, 100); 
-    U_approx = viennacl::linalg::solve(A, U_exact, tag); 
-
-    std::cout << "Rel l1   Norm: " << boost::numeric::ublas::norm_1(U_approx - U_exact) / boost::numeric::ublas::norm_1(U_exact) << std::endl;  
-    std::cout << "Rel l2   Norm: " << boost::numeric::ublas::norm_2(U_approx - U_exact) / boost::numeric::ublas::norm_2(U_exact) << std::endl;  
-    std::cout << "Rel linf Norm: " << boost::numeric::ublas::norm_inf(U_approx - U_exact) / boost::numeric::ublas::norm_inf(U_exact) << std::endl;  
-}
-
-template <typename MatT, typename VecT>
-void benchmark_GMRES_Device(MatT& A, VecT& F, VecT& U_exact) {
-    VecT U_approx(U_exact.size());
-    viennacl::linalg::gmres_tag tag(1e-8, 100); 
-    U_approx = viennacl::linalg::solve(A, F, tag); 
-
-    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(U_approx - U_exact) / viennacl::linalg::norm_1(U_exact) << std::endl;  
-    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(U_approx - U_exact) / viennacl::linalg::norm_2(U_exact) << std::endl;  
-    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(U_approx - U_exact) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
 }
 
 void assemble_LHS(RBFFD& der, Grid& grid, STL_Sparse_Mat& A){
@@ -257,7 +234,6 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     tm[copy_timer_name]->stop();
 
     tm[test_timer_name]->start();
-    // Use GMRES to solve A*u = F
     benchmark_Multiply_Device<OpMatType>(*A_op, *F_op, *U_exact_op);
     tm[test_timer_name]->stop();
 
@@ -330,7 +306,7 @@ void run_test(RBFFD& der, Grid& grid) {
             run_SpMV<MatType, assemble_t_e, operate_t_e>(der, grid); 
             break; 
         default: 
-            std::cout << "ERROR! Unsupported GMRES type\n"; 
+            std::cout << "ERROR! Unsupported multiply type\n"; 
     }
 }
 

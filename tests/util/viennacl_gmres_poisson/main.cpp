@@ -163,8 +163,10 @@ void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        U_exact[i] = UU.eval(Xx, Yy, Zz); 
-        // Solving -lapl(u) = f
+        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
+        // Solving -lapl(u + const) = f = -lapl(u) + 0
+        // of course the lapl(const) is 0, so we will have a test to verify
+        // that our null space is closed. 
         F[i] = -UU.lapl(Xx, Yy, Zz); 
     }
 }

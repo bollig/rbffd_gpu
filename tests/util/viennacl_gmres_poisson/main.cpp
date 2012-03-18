@@ -71,14 +71,36 @@ void GMRES_Host(UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact) {
 
 // Perform GMRES on GPU
 void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
-#if 0
-    VCL_VEC_t U_approx(U_exact.size());
+#if 1
+    VCL_VEC_t U_approx_gpu(U_exact.size());
+    U_approx_gpu.clear(); 
     viennacl::linalg::gmres_tag tag(1e-8, 100); 
-    U_approx = viennacl::linalg::solve(A, F, tag); 
 
-    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(U_approx - U_exact) / viennacl::linalg::norm_1(U_exact) << std::endl;  
-    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(U_approx - U_exact) / viennacl::linalg::norm_2(U_exact) << std::endl;  
-    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(U_approx - U_exact) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
+    std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
+    std::cout << "GMRES Error Estimate: " << tag.error() << std::endl;
+    std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
+    std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim): " << tag.max_restarts() << std::endl;
+    std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
+    std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
+
+
+    // Solve Au = F
+    U_approx_gpu = viennacl::linalg::solve(A, F, tag); 
+
+    UBLAS_VEC_t U_approx(U_exact.size());
+    copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin());
+#if 1
+    std::ofstream f_out("U_gpu.mtx"); 
+    for (unsigned int i = 0; i < U_exact.size(); i++) {
+        f_out << U_approx[i] << std::endl;
+    }
+    f_out.close();
+#endif 
+
+
+    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(U_approx_gpu - U_exact) / viennacl::linalg::norm_1(U_exact) << std::endl;  
+    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(U_approx_gpu - U_exact) / viennacl::linalg::norm_2(U_exact) << std::endl;  
+    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(U_approx_gpu - U_exact) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
 #endif 
 }
 
@@ -126,7 +148,7 @@ void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_MAT_t& A){
 // This assembly is the same regardless of STL/UBlas vector
 template <class MatType, class VecType>
 void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
-    SphericalHarmonic::Sph32 UU; 
+    SphericalHarmonic::Sph105 UU; 
 
     unsigned int N = grid.getNodeListSize(); 
     //unsigned int n = grid.getMaxStencilSize(); 
@@ -190,6 +212,18 @@ void gpuTest(RBFFD& der, Grid& grid) {
     viennacl::copy(F->begin(), F->end(), F_op->begin());
     viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_op->begin());
     tm[copy_timer_name]->stop();
+
+#if 1
+    std::ofstream f_out("U_exact.mtx"); 
+    std::ofstream f_out2("F.mtx"); 
+    for (unsigned int i = 0; i < N; i++) {
+        f_out << (*U_exact)[i] << std::endl;
+        f_out2 << (*F)[i] << std::endl;
+    }
+    f_out.close();
+    f_out2.close();
+#endif 
+
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F

@@ -391,13 +391,22 @@ class Grid
         // add this in a subclass if we wanted like a TriangularGrid or
         // RectilinearGrid. 
         
-    protected: 
-        void writeVecToFile(std::string prefix, std::string suffix, std::vector<double> vals);
+        // Allow anyone to update the boundary. 
+        // WARNING!: This could delete existing nodes from the boundary
+        // Also, this does not ensure that the boundary is filled properly
         void resizeBoundary(unsigned int nb_boundary_nodes)
         {
             this->boundary_indices.resize(nb_boundary_nodes);
             this->boundary_normals.resize(nb_boundary_nodes);
         }
+
+        void appendBoundaryIndex(unsigned int boundary_index, Vec3 boundary_normal=Vec3(0,0,0)) {
+            this->boundary_indices.push_back(boundary_index); 
+            this->boundary_normals.push_back(boundary_normal); 
+        }
+
+    protected: 
+        void writeVecToFile(std::string prefix, std::string suffix, std::vector<double> vals);
         void resizeNodeList(unsigned int nb_pts)
         {
             this->node_list.resize(nb_pts);

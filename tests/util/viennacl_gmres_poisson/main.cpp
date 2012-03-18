@@ -83,16 +83,6 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
     // Solve Au = F
     U_approx_gpu = viennacl::linalg::solve(A, F, tag); 
 
-    UBLAS_VEC_t U_approx(U_exact.size());
-    copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin());
-#if 1
-    std::ofstream f_out("output/U_gpu.mtx"); 
-    for (unsigned int i = 0; i < U_exact.size(); i++) {
-        f_out << U_approx[i] << std::endl;
-    }
-    f_out.close();
-#endif 
-
     std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
     std::cout << "GMRES Error Estimate: " << tag.error() << std::endl;
     std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
@@ -105,6 +95,19 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(U_approx_gpu - U_exact) / viennacl::linalg::norm_2(U_exact) << std::endl;  
     std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(U_approx_gpu - U_exact) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
 #endif 
+
+    // IF we want to write details we need to copy back to host. 
+#if 1
+    UBLAS_VEC_t U_approx(U_exact.size());
+    copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin());
+
+    std::ofstream f_out("output/U_gpu.mtx"); 
+    for (unsigned int i = 0; i < U_exact.size(); i++) {
+        f_out << U_approx[i] << std::endl;
+    }
+    f_out.close();
+#endif 
+
 }
 
 //---------------------------------
@@ -344,6 +347,15 @@ int main(void)
         if (err == Grid::NO_GRID_FILES) 
         {
             grid->generate();
+            // NOTE: We force at least one node in the domain to be a boundary. 
+            //-----------------------------
+            // We will set the first node as a boundary/ground point. We know
+            // the normal because we're on teh sphere centered at (0,0,0)
+            unsigned int nodeIndex = 0; 
+            NodeType& node = grid->getNode(nodeIndex); 
+            Vec3 nodeNormal = node - Vec3(0,0,0); 
+            grid->appendBoundaryIndex(nodeIndex, nodeNormal); 
+            //-----------------------------
             if (writeIntermediate) {
                 grid->writeToFile(); 
             }

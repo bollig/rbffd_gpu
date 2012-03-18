@@ -77,7 +77,7 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
     VCL_VEC_t U_approx_gpu(U_exact.size());
     U_approx_gpu.clear(); 
     //viennacl::linalg::gmres_tag tag;
-    viennacl::linalg::gmres_tag tag(1e-8, 1000, 20); 
+    viennacl::linalg::gmres_tag tag(1e-8, 10000, 350); 
     //viennacl::linalg::gmres_tag tag(1e-10, 1000, 20); 
 
     // Solve Au = F
@@ -112,34 +112,21 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
 
 //---------------------------------
 
-// Assembly depends on the input type. This one for UBLAS_CSR
-void assemble_LHS(RBFFD& der, Grid& grid, STL_MAT_t& A){
+// Assemble the LHS matrix with the Identity for boundary nodes. Assume solver
+// is intelligent enough to use information and converge
+// 
+void assemble_LHS_Bnd_Eye( RBFFD& der, Grid& grid, UBLAS_MAT_t& A){
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
-    unsigned int n_bnd = grid.getBoundaryIndicesSize();
-    std::cout << "Boundary nodes: " << n_bnd << std::endl;
-
-    for (unsigned int i = n_bnd; i < N; i++) {
-        StencilType& sten = grid.getStencil(i); 
-        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
-
-        // Off diagonals
-        for (unsigned int j = 0; j < n; j++) {
-            A[i][sten[j]] = -lapl[j]; 
-        }
+    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+    std::cout << "Boundary nodes: " << nb_bnd << std::endl;
+    
+    for (unsigned int i = 0; i < nb_bnd; i++) {
+        A(i,i) = 1; 
     }
-}
 
-// Assembly depends on the input type. This one for UBLAS_CSR
-void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_MAT_t& A){
-    unsigned int N = grid.getNodeListSize(); 
-    unsigned int n = grid.getMaxStencilSize(); 
-
-    unsigned int n_bnd = grid.getBoundaryIndicesSize();
-    std::cout << "Boundary nodes: " << n_bnd << std::endl;
-
-    for (unsigned int i = n_bnd; i < N; i++) {
+    for (unsigned int i = nb_bnd; i < N; i++) {
         StencilType& sten = grid.getStencil(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
@@ -147,6 +134,33 @@ void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_MAT_t& A){
             A(i,sten[j]) += -lapl[j]; 
         }
     }
+    
+    viennacl::io::write_matrix_market_file(A,"output/LHS.mtx"); 
+}
+
+
+// Assembly depends on the input type. This one for UBLAS_CSR
+void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_MAT_t& A){
+    unsigned int N = grid.getNodeListSize(); 
+    unsigned int n = grid.getMaxStencilSize(); 
+
+    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+    std::cout << "Boundary nodes: " << nb_bnd << std::endl;
+    
+    for (unsigned int i = 0; i < nb_bnd; i++) {
+        A(i,i) = 1; 
+    }
+
+    for (unsigned int i = nb_bnd; i < N; i++) {
+        StencilType& sten = grid.getStencil(i); 
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+
+        for (unsigned int j = 0; j < n; j++) {
+            A(i,sten[j]) += -lapl[j]; 
+        }
+    }
+    
+    viennacl::io::write_matrix_market_file(A,"output/LHS.mtx"); 
 }
 
 //---------------------------------
@@ -157,10 +171,20 @@ void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
     SphericalHarmonic::Sph105 UU; 
 
     unsigned int N = grid.getNodeListSize(); 
-    //unsigned int n = grid.getMaxStencilSize(); 
     std::vector<NodeType>& nodes = grid.getNodeList(); 
+    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
 
-    for (unsigned int i = 0; i < N; i++) {
+    for (unsigned int i = 0; i < nb_bnd; i++) {
+        NodeType& node = nodes[i]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
+        F[i] = U_exact[i]; 
+    }
+
+    for (unsigned int i = nb_bnd; i < N; i++) {
         NodeType& node = nodes[i]; 
         double Xx = node.x(); 
         double Yy = node.y(); 

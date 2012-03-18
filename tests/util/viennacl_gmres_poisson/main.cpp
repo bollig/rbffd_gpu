@@ -40,100 +40,57 @@
 #include <typeinfo> 
 using namespace std;
 
-#define stringify( name ) # name
 
-// Define a couple types that we will work with. 
-// Then we can templatize most routines and specialize as necessary 
+typedef std::vector< std::map< unsigned int, double> > STL_MAT_t; 
+typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_MAT_t; 
+typedef boost::numeric::ublas::coordinate_matrix<double> UBLAS_ALT_MAT_t; 
+typedef viennacl::compressed_matrix<double> VCL_MAT_t; 
+typedef viennacl::coordinate_matrix<double> VCL_ALT_MAT_t; 
 
-typedef std::vector< std::map< unsigned int, double> > STL_Sparse_Mat; 
-typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_CSR_Mat; 
-typedef boost::numeric::ublas::coordinate_matrix<double> UBLAS_COO_Mat; 
-typedef viennacl::compressed_matrix<double> VCL_CSR_Mat; 
-typedef viennacl::coordinate_matrix<double> VCL_COO_Mat; 
-
-//typedef std::vector<double> UBLAS_Vec; 
-typedef boost::numeric::ublas::vector<double> UBLAS_Vec; 
-typedef viennacl::vector<double> VCL_Vec; 
-
-enum MatrixType : int
-{
-    COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, STL_Sparse_mat, DUMMY
-};
-
-const char* assemble_t_eStrings[] = 
-{
-    stringify( UBLAS_COO_CPU ), 
-    stringify( VCL_COO_GPU ), 
-    stringify( UBLAS_CSR_CPU ), 
-    stringify( VCL_CSR_GPU ), 
-    stringify( STL_Sparse_Mat ), 
-    stringify( DUMMY )
-};
-
-
-// TODO: 
-// Sort CSR, ELL, HYB by column. (use std::pair<unsigned int, unsigned int>
-// (sten[j], j) and sort on sten[j]. Then use the sorted j's to index sten[]
-// and lapl[]
-// NOTE: I did this sorting and benchmarked. There was no difference in timing.
-// The STL maps auto sort and the assembly on the GPU sorts as well. 
+typedef std::vector<double> STL_VEC_t; 
+typedef boost::numeric::ublas::vector<double> UBLAS_VEC_t; 
+typedef viennacl::vector<double> VCL_VEC_t; 
 
 EB::TimerList tm;
 
 
 //---------------------------------
 
-template <typename MatT, typename VecT>
-void benchmark_Multiply_Host(MatT& A, VecT& F, VecT& U_exact) {
-    VecT F_discrete(F.size(), 1);
-    F_discrete = boost::numeric::ublas::prod(A, U_exact); 
-
-    std::cout << "Rel l1   Norm: " << boost::numeric::ublas::norm_1(F_discrete - F) / boost::numeric::ublas::norm_1(F) << std::endl;  
-    std::cout << "Rel l2   Norm: " << boost::numeric::ublas::norm_2(F_discrete - F) / boost::numeric::ublas::norm_2(F) << std::endl;  
-    std::cout << "Rel linf Norm: " << boost::numeric::ublas::norm_inf(F_discrete - F) / boost::numeric::ublas::norm_inf(F) << std::endl;  
-}
-
-template <typename MatT, typename VecT>
-void benchmark_Multiply_Device(MatT& A, VecT& F, VecT& U_exact) {
-    VecT F_discrete(F.size());
-    F_discrete = viennacl::linalg::prod(A, U_exact); 
-
-    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(F_discrete - F) / viennacl::linalg::norm_1(F) << std::endl;  
-    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(F_discrete - F) / viennacl::linalg::norm_2(F) << std::endl;  
-    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(F_discrete - F) / viennacl::linalg::norm_inf(F) << std::endl;  
-}
-
-template <typename MatT, typename VecT>
-void benchmark_GMRES_Host(MatT& A, VecT& F, VecT& U_exact) {
-    VecT U_approx(U_exact.size());
+// Perform GMRES on CPU
+void GMRES_Host(UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact) {
+#if 0
+    UBLAS_VEC_t U_approx(U_exact.size());
     viennacl::linalg::gmres_tag tag(1e-8, 100); 
     U_approx = viennacl::linalg::solve(A, U_exact, tag); 
 
     std::cout << "Rel l1   Norm: " << boost::numeric::ublas::norm_1(U_approx - U_exact) / boost::numeric::ublas::norm_1(U_exact) << std::endl;  
     std::cout << "Rel l2   Norm: " << boost::numeric::ublas::norm_2(U_approx - U_exact) / boost::numeric::ublas::norm_2(U_exact) << std::endl;  
     std::cout << "Rel linf Norm: " << boost::numeric::ublas::norm_inf(U_approx - U_exact) / boost::numeric::ublas::norm_inf(U_exact) << std::endl;  
+#endif 
 }
 
-template <typename MatT, typename VecT>
-void benchmark_GMRES_Device(MatT& A, VecT& F, VecT& U_exact) {
-    VecT U_approx(U_exact.size());
+// Perform GMRES on GPU
+void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
+#if 0
+    VCL_VEC_t U_approx(U_exact.size());
     viennacl::linalg::gmres_tag tag(1e-8, 100); 
     U_approx = viennacl::linalg::solve(A, F, tag); 
 
     std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(U_approx - U_exact) / viennacl::linalg::norm_1(U_exact) << std::endl;  
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(U_approx - U_exact) / viennacl::linalg::norm_2(U_exact) << std::endl;  
     std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(U_approx - U_exact) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
+#endif 
 }
 
-void assemble_LHS(RBFFD& der, Grid& grid, STL_Sparse_Mat& A){
+//---------------------------------
 
+// Assembly depends on the input type. This one for UBLAS_CSR
+void assemble_LHS(RBFFD& der, Grid& grid, STL_MAT_t& A){
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
     unsigned int n_bnd = grid.getBoundaryIndicesSize();
     std::cout << "Boundary nodes: " << n_bnd << std::endl;
-    //A_ptr = new MatType( N ); 
-    //    MatType& A     = *A_ptr; 
 
     for (unsigned int i = n_bnd; i < N; i++) {
         StencilType& sten = grid.getStencil(i); 
@@ -146,51 +103,28 @@ void assemble_LHS(RBFFD& der, Grid& grid, STL_Sparse_Mat& A){
     }
 }
 
-void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_COO_Mat& A){
-
+// Assembly depends on the input type. This one for UBLAS_CSR
+void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_MAT_t& A){
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
     unsigned int n_bnd = grid.getBoundaryIndicesSize();
     std::cout << "Boundary nodes: " << n_bnd << std::endl;
-    //A_ptr = new MatType( N ); 
-    //    MatType& A     = *A_ptr; 
 
     for (unsigned int i = n_bnd; i < N; i++) {
         StencilType& sten = grid.getStencil(i); 
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
-        // Off diagonals
-        for (unsigned int j = 0; j < n; j++) {
-            A.append_element(i, sten[j], -lapl[j]); 
-        }
-    }
-}
-
-void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_CSR_Mat& A){
-
-    unsigned int N = grid.getNodeListSize(); 
-    unsigned int n = grid.getMaxStencilSize(); 
-
-    unsigned int n_bnd = grid.getBoundaryIndicesSize();
-    std::cout << "Boundary nodes: " << n_bnd << std::endl;
-    //A_ptr = new MatType( N ); 
-    //    MatType& A     = *A_ptr; 
-
-    for (unsigned int i = n_bnd; i < N; i++) {
-        StencilType& sten = grid.getStencil(i); 
-        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
-
-        // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
             A(i,sten[j]) += -lapl[j]; 
-            //A(i,sten[j]) = -lapl[j]; 
         }
     }
 }
 
+//---------------------------------
 
-template <class MatType, class VecType=UBLAS_Vec>
+// This assembly is the same regardless of STL/UBlas vector
+template <class MatType, class VecType>
 void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
     SphericalHarmonic::Sph32 UU; 
 
@@ -210,8 +144,9 @@ void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
     }
 }
 
-template <class MatType, class OpMatType, MatrixType assemble_t_e, MatrixType operate_t_e>
-void run_SpMV(RBFFD& der, Grid& grid) {
+//---------------------------------
+
+void gpuTest(RBFFD& der, Grid& grid) {
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
@@ -220,10 +155,10 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     char copy_timer_name[512]; 
     char test_timer_name[256]; 
 
-    sprintf(test_name, "%u SpMV (%s -> %s)", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]); 
-    sprintf(assemble_timer_name, "%u %s Assemble", N, assemble_t_eStrings[assemble_t_e]); 
-    sprintf(copy_timer_name,     "%u %s Copy To %s", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]); 
-    sprintf(test_timer_name, "%u %s Multiply test", N, assemble_t_eStrings[operate_t_e]);
+    sprintf(test_name, "%u GMRES GPU (VCL_CSR)", N);  
+    sprintf(assemble_timer_name, "%u UBLAS_CSR Assemble", N);
+    sprintf(copy_timer_name,     "%u UBLAS_CSR Copy To VCL_CSR", N); 
+    sprintf(test_timer_name, "%u GPU GMRES test", N); 
 
     if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
     if (!tm.contains(copy_timer_name)) { tm[copy_timer_name] = new EB::Timer(copy_timer_name); } 
@@ -232,33 +167,33 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 
     std::cout << test_name << std::endl;
 
-    MatType* A = NULL; 
-    OpMatType* A_op = NULL; 
+    UBLAS_MAT_t* A = NULL; 
+    VCL_MAT_t* A_op = NULL; 
 
     // Assemble the matrix
     // ----------------------
     tm[assemble_timer_name]->start(); 
-    A = new MatType(N, N, n*N); 
+    A = new UBLAS_MAT_t(N, N, n*N); 
     assemble_LHS(der, grid, *A);  
 
-    UBLAS_Vec* F = new UBLAS_Vec(N, 1);
-    UBLAS_Vec* U_exact = new UBLAS_Vec(N, 1);
-    assemble_RHS<MatType>(der, grid, *F, *U_exact);  
+    UBLAS_VEC_t* F = new UBLAS_VEC_t(N, 1);
+    UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(N, 1);
+    assemble_RHS<UBLAS_VEC_t>(der, grid, *F, *U_exact);  
     tm[assemble_timer_name]->stop(); 
 
     tm[copy_timer_name]->start();
-    A_op = new OpMatType(N,N); 
+    A_op = new VCL_MAT_t(N,N); 
     copy(*A, *A_op);
 
-    VCL_Vec* F_op = new VCL_Vec(N);
-    VCL_Vec* U_exact_op = new VCL_Vec(N);
+    VCL_VEC_t* F_op = new VCL_VEC_t(N);
+    VCL_VEC_t* U_exact_op = new VCL_VEC_t(N);
     viennacl::copy(F->begin(), F->end(), F_op->begin());
     viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_op->begin());
     tm[copy_timer_name]->stop();
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F
-    benchmark_Multiply_Device<OpMatType>(*A_op, *F_op, *U_exact_op);
+    GMRES_Device(*A_op, *F_op, *U_exact_op);
     tm[test_timer_name]->stop();
 
     // Cleanup
@@ -270,8 +205,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     delete(U_exact_op);
 }
 
-template <class MatType, MatrixType assemble_t_e, MatrixType operate_t_e>
-void run_SpMV(RBFFD& der, Grid& grid) {
+void cpuTest(RBFFD& der, Grid& grid) {
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
@@ -280,9 +214,9 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     char assemble_timer_name[256]; 
     char test_timer_name[256]; 
 
-    sprintf(test_name, "%u SpMV (%s -> %s)", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]); 
-    sprintf(assemble_timer_name, "%u %s Assemble", N, assemble_t_eStrings[assemble_t_e]); 
-    sprintf(test_timer_name, "%u %s Multiply test", N, assemble_t_eStrings[assemble_t_e]);
+    sprintf(test_name, "%u GMRES CPU (VCL_CSR)", N);  
+    sprintf(assemble_timer_name, "%u UBLAS_CSR Assemble", N);
+    sprintf(test_timer_name, "%u CPU GMRES test", N); 
 
     if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
     if (!tm.contains(test_timer_name)) { tm[test_timer_name] = new EB::Timer(test_timer_name); } 
@@ -292,12 +226,12 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     // Assemble the matrix
     // ----------------------
     tm[assemble_timer_name]->start(); 
-    MatType* A = new MatType(N,N, n*N); 
+    UBLAS_MAT_t* A = new UBLAS_MAT_t(N,N, n*N); 
     assemble_LHS(der, grid, *A);  
 
-    UBLAS_Vec* F = new UBLAS_Vec(N, 1);
-    UBLAS_Vec* U_exact = new UBLAS_Vec(N, 1);
-    assemble_RHS<MatType>(der, grid, *F, *U_exact);  
+    UBLAS_VEC_t* F = new UBLAS_VEC_t(N, 1);
+    UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(N, 1);
+    assemble_RHS<UBLAS_VEC_t>(der, grid, *F, *U_exact);  
     tm[assemble_timer_name]->stop(); 
 
 #if 0
@@ -309,47 +243,14 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 #endif 
 
     tm[test_timer_name]->start();
-    benchmark_Multiply_Host<MatType>(*A, *F, *U_exact);
+    GMRES_Host(*A, *F, *U_exact);
     tm[test_timer_name]->stop();
 
     // Cleanup
     delete(A);
 }
 
-template <class MatType, MatrixType assemble_t_e, MatrixType operate_t_e>
-void run_test(RBFFD& der, Grid& grid) {
-    switch (operate_t_e) {
-        case COO_GPU: 
-            run_SpMV<MatType, VCL_COO_Mat, assemble_t_e, operate_t_e>(der, grid); 
-            break;
-        case CSR_GPU:
-            run_SpMV<MatType, VCL_CSR_Mat, assemble_t_e, operate_t_e>(der, grid); 
-            break; 
-        case COO_CPU: 
-        case CSR_CPU: 
-            run_SpMV<MatType, assemble_t_e, operate_t_e>(der, grid); 
-            break; 
-        default: 
-            std::cout << "ERROR! Unsupported GMRES type\n"; 
-    }
-}
 
-template <MatrixType assemble_t_e, MatrixType operate_t_e>
-void run_test(RBFFD& der, Grid& grid) {
-    switch (assemble_t_e) {
-        case COO_CPU:
-            run_test<UBLAS_COO_Mat, assemble_t_e, operate_t_e>(der, grid); 
-            break; 
-        case CSR_CPU:
-            run_test<UBLAS_CSR_Mat, assemble_t_e, operate_t_e>(der, grid); 
-            break;
-        case DUMMY: 
-            run_SpMV<UBLAS_CSR_Mat, VCL_COO_Mat, assemble_t_e, assemble_t_e>(der, grid); 
-            break; 
-        default: 
-            std::cout << "ERROR! Unsupported assembly type\n"; 
-    }
-}
 
 int main(void)
 {
@@ -360,7 +261,7 @@ int main(void)
 
     //grids.push_back("~/GRIDS/md/md005.00036"); 
     grids.push_back("~/GRIDS/md/md031.01024"); 
-#if 1 
+#if 0 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/md/md089.08100"); 
@@ -431,21 +332,12 @@ int main(void)
 
         if (!primed)  {
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";
-            run_test<DUMMY, DUMMY>(der, *grid); 
+            gpuTest(der,*grid);
             primed = true; 
         } 
 
-        cout << "Running Tests\n" << std::endl;
-        {
-#if 1
-            run_test<COO_CPU, COO_CPU>(der, *grid); 
-            run_test<COO_CPU, COO_GPU>(der, *grid); 
-            run_test<CSR_CPU, CSR_CPU>(der, *grid); 
-            run_test<CSR_CPU, CSR_GPU>(der, *grid); 
-            run_test<COO_CPU, CSR_GPU>(der, *grid); 
-            run_test<CSR_CPU, COO_GPU>(der, *grid); 
-#endif 
-        }
+        cpuTest(der,*grid);  
+        gpuTest(der,*grid);  
 
         delete(grid); 
     }

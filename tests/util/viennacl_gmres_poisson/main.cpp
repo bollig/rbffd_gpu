@@ -58,6 +58,8 @@ EB::TimerList tm;
 
 // Perform GMRES on CPU
 void GMRES_Host(UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact) {
+    std::cout << "ERROR: UBLAS is not supported by ViennaCL GMRES.\n"; 
+    exit(-1); 
 #if 0
     UBLAS_VEC_t U_approx(U_exact.size());
     viennacl::linalg::gmres_tag tag(1e-8, 100); 
@@ -74,7 +76,8 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
 #if 1
     VCL_VEC_t U_approx_gpu(U_exact.size());
     U_approx_gpu.clear(); 
-    viennacl::linalg::gmres_tag tag(1e-8, 100); 
+    viennacl::linalg::gmres_tag tag;
+    //viennacl::linalg::gmres_tag tag(1e-8, 100); 
 
     std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
     std::cout << "GMRES Error Estimate: " << tag.error() << std::endl;
@@ -90,7 +93,7 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
     UBLAS_VEC_t U_approx(U_exact.size());
     copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin());
 #if 1
-    std::ofstream f_out("U_gpu.mtx"); 
+    std::ofstream f_out("output/U_gpu.mtx"); 
     for (unsigned int i = 0; i < U_exact.size(); i++) {
         f_out << U_approx[i] << std::endl;
     }
@@ -168,7 +171,7 @@ void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
 
 //---------------------------------
 
-void gpuTest(RBFFD& der, Grid& grid) {
+void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
@@ -177,10 +180,17 @@ void gpuTest(RBFFD& der, Grid& grid) {
     char copy_timer_name[512]; 
     char test_timer_name[256]; 
 
-    sprintf(test_name, "%u GMRES GPU (VCL_CSR)", N);  
-    sprintf(assemble_timer_name, "%u UBLAS_CSR Assemble", N);
-    sprintf(copy_timer_name,     "%u UBLAS_CSR Copy To VCL_CSR", N); 
-    sprintf(test_timer_name, "%u GPU GMRES test", N); 
+    if (primeGPU) {
+        sprintf(test_name, "%u PRIMING THE GPU", N);  
+        sprintf(assemble_timer_name, "%u Primer Assemble", N);
+        sprintf(copy_timer_name,     "%u Primer Copy To VCL_CSR", N); 
+        sprintf(test_timer_name, "%u Primer GMRES test", N); 
+    } else { 
+        sprintf(test_name, "%u GMRES GPU (VCL_CSR)", N);  
+        sprintf(assemble_timer_name, "%u UBLAS_CSR Assemble", N);
+        sprintf(copy_timer_name,     "%u UBLAS_CSR Copy To VCL_CSR", N); 
+        sprintf(test_timer_name, "%u GPU GMRES test", N); 
+    }
 
     if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
     if (!tm.contains(copy_timer_name)) { tm[copy_timer_name] = new EB::Timer(copy_timer_name); } 
@@ -214,8 +224,8 @@ void gpuTest(RBFFD& der, Grid& grid) {
     tm[copy_timer_name]->stop();
 
 #if 1
-    std::ofstream f_out("U_exact.mtx"); 
-    std::ofstream f_out2("F.mtx"); 
+    std::ofstream f_out("output/U_exact.mtx"); 
+    std::ofstream f_out2("output/F.mtx"); 
     for (unsigned int i = 0; i < N; i++) {
         f_out << (*U_exact)[i] << std::endl;
         f_out2 << (*F)[i] << std::endl;
@@ -294,8 +304,10 @@ int main(void)
     std::vector<std::string> grids; 
 
     //grids.push_back("~/GRIDS/md/md005.00036"); 
-    grids.push_back("~/GRIDS/md/md031.01024"); 
+
+    grids.push_back("~/GRIDS/md/md165.27556"); 
 #if 0 
+    grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/md/md089.08100"); 
@@ -366,11 +378,12 @@ int main(void)
 
         if (!primed)  {
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";
-            gpuTest(der,*grid);
+            gpuTest(der,*grid, 1);
             primed = true; 
         } 
 
-        cpuTest(der,*grid);  
+        // No support for GMRES on the CPU yet. 
+        //cpuTest(der,*grid);  
         gpuTest(der,*grid);  
 
         delete(grid); 

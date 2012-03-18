@@ -76,16 +76,9 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
 #if 1
     VCL_VEC_t U_approx_gpu(U_exact.size());
     U_approx_gpu.clear(); 
-    viennacl::linalg::gmres_tag tag;
-    //viennacl::linalg::gmres_tag tag(1e-8, 100); 
-
-    std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
-    std::cout << "GMRES Error Estimate: " << tag.error() << std::endl;
-    std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
-    std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim): " << tag.max_restarts() << std::endl;
-    std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
-    std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
-
+    //viennacl::linalg::gmres_tag tag;
+    viennacl::linalg::gmres_tag tag(1e-8, 1000, 20); 
+    //viennacl::linalg::gmres_tag tag(1e-10, 1000, 20); 
 
     // Solve Au = F
     U_approx_gpu = viennacl::linalg::solve(A, F, tag); 
@@ -99,6 +92,13 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
     }
     f_out.close();
 #endif 
+
+    std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
+    std::cout << "GMRES Error Estimate: " << tag.error() << std::endl;
+    std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
+    std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim): " << tag.max_restarts() << std::endl;
+    std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
+    std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
 
     std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(U_approx_gpu - U_exact) / viennacl::linalg::norm_1(U_exact) << std::endl;  

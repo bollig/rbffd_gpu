@@ -154,12 +154,12 @@ namespace viennacl
         viennacl::traits::resize(U[k], problem_size);
       }
 
-      //std::cout << "Starting GMRES..." << std::endl;
+      std::cout << "Starting GMRES..." << std::endl;
       tag.iters(0);
       
       for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
       {
-        //std::cout << "-- GMRES Start " << it << " -- " << std::endl;
+        std::cout << "-- GMRES Start " << it << " -- " << std::endl;
         
         res = rhs;
         res -= viennacl::linalg::prod(matrix, result);  //initial guess zero
@@ -168,11 +168,11 @@ namespace viennacl
         
         CPU_ScalarType rho_0 = viennacl::linalg::norm_2(res); 
         CPU_ScalarType rho = static_cast<CPU_ScalarType>(1.0);
-        //std::cout << "rho_0: " << rho_0 << std::endl;
+        std::cout << "rho_0: " << rho_0 << std::endl;
 
         if (rho_0 / norm_rhs < tag.tolerance() || (norm_rhs == CPU_ScalarType(0.0)) )
         {
-          //std::cout << "Allowed Error reached at begin of loop" << std::endl;
+          std::cout << "Allowed Error reached at begin of loop" << std::endl;
           tag.error(rho_0 / norm_rhs);
           return result;
         }

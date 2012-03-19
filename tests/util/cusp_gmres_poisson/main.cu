@@ -52,63 +52,88 @@ EB::TimerList tm;
 
 //---------------------------------
 
-// Perform GMRES on CPU
-void GMRES_Host(HOST_MAT_t& A, HOST_VEC_t& F, HOST_VEC_t& U_exact) {
-#if 0
-    HOST_VEC_t U_approx(U_exact.size());
-    viennacl::linalg::gmres_tag tag(1e-8, 100); 
-    U_approx = viennacl::linalg::solve(A, U_exact, tag); 
-
-    std::cout << "Rel l1   Norm: " << boost::numeric::ublas::norm_1(U_approx - U_exact) / boost::numeric::ublas::norm_1(U_exact) << std::endl;  
-    std::cout << "Rel l2   Norm: " << boost::numeric::ublas::norm_2(U_approx - U_exact) / boost::numeric::ublas::norm_2(U_exact) << std::endl;  
-    std::cout << "Rel linf Norm: " << boost::numeric::ublas::norm_inf(U_approx - U_exact) / boost::numeric::ublas::norm_inf(U_exact) << std::endl;  
-#endif 
-}
-
-
 // Perform GMRES on GPU
 void GMRES_Device(DEVICE_MAT_t& A, DEVICE_VEC_t& F, DEVICE_VEC_t& U_exact, DEVICE_VEC_t& U_approx_gpu) {
+#if 1
     size_t restart = 300; 
     int max_iters = 10000; 
     double rel_tol = 1e-8; 
+#else 
+    size_t restart = 50; 
+    int max_iters = 100; 
+    double rel_tol = 1e-8; 
+#endif 
 
-    //    cusp::convergence_monitor<double> monitor( F, max_iters, 0, 1e-3); 
-    cusp::default_monitor<double> monitor( F, max_iters, rel_tol);// , 1e-3); 
+    try {
 
-    cudaThreadSynchronize();
-    std::cout << "Generated monitor\n";
-    // 1e-8, 10000, 300); 
+        //    cusp::convergence_monitor<double> monitor( F, max_iters, 0, 1e-3); 
+        cusp::default_monitor<double> monitor( F, max_iters, rel_tol);// , 1e-3); 
 
-    // Solve Au = F
-    cusp::krylov::gmres(A, U_approx_gpu, F, restart, monitor); 
-    cudaThreadSynchronize(); 
-    //    monitor.print();
+        cudaThreadSynchronize();
+        std::cout << "Generated monitor\n";
+        // 1e-8, 10000, 300); 
 
-    if (monitor.converged())
-    {
-        std::cout << "\n[+++] Solver converged to " << monitor.relative_tolerance() << " relative tolerance";       
-        std::cout << " after " << monitor.iteration_count() << " iterations" << std::endl << std::endl;
+        // Solve Au = F
+        cusp::krylov::gmres(A, U_approx_gpu, F, restart, monitor); 
+        cudaThreadSynchronize(); 
+
+        //    monitor.print();
+
+        if (monitor.converged())
+        {
+            std::cout << "\n[+++] Solver converged to " << monitor.relative_tolerance() << " relative tolerance";       
+            std::cout << " after " << monitor.iteration_count() << " iterations" << std::endl << std::endl;
+        }
+        else
+        {
+            std::cout << "\n[XXX] Solver reached iteration limit " << monitor.iteration_limit() << " before converging";
+            std::cout << " to " << monitor.relative_tolerance() << " relative tolerance " << std::endl << std::endl;
+        }
+
+        std::cout << "GMRES Iterations: " << monitor.iteration_count() << std::endl;
+        std::cout << "GMRES Iteration Limit: " << monitor.iteration_limit() << std::endl;
+        std::cout << "GMRES Residual Norm: " << monitor.residual_norm() << std::endl;
+        std::cout << "GMRES Relative Tol: " << monitor.relative_tolerance() << std::endl;
+        std::cout << "GMRES Absolute Tol: " << monitor.absolute_tolerance() << std::endl;
+        std::cout << "GMRES Target Residual (Abs + Rel*norm(F)): " << monitor.tolerance() << std::endl;
     }
-    else
+    catch(std::bad_alloc &e)
     {
-        std::cout << "\n[XXX] Solver reached iteration limit " << monitor.iteration_limit() << " before converging";
-        std::cout << " to " << monitor.relative_tolerance() << " relative tolerance " << std::endl << std::endl;
+        std::cerr << "Ran out of memory trying to compute GMRES: " << e.what() << std::endl;
+        exit(-1);
+    }
+    catch(thrust::system_error &e)
+    {
+        std::cerr << "Some other error happened during GMRES: " << e.what() << std::endl;
+        exit(-1);
     }
 
-    std::cout << "GMRES Iterations: " << monitor.iteration_count() << std::endl;
-    std::cout << "GMRES Iteration Limit: " << monitor.iteration_limit() << std::endl;
-    std::cout << "GMRES Residual Norm: " << monitor.residual_norm() << std::endl;
-    std::cout << "GMRES Relative Tol: " << monitor.relative_tolerance() << std::endl;
-    std::cout << "GMRES Absolute Tol: " << monitor.absolute_tolerance() << std::endl;
-    std::cout << "GMRES Target Residual (Abs + Rel*norm(F)): " << monitor.tolerance() << std::endl;
 
-    DEVICE_VEC_t diff(U_approx_gpu); 
+    try {
 
-    cusp::blas::axpy(U_exact.begin()+(U_exact.size() - F.size()), U_exact.end(), diff.begin(),  -1); 
+        typedef cusp::array1d<double, DEVICE_VEC_t>::view DEVICE_VEC_VIEW_t; 
 
-    std::cout << "Rel l1   Norm: " << cusp::blas::nrm1(diff) / cusp::blas::nrm1(U_exact) << std::endl;  
-    std::cout << "Rel l2   Norm: " << cusp::blas::nrm2(diff) / cusp::blas::nrm2(U_exact) << std::endl;  
-    std::cout << "Rel linf Norm: " << cusp::blas::nrmmax(diff) / cusp::blas::nrmmax(U_exact) << std::endl;  
+        DEVICE_VEC_VIEW_t U_approx_view(U_exact.begin()+(U_exact.size() - F.size()), U_exact.end()); 
+
+        DEVICE_VEC_t diff(U_approx_gpu); 
+
+        //cusp::blas::axpy(U_exact.begin()+(U_exact.size() - F.size()), U_exact.end(), diff.begin(),  -1); 
+        cusp::blas::axpy(U_approx_view, diff, -1); 
+
+        std::cout << "Rel l1   Norm: " << cusp::blas::nrm1(diff) / cusp::blas::nrm1(U_exact) << std::endl;  
+        std::cout << "Rel l2   Norm: " << cusp::blas::nrm2(diff) / cusp::blas::nrm2(U_exact) << std::endl;  
+        std::cout << "Rel linf Norm: " << cusp::blas::nrmmax(diff) / cusp::blas::nrmmax(U_exact) << std::endl;  
+    }
+    catch(std::bad_alloc &e)
+    {
+        std::cerr << "Ran out of memory trying to compute Error Norms: " << e.what() << std::endl;
+        exit(-1);
+    }
+    catch(thrust::system_error &e)
+    {
+        std::cerr << "Some other error happened during Error Norms: " << e.what() << std::endl;
+        exit(-1);
+    }
 }
 
 //---------------------------------
@@ -340,7 +365,7 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     tm[assemble_timer_name]->stop(); 
 
     if (!primeGPU) {
-        write_System(*A, *F, *U_exact); 
+        //write_System(*A, *F, *U_exact); 
     }
     // ----- SOLVE -----
 
@@ -381,8 +406,8 @@ int main(void)
 
     //grids.push_back("~/GRIDS/md/md005.00036"); 
 
-    grids.push_back("~/GRIDS/md/md165.27556"); 
-#if 0 
+//    grids.push_back("~/GRIDS/md/md165.27556"); 
+#if 1 
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
@@ -391,6 +416,8 @@ int main(void)
     grids.push_back("~/GRIDS/md/md165.27556"); 
 #endif 
 #if 0
+    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtmesh_500k_nodes.ascii"); 
     grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
     grids.push_back("~/GRIDS/geoff/scvtmesh_500k_nodes.ascii"); 
     grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
@@ -454,11 +481,14 @@ int main(void)
         int der_err = der.loadAllWeightsFromFile(); 
         if (der_err) {
             der.computeAllWeightsForAllStencils(); 
+            tm[weight_timer_name]->stop(); 
 
-            tm[weight_timer_name]->start(); 
+            #if 0
+            // Im finding that its more efficient to compute the weights than write and load from disk. 
             if (writeIntermediate) {
                 der.writeAllWeightsToFile(); 
             }
+            #endif 
         }
 
         if (!primed)  {

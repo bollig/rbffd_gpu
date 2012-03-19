@@ -15,6 +15,8 @@
 #include <viennacl/io/matrix_market.hpp>
 #include <viennacl/matrix.hpp>
 #include <viennacl/vector.hpp> 
+#include <viennacl/vector_proxy.hpp> 
+#include <viennacl/linalg/vector_operations.hpp> 
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
@@ -33,6 +35,7 @@
 
 #include <CL/opencl.h>
 
+#include <iomanip>
 #include <iostream>
 #include <sstream> 
 #include <map>
@@ -54,6 +57,8 @@ typedef viennacl::vector<double> VCL_VEC_t;
 EB::TimerList tm;
 
 
+
+
 //---------------------------------
 
 // Perform GMRES on CPU
@@ -72,12 +77,9 @@ void GMRES_Host(UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact) {
 }
 
 // Perform GMRES on GPU
-void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
-#if 1
-    VCL_VEC_t U_approx_gpu(U_exact.size());
-    U_approx_gpu.clear(); 
+void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu) {
     //viennacl::linalg::gmres_tag tag;
-    viennacl::linalg::gmres_tag tag(1e-8, 10000, 350); 
+    viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
     //viennacl::linalg::gmres_tag tag(1e-10, 1000, 20); 
 
     // Solve Au = F
@@ -90,24 +92,15 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
     std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
     std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
+    viennacl::vector_range<VCL_VEC_t> U_exact_view(U_exact, viennacl::range(U_exact.size() - F.size(),U_exact.size()));
 
-    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(U_approx_gpu - U_exact) / viennacl::linalg::norm_1(U_exact) << std::endl;  
-    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(U_approx_gpu - U_exact) / viennacl::linalg::norm_2(U_exact) << std::endl;  
-    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(U_approx_gpu - U_exact) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
-#endif 
+    VCL_VEC_t diff(F.size()); 
 
-    // IF we want to write details we need to copy back to host. 
-#if 1
-    UBLAS_VEC_t U_approx(U_exact.size());
-    copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin());
+    viennacl::linalg::sub(U_approx_gpu, U_exact_view, diff); 
 
-    std::ofstream f_out("output/U_gpu.mtx"); 
-    for (unsigned int i = 0; i < U_exact.size(); i++) {
-        f_out << U_approx[i] << std::endl;
-    }
-    f_out.close();
-#endif 
-
+    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(U_exact) << std::endl;  
+    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(U_exact) << std::endl;  
+    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
 }
 
 //---------------------------------
@@ -115,64 +108,99 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
 // Assemble the LHS matrix with the Identity for boundary nodes. Assume solver
 // is intelligent enough to use information and converge
 // 
-void assemble_LHS_Bnd_Eye( RBFFD& der, Grid& grid, UBLAS_MAT_t& A){
+void assemble_System_Compressed( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact){
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
 
     unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+
     std::cout << "Boundary nodes: " << nb_bnd << std::endl;
     
-    for (unsigned int i = 0; i < nb_bnd; i++) {
-        A(i,i) = 1; 
-    }
 
-    for (unsigned int i = nb_bnd; i < N; i++) {
-        StencilType& sten = grid.getStencil(i); 
-        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+    //------ RHS ----------
 
-        for (unsigned int j = 0; j < n; j++) {
-            A(i,sten[j]) += -lapl[j]; 
-        }
-    }
-    
-    viennacl::io::write_matrix_market_file(A,"output/LHS.mtx"); 
-}
-
-
-// Assembly depends on the input type. This one for UBLAS_CSR
-void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_MAT_t& A){
-    unsigned int N = grid.getNodeListSize(); 
-    unsigned int n = grid.getMaxStencilSize(); 
-
-    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
-    std::cout << "Boundary nodes: " << nb_bnd << std::endl;
-    
-    for (unsigned int i = 0; i < nb_bnd; i++) {
-        A(i,i) = 1; 
-    }
-
-    for (unsigned int i = nb_bnd; i < N; i++) {
-        StencilType& sten = grid.getStencil(i); 
-        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
-
-        for (unsigned int j = 0; j < n; j++) {
-            A(i,sten[j]) += -lapl[j]; 
-        }
-    }
-    
-    viennacl::io::write_matrix_market_file(A,"output/LHS.mtx"); 
-}
-
-//---------------------------------
-
-// This assembly is the same regardless of STL/UBlas vector
-template <class MatType, class VecType>
-void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
     SphericalHarmonic::Sph105 UU; 
 
-    unsigned int N = grid.getNodeListSize(); 
     std::vector<NodeType>& nodes = grid.getNodeList(); 
+
+    // We want U_exact to have the FULL solution. 
+    // F should only have the compressed problem. 
+    for (unsigned int i = 0; i < nb_bnd; i++) {
+        NodeType& node = nodes[i]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
+    }
+
+    for (unsigned int i = nb_bnd; i < N; i++) {
+        NodeType& node = nodes[i]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
+        // Solving -lapl(u + const) = f = -lapl(u) + 0
+        // of course the lapl(const) is 0, so we will have a test to verify
+        // that our null space is closed. 
+        F[i-nb_bnd] = -UU.lapl(Xx, Yy, Zz); 
+    }
+
+    //------ LHS ----------
+
+    // NOTE: assumes the boundary is sorted to the top of the node indices
+    for (unsigned int i = nb_bnd; i < N; i++) {
+        StencilType& sten = grid.getStencil(i); 
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+
+        for (unsigned int j = 0; j < n; j++) {
+            if (sten[j] < (int)nb_bnd) { 
+                // Subtract the solution*weight from the element of the RHS. 
+                F[i-nb_bnd] -= (U_exact[sten[j]] * ( -lapl[j] )); 
+//                std::cout << "Node " << i << " depends on boundary\n"; 
+            } else {
+                // Offset by nb_bnd so we crop off anything related to the boundary
+                A(i-nb_bnd,sten[j]-nb_bnd) += -lapl[j]; 
+            }
+        }
+    }    
+}
+
+
+
+// Assemble the LHS matrix with the Identity for boundary nodes. Assume solver
+// is intelligent enough to use information and converge
+// 
+void assemble_System_Bnd_Eye( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact){
+    unsigned int N = grid.getNodeListSize(); 
+    unsigned int n = grid.getMaxStencilSize(); 
+
     unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+
+    std::cout << "Boundary nodes: " << nb_bnd << std::endl;
+    
+    //------ LHS ----------
+
+    for (unsigned int i = 0; i < nb_bnd; i++) {
+        A(i,i) = 1; 
+    }
+
+    for (unsigned int i = nb_bnd; i < N; i++) {
+        StencilType& sten = grid.getStencil(i); 
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+
+        for (unsigned int j = 0; j < n; j++) {
+            A(i,sten[j]) += -lapl[j]; 
+        }
+    }
+    
+    
+    //------ RHS ----------
+
+    SphericalHarmonic::Sph105 UU; 
+
+    std::vector<NodeType>& nodes = grid.getNodeList(); 
 
     for (unsigned int i = 0; i < nb_bnd; i++) {
         NodeType& node = nodes[i]; 
@@ -196,7 +224,41 @@ void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
         // that our null space is closed. 
         F[i] = -UU.lapl(Xx, Yy, Zz); 
     }
+
 }
+
+template <typename VecT>
+void write_to_file(VecT vec, std::string filename)
+{
+    std::ofstream fout;
+    fout.open(filename.c_str());
+    for (size_t i = 0; i < vec.size(); i++) {
+        fout << std::setprecision(10) << vec[i] << std::endl;
+    }
+    fout.close();
+    std::cout << "Wrote " << filename << std::endl;
+}
+
+
+void write_System ( UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact )
+{
+    write_to_file(F, "output/F.mtx"); 
+    write_to_file(U_exact, "output/U_exact.mtx"); 
+    viennacl::io::write_matrix_market_file(A,"output/LHS.mtx"); 
+}
+
+void write_Solution( Grid& grid, UBLAS_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu ) 
+{
+    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+
+    // IF we want to write details we need to copy back to host. 
+    UBLAS_VEC_t U_approx(U_exact.size());
+    copy(U_exact.begin(), U_exact.begin()+nb_bnd, U_approx.begin());
+    copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin()+nb_bnd);
+
+    write_to_file(U_approx, "output/U_gpu.mtx"); 
+}
+
 
 //---------------------------------
 
@@ -228,56 +290,60 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     std::cout << test_name << std::endl;
 
-    UBLAS_MAT_t* A = NULL; 
-    VCL_MAT_t* A_op = NULL; 
 
-    // Assemble the matrix
-    // ----------------------
+    // ----- ASSEMBLE -----
     tm[assemble_timer_name]->start(); 
-    A = new UBLAS_MAT_t(N, N, n*N); 
-    assemble_LHS(der, grid, *A);  
-
+#if 0
+    // Keep rows in system for boundary
+    UBLAS_MAT_t* A = new UBLAS_MAT_t(N, N, n*N); 
     UBLAS_VEC_t* F = new UBLAS_VEC_t(N, 1);
     UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(N, 1);
-    assemble_RHS<UBLAS_VEC_t>(der, grid, *F, *U_exact);  
+    assemble_System_Bnd_Eye(der, grid, *A, *F, *U_exact); 
+#else 
+    // Compress system to remove boundary rows
+    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+    UBLAS_MAT_t* A = new UBLAS_MAT_t(N-nb_bnd, N-nb_bnd, n*(N-nb_bnd)); 
+    UBLAS_VEC_t* F = new UBLAS_VEC_t(N-nb_bnd, 1);
+    UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(N, 1);
+    assemble_System_Compressed(der, grid, *A, *F, *U_exact); 
+#endif 
     tm[assemble_timer_name]->stop(); 
+    
+    write_System(*A, *F, *U_exact); 
+
+    // ----- SOLVE -----
 
     tm[copy_timer_name]->start();
-    A_op = new VCL_MAT_t(N,N); 
-    copy(*A, *A_op);
 
-    VCL_VEC_t* F_op = new VCL_VEC_t(N);
-    VCL_VEC_t* U_exact_op = new VCL_VEC_t(N);
-    viennacl::copy(F->begin(), F->end(), F_op->begin());
-    viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_op->begin());
+    VCL_MAT_t* A_gpu = new VCL_MAT_t(A->size1(), A->size2()); 
+    copy(*A, *A_gpu);
+
+    VCL_VEC_t* F_gpu = new VCL_VEC_t(F->size());
+    VCL_VEC_t* U_exact_gpu = new VCL_VEC_t(U_exact->size());
+    VCL_VEC_t* U_approx_gpu = new VCL_VEC_t(F->size());
+
+    viennacl::copy(F->begin(), F->end(), F_gpu->begin());
+    viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_gpu->begin());
     tm[copy_timer_name]->stop();
-
-#if 1
-    std::ofstream f_out("output/U_exact.mtx"); 
-    std::ofstream f_out2("output/F.mtx"); 
-    for (unsigned int i = 0; i < N; i++) {
-        f_out << (*U_exact)[i] << std::endl;
-        f_out2 << (*F)[i] << std::endl;
-    }
-    f_out.close();
-    f_out2.close();
-#endif 
-
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F
-    GMRES_Device(*A_op, *F_op, *U_exact_op);
+    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu);
     tm[test_timer_name]->stop();
+
+    write_Solution(grid, *U_exact, *U_approx_gpu); 
 
     // Cleanup
     delete(A);
-    delete(A_op);
+    delete(A_gpu);
     delete(F);
     delete(U_exact);
-    delete(F_op);
-    delete(U_exact_op);
+    delete(F_gpu);
+    delete(U_exact_gpu);
+    delete(U_approx_gpu);
 }
 
+#if 0
 void cpuTest(RBFFD& der, Grid& grid) {
 
     unsigned int N = grid.getNodeListSize(); 
@@ -322,7 +388,7 @@ void cpuTest(RBFFD& der, Grid& grid) {
     // Cleanup
     delete(A);
 }
-
+#endif 
 
 
 int main(void)

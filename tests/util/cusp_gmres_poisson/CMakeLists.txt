@@ -21,5 +21,5 @@ SET (ARGV
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_cuda_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
-add_serial_cuda_framework_test( "${PROJECT_NAME}_nullspace.x"
-    "main_nullspace.cu" "${ARGV}" )
+add_serial_cuda_framework_test( "${PROJECT_NAME}_nullspace.x" "main_nullspace.cu" "${ARGV}" )
+add_serial_cuda_framework_test( "${PROJECT_NAME}_precond.x" "main_precond.cu" "${ARGV}" )

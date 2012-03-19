@@ -24,7 +24,7 @@
 int nx;
 double minX; 
 double maxX; 
-double decay;
+double ddecay;
 int uniformDiffusion;
 
 // Get specific settings for this test case
@@ -32,7 +32,7 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
     minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "0."); 	
     maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "10."); 	
-    decay = settings->GetSettingAs<double>("DECAY", ProjectSettings::optional, "1."); 	
+    ddecay = settings->GetSettingAs<double>("DECAY", ProjectSettings::optional, "1."); 	
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
 }
 
@@ -40,9 +40,9 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
 // Choose a specific Solution to this test case
 ExactSolution* getExactSolution(int dim_num) {
 //    double Re = 10;
-//    decay = 1.0/Re;
+//    ddecay = 1.0/Re;
     //double L = maxX - minX; 
-    ExactSolution* exact = new Exact1D(minX, maxX, decay);
+    ExactSolution* exact = new Exact1D(minX, maxX, ddecay);
     return exact;
 }
 
@@ -358,7 +358,7 @@ int main(int argc, char** argv) {
     // Laplacian = d^2/dx^2
     double sten_area = avgdx*avgdx;
 
-    double max_dt = (0.5*sten_area)/decay;
+    double max_dt = (0.5*sten_area)/ddecay;
 
     // Not sure where Gordon came up with this parameter.
     // for second centered difference and euler time we have nu = 0.5

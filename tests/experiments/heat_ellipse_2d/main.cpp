@@ -35,7 +35,7 @@ double midax_axis;
 int nb_cvt_samples; 
 int nb_cvt_iters; 
 int nb_nodes;
-double decay;
+double ddecay;
 
 int uniformDiffusion; 
 
@@ -51,7 +51,7 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     nb_cvt_samples = settings->GetSettingAs<int>("NB_CVT_SAMPLES", ProjectSettings::optional, "10000"); 	
     nb_cvt_iters = settings->GetSettingAs<int>("NB_CVT_ITERS", ProjectSettings::optional, "1000"); 
     uniformDiffusion = settings->GetSettingAs<int>("UNIFORM_DIFFUSION", ProjectSettings::optional, "1"); 
-    decay = settings->GetSettingAs<double>("DECAY", ProjectSettings::optional, "1."); 	
+    ddecay = settings->GetSettingAs<double>("DECAY", ProjectSettings::optional, "1."); 	
 
 }
 
@@ -60,7 +60,7 @@ void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
 ExactSolution* getExactSolution(int dim_num) {
     switch (dim_num) {
         case 2: 
-            return new Exact2D(major_axis, minor_axis, decay);
+            return new Exact2D(major_axis, minor_axis, ddecay);
 //            return new ExactEllipse(acos(-1.) / 2., 0.5, major_axis, minor_axis);
             break; 
         case 3: 
@@ -413,7 +413,7 @@ int main(int argc, char** argv) {
     // Laplacian = d^2/dx^2
     double sten_area = avgdx*avgdx;
 
-    double max_dt = (0.5*sten_area)/decay;
+    double max_dt = (0.5*sten_area)/ddecay;
 
     // Not sure where Gordon came up with this parameter.
     // for second centered difference and euler time we have nu = 0.5

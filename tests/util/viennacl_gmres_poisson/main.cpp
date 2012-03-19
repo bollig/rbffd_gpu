@@ -161,7 +161,7 @@ void assemble_System_Compressed( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_V
 //                std::cout << "Node " << i << " depends on boundary\n"; 
             } else {
                 // Offset by nb_bnd so we crop off anything related to the boundary
-                A(i-nb_bnd,sten[j]-nb_bnd) += -lapl[j]; 
+                A(i-nb_bnd,sten[j]-nb_bnd) = -lapl[j]; 
             }
         }
     }    
@@ -191,7 +191,7 @@ void assemble_System_Bnd_Eye( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         for (unsigned int j = 0; j < n; j++) {
-            A(i,sten[j]) += -lapl[j]; 
+            A(i,sten[j]) = -lapl[j]; 
         }
     }
     

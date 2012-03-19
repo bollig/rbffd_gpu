@@ -400,8 +400,8 @@ int main(void)
 
     //grids.push_back("~/GRIDS/md/md005.00036"); 
 
-    grids.push_back("~/GRIDS/md/md165.27556"); 
-#if 0 
+    //grids.push_back("~/GRIDS/md/md165.27556"); 
+#if 1 
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
@@ -481,9 +481,12 @@ int main(void)
         }
 
         if (!primed)  {
+            std::cout << "\n\n"; 
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";
             gpuTest(der,*grid, 1);
+            gpuTest(der,*grid, 1);
             primed = true; 
+            std::cout << "\n\n"; 
         } 
 
         // No support for GMRES on the CPU yet. 

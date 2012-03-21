@@ -25,5 +25,8 @@ add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}
 # assumes our free constant is 0. WIth that assumption we can actually obtain
 # a good solution. However, if we add dimensions to the problem (i.e., go to
 # the stokes flow problem it will not be able to converge as well. 
-add_serial_opencl_framework_test( "${PROJECT_NAME}_nullspace.x"
-    "main_nullspace.cpp" "${ARGV}" )
+add_serial_opencl_framework_test( "${PROJECT_NAME}_nullspace.x" "main_nullspace.cpp" "${ARGV}" )
+
+
+# Show how to use preconditioners
+add_serial_opencl_framework_test( "${PROJECT_NAME}_precond.x" "main_precond.cpp" "${ARGV}" )

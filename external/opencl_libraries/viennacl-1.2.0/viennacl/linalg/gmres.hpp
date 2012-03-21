@@ -278,6 +278,7 @@ namespace viennacl
             //std::cout << "Krylov space big enough" << endl;
             tag.error( std::fabs(rho*rho_0 / norm_rhs) );
             ++k;
+            std::cout << "--- GMRES converged in " << tag.iters() << " iterations (" << it << " restarts)\n"; 
             break;
           }
           

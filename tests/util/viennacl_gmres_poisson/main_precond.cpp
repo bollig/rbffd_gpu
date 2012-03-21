@@ -66,10 +66,10 @@ EB::TimerList tm;
 // Perform GMRES on GPU
 void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu) {
     //viennacl::linalg::gmres_tag tag;
-    viennacl::linalg::gmres_tag tag(1e-8, 100, 30); 
+    viennacl::linalg::gmres_tag tag(1e-8, 10000, 200); 
     //viennacl::linalg::gmres_tag tag(1e-10, 1000, 20); 
 
-    int precond = 0; 
+    int precond = 1; 
     switch(precond) {
         case 0: 
             {
@@ -81,8 +81,8 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
             break; 
         case 1: 
             { 
-                //compute ILUT preconditioner with 20 nonzeros per row and drop tolerance of 1e-2
-                viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag(40, 1e-2) );
+                //compute ILUT preconditioner with 20 nonzeros per row 
+                viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag(10) );
                 //solve (e.g. using conjugate gradient solver)
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilut);
             }
@@ -362,8 +362,7 @@ int main(void)
     //grids.push_back("~/GRIDS/md/md005.00036"); 
 
     //grids.push_back("~/GRIDS/md/md165.27556"); 
-    grids.push_back("~/GRIDS/md/md063.04096"); 
-#if 0 
+#if 1 
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
@@ -431,6 +430,7 @@ int main(void)
         std::cout << "Generate RBFFD Weights\n"; 
         tm[weight_timer_name]->start(); 
         RBFFD der(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, grid, 3, 0); 
+//TODO:         der.setWeightType(RBFFD::ContourSVD);
         der.setEpsilonByParameters(eps_c1, eps_c2);
         int der_err = der.loadAllWeightsFromFile(); 
         if (der_err) {

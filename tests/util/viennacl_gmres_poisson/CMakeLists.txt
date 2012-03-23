@@ -30,3 +30,6 @@ add_serial_opencl_framework_test( "${PROJECT_NAME}_nullspace.x" "main_nullspace.
 
 # Show how to use preconditioners
 add_serial_opencl_framework_test( "${PROJECT_NAME}_precond.x" "main_precond.cpp" "${ARGV}" )
+
+# Stokes steady state. Just doign the assembly and testing 1 node locked. 
+add_serial_opencl_framework_test( "${PROJECT_NAME}_stokes.x" "main_stokes.cpp" "${ARGV}" )

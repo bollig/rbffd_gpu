@@ -59,10 +59,10 @@ EB::TimerList tm;
 
 // Perform GMRES on GPU
 void GMRES_Device(DEVICE_MAT_t& A, DEVICE_VEC_t& F, DEVICE_VEC_t& U_exact, DEVICE_VEC_t& U_approx_gpu) {
-#if 0
+#if 1
     size_t restart = 300; 
-    int max_iters = 10000; 
-    double rel_tol = 1e-8; 
+    int max_iters = 1000; 
+    double rel_tol = 1e-6; 
 #else 
     // Maximum number of iterations (total) 
     size_t max_iters = 500; 
@@ -74,12 +74,13 @@ void GMRES_Device(DEVICE_MAT_t& A, DEVICE_VEC_t& F, DEVICE_VEC_t& U_exact, DEVIC
     try {
 
         //    cusp::convergence_monitor<double> monitor( F, max_iters, 0, 1e-3); 
-        cusp::default_monitor<double> monitor( F, -1, rel_tol ); //, max_iters, rel_tol);// , 1e-3); 
+        cusp::default_monitor<double> monitor( F, max_iters, rel_tol ); //, max_iters, rel_tol);// , 1e-3); 
+        //cusp::default_monitor<double> monitor( F, -1, rel_tol ); //, max_iters, rel_tol);// , 1e-3); 
 
         std::cout << "GMRES Starting Residual Norm: " << monitor.residual_norm() << std::endl;
 
         // 1e-8, 10000, 300); 
-        int precondType = 0; 
+        int precondType = -1; 
         switch (precondType) {
             case 0: 
                 {
@@ -203,7 +204,7 @@ void GMRES_Device(DEVICE_MAT_t& A, DEVICE_VEC_t& F, DEVICE_VEC_t& U_exact, DEVIC
 
 //---------------------------------
 
-void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact){
+void assemble_System_Stokes( RBFFD& der, Grid& grid, HOST_MAT_t& A, HOST_VEC_t& F, HOST_VEC_t& U_exact){
     double eta = 1.;
     //double Ra = 1.e6;
 
@@ -306,7 +307,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
         unsigned int diag_row_ind = i + 0*N;
         
-        A.row_offsets[i] = diag_row_ind; 
+        A.row_offsets[diag_row_ind] = ind; 
 
 
         for (unsigned int j = 0; j < st.size(); j++) {
@@ -339,7 +340,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         unsigned int diag_row_ind = i + 1*N;
-        A.row_offsets[i] = diag_row_ind; 
+        A.row_offsets[diag_row_ind] = ind; 
 
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 1*N;
@@ -371,7 +372,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
         unsigned int diag_row_ind = i + 2*N;
-        A.row_offsets[ind] = diag_row_ind; 
+        A.row_offsets[diag_row_ind] = ind; 
 
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 2*N;
@@ -405,7 +406,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double* ddz = der.getStencilWeights(RBFFD::ZSFC, i);
 
         unsigned int diag_row_ind = i + 3*N;
-        A.row_indices[ind] = diag_row_ind; 
+        A.row_offsets[diag_row_ind] = ind; 
 
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 0*N;
@@ -437,7 +438,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
     // ------ EXTRA CONSTRAINT ROWS -----
     unsigned int diag_row_ind = 4*N;
-    A.row_indices[ind] = diag_row_ind; 
+    A.row_offsets[diag_row_ind] = ind;
     // U
     for (unsigned int j = 0; j < N; j++) {
         unsigned int diag_col_ind = j + 0*N;
@@ -448,7 +449,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
     }
 
     diag_row_ind++; 
-    A.row_indices[ind] = diag_row_ind; 
+    A.row_offsets[diag_row_ind] = ind; 
     // V
     for (unsigned int j = 0; j < N; j++) {
         unsigned int diag_col_ind = j + 1*N;
@@ -459,7 +460,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
     }
 
     diag_row_ind++; 
-    A.row_indices[ind] = diag_row_ind; 
+    A.row_offsets[diag_row_ind] = ind; 
     // W
     for (unsigned int j = 0; j < N; j++) {
         unsigned int diag_col_ind = j + 2*N;
@@ -470,7 +471,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
     }
 
     diag_row_ind++; 
-    A.row_indices[ind] = diag_row_ind; 
+    A.row_offsets[diag_row_ind] = ind; 
     // P
     for (unsigned int j = 0; j < N; j++) {
         unsigned int diag_col_ind = j + 3*N;
@@ -481,77 +482,11 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
     }
 
     // VERY IMPORTANT. UNSPECIFIED LAUNCH FAILURES ARE CAUSED BY FORGETTING THIS!
-    A.row_offsets[nrows] = ind; 
+    A.row_offsets[4*N+4] = ind; 
 }
 
 
 
-// Assemble the LHS matrix with the Identity for boundary nodes. Assume solver
-// is intelligent enough to use information and converge
-// 
-void assemble_System_Bnd_Eye( RBFFD& der, Grid& grid, HOST_MAT_t& A, HOST_VEC_t& F, HOST_VEC_t& U_exact){
-    unsigned int N = grid.getNodeListSize(); 
-    unsigned int n = grid.getMaxStencilSize(); 
-
-    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
-
-    std::cout << "Boundary nodes: " << nb_bnd << std::endl;
-
-    //------ RHS ----------
-
-    SphericalHarmonic::Sph105 UU; 
-
-    std::vector<NodeType>& nodes = grid.getNodeList(); 
-
-    for (unsigned int i = 0; i < nb_bnd; i++) {
-        NodeType& node = nodes[i]; 
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
-
-        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
-        F[i] = U_exact[i]; 
-    }
-
-    for (unsigned int i = nb_bnd; i < N; i++) {
-        NodeType& node = nodes[i]; 
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
-
-        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
-        // Solving -lapl(u + const) = f = -lapl(u) + 0
-        // of course the lapl(const) is 0, so we will have a test to verify
-        // that our null space is closed. 
-        F[i] = -UU.lapl(Xx, Yy, Zz); 
-    }
-
-
-    //------ LHS ----------
-    unsigned ind = 0; 
-    for (unsigned int i = 0; i < nb_bnd; i++) {
-        A.row_offsets[i] = ind; 
-        A.column_indices[ind] = i; 
-        A.values[ind] = 1; 
-        ind++; 
-    }
-
-    for (unsigned int i = nb_bnd; i < N; i++) {
-        StencilType& sten = grid.getStencil(i); 
-        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
-
-        A.row_offsets[i] = ind; 
-
-        for (unsigned int j = 0; j < n; j++) {
-            A.column_indices[ind] = sten[j]; 
-            A.values[ind] = -lapl[j]; 
-            ind++; 
-        }
-    }
-
-    // VERY IMPORTANT. UNSPECIFIED LAUNCH FAILURES ARE CAUSED BY FORGETTING THIS!
-    A.row_offsets[N] = ind; 
-}
 
     template <typename VecT>
 void write_to_file(VecT vec, std::string filename)
@@ -596,7 +531,10 @@ void write_Solution( Grid& grid, HOST_VEC_t& U_exact, DEVICE_VEC_t& U_approx_gpu
 void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
-
+    unsigned int nrows = 4 * N + 4; 
+    unsigned int ncols = 4 * N + 4; 
+    unsigned int NNZ = 9*n*N+2*(4*N)+2*(3*N);  
+ 
     char test_name[256]; 
     char assemble_timer_name[256]; 
     char copy_timer_name[512]; 
@@ -624,20 +562,11 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     // ----- ASSEMBLE -----
     tm[assemble_timer_name]->start(); 
-#if 1
-    // Keep rows in system for boundary
-    HOST_MAT_t* A = new HOST_MAT_t(N, N, n*N); 
-    HOST_VEC_t* F = new HOST_VEC_t(N, 1);
-    HOST_VEC_t* U_exact = new HOST_VEC_t(N, 1);
-    assemble_System_Bnd_Eye(der, grid, *A, *F, *U_exact); 
-#else 
-    // Compress system to remove boundary rows
-    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
-    HOST_MAT_t* A = new HOST_MAT_t(N-nb_bnd, N-nb_bnd, n*(N-nb_bnd)); 
-    HOST_VEC_t* F = new HOST_VEC_t(N-nb_bnd, 1);
-    HOST_VEC_t* U_exact = new HOST_VEC_t(N, 1);
-    assemble_System_Compressed(der, grid, *A, *F, *U_exact); 
-#endif 
+    HOST_MAT_t* A = new HOST_MAT_t(nrows, ncols, NNZ); 
+    HOST_VEC_t* F = new HOST_VEC_t(nrows, 0);
+    HOST_VEC_t* U_exact = new HOST_VEC_t(nrows, 0);
+    assemble_System_Stokes(der, grid, *A, *F, *U_exact); 
+    
     tm[assemble_timer_name]->stop(); 
 
     if (!primeGPU) {
@@ -771,7 +700,6 @@ int main(void)
         if (!primed)  {
             std::cout << "\n\n"; 
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";
-            gpuTest(der,*grid, 1);
             gpuTest(der,*grid, 1);
             primed = true; 
             std::cout << "\n\n"; 

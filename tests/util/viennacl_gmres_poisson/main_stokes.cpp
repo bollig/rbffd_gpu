@@ -67,7 +67,7 @@ EB::TimerList tm;
 void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu) {
     //viennacl::linalg::gmres_tag tag;
     //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
-    viennacl::linalg::gmres_tag tag(1e-6, 3000, 300); 
+    viennacl::linalg::gmres_tag tag(1e-6, 1000, 300); 
 
     int precond = -1; 
     switch(precond) {
@@ -547,10 +547,12 @@ int main(void)
         if (der_err) {
             der.computeAllWeightsForAllStencils(); 
 
-            tm[weight_timer_name]->start(); 
+            tm[weight_timer_name]->stop(); 
+#if 0
             if (writeIntermediate) {
                 der.writeAllWeightsToFile(); 
             }
+#endif 
         }
 
         if (!primed)  {

@@ -442,10 +442,15 @@ int main(void)
 
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
+        #if 0
         unsigned int stencil_size = 40;
         double eps_c1 = 0.027;
         double eps_c2 = 0.274;
-
+#else 
+        unsigned int stencil_size = 50;
+        double eps_c1 = 0.027;
+        double eps_c2 = 0.274;
+#endif 
 
         GridReader* grid = new GridReader(grid_name, 4); 
         grid->setMaxStencilSize(stencil_size); 

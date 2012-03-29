@@ -52,6 +52,7 @@
 
 		util/cusp_spmv_benchmark
 		util/cusp_gmres_poisson
+        util/cusp_stokes_steady
 
 		template
 	)

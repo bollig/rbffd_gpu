@@ -1,6 +1,11 @@
+// Solve simple poisson (-lapl(u) = f)
+//  - Solution in one component (not U,V,W,P)
+//  - Use preconditioner ILU0 (ILU with zero-fill-in) 
+//
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
 #include "timer_eb.h" 
+#include "ilu0.hpp"     // MY Version of ILU with 0 fill-in for VCL
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
@@ -66,12 +71,19 @@ EB::TimerList tm;
 // Perform GMRES on GPU
 void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu) {
     //viennacl::linalg::gmres_tag tag;
-    viennacl::linalg::gmres_tag tag(1e-8, 10000, 200); 
+    viennacl::linalg::gmres_tag tag(1e-8, 10000, 50); 
     //viennacl::linalg::gmres_tag tag(1e-10, 1000, 20); 
 
-    int precond = 1; 
+    int precond = 0; 
     switch(precond) {
         case 0: 
+            {
+                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag() ); 
+                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
+                U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0); 
+            }
+            break; 
+        case 1: 
             {
                 //compute ILUT preconditioner (NOT zero fill. This does fill-in according to tag defaults.):
                 viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag() );
@@ -79,7 +91,7 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilut);
             }
             break; 
-        case 1: 
+        case 2: 
             { 
                 //compute ILUT preconditioner with 20 nonzeros per row 
                 viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag(10) );

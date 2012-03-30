@@ -58,36 +58,70 @@ namespace cusp
 
     class StokesSteady //: public PDE 
     {
+        protected: 
+            int primeGPU; 
+            Grid& grid; 
+            RBFFD& der; 
 
-        EB::TimerList tm;
+            unsigned int N; 
+            unsigned int n;
+            unsigned int nb_bnd;
+            unsigned int nrows;
+            unsigned int ncols;
+            unsigned int NNZ; 
 
-        //---------------------------------
+            char test_name[256]; 
+            char assemble_timer_name[256]; 
+            char copy_timer_name[512]; 
+            char test_timer_name[256]; 
+
+            HOST_MAT_t* A; 
+            HOST_VEC_t* F; 
+            HOST_VEC_t* U_exact;
+            DEVICE_MAT_t* A_gpu;
+            DEVICE_VEC_t* F_gpu; 
+            DEVICE_VEC_t* U_exact_gpu; 
+            DEVICE_VEC_t* U_approx_gpu;
+
+            EB::TimerList tm;
+
+            //---------------------------------
         public: 
+            StokesSteady(RBFFD& der, Grid& grid, int primeGPU=0); 
+            ~StokesSteady(); 
 
-        // Perform GMRES on GPU
-        void GMRES_Device(DEVICE_MAT_t& A, DEVICE_VEC_t& F, DEVICE_VEC_t& U_exact, DEVICE_VEC_t& U_approx_gpu) ;
-        //---------------------------------
+            void setupTimers(); 
 
-        void assemble_System_Stokes( RBFFD& der, Grid& grid, HOST_MAT_t& A, HOST_VEC_t& F, HOST_VEC_t& U_exact);
+            void assemble(); 
+            void solve();
 
-        template <typename VecT>
-            void write_to_file(VecT vec, std::string filename){
-                std::ofstream fout;
-                fout.open(filename.c_str());
-                for (size_t i = 0; i < vec.size(); i++) {
-                    fout << std::setprecision(10) << vec[i] << std::endl;
+            // Perform GMRES on GPU
+            void GMRES_Device(DEVICE_MAT_t& A, DEVICE_VEC_t& F, DEVICE_VEC_t& U_exact, DEVICE_VEC_t& U_approx_gpu) ;
+
+            // Do a test SpMV to make sure our parallel system is assembled properly
+            void SpMV_Device(DEVICE_MAT_t& A, DEVICE_VEC_t& F, DEVICE_VEC_t& U_exact, DEVICE_VEC_t& U_approx_gpu) ;
+            //---------------------------------
+
+            void assemble_System_Stokes( RBFFD& der, Grid& grid, HOST_MAT_t& A, HOST_VEC_t& F, HOST_VEC_t& U_exact);
+
+            template <typename VecT>
+                void write_to_file(VecT vec, std::string filename){
+                    std::ofstream fout;
+                    fout.open(filename.c_str());
+                    for (size_t i = 0; i < vec.size(); i++) {
+                        fout << std::setprecision(10) << vec[i] << std::endl;
+                    }
+                    fout.close();
+                    std::cout << "Wrote " << filename << std::endl;
                 }
-                fout.close();
-                std::cout << "Wrote " << filename << std::endl;
-            }
 
 
-        void write_System ( HOST_MAT_t& A, HOST_VEC_t& F, HOST_VEC_t& U_exact ); 
-        void write_Solution( Grid& grid, HOST_VEC_t& U_exact, DEVICE_VEC_t& U_approx_gpu );
+            void write_System ( HOST_MAT_t& A, HOST_VEC_t& F, HOST_VEC_t& U_exact ); 
+            void write_Solution( Grid& grid, HOST_VEC_t& U_exact, DEVICE_VEC_t& U_approx_gpu );
 
-        //---------------------------------
+            //---------------------------------
 
-        void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0);
+            void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0);
     }; 
 
 }; 

@@ -9,6 +9,7 @@
 #include "timer_eb.h" 
 
 #include "utils/spherical_harmonics.h"
+#include "utils/conf/projectsettings.h" 
 
 #include "stokes_steady_cusp.h"
 
@@ -26,7 +27,6 @@ EB::TimerList tm;
 
 int main(void)
 {
-    cusp::StokesSteady pde; 
 
     bool writeIntermediate = true; 
     bool primed = false; 
@@ -121,17 +121,22 @@ int main(void)
 #endif 
         }
 
+        cusp::StokesSteady pde(der, *grid, 1); 
+
+        pde.assemble();
+
+
         if (!primed)  {
             std::cout << "\n\n"; 
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";
-            pde.gpuTest(der,*grid, 1);
+            pde.solve();
             primed = true; 
             std::cout << "\n\n"; 
         } 
 
-        // No support for GMRES on the CPU yet. 
-        //cpuTest(der,*grid);  
-        pde.gpuTest(der,*grid);  
+        for (int i = 0 ; i < 5; i++) {
+//            pde.solve(); 
+        }
 
         delete(grid); 
     }

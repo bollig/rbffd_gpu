@@ -78,8 +78,22 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
     switch(precond) {
         case 0: 
             {
+#if 0
+                // vandermond matrix test. PASS
+                UBLAS_MAT_t AA(5,5,25); 
+                AA(0,0) = 1;   AA(0,1) = 1;   AA(0,2) = 1;   AA(0,3) = 1;   AA(0,4) = 1; 
+                AA(1,0) = 16;   AA(1,1) = 8;   AA(1,2) = 4;   AA(1,3) = 2;   AA(1,4) = 1; 
+                AA(2,0) = 81;   AA(2,1) = 27;   AA(2,2) = 9;   AA(2,3) = 3;   AA(2,4) = 1; 
+                AA(3,0) = 256;   AA(3,1) = 64;   AA(3,2) = 16;   AA(3,3) = 4;   AA(3,4) = 1; 
+                AA(4,0) = 625;   AA(4,1) = 125;   AA(4,2) = 25;   AA(4,3) = 5;   AA(4,4) = 1; 
+                VCL_MAT_t AA_gpu; 
+                copy(AA,AA_gpu);
+                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu( AA_gpu, viennacl::linalg::ilu0_tag() ); 
+                viennacl::io::write_matrix_market_file(vcl_ilu.LU,"output/ILU.mtx"); 
+#endif 
                 viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag() ); 
                 viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
+                exit(-1);
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0); 
             }
             break; 

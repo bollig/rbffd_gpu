@@ -56,29 +56,7 @@ namespace viennacl
                     : _row_start(row_start),  
                     _row_end(row_end) 
             {}
-#if 0
-                //ilu0_tag(unsigned int entries_per_row = 20, double drop_tolerance = 1e-4) : _entries_per_row(entries_per_row), _drop_tolerance(drop_tolerance) {}; 
-
-                void set_drop_tolerance(double tol)
-                {
-                    if (tol > 0)
-                        _drop_tolerance = tol;
-                }
-                double get_drop_tolerance() const { return _drop_tolerance; }
-
-                void set_entries_per_row(unsigned int e)
-                {
-                    if (e > 0)
-                        _entries_per_row = e;
-                }
-
-                unsigned int get_entries_per_row() const { return _entries_per_row; }
-
-            private:
-                unsigned int _entries_per_row;
-                double _drop_tolerance;
-#endif 
-            public: 
+           public: 
                 unsigned int _row_start, _row_end;
         };
 
@@ -157,10 +135,10 @@ namespace viennacl
                     w.clear();
                     for (InputColIterator col_iter = row_iter.begin(); col_iter != row_iter.end(); ++col_iter)
                     {
-#if 0
+#if 1
                         // Only work on the block described by (row_start:row_end, row_start:row_end)
-                        if ((row_iter.index1() >= tag._row_start) && (row_iter.index1() < tag._row_end)) {
-                            if ((col_iter.index2() >= tag._row_start) && (col_iter.index2() < tag._row_end)) {
+                        if ((static_cast<unsigned int>(row_iter.index1()) >= tag._row_start) && (static_cast<unsigned int>(row_iter.index1()) < tag._row_end)) {
+                            if ((static_cast<unsigned int>(col_iter.index2()) >= tag._row_start) && (static_cast<unsigned int>(col_iter.index2()) < tag._row_end)) {
                                 w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
                             }
                         } else {

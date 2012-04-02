@@ -68,9 +68,9 @@ EB::TimerList tm;
 void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N, unsigned int nb_bnd) {
     //viennacl::linalg::gmres_tag tag;
     //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
-    viennacl::linalg::gmres_tag tag(1e-6, 10000, 300); 
+    viennacl::linalg::gmres_tag tag(1e-6, 1000, 60); 
 
-    int precond = 1; 
+    int precond = -1; 
     switch(precond) {
         case 0: 
             {
@@ -132,14 +132,14 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
 
 //---------------------------------
 
-void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact){
+void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact, UBLAS_VEC_t& U_exact_compressed){
     double eta = 1.;
     //double Ra = 1.e6;
 
     // We have different nb_stencils and nb_nodes when we parallelize. The subblocks might not be full
     unsigned int nb_stencils = grid.getStencilsSize();
-    unsigned int nb_nodes = grid.getNodeListSize(); 
-    unsigned int max_stencil_size = grid.getMaxStencilSize();
+   // unsigned int nb_nodes = grid.getNodeListSize(); 
+   // unsigned int max_stencil_size = grid.getMaxStencilSize();
     unsigned int N = nb_stencils;
     unsigned int nb_bnd = grid.getBoundaryIndicesSize();
     // ---------------------------------------------------
@@ -148,7 +148,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
     // This is our manufactured solution:
     SphericalHarmonic::Sph32 UU; 
     SphericalHarmonic::Sph32105 VV; 
-    SphericalHarmonic::Sph32 WW; 
+    SphericalHarmonic::Sph105 WW; 
     SphericalHarmonic::Sph32 PP; 
 
     std::vector<NodeType>& nodes = grid.getNodeList(); 
@@ -156,7 +156,6 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
     //------------- Fill F -------------
 
     // U
-    // 0->1
     for (unsigned int j = 0; j < nb_bnd; j++) {
         unsigned int row_ind = j + 0*(N);
         NodeType& node = nodes[j]; 
@@ -166,8 +165,6 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
         U_exact(row_ind) = UU.eval(Xx, Yy, Zz);
     }
-
-    // 1->1023
     for (unsigned int j = nb_bnd; j < N; j++) {
         unsigned int row_ind = j + 0*(N-nb_bnd);
         unsigned int uncompressed_row_ind = j + 0*(N);
@@ -177,11 +174,11 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double Zz = node.z(); 
 
         U_exact(uncompressed_row_ind) = UU.eval(Xx,Yy,Zz); 
-        F(row_ind-nb_bnd) = -UU.lapl(Xx,Yy,Zz) + PP.d_dx(Xx,Yy,Zz);  
+        U_exact_compressed(row_ind-nb_bnd) = UU.eval(Xx,Yy,Zz); 
+        F(row_ind-nb_bnd) = -eta * UU.lapl(Xx,Yy,Zz) + PP.d_dx(Xx,Yy,Zz);  
     }
 
     // V
-    // 1023->1024
     for (unsigned int j = 0; j < nb_bnd; j++) {
         unsigned int row_ind = j + 1*(N);
         NodeType& node = nodes[j]; 
@@ -189,10 +186,8 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        U_exact(row_ind) = -j; // VV.eval(Xx,Yy,Zz); 
+        U_exact(row_ind) = VV.eval(Xx,Yy,Zz); 
     }
-
-    // 1024->2047
     for (unsigned int j = nb_bnd; j < N; j++) {
         unsigned int row_ind = j + 1*(N-nb_bnd);
         unsigned int uncompressed_row_ind = j + 1*(N);
@@ -200,12 +195,10 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double Xx = node.x(); 
         double Yy = node.y(); 
         double Zz = node.z(); 
-        //double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
-        //double dir = node.y();
 
-        // F(row_ind) = (Ra * Temperature(j) * dir) / rr;  
         U_exact(uncompressed_row_ind) = VV.eval(Xx,Yy,Zz); 
-        F(row_ind-nb_bnd) = -VV.lapl(Xx,Yy,Zz) + PP.d_dy(Xx,Yy,Zz);  
+        U_exact_compressed(row_ind-nb_bnd) = VV.eval(Xx,Yy,Zz); 
+        F(row_ind-nb_bnd) = -eta * VV.lapl(Xx,Yy,Zz) + PP.d_dy(Xx,Yy,Zz);  
     }
 
 
@@ -217,7 +210,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        U_exact(row_ind) = -j; // WW.eval(Xx,Yy,Zz); 
+        U_exact(row_ind) = WW.eval(Xx,Yy,Zz); 
     }
 
     for (unsigned int j = nb_bnd; j < N; j++) {
@@ -229,7 +222,8 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double Zz = node.z(); 
 
         U_exact(uncompressed_row_ind) = WW.eval(Xx,Yy,Zz); 
-        F(row_ind-nb_bnd) = -WW.lapl(Xx,Yy,Zz) + PP.d_dz(Xx,Yy,Zz);  
+        U_exact_compressed(row_ind-nb_bnd) = WW.eval(Xx,Yy,Zz); 
+        F(row_ind-nb_bnd) = -eta * WW.lapl(Xx,Yy,Zz) + PP.d_dz(Xx,Yy,Zz);  
     }
 
     // P
@@ -253,6 +247,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         double Zz = node.z(); 
 
         U_exact(uncompressed_row_ind) = PP.eval(Xx,Yy,Zz); 
+        U_exact_compressed(row_ind-nb_bnd) = PP.eval(Xx,Yy,Zz); 
         F(row_ind-nb_bnd) = UU.d_dx(Xx,Yy,Zz) + VV.d_dy(Xx,Yy,Zz) + WW.d_dz(Xx,Yy,Zz);  
     }
 
@@ -362,7 +357,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
                 double Yy = node.y(); 
                 double Zz = node.z(); 
 
-                F[diag_row_ind-nb_bnd] -= -eta * VV.lapl(Xx, Yy, Zz);
+                F[diag_row_ind-nb_bnd] -= -eta * WW.lapl(Xx, Yy, Zz);
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = -eta * lapl[j];  
             }
@@ -467,12 +462,12 @@ void write_System ( UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact )
     viennacl::io::write_matrix_market_file(A,"output/LHS.mtx"); 
 }
 
-void write_Solution( Grid& grid, UBLAS_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu ) 
+void write_Solution( Grid& grid, UBLAS_VEC_t& U_exact_compressed, VCL_VEC_t& U_approx_gpu ) 
 {
-    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+    //unsigned int nb_bnd = grid.getBoundaryIndicesSize();
 
     // IF we want to write details we need to copy back to host. 
-    UBLAS_VEC_t U_approx(U_exact.size());
+    UBLAS_VEC_t U_approx(U_exact_compressed.size());
     copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin());
 
     write_to_file(U_approx, "output/U_gpu.mtx"); 
@@ -521,11 +516,16 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     // Compress system to remove boundary rows
     UBLAS_MAT_t* A = new UBLAS_MAT_t(nrows, ncols, NNZ); 
     UBLAS_VEC_t* F = new UBLAS_VEC_t(nrows, 0);
-    UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(n_unknowns, -1);
-    assemble_System_Stokes(der, grid, *A, *F, *U_exact); 
+    UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(n_unknowns, 0);
+    UBLAS_VEC_t* U_exact_compressed = new UBLAS_VEC_t(nrows, 0);
+    assemble_System_Stokes(der, grid, *A, *F, *U_exact, *U_exact_compressed); 
     tm[assemble_timer_name]->stop(); 
 
     write_System(*A, *F, *U_exact); 
+    write_to_file(*U_exact_compressed, "output/U_exact_compressed.mtx"); 
+
+    UBLAS_VEC_t F_discrete = prod(*A, *U_exact_compressed); 
+    write_to_file(F_discrete, "output/F_discrete.mtx"); 
 
     // ----- SOLVE -----
 
@@ -535,11 +535,11 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     copy(*A, *A_gpu);
 
     VCL_VEC_t* F_gpu = new VCL_VEC_t(F->size());
-    VCL_VEC_t* U_exact_gpu = new VCL_VEC_t(U_exact->size());
+    VCL_VEC_t* U_exact_gpu = new VCL_VEC_t(U_exact_compressed->size());
     VCL_VEC_t* U_approx_gpu = new VCL_VEC_t(F->size());
 
     viennacl::copy(F->begin(), F->end(), F_gpu->begin());
-    viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_gpu->begin());
+    viennacl::copy(U_exact_compressed->begin(), U_exact_compressed->end(), U_exact_gpu->begin());
     tm[copy_timer_name]->stop();
 
     tm[test_timer_name]->start();
@@ -547,13 +547,14 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N, nb_bnd);
     tm[test_timer_name]->stop();
 
-    write_Solution(grid, *U_exact, *U_approx_gpu); 
+    write_Solution(grid, *U_exact_compressed, *U_approx_gpu); 
 
     // Cleanup
     delete(A);
     delete(A_gpu);
     delete(F);
     delete(U_exact);
+    delete(U_exact_compressed);
     delete(F_gpu);
     delete(U_exact_gpu);
     delete(U_approx_gpu);
@@ -570,9 +571,9 @@ int main(void)
 
     //    grids.push_back("~/GRIDS/md/md005.00036"); 
 
-    //grids.push_back("~/GRIDS/md/md165.27556"); 
-    grids.push_back("~/GRIDS/md/md031.01024"); 
-    //  grids.push_back("~/GRIDS/md/md089.08100"); 
+    grids.push_back("~/GRIDS/md/md165.27556"); 
+    //grids.push_back("~/GRIDS/md/md031.01024"); 
+    //grids.push_back("~/GRIDS/md/md089.08100"); 
 #if 0
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
@@ -615,13 +616,15 @@ int main(void)
             // We will set the first node as a boundary/ground point. We know
             // the normal because we're on teh sphere centered at (0,0,0)
             unsigned int nodeIndex = 0; 
-            unsigned int nodeIndex2 = 1; 
             NodeType& node = grid->getNode(nodeIndex); 
-            NodeType& node2 = grid->getNode(nodeIndex); 
             Vec3 nodeNormal = node - Vec3(0,0,0); 
-            Vec3 nodeNormal2 = node2 - Vec3(0,0,0); 
             grid->appendBoundaryIndex(nodeIndex, nodeNormal); 
-           // grid->appendBoundaryIndex(nodeIndex2, nodeNormal2); 
+#if 0
+            unsigned int nodeIndex2 = 1; 
+            NodeType& node2 = grid->getNode(nodeIndex); 
+            Vec3 nodeNormal2 = node2 - Vec3(0,0,0); 
+            grid->appendBoundaryIndex(nodeIndex2, nodeNormal2); 
+#endif 
 #endif 
             //-----------------------------
             if (writeIntermediate) {
@@ -664,7 +667,6 @@ int main(void)
         if (!primed)  {
             std::cout << "\n\n"; 
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";
-            gpuTest(der,*grid, 1);
             gpuTest(der,*grid, 1);
             primed = true; 
             std::cout << "\n\n"; 

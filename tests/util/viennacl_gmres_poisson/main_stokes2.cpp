@@ -76,7 +76,7 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
             {
                 // ILU with 0 fill-in
                 viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag()); 
-                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
+//                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
                 std::cout << "Wrote preconditioner to output/ILU.mtx\n";
                 //solve (e.g. using conjugate gradient solver)
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0);
@@ -86,7 +86,7 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
             {
                 // ILU with 0 fill-in on a subset of the input matrix
                 viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag(0, 3*(N-nb_bnd))); 
-                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
+//                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
                 std::cout << "Wrote preconditioner to output/ILU.mtx\n";
                 //solve (e.g. using conjugate gradient solver)
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0);
@@ -148,7 +148,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
     // This is our manufactured solution:
     SphericalHarmonic::Sph32 UU; 
     SphericalHarmonic::Sph32105 VV; 
-    SphericalHarmonic::Sph105 WW; 
+    SphericalHarmonic::Sph32 WW; 
     SphericalHarmonic::Sph32 PP; 
 
     std::vector<NodeType>& nodes = grid.getNodeList(); 
@@ -459,7 +459,7 @@ void write_System ( UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact )
 {
     write_to_file(F, "output/F.mtx"); 
     write_to_file(U_exact, "output/U_exact.mtx"); 
-    viennacl::io::write_matrix_market_file(A,"output/LHS.mtx"); 
+//    viennacl::io::write_matrix_market_file(A,"output/LHS.mtx"); 
 }
 
 void write_Solution( Grid& grid, UBLAS_VEC_t& U_exact_compressed, VCL_VEC_t& U_approx_gpu ) 

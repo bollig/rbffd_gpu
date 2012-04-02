@@ -68,7 +68,7 @@ EB::TimerList tm;
 void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N, unsigned int nb_bnd) {
     //viennacl::linalg::gmres_tag tag;
     //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
-    viennacl::linalg::gmres_tag tag(1e-6, 10000, 80); 
+    viennacl::linalg::gmres_tag tag(1e-6, 10000, 300); 
 
     int precond = 1; 
     switch(precond) {
@@ -220,7 +220,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         U_exact(row_ind) = -j; // WW.eval(Xx,Yy,Zz); 
     }
 
-   for (unsigned int j = nb_bnd; j < N; j++) {
+    for (unsigned int j = nb_bnd; j < N; j++) {
         unsigned int row_ind = j + 2*(N-nb_bnd);
         unsigned int uncompressed_row_ind = j + 2*(N);
         NodeType& node = nodes[j];
@@ -274,12 +274,14 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 0*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                // Need the exact solution at stencil node j
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= -eta * UU.lapl(Xx, Yy, Zz);
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = -eta * lapl[j];  
@@ -287,12 +289,14 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         }
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 3*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                // Need the exact solution at stencil node j
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= PP.d_dx(Xx, Yy, Zz); 
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddx[j];  
@@ -311,12 +315,14 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 1*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                // Need the exact solution at stencil node j
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= -eta * VV.lapl(Xx, Yy, Zz);
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = -eta * lapl[j];  
@@ -324,12 +330,14 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         }
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 3*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                // Need the exact solution at stencil node j
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= PP.d_dy(Xx, Yy, Zz); 
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddy[j];  
@@ -347,12 +355,13 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 2*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= -eta * VV.lapl(Xx, Yy, Zz);
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = -eta * lapl[j];  
@@ -360,12 +369,13 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         }
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 3*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= PP.d_dz(Xx, Yy, Zz); 
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddz[j];  
@@ -385,27 +395,29 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         // ddx(U)-component
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 0*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= UU.d_dx(Xx, Yy, Zz);
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddx[j];  
             }
         }
- 
+
         // ddy(V)-component
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 1*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= VV.d_dx(Xx, Yy, Zz);
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddy[j];  
@@ -415,12 +427,13 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         // ddz(W)-component
         for (unsigned int j = 0; j < st.size(); j++) {
             unsigned int diag_col_ind = st[j] + 2*(N-nb_bnd);
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
 
             if (st[j] < (int)nb_bnd) { 
+                NodeType& node = nodes[st[j]]; 
+                double Xx = node.x(); 
+                double Yy = node.y(); 
+                double Zz = node.z(); 
+
                 F[diag_row_ind-nb_bnd] -= WW.d_dx(Xx, Yy, Zz);
             } else {
                 A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddz[j];  
@@ -439,7 +452,8 @@ void write_to_file(VecT vec, std::string filename)
     std::ofstream fout;
     fout.open(filename.c_str());
     for (size_t i = 0; i < vec.size(); i++) {
-        fout << i << "\t" << std::setprecision(10) << vec[i] << std::endl;
+        //   fout << i << "\t" << std::setprecision(10) << vec[i] << std::endl;
+        fout << std::setprecision(10) << vec[i] << std::endl;
     }
     fout.close();
     std::cout << "Wrote " << filename << std::endl;
@@ -476,7 +490,7 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     unsigned int nrows = 4 * N - 4*nb_bnd; 
     unsigned int ncols = 4 * N - 4*nb_bnd; 
     unsigned int NNZ = 9*n*N+2*(4*N)+2*(3*N);  
- 
+
     char test_name[256]; 
     char assemble_timer_name[256]; 
     char copy_timer_name[512]; 
@@ -554,16 +568,16 @@ int main(void)
 
     std::vector<std::string> grids; 
 
-//    grids.push_back("~/GRIDS/md/md005.00036"); 
+    //    grids.push_back("~/GRIDS/md/md005.00036"); 
 
     //grids.push_back("~/GRIDS/md/md165.27556"); 
-//    grids.push_back("~/GRIDS/md/md031.01024"); 
-  grids.push_back("~/GRIDS/md/md089.08100"); 
+    grids.push_back("~/GRIDS/md/md031.01024"); 
+    //  grids.push_back("~/GRIDS/md/md089.08100"); 
 #if 0
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
-  grids.push_back("~/GRIDS/md/md089.08100"); 
+    grids.push_back("~/GRIDS/md/md089.08100"); 
     grids.push_back("~/GRIDS/md/md127.16384"); 
     grids.push_back("~/GRIDS/md/md165.27556"); 
 #endif 
@@ -582,7 +596,7 @@ int main(void)
         tm[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
-        unsigned int stencil_size = 4;
+        unsigned int stencil_size = 40;
         double eps_c1 = 0.027;
         double eps_c2 = 0.274;
 
@@ -607,7 +621,7 @@ int main(void)
             Vec3 nodeNormal = node - Vec3(0,0,0); 
             Vec3 nodeNormal2 = node2 - Vec3(0,0,0); 
             grid->appendBoundaryIndex(nodeIndex, nodeNormal); 
-//            grid->appendBoundaryIndex(nodeIndex2, nodeNormal2); 
+           // grid->appendBoundaryIndex(nodeIndex2, nodeNormal2); 
 #endif 
             //-----------------------------
             if (writeIntermediate) {
@@ -633,7 +647,7 @@ int main(void)
         std::cout << "Generate RBFFD Weights\n"; 
         tm[weight_timer_name]->start(); 
         RBFFD der(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, grid, 3, 0); 
-//TODO:         der.setWeightType(RBFFD::ContourSVD);
+        //TODO:         der.setWeightType(RBFFD::ContourSVD);
         der.setEpsilonByParameters(eps_c1, eps_c2);
         int der_err = der.loadAllWeightsFromFile(); 
         if (der_err) {

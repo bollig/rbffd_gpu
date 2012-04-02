@@ -249,7 +249,7 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
     // -----------------  Fill LHS --------------------
     //
     // U (block)  row
-    for (unsigned int i = nb_bnd; i < nb_bnd+10; i++) {
+    for (unsigned int i = nb_bnd; i < N; i++) {
         StencilType& st = grid.getStencil(i);
 
         // System has form: 
@@ -290,122 +290,133 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         }
     }
 
-#if 0
-    // V (block)  row
-    for (unsigned int i = 0; i < N; i++) {
-        StencilType& st = grid.getStencil(i);
 
-        // TODO: change these to *SFC weights (when computed)
+    // V (block)  row
+    for (unsigned int i = nb_bnd; i < N; i++) {
+        StencilType& st = grid.getStencil(i);
         double* ddy = der.getStencilWeights(RBFFD::YSFC, i);
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
-        unsigned int diag_row_ind = i + 1*N;
+        unsigned int diag_row_ind = i + 1*(N-nb_bnd);
 
         for (unsigned int j = 0; j < st.size(); j++) {
-            unsigned int diag_col_ind = st[j] + 1*N;
+            unsigned int diag_col_ind = st[j] + 1*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
 
-            A(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= -eta * VV.lapl(Xx, Yy, Zz);
+            } else {
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = -eta * lapl[j];  
+            }
         }
         for (unsigned int j = 0; j < st.size(); j++) {
-            unsigned int diag_col_ind = st[j] + 3*N;
+            unsigned int diag_col_ind = st[j] + 3*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
 
-            A(diag_row_ind, diag_col_ind) = ddy[j];  
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= PP.d_dy(Xx, Yy, Zz); 
+            } else {
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddy[j];  
+            }
         }
-
-        // Added constraint to square mat and close nullspace
-        A(diag_row_ind, 4*N+1) = 1.; 
     }
 
     // W (block)  row
-    for (unsigned int i = 0; i < N; i++) {
+    for (unsigned int i = nb_bnd; i < N; i++) {
         StencilType& st = grid.getStencil(i);
-
-        // TODO: change these to *SFC weights (when computed)
         double* ddz = der.getStencilWeights(RBFFD::ZSFC, i);
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
-        unsigned int diag_row_ind = i + 2*N;
+        unsigned int diag_row_ind = i + 2*(N-nb_bnd);
 
         for (unsigned int j = 0; j < st.size(); j++) {
-            unsigned int diag_col_ind = st[j] + 2*N;
+            unsigned int diag_col_ind = st[j] + 2*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
 
-            A(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= -eta * VV.lapl(Xx, Yy, Zz);
+            } else {
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = -eta * lapl[j];  
+            }
         }
         for (unsigned int j = 0; j < st.size(); j++) {
-            unsigned int diag_col_ind = st[j] + 3*N;
+            unsigned int diag_col_ind = st[j] + 3*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
 
-            A(diag_row_ind, diag_col_ind) = ddz[j];  
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= PP.d_dz(Xx, Yy, Zz); 
+            } else {
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddz[j];  
+            }
         }
-
-        // Added constraint to square mat and close nullspace
-        A(diag_row_ind, 4*N+2) = 1.; 
     }
 
-
     // P (block)  row
-    for (unsigned int i = 0; i < N; i++) {
+    for (unsigned int i = nb_bnd; i < N; i++) {
         StencilType& st = grid.getStencil(i);
-
-        // TODO: change these to *SFC weights (when computed)
         double* ddx = der.getStencilWeights(RBFFD::XSFC, i);
         double* ddy = der.getStencilWeights(RBFFD::YSFC, i);
         double* ddz = der.getStencilWeights(RBFFD::ZSFC, i);
 
-        unsigned int diag_row_ind = i + 3*N;
+        unsigned int diag_row_ind = i + 3*(N-nb_bnd);
 
+        // ddx(U)-component
         for (unsigned int j = 0; j < st.size(); j++) {
-            unsigned int diag_col_ind = st[j] + 0*N;
+            unsigned int diag_col_ind = st[j] + 0*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
 
-            A(diag_row_ind, diag_col_ind) = ddx[j];  
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= UU.d_dx(Xx, Yy, Zz);
+            } else {
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddx[j];  
+            }
         }
+ 
+        // ddy(V)-component
         for (unsigned int j = 0; j < st.size(); j++) {
-            unsigned int diag_col_ind = st[j] + 1*N;
+            unsigned int diag_col_ind = st[j] + 1*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
 
-            A(diag_row_ind, diag_col_ind) = ddy[j];  
-        }
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= VV.d_dx(Xx, Yy, Zz);
+            } else {
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddy[j];  
+            }
+        }    
+
+        // ddz(W)-component
         for (unsigned int j = 0; j < st.size(); j++) {
-            unsigned int diag_col_ind = st[j] + 2*N;
+            unsigned int diag_col_ind = st[j] + 2*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
 
-            A(diag_row_ind, diag_col_ind) = ddz[j];  
-        }
-
-        // Added constraint to square mat and close nullspace
-        A(diag_row_ind, 4*N+3) = 1.;  
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= WW.d_dx(Xx, Yy, Zz);
+            } else {
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddz[j];  
+            }
+        }    
     }
-
-    // ------ EXTRA CONSTRAINT ROWS -----
-    unsigned int diag_row_ind = 4*N;
-    // U
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int diag_col_ind = j + 0*N;
-
-        A(diag_row_ind, diag_col_ind) = 1.;  
-    }
-
-    diag_row_ind++; 
-    // V
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int diag_col_ind = j + 1*N;
-
-        A(diag_row_ind, diag_col_ind) = 1.;  
-    }
-
-    diag_row_ind++; 
-    // W
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int diag_col_ind = j + 2*N;
-
-        A(diag_row_ind, diag_col_ind) = 1.;  
-    }
-
-    diag_row_ind++; 
-    // P
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int diag_col_ind = j + 3*N;
-
-        A(diag_row_ind, diag_col_ind) = 1.;  
-    }
-#endif 
 }
 
 

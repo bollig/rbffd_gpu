@@ -21,6 +21,11 @@ SET (ARGV
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
+
+# Verify that our solution of a simple FD matrix (well conditioned) matches
+# GMRES from Matlab
+add_serial_opencl_framework_test( "${PROJECT_NAME}_simple_verify.x" "main_verify_gmres.cpp" "${ARGV}" )
+
 # This binary will show how GMRES converges when we have a nullspace. It
 # assumes our free constant is 0. WIth that assumption we can actually obtain
 # a good solution. However, if we add dimensions to the problem (i.e., go to

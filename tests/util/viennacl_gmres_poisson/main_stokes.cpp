@@ -65,10 +65,11 @@ EB::TimerList tm;
 
 
 // Perform GMRES on GPU
-void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N) {
+void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N, unsigned int n) {
     //viennacl::linalg::gmres_tag tag;
     //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
-    viennacl::linalg::gmres_tag tag(1e-6, 10000, 300); 
+    //viennacl::linalg::gmres_tag tag(1e-8, 1000, 3*n); 
+    viennacl::linalg::gmres_tag tag(1e-8, 1000, 250); 
 
     int precond = 0; 
     switch(precond) {
@@ -76,8 +77,10 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
             {
                 //compute ILUT preconditioner (NOT zero fill. This does fill-in according to tag defaults.):
                 viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag(0, 3*N)); 
+#if 0
                 viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
                 std::cout << "Wrote preconditioner to output/ILU.mtx\n";
+#endif 
                 //solve (e.g. using conjugate gradient solver)
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0);
             }
@@ -113,11 +116,29 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
     viennacl::vector_range<VCL_VEC_t> U_exact_view(U_exact, viennacl::range(U_exact.size() - F.size(),U_exact.size()));
 #endif 
     VCL_VEC_t diff(F.size()); 
+    if (F.size() != U_exact.size()) { 
+    exit(-1); 
+    }
     viennacl::linalg::sub(U_approx_gpu, U_exact, diff); 
 
     std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(U_exact) << std::endl;  
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(U_exact) << std::endl;  
     std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
+    std::cout << "----------------------------\n";
+
+    for (int i = 0; i < 4; i++) { 
+        VCL_VEC_t uu(N);
+        viennacl::copy(U_approx_gpu.begin()+i*N, U_approx_gpu.begin()+((i*N)+N-1), uu.begin()); 
+
+        VCL_VEC_t uu_exact(N);
+        viennacl::copy(U_exact.begin()+i*N, U_exact.begin()+((i*N)+N-1), uu_exact.begin()); 
+
+        std::cout << "==> Component " << i << "\n"; 
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(uu - uu_exact) / viennacl::linalg::norm_1(uu_exact) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(uu - uu_exact) / viennacl::linalg::norm_2(uu_exact) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(uu - uu_exact) / viennacl::linalg::norm_inf(uu_exact) << std::endl;  
+        std::cout << "----------------------------\n";
+    }
 }
 
 //---------------------------------
@@ -454,7 +475,7 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F
-    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N);
+    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N, n);
     tm[test_timer_name]->stop();
 
     write_Solution(grid, *U_exact, *U_approx_gpu); 
@@ -480,8 +501,8 @@ int main(void)
 
     //grids.push_back("~/GRIDS/md/md005.00036"); 
 
-    //grids.push_back("~/GRIDS/md/md165.27556"); 
-    //grids.push_back("~/GRIDS/md/md031.01024"); 
+//    grids.push_back("~/GRIDS/md/md031.01024"); 
+    //grids.push_back("~/GRIDS/md/md089.08100"); 
 #if 1
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
@@ -505,10 +526,16 @@ int main(void)
         tm[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
+#if 0
+        // Too ill-conditioned? Doesnt converge in GMRES + ILU0
         unsigned int stencil_size = 40;
         double eps_c1 = 0.027;
         double eps_c2 = 0.274;
-
+#else 
+        unsigned int stencil_size = 31;
+        double eps_c1 = 0.035;
+        double eps_c2 = 0.1;
+#endif 
 
         GridReader* grid = new GridReader(grid_name, 4); 
         grid->setMaxStencilSize(stencil_size); 
@@ -569,7 +596,6 @@ int main(void)
         if (!primed)  {
             std::cout << "\n\n"; 
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";
-            gpuTest(der,*grid, 1);
             gpuTest(der,*grid, 1);
             primed = true; 
             std::cout << "\n\n"; 

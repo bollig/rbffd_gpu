@@ -35,6 +35,7 @@
 #include <boost/numeric/ublas/lu.hpp>
 
 #include "utils/spherical_harmonics.h"
+#include "ilu0.hpp"
 
 #include <CL/opencl.h>
 
@@ -64,14 +65,24 @@ EB::TimerList tm;
 
 
 // Perform GMRES on GPU
-void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu) {
+void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N) {
     //viennacl::linalg::gmres_tag tag;
     //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
-    viennacl::linalg::gmres_tag tag(1e-6, 1000, 300); 
+    viennacl::linalg::gmres_tag tag(1e-6, 10000, 300); 
 
-    int precond = -1; 
+    int precond = 0; 
     switch(precond) {
         case 0: 
+            {
+                //compute ILUT preconditioner (NOT zero fill. This does fill-in according to tag defaults.):
+                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag(0, 3*N)); 
+                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
+                std::cout << "Wrote preconditioner to output/ILU.mtx\n";
+                //solve (e.g. using conjugate gradient solver)
+                U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0);
+            }
+            break; 
+        case 1: 
             {
                 //compute ILUT preconditioner (NOT zero fill. This does fill-in according to tag defaults.):
                 viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag() );
@@ -79,7 +90,7 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilut);
             }
             break; 
-        case 1: 
+        case 2: 
             { 
                 //compute ILUT preconditioner with 20 nonzeros per row 
                 viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag(10) );
@@ -443,7 +454,7 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F
-    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu);
+    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N);
     tm[test_timer_name]->stop();
 
     write_Solution(grid, *U_exact, *U_approx_gpu); 

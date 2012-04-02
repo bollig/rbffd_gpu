@@ -1,3 +1,12 @@
+
+// ILU0 (Incomplete LU with zero fill-in) 
+//  - All preconditioner nonzeros exist at locations that were nonzero in the input matrix. 
+//  - The number of nonzeros in the output preconditioner are exactly the same number as the input matrix
+//
+// Evan Bollig 3/30/12
+// 
+// Adapted from viennacl/linalg/ilu.hpp
+
 #ifndef VIENNACL_LINALG_ILU0_HPP_
 #define VIENNACL_LINALG_ILU0_HPP_
 
@@ -40,11 +49,15 @@ namespace viennacl
             public:
                 /** @brief The constructor.
                  *
-                 * @param entries_per_row  Number of nonzero entries per row in L and U. Note that L and U are stored in a single matrix, thus there are 2*entries_per_row in total.
-                 * @param drop_tolerance   The drop tolerance for ILUT
+                 * @param row_start     The starting row for the block to which we apply ILU
+                 * @param row_end       The end column of the block to which we apply ILU
                  */
-                ilu0_tag(unsigned int entries_per_row = 20,
-                        double drop_tolerance = 1e-4) : _entries_per_row(entries_per_row), _drop_tolerance(drop_tolerance) {}; 
+                ilu0_tag(unsigned int row_start = 0, unsigned int row_end = -1)
+                    : _row_start(row_start),  
+                    _row_end(row_end) 
+            {}
+#if 0
+                //ilu0_tag(unsigned int entries_per_row = 20, double drop_tolerance = 1e-4) : _entries_per_row(entries_per_row), _drop_tolerance(drop_tolerance) {}; 
 
                 void set_drop_tolerance(double tol)
                 {
@@ -64,6 +77,9 @@ namespace viennacl
             private:
                 unsigned int _entries_per_row;
                 double _drop_tolerance;
+#endif 
+            public: 
+                unsigned int _row_start, _row_end;
         };
 
 
@@ -132,6 +148,7 @@ namespace viennacl
                 output.resize(static_cast<unsigned int>(input.size1()), static_cast<unsigned int>(input.size2()), false);
                 SparseVector w;
 
+
                 std::map<double, unsigned int> temp_map;
 
                 // For i = 2, ... , N, DO
@@ -139,7 +156,21 @@ namespace viennacl
                 {
                     w.clear();
                     for (InputColIterator col_iter = row_iter.begin(); col_iter != row_iter.end(); ++col_iter)
-                        w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
+                    {
+#if 1
+                        // Only work on the block described by (row_start:row_end, row_start:row_end)
+                        if ((row_iter.index1() >= tag._row_start) && (row_iter.index1() < tag._row_end)) {
+                            if ((col_iter.index2() >= tag._row_start) && (col_iter.index2() < tag._row_end)) {
+                                w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
+                            }
+                        } else {
+                            // Put identity on the excluded diagonal
+                            w[static_cast<unsigned int>(row_iter.index1())] = 1.e-3; 
+                        }
+#else 
+                                w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
+#endif 
+                    }
 
                     //line 3:
                     OutputRowIterator row_iter_out = output.begin1();
@@ -157,6 +188,7 @@ namespace viennacl
                         if (output(index_k, index_k) == 0.0)
                         {
                             std::cerr << "ViennaCL: FATAL ERROR in ILUT(): Diagonal entry is zero in row " << index_k << "!" << std::endl;
+
                         }
 
                         for (OutputColIterator j = row_iter_out.begin(); j != row_iter_out.end(); ++j)
@@ -183,7 +215,6 @@ namespace viennacl
                         output(static_cast<unsigned int>(row_iter.index1()), k->first) = static_cast<typename LUType::value_type>(w[k->first]);
                         k_count ++; 
                     }
-
                 } //for i
             }
 

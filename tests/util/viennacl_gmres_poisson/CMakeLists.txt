@@ -36,3 +36,4 @@ add_serial_opencl_framework_test( "${PROJECT_NAME}_ilu0.x" "main_ilu0.cpp" "${AR
 
 # Stokes steady state (U,V,W,P). Just doign the assembly and testing 1 node locked. 
 add_serial_opencl_framework_test( "${PROJECT_NAME}_stokes.x" "main_stokes.cpp" "${ARGV}" )
+add_serial_opencl_framework_test( "${PROJECT_NAME}_stokes2.x" "main_stokes2.cpp" "${ARGV}" )

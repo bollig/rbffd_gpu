@@ -1,11 +1,6 @@
-// Solve simple poisson (-lapl(u) = f)
-//  - Solution in one component (not U,V,W,P)
-//  - Use preconditioner ILU0 (ILU with zero-fill-in) 
-//
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
 #include "timer_eb.h" 
-#include "ilu0.hpp"     // MY Version of ILU with 0 fill-in for VCL
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
@@ -40,6 +35,7 @@
 #include <boost/numeric/ublas/lu.hpp>
 
 #include "utils/spherical_harmonics.h"
+#include "ilu0.hpp"
 
 #include <CL/opencl.h>
 
@@ -69,46 +65,24 @@ EB::TimerList tm;
 
 
 // Perform GMRES on GPU
-void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu) {
+void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N) {
     //viennacl::linalg::gmres_tag tag;
-    viennacl::linalg::gmres_tag tag(1e-8, 10000, 50); 
-    //viennacl::linalg::gmres_tag tag(1e-10, 1000, 20); 
+    //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
+    viennacl::linalg::gmres_tag tag(1e-6, 10000, 300); 
 
     int precond = 0; 
     switch(precond) {
         case 0: 
             {
-#if 0
-                // vandermond matrix test. PASS
-                UBLAS_MAT_t AA(5,5,25); 
-                AA(0,0) = 1;   AA(0,1) = 1;   AA(0,2) = 1;   AA(0,3) = 1;   AA(0,4) = 1; 
-                AA(1,0) = 16;   AA(1,1) = 8;   AA(1,2) = 4;   AA(1,3) = 2;   AA(1,4) = 1; 
-                AA(2,0) = 81;   AA(2,1) = 27;   AA(2,2) = 9;   AA(2,3) = 3;   AA(2,4) = 1; 
-                AA(3,0) = 256;   AA(3,1) = 64;   AA(3,2) = 16;   AA(3,3) = 4;   AA(3,4) = 1; 
-                AA(4,0) = 625;   AA(4,1) = 125;   AA(4,2) = 25;   AA(4,3) = 5;   AA(4,4) = 1; 
-                VCL_MAT_t AA_gpu; 
-                copy(AA,AA_gpu);
-                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu( AA_gpu, viennacl::linalg::ilu0_tag() ); 
-                viennacl::io::write_matrix_market_file(vcl_ilu.LU,"output/ILU.mtx"); 
-                exit(-1);
-#endif 
-                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag() ); 
-#if 0
+                //compute ILUT preconditioner (NOT zero fill. This does fill-in according to tag defaults.):
+                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag(0, 3*N)); 
                 viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
                 std::cout << "Wrote preconditioner to output/ILU.mtx\n";
-#endif 
-                U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0); 
+                //solve (e.g. using conjugate gradient solver)
+                U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0);
             }
             break; 
         case 1: 
-            {
-                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag(10, F.size())); 
-                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
-                std::cout << "Wrote preconditioner to output/ILU.mtx\n";
-                U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0); 
-            }
-            break; 
-        case 2: 
             {
                 //compute ILUT preconditioner (NOT zero fill. This does fill-in according to tag defaults.):
                 viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag() );
@@ -116,10 +90,10 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilut);
             }
             break; 
-        case 3: 
+        case 2: 
             { 
                 //compute ILUT preconditioner with 20 nonzeros per row 
-                viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag(40) );
+                viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag(10) );
                 //solve (e.g. using conjugate gradient solver)
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilut);
             }
@@ -135,12 +109,11 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
     std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim): " << tag.max_restarts() << std::endl;
     std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
     std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
-
+#if 0
     viennacl::vector_range<VCL_VEC_t> U_exact_view(U_exact, viennacl::range(U_exact.size() - F.size(),U_exact.size()));
-
+#endif 
     VCL_VEC_t diff(F.size()); 
-
-    viennacl::linalg::sub(U_approx_gpu, U_exact_view, diff); 
+    viennacl::linalg::sub(U_approx_gpu, U_exact, diff); 
 
     std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(U_exact) << std::endl;  
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(U_exact) << std::endl;  
@@ -149,128 +122,295 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
 
 //---------------------------------
 
-// Assemble the LHS matrix with the Identity for boundary nodes. Assume solver
-// is intelligent enough to use information and converge
-// NOTE: this is a single component, -lapl(u) = f  with 1 boundary node. 
-// 
-void assemble_System_Compressed( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact){
-    unsigned int N = grid.getNodeListSize(); 
-    unsigned int n = grid.getMaxStencilSize(); 
+void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact){
+    double eta = 1.;
+    //double Ra = 1.e6;
 
+    // We have different nb_stencils and nb_nodes when we parallelize. The subblocks might not be full
+    unsigned int nb_stencils = grid.getStencilsSize();
+    unsigned int nb_nodes = grid.getNodeListSize(); 
+    unsigned int max_stencil_size = grid.getMaxStencilSize();
+    unsigned int N = nb_stencils;
     unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+    // ---------------------------------------------------
 
-    std::cout << "Boundary nodes: " << nb_bnd << std::endl;
-
-
-    //------ RHS ----------
-
-    SphericalHarmonic::Sph2020 UU; 
+    //------------- Fill the RHS of the System -------------
+    // This is our manufactured solution:
+    SphericalHarmonic::Sph32 UU; 
+    SphericalHarmonic::Sph32105 VV; 
+    SphericalHarmonic::Sph32 WW; 
+    SphericalHarmonic::Sph32 PP; 
 
     std::vector<NodeType>& nodes = grid.getNodeList(); 
 
-    // We want U_exact to have the FULL solution. 
-    // F should only have the compressed problem. 
-    for (unsigned int i = 0; i < nb_bnd; i++) {
-        NodeType& node = nodes[i]; 
+    //------------- Fill F -------------
+
+    // U
+    // 0->1
+    for (unsigned int j = 0; j < nb_bnd; j++) {
+        unsigned int row_ind = j + 0*(N);
+        NodeType& node = nodes[j]; 
         double Xx = node.x(); 
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
+        U_exact(row_ind) = UU.eval(Xx, Yy, Zz);
     }
 
-    for (unsigned int i = nb_bnd; i < N; i++) {
-        NodeType& node = nodes[i]; 
+    // 1->1023
+    for (unsigned int j = nb_bnd; j < N; j++) {
+        unsigned int row_ind = j + 0*(N-nb_bnd);
+        unsigned int uncompressed_row_ind = j + 0*(N);
+        NodeType& node = nodes[j]; 
         double Xx = node.x(); 
         double Yy = node.y(); 
         double Zz = node.z(); 
 
-        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
-        // Solving -lapl(u + const) = f = -lapl(u) + 0
-        // of course the lapl(const) is 0, so we will have a test to verify
-        // that our null space is closed. 
-        F[i-nb_bnd] = -UU.lapl(Xx, Yy, Zz); 
+        U_exact(uncompressed_row_ind) = UU.eval(Xx,Yy,Zz); 
+        F(row_ind-nb_bnd) = -UU.lapl(Xx,Yy,Zz) + PP.d_dx(Xx,Yy,Zz);  
     }
 
-    //------ LHS ----------
+    // V
+    // 1023->1024
+    for (unsigned int j = 0; j < nb_bnd; j++) {
+        unsigned int row_ind = j + 1*(N);
+        NodeType& node = nodes[j]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
 
-    // NOTE: assumes the boundary is sorted to the top of the node indices
-    for (unsigned int i = nb_bnd; i < N; i++) {
-        StencilType& sten = grid.getStencil(i); 
+        U_exact(row_ind) = -j; // VV.eval(Xx,Yy,Zz); 
+    }
+
+    // 1024->2047
+    for (unsigned int j = nb_bnd; j < N; j++) {
+        unsigned int row_ind = j + 1*(N-nb_bnd);
+        unsigned int uncompressed_row_ind = j + 1*(N);
+        NodeType& node = nodes[j]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+        //double rr = sqrt(node.x()*node.x() + node.y()*node.y() + node.z()*node.z());
+        //double dir = node.y();
+
+        // F(row_ind) = (Ra * Temperature(j) * dir) / rr;  
+        U_exact(uncompressed_row_ind) = VV.eval(Xx,Yy,Zz); 
+        F(row_ind-nb_bnd) = -VV.lapl(Xx,Yy,Zz) + PP.d_dy(Xx,Yy,Zz);  
+    }
+
+
+    // W
+    for (unsigned int j = 0; j < nb_bnd; j++) {
+        unsigned int row_ind = j + 2*(N);
+        NodeType& node = nodes[j]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        U_exact(row_ind) = -j; // WW.eval(Xx,Yy,Zz); 
+    }
+
+   for (unsigned int j = nb_bnd; j < N; j++) {
+        unsigned int row_ind = j + 2*(N-nb_bnd);
+        unsigned int uncompressed_row_ind = j + 2*(N);
+        NodeType& node = nodes[j];
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        U_exact(uncompressed_row_ind) = WW.eval(Xx,Yy,Zz); 
+        F(row_ind-nb_bnd) = -WW.lapl(Xx,Yy,Zz) + PP.d_dz(Xx,Yy,Zz);  
+    }
+
+    // P
+    for (unsigned int j = 0; j < nb_bnd; j++) {
+        unsigned int row_ind = j + 3*(N);
+        NodeType& node = nodes[j]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        U_exact(row_ind) = PP.eval(Xx,Yy,Zz); 
+    }
+
+
+    for (unsigned int j = nb_bnd; j < N; j++) {
+        unsigned int row_ind = j + 3*(N-nb_bnd);
+        unsigned int uncompressed_row_ind = j + 3*(N);
+        NodeType& node = nodes[j]; 
+        double Xx = node.x(); 
+        double Yy = node.y(); 
+        double Zz = node.z(); 
+
+        U_exact(uncompressed_row_ind) = PP.eval(Xx,Yy,Zz); 
+        F(row_ind-nb_bnd) = UU.d_dx(Xx,Yy,Zz) + VV.d_dy(Xx,Yy,Zz) + WW.d_dz(Xx,Yy,Zz);  
+    }
+
+    // -----------------  Fill LHS --------------------
+    //
+    // U (block)  row
+    for (unsigned int i = nb_bnd; i < nb_bnd+10; i++) {
+        StencilType& st = grid.getStencil(i);
+
+        // System has form: 
+        // -lapl(U) + grad(P) = f
+        // div(U) = 0
+
+        // TODO: change these to *SFC weights (when computed)
+        double* ddx = der.getStencilWeights(RBFFD::XSFC, i);
         double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
-        for (unsigned int j = 0; j < n; j++) {
-            if (sten[j] < (int)nb_bnd) { 
-                // Subtract the solution*weight from the element of the RHS. 
-                F[i-nb_bnd] -= (U_exact[sten[j]] * ( -lapl[j] )); 
-                //                std::cout << "Node " << i << " depends on boundary\n"; 
+        unsigned int diag_row_ind = i + 0*(N-nb_bnd);
+
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 0*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
+
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= -eta * UU.lapl(Xx, Yy, Zz);
             } else {
-                // Offset by nb_bnd so we crop off anything related to the boundary
-                A(i-nb_bnd,sten[j]-nb_bnd) = -lapl[j]; 
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = -eta * lapl[j];  
             }
         }
-    }    
-}
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 3*(N-nb_bnd);
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
 
-
-
-// Assemble the LHS matrix with the Identity for boundary nodes. Assume solver
-// is intelligent enough to use information and converge
-// 
-void assemble_System_Bnd_Eye( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t& F, UBLAS_VEC_t& U_exact){
-    unsigned int N = grid.getNodeListSize(); 
-    unsigned int n = grid.getMaxStencilSize(); 
-
-    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
-
-    std::cout << "Boundary nodes: " << nb_bnd << std::endl;
-
-    //------ LHS ----------
-
-    for (unsigned int i = 0; i < nb_bnd; i++) {
-        A(i,i) = 1; 
-    }
-
-    for (unsigned int i = nb_bnd; i < N; i++) {
-        StencilType& sten = grid.getStencil(i); 
-        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
-
-        for (unsigned int j = 0; j < n; j++) {
-            A(i,sten[j]) = -lapl[j]; 
+            if (st[j] < (int)nb_bnd) { 
+                F[diag_row_ind-nb_bnd] -= PP.d_dx(Xx, Yy, Zz); 
+            } else {
+                A(diag_row_ind-nb_bnd, diag_col_ind-nb_bnd) = ddx[j];  
+            }
         }
     }
 
+#if 0
+    // V (block)  row
+    for (unsigned int i = 0; i < N; i++) {
+        StencilType& st = grid.getStencil(i);
 
-    //------ RHS ----------
+        // TODO: change these to *SFC weights (when computed)
+        double* ddy = der.getStencilWeights(RBFFD::YSFC, i);
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
 
-    SphericalHarmonic::Sph2020 UU; 
+        unsigned int diag_row_ind = i + 1*N;
 
-    std::vector<NodeType>& nodes = grid.getNodeList(); 
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 1*N;
 
-    for (unsigned int i = 0; i < nb_bnd; i++) {
-        NodeType& node = nodes[i]; 
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
+            A(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+        }
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 3*N;
 
-        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
-        F[i] = U_exact[i]; 
+            A(diag_row_ind, diag_col_ind) = ddy[j];  
+        }
+
+        // Added constraint to square mat and close nullspace
+        A(diag_row_ind, 4*N+1) = 1.; 
     }
 
-    for (unsigned int i = nb_bnd; i < N; i++) {
-        NodeType& node = nodes[i]; 
-        double Xx = node.x(); 
-        double Yy = node.y(); 
-        double Zz = node.z(); 
+    // W (block)  row
+    for (unsigned int i = 0; i < N; i++) {
+        StencilType& st = grid.getStencil(i);
 
-        U_exact[i] = UU.eval(Xx, Yy, Zz) + 2*M_PI; 
-        // Solving -lapl(u + const) = f = -lapl(u) + 0
-        // of course the lapl(const) is 0, so we will have a test to verify
-        // that our null space is closed. 
-        F[i] = -UU.lapl(Xx, Yy, Zz); 
+        // TODO: change these to *SFC weights (when computed)
+        double* ddz = der.getStencilWeights(RBFFD::ZSFC, i);
+        double* lapl = der.getStencilWeights(RBFFD::LSFC, i); 
+
+        unsigned int diag_row_ind = i + 2*N;
+
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 2*N;
+
+            A(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
+        }
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 3*N;
+
+            A(diag_row_ind, diag_col_ind) = ddz[j];  
+        }
+
+        // Added constraint to square mat and close nullspace
+        A(diag_row_ind, 4*N+2) = 1.; 
     }
 
+
+    // P (block)  row
+    for (unsigned int i = 0; i < N; i++) {
+        StencilType& st = grid.getStencil(i);
+
+        // TODO: change these to *SFC weights (when computed)
+        double* ddx = der.getStencilWeights(RBFFD::XSFC, i);
+        double* ddy = der.getStencilWeights(RBFFD::YSFC, i);
+        double* ddz = der.getStencilWeights(RBFFD::ZSFC, i);
+
+        unsigned int diag_row_ind = i + 3*N;
+
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 0*N;
+
+            A(diag_row_ind, diag_col_ind) = ddx[j];  
+        }
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 1*N;
+
+            A(diag_row_ind, diag_col_ind) = ddy[j];  
+        }
+        for (unsigned int j = 0; j < st.size(); j++) {
+            unsigned int diag_col_ind = st[j] + 2*N;
+
+            A(diag_row_ind, diag_col_ind) = ddz[j];  
+        }
+
+        // Added constraint to square mat and close nullspace
+        A(diag_row_ind, 4*N+3) = 1.;  
+    }
+
+    // ------ EXTRA CONSTRAINT ROWS -----
+    unsigned int diag_row_ind = 4*N;
+    // U
+    for (unsigned int j = 0; j < N; j++) {
+        unsigned int diag_col_ind = j + 0*N;
+
+        A(diag_row_ind, diag_col_ind) = 1.;  
+    }
+
+    diag_row_ind++; 
+    // V
+    for (unsigned int j = 0; j < N; j++) {
+        unsigned int diag_col_ind = j + 1*N;
+
+        A(diag_row_ind, diag_col_ind) = 1.;  
+    }
+
+    diag_row_ind++; 
+    // W
+    for (unsigned int j = 0; j < N; j++) {
+        unsigned int diag_col_ind = j + 2*N;
+
+        A(diag_row_ind, diag_col_ind) = 1.;  
+    }
+
+    diag_row_ind++; 
+    // P
+    for (unsigned int j = 0; j < N; j++) {
+        unsigned int diag_col_ind = j + 3*N;
+
+        A(diag_row_ind, diag_col_ind) = 1.;  
+    }
+#endif 
 }
+
+
+
+
 
     template <typename VecT>
 void write_to_file(VecT vec, std::string filename)
@@ -278,7 +418,7 @@ void write_to_file(VecT vec, std::string filename)
     std::ofstream fout;
     fout.open(filename.c_str());
     for (size_t i = 0; i < vec.size(); i++) {
-        fout << std::setprecision(10) << vec[i] << std::endl;
+        fout << i << "\t" << std::setprecision(10) << vec[i] << std::endl;
     }
     fout.close();
     std::cout << "Wrote " << filename << std::endl;
@@ -298,8 +438,7 @@ void write_Solution( Grid& grid, UBLAS_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu )
 
     // IF we want to write details we need to copy back to host. 
     UBLAS_VEC_t U_approx(U_exact.size());
-    copy(U_exact.begin(), U_exact.begin()+nb_bnd, U_approx.begin());
-    copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin()+nb_bnd);
+    copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin());
 
     write_to_file(U_approx, "output/U_gpu.mtx"); 
 }
@@ -308,9 +447,15 @@ void write_Solution( Grid& grid, UBLAS_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu )
 //---------------------------------
 
 void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
-    unsigned int N = grid.getNodeListSize(); 
+    unsigned int N = grid.getStencilsSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
-
+    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
+    unsigned int n_unknowns = 4 * N;
+    // We subtract off the unknowns for the boundary
+    unsigned int nrows = 4 * N - 4*nb_bnd; 
+    unsigned int ncols = 4 * N - 4*nb_bnd; 
+    unsigned int NNZ = 9*n*N+2*(4*N)+2*(3*N);  
+ 
     char test_name[256]; 
     char assemble_timer_name[256]; 
     char copy_timer_name[512]; 
@@ -338,23 +483,15 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     // ----- ASSEMBLE -----
     tm[assemble_timer_name]->start(); 
-#if 0
-    // Keep rows in system for boundary
-    UBLAS_MAT_t* A = new UBLAS_MAT_t(N, N, n*N); 
-    UBLAS_VEC_t* F = new UBLAS_VEC_t(N, 1);
-    UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(N, 1);
-    assemble_System_Bnd_Eye(der, grid, *A, *F, *U_exact); 
-#else 
     // Compress system to remove boundary rows
-    unsigned int nb_bnd = grid.getBoundaryIndicesSize();
-    UBLAS_MAT_t* A = new UBLAS_MAT_t(N-nb_bnd, N-nb_bnd, n*(N-nb_bnd)); 
-    UBLAS_VEC_t* F = new UBLAS_VEC_t(N-nb_bnd, 1);
-    UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(N, 1);
-    assemble_System_Compressed(der, grid, *A, *F, *U_exact); 
-#endif 
+    UBLAS_MAT_t* A = new UBLAS_MAT_t(nrows, ncols, NNZ); 
+    UBLAS_VEC_t* F = new UBLAS_VEC_t(nrows, 0);
+    UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(n_unknowns, -1);
+    assemble_System_Stokes(der, grid, *A, *F, *U_exact); 
     tm[assemble_timer_name]->stop(); 
 
     write_System(*A, *F, *U_exact); 
+    exit(-1); 
 
     // ----- SOLVE -----
 
@@ -373,7 +510,7 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F
-    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu);
+    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N);
     tm[test_timer_name]->stop();
 
     write_Solution(grid, *U_exact, *U_approx_gpu); 
@@ -397,10 +534,11 @@ int main(void)
 
     std::vector<std::string> grids; 
 
-    //grids.push_back("~/GRIDS/md/md005.00036"); 
+    grids.push_back("~/GRIDS/md/md005.00036"); 
 
-    grids.push_back("~/GRIDS/md/md165.27556"); 
-#if 0 
+    //grids.push_back("~/GRIDS/md/md165.27556"); 
+    //grids.push_back("~/GRIDS/md/md031.01024"); 
+#if 0
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
@@ -423,7 +561,7 @@ int main(void)
         tm[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
-        unsigned int stencil_size = 40;
+        unsigned int stencil_size = 4;
         double eps_c1 = 0.027;
         double eps_c2 = 0.274;
 
@@ -436,14 +574,20 @@ int main(void)
         if (err == Grid::NO_GRID_FILES) 
         {
             grid->generate();
+#if 1
             // NOTE: We force at least one node in the domain to be a boundary. 
             //-----------------------------
             // We will set the first node as a boundary/ground point. We know
             // the normal because we're on teh sphere centered at (0,0,0)
             unsigned int nodeIndex = 0; 
+            unsigned int nodeIndex2 = 1; 
             NodeType& node = grid->getNode(nodeIndex); 
+            NodeType& node2 = grid->getNode(nodeIndex); 
             Vec3 nodeNormal = node - Vec3(0,0,0); 
+            Vec3 nodeNormal2 = node2 - Vec3(0,0,0); 
             grid->appendBoundaryIndex(nodeIndex, nodeNormal); 
+//            grid->appendBoundaryIndex(nodeIndex2, nodeNormal2); 
+#endif 
             //-----------------------------
             if (writeIntermediate) {
                 grid->writeToFile(); 
@@ -474,10 +618,12 @@ int main(void)
         if (der_err) {
             der.computeAllWeightsForAllStencils(); 
 
-            tm[weight_timer_name]->start(); 
+            tm[weight_timer_name]->stop(); 
+#if 0
             if (writeIntermediate) {
                 der.writeAllWeightsToFile(); 
             }
+#endif 
         }
 
         if (!primed)  {

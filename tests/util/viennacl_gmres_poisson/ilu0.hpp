@@ -157,7 +157,7 @@ namespace viennacl
                     w.clear();
                     for (InputColIterator col_iter = row_iter.begin(); col_iter != row_iter.end(); ++col_iter)
                     {
-#if 1
+#if 0
                         // Only work on the block described by (row_start:row_end, row_start:row_end)
                         if ((row_iter.index1() >= tag._row_start) && (row_iter.index1() < tag._row_end)) {
                             if ((col_iter.index2() >= tag._row_start) && (col_iter.index2() < tag._row_end)) {
@@ -165,10 +165,10 @@ namespace viennacl
                             }
                         } else {
                             // Put identity on the excluded diagonal
-                            w[static_cast<unsigned int>(row_iter.index1())] = 1.e-3; 
+                            w[static_cast<unsigned int>(row_iter.index1())] = 1.; 
                         }
 #else 
-                                w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
+                        w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
 #endif 
                     }
 

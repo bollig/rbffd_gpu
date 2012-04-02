@@ -65,17 +65,17 @@ EB::TimerList tm;
 
 
 // Perform GMRES on GPU
-void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N) {
+void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N, unsigned int nb_bnd) {
     //viennacl::linalg::gmres_tag tag;
     //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
-    viennacl::linalg::gmres_tag tag(1e-6, 10000, 300); 
+    viennacl::linalg::gmres_tag tag(1e-6, 10000, 80); 
 
-    int precond = 0; 
+    int precond = 1; 
     switch(precond) {
         case 0: 
             {
-                //compute ILUT preconditioner (NOT zero fill. This does fill-in according to tag defaults.):
-                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag(0, 3*N)); 
+                // ILU with 0 fill-in
+                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag()); 
                 viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
                 std::cout << "Wrote preconditioner to output/ILU.mtx\n";
                 //solve (e.g. using conjugate gradient solver)
@@ -84,13 +84,23 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
             break; 
         case 1: 
             {
+                // ILU with 0 fill-in on a subset of the input matrix
+                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu0( A, viennacl::linalg::ilu0_tag(0, 3*(N-nb_bnd))); 
+                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
+                std::cout << "Wrote preconditioner to output/ILU.mtx\n";
+                //solve (e.g. using conjugate gradient solver)
+                U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0);
+            }
+            break; 
+        case 2: 
+            {
                 //compute ILUT preconditioner (NOT zero fill. This does fill-in according to tag defaults.):
                 viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag() );
                 //solve (e.g. using conjugate gradient solver)
                 U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilut);
             }
             break; 
-        case 2: 
+        case 3: 
             { 
                 //compute ILUT preconditioner with 20 nonzeros per row 
                 viennacl::linalg::ilut_precond< VCL_MAT_t > vcl_ilut( A, viennacl::linalg::ilut_tag(10) );
@@ -502,7 +512,6 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     tm[assemble_timer_name]->stop(); 
 
     write_System(*A, *F, *U_exact); 
-    exit(-1); 
 
     // ----- SOLVE -----
 
@@ -521,7 +530,7 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F
-    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N);
+    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N, nb_bnd);
     tm[test_timer_name]->stop();
 
     write_Solution(grid, *U_exact, *U_approx_gpu); 
@@ -545,15 +554,16 @@ int main(void)
 
     std::vector<std::string> grids; 
 
-    grids.push_back("~/GRIDS/md/md005.00036"); 
+//    grids.push_back("~/GRIDS/md/md005.00036"); 
 
     //grids.push_back("~/GRIDS/md/md165.27556"); 
-    //grids.push_back("~/GRIDS/md/md031.01024"); 
+//    grids.push_back("~/GRIDS/md/md031.01024"); 
+  grids.push_back("~/GRIDS/md/md089.08100"); 
 #if 0
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
-    grids.push_back("~/GRIDS/md/md089.08100"); 
+  grids.push_back("~/GRIDS/md/md089.08100"); 
     grids.push_back("~/GRIDS/md/md127.16384"); 
     grids.push_back("~/GRIDS/md/md165.27556"); 
 #endif 

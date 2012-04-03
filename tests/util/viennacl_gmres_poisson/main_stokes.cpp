@@ -69,7 +69,7 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
     //viennacl::linalg::gmres_tag tag;
     //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
     //viennacl::linalg::gmres_tag tag(1e-8, 1000, 3*n); 
-    viennacl::linalg::gmres_tag tag(1e-8, 1000, 250); 
+    viennacl::linalg::gmres_tag tag(1e-6, 1000, 80); 
 
     int precond = 0; 
     switch(precond) {

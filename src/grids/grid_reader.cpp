@@ -19,7 +19,8 @@ GridReader::GridReader(std::string filename_to_read, int numCols, unsigned int n
     numExtraCols(numCols - 3),
     n_nodes(n_nodes_to_read),
     filename(filename_to_read),
-    file_loaded(false)
+    file_loaded(false), 
+    loadExtra(0)
 {
     node_list.clear();
     boundary_normals.clear();
@@ -44,6 +45,10 @@ int GridReader::readNodeList(int expect_num_extra_dbls_per_line) {
         std::cout << "ERROR: FILES MUST CONTAIN AT LEAST 3 COLUMNS PER NODE" <<  std::endl;
         exit(EXIT_FAILURE);
     }
+    
+    if (loadExtra) {
+        extra_cols.resize(loadExtra); 
+    }
 
     unsigned int i = 0; 
 
@@ -55,6 +60,9 @@ int GridReader::readNodeList(int expect_num_extra_dbls_per_line) {
             double junk; 
             for (int j = 0; j < expect_num_extra_dbls_per_line; j++) {
                 fin >> junk; 
+                if (j < loadExtra) {
+                    extra_cols[j].push_back(junk); 
+                }
             }
             if (!fin.eof()) {
                 if (i < n_nodes) {

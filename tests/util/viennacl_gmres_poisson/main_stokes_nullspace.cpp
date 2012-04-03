@@ -64,14 +64,27 @@ EB::TimerList tm;
 //---------------------------------
 
 
+    template <typename VecT>
+void write_to_file(VecT vec, std::string filename)
+{
+    std::ofstream fout;
+    fout.open(filename.c_str());
+    for (size_t i = 0; i < vec.size(); i++) {
+        fout << std::setprecision(10) << vec[i] << std::endl;
+    }
+    fout.close();
+    std::cout << "Wrote " << filename << std::endl;
+}
+
+
 // Perform GMRES on GPU
-void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N, unsigned int n) {
+void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu, unsigned int N, unsigned int n, VCL_VEC_t& quad_weights) {
     //viennacl::linalg::gmres_tag tag;
     //viennacl::linalg::gmres_tag tag(1e-8, 10000, 300); 
     //viennacl::linalg::gmres_tag tag(1e-8, 1000, 3*n); 
     viennacl::linalg::gmres_tag tag(1e-8, 1000, 250); 
 
-    int precond = 0; 
+    int precond = 1; 
     switch(precond) {
         case 0: 
             {
@@ -115,6 +128,9 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
 #if 0
     viennacl::vector_range<VCL_VEC_t> U_exact_view(U_exact, viennacl::range(U_exact.size() - F.size(),U_exact.size()));
 #endif 
+ //   UBLAS_VEC_t quad_weights(N); 
+
+#if 0
     VCL_VEC_t diff(F.size()); 
     if (F.size() != U_exact.size()) { 
     exit(-1); 
@@ -125,15 +141,28 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(U_exact) << std::endl;  
     std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
     std::cout << "----------------------------\n";
-
+#endif 
     for (int i = 0; i < 4; i++) { 
+        UBLAS_VEC_t ee(N,1);
+        VCL_VEC_t ee_gpu(N);
+        viennacl::copy(ee, ee_gpu); 
+
         VCL_VEC_t uu(N);
         viennacl::copy(U_approx_gpu.begin()+i*N, U_approx_gpu.begin()+((i*N)+N), uu.begin()); 
 
+        // This will compute integral over domain for first component of solution
+        double surf_area = viennacl::linalg::inner_prod(quad_weights,ee_gpu);
+        // Scale the weights by 1/w_avg where w_avg is |S^2|/d_n (surface area/num_nodes) 
+        quad_weights *= (1/surf_area);
+        double alpha = viennacl::linalg::inner_prod(quad_weights, uu);
+        // Subtract off integral of uu
+        uu -= alpha*ee_gpu; 
+
         VCL_VEC_t uu_exact(N);
         viennacl::copy(U_exact.begin()+i*N, U_exact.begin()+((i*N)+N), uu_exact.begin()); 
+        
 
-        std::cout << "==> Component " << i << "\n"; 
+        std::cout << "==> Component " << i << " (Integral constant: " << alpha << ")\n"; 
         std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(uu - uu_exact) / viennacl::linalg::norm_1(uu_exact) << std::endl;  
         std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(uu - uu_exact) / viennacl::linalg::norm_2(uu_exact) << std::endl;  
         std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(uu - uu_exact) / viennacl::linalg::norm_inf(uu_exact) << std::endl;  
@@ -176,7 +205,6 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         U_exact(row_ind) = UU.eval(Xx,Yy,Zz); 
         F[row_ind] = -UU.lapl(Xx,Yy,Zz) + PP.d_dx(Xx,Yy,Zz);  
     }
-#if 1
 
     // V
     for (unsigned int j = 0; j < N; j++) {
@@ -216,22 +244,6 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
         U_exact(row_ind) = PP.eval(Xx,Yy,Zz); 
         F(row_ind) = UU.d_dx(Xx,Yy,Zz) + VV.d_dy(Xx,Yy,Zz) + WW.d_dz(Xx,Yy,Zz);  
     }
-#endif
-    // Sum of U
-    F(4*N+0) = 0.;
-
-    // Sum of V
-    F(4*N+1) = 0.;
-
-    // Sum of W
-    F(4*N+2) = 0.;
-
-    // Sum of P
-    F(4*N+3) = 0.;
- 
-
-
-
 
     // -----------------  Fill LHS --------------------
     //
@@ -255,9 +267,6 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
             A(diag_row_ind, diag_col_ind) = ddx[j];  
         }
-
-        // Added constraint to square mat and close nullspace
-        A(diag_row_ind, 4*N+0) = 1.; 
     }
 
     // V (block)  row
@@ -280,9 +289,6 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
             A(diag_row_ind, diag_col_ind) = ddy[j];  
         }
-
-        // Added constraint to square mat and close nullspace
-        A(diag_row_ind, 4*N+1) = 1.; 
     }
 
     // W (block)  row
@@ -305,9 +311,6 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
             A(diag_row_ind, diag_col_ind) = ddz[j];  
         }
-
-        // Added constraint to square mat and close nullspace
-        A(diag_row_ind, 4*N+2) = 1.; 
     }
 
 
@@ -337,60 +340,8 @@ void assemble_System_Stokes( RBFFD& der, Grid& grid, UBLAS_MAT_t& A, UBLAS_VEC_t
 
             A(diag_row_ind, diag_col_ind) = ddz[j];  
         }
-
-        // Added constraint to square mat and close nullspace
-        A(diag_row_ind, 4*N+3) = 1.;  
     }
-
-    // ------ EXTRA CONSTRAINT ROWS -----
-    unsigned int diag_row_ind = 4*N;
-    // U
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int diag_col_ind = j + 0*N;
-
-        A(diag_row_ind, diag_col_ind) = 1.;  
-    }
-
-    diag_row_ind++; 
-    // V
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int diag_col_ind = j + 1*N;
-
-        A(diag_row_ind, diag_col_ind) = 1.;  
-    }
-
-    diag_row_ind++; 
-    // W
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int diag_col_ind = j + 2*N;
-
-        A(diag_row_ind, diag_col_ind) = 1.;  
-    }
-
-    diag_row_ind++; 
-    // P
-    for (unsigned int j = 0; j < N; j++) {
-        unsigned int diag_col_ind = j + 3*N;
-
-        A(diag_row_ind, diag_col_ind) = 1.;  
-    }
-
-}
-
-
-
-
-
-    template <typename VecT>
-void write_to_file(VecT vec, std::string filename)
-{
-    std::ofstream fout;
-    fout.open(filename.c_str());
-    for (size_t i = 0; i < vec.size(); i++) {
-        fout << std::setprecision(10) << vec[i] << std::endl;
-    }
-    fout.close();
-    std::cout << "Wrote " << filename << std::endl;
+    viennacl::io::write_matrix_market_file(A,"output/A.mtx"); 
 }
 
 
@@ -415,11 +366,11 @@ void write_Solution( Grid& grid, UBLAS_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu )
 
 //---------------------------------
 
-void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
+void gpuTest(RBFFD& der, GridReader& grid, int primeGPU=0) {
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
-    unsigned int nrows = 4 * N + 4; 
-    unsigned int ncols = 4 * N + 4; 
+    unsigned int nrows = 4 * N; 
+    unsigned int ncols = 4 * N; 
     unsigned int NNZ = 9*n*N+2*(4*N)+2*(3*N);  
  
     char test_name[256]; 
@@ -468,6 +419,12 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     VCL_VEC_t* F_gpu = new VCL_VEC_t(F->size());
     VCL_VEC_t* U_exact_gpu = new VCL_VEC_t(U_exact->size());
     VCL_VEC_t* U_approx_gpu = new VCL_VEC_t(F->size());
+    
+    UBLAS_VEC_t quad_weights(N); 
+    copy(grid.getExtraCol().begin(), grid.getExtraCol().end(), quad_weights.begin()); 
+    write_to_file(quad_weights, "output/quad_weights.mtx");
+    VCL_VEC_t quad_weights_gpu(N);
+    copy(quad_weights, quad_weights_gpu); 
 
     viennacl::copy(F->begin(), F->end(), F_gpu->begin());
     viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_gpu->begin());
@@ -475,7 +432,7 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     tm[test_timer_name]->start();
     // Use GMRES to solve A*u = F
-    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N, n);
+    GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N, n, quad_weights_gpu);
     tm[test_timer_name]->stop();
 
     write_Solution(grid, *U_exact, *U_approx_gpu); 
@@ -544,6 +501,7 @@ int main(void)
         Grid::GridLoadErrType err = grid->loadFromFile(); 
         if (err == Grid::NO_GRID_FILES) 
         {
+            grid->setLoadExtra(1);
             grid->generate();
 #if 0
             // NOTE: We force at least one node in the domain to be a boundary. 
@@ -560,6 +518,7 @@ int main(void)
                 grid->writeToFile(); 
             }
         } 
+
         std::cout << "Generate Stencils\n";
         Grid::GridLoadErrType st_err = grid->loadStencilsFromFile(); 
         if (st_err == Grid::NO_STENCIL_FILES) {

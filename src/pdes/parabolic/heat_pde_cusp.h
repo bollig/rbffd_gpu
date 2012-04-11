@@ -14,15 +14,22 @@
 
 #include "pdes/parabolic/heat_pde.h"
 
-class RBFFD; 
+class RBFFD;  
+
+typedef cusp::csr_matrix<unsigned int, double, cusp::device_memory> GPU_MAT_t; 
+typedef cusp::csr_matrix<unsigned int, double, cusp::host_memory> CPU_CSR_MAT_t; 
+typedef cusp::coo_matrix<unsigned int, double, cusp::host_memory> CPU_COO_MAT_t; 
+typedef cusp::array1d<double, cusp::device_memory> GPU_VEC_t; 
+typedef cusp::array1d<double, cusp::host_memory> CPU_VEC_t; 
+
 
 class HeatPDE_CL : public HeatPDE
 {
     protected: 
-        cusp::csr_matrix<unsigned int, float, cusp::device_memory> x_weights_gpu; 
-        cusp::csr_matrix<unsigned int, float, cusp::device_memory> y_weights_gpu;
-        cusp::csr_matrix<unsigned int, float, cusp::device_memory> z_weights_gpu;
-        cusp::csr_matrix<unsigned int, float, cusp::device_memory> l_weights_gpu;
+        GPU_MAT_t* x_weights_gpu; 
+        GPU_MAT_t* y_weights_gpu;
+        GPU_MAT_t* z_weights_gpu;
+        GPU_MAT_t* l_weights_gpu;
 
         // Euler needs: 
         //      solution in
@@ -31,8 +38,8 @@ class HeatPDE_CL : public HeatPDE
         //      
         // We use a ping pong buffer scheme here for solution to avoid copying one to the other
         // Each of these is NB_NODES long
-        cusp::array1d<float, cusp::device_memory> gpu_solution[3]; 
-        cusp::array1d<float, cusp::device_memory> gpu_diffusivity;
+        GPU_VEC_t gpu_solution[3]; 
+        GPU_VEC_t gpu_diffusivity;
 
         // Midpoint needs: 
         //      solution in
@@ -88,7 +95,7 @@ class HeatPDE_CL : public HeatPDE
         };
     
         virtual void fillInitialConditions(ExactSolution* exact=NULL);
-        virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, cusp::array1d<float, cusp::device_memory>& sol, double t);
+        virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, GPU_VEC_t& sol, double t);
         
         virtual void allocateGPUMem(); 
 
@@ -104,12 +111,12 @@ class HeatPDE_CL : public HeatPDE
         virtual std::string className() {return "heat_cl";}
 
         // Sync set R from the vec into the gpu_vec
-        void syncSetRSingle(std::vector<SolutionType>& vec, cusp::array1d<float, cusp::device_memory>& gpu_vec); 
-        void syncSetRDouble(std::vector<SolutionType>& vec, cusp::array1d<float, cusp::device_memory>& gpu_vec);
+        void syncSetRSingle(std::vector<SolutionType>& vec, GPU_VEC_t& gpu_vec); 
+        void syncSetRDouble(std::vector<SolutionType>& vec, GPU_VEC_t& gpu_vec);
 
         // Sync set O from the gpu_vec to the vec
-        void syncSetOSingle(std::vector<SolutionType>& vec, cusp::array1d<float, cusp::device_memory>& gpu_vec); 
-        void syncSetODouble(std::vector<SolutionType>& vec, cusp::array1d<float, cusp::device_memory>& gpu_vec); 
+        void syncSetOSingle(std::vector<SolutionType>& vec, GPU_VEC_t& gpu_vec); 
+        void syncSetODouble(std::vector<SolutionType>& vec, GPU_VEC_t& gpu_vec); 
 
         virtual void syncCPUtoGPU(); 
 
@@ -119,12 +126,12 @@ class HeatPDE_CL : public HeatPDE
         virtual void advanceRungeKutta4(double dt);
 
 
-        void launchEulerSetQmDKernel( double dt, cusp::array1d<float, cusp::device_memory>& sol_in, cusp::array1d<float, cusp::device_memory>& sol_out);
-        void launchEulerSetDKernel( double dt, cusp::array1d<float, cusp::device_memory>& sol_in, cusp::array1d<float, cusp::device_memory>& sol_out);
+        void launchEulerSetQmDKernel( double dt, GPU_VEC_t& sol_in, GPU_VEC_t& sol_out);
+        void launchEulerSetDKernel( double dt, GPU_VEC_t& sol_in, GPU_VEC_t& sol_out);
 
 
 
-        void fillGPUMat(RBFFD::DerType which, cusp::csr_matrix<unsigned int, float, cusp::device_memory>& gpu_buffer);
+        void fillGPUMat(RBFFD::DerType which, GPU_MAT_t*& gpu_buffer);
 
          
         virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 

@@ -52,10 +52,10 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
         delete [] U_G_f; 
         delete [] diffusivity_f; 
-    // FIXME: change all unsigned int to int. Or unsigned int. Size_t is not supported by GPU.
-    std::vector<unsigned int>& bindices = grid_ref.getBoundaryIndices();
-    unsigned int nb_bnd = bindices.size();
-    //    err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_FALSE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
+        // FIXME: change all unsigned int to int. Or unsigned int. Size_t is not supported by GPU.
+        std::vector<unsigned int>& bindices = grid_ref.getBoundaryIndices();
+        unsigned int nb_bnd = bindices.size();
+        //    err = queue.enqueueWriteBuffer(gpu_boundary_indices, CL_FALSE, 0, nb_bnd*sizeof(unsigned int), &bindices[0], NULL, &event);
 
 #endif 
     }
@@ -64,7 +64,7 @@ void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
 
 // Handle the boundary conditions however we want to. 
 // NOTE: we must update the solution on the GPU too. 
-void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, cusp::array1d<float, cusp::device_memory>& sol, double t)
+void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, GPU_VEC_t& sol, double t)
 {
 #if 0
     // FIXME: should we mirror the CPU first?
@@ -102,28 +102,32 @@ void HeatPDE_CL::enforceBoundaryConditions(std::vector<SolutionType>& u_t, cusp:
 }
 
 
-void HeatPDE_CL::fillGPUMat(RBFFD::DerType which, cusp::csr_matrix<unsigned int, float, cusp::device_memory>& gpu_buffer) {
+void HeatPDE_CL::fillGPUMat(RBFFD::DerType which, GPU_MAT_t*& gpu_buffer) {
     unsigned int nb_nodes = grid_ref.getNodeListSize(); 
     unsigned int nb_stencils = grid_ref.getStencilsSize();
     unsigned int max_st_size = grid_ref.getMaxStencilSize();
-    
-    cusp::coo_matrix<unsigned int, float, cusp::host_memory> weights_cpu(nb_nodes, nb_nodes, nb_nodes*max_st_size); 
+
+    CPU_CSR_MAT_t A(nb_nodes, nb_nodes, nb_nodes*max_st_size); 
     std::vector<double*>& weights = der_ref.getWeights(which);
 
-    unsigned int indx = 0;
-    for (unsigned int i = 0; i < nb_stencils; i++) {
-        StencilType& st = grid_ref.getStencil(i);
-        unsigned int stencil_size = st.size();
-        for (unsigned int j = 0; j < stencil_size; j++) {
-            weights_cpu.row_indices[indx] = st[0]; 
-            weights_cpu.column_indices[indx] = st[j];
-            weights_cpu.values[indx] = weights[i][j];
+    unsigned int ind = 0; 
+    for (int i = 0; i < A.num_rows; i++) {
+        StencilType& sten = grid_ref.getStencil(i); 
+        double* w = weights[i]; 
+
+        A.row_offsets[i] = ind;
+
+        // Off diagonals
+        for (unsigned int j = 0; j < max_st_size; j++) {
+            A.column_indices[ind] =  sten[j]; 
+            A.values[ind] = w[j]; 
+            ind++; 
         }
-        // 0's automatically pad the end of our stencil
     }
+    A.row_offsets[A.num_rows] = ind; 
 
     // Copies to GPU.
-    gpu_buffer = weights_cpu; 
+    gpu_buffer = new GPU_MAT_t(A); 
 }
 
 //----------------------------------------------------------------------
@@ -136,13 +140,16 @@ void HeatPDE_CL::assemble()
 
     // Put weights on GPU. 
     if (!assembled) {
+#if 1
         this->fillGPUMat(RBFFD::X, this->x_weights_gpu); 
-    std::cout << "Done assembling\n";
+        std::cout << "Done assembling X\n";
         this->fillGPUMat(RBFFD::Y, this->y_weights_gpu); 
-    std::cout << "Done assembling\n";
+        std::cout << "Done assembling Y\n";
         this->fillGPUMat(RBFFD::Z, this->z_weights_gpu); 
-    std::cout << "Done assembling\n";
+        std::cout << "Done assembling Z\n";
+#endif 
         this->fillGPUMat(RBFFD::LAPL, this->l_weights_gpu); 
+        std::cout << "Done assembling Lapl\n";
         assembled = true;
     }
 
@@ -175,7 +182,7 @@ void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
     tm["advance_gpu"]->stop(); 
 }
 
-void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cusp::array1d<float,cusp::device_memory>& gpu_vec) {
+void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, GPU_VEC_t& gpu_vec) {
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size(); 
@@ -211,7 +218,7 @@ void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cusp::array1d<fl
 
 
 // General routine to copy the set R indices vec up to gpu_vec
-void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cusp::array1d<float, cusp::device_memory>& gpu_vec) {
+void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, GPU_VEC_t& gpu_vec) {
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size(); 
@@ -239,7 +246,7 @@ void HeatPDE_CL::syncSetRDouble(std::vector<SolutionType>& vec, cusp::array1d<fl
 }
 
 // General routine to copy the set O indices from gpu_vec down to vec
-void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cusp::array1d<float, cusp::device_memory>& gpu_vec) {
+void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, GPU_VEC_t& gpu_vec) {
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size(); 
@@ -275,7 +282,7 @@ void HeatPDE_CL::syncSetOSingle(std::vector<SolutionType>& vec, cusp::array1d<fl
 }
 
 
-void HeatPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, cusp::array1d<float, cusp::device_memory>& gpu_vec) {
+void HeatPDE_CL::syncSetODouble(std::vector<SolutionType>& vec, GPU_VEC_t& gpu_vec) {
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size(); 
@@ -667,15 +674,15 @@ void HeatPDE_CL::allocateGPUMem() {
 //----------------------------------------------------------------------
 //
 
-void HeatPDE_CL::launchEulerSetQmDKernel( double dt, cusp::array1d<float, cusp::device_memory>& sol_in, cusp::array1d<float, cusp::device_memory>& sol_out)
+void HeatPDE_CL::launchEulerSetQmDKernel( double dt, GPU_VEC_t& sol_in, GPU_VEC_t& sol_out)
 {
     // 1) Assume no parallelism to start. Then all we need is:  y = y + dt*f
     //      f = K . (A * y)
-    cusp::multiply(l_weights_gpu, sol_in, sol_out);  
+    cusp::multiply(*(this->l_weights_gpu), sol_in, sol_out);  
 
-    cusp::blas::axpy(sol_in, sol_out, (float)dt);  
+   // cusp::blas::axpy(sol_in, sol_out, (float)dt);  
 }
-void HeatPDE_CL::launchEulerSetDKernel(double dt, cusp::array1d<float, cusp::device_memory>& sol_in, cusp::array1d<float, cusp::device_memory>& sol_out) 
+void HeatPDE_CL::launchEulerSetDKernel(double dt, GPU_VEC_t& sol_in, GPU_VEC_t& sol_out) 
 {
     ;
 }

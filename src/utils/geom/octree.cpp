@@ -102,7 +102,7 @@ void Node::intersectBoundary()
 
 	double p1 = patch->how_far(x[0], y[0], z[0]);
 	//printf("-- how_far(p1) = %f, (%f, %f, %f)\n", p1, x[0], y[0], z[0]);
-	double p;
+	double p = 0.0;
 
 	hit = 0; // node does not intersect the boundary
 

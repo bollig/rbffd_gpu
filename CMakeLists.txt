@@ -91,8 +91,8 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 
 #add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -no-vec -opt-report -vec-report -par-report)
 #ICC:  add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -opt-report -vec-report -par-report)
-add_definitions( -std=c++0x -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall -O3 -DNDEBUG )# -g -DTHRUST_DEBUG ) 
-
+add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall -O3 -DNDEBUG )# -g -DTHRUST_DEBUG ) 
+# -std=c++0x 
 
 #INCLUDE_DIRECTORIES($ENV{EXTERNAL_INCLUDE_DIRS})
 

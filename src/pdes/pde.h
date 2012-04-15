@@ -62,6 +62,15 @@ class PDE : public MPISendable
             allocateCommBuffers(); 
         }
 
+        ~PDE() {
+            delete [] sbuf; 
+            delete [] sendcounts; 
+            delete [] sdispls; 
+            delete [] rdispls; 
+            delete [] recvcounts; 
+            delete [] rbuf; 
+        }
+
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble() =0; 
         virtual void solve()=0;
@@ -184,7 +193,48 @@ class PDE : public MPISendable
         void setupTimers();
 
         void allocateCommBuffers() {
-            // Send: O_by_rank total size
+#if 0
+            double* sbuf; 
+            int* sendcounts; 
+            int* sdispls; 
+            int* rdispls; 
+            int* recvcounts; 
+            double* rbuf; 
+#endif 
+            this->sdispls = new int[grid_ref.O_by_rank.size()]; 
+            this->sendcounts = new int[grid_ref.O_by_rank.size()]; 
+
+            unsigned int O_tot = grid_ref.O_by_rank[0].size(); 
+            sdispls[0] = 0;
+            sendcounts[0] = grid_ref.O_by_rank[0].size()+1; 
+            for (size_t i = 1; i < grid_ref.O_by_rank.size(); i++) {
+                sdispls[i] = sdispls[i-1] + sendcounts[i-1];
+                sendcounts[i] = grid_ref.O_by_rank[i].size()+1; 
+                O_tot += sendcounts[i]; 
+            }
+            this->rdispls = new int[grid_ref.R_by_rank.size()]; 
+            this->recvcounts = new int[grid_ref.R_by_rank.size()]; 
+
+            unsigned int R_tot = grid_ref.R_by_rank[0].size(); 
+            rdispls[0] = 0; 
+            recvcounts[0] = grid_ref.R_by_rank[0].size()+1; 
+            for (size_t i = 1; i < grid_ref.R_by_rank.size(); i++) {
+                recvcounts[i] = grid_ref.R_by_rank[i].size()+1; 
+                rdispls[i] = rdispls[i-1] + recvcounts[i-1];   
+                R_tot += recvcounts[i]; 
+            }
+
+            // Not sure if we need to use malloc to guarantee contiguous?
+            this->sbuf = new double[O_tot + comm_ref.getSize()]; 
+            this->rbuf = new double[R_tot + comm_ref.getSize()]; 
+
+            for (size_t i = 0; i < O_tot + comm_ref.getSize(); i++) { 
+                this->sbuf[i] = 0; 
+            }
+
+            for (size_t i = 0; i < R_tot + comm_ref.getSize(); i++) { 
+                this->rbuf[i] = 0; 
+            }
         }
 
     protected: 

@@ -118,7 +118,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
     for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** FILLING R_by_rank for CPU%d ***************** \n", i);
         for (unsigned int j = 0; j < subdomains.size(); j++) {
-            subdomains[i]->fill_R_by_rank(subdomains[j]->R, j); 
+            subdomains[i]->fill_R_by_rank(subdomains[j]->O, j); 
         }
     }
 

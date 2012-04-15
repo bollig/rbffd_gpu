@@ -252,41 +252,77 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
     tm["sendrecv"]->start();
     if (comm_ref.getSize() > 1) {
 
-        // Input: vector of double (SolutionType) 
-        //
-        // Require: 
-        //  - have send buffer pre-allocated as class member
-        //  - have recv buffer pre-allocated as class member
-        //  - have send/recv counts pre-set as class members
-        //  - have rdispls, sdispl pre-set as class members
-        //  
-        // Todo: 
-        //  - Copy input vec[..] elements to send buffer
-        //  - MPI_Alltoallv
-        //  - Copy recv buffer elements to vec[...]
-
+ #if 0
         std::cout << "Send counts: \n"; 
         for (int i = 0; i < grid_ref.O_by_rank.size(); i++) {
             std::cout << i << ": " << grid_ref.O_by_rank[i].size() << "\t";  
             for (int j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
-                std::cout << grid_ref.O_by_rank[i][j] << ", "; 
+                std::cout << grid_ref.g2l(grid_ref.O_by_rank[i][j]) << ", "; 
             }
             std::cout << std::endl;
         }
 
+        std::cout << "Vec Size: " << vec.size() << "\n";
        
         std::cout << "Recv counts: \n"; 
         for (int i = 0; i < grid_ref.R_by_rank.size(); i++) {
             std::cout << i << ": " << grid_ref.R_by_rank[i].size() << "\t";  
             for (int j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
-                std::cout << grid_ref.R_by_rank[i][j] << ", "; 
+                std::cout << grid_ref.g2l(grid_ref.R_by_rank[i][j]) << ", "; 
             }
             std::cout << std::endl;
         }
+#endif
+        // Copy elements of set to sbuf
+        unsigned int k = 0; 
+        for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
+            k = this->sdispls[i]; 
+            for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
+                this->sbuf[k] = grid_ref.O_by_rank[i][j];
+                //this->sbuf[k] = vec[grid_ref.g2l(grid_ref.O_by_rank[i][j])]; 
+                k++; 
+            }
+        }
 
-        //MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, rdispls, MPI_DOUBLE, comm_ref.getComm()); 
+        k = 0; 
+        for (int i = 0 ; i < grid_ref.O_by_rank.size(); i++) { 
+            std::cout << "sbuf[" << sdispls[i] << "] + " << sendcounts[i] << "\n";  
+        }
+        for (int j = 0 ; j < 4; j++) {
+            std::cout << sbuf[j] << ", " ; 
+            k++; 
+        }
+        std::cout << std::endl;
+ 
+        k = 0; 
+        for (int i = 0 ; i < grid_ref.R_by_rank.size(); i++) { 
+            std::cout << "rbuf[" << rdispls[i] << "] + " << recvcounts[i] << "\n";  
+        }
+        
+        
+        MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); //comm_ref.getComm()); 
+
+        MPI_Barrier( MPI_COMM_WORLD );
+        comm_ref.barrier();
+
+       for (int j = 0 ; j < 4; j++) {
+            std::cout << rbuf[j] << ", " ; 
+            k++; 
+        }
+        std::cout << std::endl;
+ 
+
+        k = 0; 
+        for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
+            k = this->rdispls[i]; 
+            for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
+                // TODO: need to translate to local indexing
+                vec[grid_ref.g2l(grid_ref.R_by_rank[i][j])] = this->rbuf[k];  
+                k++; 
+            }
+            std::cout << std::endl;
+        }
     }
-    comm_ref.barrier();
     tm["sendrecv"]->stop();
     return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }

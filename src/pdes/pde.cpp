@@ -252,38 +252,18 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
     tm["sendrecv"]->start();
     if (comm_ref.getSize() > 1) {
 
- #if 0
-        std::cout << "Send counts: \n"; 
-        for (int i = 0; i < grid_ref.O_by_rank.size(); i++) {
-            std::cout << i << ": " << grid_ref.O_by_rank[i].size() << "\t";  
-            for (int j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
-                std::cout << grid_ref.g2l(grid_ref.O_by_rank[i][j]) << ", "; 
-            }
-            std::cout << std::endl;
-        }
-
-        std::cout << "Vec Size: " << vec.size() << "\n";
-       
-        std::cout << "Recv counts: \n"; 
-        for (int i = 0; i < grid_ref.R_by_rank.size(); i++) {
-            std::cout << i << ": " << grid_ref.R_by_rank[i].size() << "\t";  
-            for (int j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
-                std::cout << grid_ref.g2l(grid_ref.R_by_rank[i][j]) << ", "; 
-            }
-            std::cout << std::endl;
-        }
-#endif
-        // Copy elements of set to sbuf
+       // Copy elements of set to sbuf
         unsigned int k = 0; 
         for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
             k = this->sdispls[i]; 
             for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
-                this->sbuf[k] = grid_ref.O_by_rank[i][j];
-                //this->sbuf[k] = vec[grid_ref.g2l(grid_ref.O_by_rank[i][j])]; 
+               // this->sbuf[k] = grid_ref.O_by_rank[i][j];
+                this->sbuf[k] = vec[grid_ref.g2l(grid_ref.O_by_rank[i][j])]; 
                 k++; 
             }
         }
 
+#if 0
         k = 0; 
         for (int i = 0 ; i < grid_ref.O_by_rank.size(); i++) { 
             std::cout << "sbuf[" << sdispls[i] << "] + " << sendcounts[i] << "\n";  
@@ -298,20 +278,18 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
         for (int i = 0 ; i < grid_ref.R_by_rank.size(); i++) { 
             std::cout << "rbuf[" << rdispls[i] << "] + " << recvcounts[i] << "\n";  
         }
+#endif    
         
-        
-        MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); //comm_ref.getComm()); 
+        MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
 
-        MPI_Barrier( MPI_COMM_WORLD );
         comm_ref.barrier();
-
+#if 0
        for (int j = 0 ; j < 4; j++) {
             std::cout << rbuf[j] << ", " ; 
             k++; 
         }
         std::cout << std::endl;
- 
-
+#endif 
         k = 0; 
         for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
             k = this->rdispls[i]; 
@@ -320,7 +298,6 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
                 vec[grid_ref.g2l(grid_ref.R_by_rank[i][j])] = this->rbuf[k];  
                 k++; 
             }
-            std::cout << std::endl;
         }
     }
     tm["sendrecv"]->stop();

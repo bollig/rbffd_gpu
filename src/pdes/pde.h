@@ -206,10 +206,10 @@ class PDE : public MPISendable
 
             unsigned int O_tot = grid_ref.O_by_rank[0].size(); 
             sdispls[0] = 0;
-            sendcounts[0] = grid_ref.O_by_rank[0].size()+1; 
+            sendcounts[0] = grid_ref.O_by_rank[0].size(); 
             for (size_t i = 1; i < grid_ref.O_by_rank.size(); i++) {
                 sdispls[i] = sdispls[i-1] + sendcounts[i-1];
-                sendcounts[i] = grid_ref.O_by_rank[i].size()+1; 
+                sendcounts[i] = grid_ref.O_by_rank[i].size(); 
                 O_tot += sendcounts[i]; 
             }
             this->rdispls = new int[grid_ref.R_by_rank.size()]; 
@@ -217,24 +217,16 @@ class PDE : public MPISendable
 
             unsigned int R_tot = grid_ref.R_by_rank[0].size(); 
             rdispls[0] = 0; 
-            recvcounts[0] = grid_ref.R_by_rank[0].size()+1; 
+            recvcounts[0] = grid_ref.R_by_rank[0].size(); 
             for (size_t i = 1; i < grid_ref.R_by_rank.size(); i++) {
-                recvcounts[i] = grid_ref.R_by_rank[i].size()+1; 
+                recvcounts[i] = grid_ref.R_by_rank[i].size(); 
                 rdispls[i] = rdispls[i-1] + recvcounts[i-1];   
                 R_tot += recvcounts[i]; 
             }
 
             // Not sure if we need to use malloc to guarantee contiguous?
-            this->sbuf = new double[O_tot + comm_ref.getSize()]; 
-            this->rbuf = new double[R_tot + comm_ref.getSize()]; 
-
-            for (size_t i = 0; i < O_tot + comm_ref.getSize(); i++) { 
-                this->sbuf[i] = 0; 
-            }
-
-            for (size_t i = 0; i < R_tot + comm_ref.getSize(); i++) { 
-                this->rbuf[i] = 0; 
-            }
+            this->sbuf = new double[O_tot];  
+            this->rbuf = new double[R_tot];
         }
 
     protected: 

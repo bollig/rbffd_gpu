@@ -69,10 +69,7 @@ class Domain : public Grid, public MPISendable
         // These decompose sets R and O by CPU rank so we can see which CPU requires 
         // which subset of R and must send what subset of O. 
         std::vector<std::vector<int> > O_by_rank;
-        // IF we use this then we can send atomic updates (i.e. we dont need to ask
-        // how many node updates we will receive from each Domain and can instead send
-        // and receive exactly what is required): 
-        // std::vector<std::set<int> > R_by_rank;
+        std::vector<std::vector<int> > R_by_rank;
 
     private: 
         bool inclMX, inclMY, inclMZ;
@@ -139,8 +136,17 @@ class Domain : public Grid, public MPISendable
         // Fill this Domains stencil and position sets based on the global set of RBF centers and stencils. 
         void fillLocalData(std::vector<NodeType>& rbf_centers, std::vector<StencilType>& stencil, std::vector<unsigned int>& boundary, std::vector<double>& avg_dist, std::vector<double>& max_dist, std::vector<double>& min_dist);
 
-        // Append to O_by_rank (find what subset of O is needed by rank subdomain_rank)
-        void fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank); 
+        // Append to O_by_rank (find what subset of O is needed (i.e., in the
+        // set R) of another subdomain
+        // Param: subdomain_R specifies R for neighboring domain;
+        // subdomain_rank specifies neighbors rank
+        void fill_O_by_rank(std::set<int>& subdomain_R, int subdomain_rank); 
+
+        // Append to R_by_rank (find what subset of R is provided (i.e., in the
+        // set O) of another subdomain
+        // Param: subdomain_O specifies R for neighboring domain;
+        // subdomain_rank specifies neighbors rank
+        void fill_R_by_rank(std::set<int>& subdomain_O, int subdomain_rank); 
 
         // When we move to 3D this should be updated to reflect zmin, zmax
         // We could also make this polar coords, striped subdomains etcs. 

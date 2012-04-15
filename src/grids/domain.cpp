@@ -111,10 +111,18 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
     for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** FILLING O_by_rank for CPU%d ***************** \n", i);
         for (unsigned int j = 0; j < subdomains.size(); j++) {
-            subdomains[i]->fillDependencyList(subdomains[j]->R, j); // appends to O_by_rank any nodes required by subdomain[j]
+            subdomains[i]->fill_O_by_rank(subdomains[j]->R, j); 
         }
     }
 
+    for (unsigned int i = 0; i < subdomains.size(); i++) {
+        printf("\n ***************** FILLING R_by_rank for CPU%d ***************** \n", i);
+        for (unsigned int j = 0; j < subdomains.size(); j++) {
+            subdomains[i]->fill_R_by_rank(subdomains[j]->R, j); 
+        }
+    }
+
+ 
     //return subdomains;
 }
 
@@ -150,6 +158,7 @@ int Domain::send(int my_rank, int receiver_rank) {
     sendSTL(&glob_to_loc, my_rank, receiver_rank); // g2l
 
     sendSTL(&O_by_rank, my_rank, receiver_rank); // Subsets of O that this Domain will send out to each other Domain
+    sendSTL(&R_by_rank, my_rank, receiver_rank); // Subsets of R that this Domain will receive from every other Domain
     sendSTL(&boundary_indices, my_rank, receiver_rank);
     sendSTL(&max_st_size, my_rank, receiver_rank);  
 
@@ -198,6 +207,7 @@ int Domain::receive(int my_rank, int sender_rank) {
     recvSTL(&glob_to_loc, my_rank, sender_rank); // g2l
 
     recvSTL(&O_by_rank, my_rank, sender_rank); // Subsets of O that this Domain will send out to each other Domain
+    recvSTL(&R_by_rank, my_rank, sender_rank); 
     recvSTL(&boundary_indices, my_rank, sender_rank);
     recvSTL(&max_st_size, my_rank, sender_rank);  
 
@@ -232,54 +242,32 @@ void Domain::printVerboseDependencyGraph() {
 #endif
 }
 
-
-
 // Append to O_by_rank (find what subset of O is needed by rank subdomain_rank)
-void Domain::fillDependencyList(std::set<int>& subdomain_R, int subdomain_rank) {
+void Domain::fill_O_by_rank(std::set<int>& subdomain_R, int subdomain_rank) {
     set<int>::iterator qit;
-    //int i = 0;
 
     if (O_by_rank.size() == 0) {
-#if 0
-        cout << "RESIZING O_by_rank" << endl;
-        printSetG2L(this->O, "Original O");
-#endif 
-        O_by_rank.resize(comm_size);
+       O_by_rank.resize(comm_size);
     }
 
-    //        printSetG2L(subdomain_R, "R-by-rank");
-
-#if 1
+    // subdomain_R contains the R for one subdomain. 
+    // We take the intersection to find what elements of R on that subdomain
+    // are sent by this processor and use the builtin STL inserter for efficiency
     set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end())); 
-#else 
-    for (qit = subdomain_R.begin(); qit != subdomain_R.end(); qit++, i++) {
-        if (isInSet(*qit, this->O)) {
-            this->O_by_rank[subdomain_rank].push_back(*qit);
-        }
+    return;
+}
+
+// Append to R_by_rank (find what subset of O is needed by rank subdomain_rank)
+void Domain::fill_R_by_rank(std::set<int>& subdomain_O, int subdomain_rank) {
+    set<int>::iterator qit;
+    if (R_by_rank.size() == 0) {
+        R_by_rank.resize(comm_size);
     }
-#endif 
-
-#if 0
-    char label[256];
-    sprintf(label, "Rank %d O_by_rank[%d]", id, subdomain_rank);
-    std::cout << label << " = {" << std::endl;
-#endif 
-#if 0
-    for (unsigned int i = 0; i < O_by_rank[subdomain_rank].size(); i++) {
-        int g_indx = O_by_rank[subdomain_rank][i];
-        int l_indx = this->g2l(g_indx);
-
-        std::cout << "\t" << g_indx << " (l_indx: " << l_indx << ")\n";
-    }
-#endif 
-
-#if 0
-    std::cout << "}\n";
-    // O_by_rank is still in global indices, but the g2l wont be able to map it 
-    //printVectorG2L(this->O_by_rank[subdomain_rank], label);
-    //    printVectorG2L(this->O_by_rank[subdomain_rank], label);
-#endif 
-
+    // subdomain_O contains the O for one subdomain. 
+    // We take the intersection to find what elements of R on that subdomain
+    // are sent by processor indicated by subdomain_rank and use the builtin
+    // STL inserter for efficiency
+    set_intersection(subdomain_O.begin(), subdomain_O.end(), this->R.begin(), this->R.end(), inserter(R_by_rank[subdomain_rank], R_by_rank[subdomain_rank].end())); 
     return;
 }
 

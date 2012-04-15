@@ -11,6 +11,10 @@ public:
     Communicator(int argc, char** argv);
     ~Communicator();
 
+    MPI_Comm getComm() { 
+        return MPI_COMM_WORLD; 
+    }
+
     // Return unique ID for this compute node
     int getRank();
 

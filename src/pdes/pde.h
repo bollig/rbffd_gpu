@@ -29,6 +29,15 @@ class PDE : public MPISendable
         std::vector<SolutionType> U_G; 
 
         int initCount; 
+    
+
+        double* sbuf; 
+        int* sendcounts; 
+        int* sdispls; 
+        int* rdispls; 
+        int* recvcounts; 
+        double* rbuf; 
+       
 
     private:
         // A map for global INDEX=VALUE storage of the final solution
@@ -50,8 +59,8 @@ class PDE : public MPISendable
             // We want our solution to match the number of nodes
             U_G.resize(grid_ref.getNodeListSize());
             setupTimers();
+            allocateCommBuffers(); 
         }
-
 
         // This should assemble a matrix L of weights which can be used to solve the PDE
         virtual void assemble() =0; 
@@ -170,8 +179,14 @@ class PDE : public MPISendable
         int receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
         int sendUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
         int sendrecvUpdates(std::vector<SolutionType>& vec, std::string label=""); 
+        int sendrecvUpdates_rr(std::vector<SolutionType>& vec, std::string label=""); 
 
         void setupTimers();
+
+        void allocateCommBuffers() {
+            // Send: O_by_rank total size
+        }
+
     protected: 
         // FIXME: put these in another pure virtual interface class
 

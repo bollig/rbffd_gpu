@@ -212,7 +212,8 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
     return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 
-int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label) 
+// Send and receive updates in round-robin fashion (direct connect == slow)
+int PDE::sendrecvUpdates_rr(std::vector<SolutionType>& vec, std::string label) 
 {
     tm["sendrecv"]->start();
     if (comm_ref.getSize() > 1) {
@@ -240,6 +241,50 @@ int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label)
                 this->receiveUpdate(vec, comm_ref.getRank(), j, label);
             }
         }
+    }
+    comm_ref.barrier();
+    tm["sendrecv"]->stop();
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
+}
+
+int PDE::sendrecvUpdates(std::vector<SolutionType>& vec, std::string label) 
+{
+    tm["sendrecv"]->start();
+    if (comm_ref.getSize() > 1) {
+
+        // Input: vector of double (SolutionType) 
+        //
+        // Require: 
+        //  - have send buffer pre-allocated as class member
+        //  - have recv buffer pre-allocated as class member
+        //  - have send/recv counts pre-set as class members
+        //  - have rdispls, sdispl pre-set as class members
+        //  
+        // Todo: 
+        //  - Copy input vec[..] elements to send buffer
+        //  - MPI_Alltoallv
+        //  - Copy recv buffer elements to vec[...]
+
+        std::cout << "Send counts: \n"; 
+        for (int i = 0; i < grid_ref.O_by_rank.size(); i++) {
+            std::cout << i << ": " << grid_ref.O_by_rank[i].size() << "\t";  
+            for (int j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
+                std::cout << grid_ref.O_by_rank[i][j] << ", "; 
+            }
+            std::cout << std::endl;
+        }
+
+       
+        std::cout << "Recv counts: \n"; 
+        for (int i = 0; i < grid_ref.R_by_rank.size(); i++) {
+            std::cout << i << ": " << grid_ref.R_by_rank[i].size() << "\t";  
+            for (int j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
+                std::cout << grid_ref.R_by_rank[i][j] << ", "; 
+            }
+            std::cout << std::endl;
+        }
+
+        //MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, rdispls, MPI_DOUBLE, comm_ref.getComm()); 
     }
     comm_ref.barrier();
     tm["sendrecv"]->stop();

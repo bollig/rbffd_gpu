@@ -37,10 +37,12 @@ int main(int argc, char** argv) {
     tm["receive"] = new Timer("[Main] Receive subdomain from master (clients only)"); 
     tm["weights"] = new Timer("[Main] Compute all stencils weights"); 
     tm["oneWeight"] = new Timer("[Main] Compute single stencil weights"); 
-    
+
     // grid should only be valid instance for MASTER
     Grid* grid=NULL; 
     Domain* subdomain; 
+
+    int dim = 1; 
 
     tm["total"]->start(); 
 
@@ -61,17 +63,21 @@ int main(int argc, char** argv) {
 
         int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
+        int N = settings->GetSettingAs<int>("NB_X", ProjectSettings::optional, "10"); 
+        double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "0"); 
+        double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1"); 
+
         tm["settings"]->stop(); 
 
-        grid = new RegularGrid(nx, minX, maxX); 
+        grid = new RegularGrid(N, minX, maxX); 
 
         grid->setMaxStencilSize(stencil_size); 
 
         Grid::GridLoadErrType err = grid->loadFromFile(); 
         if (err == Grid::NO_GRID_FILES) 
         {
-            printf("************** Generating new Grid **************\n"); 
-//          grid->setSortBoundaryNodes(true); 
+            printf("\n************** Generating new Grid **************\n"); 
+            //          grid->setSortBoundaryNodes(true); 
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
@@ -80,9 +86,9 @@ int main(int argc, char** argv) {
         if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
             std::cout << "Generating stencils files\n";
             tm["stencils"]->start(); 
-//            grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
-//            grid->generateStencils(Grid::ST_HASH);   
-//            grid->generateStencils(Grid::ST_BRUTE_FORCE);  
+            //            grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
+            //            grid->generateStencils(Grid::ST_HASH);   
+            //            grid->generateStencils(Grid::ST_BRUTE_FORCE);  
             grid->generateStencils(Grid::ST_KDTREE);   
             tm["stencils"]->stop();
             grid->writeToFile(); 
@@ -134,30 +140,25 @@ int main(int argc, char** argv) {
     comm_unit->barrier();
 
 #if 0
-        subdomain->printVerboseDependencyGraph();
-        subdomain->printNodeList("All Centers Needed by This Process"); 
+    subdomain->printVerboseDependencyGraph();
+    subdomain->printNodeList("All Centers Needed by This Process"); 
 
-        printf("CHECKING STENCILS: ");
-        for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
-            //  printf("Stencil[%d] = ", irbf);
-            StencilType& s = subdomain->getStencil(irbf); 
-            if (irbf == s[0]) {
-                //	printf("PASS\n");
-                //    subdomain->printStencil(s, "S"); 
-            } else {
-                printf("FAIL on stencil %d\n", irbf);
-                exit(EXIT_FAILURE);
-            }
+    printf("CHECKING STENCILS: ");
+    for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
+        //  printf("Stencil[%d] = ", irbf);
+        StencilType& s = subdomain->getStencil(irbf); 
+        if (irbf == s[0]) {
+            //	printf("PASS\n");
+            //    subdomain->printStencil(s, "S"); 
+        } else {
+            printf("FAIL on stencil %d\n", irbf);
+            exit(EXIT_FAILURE);
         }
-        printf("OK\n");
+    }
+    printf("OK\n");
 #endif 
 
-    RBFFD* der;
-    if (use_gpu) {
-        der = new RBFFD_CL(RBFFD::LAPL | RBFFD::X | RBFFD::Y | RBFFD::Z, subdomain, dim, comm_unit->getRank()); 
-    } else {
-        der = new RBFFD(RBFFD::LAPL | RBFFD::X | RBFFD::Y | RBFFD::Z, subdomain, dim, comm_unit->getRank()); 
-    }
+    RBFFD* der = new RBFFD(RBFFD::LAPL | RBFFD::X | RBFFD::Y | RBFFD::Z, subdomain, dim, comm_unit->getRank()); 
 
     int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");
     if (use_var_eps) {
@@ -170,13 +171,6 @@ int main(int argc, char** argv) {
         der->setEpsilon(epsilon);
     }
 
-#if 0
-        der->setWeightType(RBFFD::ContourSVD);
-        der->setWeightType(RBFFD::Direct);
-#else 
-        der->setWeightType((RBFFD::WeightType)weight_method);
-#endif 
- 
     // Try loading all the weight files
     int err = der->loadFromFile(RBFFD::X); 
     err += der->loadFromFile(RBFFD::Y); 
@@ -249,8 +243,8 @@ int main(int argc, char** argv) {
     // for second centered difference and euler time we have nu = 0.5
     //          dt <= nu/dx^2 
     // is valid for stability in some FD schemes. 
-   // double max_dt = 0.2*(sten_area);
-	printf("dt = %f (FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", dt, max_dt, 0.5*sten_area);
+    // double max_dt = 0.2*(sten_area);
+    printf("dt = %f (FD suggested max_dt(0.5*dx^2/K)= %f; 0.5dx^2 = %f)\n", dt, max_dt, 0.5*sten_area);
     // This appears to be consistent with Chinchipatnam2006 (Thesis)
     // TODO: get more details on CFL for RBFFD
     // note: checking stability only works if we have all weights for all
@@ -260,7 +254,7 @@ int main(int argc, char** argv) {
         // Not sure why this is 2
         max_dt = 2. / eigs.max_neg_eig;
         printf("Suggested max_dt based on eigenvalues (2/lambda_max)= %f\n", max_dt);
-        
+
         // CFL condition:
         if (dt > max_dt) {
             std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. According to eigenvalues, it must be less than " << max_dt << std::endl;

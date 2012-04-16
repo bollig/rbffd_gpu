@@ -39,7 +39,10 @@ add_serial_opencl_framework_test( "${PROJECT_NAME}_precond.x" "main_precond.cpp"
 add_serial_opencl_framework_test( "${PROJECT_NAME}_ilu0.x" "main_ilu0.cpp" "${ARGV}" )
 
 
-# Stokes steady state (U,V,W,P). Just doign the assembly and testing 1 node locked. 
+# Stokes steady state (U,V,W,P). 
+# With constraints
 add_serial_opencl_framework_test( "${PROJECT_NAME}_stokes.x" "main_stokes.cpp" "${ARGV}" )
+# With no constraints and no locked nodes
 add_serial_opencl_framework_test( "${PROJECT_NAME}_stokes_nullspace.x" "main_stokes_nullspace.cpp" "${ARGV}" )
+# With boundary nodes (1 node locked): 
 add_serial_opencl_framework_test( "${PROJECT_NAME}_stokes2.x" "main_stokes2.cpp" "${ARGV}" )

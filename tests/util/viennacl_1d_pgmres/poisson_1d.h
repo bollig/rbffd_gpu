@@ -92,28 +92,34 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     UBLAS_VEC_t* RHS_host; 
     UBLAS_VEC_t* U_exact_host; 
 
-    // Problem size
+    // Problem size (Num Rows)
     unsigned int N;
+    // Problem size (Num Cols)
+    unsigned int M;
     // Stencil size
     unsigned int n;
     // Number of boundary nodes
     unsigned int nb_bnd;
     // N - nb_bnd
     unsigned int NN;
+    // M - nb_bnd
+    unsigned int MM;
 
     public: 
     Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) 
     {   
-        N = grid_ref.getNodeListSize(); 
+        N = grid_ref.getStencilsSize(); 
+        M = grid_ref.getNodeListSize(); 
         n = grid_ref.getMaxStencilSize(); 
         nb_bnd = grid_ref.getBoundaryIndicesSize();
         NN = N - nb_bnd; 
+        MM = M - nb_bnd; 
 
-        LHS_host = new UBLAS_MAT_t(NN,NN,(NN)*n); 
+        LHS_host = new UBLAS_MAT_t(NN,MM,(NN)*n); 
         RHS_host = new UBLAS_VEC_t(NN); 
-        U_exact_host = new UBLAS_VEC_t(N); 
+        U_exact_host = new UBLAS_VEC_t(M); 
     }
 
     ~Poisson1D_PDE_VCL() {
@@ -161,6 +167,12 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             F[i-nb_bnd] = -UU.lapl(Xx, Yy, Zz); 
         }
 
+        for (unsigned int i = N; i < M; i++) {
+            U_exact[i] = -1.; // Indicate that we need to receive data from other procs
+        }
+
+        // TODO: synchronize here!
+
         //------ LHS ----------
 
         // NOTE: assumes the boundary is sorted to the top of the node indices
@@ -172,7 +184,6 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
                 if (sten[j] < (int)nb_bnd) { 
                     // Subtract the solution*weight from the element of the RHS. 
                     F[i-nb_bnd] -= (U_exact[sten[j]] * ( -lapl[j] )); 
-                    //                std::cout << "Node " << i << " depends on boundary\n"; 
                 } else {
                     // Offset by nb_bnd so we crop off anything related to the boundary
                     A(i-nb_bnd,sten[j]-nb_bnd) = -lapl[j]; 
@@ -193,6 +204,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         char dir[10]; 
         sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
         std::string dir_str(dir); 
+        std::cout << dir_str << std::endl;
         boost::filesystem::create_directories(dir_str);
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx"); 

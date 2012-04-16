@@ -28,6 +28,12 @@ class PDE : public MPISendable
         // Each solution type could be a scalar or vector
         std::vector<SolutionType> U_G; 
 
+        // Number of dimensions for the solutions (i.e., -lapl(u) = f has
+        // sol_dim == 1; -lapl([U; V; W]) = f has sol_dim == 3 
+        // When we call MPI_Alltoallv we group all solution components for a
+        // single node together in memory.
+        unsigned int sol_dim; 
+
         int initCount; 
     
 
@@ -52,8 +58,8 @@ class PDE : public MPISendable
 
 
     public: 
-        PDE(Domain* grid, RBFFD* der, Communicator* comm) 
-            : grid_ref(*grid), der_ref(*der), comm_ref(*comm), 
+        PDE(Domain* grid, RBFFD* der, Communicator* comm, unsigned int solution_dim=1) 
+            : grid_ref(*grid), der_ref(*der), comm_ref(*comm), sol_dim(solution_dim), 
             initCount(0)
         {
             // We want our solution to match the number of nodes
@@ -201,25 +207,25 @@ class PDE : public MPISendable
             int* recvcounts; 
             double* rbuf; 
 #endif 
-            this->sdispls = new int[grid_ref.O_by_rank.size()]; 
-            this->sendcounts = new int[grid_ref.O_by_rank.size()]; 
+            this->sdispls = new int[sol_dim*grid_ref.O_by_rank.size()]; 
+            this->sendcounts = new int[sol_dim*grid_ref.O_by_rank.size()]; 
 
-            unsigned int O_tot = grid_ref.O_by_rank[0].size(); 
+            unsigned int O_tot = sol_dim*grid_ref.O_by_rank[0].size(); 
             sdispls[0] = 0;
-            sendcounts[0] = grid_ref.O_by_rank[0].size(); 
+            sendcounts[0] = sol_dim*grid_ref.O_by_rank[0].size(); 
             for (size_t i = 1; i < grid_ref.O_by_rank.size(); i++) {
                 sdispls[i] = sdispls[i-1] + sendcounts[i-1];
-                sendcounts[i] = grid_ref.O_by_rank[i].size(); 
+                sendcounts[i] = sol_dim*grid_ref.O_by_rank[i].size(); 
                 O_tot += sendcounts[i]; 
             }
-            this->rdispls = new int[grid_ref.R_by_rank.size()]; 
-            this->recvcounts = new int[grid_ref.R_by_rank.size()]; 
+            this->rdispls = new int[sol_dim*grid_ref.R_by_rank.size()]; 
+            this->recvcounts = new int[sol_dim*grid_ref.R_by_rank.size()]; 
 
-            unsigned int R_tot = grid_ref.R_by_rank[0].size(); 
+            unsigned int R_tot = sol_dim*grid_ref.R_by_rank[0].size(); 
             rdispls[0] = 0; 
-            recvcounts[0] = grid_ref.R_by_rank[0].size(); 
+            recvcounts[0] = sol_dim*grid_ref.R_by_rank[0].size(); 
             for (size_t i = 1; i < grid_ref.R_by_rank.size(); i++) {
-                recvcounts[i] = grid_ref.R_by_rank[i].size(); 
+                recvcounts[i] = sol_dim*grid_ref.R_by_rank[i].size(); 
                 rdispls[i] = rdispls[i-1] + recvcounts[i-1];   
                 R_tot += recvcounts[i]; 
             }

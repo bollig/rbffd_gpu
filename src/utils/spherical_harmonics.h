@@ -4,11 +4,7 @@
 #include <stdlib.h>
 #include <math.h> 
 
-// TODO: Template meta-programming expressions to complete the cartesian sph
-// given any l,m. Is it possible with the derivatives? Must be, but it'll be
-// difficult. 
-
-
+#include "utils/mathematica_base.h"
 
 /***** 
  * All of these classes are filled by CForm output from the SphericalHarmonics_Cartesian.nb script. 
@@ -25,31 +21,9 @@
  *  - Copy the output from CForm and paste it directly into the matching routines within your new class
  */ 
 
-#if 0
-    // Template for Y_l^m (replace LL and MM with l,m resp.)
-    class SphLLMM : public SphericalHarmonicBase
-    {
-        virtual double eval(double Xx, double Yy, double Zz) {
-            return 
-        }
-        virtual double d_dx(double Xx, double Yy, double Zz) {
-            return 
-        }
-        virtual double d_dy(double Xx, double Yy, double Zz) {
-            return 
-        }
-        virtual double d_dz(double Xx, double Yy, double Zz) {
-            return 
-        }
-        virtual double lapl(double Xx, double Yy, double Zz) {
-            return 
-        }
-    };
-#endif 
-
 namespace SphericalHarmonic
 {
-    class SphericalHarmonicBase
+    class SphericalHarmonicBase : public MathematicaBase
     {
         public:
             virtual double operator()(double Xx, double Yy, double Zz) { return this->eval(Xx, Yy, Zz); }
@@ -59,47 +33,6 @@ namespace SphericalHarmonic
             virtual double d_dy(double Xx, double Yy, double Zz) = 0;
             virtual double d_dz(double Xx, double Yy, double Zz) = 0;
             virtual double lapl(double Xx, double Yy, double Zz) = 0;
-
-            /***********   MATHEMATICA mdefs.h PROVIDED MOST OF THESE ************/
-            // Its ok to directly use their definitions
-            
-            // NOTE: I found that RHEL6 (not sure if its just this version) was
-            // MUCH slower when using the double precision version of
-            // pow(double,double) vs pow(float,float). For spherical harmonics,
-            // we do not see a noticable difference in the harmonic
-            // approximations caused by downcasting to float here. However, the
-            // impact on performance is 1000x speedup for 10201 nodes. This
-            // casting causes 1e-5 error in production of sph32105, no noticeable
-            // error in sph32 or sph2020.  Presumably the lack of error is
-            // because the pow is integer, not double/float.  
-#if 0
-            double Power(double x, double y) { return    (pow((double)(x), (double)(y))) ; }
-#else 
-            double Power(double x, double y) { return    (double)(pow((float)(x), (float)(y))) ; }
-#endif 
-            double Sqrt(double x)  { return (sqrt((double)(x))) ; }
-
-            double Abs(double x)   { return (fabs((double)(x))) ; }
-
-            double Exp(double x)   { return (exp((double)(x))) ; } 
-            double Log(double x)   { return (log((double)(x))) ; }
-
-            double Sin(double x)   { return (sin((double)(x))) ; }
-            double Cos(double x)   { return (cos((double)(x))) ; }
-            double Tan(double x)   { return (tan((double)(x))) ; }
-
-            double ArcSin(double x){ return (asin((double)(x))) ; }
-            double ArcCos(double x){ return (acos((double)(x))) ; }
-            double ArcTan(double x){ return (atan((double)(x))) ; }
-            double ArcTan(double x,double y){ return (atan2((double)(y), (double)(x))) ; }
-
-            double Sinh(double x)  { return (sinh((double)(x))) ; }
-            double Cosh(double x)  { return (cosh((double)(x))) ; }
-            double Tanh(double x)  { return (tanh((double)(x))) ; }
-
-            // I Know M_PI is defined in math.h 
-            const static double Pi = M_PI;
-            /***********   END MATHEMATICA mdefs.h PROVIDED ************/
     };
 
     // Y_3^2

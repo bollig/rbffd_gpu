@@ -59,7 +59,7 @@ set ( Boost_NO_SYSTEM_PATHS true )
 set ( BOOST_MIN_VERSION     1.48.0)
 
 # This guarantees geometry and other features we use will exist.
-find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
+find_package(Boost ${BOOST_MIN_VERSION} COMPONENTS system filesystem REQUIRED)
 
 if(Boost_FOUND)
   

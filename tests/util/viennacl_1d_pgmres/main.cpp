@@ -199,13 +199,11 @@ int main(int argc, char** argv) {
         cout << "end write weights to file" << endl;
     }
 
-#if 0
-    SteadyStatePDE* pde = new PoissonPDE_VCL(domain, der, comm_unit); 
+    Poisson1D_PDE_VCL* pde = new Poisson1D_PDE_VCL(subdomain, der, comm_unit); 
 
     pde->assemble();
-    pde->sendrecvUpdates(); 
-    comm_unit->barrier(); 
-#endif 
+    pde->write_System(); 
+    pde->solve();
 
 #if 0
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 

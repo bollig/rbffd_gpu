@@ -109,6 +109,8 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     // M - nb_bnd
     unsigned int MM;
 
+    std::string dir_str; 
+
     public: 
     Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm) 
         // The 1 here indicates the solution will have one component
@@ -124,6 +126,13 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         LHS_host = new UBLAS_MAT_t(NN,MM,(NN)*n); 
         RHS_host = new UBLAS_VEC_t(NN); 
         U_exact_host = new UBLAS_VEC_t(M); 
+
+        char dir[10]; 
+        sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
+
+        dir_str = string(dir); 
+        std::cout << "Making output dir: " << dir_str << std::endl;
+        boost::filesystem::create_directories(dir_str);
     }
 
     ~Poisson1D_PDE_VCL() {
@@ -158,7 +167,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact[i] = UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
+            U_exact[i] = i; // UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
         }
 
         for (unsigned int i = nb_bnd; i < N; i++) {
@@ -167,13 +176,14 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact[i] = UU.eval(Xx, Yy, Zz); // + 2*M_PI; 
+            U_exact[i] = i; // UU.eval(Xx, Yy, Zz); // + 2*M_PI; 
             // Solving -lapl(u + const) = f = -lapl(u) + 0
             // of course the lapl(const) is 0, so we will have a test to verify
             // that our null space is closed. 
             F[i-nb_bnd] = -UU.lapl(Xx, Yy, Zz); 
         }
 
+        std::cout << "N = " << N << ", M = " << M << std::endl;
         for (unsigned int i = N; i < M; i++) {
             U_exact[i] = -1.; // Indicate that we need to receive data from other procs
         }
@@ -221,19 +231,14 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 #endif 
         viennacl::linalg::ilu0_precond< UBLAS_MAT_t > vcl_ilu0( *LHS_host, viennacl::linalg::ilu0_tag() ); 
 #if 1
-        viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
-        std::cout << "Wrote preconditioner to output/ILU.mtx\n";
+        viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
+        std::cout << "Wrote preconditioner to ILU.mtx\n";
         UBLAS_VEC_t U_approx_gpu = viennacl::linalg::solve(*LHS_host, *RHS_host, tag, vcl_ilu0); 
 #endif 
     }
 
     void write_System ( )
     {
-        char dir[10]; 
-        sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
-        std::string dir_str(dir); 
-        std::cout << dir_str << std::endl;
-        boost::filesystem::create_directories(dir_str);
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx"); 
         viennacl::io::write_matrix_market_file(*LHS_host,dir_str + "LHS.mtx"); 
@@ -247,7 +252,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         UBLAS_VEC_t U_approx(M, 0); 
 //        copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin()+nb_bnd);
 
-        write_to_file(U_approx, "output/U_gpu.mtx"); 
+        write_to_file(U_approx, dir_str + "U_gpu.mtx"); 
     }
 
     virtual std::string className() {

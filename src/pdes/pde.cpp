@@ -9,9 +9,9 @@
 
 void PDE::setupTimers()
 {
-        tm["sendrecv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
+    tm["sendrecv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
 }
- 
+
 int PDE::send(int my_rank, int receiver_rank) {
     // Initially we have nothing to send.
     return 0; 
@@ -163,7 +163,7 @@ int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_ra
 #endif 
         sendSTL(&O_by_rank[receiver_rank], my_rank, receiver_rank);
         sendSTL(&U_O, my_rank, receiver_rank);
-//        cout << "RANK " << my_rank << " REPORTS: sent update to RANK " << receiver_rank << endl;
+        //        cout << "RANK " << my_rank << " REPORTS: sent update to RANK " << receiver_rank << endl;
     }
     return 0;           // FIXME: return bytes sent (in case we need to monitor this)
 }
@@ -206,7 +206,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
             vec[l_indx] = U_R[i]; // Overwrite with new values
         }
 
-//        cout << "RANK " << my_rank << " REPORTS: received update from RANK " << sender_rank << endl;
+        //        cout << "RANK " << my_rank << " REPORTS: received update from RANK " << sender_rank << endl;
     }
 
     return 0;  // FIXME: return number of bytes received in case we want to monitor this 
@@ -217,7 +217,7 @@ int PDE::sendrecvUpdates_rr(std::vector<SolutionType>& vec, std::string label)
 {
     tm["sendrecv"]->start();
     if (comm_ref.getSize() > 1) {
-//        std::cout << "[PDE] SEND/RECEIVE\n";
+        //        std::cout << "[PDE] SEND/RECEIVE\n";
         vector<int> receiver_list; 
 
         // This is BAD: we should only send to CPUs in need. 
@@ -249,7 +249,7 @@ int PDE::sendrecvUpdates_rr(std::vector<SolutionType>& vec, std::string label)
 
 
 int PDE::sendFinal(int my_rank, int receiver_rank) {
-    
+
     if (my_rank != receiver_rank) {
         this->syncCPUtoGPU();
         // This should match grid_ref.Q.size():
@@ -271,15 +271,15 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
             }
 
 #if 0    
-                cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
-                    << "]: " << U_G[grid_ref.g2l(*qit)] << endl;
+            cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
+                << "]: " << U_G[grid_ref.g2l(*qit)] << endl;
 #endif 
         }
 
         // This Q is already in global indexing
         sendSTL(&grid_ref.Q, my_rank, receiver_rank);
         sendSTL(&U_Q, my_rank, receiver_rank);
-    //    cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
+        //    cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
     }
     return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
@@ -409,9 +409,9 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
 
 //----------------------------------------------------------------------
 
-    struct ltclass {
-        bool operator() (unsigned int i, unsigned int j) { return (i<j); }
-    } srtobject; 
+struct ltclass {
+    bool operator() (unsigned int i, unsigned int j) { return (i<j); }
+} srtobject; 
 
 
 void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, Grid& grid, double rel_err_max)
@@ -436,7 +436,7 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     std::vector<double> sol_vec_int(nb_int);
     std::vector<double> sol_exact_int(nb_int);
-    
+
     std::vector<double> sol_vec_int_no_bnd;
     std::vector<double> sol_exact_int_no_bnd;
 
@@ -552,7 +552,7 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
 #define CATCH_NANS 1
 #if CATCH_NANS
     if ((l1fabs != l1fabs) ||
-        (l2fabs != l2fabs) || 
+            (l2fabs != l2fabs) || 
             (lifabs != lifabs)) {
         std::cout << "Caught NaNs in error!\n";
         exit(EXIT_FAILURE);
@@ -563,7 +563,7 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
 
 
 void PDE::checkNorms(double max_l2_norm) {
-        this->syncCPUtoGPU();
+    this->syncCPUtoGPU();
     std::vector<SolutionType>& sol_vec = this->U_G;
     int nb_pts = sol_vec.size();
     double l1fabs = l1norm(sol_vec, 0, nb_pts); 

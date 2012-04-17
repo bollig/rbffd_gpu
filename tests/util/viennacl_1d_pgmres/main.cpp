@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
         if (err == Grid::NO_GRID_FILES) 
         {
             printf("\n************** Generating new Grid **************\n"); 
-            //          grid->setSortBoundaryNodes(true); 
+            grid->setSortBoundaryNodes(true); 
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 

@@ -35,7 +35,7 @@ class PDE : public MPISendable
         unsigned int sol_dim; 
 
         int initCount; 
-    
+
 
         double* sbuf; 
         int* sendcounts; 
@@ -43,7 +43,7 @@ class PDE : public MPISendable
         int* rdispls; 
         int* recvcounts; 
         double* rbuf; 
-       
+
 
     private:
         // A map for global INDEX=VALUE storage of the final solution
@@ -61,12 +61,12 @@ class PDE : public MPISendable
         PDE(Domain* grid, RBFFD* der, Communicator* comm, unsigned int solution_dim=1) 
             : grid_ref(*grid), der_ref(*der), comm_ref(*comm), sol_dim(solution_dim), 
             initCount(0)
-        {
-            // We want our solution to match the number of nodes
-            U_G.resize(grid_ref.getNodeListSize());
-            setupTimers();
-            allocateCommBuffers(); 
-        }
+    {
+        // We want our solution to match the number of nodes
+        U_G.resize(grid_ref.getNodeListSize());
+        setupTimers();
+        allocateCommBuffers(); 
+    }
 
         ~PDE() {
             delete [] sbuf; 
@@ -106,7 +106,7 @@ class PDE : public MPISendable
         virtual void getGlobalSolution(std::vector<double>* final);
 
 
-//        virtual double getMaxVelocity(double at_time) =0; 
+        //        virtual double getMaxVelocity(double at_time) =0; 
 
         // Check the error locally
         void checkLocalError(ExactSolution* exact, double rel_err_max=-1.) { 
@@ -125,7 +125,7 @@ class PDE : public MPISendable
 
             std::vector<SolutionType> sol(nodes.size(), 0.);
             std::vector<SolutionType> exactSolution(nodes.size());
-            
+
             // TODO: call for all subdomains to send final to master
 
             // Should synchronize the U_G on CPU and GPU
@@ -133,7 +133,7 @@ class PDE : public MPISendable
 
             this->getGlobalSolution(&sol);
             this->getExactSolution(exact, nodes, &exactSolution); 
-   
+
 #if 0
             std::cout << "Global Grid nodelist size is " << global_grid->getNodeListSize() << std::endl;
             for (unsigned int i = 0; i < global_grid->getNodeListSize(); i++) {
@@ -193,7 +193,65 @@ class PDE : public MPISendable
         // two routines allow us to specify a mat/vector to transmit
         int receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
         int sendUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
-        int sendrecvUpdates(std::vector<SolutionType>& vec, std::string label=""); 
+
+        template <class VEC_t> 
+            int sendrecvUpdates(VEC_t& vec, std::string label="") 
+            {
+                tm["sendrecv"]->start();
+                if (comm_ref.getSize() > 1) {
+
+                    // Copy elements of set to sbuf
+                    unsigned int k = 0; 
+                    for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
+                        k = this->sdispls[i]; 
+                        for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
+                            // this->sbuf[k] = grid_ref.O_by_rank[i][j];
+                            this->sbuf[k] = vec[grid_ref.g2l(grid_ref.O_by_rank[i][j])]; 
+                            k++; 
+                        }
+                    }
+
+#if 0
+                    k = 0; 
+                    for (int i = 0 ; i < grid_ref.O_by_rank.size(); i++) { 
+                        std::cout << "sbuf[" << sdispls[i] << "] + " << sendcounts[i] << "\n";  
+                    }
+                    for (int j = 0 ; j < 4; j++) {
+                        std::cout << sbuf[j] << ", " ; 
+                        k++; 
+                    }
+                    std::cout << std::endl;
+
+                    k = 0; 
+                    for (int i = 0 ; i < grid_ref.R_by_rank.size(); i++) { 
+                        std::cout << "rbuf[" << rdispls[i] << "] + " << recvcounts[i] << "\n";  
+                    }
+#endif    
+
+                    MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
+
+                    comm_ref.barrier();
+#if 0
+                    for (int j = 0 ; j < 4; j++) {
+                        std::cout << rbuf[j] << ", " ; 
+                        k++; 
+                    }
+                    std::cout << std::endl;
+#endif 
+                    k = 0; 
+                    for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
+                        k = this->rdispls[i]; 
+                        for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
+                            // TODO: need to translate to local indexing
+                            vec[grid_ref.g2l(grid_ref.R_by_rank[i][j])] = this->rbuf[k];  
+                            k++; 
+                        }
+                    }
+                }
+                tm["sendrecv"]->stop();
+                return 0;  // FIXME: return number of bytes received in case we want to monitor this 
+            }
+
         int sendrecvUpdates_rr(std::vector<SolutionType>& vec, std::string label=""); 
 
         void setupTimers();

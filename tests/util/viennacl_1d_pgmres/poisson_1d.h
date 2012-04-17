@@ -145,6 +145,9 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
         // We want U_exact to have the FULL solution. 
         // F should only have the compressed problem. 
+        // NOTE: I am assuming the boundary nodes are first in the list. This
+        // works well for Dirichlet conditions. Perhaps we should elegantly
+        // handle them? 
         for (unsigned int i = 0; i < nb_bnd; i++) {
             NodeType& node = nodes[i]; 
             double Xx = node.x(); 
@@ -172,6 +175,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         }
 
         // TODO: synchronize here!
+        this->sendrecvUpdates(U_exact,"U_exact"); 
 
         //------ LHS ----------
 

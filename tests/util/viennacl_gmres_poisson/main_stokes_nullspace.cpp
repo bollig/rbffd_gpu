@@ -35,7 +35,7 @@
 #include <boost/numeric/ublas/lu.hpp>
 
 #include "utils/spherical_harmonics.h"
-#include "ilu0.hpp"
+#include "precond/ilu0.hpp"
 
 #include <CL/opencl.h>
 

@@ -5,7 +5,7 @@
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
 #include "timer_eb.h" 
-#include "ilu0.hpp"     // MY Version of ILU with 0 fill-in for VCL
+#include "precond/ilu0.hpp"     // MY Version of ILU with 0 fill-in for VCL
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>

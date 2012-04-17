@@ -41,7 +41,7 @@
 #include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 
-#include "ilu0.hpp"
+#include "precond/ilu0.hpp"
 
 #include <iomanip>
 #include <iostream>

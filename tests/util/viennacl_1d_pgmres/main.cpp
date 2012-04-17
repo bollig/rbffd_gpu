@@ -141,25 +141,6 @@ int main(int argc, char** argv) {
 
     comm_unit->barrier();
 
-#if 0
-    subdomain->printVerboseDependencyGraph();
-    subdomain->printNodeList("All Centers Needed by This Process"); 
-
-    printf("CHECKING STENCILS: ");
-    for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
-        //  printf("Stencil[%d] = ", irbf);
-        StencilType& s = subdomain->getStencil(irbf); 
-        if (irbf == s[0]) {
-            //	printf("PASS\n");
-            //    subdomain->printStencil(s, "S"); 
-        } else {
-            printf("FAIL on stencil %d\n", irbf);
-            exit(EXIT_FAILURE);
-        }
-    }
-    printf("OK\n");
-#endif 
-
     RBFFD* der = new RBFFD(RBFFD::LAPL | RBFFD::X | RBFFD::Y | RBFFD::Z, subdomain, dim, comm_unit->getRank()); 
 
     int use_var_eps = settings->GetSettingAs<int>("USE_VAR_EPSILON", ProjectSettings::optional, "0");
@@ -204,7 +185,8 @@ int main(int argc, char** argv) {
     pde->assemble();
     pde->write_System(); 
     pde->solve();
-
+    pde->write_Solution(); 
+    
 #if 0
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
     tm["updates"]->start(); 

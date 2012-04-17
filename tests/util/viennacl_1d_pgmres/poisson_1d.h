@@ -154,7 +154,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact[i] = grid_ref.l2g(i); //UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
+            U_exact[i] = UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
         }
 
         for (unsigned int i = nb_bnd; i < N; i++) {
@@ -163,7 +163,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact[i] = grid_ref.l2g(i); //UU.eval(Xx, Yy, Zz); // + 2*M_PI; 
+            U_exact[i] = UU.eval(Xx, Yy, Zz); // + 2*M_PI; 
             // Solving -lapl(u + const) = f = -lapl(u) + 0
             // of course the lapl(const) is 0, so we will have a test to verify
             // that our null space is closed. 
@@ -176,10 +176,6 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
         // This should get values from neighboring processors into U_exact. 
         this->sendrecvUpdates(U_exact,"U_exact"); 
-
-        for (int i = 0; i < grid_ref.getBoundaryIndices().size(); i++) {
-            std::cout << "Rank " << comm_ref.getRank() << " boundary node: " << grid_ref.getBoundaryIndex(i) << "\n";
-        }
 
         //------ LHS ----------
 
@@ -200,11 +196,31 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         }    
     }
 
-
-
+// Use GMRES to solve the linear system. 
     virtual void solve()
     {
+        viennacl::linalg::gmres_tag tag(1e-8, 10, 2); 
 
+#if 0
+                // vandermond matrix test. PASS
+                UBLAS_MAT_t AA(5,5,25); 
+                AA(0,0) = 1;   AA(0,1) = 1;   AA(0,2) = 1;   AA(0,3) = 1;   AA(0,4) = 1; 
+                AA(1,0) = 16;   AA(1,1) = 8;   AA(1,2) = 4;   AA(1,3) = 2;   AA(1,4) = 1; 
+                AA(2,0) = 81;   AA(2,1) = 27;   AA(2,2) = 9;   AA(2,3) = 3;   AA(2,4) = 1; 
+                AA(3,0) = 256;   AA(3,1) = 64;   AA(3,2) = 16;   AA(3,3) = 4;   AA(3,4) = 1; 
+                AA(4,0) = 625;   AA(4,1) = 125;   AA(4,2) = 25;   AA(4,3) = 5;   AA(4,4) = 1; 
+                VCL_MAT_t AA_gpu; 
+                copy(AA,AA_gpu);
+                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu( AA_gpu, viennacl::linalg::ilu0_tag() ); 
+                viennacl::io::write_matrix_market_file(vcl_ilu.LU,"output/ILU.mtx"); 
+                exit(-1);
+#endif 
+                viennacl::linalg::ilu0_precond< UBLAS_MAT_t > vcl_ilu0( LHS_host, viennacl::linalg::ilu0_tag() ); 
+#if 0
+                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
+                std::cout << "Wrote preconditioner to output/ILU.mtx\n";
+                U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0); 
+#endif 
     }
 
     void write_System ( )
@@ -218,19 +234,17 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx"); 
         viennacl::io::write_matrix_market_file(*LHS_host,dir_str + "LHS.mtx"); 
     }
-#if 0
-    void write_Solution( UBLAS_VEC_t& U_exact, VCL_VEC_t& U_approx_gpu ) 
+
+    void write_Solution()
     {
         unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
         // IF we want to write details we need to copy back to host. 
-        UBLAS_VEC_t U_approx(U_exact.size());
-        copy(U_exact.begin(), U_exact.begin()+nb_bnd, U_approx.begin());
-        copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin()+nb_bnd);
+        UBLAS_VEC_t U_approx(M, 0); 
+//        copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin()+nb_bnd);
 
         write_to_file(U_approx, "output/U_gpu.mtx"); 
     }
-#endif 
 
     virtual std::string className() {
         return "Poisson1D_PDE_VCL"; 

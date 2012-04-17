@@ -56,7 +56,7 @@ namespace viennacl
                     : _row_start(row_start),  
                     _row_end(row_end) 
             {}
-           public: 
+            public: 
                 unsigned int _row_start, _row_end;
         };
 

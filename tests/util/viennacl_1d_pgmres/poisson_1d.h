@@ -5,7 +5,6 @@
 #include "grids/domain.h"
 #include "utils/comm/communicator.h"
 
-
 class ImplicitPDE : public PDE
 {
 
@@ -54,6 +53,9 @@ class ManufacturedSolution : public MathematicaBase
 
 
 
+// This is needed to make UBLAS variants of norm_* and GMRES
+#define VIENNACL_HAVE_UBLAS 1
+
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
 #include <viennacl/linalg/gmres.hpp>
@@ -80,6 +82,8 @@ class ManufacturedSolution : public MathematicaBase
 #include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 #include <boost/filesystem.hpp>
+
+#include "precond/ilu0.hpp"
 
 class Poisson1D_PDE_VCL : public ImplicitPDE
 {
@@ -196,30 +200,30 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         }    
     }
 
-// Use GMRES to solve the linear system. 
+    // Use GMRES to solve the linear system. 
     virtual void solve()
     {
         viennacl::linalg::gmres_tag tag(1e-8, 10, 2); 
 
 #if 0
-                // vandermond matrix test. PASS
-                UBLAS_MAT_t AA(5,5,25); 
-                AA(0,0) = 1;   AA(0,1) = 1;   AA(0,2) = 1;   AA(0,3) = 1;   AA(0,4) = 1; 
-                AA(1,0) = 16;   AA(1,1) = 8;   AA(1,2) = 4;   AA(1,3) = 2;   AA(1,4) = 1; 
-                AA(2,0) = 81;   AA(2,1) = 27;   AA(2,2) = 9;   AA(2,3) = 3;   AA(2,4) = 1; 
-                AA(3,0) = 256;   AA(3,1) = 64;   AA(3,2) = 16;   AA(3,3) = 4;   AA(3,4) = 1; 
-                AA(4,0) = 625;   AA(4,1) = 125;   AA(4,2) = 25;   AA(4,3) = 5;   AA(4,4) = 1; 
-                VCL_MAT_t AA_gpu; 
-                copy(AA,AA_gpu);
-                viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu( AA_gpu, viennacl::linalg::ilu0_tag() ); 
-                viennacl::io::write_matrix_market_file(vcl_ilu.LU,"output/ILU.mtx"); 
-                exit(-1);
+        // vandermond matrix test. PASS
+        UBLAS_MAT_t AA(5,5,25); 
+        AA(0,0) = 1;   AA(0,1) = 1;   AA(0,2) = 1;   AA(0,3) = 1;   AA(0,4) = 1; 
+        AA(1,0) = 16;   AA(1,1) = 8;   AA(1,2) = 4;   AA(1,3) = 2;   AA(1,4) = 1; 
+        AA(2,0) = 81;   AA(2,1) = 27;   AA(2,2) = 9;   AA(2,3) = 3;   AA(2,4) = 1; 
+        AA(3,0) = 256;   AA(3,1) = 64;   AA(3,2) = 16;   AA(3,3) = 4;   AA(3,4) = 1; 
+        AA(4,0) = 625;   AA(4,1) = 125;   AA(4,2) = 25;   AA(4,3) = 5;   AA(4,4) = 1; 
+        VCL_MAT_t AA_gpu; 
+        copy(AA,AA_gpu);
+        viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu( AA_gpu, viennacl::linalg::ilu0_tag() ); 
+        viennacl::io::write_matrix_market_file(vcl_ilu.LU,"output/ILU.mtx"); 
+        exit(-1);
 #endif 
-                viennacl::linalg::ilu0_precond< UBLAS_MAT_t > vcl_ilu0( LHS_host, viennacl::linalg::ilu0_tag() ); 
-#if 0
-                viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
-                std::cout << "Wrote preconditioner to output/ILU.mtx\n";
-                U_approx_gpu = viennacl::linalg::solve(A, F, tag, vcl_ilu0); 
+        viennacl::linalg::ilu0_precond< UBLAS_MAT_t > vcl_ilu0( *LHS_host, viennacl::linalg::ilu0_tag() ); 
+#if 1
+        viennacl::io::write_matrix_market_file(vcl_ilu0.LU,"output/ILU.mtx"); 
+        std::cout << "Wrote preconditioner to output/ILU.mtx\n";
+        UBLAS_VEC_t U_approx_gpu = viennacl::linalg::solve(*LHS_host, *RHS_host, tag, vcl_ilu0); 
 #endif 
     }
 

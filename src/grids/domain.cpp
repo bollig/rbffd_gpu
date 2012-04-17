@@ -91,9 +91,24 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         double xm = xmin + igx * deltax;
         double ym = ymin + igy * deltay;
         double zm = zmin + igz * deltaz;
-        printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, xm, xm+deltax, ym, ym+deltay, zm, zm+deltaz);
+        
+        // Far end of boundary. doctor the set to make sure we get ALL nodes included. 
+        // Had an issue with 3 processors and the 3rd proc should have gotten
+        // (xmin, 1] as its domain but it was really (xmin,1) and the boundary
+        // node was lost. This was not a problem for 2 processors though.
+        //
+        double left_bound = xm;
+        double right_bound = (igx==gx-1) ? xmax : xm+deltax;
+
+        double bottom_bound = ym;
+        double top_bound = (igy==gy-1) ? ymax : ym+deltay;
+
+        double front_bound = zm;
+        double back_bound = (igz==gz-1) ? zmax : zm+deltaz;
+
+        printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound);
         printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
-        subdomains[id] = new Domain(dim_num, global_num_nodes, xm, xm + deltax, ym, ym + deltay,  zm, zm + deltaz, id, comm_size);
+        subdomains[id] = new Domain(dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
         subdomains[id]->setMaxStencilSize(this->max_st_size);
         subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1); 
     }
@@ -486,7 +501,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
 #endif 
         boundary_indices[i] = g2l(boundary_indices[i]);
     }
-    //printf("GLOBAL_BOUNDARY.size= %d\n", (int) boundary_indices.size());
+    printf("GLOBAL_BOUNDARY.size= %d\n", (int) boundary_indices.size());
 
     // Finally: update the number of known nodes: 
     nb_nodes = node_list.size();

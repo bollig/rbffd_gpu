@@ -154,7 +154,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact[i] = UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
+            U_exact[i] = grid_ref.l2g(i); //UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
         }
 
         for (unsigned int i = nb_bnd; i < N; i++) {
@@ -163,7 +163,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact[i] = UU.eval(Xx, Yy, Zz); // + 2*M_PI; 
+            U_exact[i] = grid_ref.l2g(i); //UU.eval(Xx, Yy, Zz); // + 2*M_PI; 
             // Solving -lapl(u + const) = f = -lapl(u) + 0
             // of course the lapl(const) is 0, so we will have a test to verify
             // that our null space is closed. 
@@ -174,8 +174,12 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             U_exact[i] = -1.; // Indicate that we need to receive data from other procs
         }
 
-        // TODO: synchronize here!
+        // This should get values from neighboring processors into U_exact. 
         this->sendrecvUpdates(U_exact,"U_exact"); 
+
+        for (int i = 0; i < grid_ref.getBoundaryIndices().size(); i++) {
+            std::cout << "Rank " << comm_ref.getRank() << " boundary node: " << grid_ref.getBoundaryIndex(i) << "\n";
+        }
 
         //------ LHS ----------
 

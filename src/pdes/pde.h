@@ -194,6 +194,11 @@ class PDE : public MPISendable
         int receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
         int sendUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
 
+        // Share data in vector with all other processors. Will only transfer
+        // data associated with nodes in overlap between domains. 
+        // Uses MPI_Alltoallv and MPI_Barrier. 
+        // Copies data from vec to transfer, then writes received data into vec
+        // before returning. 
         template <class VEC_t> 
             int sendrecvUpdates(VEC_t& vec, std::string label="") 
             {
@@ -211,33 +216,9 @@ class PDE : public MPISendable
                         }
                     }
 
-#if 0
-                    k = 0; 
-                    for (int i = 0 ; i < grid_ref.O_by_rank.size(); i++) { 
-                        std::cout << "sbuf[" << sdispls[i] << "] + " << sendcounts[i] << "\n";  
-                    }
-                    for (int j = 0 ; j < 4; j++) {
-                        std::cout << sbuf[j] << ", " ; 
-                        k++; 
-                    }
-                    std::cout << std::endl;
-
-                    k = 0; 
-                    for (int i = 0 ; i < grid_ref.R_by_rank.size(); i++) { 
-                        std::cout << "rbuf[" << rdispls[i] << "] + " << recvcounts[i] << "\n";  
-                    }
-#endif    
-
                     MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
 
                     comm_ref.barrier();
-#if 0
-                    for (int j = 0 ; j < 4; j++) {
-                        std::cout << rbuf[j] << ", " ; 
-                        k++; 
-                    }
-                    std::cout << std::endl;
-#endif 
                     k = 0; 
                     for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
                         k = this->rdispls[i]; 

@@ -174,7 +174,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     virtual void solve() {
         if (solve_on_gpu) {
             this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
-        } else {
+//        } else {
             this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 
         }
     }
@@ -237,6 +237,8 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         for (unsigned int i = nb_bnd; i < N; i++) {
             StencilType& sten = grid_ref.getStencil(i); 
             double* lapl = der_ref.getStencilWeights(RBFFD::LAPL, i); 
+//            double lapl_fd[3] = {2, -1, -1}; 
+
 
             for (unsigned int j = 0; j < n; j++) {
                 if (sten[j] < (int)nb_bnd) { 
@@ -249,9 +251,10 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             }
         }    
         
-        if (solve_on_gpu) { 
+        if (solve_on_gpu) 
+        { 
             // Put all of the known system on the GPU. 
-            viennacl::copy(*LHS_host, *LHS_dev);
+            copy(A, *LHS_dev);
             viennacl::copy(RHS_host->begin(),RHS_host->end(), RHS_dev->begin());
             viennacl::copy(U_exact_host->begin(),U_exact_host->end(), U_exact_dev->begin());
             viennacl::copy(U_approx_host->begin(),U_approx_host->end(), U_approx_dev->begin());
@@ -264,7 +267,8 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         {
 #if 1
             // Solve on the CPU
-            viennacl::linalg::gmres_tag tag(1e-8, 10, 2); 
+
+            viennacl::linalg::gmres_tag tag(1e-8, 10, 5); 
             viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
@@ -285,15 +289,10 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
         VCL_VEC_t diff(sol.size()); 
 
-        std::cout << "Exact size = " << exact.size() << ", Sol size = " << sol.size() << ", start = " << exact.size() - sol.size() << ", end = " << exact.size() << std::endl;
-        viennacl::vector_range<VCL_VEC_t> exact_view( exact, viennacl::range(exact.size() - sol.size(), sol.size())); 
+        viennacl::vector_range<VCL_VEC_t> exact_view( exact, viennacl::range(exact.size() - sol.size(), exact.size())); 
 
-        viennacl::linalg::sub(sol, exact, diff); 
+        viennacl::linalg::sub(sol, exact_view, diff); 
 
-        UBLAS_VEC_t temp(diff.size()); 
-        viennacl::copy(sol, temp);
-        write_to_file(temp, dir_str + "diff.mtx");
-        std::cout << "Norm of Solution: " << viennacl::linalg::norm_1(sol) << ", " <<  viennacl::linalg::norm_1(exact) << std::endl;  
         std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(exact) << std::endl;  
         std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(exact) << std::endl;  
         std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(exact) << std::endl;  

@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -374,7 +375,7 @@ namespace viennacl
         for (typename MatrixType::const_iterator2 col_it = row_it.begin();
               col_it != row_it.end();
               ++col_it)
-          writer << col_it.index1() + index_base << " " << col_it.index2() + index_base << " " << *col_it << std::endl;
+          writer << col_it.index1() + index_base << " " << col_it.index2() + index_base << " " << std::setw(24) << std::setprecision(16) << *col_it << std::endl;
       
       writer.close();
     }

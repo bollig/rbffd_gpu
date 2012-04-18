@@ -175,7 +175,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     virtual void solve() {
         if (solve_on_gpu) {
             this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
-//        } else {
+        } else {
             this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 
         }
     }

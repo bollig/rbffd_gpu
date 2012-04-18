@@ -40,12 +40,12 @@ Communicator::~Communicator() {
 }
 
 
-int Communicator::getSize() {
+const int Communicator::getSize() const {
 	return comm_size;
 }
 
 
-int Communicator::getRank() {
+const int Communicator::getRank() const {
 	return comm_rank;
 }
 

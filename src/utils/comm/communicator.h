@@ -11,15 +11,15 @@ public:
     Communicator(int argc, char** argv);
     ~Communicator();
 
-    MPI_Comm getComm() { 
+    const MPI_Comm getComm() const { 
         return MPI_COMM_WORLD; 
     }
 
     // Return unique ID for this compute node
-    int getRank();
+    const int getRank() const;
 
     // Return number of compute nodes registered with MPI
-    int getSize();
+    const int getSize() const;
 
     // Setup MPI_Send for CPU0
     int sendObject(MPISendable* object, int reciever_rank);

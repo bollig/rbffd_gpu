@@ -7,11 +7,10 @@
 
 class ImplicitPDE : public PDE
 {
-
     public: 
         ImplicitPDE(Domain* grid, RBFFD* der, Communicator* comm, unsigned int solution_dim) 
             // The 1 here indicates the solution will have one component
-            : PDE(grid, der, comm, solution_dim) 
+            : PDE(grid, der, comm, solution_dim)
         {   
         }
 
@@ -21,6 +20,7 @@ class ImplicitPDE : public PDE
         }
 
         virtual void assemble() =0; 
+
         virtual void solve() =0; 
 
         template <typename VecT>
@@ -90,11 +90,15 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
     typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_MAT_t; 
     typedef boost::numeric::ublas::vector<double> UBLAS_VEC_t; 
+    typedef viennacl::compressed_matrix<double> VCL_MAT_t; 
+    typedef viennacl::vector<double> VCL_VEC_t; 
+
 
     protected:
     UBLAS_MAT_t* LHS_host; 
     UBLAS_VEC_t* RHS_host; 
     UBLAS_VEC_t* U_exact_host; 
+    UBLAS_VEC_t* U_approx_host; 
 
     // Problem size (Num Rows)
     unsigned int N;
@@ -111,10 +115,12 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
     std::string dir_str; 
 
+    int solve_on_gpu; 
+    
     public: 
-    Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm) 
+    Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
-        : ImplicitPDE(grid, der, comm, 1) 
+        : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
         N = grid_ref.getStencilsSize(); 
         M = grid_ref.getNodeListSize(); 
@@ -126,6 +132,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         LHS_host = new UBLAS_MAT_t(NN,MM,(NN)*n); 
         RHS_host = new UBLAS_VEC_t(NN); 
         U_exact_host = new UBLAS_VEC_t(M); 
+        U_approx_host = new UBLAS_VEC_t(N); 
 
         char dir[10]; 
         sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
@@ -140,6 +147,18 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         delete(RHS_host); 
         delete(U_exact_host);
     }
+
+    // Catch the call to "solve()" and allow users to specify "solve_on_gpu=1"
+    // which requires memory allocation, copy to, solve, copy back operators
+    virtual void solve() {
+        if (solve_on_gpu) {
+
+        } else {
+            this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 
+        }
+    }
+
+
 
     virtual void assemble() 
     {
@@ -167,7 +186,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact[i] = i; // UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
+            U_exact[i] = UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
         }
 
         for (unsigned int i = nb_bnd; i < N; i++) {
@@ -176,7 +195,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact[i] = i; // UU.eval(Xx, Yy, Zz); // + 2*M_PI; 
+            U_exact[i] = UU.eval(Xx, Yy, Zz); // + 2*M_PI; 
             // Solving -lapl(u + const) = f = -lapl(u) + 0
             // of course the lapl(const) is 0, so we will have a test to verify
             // that our null space is closed. 
@@ -211,30 +230,55 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     }
 
     // Use GMRES to solve the linear system. 
-    virtual void solve()
-    {
-        viennacl::linalg::gmres_tag tag(1e-8, 10, 2); 
+    template <class MAT_t, class VEC_t>
+        void solve(MAT_t& LHS, VEC_t& RHS, VEC_t& U_exact, VEC_t& U_approx_out)
+        {
+#if 1
+            // Solve on the CPU
+            viennacl::linalg::gmres_tag tag(1e-8, 10, 2); 
+            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
+            viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
+            std::cout << "Wrote preconditioner to ILU.mtx\n";
+            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
+#else 
+
+#endif 
+            std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
+            std::cout << "GMRES Error Estimate: " << tag.error() << std::endl;
+            std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
+            std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim): " << tag.max_restarts() << std::endl;
+            std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
+            std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
+
+//            viennacl::vector_range<VEC_t> U_exact_view = rangeFactory(U_exact, viennacl::range(U_exact.size() - RHS.size(),U_exact.size()));
+
+            checkNorms(U_approx_out);
+        }
+
+    void checkNorms(VCL_VEC_t sol) {
+            VCL_VEC_t diff = sol; 
 
 #if 0
-        // vandermond matrix test. PASS
-        UBLAS_MAT_t AA(5,5,25); 
-        AA(0,0) = 1;   AA(0,1) = 1;   AA(0,2) = 1;   AA(0,3) = 1;   AA(0,4) = 1; 
-        AA(1,0) = 16;   AA(1,1) = 8;   AA(1,2) = 4;   AA(1,3) = 2;   AA(1,4) = 1; 
-        AA(2,0) = 81;   AA(2,1) = 27;   AA(2,2) = 9;   AA(2,3) = 3;   AA(2,4) = 1; 
-        AA(3,0) = 256;   AA(3,1) = 64;   AA(3,2) = 16;   AA(3,3) = 4;   AA(3,4) = 1; 
-        AA(4,0) = 625;   AA(4,1) = 125;   AA(4,2) = 25;   AA(4,3) = 5;   AA(4,4) = 1; 
-        VCL_MAT_t AA_gpu; 
-        copy(AA,AA_gpu);
-        viennacl::linalg::ilu0_precond< VCL_MAT_t > vcl_ilu( AA_gpu, viennacl::linalg::ilu0_tag() ); 
-        viennacl::io::write_matrix_market_file(vcl_ilu.LU,"output/ILU.mtx"); 
-        exit(-1);
+            viennacl::vector_range<VCL_VEC_t> U_exact_view( U_exact, viennacl::range(U_exact.size() - RHS.size(), U_exact.size())); 
+
+            diff -= U_exact_view; 
+
+            std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(U_exact) << std::endl;  
+            std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(U_exact) << std::endl;  
+            std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
 #endif 
-        viennacl::linalg::ilu0_precond< UBLAS_MAT_t > vcl_ilu0( *LHS_host, viennacl::linalg::ilu0_tag() ); 
-#if 1
-        viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
-        std::cout << "Wrote preconditioner to ILU.mtx\n";
-        UBLAS_VEC_t U_approx_gpu = viennacl::linalg::solve(*LHS_host, *RHS_host, tag, vcl_ilu0); 
-#endif 
+    }
+
+    void checkNorms(UBLAS_VEC_t sol) {
+            UBLAS_VEC_t diff = sol; 
+
+            boost::numeric::ublas::vector_range<UBLAS_VEC_t> U_exact_view( *U_exact_host, boost::numeric::ublas::range(U_exact_host->size() - RHS_host->size(), U_exact_host->size())); 
+
+            diff -= U_exact_view; 
+
+            std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(*U_exact_host) << std::endl;  
+            std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(*U_exact_host) << std::endl;  
+            std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(*U_exact_host) << std::endl;  
     }
 
     void write_System ( )
@@ -250,7 +294,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
         // IF we want to write details we need to copy back to host. 
         UBLAS_VEC_t U_approx(M, 0); 
-//        copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin()+nb_bnd);
+        //        copy(U_approx_gpu.begin(), U_approx_gpu.end(), U_approx.begin()+nb_bnd);
 
         write_to_file(U_approx, dir_str + "U_gpu.mtx"); 
     }

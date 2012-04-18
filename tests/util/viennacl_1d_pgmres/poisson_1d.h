@@ -265,24 +265,44 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     template <class MAT_t, class VEC_t>
         void solve(MAT_t& LHS, VEC_t& RHS, VEC_t& U_exact, VEC_t& U_approx_out)
         {
-#if 1
             // Solve on the CPU
+            int restart = 5; 
+            int krylov = 10;
+            double tol = 1e-8; 
 
-            viennacl::linalg::gmres_tag tag(1e-8, 10, 5); 
+            // Tag has (tolerance, total iterations, number iterations between restarts)
+            viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
             viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
-            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); //, vcl_ilu0); 
-#else 
-
-#endif 
-            std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
-            std::cout << "GMRES Error Estimate: " << tag.error() << std::endl;
-            std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
-            std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim): " << tag.max_restarts() << std::endl;
+            
             std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
+            std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
+            std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
+            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
+            
+            if (tag.iters() < tag.max_iterations()) { 
+                std::cout << "\n[+++] Solver converged "; //<< tag.error() << " relative tolerance";       
+                std::cout << " after " << tag.iters() << " iterations" << std::endl << std::endl;
+            }
+            else
+            {
+                std::cout << "\n[XXX] Solver reached iteration limit " << tag.iters() << " before converging\n\n";
+            //    std::cout << " to " << tag.tolerance() << " relative tolerance " << std::endl << std::endl;
+            }
+
+
+            std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
+            std::cout << "GMRES Iteration Limit: " << tag.max_iterations() << std::endl;
+            std::cout << "GMRES Residual Norm: " << tag.error() << std::endl;
+
+#if 0
+            std::cout << "GMRES Relative Tol: " << monitor.relative_tolerance() << std::endl;
+            std::cout << "GMRES Absolute Tol: " << monitor.absolute_tolerance() << std::endl;
+            std::cout << "GMRES Target Residual (Abs + Rel*norm(F)): " << monitor.tolerance() << std::endl;
+#endif 
             checkNorms(U_approx_out, U_exact);
         }
 

@@ -84,6 +84,7 @@ class ManufacturedSolution : public MathematicaBase
 #include <boost/filesystem.hpp>
 
 #include "precond/ilu0.hpp"
+#include "linalg/parallel_gmres.hpp"
 
 class Poisson1D_PDE_VCL : public ImplicitPDE
 {
@@ -271,11 +272,13 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
-            viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
+            viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
+
             viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
+#if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
-            
+#endif        
             std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
             std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
             std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;

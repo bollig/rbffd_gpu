@@ -48,6 +48,7 @@ License:         MIT (X11), see file LICENSE in the base directory
 
 // We'll extend the original gmres class: 
 #include "viennacl/linalg/gmres.hpp"
+#include "viennacl/vector_proxy.hpp"
 
 // But we need our own parallel norms
 #include "linalg/parallel_norm_2.hpp"
@@ -71,17 +72,170 @@ namespace viennacl
                  * @param max_iterations The maximum number of iterations (including restarts
                  * @param krylov_dim     The maximum dimension of the Krylov space before restart (number of restarts is found by max_iterations / krylov_dim)
                  */
-                parallel_gmres_tag(Communicator& comm_unit, Domain& decomposition, double tol = 1e-10, unsigned int max_iterations = 300, unsigned int krylov_dim = 20) 
+                parallel_gmres_tag(Communicator& comm_unit, Domain& decomposition, double tol = 1e-10, unsigned int max_iterations = 300, unsigned int krylov_dim = 20, unsigned int solution_dim_per_node = 1) 
                     : gmres_tag(tol, max_iterations, krylov_dim), 
-                    comm_ref(comm_unit), domain_ref(decomposition)
-            {};
+                    comm_ref(comm_unit), grid_ref(decomposition), 
+                    sol_dim(solution_dim_per_node)
+            {
+                allocateCommBuffers();            
+            };
+
+                ~parallel_gmres_tag() {
+                    delete [] sbuf; 
+                    delete [] sendcounts; 
+                    delete [] sdispls; 
+                    delete [] rdispls; 
+                    delete [] recvcounts; 
+                    delete [] rbuf; 
+                }
 
                 Communicator const& comm() const { return this->comm_ref; } 
 
+                void allocateCommBuffers() {
+#if 0
+                    double* sbuf; 
+                    int* sendcounts; 
+                    int* sdispls; 
+                    int* rdispls; 
+                    int* recvcounts; 
+                    double* rbuf; 
+#endif 
+                    this->sdispls = new int[sol_dim*grid_ref.O_by_rank.size()]; 
+                    this->sendcounts = new int[sol_dim*grid_ref.O_by_rank.size()]; 
+
+                    unsigned int O_tot = sol_dim*grid_ref.O_by_rank[0].size(); 
+                    sdispls[0] = 0;
+                    sendcounts[0] = sol_dim*grid_ref.O_by_rank[0].size(); 
+                    for (size_t i = 1; i < grid_ref.O_by_rank.size(); i++) {
+                        sdispls[i] = sdispls[i-1] + sendcounts[i-1];
+                        sendcounts[i] = sol_dim*grid_ref.O_by_rank[i].size(); 
+                        O_tot += sendcounts[i]; 
+                    }
+                    this->rdispls = new int[sol_dim*grid_ref.R_by_rank.size()]; 
+                    this->recvcounts = new int[sol_dim*grid_ref.R_by_rank.size()]; 
+
+                    unsigned int R_tot = sol_dim*grid_ref.R_by_rank[0].size(); 
+                    rdispls[0] = 0; 
+                    recvcounts[0] = sol_dim*grid_ref.R_by_rank[0].size(); 
+                    for (size_t i = 1; i < grid_ref.R_by_rank.size(); i++) {
+                        recvcounts[i] = sol_dim*grid_ref.R_by_rank[i].size(); 
+                        rdispls[i] = rdispls[i-1] + recvcounts[i-1];   
+                        R_tot += recvcounts[i]; 
+                    }
+
+                    // Not sure if we need to use malloc to guarantee contiguous?
+                    this->sbuf = new double[O_tot];  
+                    this->rbuf = new double[R_tot];
+                }
+
+
+                // Generic for GPU (transfer GPU subset to cpu buffer, alltoallv
+                // and return to the gpu)
+                template <typename VectorType>
+                    void
+                    alltoall_subset(VectorType& vec, typename VectorType::value_type& dummy) const
+                    {
+
+                        // Share data in vector with all other processors. Will only transfer
+                        // data associated with nodes in overlap between domains. 
+                        // Uses MPI_Alltoallv and MPI_Barrier. 
+                        // Copies data from vec to transfer, then writes received data into vec
+                        // before returning. 
+                        if (comm_ref.getSize() > 1) {
+
+                            std::cout << "TRANSFER " << grid_ref.O_by_rank.size() << "\n";
+                            // Copy elements of set to sbuf
+                            unsigned int k = 0; 
+                            for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
+                                k = this->sdispls[i]; 
+                                for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
+                                    // this->sbuf[k] = grid_ref.O_by_rank[i][j];
+                                    this->sbuf[k] = vec[grid_ref.g2l(grid_ref.O_by_rank[i][j])]; 
+                                    k++; 
+                                }
+                            }
+
+ //                           MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
+
+                            comm_ref.barrier();
+                            k = 0; 
+                            for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
+                                k = this->rdispls[i]; 
+                                for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
+                                    // TODO: need to translate to local indexing
+                                    vec[grid_ref.g2l(grid_ref.R_by_rank[i][j])] = this->rbuf[k];  
+                                    k++; 
+                                }
+                            }
+                        }
+                    }
+
+
+                // For CPU (copy subset to cpu buffer, alltoallv
+                // and return to the gpu)
+                template <typename VectorType>
+                    void
+                    alltoall_subset(VectorType& vec, double& dummy) const
+                    {
+
+                        // Share data in vector with all other processors. Will only transfer
+                        // data associated with nodes in overlap between domains. 
+                        // Uses MPI_Alltoallv and MPI_Barrier. 
+                        // Copies data from vec to transfer, then writes received data into vec
+                        // before returning. 
+                        if (comm_ref.getSize() > 1) {
+
+                            // Copy elements of set to sbuf
+                            unsigned int k = 0; 
+                            for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
+                                k = this->sdispls[i]; 
+                                for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
+                                    // this->sbuf[k] = grid_ref.O_by_rank[i][j];
+                                    this->sbuf[k] = vec[grid_ref.g2l(grid_ref.O_by_rank[i][j])]; 
+                                    k++; 
+                                }
+                            }
+
+                            MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
+
+                            comm_ref.barrier();
+                            k = 0; 
+                            for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
+                                k = this->rdispls[i]; 
+                                for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
+                                    // TODO: need to translate to local indexing properly. This hack assumes all boundary are dirichlet and appear first in the list
+                                    vec[grid_ref.g2l(grid_ref.R_by_rank[i][j]) - sol_dim*grid_ref.getBoundaryIndicesSize()] = this->rbuf[k];  
+                                    k++; 
+                                }
+                            }
+                        }
+                    }
+
+                template <typename VectorType>
+                    void 
+                    alltoall_subset(VectorType& v) const
+                    {
+                        // Redirect the call to appropriate float or double routines (Type size matters with MPI)
+                        typename VectorType::value_type dummy; 
+                        std::cout << "Rank " << comm_ref.getRank() << " v.size = " << v.size() << std::endl;
+                        alltoall_subset(v, dummy);
+                    }
+
+
+
+
             protected: 
                 mutable Communicator& comm_ref; 
-                Domain& domain_ref; 
+                Domain& grid_ref; 
+                unsigned int sol_dim; 
+                mutable double* sbuf; 
+                mutable int* sendcounts; 
+                mutable int* sdispls; 
+                mutable int* rdispls; 
+                mutable int* recvcounts; 
+                mutable double* rbuf; 
         };
+
 
         /** @brief Implementation of the GMRES solver.
          *
@@ -96,23 +250,36 @@ namespace viennacl
         template <typename MatrixType, typename VectorType, typename PreconditionerType>
             VectorType solve(const MatrixType & matrix, VectorType const & rhs, parallel_gmres_tag const & tag, PreconditionerType const & precond)
             {
+                // RHS is size(M,1)
                 typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
                 typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
-                unsigned int problem_size = viennacl::traits::size(rhs);
+                // In parallel these dimensions are VERY IMPORTANT to get right
+                //unsigned int problem_size = viennacl::traits::size(rhs);
+                unsigned int NN = matrix.size2(); //viennacl::traits::size1(matrix);
+                unsigned int MM = matrix.size2(); //viennacl::traits::size2(matrix);
                 // TODO: allow user specified initial guess
                 // TODO: when allowed MPI_Alltoallv sync here
-                VectorType result(problem_size);
+                VectorType result(MM);
                 viennacl::traits::clear(result);
+
+                // Make sure all procs have the full result (if we pass something in)
+                tag.alltoall_subset(result); 
+
+
                 unsigned int krylov_dim = tag.krylov_dim();
-                if (problem_size < tag.krylov_dim())
-                    krylov_dim = problem_size; //A Krylov space larger than the matrix would lead to seg-faults (mathematically, error is certain to be zero already)
+                if (NN < tag.krylov_dim())
+                    krylov_dim = NN; //A Krylov space larger than the matrix would lead to seg-faults (mathematically, error is certain to be zero already)
 
-                VectorType res(problem_size);
-                VectorType v_k_tilde(problem_size);
-                VectorType v_k_tilde_temp(problem_size);
+                VectorType res(MM); 
+                viennacl::vector_range<VectorType> res_temp( res, viennacl::range(0,NN) );
+                VectorType v_k_tilde(MM);
+                VectorType v_k_tilde_temp(MM);
 
+                // k x k
                 std::vector< std::vector<CPU_ScalarType> > R(krylov_dim);
+                // k x 1
                 std::vector<CPU_ScalarType> projection_rhs(krylov_dim);
+                // k x M
                 std::vector<VectorType> U(krylov_dim);
 
                 const CPU_ScalarType gpu_scalar_minus_1 = static_cast<CPU_ScalarType>(-1);    //representing the scalar '-1' on the GPU. Prevents blocking write operations
@@ -120,36 +287,48 @@ namespace viennacl
                 const CPU_ScalarType gpu_scalar_2 = static_cast<CPU_ScalarType>(2);    //representing the scalar '2' on the GPU. Prevents blocking write operations
 
                 // TODO: MPI_Reduce on norm_2
-                CPU_ScalarType norm_rhs = viennacl::linalg::norm_2(rhs);
+                CPU_ScalarType norm_rhs = viennacl::linalg::norm_2(rhs, tag.comm());
 
                 unsigned int k;
                 for (k = 0; k < krylov_dim; ++k)
                 {
                     R[k].resize(tag.krylov_dim()); 
-                    viennacl::traits::resize(U[k], problem_size);
+                    viennacl::traits::resize(U[k], MM);
                 }
 
-                std::cout << "Starting Parallel GMRES..." << std::endl;
+//                if (tag.comm().isMaster()) 
+                    std::cout << "Starting Parallel GMRES..." << std::endl;
                 tag.iters(0);
 
                 for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
                 {
-                    std::cout << "-- GMRES Start " << it << " -- " << std::endl;
+//                    if (tag.comm().isMaster()) 
+                        std::cout << "-- GMRES Start " << it << " -- " << std::endl;
 
                     res = rhs;
-                    //TODO: MPI_Alltoallv on result
-                    res -= viennacl::linalg::prod(matrix, result);  //initial guess zero
+                    //TODO: MPI_Alltoallv on result before product
+                    tag.alltoall_subset(result); 
+                    // Resizes res: 
+                    // res -= viennacl::linalg::prod(matrix, result);  //initial guess zero
+                    VectorType temp = viennacl::linalg::prod(matrix,result); 
+                    res -= temp; // Should not resize res
+
+                    // TODO: MPI_Alltoallv on res after product
                     precond.apply(res);
                     //std::cout << "Residual: " << res << std::endl;
+                    std::cout << "Residual size: " << res.size() << "\n"; 
 
                     // TODO: MPI_Reduce on norm_2
                     CPU_ScalarType rho_0 = viennacl::linalg::norm_2(res, tag.comm()); 
                     CPU_ScalarType rho = static_cast<CPU_ScalarType>(1.0);
-                    std::cout << "rho_0: " << rho_0 << std::endl;
+//                    if (tag.comm().isMaster()) 
+                        std::cout << "rho_0: " << rho_0 << std::endl;
 
+#if 0
                     if (rho_0 / norm_rhs < tag.tolerance() || (norm_rhs == CPU_ScalarType(0.0)) )
                     {
-                        std::cout << "Allowed Error reached at begin of loop" << std::endl;
+//                        if (tag.comm().isMaster()) 
+                            std::cout << "Allowed Error reached at begin of loop" << std::endl;
                         tag.error(rho_0 / norm_rhs);
                         return result;
                     }
@@ -162,7 +341,7 @@ namespace viennacl
                         viennacl::traits::clear(R[k]);
                         viennacl::traits::clear(U[k]);
                         R[k].resize(krylov_dim); 
-                        viennacl::traits::resize(U[k], problem_size);
+                        viennacl::traits::resize(U[k], MM);
                     }
 
                     for (k = 0; k < krylov_dim; ++k)
@@ -172,9 +351,10 @@ namespace viennacl
                         //compute v_k = A * v_{k-1} via Householder matrices
                         if (k == 0)
                         {
-                            // TODO: MPI_Alltoallv on res
-                            //this->alltoallv(res); 
+                            // TODO: MPI_Alltoallv on res, but then we also need to sync on v_k_tilde
+                         tag.alltoall_subset(res); 
                             v_k_tilde = viennacl::linalg::prod(matrix, res);
+                            //tag.alltoall_subset(v_k_tilde); 
                             precond.apply(v_k_tilde);
                         }
                         else
@@ -187,7 +367,9 @@ namespace viennacl
 
                             // TODO: MPI_Alltoallv on v_k_tilde
                             //this->alltoallv(v_k_tilde); 
+                           // tag.alltoall_subset(v_k_tilde); 
                             v_k_tilde_temp = viennacl::linalg::prod(matrix, v_k_tilde);
+                            //tag.alltoall_subset(v_k_tilde_temp); 
                             precond.apply(v_k_tilde_temp);
                             v_k_tilde = v_k_tilde_temp;
 
@@ -199,7 +381,7 @@ namespace viennacl
                         //std::cout << "v_k_tilde: " << v_k_tilde << std::endl;
 
                         viennacl::traits::clear(U[k]);
-                        viennacl::traits::resize(U[k], problem_size);
+                        viennacl::traits::resize(U[k], MM);
                         //copy first k entries from v_k_tilde to U[k]:
                         gmres_copy_helper(v_k_tilde, U[k], k);
 
@@ -259,7 +441,8 @@ namespace viennacl
                             //std::cout << "Krylov space big enough" << endl;
                             tag.error( std::fabs(rho*rho_0 / norm_rhs) );
                             ++k;
-                            std::cout << "--- GMRES converged in " << tag.iters() << " iterations (" << it << " restarts)\n"; 
+//                            if (tag.comm().isMaster()) 
+                                std::cout << "--- GMRES converged in " << tag.iters() << " iterations (" << it << " restarts)\n"; 
                             break;
                         }
 
@@ -280,6 +463,7 @@ namespace viennacl
                         std::cout << " | " << projection_rhs[i] << std::endl;
                     }
 #endif        
+                    std::cout << projection_rhs.size() << "OCCUPY\n";
 
                     for (int i=k-1; i>-1; --i)
                     {
@@ -326,6 +510,7 @@ namespace viennacl
                     //std::cout << r << std::endl; 
 
                     tag.error(std::fabs(rho*rho_0));
+#endif 
                 }
 
                 return result;

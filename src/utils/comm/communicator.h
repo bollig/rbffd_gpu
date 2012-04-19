@@ -41,7 +41,7 @@ public:
     void barrier();
 
     // True if this instance matches Communicator::MASTER
-    bool isMaster() { return (this->comm_rank == Communicator::MASTER); }
+    const bool isMaster() const { return (this->comm_rank == Communicator::MASTER); }
 
 public:
     static const int MASTER = 0;  // The rank associated with the master processor

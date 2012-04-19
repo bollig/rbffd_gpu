@@ -34,7 +34,8 @@ Communicator::Communicator(int argc, char** argv) {
 
 
 Communicator::~Communicator() {
-	MPI_Finalize();
+    std::cout << "[Communicator] Rank " << this->getRank() << " calling MPI_finalize\n";
+    MPI_Finalize();
     std::cout << "[Communicator] destroying communicator on rank " << this->getRank() << ", delaying MPI_Finalize within atexit()." << std::endl;
     comm_destruct_called = 1;
 }

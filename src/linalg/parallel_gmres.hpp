@@ -79,7 +79,7 @@ namespace viennacl
                 Communicator const& comm() const { return this->comm_ref; } 
 
             protected: 
-                mutable Communicator& comm_ref; 
+                Communicator& comm_ref; 
                 Domain& domain_ref; 
         };
 

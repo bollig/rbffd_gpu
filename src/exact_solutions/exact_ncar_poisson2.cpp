@@ -20,7 +20,7 @@ ExactNCARPoisson2::~ExactNCARPoisson2()
 double ExactNCARPoisson2::operator()(double Xx, double Yy, double Zz, double t)
 {
     // Scale by 10000 to make allow easier check of relative error. (Absolute = relative)
-    double A = (SCALE)*(     sin((sqrt(Xx*Xx+Yy*Yy)-1.)*(sqrt(Xx*Xx+Yy*Yy)-0.5)+Pi)
+    double A = (SCALE)*(     sin((sqrt(Xx*Xx+Yy*Yy)-1.)*(sqrt(Xx*Xx+Yy*Yy)-0.5)+pi)
                               +   (sqrt(Xx*Xx+Yy*Yy)-1.)*(sqrt(Xx*Xx+Yy*Yy)-0.5)     );
     //cout << "EXACT: " << A << endl;
 

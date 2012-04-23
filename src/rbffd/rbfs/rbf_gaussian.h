@@ -65,7 +65,7 @@ class RBF_Gaussian : public RBF
         }
 
         virtual CMPLX xderiv(const CVec3& x) {
-            CMPLX r2 = x.square();
+            //CMPLX r2 = x.square();
             CMPLX xeps = x.x() * ceps2;
             return -2. * xeps * this->eval(x);
         }
@@ -77,7 +77,7 @@ class RBF_Gaussian : public RBF
         }
 
         virtual CMPLX yderiv(const CVec3& x) {
-            CMPLX r2 = x.square();
+            //CMPLX r2 = x.square();
             CMPLX yeps = x.y() * ceps2;
             return -2. * yeps * this->eval(x);
         }
@@ -89,7 +89,7 @@ class RBF_Gaussian : public RBF
         }
 
         virtual CMPLX zderiv(const CVec3& x) {
-            CMPLX r2 = x.square();
+            //CMPLX r2 = x.square();
             CMPLX zeps = x.z() * ceps2;
             return -2. * zeps * this->eval(x);
         }
@@ -115,7 +115,7 @@ class RBF_Gaussian : public RBF
         }
 
         virtual CMPLX rderiv_over_r(const CVec3& x) {
-            CMPLX r2 = x.square();
+            //CMPLX r2 = x.square();
             return -2. * eps2 * this->eval(x);
         }
 

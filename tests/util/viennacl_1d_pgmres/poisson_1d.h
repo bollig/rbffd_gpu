@@ -5,6 +5,10 @@
 #include "grids/domain.h"
 #include "utils/comm/communicator.h"
 
+#include <iostream> 
+#include <fstream> 
+#include <iomanip> 
+
 class ImplicitPDE : public PDE
 {
     public: 
@@ -125,7 +129,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
+    Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -148,7 +152,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             U_approx_dev = new VCL_VEC_t(N); 
         }
 
-        char dir[10]; 
+        char dir[FILENAME_MAX]; 
         sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
 
         dir_str = string(dir); 

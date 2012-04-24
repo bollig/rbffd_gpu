@@ -332,6 +332,9 @@ namespace viennacl
                     r = b;
                     r -= viennacl::linalg::prod(matrix, x0);  //initial guess zero
 
+                    // DONE: MPI_Alltoallv before preconditioning
+                    //tag.alltoall_subset(r_full); 
+                    //                    precond.apply(r_full);
                     //std::cout << "Residual: " << r << std::endl;
 
                     // DONE: MPI_Reduce on norm_2

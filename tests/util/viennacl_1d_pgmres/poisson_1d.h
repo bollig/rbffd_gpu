@@ -274,7 +274,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             // Tag has (tolerance, total iterations, number iterations between restarts)
             viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
 
-            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
+//            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
 #if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";

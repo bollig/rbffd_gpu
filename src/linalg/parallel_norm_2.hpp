@@ -30,6 +30,21 @@
 #include "viennacl/linalg/norm_2.hpp"
 #include "utils/comm/communicator.h"
 
+#include <boost/numeric/ublas/matrix.hpp>                                                                              
+#include <boost/numeric/ublas/matrix_sparse.hpp>                                                                       
+#include <boost/numeric/ublas/matrix_proxy.hpp>                                                                        
+#include <boost/numeric/ublas/banded.hpp>                                                                              
+#include <boost/numeric/ublas/vector.hpp>                                                                              
+#include <boost/numeric/ublas/vector_proxy.hpp>                                                                        
+#include <boost/numeric/ublas/vector_sparse.hpp>                                                                       
+#include <boost/numeric/ublas/vector_of_vector.hpp>                                                                    
+#include <boost/numeric/ublas/vector_expression.hpp>                                                                   
+#include <boost/numeric/ublas/io.hpp>                                                                                  
+#include <boost/numeric/ublas/operation.hpp>                                                                           
+#include <boost/numeric/ublas/lu.hpp>                                                                                  
+#include <boost/filesystem.hpp> 
+
+
 namespace viennacl
 {
   //
@@ -108,37 +123,21 @@ namespace viennacl
         typename VectorType::value_type dummy; 
         return parallel_norm_2(v, comm_unit, dummy ); 
     }
-#if 0
-    template <typename VectorType, typename ScalarType>
-    ScalarType norm_2(VectorType< ScalarType > &v, Communicator& comm_unit) 
+
+    template < >
+    double
+    norm_2(boost::numeric::ublas::vector_range< boost::numeric::ublas::vector<double> > const& v, Communicator const& comm_unit) 
     {
-        ScalarType norm = viennacl::linalg::norm_2(v);
-        norm*=norm; 
-        ScalarType r; 
-        MPI_Allreduce(&norm, &r, 1, MPI_FLOAT, MPI_SUM, comm_unit.getComm()); 
-        return r; 
+        double norm = boost::numeric::ublas::norm_2(v);
+        norm *= norm;
+        double r[1]; 
+        
+        MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, comm_unit.getComm()); 
+       
+        return sqrt(r[0]); 
+
     }
-#endif 
-    
-#if 0
-    // ----------------------------------------------------
-    // STL
-    //
-    template< typename VectorT>
-    typename VectorT::value_type
-    norm_2(VectorT const& v1,
-         typename viennacl::enable_if< viennacl::is_stl< typename viennacl::traits::tag_of< VectorT >::type >::value
-                                     >::type* dummy = 0)
-    {
-      //std::cout << "stl .. " << std::endl;
-      typename VectorT::value_type result = 0;
-      for (typename VectorT::size_type i=0; i<v1.size(); ++i)
-        result += v1[i] * v1[i];
-      
-      return sqrt(result);
-    }
-#endif 
-  } // end namespace linalg
+ } // end namespace linalg
 } // end namespace viennacl
 #endif
 

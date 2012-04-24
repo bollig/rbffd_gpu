@@ -132,7 +132,8 @@ void DerivativeTests::compareGPUandCPUDerivs(unsigned int nb_stencils_to_test) {
 //
 double DerivativeTests::compareDeriv(double deriv_gpu, double deriv_cpu, std::string label, int indx) {
 
-    if (isnan(deriv_gpu))
+    bool isit = std::isnan(deriv_gpu); 
+    if (isit)
     {
         std::cout << "One of the derivs calculated by the GPU is NaN (detected by isnan)!\n"; 
         exit(EXIT_FAILURE); 

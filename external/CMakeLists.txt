@@ -7,8 +7,6 @@
 		timers
 		kdtree
         nist
-		cuda_libraries
-		opencl_libraries
 	)
 
 	# These libraries are provided by subdirectories and are 
@@ -30,3 +28,12 @@
 		SET (ENV{EXTERNAL_LIB_DEPENDENCIES} "$ENV{EXTERNAL_LIB_DEPENDENCIES};${lib}")
 		MESSAGE(STATUS "ADDED ${lib} SOURCE TO VAR: ENV{EXTERNAL_INCLUDE_DIRS} ")
 	ENDFOREACH(lib)
+
+
+    if (USE_CUDA) 
+		ADD_SUBDIRECTORY (cuda_libraries)
+    endif()
+
+    if (USE_OPENCL) 
+        ADD_SUBDIRECTORY (opencl_libraries)
+    endif()

@@ -272,7 +272,7 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
         rfile.append("/"); 
         rfile.append(log_file); 
         printf("Redirecting STDOUT to file: `%s'\n", rfile.c_str());
-        freopen(rfile.c_str(), "w", stdout);
+        FILE* temp = freopen(rfile.c_str(), "w", stdout);
         atexit(closeLogFile);
     }
 

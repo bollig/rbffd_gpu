@@ -24,33 +24,23 @@ if (USE_MKL)
 endif(USE_MKL)
 
 
-OPTION (USE_VTK "Enable/Disable the use of VTK (if required by a test)" ON)
-OPTION (USE_CUDA "Enable/Disable the use of CUDA" ON)
-OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
-OPTION (USE_ICC "Enable/Disable the use of Intel ICC compiler for CUDA" OFF)
-OPTION (USE_MPI "Enable/Disable parallel build and linking with MPI" ON)
-
-MESSAGE (STATUS "USE_VTK = ${USE_VTK}")
-MESSAGE (STATUS "USE_CUDA = ${USE_CUDA}")
-MESSAGE (STATUS "USE_OPENCL = ${USE_OPENCL}")
-MESSAGE (STATUS "USE_ICC = ${USE_ICC}")
-MESSAGE (STATUS "USE_MPI = ${USE_MPI}")
-
-FIND_PACKAGE (OPENCL)
 IF (NOT USE_OPENCL)
     set (OPENCL_FOUND false)
-ENDIF (NOT USE_OPENCL)
+ELSE ()
+    FIND_PACKAGE (OPENCL)
+ENDIF ()
 
 
-unset(CUDA_CUDA_LIBRARY CACHE)
-FIND_PACKAGE (CUDA)
 #IF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
 #    MESSAGE (WARNING "\nWARNING! Dep: libcuda was NOT FOUND. Disabling cuda support for framework. Please install NVidia proprietary driver and verify you have an NVidia GPU if you want it enabled.\n")
 #    set(CUDA_FOUND false)
 #ENDIF (CUDA_FOUND AND NOT EXISTS ${CUDA_CUDA_LIBRARY})
-IF (NOT USE_CUDA)
+IF (USE_CUDA)
+    unset(CUDA_CUDA_LIBRARY CACHE)
+    FIND_PACKAGE (CUDA)
+ELSE () 
     set (CUDA_FOUND false)
-ENDIF (NOT USE_CUDA)
+ENDIF ()
 
 
 # This makes finding boost more robust when we have custom installs

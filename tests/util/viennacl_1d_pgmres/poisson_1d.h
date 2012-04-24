@@ -5,6 +5,10 @@
 #include "grids/domain.h"
 #include "utils/comm/communicator.h"
 
+#include <iostream> 
+#include <fstream> 
+#include <iomanip> 
+
 class ImplicitPDE : public PDE
 {
     public: 
@@ -148,7 +152,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             U_approx_dev = new VCL_VEC_t(N); 
         }
 
-        char dir[10]; 
+        char dir[FILENAME_MAX]; 
         sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
 
         dir_str = string(dir); 

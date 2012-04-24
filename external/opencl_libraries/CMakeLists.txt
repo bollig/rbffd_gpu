@@ -9,7 +9,7 @@ MESSAGE(STATUS "USE_CL11 = ${USE_CL11}")
 
 # NOTE: we need the ; here or cmake will not interpret the line properly
 SET (ENV{EXTERNAL_INCLUDE_DIRS} 
-    "$ENV{EXTERNAL_INCLUDE_DIRS};${CMAKE_CURRENT_SOURCE_DIR}/viennacl-1.2.0/"
+    "$ENV{EXTERNAL_INCLUDE_DIRS};${CMAKE_CURRENT_SOURCE_DIR}/viennacl-1.2.1/"
     )
 
 

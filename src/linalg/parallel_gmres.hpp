@@ -239,7 +239,7 @@ namespace viennacl
 
 
             protected: 
-                mutable Communicator& comm_ref; 
+                Communicator& comm_ref; 
                 Domain& grid_ref; 
                 unsigned int sol_dim; 
                 mutable double* sbuf; 

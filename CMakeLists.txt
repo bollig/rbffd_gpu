@@ -26,6 +26,21 @@ ENDIF (USE_ICC)
 PROJECT(rbffd_gpu)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 	
+
+OPTION (USE_VTK "Enable/Disable the use of VTK (if required by a test)" ON)
+OPTION (USE_CUDA "Enable/Disable the use of CUDA" ON)
+OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
+OPTION (USE_ICC "Enable/Disable the use of Intel ICC compiler for CUDA" OFF)
+OPTION (USE_MPI "Enable/Disable parallel build and linking with MPI" ON)
+
+MESSAGE (STATUS "USE_VTK = ${USE_VTK}")
+MESSAGE (STATUS "USE_CUDA = ${USE_CUDA}")
+MESSAGE (STATUS "USE_OPENCL = ${USE_OPENCL}")
+MESSAGE (STATUS "USE_ICC = ${USE_ICC}")
+MESSAGE (STATUS "USE_MPI = ${USE_MPI}")
+
+
+
 SET( CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_SOURCE_DIR}/common
 	${CMAKE_CURRENT_SOURCE_DIR}/common/UseDoxygen

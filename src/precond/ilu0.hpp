@@ -121,6 +121,8 @@ namespace viennacl
                 typedef typename LUType::iterator2              OutputColIterator;  //iterate along increasing column index
 
                 output.clear();
+                std::cout << "INPUT.size == " << input.size1() << ", " << input.size2() << std::endl;
+                std::cout << "OUTPUT.size == " << output.size1() << ", " << output.size2() << std::endl;
                 assert(input.size1() == output.size1());
                 assert(input.size2() == output.size2());
                 output.resize(static_cast<unsigned int>(input.size1()), static_cast<unsigned int>(input.size2()), false);
@@ -286,7 +288,8 @@ namespace viennacl
                 private:
                 void init(MatrixType const & mat)
                 {
-                    viennacl::tools::sparse_matrix_adapter<ScalarType>       LU_adapter(LU);
+                    viennacl::tools::sparse_matrix_adapter<ScalarType>       LU_adapter(LU, mat.size1(), mat.size2());
+                    std::cout << "LU.size == " << LU_adapter.size1() << ", " << LU_adapter.size2() << std::endl;
                     viennacl::linalg::precondition(mat, LU_adapter, _tag);
                 }
 

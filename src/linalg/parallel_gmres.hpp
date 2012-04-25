@@ -205,7 +205,7 @@ namespace viennacl
                                 k = this->sdispls[i]; 
                                 for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
                                     unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
-                                    std::cout << "Sending " << s_indx << "\n";
+//                                    std::cout << "Sending " << s_indx << "\n";
                                     this->sbuf[k] = vec[s_indx];
                                     k++; 
                                 }
@@ -219,7 +219,7 @@ namespace viennacl
                                 k = this->rdispls[i]; 
                                 for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
                                     unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
-                                    std::cout << "Receiving " << r_indx << "\n";
+//                                    std::cout << "Receiving " << r_indx << "\n";
                                     // TODO: need to translate to local indexing properly. This hack assumes all boundary are dirichlet and appear first in the list
                                     vec[r_indx] = this->rbuf[k];  
                                     k++; 
@@ -376,7 +376,7 @@ namespace viennacl
                     // v_k+1 = A v_k
                     *(v[k+1]) = viennacl::linalg::prod(matrix, v_full[k]);
                     tag.alltoall_subset(v_full[k+1]); 
-#if 0 
+#if 0
                     precond.apply((*v[k+1]));
 #else 
                     precond.apply(v_full[k+1]);

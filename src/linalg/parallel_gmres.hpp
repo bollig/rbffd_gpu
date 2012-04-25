@@ -295,6 +295,9 @@ namespace viennacl
             std::vector<double> g(krylov_dim+1);
             // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)
             std::vector< std::vector<CPU_ScalarType> > H(krylov_dim+1);
+            std::vector<double> c(krylov_dim); 
+            std::vector<double> s(krylov_dim); 
+
 
             //representing the scalar '-1' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_minus_1 = static_cast<CPU_ScalarType>(-1);    
@@ -354,7 +357,6 @@ namespace viennacl
                 // v_1 = r / rho_0
                 *(v[0]) = r / rho_0;
 
-
                 // Should be 1: 
                 // std::cout << "norm_2(v0) = " << viennacl::linalg::norm_2(*(v[0]),tag.comm()) << std::endl;
 
@@ -384,11 +386,36 @@ namespace viennacl
 
                     // Safety check
                     if ((H[k+1][k] > 0.) || (H[k+1][k] < 0.)) {
-                        std::cout << "SAFETY FIRST\n";
                         *(v[k+1]) /= H[k+1][k];
-                    } else { 
-                        std::cout << "MADE IT\n";
+                    } 
+
+                    if (k > 0) {
+                        for (int i = 0; i < k; i++) {
+                            // Need additional 2*k storage for c and s
+                            double hik = c[i]*H[i][k] - s[i]*H[i+1][k]; 
+                            double hipk = s[i]*H[i][k] + c[i]*H[i+1][k]; 
+                            H[i][k] = hik; 
+                            H[i+1][k] = hipk;
+                        }
                     }
+
+                    double nu = sqrt(H[k][k]*H[k][k] + H[k+1][k]*H[k+1][k]);
+
+                    if (nu > 0.) {
+                        c[k] = H[k][k] / nu; 
+                        s[k] = -H[k+1][k] / nu; 
+
+                        H[k][k] = c[k]*H[k][k] - s[k]*H[k+1][k]; 
+                        H[k+1][k] = 0; 
+
+                        double gk = c[k]*g[k] - s[k]*g[k+1]; 
+                        double gkp = s[k]*g[k] + c[k]*g[k+1]; 
+
+                        g[k] = gk; 
+                        g[k+1] = gkp; 
+                    }
+
+                    rho = fabs(g[k+1]); 
 
 #if 0
                     // -------------------------  Step 1 ----------------------

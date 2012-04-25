@@ -94,7 +94,7 @@ class Domain : public Grid, public MPISendable
 
         virtual std::string getFileDetailString() {
             char prefix[256]; 
-            sprintf(prefix, "_rank%d_of_%d", this->id, this->comm_size); 
+            sprintf(prefix, "_rank%d_of_%da", this->id, this->comm_size); 
             std::string s = Grid::getFileDetailString(); 
             s.append(prefix); 
             return s;
@@ -240,6 +240,7 @@ class Domain : public Grid, public MPISendable
 
         // ******** BEGIN MPISENDABLE ************
         // The following seven routines are required by MPISendable inheritence.
+        void setCommSize(int size) { comm_size = size; } 
         virtual int send(int my_rank, int receiver_rank); 
         virtual int receive(int my_rank, int sender_rank);
 

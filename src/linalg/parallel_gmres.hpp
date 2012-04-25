@@ -281,6 +281,7 @@ namespace viennacl
             VectorType x_full(MM);
             ublas::vector_range<VectorType> x(x_full, ublas::range(0,NN));
             viennacl::traits::clear(x_full);
+            tag.alltoall_subset(x_full); 
 
             ublas::vector_range<VectorType> b(b_full, ublas::range(0,NN));
 
@@ -328,7 +329,7 @@ namespace viennacl
             
             // Save very first residual norm so we know when to stop
             v0 = b; 
-            precond.apply(v0);
+            //precond.apply(v0);
             CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
             CPU_ScalarType resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
             std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
@@ -339,23 +340,23 @@ namespace viennacl
                 if (tag.comm().isMaster()) 
                     std::cout << "-- GMRES Start " << it << " -- " << std::endl;
 
-                tag.alltoall_subset(x_full); 
-
                 // r = b - A x
-                w = viennacl::linalg::prod(matrix, x_full);  //initial guess zero
-                w -= b; 
+                w = b - viennacl::linalg::prod(matrix, x_full);  //initial guess zero
                 tag.alltoall_subset(w_full); 
 #if 1
-                precond.apply(w);
+//                precond.apply(w);
 #else 
                 precond.apply(w_full);
 #endif 
 
                 CPU_ScalarType beta = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(w, tag.comm())); 
-                w *= -1/beta; 
+                std::cout << "beta = " << beta << std::endl;
+                if (beta != beta) { 
+                }
+                w /= beta; 
 
                 if (tag.comm().isMaster()) 
-                    std::cout << "beta: " << beta << " , beta / b_norm: " << beta/b_norm << std::endl;
+                    std::cout << "B_norm: " << b_norm << ", Beta: " << beta << std::endl;
 
                 if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
                 {
@@ -388,7 +389,7 @@ namespace viennacl
                     *(v[k+1]) = viennacl::linalg::prod(matrix, v_full[k]);
                     tag.alltoall_subset(v_full[k+1]); 
 #if 1
-                    precond.apply((*v[k+1]));
+                    //precond.apply((*v[k+1]));
 #else 
                     precond.apply(v_full[k+1]);
 #endif 
@@ -440,6 +441,7 @@ namespace viennacl
 
                     rel_resid0 = fabs(g[k+1]) / resid0; 
                     std::cout << k << " rho = " << rel_resid0 << " <= " << b_norm * tag.tolerance() << std::endl;
+                    std::cout << k << " g[" << k+1 << "] = " << fabs(g[k+1]) << "\n";
 
                     tag.error(rel_resid0);
                     // We could add absolute tolerance here as well: 
@@ -449,34 +451,36 @@ namespace viennacl
                 } // for k
 
                 // -------------------- SOLVE PROCESS ----------------------------------
-
-                // After the Givens rotations, we have H is an upper triangular matrix 
-                std::vector<double> y(k+1); 
-#if 1
-                for (int i = k; i >= 0; i--) {
-                    y[i] /= H[i][i]; 
-                    for (int j = i-1; j >= 0; j--) {
-                        y[j] -= H[j][i] * g[i];
-                    }  
-                }
-#endif
 #if 0
-                y[k]  = g[k] / H[k][k]; 
-                for (int i = k-1; i > -1; i--) {
-                    y[i]  = g[i]; 
-                    for (int j = i+1; j < k; j++)  {
-                        y[i] -= H[i][j] * y[j]; 
-                    }
-                    y[i] = y[i] / H[i][i]; 
-                    std::cout << i << " " << y[i] << std::endl;
+                std::cout << "g = \n"; 
+                for (int i = 0; i < k; i++) { 
+                    std::cout << g[i]<< ", "; 
                 }
+                std::cout << std::endl;
+
+                std::cout << "H = \n"; 
+                for (int i = 0; i < k+1; i++) { 
+                    for (int j = 0; j < k; j++) { 
+                        std::cout << H[i][j]<< ", "; 
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << std::endl;
 #endif 
 
+                // After the Givens rotations, we have H is an upper triangular matrix 
+                for (int i = k-1; i >= 0; i--) {
+                    g[i] /= H[i][i]; 
+                    for (int j = i-1; j >= 0; j--) {
+                        g[j] -= H[j][i] * g[i];
+                    }  
+                }
 
                 // Update our solution
-                for (int i = 0 ; i < k; i++) {
-                    x += *(v[i]) * y[i]; 
+                for (int j = 0 ; j < k; j++) {
+                    x += *(v[j]) * g[j]; 
                 }
+                tag.alltoall_subset(x_full); 
 
                 if ( rel_resid0 <= b_norm * tag.tolerance() ) {
                     return x_full;

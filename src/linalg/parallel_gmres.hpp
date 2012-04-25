@@ -456,7 +456,7 @@ namespace viennacl
                 for (int i = k; i >= 0; i--) {
                     y[i] /= H[i][i]; 
                     for (int j = i-1; j >= 0; j--) {
-                        y[k] -= H[j][i] * g[i];
+                        y[j] -= H[j][i] * g[i];
                     }  
                 }
 #endif

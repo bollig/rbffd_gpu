@@ -307,10 +307,6 @@ namespace viennacl
             //representing the scalar '2' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_2 = static_cast<CPU_ScalarType>(2);    
 
-            // DONE: MPI_Reduce on norm_2 (note: we only apply norm_2 to the
-            // subset controlled by this machine)
-            CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
-
             for (unsigned int k = 0; k < krylov_dim+1; ++k)
             {
                 H[k].resize(tag.krylov_dim()); 
@@ -320,16 +316,23 @@ namespace viennacl
 
             MPI_Barrier(MPI_COMM_WORLD);
 
-            //                if (tag.comm().isMaster()) 
-            std::cout << "Starting Parallel GMRES..." << std::endl;
+            if (tag.comm().isMaster()) 
+                std::cout << "Starting Parallel GMRES..." << std::endl;
             tag.iters(0);
 
+            // Save very first residual norm so we know when to stop
+            CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
+            v_full[0] = b; 
+            precond.apply(*(v[0])); 
+            CPU_ScalarType resid0 = viennacl::linalg::norm_2(*(v[0]), tag.comm()) / b_norm;
+            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
+
+            // -------------------- OUTER LOOP ----------------------------------
             for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
             {
-                //                    if (tag.comm().isMaster()) 
-                std::cout << "-- GMRES Start " << it << " -- " << std::endl;
+                if (tag.comm().isMaster()) 
+                    std::cout << "-- GMRES Start " << it << " -- " << std::endl;
 
-                // Synchronize x(0) 
                 tag.alltoall_subset(x_full); 
 
                 // r = b - A x
@@ -341,16 +344,15 @@ namespace viennacl
                 precond.apply(r_full);
 #endif 
 
-                // DONE: MPI_Reduce on norm_2
                 CPU_ScalarType rho_0 = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(r, tag.comm())); 
                 CPU_ScalarType rho = static_cast<CPU_ScalarType>(1.0);
-                //                    if (tag.comm().isMaster()) 
-                std::cout << "rho_0: " << rho_0 << std::endl;
+                if (tag.comm().isMaster()) 
+                    std::cout << "rho_0: " << rho_0 << " , rho_0 / b_norm: " << rho_0/b_norm << std::endl;
 
                 if (rho_0 / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
                 {
-                    //                        if (tag.comm().isMaster()) 
-                    std::cout << "Allowed Error reached at begin of loop" << std::endl;
+                    if (tag.comm().isMaster()) 
+                        std::cout << "Allowed Error reached at begin of loop" << std::endl;
                     tag.error(rho_0 / b_norm);
                     return x_full;
                 }
@@ -358,19 +360,17 @@ namespace viennacl
                 // v_1 = r / rho_0
                 *(v[0]) = r / rho_0;
 
-                // Should be 1: 
-                // std::cout << "norm_2(v0) = " << viennacl::linalg::norm_2(*(v[0]),tag.comm()) << std::endl;
-
                 // First givens rotation 
                 g[0] = rho_0; 
-                //std::cout << "Normalized Residual: " << res << std::endl;
 
-                for (unsigned int k = 0; k < krylov_dim; ++k)
+                // -------------------- INNER ARNOLDI PROCESS ----------------------------------
+                // we declare k here so we can iterate partially through krylov
+                // dims and still solve the partial system
+                unsigned int k; 
+                for (k = 0; k < krylov_dim; ++k)
                 {
                     tag.iters( tag.iters() + 1 ); //increase iteration counter
 
-
-                    // Synchronize v_i with Alltoallv collective
                     tag.alltoall_subset(v_full[k]); 
 
                     // v_k+1 = A v_k
@@ -421,37 +421,30 @@ namespace viennacl
                         g[k+1] = gkp; 
                     }
                     rho = fabs(g[k+1]); 
-                    std::cout << "rho = " << rho << std::endl;
+                    std::cout << "rho = " << rho << " , rho / resid0 = " << rho / resid0 << std::endl;
+
+                    // We could add absolute tolerance here as well: 
+                    if ( rho / resid0 <= b_norm * tag.tolerance() ) {
+                        std::cout << "BREAKING\n"; 
+                        break;
+                    }
                 } // for k
 
-#if 0
-                std::cout << " Rotated H = \n" ;
-                for (int i = 0; i < krylov_dim+1; i++ ) { 
-                    for (int l = 0; l < krylov_dim; l++ ) { 
-                        std::cout << H[i][l] << " "; 
-                    }
-                    std::cout << "\n";
-                }
-#endif 
+                // -------------------- SOLVE PROCESS ----------------------------------
 
                 // After the Givens rotations, we have H is an upper triangular matrix 
-                std::vector<double> y(krylov_dim); 
-                y[krylov_dim-1]  = g[krylov_dim-1] / H[krylov_dim-1][krylov_dim-1]; 
-                for (int i = krylov_dim-2; i > -1; i--) {
+                std::vector<double> y(k+1); 
+                y[k]  = g[k] / H[k][k]; 
+                for (int i = k-1; i > -1; i--) {
                     y[i]  = g[i]; 
-                    for (int j = i+1; j < krylov_dim; j++)  {
+                    for (int j = i+1; j < k; j++)  {
                         y[i] -= H[i][j] * y[j]; 
                     }
                     y[i] = y[i] / H[i][i]; 
                 }
 
-#if 0
-                for (int i = 0; i < krylov_dim; i++) { 
-                    std::cout << i << " = " << y[i] << std::endl;
-                }
-#endif 
                 // Update our solution
-                for (int i = 0 ; i < krylov_dim; i++) {
+                for (int i = 0 ; i < k; i++) {
                     x += *(v[i]) * y[i]; 
                 }
 
@@ -459,9 +452,7 @@ namespace viennacl
 
                 if ( std::fabs(rho*rho_0 / b_norm ) < tag.tolerance() )
                 {
-                    //std::cout << "Allowed Error reached at end of loop" << std::endl;
                     tag.error(std::fabs(rho*rho_0 / b_norm ));
-                    // Make sure we have consistent view
                     tag.alltoall_subset(x_full); 
                     return x_full;
                 }

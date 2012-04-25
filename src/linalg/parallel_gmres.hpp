@@ -205,7 +205,7 @@ namespace viennacl
                                 k = this->sdispls[i]; 
                                 for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
                                     unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
-//                                    std::cout << "Sending " << s_indx << "\n";
+                                    //                                    std::cout << "Sending " << s_indx << "\n";
                                     this->sbuf[k] = vec[s_indx];
                                     k++; 
                                 }
@@ -219,7 +219,7 @@ namespace viennacl
                                 k = this->rdispls[i]; 
                                 for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
                                     unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
-//                                    std::cout << "Receiving " << r_indx << "\n";
+                                    //                                    std::cout << "Receiving " << r_indx << "\n";
                                     // TODO: need to translate to local indexing properly. This hack assumes all boundary are dirichlet and appear first in the list
                                     vec[r_indx] = this->rbuf[k];  
                                     k++; 
@@ -396,36 +396,57 @@ namespace viennacl
 
 
                     if (k > 0) {
+                        // Apply previous rotations
                         for (int i = 0; i < k; i++) {
                             // Need additional 2*k storage for c and s
-                            double hik = c[i]*H[i][k] - s[i]*H[i+1][k]; 
-                            double hipk = s[i]*H[i][k] + c[i]*H[i+1][k]; 
+                            double hik = c[i]*H[i][k] + s[i]*H[i+1][k]; 
+                            double hipk = -s[i]*H[i][k] + c[i]*H[i+1][k]; 
                             H[i][k] = hik; 
                             H[i+1][k] = hipk;
                         }
                     }
 
+#if 0
                     double nu = sqrt(H[k][k]*H[k][k] + H[k+1][k]*H[k+1][k]);
-
                     if (nu > 0.) {
                         c[k] = H[k][k] / nu; 
                         s[k] = -H[k+1][k] / nu; 
 
-                        H[k][k] = c[k]*H[k][k] - s[k]*H[k+1][k]; 
-                        H[k+1][k] = 0; 
+                        H[k][k] = c[k]*H[k][k] + s[k]*H[k+1][k]; 
+                        H[k+1][k] = 0;
+                    }
+#else 
+                        // Generate rotation (Borrowed from CUSP v 0.3.1)
+                        if (H[k+1][k] == 0.) { 
+                            s[k] = 0.0; 
+                            c[k] = 1.0; 
+                        } else if (abs(H[k+1][k]) > abs(H[k][k])) {
+                            double tmp = H[k][k]/H[k+1][k]; 
+                            s[k] = 1./sqrt(1 + tmp*tmp); 
+                            c[k] = tmp * s[k]; 
+                        } else { 
+                            double tmp = H[k+1][k]/H[k][k]; 
+                            c[k] = 1./sqrt(1 + tmp*tmp); 
+                            s[k] = tmp * c[k]; 
+                        }
 
-                        double gk = c[k]*g[k] - s[k]*g[k+1]; 
-                        double gkp = s[k]*g[k] + c[k]*g[k+1]; 
+                        double hik = c[k]*H[k][k] + s[k]*H[k+1][k]; 
+                        double hipk = -s[k]*H[k][k] + c[k]*H[k+1][k]; 
+                        H[k][k] = hik; 
+                        H[k+1][k] = hipk;
+#endif 
+
+                        double gk = c[k]*g[k] + s[k]*g[k+1]; 
+                        double gkp = -s[k]*g[k] + c[k]*g[k+1]; 
 
                         g[k] = gk; 
                         g[k+1] = gkp; 
-                    }
                     rho = fabs(g[k+1]); 
                     std::cout << "rho = " << rho << " , rho / resid0 = " << rho / resid0 << std::endl;
 
                     // We could add absolute tolerance here as well: 
                     if ( rho / resid0 <= b_norm * tag.tolerance() ) {
-                        std::cout << "BREAKING\n"; 
+                        tag.error(rho / resid0);
                         break;
                     }
                 } // for k
@@ -450,28 +471,29 @@ namespace viennacl
 
                 tag.alltoall_subset(x_full); 
 
-                if ( std::fabs(rho*rho_0 / b_norm ) < tag.tolerance() )
-                {
+                if ( rho / resid0 <= b_norm * tag.tolerance() ) {
+                    //if ( std::fabs(rho*rho_0 / b_norm ) < tag.tolerance() )
+                    //               {
                     tag.error(std::fabs(rho*rho_0 / b_norm ));
                     tag.alltoall_subset(x_full); 
                     return x_full;
                 }
                 tag.error(std::fabs(rho*rho_0));
+                }
+
+                return x_full;
             }
 
-            return x_full;
+            /** @brief Convenience overload of the solve() function using GMRES. Per default, no preconditioner is used
+            */ 
+            template <typename MatrixType, typename VectorType>
+                VectorType solve(const MatrixType & matrix, VectorType const & rhs, parallel_gmres_tag const & tag)
+                {
+                    return solve(matrix, rhs, tag, no_precond());
+                }
+
+
         }
-
-        /** @brief Convenience overload of the solve() function using GMRES. Per default, no preconditioner is used
-        */ 
-        template <typename MatrixType, typename VectorType>
-            VectorType solve(const MatrixType & matrix, VectorType const & rhs, parallel_gmres_tag const & tag)
-            {
-                return solve(matrix, rhs, tag, no_precond());
-            }
-
-
     }
-}
 
 #endif

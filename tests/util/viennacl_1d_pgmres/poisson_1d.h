@@ -271,7 +271,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         void solve(MAT_t& LHS, VEC_t& RHS, VEC_t& U_exact, VEC_t& U_approx_out)
         {
             // Solve on the CPU
-            int restart = 5; 
+            int restart = 0; 
             int krylov = 10;
             double tol = 1e-8; 
 
@@ -281,7 +281,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
-//            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
+            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
 #if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
@@ -291,7 +291,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
-            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag);//, vcl_ilu0); 
+            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
             
             if (tag.iters() < tag.max_iterations()) { 
                 std::cout << "\n[+++] Solver converged "; //<< tag.error() << " relative tolerance";       

@@ -16,7 +16,7 @@
 #include "utils/io/vtu_pde_writer.h"
 #endif 
 
-#include "poisson_1d.h"
+#include "poisson_1d_vcl.h"
 
 using namespace std;
 using namespace EB;

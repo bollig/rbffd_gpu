@@ -58,7 +58,7 @@ typedef std::vector<double> STL_VEC_t;
 typedef boost::numeric::ublas::vector<double> UBLAS_VEC_t; 
 typedef viennacl::vector<double> VCL_VEC_t; 
 
-EB::TimerList tm;
+EB::TimerList timers;
 
 
 //---------------------------------
@@ -439,28 +439,28 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
         sprintf(test_timer_name, "%u GPU GMRES test", N); 
     }
 
-    if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
-    if (!tm.contains(copy_timer_name)) { tm[copy_timer_name] = new EB::Timer(copy_timer_name); } 
-    if (!tm.contains(test_timer_name)) { tm[test_timer_name] = new EB::Timer(test_timer_name); } 
+    if (!timers.contains(assemble_timer_name)) { timers[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
+    if (!timers.contains(copy_timer_name)) { timers[copy_timer_name] = new EB::Timer(copy_timer_name); } 
+    if (!timers.contains(test_timer_name)) { timers[test_timer_name] = new EB::Timer(test_timer_name); } 
 
 
     std::cout << test_name << std::endl;
 
 
     // ----- ASSEMBLE -----
-    tm[assemble_timer_name]->start(); 
+    timers[assemble_timer_name]->start(); 
     // Compress system to remove boundary rows
     UBLAS_MAT_t* A = new UBLAS_MAT_t(nrows, ncols, NNZ); 
     UBLAS_VEC_t* F = new UBLAS_VEC_t(nrows, 0);
     UBLAS_VEC_t* U_exact = new UBLAS_VEC_t(nrows, 0);
     assemble_System_Stokes(der, grid, *A, *F, *U_exact); 
-    tm[assemble_timer_name]->stop(); 
+    timers[assemble_timer_name]->stop(); 
 
     write_System(*A, *F, *U_exact); 
 
     // ----- SOLVE -----
 
-    tm[copy_timer_name]->start();
+    timers[copy_timer_name]->start();
 
     VCL_MAT_t* A_gpu = new VCL_MAT_t(A->size1(), A->size2()); 
     copy(*A, *A_gpu);
@@ -471,12 +471,12 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
 
     viennacl::copy(F->begin(), F->end(), F_gpu->begin());
     viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_gpu->begin());
-    tm[copy_timer_name]->stop();
+    timers[copy_timer_name]->stop();
 
-    tm[test_timer_name]->start();
+    timers[test_timer_name]->start();
     // Use GMRES to solve A*u = F
     GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu, N, n);
-    tm[test_timer_name]->stop();
+    timers[test_timer_name]->stop();
 
     write_Solution(grid, *U_exact, *U_approx_gpu); 
 
@@ -523,7 +523,7 @@ int main(void)
 
         std::string weight_timer_name = grid_name + " Calc Weights";  
 
-        tm[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
+        timers[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
 #if 0
@@ -577,7 +577,7 @@ int main(void)
 
 
         std::cout << "Generate RBFFD Weights\n"; 
-        tm[weight_timer_name]->start(); 
+        timers[weight_timer_name]->start(); 
         RBFFD der(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, grid, 3, 0); 
 //TODO:         der.setWeightType(RBFFD::ContourSVD);
         der.setEpsilonByParameters(eps_c1, eps_c2);
@@ -585,7 +585,7 @@ int main(void)
         if (der_err) {
             der.computeAllWeightsForAllStencils(); 
 
-            tm[weight_timer_name]->stop(); 
+            timers[weight_timer_name]->stop(); 
 #if 0
             if (writeIntermediate) {
                 der.writeAllWeightsToFile(); 
@@ -608,8 +608,8 @@ int main(void)
         delete(grid); 
     }
 
-    tm.printAll();
-    tm.writeToFile();
+    timers.printAll();
+    timers.writeToFile();
     return EXIT_SUCCESS;
 }
 

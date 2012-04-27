@@ -255,14 +255,15 @@ class Vec3d
 	friend std::ostream& operator<< (std::ostream& os, const Vec3d& p) {
 		//    os << '(' << p.x()  << ',' << p.y() << ',' << p.z() << ')';
 
-        os.setf(std::ios::fixed, std::ios::floatfield); 
-        os.setf(std::ios::showpoint); 
-        os.precision( 15 );   
-        os.width(20);
+        //os.setf(std::ios::fixed, std::ios::floatfield); 
+        os.setf(std::ios::scientific); 
+        //os.setf(std::ios::showpoint); 
+        os.precision( 16 );   
+        os.width(24);
 		os << std::right << p.x() ;
-        os.width(20);
+        os.width(24);
         os << std::right << p.y();
-        os.width(20);
+        os.width(24);
         os << std::right << p.z();
 		if (os.fail())
 		      std::cout << "operator<<(ostream&,Vec3d&) failed" << std::endl;

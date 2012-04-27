@@ -51,23 +51,24 @@ License:         MIT (X11), see file LICENSE in the base directory
 
 // But we need our own parallel norms
 #include "linalg/parallel_norm_2.hpp"
+#include "linalg/parallel_inner_prod.hpp"
 
 #include "utils/comm/communicator.h"
 #include "grids/domain.h"
 
-#include <boost/numeric/ublas/matrix.hpp>                                                                              
-#include <boost/numeric/ublas/matrix_sparse.hpp>                                                                       
-#include <boost/numeric/ublas/matrix_proxy.hpp>                                                                        
-#include <boost/numeric/ublas/banded.hpp>                                                                              
-#include <boost/numeric/ublas/vector.hpp>                                                                              
-#include <boost/numeric/ublas/vector_proxy.hpp>                                                                        
-#include <boost/numeric/ublas/vector_sparse.hpp>                                                                       
-#include <boost/numeric/ublas/vector_of_vector.hpp>                                                                    
-#include <boost/numeric/ublas/vector_expression.hpp>                                                                   
-#include <boost/numeric/ublas/io.hpp>                                                                                  
-#include <boost/numeric/ublas/operation.hpp>                                                                           
-#include <boost/numeric/ublas/lu.hpp>                                                                                  
-#include <boost/filesystem.hpp> 
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/matrix_proxy.hpp>
+#include <boost/numeric/ublas/banded.hpp>
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/vector_proxy.hpp>
+#include <boost/numeric/ublas/vector_sparse.hpp>
+#include <boost/numeric/ublas/vector_of_vector.hpp>
+#include <boost/numeric/ublas/vector_expression.hpp>
+#include <boost/numeric/ublas/io.hpp>
+#include <boost/numeric/ublas/operation.hpp>
+#include <boost/numeric/ublas/lu.hpp>
+#include <boost/filesystem.hpp>
 
 namespace viennacl
 {
@@ -83,10 +84,10 @@ namespace viennacl
                  *
                  * @param tol            Relative tolerance for the residual (solver quits if ||r|| < tol * ||r_initial||)
                  * @param max_iterations The maximum number of iterations (including restarts
-                 * @param krylov_dim     The maximum dimension of the Krylov space before restart (number of restarts is found by max_iterations / krylov_dim)
+                 * @param R     The maximum dimension of the Krylov space before restart (number of restarts is found by max_iterations / R)
                  */
-                parallel_gmres_tag(Communicator& comm_unit, Domain& decomposition, double tol = 1e-10, unsigned int max_iterations = 300, unsigned int krylov_dim = 20, unsigned int solution_dim_per_node = 1) 
-                    : gmres_tag(tol, max_iterations, krylov_dim), 
+                parallel_gmres_tag(Communicator& comm_unit, Domain& decomposition, double tol = 1e-10, unsigned int max_iterations = 300, unsigned int R = 20, unsigned int solution_dim_per_node = 1) 
+                    : gmres_tag(tol, max_iterations, R), 
                     comm_ref(comm_unit), grid_ref(decomposition), 
                     sol_dim(solution_dim_per_node)
             {
@@ -168,7 +169,7 @@ namespace viennacl
                                 }
                             }
 
-                            //                           MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
+                            MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
 
                             comm_ref.barrier();
                             k = 0; 
@@ -203,9 +204,9 @@ namespace viennacl
                             for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
                                 k = this->sdispls[i]; 
                                 for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
-                                    // this->sbuf[k] = grid_ref.O_by_rank[i][j];
-                                    this->sbuf[k] = vec[grid_ref.g2l(grid_ref.O_by_rank[i][j])]; 
-
+                                    unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
+                                    //                                    std::cout << "Sending " << s_indx << "\n";
+                                    this->sbuf[k] = vec[s_indx];
                                     k++; 
                                 }
                             }
@@ -217,8 +218,10 @@ namespace viennacl
                             for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
                                 k = this->rdispls[i]; 
                                 for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
+                                    unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
+                                    //                                    std::cout << "Receiving " << r_indx << "\n";
                                     // TODO: need to translate to local indexing properly. This hack assumes all boundary are dirichlet and appear first in the list
-                                    vec[grid_ref.g2l(grid_ref.R_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize()] = this->rbuf[k];  
+                                    vec[r_indx] = this->rbuf[k];  
                                     k++; 
                                 }
                             }
@@ -229,9 +232,7 @@ namespace viennacl
                     void 
                     alltoall_subset(VectorType& v) const
                     {
-                        // Redirect the call to appropriate float or double routines (Type size matters with MPI)
                         typename VectorType::value_type dummy; 
-                        //                        std::cout << "Rank " << comm_ref.getRank() << " v.size = " << v.size() << std::endl;
                         alltoall_subset(v, dummy);
                     }
 
@@ -255,7 +256,8 @@ namespace viennacl
 
         /** @brief Implementation of the GMRES solver.
          *
-         * Following the algorithm proposed by Walker in "A Simpler GMRES" (1988)
+         * Following the algorithm 2.1 proposed by Walker in "A Simpler GMRES" (1988)
+         * (Evan Bollig): I changed variable names to be consistent with the paper and other literature
          *
          * @param matrix     The system matrix
          * @param rhs        The load vector
@@ -263,300 +265,230 @@ namespace viennacl
          * @param precond    A preconditioner. Precondition operation is done via member function apply()
          * @return The result vector
          */
-        template <typename MatrixType, /*typename VectorType=ublas::vector<double>,*/ typename PreconditionerType>
-            ublas::vector<double> solve(const MatrixType & matrix, ublas::vector<double> const & rhs, parallel_gmres_tag const & tag, PreconditionerType const & precond)
+        template <typename MatrixType, typename PreconditionerType>
+        ublas::vector<double> 
+        solve(const MatrixType & matrix, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
+        {
+            typedef ublas::vector<double>                                             VectorType;
+            typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
+            typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
+            
+            unsigned int NN = matrix.size1(); //viennacl::traits::size1(matrix);
+            unsigned int MM = matrix.size2(); //viennacl::traits::size2(matrix);
+            unsigned int R  = tag.krylov_dim();
+
+            // Solution
+            VectorType x_full(MM);
+            ublas::vector_range<VectorType> x(x_full, ublas::range(0,NN));
+            viennacl::traits::clear(x_full);
+            tag.alltoall_subset(x_full); 
+
+            ublas::vector_range<VectorType> b(b_full, ublas::range(0,NN));
+
+            // Workspace
+            VectorType w_full(MM);
+            ublas::vector_range<VectorType> w(w_full, ublas::range(0,NN)); 
+
+            // Arnoldi Matrix
+            std::vector< VectorType > v_full(R+1); 
+            std::vector< ublas::vector_range<VectorType> * > v(R+1);
+
+            VectorType v0(R+1); 
+
+            // Givens rotations
+            std::vector<double> g(R+1);
+
+            // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)
+            std::vector< std::vector<CPU_ScalarType> > H(R+1);
+
+            // Rotations (cs = cosine; sn = sine)
+            std::vector<double> cs(R); 
+            std::vector<double> sn(R); 
+
+            //representing the scalar '-1' on the GPU. Prevents blocking write operations
+            const CPU_ScalarType gpu_scalar_minus_1 = static_cast<CPU_ScalarType>(-1);    
+            //representing the scalar '1' on the GPU. Prevents blocking write operations
+            const CPU_ScalarType gpu_scalar_1 = static_cast<CPU_ScalarType>(1);    
+            //representing the scalar '2' on the GPU. Prevents blocking write operations
+            const CPU_ScalarType gpu_scalar_2 = static_cast<CPU_ScalarType>(2);    
+
+            CPU_ScalarType rel_resid0;
+
+            for (unsigned int k = 0; k < R+1; ++k)
             {
-                typedef ublas::vector<double> VectorType;
-                // RHS is size(M,1)
-                typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
-                typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
-                // In parallel these dimensions are VERY IMPORTANT to get right
-                //unsigned int problem_size = viennacl::traits::size(rhs);
-                unsigned int NN = matrix.size1(); //viennacl::traits::size1(matrix);
-                unsigned int MM = matrix.size2(); //viennacl::traits::size2(matrix);
-                // TODO: allow user specified initial guess
-                // TODO: when allowed MPI_Alltoallv sync here
-                VectorType result(MM);
-                viennacl::traits::clear(result);
+                H[k].resize(tag.krylov_dim()); 
+                v_full[k].resize(MM);
+                v[k] = new ublas::vector_range<VectorType>(v_full[k], ublas::range(0,NN)); 
+            }
 
-                // Make sure all procs have the full result (if we pass something in)
-                tag.alltoall_subset(result); 
+            MPI_Barrier(MPI_COMM_WORLD);
 
-                unsigned int krylov_dim = tag.krylov_dim();
-                if (NN < tag.krylov_dim())
-                    krylov_dim = NN; //A Krylov space larger than the matrix would lead to seg-faults (mathematically, error is certain to be zero already)
-
-                VectorType r_full(MM);
-                ublas::vector_range<VectorType> r(r_full, ublas::range(0,NN)); 
-                VectorType v_k_tilde_full(MM);
-                ublas::vector_range<VectorType> v_k_tilde(v_k_tilde_full, ublas::range(0,NN)); 
-                VectorType v_k_tilde_temp_full(MM);
-                ublas::vector_range<VectorType> v_k_tilde_temp(v_k_tilde_temp_full, ublas::range(0,NN)); 
-
-                // k x k
-                std::vector< std::vector<CPU_ScalarType> > R(krylov_dim);
-                // k x 1
-                std::vector<CPU_ScalarType> xi_k(krylov_dim);
-                // k x M
-                std::vector<VectorType> P(krylov_dim);
-
-                const CPU_ScalarType gpu_scalar_minus_1 = static_cast<CPU_ScalarType>(-1);    //representing the scalar '-1' on the GPU. Prevents blocking write operations
-                const CPU_ScalarType gpu_scalar_1 = static_cast<CPU_ScalarType>(1);    //representing the scalar '1' on the GPU. Prevents blocking write operations
-                const CPU_ScalarType gpu_scalar_2 = static_cast<CPU_ScalarType>(2);    //representing the scalar '2' on the GPU. Prevents blocking write operations
-
-                // DONE: MPI_Reduce on norm_2 (note: we only apply norm_2 to the subset controlled by this machine
-                CPU_ScalarType norm_rhs = viennacl::linalg::norm_2(rhs, tag.comm());
-
-                unsigned int k;
-                for (k = 0; k < krylov_dim; ++k)
-                {
-                    R[k].resize(tag.krylov_dim()); 
-                    viennacl::traits::resize(P[k], MM);
-                }
-
-                //                if (tag.comm().isMaster()) 
+            if (tag.comm().isMaster()) 
                 std::cout << "Starting Parallel GMRES..." << std::endl;
-                tag.iters(0);
+            tag.iters(0);
+            
+            // Save very first residual norm so we know when to stop
+            v0 = b; 
+            //precond.apply(v0);
+            CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
+            CPU_ScalarType resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
+            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
-                for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
-                {
-                    //                    if (tag.comm().isMaster()) 
+            // -------------------- OUTER LOOP ----------------------------------
+            for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
+            {
+                if (tag.comm().isMaster()) 
                     std::cout << "-- GMRES Start " << it << " -- " << std::endl;
 
-                    // V(0) = b - A*x
-                    r = rhs;
-                    r -= viennacl::linalg::prod(matrix, result);  //initial guess zero
-                    // DONE: MPI_Alltoallv before preconditioning
-                    tag.alltoall_subset(r_full); 
-                    //                    precond.apply(r_full);
-                    //std::cout << "Residual: " << r << std::endl;
+                // r = b - A x
+                w = b - viennacl::linalg::prod(matrix, x_full);  //initial guess zero
+                tag.alltoall_subset(w_full); 
+#if 1
+//                precond.apply(w);
+#else 
+                precond.apply(w_full);
+#endif 
 
-                    // DONE: MPI_Reduce on norm_2
-                    // beta = norm(V(0)))
-                    CPU_ScalarType rho_0 = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(r, tag.comm())); 
-                    CPU_ScalarType rho = static_cast<CPU_ScalarType>(1.0);
-                    //                    if (tag.comm().isMaster()) 
-                    std::cout << "rho_0: " << rho_0 << std::endl;
+                CPU_ScalarType beta = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(w, tag.comm())); 
+                std::cout << "beta = " << beta << std::endl;
+                if (beta != beta) { 
+                }
+                w /= beta; 
 
-                    if (rho_0 / norm_rhs < tag.tolerance() || (norm_rhs == CPU_ScalarType(0.0)) )
-                    {
-                        //                        if (tag.comm().isMaster()) 
+                if (tag.comm().isMaster()) 
+                    std::cout << "B_norm: " << b_norm << ", Beta: " << beta << std::endl;
+
+                if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
+                {
+                    if (tag.comm().isMaster()) 
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
-                        tag.error(rho_0 / norm_rhs);
-                        return result;
-                    }
-
-                    // V(0) = -V(0)/beta
-                    r_full /= rho_0;
-                    //std::cout << "Normalized Residual: " << res << std::endl;
-
-                    for (k=0; k<krylov_dim; ++k)
-                    {
-                        viennacl::traits::clear(R[k]);
-                        viennacl::traits::clear(P[k]);
-                        R[k].resize(krylov_dim); 
-                        //TODO: is this right? 
-                        viennacl::traits::resize(P[k], MM);
-                    }
-
-                    for (k = 0; k < krylov_dim; ++k)
-                    {
-                        tag.iters( tag.iters() + 1 ); //increase iteration counter
-
-                        // -------------------------  Step 1 -----------------------
-                        // Evaluate v_k_tilde = P_{k-1} P_{k-2} ... P_{1} A P_{1} P_{2} ... P_{k-1} e_{k-1}  (NOTE: v_1_tilde = A r)
-                        // ---------------------------------------------------------
-                        //compute v_k = A * v_{k-1} via Householder matrices
-                        if (k == 0)
-                        {
-                            // TODO: MPI_Alltoallv on res, but then we also need to sync on v_k_tilde
-                            tag.alltoall_subset(r_full); 
-                            v_k_tilde = viennacl::linalg::prod(matrix, r_full);
-                            tag.alltoall_subset(v_k_tilde_full); 
-                            //precond.apply(v_k_tilde);
-                        }
-                        else
-                        {
-                            // Below the U[i] is H(k,i)
-                            //
-                            // V(i+1) = A*w = M*A*V(i)
-                            // H(k,i) = <V(i+1, V(k)>  (need a reduce here)
-                            // V(i+1) -= H(k,i) * V(k) 
-
-                            // Need to parallelize here: 
-                            // i goes from k down to 1. 
-                            // if we have two processors one will go from k
-                            // down to k/2 the other will go k/2 to 1 so we need to
-                            viennacl::traits::clear(v_k_tilde_full);
-                            v_k_tilde_full[k-1] = gpu_scalar_1;
-                            //Householder rotations part 1
-                            for (int i = k-1; i > -1; --i)
-                                v_k_tilde_full -= P[i] * (viennacl::linalg::inner_prod(P[i], v_k_tilde_full) * gpu_scalar_2);
-
-                            // TODO: MPI_Alltoallv on v_k_tilde_full
-                            tag.alltoall_subset(v_k_tilde_full); 
-                            v_k_tilde_temp = viennacl::linalg::prod(matrix, v_k_tilde_full);
-                            tag.alltoall_subset(v_k_tilde_temp_full); 
-                            //precond.apply(v_k_tilde_temp_full);
-                            v_k_tilde_full = v_k_tilde_temp_full;
-
-                            //Householder rotations part 2
-                            for (unsigned int i = 0; i < k; ++i)
-                                v_k_tilde_full -= P[i] * (viennacl::linalg::inner_prod(P[i], v_k_tilde_full) * gpu_scalar_2);
-                        }
-
-                        viennacl::traits::clear(P[k]);
-                        viennacl::traits::resize(P[k], MM);
-                        //copy first k entries from v_k_tilde to P[k]:
-
-                        // -------------------------  Step 2 -----------------------
-                        // Determine P_{k} such that P_{k} v_k_tilde = (p_{1,k}, p_{2,k}, ... p_{k,k}, 0, ..., 0)^T
-                        // ---------------------------------------------------------
-
-
-                        // ??? EVAN ??? Here we build a krylov subspace using k dimensions just from 
-                        gmres_copy_helper(v_k_tilde_full, P[k], k);
-
-                        P[k][k] = std::sqrt( viennacl::linalg::inner_prod(v_k_tilde_full, v_k_tilde_full) - viennacl::linalg::inner_prod(P[k], P[k]) );
-
-                        if (fabs(P[k][k]) < CPU_ScalarType(10 * std::numeric_limits<CPU_ScalarType>::epsilon()))
-                            break; //Note: Solution is essentially (up to round-off error) already in Krylov space. No need to proceed.
-
-
-                        // -------------------------  Step 3 -----------------------
-                        // Set R_k = ( R_{k-1}  p_{1,k} )
-                        //           (            ...   )   with (R_1 = (p_(1,1))
-                        //           (   0...0  p_{k,k} )
-                        //copy first k+1 entries from P[k] to R[k]
-                        gmres_copy_helper(P[k], R[k], k+1);
-
-                        P[k] -= v_k_tilde_full;
-                        //std::cout << "P[k] before normalization: " << P[k] << std::endl;
-                        P[k] *= gpu_scalar_minus_1 / viennacl::linalg::norm_2( P[k] , tag.comm() );
-                        //std::cout << "Householder vector P[k]: " << P[k] << std::endl;
-
-                        //DEBUG: Make sure that P_k v_k_tilde_full equals (rho_{1,k}, ... , rho_{k,k}, 0, 0 )
-#ifdef VIENNACL_GMRES_DEBUG
-                        std::cout << "P_k v_k_tilde: " << (v_k_tilde_full - 2.0 * P[k] * inner_prod(P[k], v_k_tilde_full)) << std::endl;
-                        std::cout << "R[k]: [" << R[k].size() << "](";
-                        for (size_t i=0; i<R[k].size(); ++i)
-                            std::cout << R[k][i] << ",";
-                        std::cout << ")" << std::endl;
-#endif
-                        //std::cout << "P_k res: " << (r - 2.0 * P[k] * inner_prod(P[k], r)) << std::endl;
-                        r_full -= P[k] * (viennacl::linalg::inner_prod( P[k], r_full ) * gpu_scalar_2);
-                        //std::cout << "zeta_k: " << viennacl::linalg::inner_prod( P[k], r ) * gpu_scalar_2 << std::endl;
-                        //std::cout << "Updated r: " << r << std::endl;
-
-#ifdef VIENNACL_GMRES_DEBUG
-                        VectorType v1(P[k].size()); v1.clear(); v1.resize(P[k].size());
-                        v1(0) = 1.0;
-                        v1 -= P[k] * (viennacl::linalg::inner_prod( P[k], v1 ) * gpu_scalar_2);
-                        std::cout << "v1: " << v1 << std::endl;
-                        boost::numeric::ublas::matrix<ScalarType> P = -2.0 * outer_prod(P[k], P[k]);
-                        P(0,0) += 1.0; P(1,1) += 1.0; P(2,2) += 1.0;
-                        std::cout << "P: " << P << std::endl;
-#endif
-
-                        if (r_full[k] > rho) //machine precision reached
-                            r_full[k] = rho;
-
-                        if (r_full[k] < -1.0 * rho) //machine precision reached
-                            r_full[k] = -1.0 * rho;
-
-                        xi_k[k] = r_full[k];
-
-                        rho *= std::sin( std::acos(xi_k[k] / rho) );
-
-#ifdef VIENNACL_GMRES_DEBUG
-                        std::cout << "k-th component of r: " << res_full[k] << std::endl;
-                        std::cout << "New rho (norm of res): " << rho << std::endl;
-#endif        
-
-                        if (std::fabs(rho * rho_0 / norm_rhs) < tag.tolerance())
-                        {
-                            //std::cout << "Krylov space big enough" << endl;
-                            tag.error( std::fabs(rho*rho_0 / norm_rhs) );
-                            ++k;
-                            //                            if (tag.comm().isMaster()) 
-                            std::cout << "--- GMRES converged in " << tag.iters() << " iterations (" << it << " restarts)\n"; 
-                            break;
-                        }
-                        //std::cout << "Current residual: " << rho * rho_0 << std::endl;
-                        //std::cout << " - End of Krylov space setup - " << std::endl;
-                    } // for k
-
-#ifdef VIENNACL_GMRES_DEBUG
-                    //inplace solution of the upper triangular matrix:
-                    std::cout << "Upper triangular system:" << std::endl;
-                    std::cout << "Size of Krylov space: " << k << std::endl;
-                    for (size_t i=0; i<k; ++i)
-                    {
-                        for (size_t j=0; j<k; ++j)
-                        {
-                            std::cout << R[j][i] << ", ";
-                        }
-                        std::cout << " | " << projection_rhs[i] << std::endl;
-                    }
-#endif        
-                    // -------------------------  BEGIN SOLVE:  -----------------------
-                    // Let k be the final iteration number from Iterate
-                    // 1. Solve R_k y = (xi_1, xi_2, ... , xi_k)^T for y = (eta_1, eta_2, ... eta_k)^T
-                    for (int i=k-1; i>-1; --i)
-                    {
-                        for (unsigned int j=i+1; j<k; ++j)
-                            //temp_rhs[i] -= R[i][j] * temp_rhs[j];   //if R is not transposed
-                            xi_k[i] -= R[j][i] * xi_k[j];     //R is transposed
-
-                        xi_k[i] /= R[i][i];
-                    }
-
-#ifdef VIENNACL_GMRES_DEBUG
-                    std::cout << "Result of triangular solver: ";
-                    for (size_t i=0; i<k; ++i)
-                        std::cout << projection_rhs[i] << ", ";
-                    std::cout << std::endl;
-#endif        
-
-                    // 2. Form z = P_1 (eta_1 r)                        if k = 1 
-                    //             P_1 P_2 ... P_k [ eta_1 r + (eta_2, ... , eta_k, 0, ..., 0)^T]  if k > 1
-                    r_full *= xi_k[0];
-
-                    if (k > 0)
-                    {
-                        for (unsigned int i = 0; i < k-1; ++i)
-                        {
-                            r_full[i] += xi_k[i+1];
-                        }
-                    }
-
-                    for (int i = k-1; i > -1; --i)
-                        r_full -= P[i] * (viennacl::linalg::inner_prod(P[i], r) * gpu_scalar_2);
-
-                    r_full *= rho_0;
-                    result += r_full;
-
-                    // TODO: MPI_Alltoallv on the latest solution available
-                    tag.alltoall_subset(r_full); 
-
-                    if ( std::fabs(rho*rho_0 / norm_rhs) < tag.tolerance() )
-                    {
-                        //std::cout << "Allowed Error reached at end of loop" << std::endl;
-                        tag.error(std::fabs(rho*rho_0 / norm_rhs));
-                        return result;
-                    }
-
-                    //r = rhs;
-                    //r -= viennacl::linalg::prod(matrix, result);
-                    //std::cout << "norm_2(r)=" << norm_2(r) << std::endl;
-                    //std::cout << "std::abs(rho*rho_0)=" << std::abs(rho*rho_0) << std::endl;
-                    //std::cout << r << std::endl; 
-
-                    tag.error(std::fabs(rho*rho_0));
+                    tag.error(beta / b_norm);
+                    return x_full;
                 }
 
-                return result;
+                // v_0 = (M^{-1} * (b - Ax)) * 1/beta
+                *(v[0]) = w;
+
+                // First givens rotation 
+                for (int i = 0; i < R+1; i++) {
+                    g[i] = 0.;
+                }
+                g[0] = beta; 
+
+                // -------------------- INNER ARNOLDI PROCESS ----------------------------------
+                // we declare k here so we can iterate partially through krylov
+                // dims and still solve the partial system
+                unsigned int k = 0; 
+                for (k = 0; k < R; ++k)
+                {
+                    tag.iters( tag.iters() + 1 ); //increase iteration counter
+
+                    tag.alltoall_subset(v_full[k]); 
+
+                    // v_k+1 = A v_k
+                    *(v[k+1]) = viennacl::linalg::prod(matrix, v_full[k]);
+                    tag.alltoall_subset(v_full[k+1]); 
+#if 1
+                    //precond.apply((*v[k+1]));
+#else 
+                    precond.apply(v_full[k+1]);
+#endif 
+                    // Begin modified Gram-Schmidt (may require reorthogonalization)
+                    for (int j = 0; j < k; j++) { 
+                        H[j][k] = viennacl::linalg::inner_prod(*(v[k+1]), *(v[j]), tag.comm());
+                        *(v[k+1]) -= H[j][k] * *(v[j]); 
+                    }
+
+                    H[k+1][k] = viennacl::linalg::norm_2(*(v[k+1]), tag.comm());
+
+                    // Safety check
+                    if ((H[k+1][k] > 0.) || (H[k+1][k] < 0.)) {
+                        *(v[k+1]) /= H[k+1][k];
+                    } else {
+                        std::cout << "H[" << k+1 << "][" << k << "] = 0\n";
+                    } 
+
+
+                    // Apply previous rotations
+                    for (int i = 0; i < k; i++) {
+                        // Need additional 2*k storage for c and s
+                        double tmp = cs[i]*H[i][k] + sn[i]*H[i+1][k]; 
+                        H[i+1][k]  = -sn[i]*H[i][k] + cs[i]*H[i+1][k]; 
+                        H[i][k]    = tmp; 
+                    }
+
+                    // Generate rotation (Borrowed from CUSP v 0.3.1)
+                    if (H[k+1][k] == 0.) { 
+                        cs[k] = 1.0; 
+                        sn[k] = 0.0; 
+                    } else if (abs(H[k+1][k]) > abs(H[k][k])) {
+                        double tmp = H[k][k]/H[k+1][k]; 
+                        sn[k] = 1./sqrt(1. + tmp*tmp); 
+                        cs[k] = tmp * sn[k]; 
+                    } else { 
+                        double tmp = H[k+1][k]/H[k][k]; 
+                        cs[k] = 1./sqrt(1. + tmp*tmp); 
+                        sn[k] = tmp * cs[k]; 
+                    }
+
+                    double tmp = cs[k]*H[k][k] + sn[k]*H[k+1][k]; 
+                    H[k+1][k]  = -sn[k]*H[k][k] + cs[k]*H[k+1][k]; 
+                    H[k][k]    = tmp; 
+
+                    double gk = cs[k]*g[k] + sn[k]*g[k+1]; 
+                    g[k+1]    = -sn[k]*g[k] + cs[k]*g[k+1]; 
+                    g[k]      = gk; 
+
+                    rel_resid0 = fabs(g[k+1]) / resid0; 
+                    std::cout << k << " rho = " << rel_resid0 << " <= " << b_norm * tag.tolerance() << std::endl;
+                    std::cout << k << " g[" << k+1 << "] = " << fabs(g[k+1]) << "\n";
+
+                    tag.error(rel_resid0);
+                    // We could add absolute tolerance here as well: 
+                    if (rel_resid0 <= b_norm * tag.tolerance() ) {
+                        break;
+                    }
+                } // for k
+
+                // -------------------- SOLVE PROCESS ----------------------------------
+#if 0
+                std::cout << "g = \n"; 
+                for (int i = 0; i < k; i++) { 
+                    std::cout << g[i]<< ", "; 
+                }
+                std::cout << std::endl;
+
+                std::cout << "H = \n"; 
+                for (int i = 0; i < k+1; i++) { 
+                    for (int j = 0; j < k; j++) { 
+                        std::cout << H[i][j]<< ", "; 
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << std::endl;
+#endif 
+
+                // After the Givens rotations, we have H is an upper triangular matrix 
+                for (int i = k-1; i >= 0; i--) {
+                    g[i] /= H[i][i]; 
+                    for (int j = i-1; j >= 0; j--) {
+                        g[j] -= H[j][i] * g[i];
+                    }  
+                }
+
+                // Update our solution
+                for (int j = 0 ; j < k; j++) {
+                    x += *(v[j]) * g[j]; 
+                }
+                tag.alltoall_subset(x_full); 
+
+                if ( rel_resid0 <= b_norm * tag.tolerance() ) {
+                    return x_full;
+                }
             }
+
+            return x_full;
+        }
 
         /** @brief Convenience overload of the solve() function using GMRES. Per default, no preconditioner is used
         */ 

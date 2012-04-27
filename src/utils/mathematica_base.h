@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h> 
 
+#define Pi M_PI
 class MathematicaBase
 {
     public:
@@ -45,7 +46,8 @@ class MathematicaBase
         inline double Tanh(double x)  { return (tanh((double)(x))) ; }
 
         // I Know M_PI is defined in math.h 
-        constexpr static double Pi = M_PI;
+       // constexpr static double Pi = M_PI;
+//        const static double Pi = M_PI;
         /***********   END MATHEMATICA mdefs.h PROVIDED ************/
 };
 

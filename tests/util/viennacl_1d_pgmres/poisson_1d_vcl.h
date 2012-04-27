@@ -223,7 +223,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
-#if 0
+#if 1
             viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 

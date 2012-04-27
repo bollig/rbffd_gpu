@@ -1,0 +1,12 @@
+This test
+    - construct a 1d line of points
+    - decompose points into p-partitions (on independent processors)
+    - assemble a sub DM for -lapl(u) = f on each processor
+    - assume dirichlet boundary conditions
+    - solve system using parallel GMRES and ViennaCL
+
+
+TODO: 
+    - avoid loading grid and generating stencils on one processor (need a parallel tree structure) 
+    - use a preprocessor like parmetis to generate partitions rather that write my own software for previous point
+    - 

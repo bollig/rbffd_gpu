@@ -2,7 +2,7 @@
 #define __POISSON1D_CU_H__
 
 #include "manufactured_solution.h"
-#include "implicit_pde.h"
+#include "pdes/implicit_pde.h"
 #include "grids/domain.h"
 
 #include <cusp/hyb_matrix.h>
@@ -29,8 +29,6 @@
 #include <thrust/device_vector.h>
 #include <thrust/generate.h>
 
-class Domain; 
-class Communicator;
 #include <boost/filesystem.hpp>
 
 class Poisson1D_PDE_CU : public ImplicitPDE
@@ -86,8 +84,8 @@ class Poisson1D_PDE_CU : public ImplicitPDE
 
         LHS_host = new HOST_MAT_t(NN,MM,(NN)*n); 
         RHS_host = new HOST_VEC_t(NN); 
-        U_exact_host = new HOST_VEC_t(M); 
-        U_approx_host = new HOST_VEC_t(N, 0); 
+        U_exact_host = new HOST_VEC_t(MM); 
+        U_approx_host = new HOST_VEC_t(NN, 0); 
 
         if (solve_on_gpu) {
             LHS_dev = new DEV_MAT_t(NN,MM,(NN)*n); 
@@ -122,7 +120,7 @@ class Poisson1D_PDE_CU : public ImplicitPDE
     // which requires memory allocation, copy to, solve, copy back operators
     virtual void solve() {
         if (solve_on_gpu) {
-            //this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
+            this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
         } else {
             this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 
         }
@@ -242,12 +240,16 @@ class Poisson1D_PDE_CU : public ImplicitPDE
         {
             // Solve on the CPU
             int restart = 5; 
-            int krylov = 10;
+            int krylov = 20;
             double tol = 1e-8; 
 
             try {
-                //    cusp::convergence_monitor<double> monitor( F, max_iters, 0, 1e-3); 
+#if 1
+                cusp::convergence_monitor<double> monitor( RHS, krylov*restart, tol); 
+#else 
                 cusp::default_monitor<double> monitor( RHS, krylov*restart, tol );
+#endif 
+
 
                 std::cout << "GMRES Starting Residual Norm: " << monitor.residual_norm() << std::endl;
 
@@ -286,20 +288,46 @@ class Poisson1D_PDE_CU : public ImplicitPDE
             checkNorms(U_approx_out, U_exact);
         }
 
-
-    template <class VEC_t> 
-        void checkNorms(VEC_t& sol, VEC_t& exact) {
+        void checkNorms(DEV_VEC_t& sol, DEV_VEC_t& exact) {
 
             try {
-                typedef cusp::array1d<double, cusp::host_memory>::view VEC_VIEW_t; 
-
+                typedef cusp::array1d<double, cusp::device_memory>::view VEC_VIEW_t; 
+#if 1
                 VEC_VIEW_t U_approx_view(exact.begin()+(exact.size() - sol.size()), exact.end()); 
-                VEC_t diff(sol); 
+                DEV_VEC_t diff(sol); 
 
                 cusp::blas::axpy(U_approx_view, diff, -1); 
                 std::cout << "Rel l1   Norm: " << cusp::blas::nrm1(diff) / cusp::blas::nrm1(exact) << std::endl;  
                 std::cout << "Rel l2   Norm: " << cusp::blas::nrm2(diff) / cusp::blas::nrm2(exact) << std::endl;  
                 std::cout << "Rel linf Norm: " << cusp::blas::nrmmax(diff) / cusp::blas::nrmmax(exact) << std::endl;  
+#endif 
+            }
+            catch(std::bad_alloc &e)
+            {
+                std::cerr << "Ran out of memory trying to compute Error Norms: " << e.what() << std::endl;
+                exit(-1);
+            }
+            catch(thrust::system_error &e)
+            {
+                std::cerr << "Some other error happened during Error Norms: " << e.what() << std::endl;
+                exit(-1);
+            }
+        }
+
+
+        void checkNorms(HOST_VEC_t& sol, HOST_VEC_t& exact) {
+
+            try {
+                typedef cusp::array1d<double, cusp::host_memory>::view VEC_VIEW_t; 
+#if 1
+                VEC_VIEW_t U_approx_view(exact.begin()+(exact.size() - sol.size()), exact.end()); 
+                HOST_VEC_t diff(sol); 
+
+                cusp::blas::axpy(U_approx_view, diff, -1); 
+                std::cout << "Rel l1   Norm: " << cusp::blas::nrm1(diff) / cusp::blas::nrm1(exact) << std::endl;  
+                std::cout << "Rel l2   Norm: " << cusp::blas::nrm2(diff) / cusp::blas::nrm2(exact) << std::endl;  
+                std::cout << "Rel linf Norm: " << cusp::blas::nrmmax(diff) / cusp::blas::nrmmax(exact) << std::endl;  
+#endif 
             }
             catch(std::bad_alloc &e)
             {

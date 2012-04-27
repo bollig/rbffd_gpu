@@ -35,7 +35,7 @@
 #include "linalg/parallel_gmres.hpp"
 
 #include "manufactured_solution.h"
-#include "implicit_pde.h"
+#include "pdes/implicit_pde.h"
 
 class Poisson1D_PDE_VCL : public ImplicitPDE
 {

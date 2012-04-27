@@ -6,7 +6,6 @@
 #include "grids/domain.h"
 #include "rbffd/derivative_tests.h"
 #include "rbffd/rbffd.h"
-#include "rbffd/rbffd_cl.h"
 
 #include "timer_eb.h"
 #include "utils/comm/communicator.h"
@@ -181,7 +180,7 @@ int main(int argc, char** argv) {
         cout << "end write weights to file" << endl;
     }
 
-    Poisson1D_PDE_VCL* pde = new Poisson1D_PDE_VCL(subdomain, der, comm_unit); 
+    Poisson1D_PDE_CU* pde = new Poisson1D_PDE_CU(subdomain, der, comm_unit); 
 
     pde->assemble();
     pde->write_System(); 

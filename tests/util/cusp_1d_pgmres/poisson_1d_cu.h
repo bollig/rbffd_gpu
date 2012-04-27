@@ -3,6 +3,7 @@
 
 #include "manufactured_solution.h"
 #include "implicit_pde.h"
+#include "grids/domain.h"
 
 #include <cusp/hyb_matrix.h>
 #include <cusp/ell_matrix.h>
@@ -28,13 +29,18 @@
 #include <thrust/device_vector.h>
 #include <thrust/generate.h>
 
-class Poisson1D_PDE_DEV : public ImplicitPDE
+class Domain; 
+class Communicator;
+#include <boost/filesystem.hpp>
+
+class Poisson1D_PDE_CU : public ImplicitPDE
 {
 
-    typedef cusp::csr_matrix<double, cusp::host_memory> HOST_MAT_t; 
-    typedef boost::numeric::ublas::vector<double> HOST_VEC_t; 
-    typedef viennacl::compressed_matrix<double> DEV_MAT_t; 
-    typedef viennacl::vector<double> DEV_VEC_t; 
+    typedef cusp::array1d<double, cusp::host_memory> HOST_VEC_t; 
+    typedef cusp::array1d<double, cusp::device_memory> DEV_VEC_t; 
+    typedef cusp::csr_matrix<unsigned int, double, cusp::host_memory> HOST_MAT_t; 
+    typedef cusp::csr_matrix<unsigned int, double, cusp::device_memory> DEV_MAT_t; 
+
 
 
     protected:
@@ -67,7 +73,7 @@ class Poisson1D_PDE_DEV : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    Poisson1D_PDE_DEV(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
+    Poisson1D_PDE_CU(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -98,7 +104,7 @@ class Poisson1D_PDE_DEV : public ImplicitPDE
         boost::filesystem::create_directories(dir_str);
     }
 
-    ~Poisson1D_PDE_DEV() {
+    ~Poisson1D_PDE_CU() {
         delete(LHS_host); 
         delete(RHS_host); 
         delete(U_exact_host);
@@ -116,7 +122,7 @@ class Poisson1D_PDE_DEV : public ImplicitPDE
     // which requires memory allocation, copy to, solve, copy back operators
     virtual void solve() {
         if (solve_on_gpu) {
-            this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
+            //this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
         } else {
             this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 
         }
@@ -176,11 +182,12 @@ class Poisson1D_PDE_DEV : public ImplicitPDE
 
         //------ LHS ----------
 
+#if 0
         // NOTE: assumes the boundary is sorted to the top of the node indices
         for (unsigned int i = nb_bnd; i < N; i++) {
             StencilType& sten = grid_ref.getStencil(i); 
             double* lapl = der_ref.getStencilWeights(RBFFD::LAPL, i); 
-//            double lapl_fd[3] = {2, -1, -1}; 
+            //            double lapl_fd[3] = {2, -1, -1}; 
 
 
             for (unsigned int j = 0; j < n; j++) {
@@ -193,14 +200,39 @@ class Poisson1D_PDE_DEV : public ImplicitPDE
                 }
             }
         }    
-        
+#endif 
+        unsigned int ind = 0; 
+        // NOTE: assumes the boundary is sorted to the top of the node indices
+        for (unsigned int i = nb_bnd; i < N; i++) {
+            StencilType& sten = grid_ref.getStencil(i); 
+            double* lapl = der_ref.getStencilWeights(RBFFD::LAPL, i); 
+
+            A.row_offsets[i-nb_bnd] = ind;
+
+            for (unsigned int j = 0; j < n; j++) {
+                if (sten[j] < (int)nb_bnd) { 
+                    // Subtract the solution*weight from the element of the RHS. 
+                    F[i-nb_bnd] -= (U_exact[sten[j]] * ( -lapl[j] )); 
+                    // std::cout << "Node " << i << " depends on boundary\n"; 
+                } else {
+                    // Offset by nb_bnd so we crop off anything related to the boundary
+                    A.column_indices[ind] = sten[j]-nb_bnd; 
+                    A.values[ind] = -lapl[j]; 
+                    ind++; 
+                }
+            }
+        }    
+
+        // VERY IMPORTANT. UNSPECIFIED LAUNCH FAILURES ARE CAUSED BY FORGETTING THIS!
+        A.row_offsets[N-nb_bnd] = ind; 
+
         if (solve_on_gpu) 
         { 
             // Put all of the known system on the GPU. 
-            copy(A, *LHS_dev);
-            viennacl::copy(RHS_host->begin(),RHS_host->end(), RHS_dev->begin());
-            viennacl::copy(U_exact_host->begin(),U_exact_host->end(), U_exact_dev->begin());
-            viennacl::copy(U_approx_host->begin(),U_approx_host->end(), U_approx_dev->begin());
+            *LHS_dev = *LHS_host; 
+            *RHS_dev = *RHS_host; 
+            *U_exact_dev = *U_exact_host; 
+            *U_approx_dev = *U_approx_host; 
         }
     }
 
@@ -213,81 +245,79 @@ class Poisson1D_PDE_DEV : public ImplicitPDE
             int krylov = 10;
             double tol = 1e-8; 
 
-            // Tag has (tolerance, total iterations, number iterations between restarts)
-#if 1
-            viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
-#else
-            viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
-#endif 
-            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
-#if 0
-            viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
-            std::cout << "Wrote preconditioner to ILU.mtx\n";
-#endif        
-            std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
-            std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
-            std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
-            std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
+            try {
+                //    cusp::convergence_monitor<double> monitor( F, max_iters, 0, 1e-3); 
+                cusp::default_monitor<double> monitor( RHS, krylov*restart, tol );
 
-#if 1
-            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
-#else 
-            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
-#endif 
-            
-            if (tag.iters() < tag.max_iterations()) { 
-                std::cout << "\n[+++] Solver converged "; //<< tag.error() << " relative tolerance";       
-                std::cout << " after " << tag.iters() << " iterations" << std::endl << std::endl;
+                std::cout << "GMRES Starting Residual Norm: " << monitor.residual_norm() << std::endl;
+
+                cusp::krylov::gmres(LHS, U_approx_out, RHS, restart, monitor); 
+                cudaThreadSynchronize(); 
+
+                if (monitor.converged())
+                {
+                    std::cout << "\n[+++] Solver converged to " << monitor.relative_tolerance() << " relative tolerance";       
+                    std::cout << " after " << monitor.iteration_count() << " iterations" << std::endl << std::endl;
+                }
+                else
+                {
+                    std::cout << "\n[XXX] Solver reached iteration limit " << monitor.iteration_limit() << " before converging";
+                    std::cout << " to " << monitor.relative_tolerance() << " relative tolerance " << std::endl << std::endl;
+                }
+
+                std::cout << "GMRES Iterations: " << monitor.iteration_count() << std::endl;
+                std::cout << "GMRES Iteration Limit: " << monitor.iteration_limit() << std::endl;
+                std::cout << "GMRES Residual Norm: " << monitor.residual_norm() << std::endl;
+                std::cout << "GMRES Relative Tol: " << monitor.relative_tolerance() << std::endl;
+                std::cout << "GMRES Absolute Tol: " << monitor.absolute_tolerance() << std::endl;
+                std::cout << "GMRES Target Residual (Abs + Rel*norm(F)): " << monitor.tolerance() << std::endl;
             }
-            else
+            catch(std::bad_alloc &e)
             {
-                std::cout << "\n[XXX] Solver reached iteration limit " << tag.iters() << " before converging\n\n";
-            //    std::cout << " to " << tag.tolerance() << " relative tolerance " << std::endl << std::endl;
+                std::cerr << "Ran out of memory trying to compute GMRES: " << e.what() << std::endl;
+                exit(-1);
+            }
+            catch(thrust::system_error &e)
+            {
+                std::cerr << "Some other error happened during GMRES: " << e.what() << std::endl;
+                exit(-1);
             }
 
-
-            std::cout << "GMRES Iterations: " << tag.iters() << std::endl;
-            std::cout << "GMRES Iteration Limit: " << tag.max_iterations() << std::endl;
-            std::cout << "GMRES Residual Norm: " << tag.error() << std::endl;
-
-#if 0
-            std::cout << "GMRES Relative Tol: " << monitor.relative_tolerance() << std::endl;
-            std::cout << "GMRES Absolute Tol: " << monitor.absolute_tolerance() << std::endl;
-            std::cout << "GMRES Target Residual (Abs + Rel*norm(F)): " << monitor.tolerance() << std::endl;
-#endif 
             checkNorms(U_approx_out, U_exact);
         }
 
-    void checkNorms(DEV_VEC_t& sol, DEV_VEC_t& exact) {
-        DEV_VEC_t diff(sol.size()); 
 
-        viennacl::vector_range<DEV_VEC_t> exact_view( exact, viennacl::range(exact.size() - sol.size(), exact.size())); 
+    template <class VEC_t> 
+        void checkNorms(VEC_t& sol, VEC_t& exact) {
 
-        viennacl::linalg::sub(sol, exact_view, diff); 
+            try {
+                typedef cusp::array1d<double, cusp::host_memory>::view VEC_VIEW_t; 
 
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(exact) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(exact) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(exact) << std::endl;  
-    }
+                VEC_VIEW_t U_approx_view(exact.begin()+(exact.size() - sol.size()), exact.end()); 
+                VEC_t diff(sol); 
 
-
-    void checkNorms(HOST_VEC_t& sol, HOST_VEC_t& exact) {
-        HOST_VEC_t diff = sol; 
-
-        boost::numeric::ublas::vector_range<HOST_VEC_t> exact_view( exact, boost::numeric::ublas::range(exact.size() - sol.size(), exact.size())); 
-
-        diff -= exact_view; 
-
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(exact) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(exact) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(exact) << std::endl;  
-    }
+                cusp::blas::axpy(U_approx_view, diff, -1); 
+                std::cout << "Rel l1   Norm: " << cusp::blas::nrm1(diff) / cusp::blas::nrm1(exact) << std::endl;  
+                std::cout << "Rel l2   Norm: " << cusp::blas::nrm2(diff) / cusp::blas::nrm2(exact) << std::endl;  
+                std::cout << "Rel linf Norm: " << cusp::blas::nrmmax(diff) / cusp::blas::nrmmax(exact) << std::endl;  
+            }
+            catch(std::bad_alloc &e)
+            {
+                std::cerr << "Ran out of memory trying to compute Error Norms: " << e.what() << std::endl;
+                exit(-1);
+            }
+            catch(thrust::system_error &e)
+            {
+                std::cerr << "Some other error happened during Error Norms: " << e.what() << std::endl;
+                exit(-1);
+            }
+        }
 
     void write_System ( )
     {
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx"); 
-        viennacl::io::write_matrix_market_file(*LHS_host,dir_str + "LHS.mtx"); 
+        cusp::io::write_matrix_market_file(*LHS_host,dir_str + "LHS.mtx"); 
     }
 
     void write_Solution()
@@ -297,7 +327,8 @@ class Poisson1D_PDE_DEV : public ImplicitPDE
         // IF we want to write details we need to copy back to host. 
         HOST_VEC_t U_approx(M, 0); 
         if (solve_on_gpu) { 
-            copy(U_approx_dev->begin(), U_approx_dev->end(), U_approx.begin()+nb_bnd);
+            //copy(U_approx_dev->begin(), U_approx_dev->end(), U_approx.begin()+nb_bnd);
+            *U_approx_host = *U_approx_dev;
             write_to_file(U_approx, dir_str + "U_gpu.mtx"); 
         } else { 
             write_to_file(*U_approx_host, dir_str + "U_gpu.mtx"); 
@@ -305,7 +336,7 @@ class Poisson1D_PDE_DEV : public ImplicitPDE
     }
 
     virtual std::string className() {
-        return "Poisson1D_PDE_DEV"; 
+        return "Poisson1D_PDE_CU"; 
     }
 };
 

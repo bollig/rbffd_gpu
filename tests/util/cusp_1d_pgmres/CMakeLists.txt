@@ -11,7 +11,7 @@ SET (NUM_PROCS 4)
 
 # 3) Source files to compile
 SET ( EXEC_SOURCE_FILES
-	main.cpp
+	main.cu
 )
 
 # 4) Runtime arguments for executable (argv[0] .. argv[N]; individual arguments in quotes ("")) 

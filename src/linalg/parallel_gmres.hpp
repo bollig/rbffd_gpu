@@ -269,6 +269,7 @@ namespace viennacl
         ublas::vector<double> 
         solve(const MatrixType & matrix, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
+                std::cout << "INSIDE PARALLEL\n";
             typedef ublas::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
             typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
@@ -328,10 +329,10 @@ namespace viennacl
             tag.iters(0);
             
             // Save very first residual norm so we know when to stop
-            v0 = b; 
-            //precond.apply(v0);
             CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
-            CPU_ScalarType resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
+            *(v[0]) = b; 
+            precond.apply(v_full[0]);
+            CPU_ScalarType resid0 = viennacl::linalg::norm_2(*(v[0]), tag.comm()) / b_norm;
             std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
             // -------------------- OUTER LOOP ----------------------------------
@@ -343,37 +344,34 @@ namespace viennacl
                 // r = b - A x
                 w = b - viennacl::linalg::prod(matrix, x_full);  //initial guess zero
                 tag.alltoall_subset(w_full); 
-#if 1
+#if 0
 //                precond.apply(w);
 #else 
                 precond.apply(w_full);
 #endif 
 
-                CPU_ScalarType beta = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(w, tag.comm())); 
-                std::cout << "beta = " << beta << std::endl;
-                if (beta != beta) { 
-                }
-                w /= beta; 
+                CPU_ScalarType rho_0 = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(w, tag.comm())); 
+                w /= rho_0; 
 
                 if (tag.comm().isMaster()) 
-                    std::cout << "B_norm: " << b_norm << ", Beta: " << beta << std::endl;
+                    std::cout << "rho_0 = " << rho_0 << std::endl;
 
-                if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
+                if (rho_0 / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
                 {
                     if (tag.comm().isMaster()) 
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
-                    tag.error(beta / b_norm);
+                    tag.error(rho_0 / b_norm);
                     return x_full;
                 }
 
-                // v_0 = (M^{-1} * (b - Ax)) * 1/beta
+                // v_0 = (M^{-1} * (b - Ax)) * 1/rho_0
                 *(v[0]) = w;
 
                 // First givens rotation 
                 for (int i = 0; i < R+1; i++) {
                     g[i] = 0.;
                 }
-                g[0] = beta; 
+                g[0] = rho_0; 
 
                 // -------------------- INNER ARNOLDI PROCESS ----------------------------------
                 // we declare k here so we can iterate partially through krylov
@@ -388,7 +386,7 @@ namespace viennacl
                     // v_k+1 = A v_k
                     *(v[k+1]) = viennacl::linalg::prod(matrix, v_full[k]);
                     tag.alltoall_subset(v_full[k+1]); 
-#if 1
+#if 0
                     //precond.apply((*v[k+1]));
 #else 
                     precond.apply(v_full[k+1]);
@@ -440,18 +438,17 @@ namespace viennacl
                     g[k]      = gk; 
 
                     rel_resid0 = fabs(g[k+1]) / resid0; 
-                    std::cout << k << " rho = " << rel_resid0 << " <= " << b_norm * tag.tolerance() << std::endl;
-                    std::cout << k << " g[" << k+1 << "] = " << fabs(g[k+1]) << "\n";
+                    std::cout << " rho = " << rel_resid0 << std::endl;
 
-                    tag.error(rel_resid0);
+                    tag.error(rel_resid0 / b_norm);
                     // We could add absolute tolerance here as well: 
-                    if (rel_resid0 <= b_norm * tag.tolerance() ) {
+                    if (rel_resid0 / b_norm <= tag.tolerance() ) {
                         break;
                     }
                 } // for k
 
                 // -------------------- SOLVE PROCESS ----------------------------------
-#if 0
+#if 0 
                 std::cout << "g = \n"; 
                 for (int i = 0; i < k; i++) { 
                     std::cout << g[i]<< ", "; 
@@ -482,7 +479,7 @@ namespace viennacl
                 }
                 tag.alltoall_subset(x_full); 
 
-                if ( rel_resid0 <= b_norm * tag.tolerance() ) {
+                if ( rel_resid0 / b_norm <= tag.tolerance() ) {
                     return x_full;
                 }
             }
@@ -493,8 +490,9 @@ namespace viennacl
         /** @brief Convenience overload of the solve() function using GMRES. Per default, no preconditioner is used
         */ 
         template <typename MatrixType, typename VectorType>
-            VectorType solve(const MatrixType & matrix, VectorType const & rhs, parallel_gmres_tag const & tag)
+            VectorType solve(const MatrixType & matrix, VectorType & rhs, parallel_gmres_tag const & tag)
             {
+                std::cout << "CALLING SOLVER\n";
                 return solve(matrix, rhs, tag, no_precond());
             }
 

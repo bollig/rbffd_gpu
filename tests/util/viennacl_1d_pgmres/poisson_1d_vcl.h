@@ -1,62 +1,6 @@
 #ifndef __POISSON1D_VCL_H__
 #define __POISSON1D_VCL_H__
 
-#include "pdes/pde.h"
-#include "grids/domain.h"
-#include "utils/comm/communicator.h"
-
-#include <iostream> 
-#include <fstream> 
-#include <iomanip> 
-
-class ImplicitPDE : public PDE
-{
-    public: 
-        ImplicitPDE(Domain* grid, RBFFD* der, Communicator* comm, unsigned int solution_dim) 
-            // The 1 here indicates the solution will have one component
-            : PDE(grid, der, comm, solution_dim)
-        {   
-        }
-
-        virtual void solve(std::vector<SolutionType>& y, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) {}; 
-        virtual std::string className() {
-            return "ImplicitPDE"; 
-        }
-
-        virtual void assemble() =0; 
-
-        virtual void solve() =0; 
-
-        template <typename VecT>
-            void write_to_file(VecT vec, std::string filename)
-            {
-                std::ofstream fout;
-                fout.open(filename.c_str());
-                for (size_t i = 0; i < vec.size(); i++) {
-                    fout << std::setprecision(10) << vec[i] << std::endl;
-                }
-                fout.close();
-                std::cout << "Wrote " << filename << std::endl;
-            }
-};
-
-
-#include "utils/mathematica_base.h"
-
-class ManufacturedSolution : public MathematicaBase
-{
-    public: 
-        virtual double operator()(double Xx, double Yy, double Zz) { return this->eval(Xx, Yy, Zz); }
-        virtual double eval(double Xx, double Yy, double Zz) {
-            return Sin(Pi*Xx) ;
-        }
-        virtual double lapl(double Xx, double Yy, double Zz) {
-            return -(Power(Pi,2)*Sin(Pi*Xx)); 
-        }
-};
-
-
-
 // This is needed to make UBLAS variants of norm_* and GMRES
 #define VIENNACL_HAVE_UBLAS 1
 
@@ -89,6 +33,9 @@ class ManufacturedSolution : public MathematicaBase
 
 #include "precond/ilu0.hpp"
 #include "linalg/parallel_gmres.hpp"
+
+#include "manufactured_solution.h"
+#include "implicit_pde.h"
 
 class Poisson1D_PDE_VCL : public ImplicitPDE
 {
@@ -276,7 +223,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
-#if 1
+#if 0
             viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 

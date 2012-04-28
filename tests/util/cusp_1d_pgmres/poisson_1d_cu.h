@@ -84,7 +84,7 @@ class Poisson1D_PDE_CU : public ImplicitPDE
 
         LHS_host = new HOST_MAT_t(NN,MM,(NN)*n); 
         RHS_host = new HOST_VEC_t(NN); 
-        U_exact_host = new HOST_VEC_t(MM); 
+        U_exact_host = new HOST_VEC_t(M, 0.); 
         U_approx_host = new HOST_VEC_t(NN, 0.); 
 
         if (solve_on_gpu) {
@@ -122,7 +122,7 @@ class Poisson1D_PDE_CU : public ImplicitPDE
         if (solve_on_gpu) {
             this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
         } else {
-//            this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 
+            this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 
         }
     }
 
@@ -156,12 +156,6 @@ class Poisson1D_PDE_CU : public ImplicitPDE
 
             U_exact[i] = UU.eval(Xx, Yy, Zz);// + 2*M_PI; 
         }
-        std::cout << "U_approx = "; 
-        for (int i = 0; i < (*U_approx_host).size(); i++) {
-            std::cout << (*U_approx_host)[i] <<",";
-        }
-        std::cout << "\n";
-
 
         for (unsigned int i = nb_bnd; i < N; i++) {
             NodeType& node = nodes[i]; 
@@ -175,12 +169,6 @@ class Poisson1D_PDE_CU : public ImplicitPDE
             // that our null space is closed. 
             F[i-nb_bnd] = -UU.lapl(Xx, Yy, Zz); 
         }
-        std::cout << "U_approx = "; 
-        for (int i = 0; i < (*U_approx_host).size(); i++) {
-            std::cout << (*U_approx_host)[i] <<",";
-        }
-        std::cout << "\n";
-
 
         std::cout << "N = " << N << ", M = " << M << std::endl;
         for (unsigned int i = N; i < M; i++) {

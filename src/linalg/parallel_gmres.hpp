@@ -389,7 +389,7 @@ namespace viennacl
             v0 = b; 
             precond.apply(v0);
             double resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
-            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
+//            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
 #if 0
             // -------------------- OUTER LOOP ----------------------------------
@@ -519,10 +519,10 @@ namespace viennacl
 
                 do{
                     // compute initial residual and its norm //
-                    w_full = b_full - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
+                    w = b - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
+                    tag.alltoall_subset(w_full); 
                     precond.apply(w_full);                                  // V(0) = M*V(0)     //
-                    beta = ublas::norm_2(w_full); 
-                    std::cout << "beta3 = " << beta << std::endl;
+                    beta = viennacl::linalg::norm_2(w, tag.comm()); 
                     w /= beta;                                         // V(0) = -V(0)/beta //
 
                     *(v[0]) = w; 
@@ -538,19 +538,21 @@ namespace viennacl
                         ++i;
                         tag.iters(tag.iters() + 1); 
 
+                        tag.alltoall_subset(w_full); 
+
                         //apply preconditioner
                         //can't pass in ref to column in V so need to use copy (w)
                         v0 = viennacl::linalg::prod(A,w_full); 
+                        tag.alltoall_subset(v0); 
                         //V(i+1) = A*w = M*A*V(i)    //
                         precond.apply(v0); 
-                        w_full = v0; 
+                        w = v0; 
 
                         for (int k = 0; k <= i; k++){
                             //  H(k,i) = <V(i+1),V(k)>    //
                             H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
                             // V(i+1) -= H(k, i) * V(k)  //
                             w -= H(k,i) * *(v[k]);
-
                         }
 
                         H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
@@ -562,6 +564,7 @@ namespace viennacl
                         PlaneRotation(H,cs,sn,s,i);
 
                         rel_resid0 = fabs(s[i+1]) / resid0;
+                        std::cout << "\t" << i << "\t" << rel_resid0 << std::endl;
 
                         tag.error(rel_resid0);
                         // We could add absolute tolerance here as well: 
@@ -588,7 +591,6 @@ namespace viennacl
                         x += *(v[j]) * s[j]; 
                     }
                     tag.alltoall_subset(x_full); 
-                    std::cout << "X Norm = " << ublas::norm_2(x_full) << std::endl; 
 
                 } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 

@@ -91,7 +91,7 @@ class Poisson1D_PDE_CU : public ImplicitPDE
             LHS_dev = new DEV_MAT_t(NN,MM,(NN)*n); 
             RHS_dev = new DEV_VEC_t(NN); 
             U_exact_dev = new DEV_VEC_t(M); 
-            U_approx_dev = new DEV_VEC_t(N); 
+            U_approx_dev = new DEV_VEC_t(NN); 
         }
 
         char dir[FILENAME_MAX]; 
@@ -235,9 +235,6 @@ class Poisson1D_PDE_CU : public ImplicitPDE
                 cusp::verbose_monitor<double> monitor( RHS, restart*krylov, tol );
 #endif
 #endif 
-
-
-                std::cout << "GMRES Starting Residual Norm: " << monitor.residual_norm() << std::endl;
 
 #if 0
                 std::cout << "RHS = "; 

@@ -313,7 +313,7 @@ namespace viennacl
             //representing the scalar '2' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_2 = static_cast<CPU_ScalarType>(2);    
 
-            CPU_ScalarType rel_resid0;
+            CPU_ScalarType rel_resid0 = 0;
 
             for (unsigned int k = 0; k < R+1; ++k)
             {
@@ -342,7 +342,9 @@ namespace viennacl
                     std::cout << "-- GMRES Start " << it << " -- " << std::endl;
 
                 // r = b - A x
-                w = b - viennacl::linalg::prod(matrix, x_full);  //initial guess zero
+                w = viennacl::linalg::prod(matrix, x_full);  //initial guess zero
+                w -= b;
+
                 tag.alltoall_subset(w_full); 
 #if 0
 //                precond.apply(w);
@@ -350,28 +352,30 @@ namespace viennacl
                 precond.apply(w_full);
 #endif 
 
-                CPU_ScalarType rho_0 = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(w, tag.comm())); 
-                w /= rho_0; 
+                CPU_ScalarType beta = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(w, tag.comm())); 
+
+                w *= CPU_ScalarType(-1.)/beta; 
 
                 if (tag.comm().isMaster()) 
-                    std::cout << "rho_0 = " << rho_0 << std::endl;
+                    std::cout << "beta = " << beta << std::endl;
 
-                if (rho_0 / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
+#if 0
+                if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
                 {
                     if (tag.comm().isMaster()) 
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
-                    tag.error(rho_0 / b_norm);
+                    tag.error(beta / b_norm);
                     return x_full;
                 }
-
-                // v_0 = (M^{-1} * (b - Ax)) * 1/rho_0
+#endif 
+                // v_0 = (M^{-1} * (b - Ax)) * 1/beta
                 *(v[0]) = w;
 
                 // First givens rotation 
                 for (int i = 0; i < R+1; i++) {
                     g[i] = 0.;
                 }
-                g[0] = rho_0; 
+                g[0] = beta; 
 
                 // -------------------- INNER ARNOLDI PROCESS ----------------------------------
                 // we declare k here so we can iterate partially through krylov
@@ -440,9 +444,9 @@ namespace viennacl
                     rel_resid0 = fabs(g[k+1]) / resid0; 
                     std::cout << " rho = " << rel_resid0 << std::endl;
 
-                    tag.error(rel_resid0 / b_norm);
+                    tag.error(rel_resid0);
                     // We could add absolute tolerance here as well: 
-                    if (rel_resid0 / b_norm <= tag.tolerance() ) {
+                    if (rel_resid0 <= b_norm * tag.tolerance() ) {
                         break;
                     }
                 } // for k
@@ -479,7 +483,7 @@ namespace viennacl
                 }
                 tag.alltoall_subset(x_full); 
 
-                if ( rel_resid0 / b_norm <= tag.tolerance() ) {
+                if ( rel_resid0 <= b_norm * tag.tolerance() ) {
                     return x_full;
                 }
             }

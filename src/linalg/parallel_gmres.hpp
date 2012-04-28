@@ -517,21 +517,14 @@ namespace viennacl
                 } // for k
 #endif 
 
-
-                    beta = viennacl::linalg::norm_2(w, tag.comm()); 
-                    std::cout << "beta = " << beta << std::endl;
-
                 do{
                              // compute initial residual and its norm //
                     w_full = b_full - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
-                    beta = viennacl::linalg::norm_1(w_full);
-                    std::cout << "beta = " << beta << std::endl;
-                    beta = viennacl::linalg::norm_2(w_full, tag.comm()); 
-                    std::cout << "beta = " << beta << std::endl;
                     precond.apply(w_full);                                  // V(0) = M*V(0)     //
-                    beta = viennacl::linalg::norm_2(w_full, tag.comm()); 
-                    std::cout << "beta = " << beta << std::endl;
+                    beta = ublas::norm_2(w_full); 
+                    std::cout << "beta3 = " << beta << std::endl;
                     w /= beta;                                         // V(0) = -V(0)/beta //
+
                     *(v[0]) = w; 
 
                     // First givens rotation 
@@ -548,13 +541,9 @@ namespace viennacl
                         //apply preconditioner
                         //can't pass in ref to column in V so need to use copy (w)
                         v0 = viennacl::linalg::prod(A,w_full); 
-
-                        std::cout << "nrm2(A*x) = " << viennacl::linalg::norm_2(v0, tag.comm()) << std::endl;
-                        
                         //V(i+1) = A*w = M*A*V(i)    //
                         precond.apply(v0); 
                         w_full = v0; 
-                        //cusp::multiply(M,V0,w);
 
                         for (int k = 0; k <= i; k++){
                             //  H(k,i) = <V(i+1),V(k)>    //
@@ -576,7 +565,7 @@ namespace viennacl
 
                         tag.error(rel_resid0);
                         // We could add absolute tolerance here as well: 
-                        if (rel_resid0 <= b_norm * tag.tolerance() ) {
+                        if (rel_resid0 < b_norm * tag.tolerance() ) {
                             break;
                         }
 
@@ -584,22 +573,7 @@ namespace viennacl
 
 
                 // -------------------- SOLVE PROCESS ----------------------------------
-#if 0 
-                std::cout << "g = \n"; 
-                for (int j = 0; j < i; j++) { 
-                    std::cout << s[j]<< ", "; 
-                }
-                std::cout << std::endl;
 
-                std::cout << "H = \n"; 
-                for (int k = 0; k < i+1; k++) { 
-                    for (int j = 0; j < i; j++) { 
-                        std::cout << H(k,j)<< ", "; 
-                    }
-                    std::cout << std::endl;
-                }
-                std::cout << std::endl;
-#endif 
 
                 // After the Givens rotations, we have H is an upper triangular matrix 
                 for (int j = i; j >= 0; j--) {
@@ -614,6 +588,7 @@ namespace viennacl
                     x += *(v[j]) * s[j]; 
                 }
                 tag.alltoall_subset(x_full); 
+                std::cout << "X Norm = " << ublas::norm_2(x_full) << std::endl; 
 
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 

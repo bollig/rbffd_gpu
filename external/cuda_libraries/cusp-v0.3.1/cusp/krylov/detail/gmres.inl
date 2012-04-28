@@ -137,13 +137,13 @@ namespace cusp
                              // compute initial residual and its norm //
                              cusp::multiply(A, x, w);                     // V(0) = A*x        //
                              beta = blas::nrm2(w);                        // beta = norm(V(0)) //
-                             std::cout << "Beta = " << beta << std::endl;
+                             std::cout << "Beta1 = " << beta << std::endl;
                              blas::axpy(b,w,ValueType(-1));               // V(0) = V(0) - b   //
                              beta = blas::nrm2(w);                        // beta = norm(V(0)) //
-                             std::cout << "Beta = " << beta << std::endl;
+                             std::cout << "Beta2 = " << beta << std::endl;
                              cusp::multiply(M,w,w);                       // V(0) = M*V(0)     //
                              beta = blas::nrm2(w);                        // beta = norm(V(0)) //
-                             std::cout << "Beta = " << beta << std::endl;
+                             std::cout << "Beta3 = " << beta << std::endl;
                              blas::scal(w, ValueType(-1.0/beta));         // V(0) = -V(0)/beta //
                              blas::copy(w,V.column(0));
                              // save very first residual norm //
@@ -212,7 +212,7 @@ namespace cusp
                                  blas::axpy(V.column(j),x,s[j]);
                              }
 
-                                 std::cout << "nrm2(x) = " << blas::nrm2(x) << std::endl;
+                                 std::cout << "X norm = " << blas::nrm2(x) << std::endl;
                          } while (rel_resid[0] >= monitor.tolerance() && 
                                  monitor.iteration_count()+1 <= monitor.iteration_limit());
                      }

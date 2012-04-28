@@ -240,20 +240,24 @@ class Poisson1D_PDE_CU : public ImplicitPDE
         {
             // Solve on the CPU
             int restart = 5; 
-            int krylov = 20;
+            int krylov = 10;
             double tol = 1e-8; 
 
             try {
-#if 1
-                cusp::convergence_monitor<double> monitor( RHS, krylov*restart, tol); 
+#if 0
+                cusp::convergence_monitor<double> monitor( RHS, -1, tol); 
 #else 
-                cusp::default_monitor<double> monitor( RHS, krylov*restart, tol );
+#if 0
+                cusp::default_monitor<double> monitor( RHS, -1, tol );
+#else 
+                cusp::verbose_monitor<double> monitor( RHS, restart*krylov, tol );
+#endif
 #endif 
 
 
                 std::cout << "GMRES Starting Residual Norm: " << monitor.residual_norm() << std::endl;
 
-                cusp::krylov::gmres(LHS, U_approx_out, RHS, restart, monitor); 
+                cusp::krylov::gmres(LHS, U_approx_out, RHS, krylov, monitor); 
                 cudaThreadSynchronize(); 
 
                 if (monitor.converged())

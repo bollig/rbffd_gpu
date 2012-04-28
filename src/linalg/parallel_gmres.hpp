@@ -345,19 +345,20 @@ namespace viennacl
             std::vector< VectorType > v_full(R+1); 
             std::vector< ublas::vector_range<VectorType> * > v(R+1);
 
-            boost::numeric::ublas::vector<double> v0(R+1); 
+            VectorType v0_full(MM); 
+            ublas::vector_range< VectorType > v0(v0_full, ublas::range(0,NN)); 
 
             // Givens rotations
-            boost::numeric::ublas::vector<double> sDev(R+1);
-            boost::numeric::ublas::vector<double> s(R+1);
+            VectorType sDev(R+1);
+            VectorType s(R+1);
 
             // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)
             //std::vector< std::vector<CPU_ScalarType> > H(R+1);
-            boost::numeric::ublas::matrix<double> H(R+1,R);
+            ublas::matrix<double> H(R+1,R);
 
             // Rotations (cs = cosine; sn = sine)
-            boost::numeric::ublas::vector<double> cs(R); 
-            boost::numeric::ublas::vector<double> sn(R); 
+            VectorType cs(R); 
+            VectorType sn(R); 
 
 #if 0
             //representing the scalar '-1' on the GPU. Prevents blocking write operations
@@ -386,7 +387,7 @@ namespace viennacl
 
             // Save very first residual norm so we know when to stop
             double b_norm = viennacl::linalg::norm_2(b, tag.comm());
-            v0 = b; 
+            v0 = b_full; 
             precond.apply(v0);
             double resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
 //            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
@@ -543,9 +544,9 @@ namespace viennacl
                         //apply preconditioner
                         //can't pass in ref to column in V so need to use copy (w)
                         v0 = viennacl::linalg::prod(A,w_full); 
-                        tag.alltoall_subset(v0); 
+                        tag.alltoall_subset(v0_full); 
                         //V(i+1) = A*w = M*A*V(i)    //
-                        precond.apply(v0); 
+                        precond.apply(v0_full); 
                         w = v0; 
 
                         for (int k = 0; k <= i; k++){

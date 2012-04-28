@@ -317,14 +317,14 @@ namespace viennacl
          * @return The result vector
          */
         template <typename MatrixType, typename PreconditionerType>
-        ublas::vector<double> 
-        solve(const MatrixType & A, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
+                          ublas::vector<double> 
+                          solve(const MatrixType & A, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
-                std::cout << "INSIDE PARALLEL\n";
+            std::cout << "INSIDE PARALLEL\n";
             typedef ublas::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
             typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
-            
+
             unsigned int NN = A.size1(); //viennacl::traits::size1(matrix);
             unsigned int MM = A.size2(); //viennacl::traits::size2(matrix);
             unsigned int R  = tag.krylov_dim();
@@ -383,7 +383,7 @@ namespace viennacl
             if (tag.comm().isMaster()) 
                 std::cout << "Starting Parallel GMRES..." << std::endl;
             tag.iters(0);
-            
+
             // Save very first residual norm so we know when to stop
             double b_norm = viennacl::linalg::norm_2(b, tag.comm());
             v0 = b; 
@@ -402,11 +402,11 @@ namespace viennacl
                 // w = b - A x
                 w = viennacl::linalg::prod(A, x_full); 
                 w -= b;
-            VectorType diff = w; 
+                VectorType diff = w; 
                 tag.alltoall_subset(w_full); 
 
 #if 0
-//                precond.apply(w);
+                //                precond.apply(w);
 #else 
                 precond.apply(w_full);
 #endif 
@@ -518,7 +518,7 @@ namespace viennacl
 #endif 
 
                 do{
-                             // compute initial residual and its norm //
+                    // compute initial residual and its norm //
                     w_full = b_full - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
                     precond.apply(w_full);                                  // V(0) = M*V(0)     //
                     beta = ublas::norm_2(w_full); 
@@ -550,7 +550,7 @@ namespace viennacl
                             H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
                             // V(i+1) -= H(k, i) * V(k)  //
                             w -= H(k,i) * *(v[k]);
-                            
+
                         }
 
                         H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
@@ -572,40 +572,40 @@ namespace viennacl
                     }while (i+1 < R && tag.iters()+1 <= tag.max_iterations());
 
 
-                // -------------------- SOLVE PROCESS ----------------------------------
+                    // -------------------- SOLVE PROCESS ----------------------------------
 
 
-                // After the Givens rotations, we have H is an upper triangular matrix 
-                for (int j = i; j >= 0; j--) {
-                    s[j] /= H(j,j); 
-                    for (int k = j-1; k >= 0; k--) {
-                        s[k] -= H(k,j) * s[j];
-                    }  
-                }
+                    // After the Givens rotations, we have H is an upper triangular matrix 
+                    for (int j = i; j >= 0; j--) {
+                        s[j] /= H(j,j); 
+                        for (int k = j-1; k >= 0; k--) {
+                            s[k] -= H(k,j) * s[j];
+                        }  
+                    }
 
-                // Update our solution
-                for (int j = 0 ; j < i; j++) {
-                    x += *(v[j]) * s[j]; 
-                }
-                tag.alltoall_subset(x_full); 
-                std::cout << "X Norm = " << ublas::norm_2(x_full) << std::endl; 
+                    // Update our solution
+                    for (int j = 0 ; j < i; j++) {
+                        x += *(v[j]) * s[j]; 
+                    }
+                    tag.alltoall_subset(x_full); 
+                    std::cout << "X Norm = " << ublas::norm_2(x_full) << std::endl; 
 
-            } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
+                } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
-            return x_full;
-        }
-
-        /** @brief Convenience overload of the solve() function using GMRES. Per default, no preconditioner is used
-        */ 
-        template <typename MatrixType, typename VectorType>
-            VectorType solve(const MatrixType & matrix, VectorType & rhs, parallel_gmres_tag const & tag)
-            {
-                std::cout << "CALLING SOLVER\n";
-                return solve(matrix, rhs, tag, no_precond());
+                return x_full;
             }
 
+            /** @brief Convenience overload of the solve() function using GMRES. Per default, no preconditioner is used
+            */ 
+            template <typename MatrixType, typename VectorType>
+                VectorType solve(const MatrixType & matrix, VectorType & rhs, parallel_gmres_tag const & tag)
+                {
+                    std::cout << "CALLING SOLVER\n";
+                    return solve(matrix, rhs, tag, no_precond());
+                }
 
+
+        }
     }
-}
 
 #endif

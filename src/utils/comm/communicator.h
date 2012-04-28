@@ -11,15 +11,15 @@ public:
     Communicator(int argc, char** argv);
     ~Communicator();
 
-    const MPI_Comm getComm() const { 
+    MPI_Comm getComm() const { 
         return MPI_COMM_WORLD; 
     }
 
     // Return unique ID for this compute node
-    const int getRank() const;
+    int getRank() const;
 
     // Return number of compute nodes registered with MPI
-    const int getSize() const;
+    int getSize() const;
 
     // Setup MPI_Send for CPU0
     int sendObject(MPISendable* object, int reciever_rank);
@@ -41,7 +41,7 @@ public:
     void barrier();
 
     // True if this instance matches Communicator::MASTER
-    const bool isMaster() const { return (this->comm_rank == Communicator::MASTER); }
+    bool isMaster() const { return (this->comm_rank == Communicator::MASTER); }
 
 public:
     static const int MASTER = 0;  // The rank associated with the master processor

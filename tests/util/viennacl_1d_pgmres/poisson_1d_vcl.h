@@ -90,13 +90,13 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         LHS_host = new UBLAS_MAT_t(NN,MM,(NN)*n); 
         RHS_host = new UBLAS_VEC_t(NN); 
         U_exact_host = new UBLAS_VEC_t(M); 
-        U_approx_host = new UBLAS_VEC_t(N, 0); 
+        U_approx_host = new UBLAS_VEC_t(NN, 0); 
 
         if (solve_on_gpu) {
             LHS_dev = new VCL_MAT_t(NN,MM,(NN)*n); 
             RHS_dev = new VCL_VEC_t(NN); 
             U_exact_dev = new VCL_VEC_t(M); 
-            U_approx_dev = new VCL_VEC_t(N); 
+            U_approx_dev = new VCL_VEC_t(NN); 
         }
 
         char dir[FILENAME_MAX]; 

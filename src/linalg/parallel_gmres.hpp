@@ -254,6 +254,57 @@ namespace viennacl
 
         namespace ublas = boost::numeric::ublas;
 
+#if 1
+        template <typename ValueType>
+            void ApplyPlaneRotation(ValueType& dx,
+                    ValueType& dy,
+                    ValueType& cs,
+                    ValueType& sn)
+            {
+                ValueType temp = cs * dx + sn *dy;
+                dy = -sn*dx+cs*dy;
+                dx = temp;
+            }
+
+        template <typename ValueType> 
+            void GeneratePlaneRotation(ValueType& dx,
+                    ValueType& dy,
+                    ValueType& cs,
+                    ValueType& sn)
+            {
+                if(dy == ValueType(0.0)){
+                    cs = 1.0;
+                    sn = 0.0;
+                }else if (abs(dy) > abs(dx)) {
+                    ValueType tmp = dx / dy;
+                    sn = ValueType(1.0) / sqrt(ValueType(1.0) + tmp*tmp);
+                    cs = tmp*sn;            
+                }else {
+                    ValueType tmp = dy / dx;
+                    cs = ValueType(1.0) / sqrt(ValueType(1.0) + tmp*tmp);
+                    sn = tmp*cs;
+                }
+            }
+
+
+        template <typename MatrixType, typename VectorType> 
+            void PlaneRotation(MatrixType& H,
+                    VectorType& cs,
+                    VectorType& sn,
+                    VectorType& s,
+                    int i)
+            {
+                // Apply previous rotations
+                for (int k = 0; k < i; k++){
+                    ApplyPlaneRotation(H(k,i), H(k+1,i), cs[k], sn[k]);
+                }
+                // Generate new rotation
+                GeneratePlaneRotation(H(i,i), H(i+1,i), cs[i], sn[i]);
+                ApplyPlaneRotation(H(i,i), H(i+1,i), cs[i], sn[i]);
+                ApplyPlaneRotation(s[i], s[i+1], cs[i], sn[i]);
+            }
+#endif 
+
         /** @brief Implementation of the GMRES solver.
          *
          * Following the algorithm 2.1 proposed by Walker in "A Simpler GMRES" (1988)
@@ -267,15 +318,15 @@ namespace viennacl
          */
         template <typename MatrixType, typename PreconditionerType>
         ublas::vector<double> 
-        solve(const MatrixType & matrix, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
+        solve(const MatrixType & A, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
                 std::cout << "INSIDE PARALLEL\n";
             typedef ublas::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
             typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
             
-            unsigned int NN = matrix.size1(); //viennacl::traits::size1(matrix);
-            unsigned int MM = matrix.size2(); //viennacl::traits::size2(matrix);
+            unsigned int NN = A.size1(); //viennacl::traits::size1(matrix);
+            unsigned int MM = A.size2(); //viennacl::traits::size2(matrix);
             unsigned int R  = tag.krylov_dim();
 
             // Solution
@@ -294,30 +345,35 @@ namespace viennacl
             std::vector< VectorType > v_full(R+1); 
             std::vector< ublas::vector_range<VectorType> * > v(R+1);
 
-            VectorType v0(R+1); 
+            boost::numeric::ublas::vector<double> v0(R+1); 
 
             // Givens rotations
-            std::vector<double> g(R+1);
+            boost::numeric::ublas::vector<double> sDev(R+1);
+            boost::numeric::ublas::vector<double> s(R+1);
 
             // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)
-            std::vector< std::vector<CPU_ScalarType> > H(R+1);
+            //std::vector< std::vector<CPU_ScalarType> > H(R+1);
+            boost::numeric::ublas::matrix<double> H(R+1,R);
 
             // Rotations (cs = cosine; sn = sine)
-            std::vector<double> cs(R); 
-            std::vector<double> sn(R); 
+            boost::numeric::ublas::vector<double> cs(R); 
+            boost::numeric::ublas::vector<double> sn(R); 
 
+#if 0
             //representing the scalar '-1' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_minus_1 = static_cast<CPU_ScalarType>(-1);    
             //representing the scalar '1' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_1 = static_cast<CPU_ScalarType>(1);    
             //representing the scalar '2' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_2 = static_cast<CPU_ScalarType>(2);    
+#endif 
 
-            CPU_ScalarType rel_resid0 = 0;
+            double beta = 0;
+            double rel_resid0 = 0;
 
             for (unsigned int k = 0; k < R+1; ++k)
             {
-                H[k].resize(tag.krylov_dim()); 
+                //H[k].resize(tag.krylov_dim()); 
                 v_full[k].resize(MM);
                 v[k] = new ublas::vector_range<VectorType>(v_full[k], ublas::range(0,NN)); 
             }
@@ -329,35 +385,37 @@ namespace viennacl
             tag.iters(0);
             
             // Save very first residual norm so we know when to stop
-            CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
-            *(v[0]) = b; 
-            precond.apply(v_full[0]);
-            CPU_ScalarType resid0 = viennacl::linalg::norm_2(*(v[0]), tag.comm()) / b_norm;
+            double b_norm = viennacl::linalg::norm_2(b, tag.comm());
+            v0 = b; 
+            precond.apply(v0);
+            double resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
             std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
+#if 0
             // -------------------- OUTER LOOP ----------------------------------
             for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
             {
                 if (tag.comm().isMaster()) 
                     std::cout << "-- GMRES Start " << it << " -- " << std::endl;
 
-                // r = b - A x
-                w = viennacl::linalg::prod(matrix, x_full);  //initial guess zero
+                std::cout << "A.size = " << A.size1() << " " << A.size2() << ", x.size = " << x_full.size() << std::endl;
+                // w = b - A x
+                w = viennacl::linalg::prod(A, x_full); 
                 w -= b;
-
+            VectorType diff = w; 
                 tag.alltoall_subset(w_full); 
+
 #if 0
 //                precond.apply(w);
 #else 
                 precond.apply(w_full);
 #endif 
 
-                CPU_ScalarType beta = static_cast<CPU_ScalarType>(viennacl::linalg::norm_2(w, tag.comm())); 
+                diff -= w_full; 
+                std::cout << "Norm diff: " << boost::numeric::ublas::norm_1(diff) << std::endl;
+                beta = viennacl::linalg::norm_2(w, tag.comm()); 
 
-                w *= CPU_ScalarType(-1.)/beta; 
-
-                if (tag.comm().isMaster()) 
-                    std::cout << "beta = " << beta << std::endl;
+                w *= -1./beta; 
 
 #if 0
                 if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
@@ -373,76 +431,83 @@ namespace viennacl
 
                 // First givens rotation 
                 for (int i = 0; i < R+1; i++) {
-                    g[i] = 0.;
+                    s[i] = 0.;
                 }
-                g[0] = beta; 
+                s[0] = beta; 
 
                 // -------------------- INNER ARNOLDI PROCESS ----------------------------------
                 // we declare k here so we can iterate partially through krylov
                 // dims and still solve the partial system
-                unsigned int k = 0; 
-                for (k = 0; k < R; ++k)
+                unsigned int i = 0; 
+                for (i = 0; i < R; ++i)
                 {
                     tag.iters( tag.iters() + 1 ); //increase iteration counter
 
-                    tag.alltoall_subset(v_full[k]); 
+                    tag.alltoall_subset(w_full); 
 
                     // v_k+1 = A v_k
-                    *(v[k+1]) = viennacl::linalg::prod(matrix, v_full[k]);
-                    tag.alltoall_subset(v_full[k+1]); 
+                    v0 = viennacl::linalg::prod(A, w_full);
+                    tag.alltoall_subset(v0); 
 #if 0
                     //precond.apply((*v[k+1]));
 #else 
-                    precond.apply(v_full[k+1]);
+                    precond.apply(v0);
 #endif 
+                    w_full = v0;
                     // Begin modified Gram-Schmidt (may require reorthogonalization)
-                    for (int j = 0; j < k; j++) { 
-                        H[j][k] = viennacl::linalg::inner_prod(*(v[k+1]), *(v[j]), tag.comm());
-                        *(v[k+1]) -= H[j][k] * *(v[j]); 
+                    for (int k = 0; k < i; k++) { 
+                        H(k,i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
+                        w += -H(k,i) * *(v[k]); 
                     }
 
-                    H[k+1][k] = viennacl::linalg::norm_2(*(v[k+1]), tag.comm());
+                    H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());
 
+                    w /= H(i+1,i);
+#if 0
                     // Safety check
-                    if ((H[k+1][k] > 0.) || (H[k+1][k] < 0.)) {
-                        *(v[k+1]) /= H[k+1][k];
+                    if ((H(i+1,i) > 0.) || (H(i+1,i) < 0.)) {
                     } else {
                         std::cout << "H[" << k+1 << "][" << k << "] = 0\n";
                     } 
+#endif 
+                    v_full[i+1] = w;
 
 
+#if 0
                     // Apply previous rotations
-                    for (int i = 0; i < k; i++) {
+                    for (int k = 0; k < i; k++) {
                         // Need additional 2*k storage for c and s
-                        double tmp = cs[i]*H[i][k] + sn[i]*H[i+1][k]; 
-                        H[i+1][k]  = -sn[i]*H[i][k] + cs[i]*H[i+1][k]; 
-                        H[i][k]    = tmp; 
+                        double temp = cs[k]*H(k,i) + sn[k]*H(k+1,i); 
+                        H(i+1,k)  = -sn[i]*H(i,k) + cs[i]*H(i+1,k); 
+                        H(i,k)    = temp; 
                     }
 
                     // Generate rotation (Borrowed from CUSP v 0.3.1)
-                    if (H[k+1][k] == 0.) { 
+                    if (H(k+1,k) == 0.) { 
                         cs[k] = 1.0; 
                         sn[k] = 0.0; 
-                    } else if (abs(H[k+1][k]) > abs(H[k][k])) {
-                        double tmp = H[k][k]/H[k+1][k]; 
+                    } else if (abs(H(k+1,k)) > abs(H(k,k))) {
+                        double tmp = H(k,k)/H(k+1,k); 
                         sn[k] = 1./sqrt(1. + tmp*tmp); 
                         cs[k] = tmp * sn[k]; 
                     } else { 
-                        double tmp = H[k+1][k]/H[k][k]; 
+                        double tmp = H(k+1,k)/H(k,k); 
                         cs[k] = 1./sqrt(1. + tmp*tmp); 
                         sn[k] = tmp * cs[k]; 
                     }
 
-                    double tmp = cs[k]*H[k][k] + sn[k]*H[k+1][k]; 
-                    H[k+1][k]  = -sn[k]*H[k][k] + cs[k]*H[k+1][k]; 
-                    H[k][k]    = tmp; 
+                    double temp = cs[k]*H(k,k) + sn[k]*H(k+1,k); 
+                    H(k+1,k)  = -sn[k]*H(k,k) + cs[k]*H(k+1,k); 
+                    H(k,k)    = temp; 
 
-                    double gk = cs[k]*g[k] + sn[k]*g[k+1]; 
-                    g[k+1]    = -sn[k]*g[k] + cs[k]*g[k+1]; 
-                    g[k]      = gk; 
-
-                    rel_resid0 = fabs(g[k+1]) / resid0; 
-                    std::cout << " rho = " << rel_resid0 << std::endl;
+                    double gk = cs[k]*s[k] + sn[k]*s[k+1]; 
+                    s[k+1]    = -sn[k]*s[k] + cs[k]*s[k+1]; 
+                    s[k]      = gk; 
+#else 
+                    PlaneRotation(H, cs, sn, s, i); 
+#endif 
+                    rel_resid0 = fabs(s[i+1]) / resid0; 
+                    std::cout << " rho = " << << std::endl;
 
                     tag.error(rel_resid0);
                     // We could add absolute tolerance here as well: 
@@ -450,19 +515,86 @@ namespace viennacl
                         break;
                     }
                 } // for k
+#endif 
+
+
+                    beta = viennacl::linalg::norm_2(w, tag.comm()); 
+                    std::cout << "beta = " << beta << std::endl;
+
+                do{
+                             // compute initial residual and its norm //
+                    w_full = b_full - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
+                    beta = viennacl::linalg::norm_1(w_full);
+                    std::cout << "beta = " << beta << std::endl;
+                    beta = viennacl::linalg::norm_2(w_full, tag.comm()); 
+                    std::cout << "beta = " << beta << std::endl;
+                    precond.apply(w_full);                                  // V(0) = M*V(0)     //
+                    beta = viennacl::linalg::norm_2(w_full, tag.comm()); 
+                    std::cout << "beta = " << beta << std::endl;
+                    w /= beta;                                         // V(0) = -V(0)/beta //
+                    *(v[0]) = w; 
+
+                    // First givens rotation 
+                    for (int i = 0; i < R+1; i++) {
+                        s[i] = 0.;
+                    }
+                    s[0] = beta; 
+                    int i = -1;
+
+                    do{
+                        ++i;
+                        tag.iters(tag.iters() + 1); 
+
+                        //apply preconditioner
+                        //can't pass in ref to column in V so need to use copy (w)
+                        v0 = viennacl::linalg::prod(A,w_full); 
+
+                        std::cout << "nrm2(A*x) = " << viennacl::linalg::norm_2(v0, tag.comm()) << std::endl;
+                        
+                        //V(i+1) = A*w = M*A*V(i)    //
+                        precond.apply(v0); 
+                        w_full = v0; 
+                        //cusp::multiply(M,V0,w);
+
+                        for (int k = 0; k <= i; k++){
+                            //  H(k,i) = <V(i+1),V(k)>    //
+                            H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
+                            // V(i+1) -= H(k, i) * V(k)  //
+                            w -= H(k,i) * *(v[k]);
+                            
+                        }
+
+                        H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
+
+                        // V(i+1) = V(i+1) / H(i+1, i) //
+                        w *= 1.0/H(i+1,i); 
+                        v_full[i+1] = w; 
+
+                        PlaneRotation(H,cs,sn,s,i);
+
+                        rel_resid0 = fabs(s[i+1]) / resid0;
+
+                        tag.error(rel_resid0);
+                        // We could add absolute tolerance here as well: 
+                        if (rel_resid0 <= b_norm * tag.tolerance() ) {
+                            break;
+                        }
+
+                    }while (i+1 < R && tag.iters()+1 <= tag.max_iterations());
+
 
                 // -------------------- SOLVE PROCESS ----------------------------------
 #if 0 
                 std::cout << "g = \n"; 
-                for (int i = 0; i < k; i++) { 
-                    std::cout << g[i]<< ", "; 
+                for (int j = 0; j < i; j++) { 
+                    std::cout << s[j]<< ", "; 
                 }
                 std::cout << std::endl;
 
                 std::cout << "H = \n"; 
-                for (int i = 0; i < k+1; i++) { 
-                    for (int j = 0; j < k; j++) { 
-                        std::cout << H[i][j]<< ", "; 
+                for (int k = 0; k < i+1; k++) { 
+                    for (int j = 0; j < i; j++) { 
+                        std::cout << H(k,j)<< ", "; 
                     }
                     std::cout << std::endl;
                 }
@@ -470,23 +602,20 @@ namespace viennacl
 #endif 
 
                 // After the Givens rotations, we have H is an upper triangular matrix 
-                for (int i = k-1; i >= 0; i--) {
-                    g[i] /= H[i][i]; 
-                    for (int j = i-1; j >= 0; j--) {
-                        g[j] -= H[j][i] * g[i];
+                for (int j = i; j >= 0; j--) {
+                    s[j] /= H(j,j); 
+                    for (int k = j-1; k >= 0; k--) {
+                        s[k] -= H(k,j) * s[j];
                     }  
                 }
 
                 // Update our solution
-                for (int j = 0 ; j < k; j++) {
-                    x += *(v[j]) * g[j]; 
+                for (int j = 0 ; j < i; j++) {
+                    x += *(v[j]) * s[j]; 
                 }
                 tag.alltoall_subset(x_full); 
 
-                if ( rel_resid0 <= b_norm * tag.tolerance() ) {
-                    return x_full;
-                }
-            }
+            } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
             return x_full;
         }

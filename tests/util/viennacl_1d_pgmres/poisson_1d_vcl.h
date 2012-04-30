@@ -279,9 +279,9 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
         viennacl::linalg::sub(sol, exact_view, diff); 
 
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(exact) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(exact) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(exact) << std::endl;  
+//        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
+ //       std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
     }
 
 

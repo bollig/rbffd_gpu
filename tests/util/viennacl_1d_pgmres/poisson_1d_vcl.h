@@ -32,7 +32,11 @@
 #include <boost/filesystem.hpp>
 
 #include "precond/ilu0.hpp"
+#if 1
 #include "linalg/parallel_gmres.hpp"
+#else
+#include "linalg/parallel_gmres_vcl.hpp"
+#endif 
 
 #include "manufactured_solution.h"
 #include "pdes/implicit_pde.h"
@@ -44,6 +48,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     typedef boost::numeric::ublas::vector<double> UBLAS_VEC_t; 
     typedef viennacl::compressed_matrix<double> VCL_MAT_t; 
     typedef viennacl::vector<double> VCL_VEC_t; 
+
 
 
     protected:

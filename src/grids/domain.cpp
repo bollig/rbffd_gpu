@@ -475,7 +475,11 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
 
     // global to local map
     for (int i = 0; i < (int)loc_to_glob.size(); i++) {
-        glob_to_loc[l2g(i)] = i;
+        // We offset the global local indices by 1. Since the map returns 0 for
+        // anything not in the key list, we can subtract 1 from any return
+        // index and see -1 for elements not in list and the true local index
+        // for all others
+        glob_to_loc[l2g(i)] = i + 1;
     }
 
     std::cout << "Domain stencils size = " << stencil_map.size() << std::endl;
@@ -813,7 +817,10 @@ void Domain::writeG2LToFile(std::string filename) {
     if (fout.is_open()) {
         std::map<int, int>::iterator mit;  
         for (mit = glob_to_loc.begin(); mit != glob_to_loc.end(); mit++) {
-            fout << (*mit).first << " " << (*mit).second << std::endl; 
+            // Subtract 1 because all indices are offset by 1. When an element
+            // doesnt exist its mapped to 0. By subtracting 1 off everything we
+            // get -1 when an index is not in the map 
+            fout << (*mit).first << " " << (*mit).second - 1 << std::endl; 
         }
     } else {
         printf("Error opening file to write\n"); 
@@ -842,7 +849,7 @@ void Domain::writeL2GToFile(std::string filename) {
         exit(EXIT_FAILURE); 
     }
     fout.close();
-    std::cout << "[Domain] \tWrote " << glob_to_loc.size() << " local to global index map elements to \t" << fname << std::endl;
+    std::cout << "[Domain] \tWrote " << loc_to_glob.size() << " local to global index map elements to \t" << fname << std::endl;
 
 }
 

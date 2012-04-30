@@ -21,6 +21,7 @@ SET (ARGV
 )
 
 require_config()   # Default is to require test.conf
+require_config(test_N20.conf)   # Default is to require test.conf
 
 load_vtk()
 

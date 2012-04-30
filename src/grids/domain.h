@@ -58,12 +58,14 @@ class Domain : public Grid, public MPISendable
         std::set<int> BmO;
         std::set<int> R;			// Nodes REQUIRED from other Domains (not stencil centers) 
 
+    protected: 
         // 5) These are the maps between local and global indexing space
         // l2g[i] = global_indx_matching_i
         std::vector<int> loc_to_glob;
         // g2l[i] = local_indx_matching_i
         std::map<int, int> glob_to_loc;
 
+    public: 
         // 6) Additional properties (should be possible to avoid these)
 
         // These decompose sets R and O by CPU rank so we can see which CPU requires 
@@ -221,10 +223,13 @@ class Domain : public Grid, public MPISendable
         int l2g(int ix) {
             return loc_to_glob[ix];
         }
+        size_t l2gSize() { 
+            return loc_to_glob.size(); 
+        }
         // global to local
         // build a hash table
         int g2l(int ix) {
-            return glob_to_loc[ix];
+            return glob_to_loc[ix]-1;
         }
 
 

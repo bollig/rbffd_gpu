@@ -367,7 +367,7 @@ void PDE::printSolution(std::string set_label) {
     for (vector<SolutionType>::const_iterator setiter = U_G.begin(); setiter
             != U_G.end(); setiter++, i++) {
         // True -> stencil[i][j] is in center set
-        if (grid_ref.loc_to_glob.size() > 0) {
+        if (grid_ref.l2gSize() > 0) {
             cout << "\t[" << i << " (global:" << grid_ref.l2g(i) << ")] = " << *setiter
                 << endl;
         } else {

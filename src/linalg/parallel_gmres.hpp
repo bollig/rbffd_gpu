@@ -328,7 +328,7 @@ namespace viennacl
 
             unsigned int NN = A.size1(); //viennacl::traits::size1(matrix);
             unsigned int MM = A.size2(); //viennacl::traits::size2(matrix);
-            unsigned int R  = tag.krylov_dim();
+            int R  = (int)tag.krylov_dim();
 
             // Solution
             VectorType x_full(MM);
@@ -372,7 +372,7 @@ namespace viennacl
             double beta = 0;
             double rel_resid0 = 0;
 
-            for (unsigned int k = 0; k < R+1; ++k)
+            for (int k = 0; k < R+1; ++k)
             {
                 //H[k].resize(tag.krylov_dim()); 
                 v_full[k].resize(MM);
@@ -395,19 +395,17 @@ namespace viennacl
 
             do{
                 // compute initial residual and its norm //
-                //w = b - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
-                // TODO: tell Karl that vcl_range = vcl_range - prod(vcl_mat,vcl_vec) doesnt work, but prod - range does. 
-                w = viennacl::linalg::prod(A,x_full) - b;
+                w = viennacl::linalg::prod(A, x_full) - b;                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full); 
                 precond.apply(w_full);                                  // V(0) = M*V(0)     //
                 beta = viennacl::linalg::norm_2(w, tag.comm()); 
                 w /= -beta;                                         // V(0) = -V(0)/beta //
 
-                //*(v[0]) = w; 
+                *(v[0]) = w; 
 
                 // First givens rotation 
-                for (int i = 0; i < R+1; i++) {
-                    s[i] = 0.;
+                for (int ii = 0; ii < R+1; ii++) {
+                    s[ii] = 0.;
                 }
                 s[0] = beta; 
                 int i = -1;
@@ -421,7 +419,6 @@ namespace viennacl
                 }
 
                 do{
-#if 0
                     ++i;
                     tag.iters(tag.iters() + 1); 
 
@@ -458,7 +455,7 @@ namespace viennacl
                     if (rel_resid0 < b_norm * tag.tolerance() ) {
                         break;
                     }
-#endif 
+
                 }while (i+1 < R && tag.iters()+1 <= tag.max_iterations());
 
                 // -------------------- SOLVE PROCESS ----------------------------------
@@ -474,7 +471,7 @@ namespace viennacl
 
                 // Update our solution
                 for (int j = 0 ; j < i; j++) {
-                    //x += *(v[j]) * s[j]; 
+                    x +=  s[j] * *(v[j]); 
                 }
                 tag.alltoall_subset(x_full); 
 
@@ -506,7 +503,7 @@ namespace viennacl
 
             unsigned int NN = A.size1(); //viennacl::traits::size1(matrix);
             unsigned int MM = A.size2(); //viennacl::traits::size2(matrix);
-            unsigned int R  = tag.krylov_dim();
+            int R  = (int)tag.krylov_dim();
 
             // Solution
             VectorType x_full(MM);
@@ -550,7 +547,7 @@ namespace viennacl
             double beta = 0;
             double rel_resid0 = 0;
 
-            for (unsigned int k = 0; k < R+1; ++k)
+            for (int k = 0; k < R+1; ++k)
             {
                 //H[k].resize(tag.krylov_dim()); 
                 v_full[k].resize(MM);
@@ -582,8 +579,8 @@ namespace viennacl
                 *(v[0]) = w; 
 
                 // First givens rotation 
-                for (int i = 0; i < R+1; i++) {
-                    s[i] = 0.;
+                for (int ii = 0; ii < R+1; ii++) {
+                    s[ii] = 0.;
                 }
                 s[0] = beta; 
                 int i = -1;

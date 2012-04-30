@@ -72,9 +72,37 @@ namespace viennacl
       }      
 
 
-      self_type & operator=(const VectorType & v) 
+      // EVAN BOLLIG
+      // added support for copying vector_range into vector_range
+      self_type & operator=(self_type & vec) 
       {
-        assert( false && "Not implemented!");
+          assert( this->size() == vec.size() ); 
+          if (size() != 0)
+          {
+              cl_int err;
+              err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.get().handle().get(), get().handle().get(), 0, 0, sizeof(value_type)*size(), 0, NULL, NULL);
+              //assert(err == CL_SUCCESS);
+              VIENNACL_ERR_CHECK(err);
+          }
+
+        //assert( false && "Not implemented!");
+        return *this;
+      } 
+
+      // EVAN BOLLIG
+      // added support for copying vector into vector_range
+      self_type & operator=(const VectorType & vec) 
+      {
+          assert( this->size() == vec.size() ); 
+          if (size() != 0)
+          {
+              cl_int err;
+              err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.handle().get(), get().handle().get(), 0, 0, sizeof(value_type)*size(), 0, NULL, NULL);
+              //assert(err == CL_SUCCESS);
+              VIENNACL_ERR_CHECK(err);
+          }
+
+        //assert( false && "Not implemented!");
         return *this;
       }      
 
@@ -83,8 +111,25 @@ namespace viennacl
         viennacl::linalg::inplace_add(*this, other);
         return *this;
       }
+
+      // EVAN BOLLIG 
+      // Added support to += a vector
+      self_type & operator += (VectorType const & other)
+      {
+        viennacl::linalg::inplace_add(*this, other);
+        return *this;
+      }
+
       
       self_type & operator -= (self_type const & other)
+      {
+        viennacl::linalg::inplace_sub(*this, other);
+        return *this;
+      }
+
+      // EVAN BOLLIG 
+      // Added support to -= a vector
+      self_type & operator -= (VectorType const & other)
       {
         viennacl::linalg::inplace_sub(*this, other);
         return *this;
@@ -150,7 +195,9 @@ namespace viennacl
     std::vector<ScalarType> temp(proxy.size());
     viennacl::copy(proxy, temp);
     
-    //instead of printing 'temp' directly, let's reuse the existing functionality for viennacl::vector. It certainly adds overhead, but printing a vector is typically not about performance...
+    //instead of printing 'temp' directly, let's reuse the existing
+    //functionality for viennacl::vector. It certainly adds overhead, but
+    //printing a vector is typically not about performance...
     VectorType temp2(temp.size());
     viennacl::copy(temp, temp2);
     s << temp2;
@@ -210,6 +257,20 @@ namespace viennacl
       std::copy(temp_buffer.begin(), temp_buffer.end(), cpu_vector.begin());
     }
   }
+
+
+    ////////// operations /////////////
+    // EVAN BOLLIG Added support for oeprator * required for GMRES
+    /** @brief Operator overload for the expression alpha * v1, where alpha is a host scalar (float or double) and v1 is a ViennaCL vector.
+    *
+    * @param value   The host scalar (float or double)
+    * @param vec     A ViennaCL vector
+    */
+    template <typename SCALARTYPE, unsigned int A>
+    vector_expression< const vector<SCALARTYPE, A>, const SCALARTYPE, op_prod> operator * (SCALARTYPE const & value, vector_range< vector<SCALARTYPE, A> > const & vec)
+    {
+      return vector_expression< const vector<SCALARTYPE, A>, const SCALARTYPE, op_prod>(vec, value);
+    }
 
 
 }

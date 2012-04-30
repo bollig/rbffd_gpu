@@ -432,12 +432,21 @@ namespace viennacl
                     precond.apply(v0_full); 
                     w = v0; 
 
-                    for (int k = 0; k <= i; k++){
+                   for (int k = 0; k <= i; k++){
                         //  H(k,i) = <V(i+1),V(k)>    //
                         H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
                         // V(i+1) -= H(k, i) * V(k)  //
+                        std::cout << v[k]->size() << "," << w.size() << H(k,i) * *(v[k])  << std::endl;
                         w -= H(k,i) * *(v[k]);
                     }
+
+#if 1
+                   std::cout << "H[" << i << "] = "; 
+                    for (int k = 0; k <=i; k++) {
+                        std::cout << H(k,i) << ", "; 
+                    }
+                    std::cout << std::endl;
+#endif 
 
                     H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
 
@@ -457,7 +466,6 @@ namespace viennacl
                     }
 
                 }while (i+1 < R && tag.iters()+1 <= tag.max_iterations());
-
                 // -------------------- SOLVE PROCESS ----------------------------------
 
 

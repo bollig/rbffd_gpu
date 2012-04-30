@@ -142,6 +142,46 @@ namespace viennacl
                     this->rbuf = new double[R_tot];
                 }
 
+                template <typename GPUVectorType>
+                void syncSetR(double*& vec, GPUVectorType& gpu_vec) const {
+                    //unsigned int nb_nodes = grid_ref.getNodeListSize();
+                    //unsigned int set_G_size = grid_ref.G.size();
+                    unsigned int set_Q_size = grid_ref.Q.size();
+                    //unsigned int set_O_size = grid_ref.O.size();
+                    unsigned int set_R_size = grid_ref.R.size();
+
+                    // OUR SOLUTION IS ARRANGED IN THIS FASHION:
+                    //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
+
+                    // TODO: fix this. We have to maintain an additional index
+                    // map to convert from local node indices to the linear
+                    // system indices (i.e. filter off the dirichlet boundary
+                    // node indices
+                    unsigned int offset_to_set_R = set_Q_size - grid_ref.getBoundaryIndicesSize();
+
+
+                    viennacl::vector_range< GPUVectorType > setR(gpu_vec, viennacl::range(offset_to_set_R, offset_to_set_R+set_R_size));
+                    viennacl::copy(vec, setR, set_R_size);                    
+                }
+
+                template <typename GPUVectorType>
+                void syncSetO(double*& vec, GPUVectorType& gpu_vec) const {
+                    unsigned int set_Q_size = grid_ref.Q.size();
+                    unsigned int set_O_size = grid_ref.O.size();
+
+                    // OUR SOLUTION IS ARRANGED IN THIS FASHION:
+                    //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
+                    //  Minus 1 because we start indexing at 0 
+
+                    // TODO: fix this. We have to maintain an additional index
+                    // map to convert from local node indices to the linear
+                    // system indices (i.e. filter off the dirichlet boundary
+                    // node indices
+                    unsigned int offset_to_set_O = set_Q_size - set_O_size - grid_ref.getBoundaryIndicesSize();
+
+                    viennacl::vector_range< GPUVectorType > setO(gpu_vec, viennacl::range(offset_to_set_O, offset_to_set_O+set_O_size));
+                    viennacl::copy(setO, vec, set_O_size);                    
+                }
 
                 // Generic for GPU (transfer GPU subset to cpu buffer, alltoallv
                 // and return to the gpu)
@@ -156,8 +196,11 @@ namespace viennacl
                         // Copies data from vec to transfer, then writes received data into vec
                         // before returning. 
                         if (comm_ref.getSize() > 1) {
+                                    
+                    // GPU array is arranged as {QmB BmO O R} 
 
-                            std::cout << "TRANSFER " << grid_ref.O_by_rank.size() << "\n";
+                            std::cout << "VCL TRANSFER " << grid_ref.O_by_rank.size() << "\n";
+#if 0
                             // Copy elements of set to sbuf
                             unsigned int k = 0; 
                             for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
@@ -168,10 +211,16 @@ namespace viennacl
                                     k++; 
                                 }
                             }
+#endif 
+                            syncSetO(sbuf,vec);
 
                             MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
 
                             comm_ref.barrier();
+                            
+                            syncSetR(rbuf, vec); 
+
+#if 0
                             k = 0; 
                             for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
                                 k = this->rdispls[i]; 
@@ -181,6 +230,7 @@ namespace viennacl
                                     k++; 
                                 }
                             }
+#endif 
                         }
                     }
 
@@ -360,11 +410,11 @@ namespace viennacl
             ublas::vector<double> cs(R); 
             ublas::vector<double> sn(R); 
 
-#if 1
             //representing the scalar '-1' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_minus_1 = static_cast<CPU_ScalarType>(-1);    
             //representing the scalar '1' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_1 = static_cast<CPU_ScalarType>(1);    
+#if 0
             //representing the scalar '2' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_2 = static_cast<CPU_ScalarType>(2);    
 #endif 
@@ -388,7 +438,7 @@ namespace viennacl
             // Save very first residual norm so we know when to stop
             CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
             v0 = b_full; 
-            precond.apply(v0);
+            precond.apply(v0_full);
             CPU_ScalarType resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
             //std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 

@@ -90,6 +90,47 @@ namespace viennacl
         return *this;
       }
 
+      // Evan Bollig
+      // Added support for *=  using routine from vector.hpp
+      // Also needed additional template type SCALARTYPE here. 
+      // -----------------------------------------------------------------------------
+      /** @brief Scales this vector by a CPU scalar value
+      */
+      template <typename SCALARTYPE>
+      self_type & operator *= (SCALARTYPE val)
+      {
+        viennacl::linalg::inplace_mult(*this, val);
+        return *this;
+      }
+
+      /** @brief Scales this vector by a GPU scalar value
+      */
+      template <typename SCALARTYPE>
+      self_type & operator *= (scalar<SCALARTYPE> const & gpu_val)
+      {
+        viennacl::linalg::inplace_mult(*this, gpu_val);
+        return *this;
+      }
+
+      /** @brief Scales this vector by a CPU scalar value
+      */
+      template <typename SCALARTYPE>
+      self_type & operator /= (SCALARTYPE val)
+      {
+        viennacl::linalg::inplace_mult(*this, static_cast<SCALARTYPE>(1) / val);
+        return *this;
+      }
+      
+      /** @brief Scales this vector by a CPU scalar value
+      */
+      template <typename SCALARTYPE>
+      self_type & operator /= (scalar<SCALARTYPE> const & gpu_val)
+      {
+        viennacl::linalg::inplace_divide(*this, gpu_val);
+        return *this;
+      }
+      // -----------------------------------------------------------------------------
+
       //const_reference operator()(size_type i, size_type j) const { return A_(start1() + i, start2() + i); }
       //reference operator()(size_type i, size_type j) { return A_(start1() + i, start2() + i); }
 

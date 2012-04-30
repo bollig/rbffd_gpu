@@ -274,6 +274,31 @@ namespace viennacl
         }
       }
 
+      /** @brief The copy constructor
+      * EVAN BOLLIG
+      * Added a copy constructor for vector ranges so we can easily
+      * interchange. This will resize the vector to match the range and create
+      * a new copy of the data
+      * Similar to operator=(vector_range) below, I added a
+      * vec.GET().handle().get() to copy the data
+      * Entries of 'vec' are directly copied to this vector.
+      */
+      vector(const vector_range< vector<SCALARTYPE, ALIGNMENT> > & vec) :
+        size_(vec.size())
+      {
+        viennacl::linalg::kernels::vector<SCALARTYPE, 1>::init(); 
+        
+        if (size() != 0)
+        {
+          elements_ = viennacl::ocl::current_context().create_memory(CL_MEM_READ_WRITE, sizeof(SCALARTYPE)*internal_size());
+          cl_int err;
+          err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.get().handle().get(), elements_.get(), 0, 0, sizeof(SCALARTYPE)*internal_size(), 0, NULL, NULL);
+          //assert(err == CL_SUCCESS);
+          VIENNACL_ERR_CHECK(err);
+        }
+      }
+
+
       /** @brief Assignment operator. This vector is resized if 'vec' is of a different size.
       */
       vector<SCALARTYPE, ALIGNMENT> & operator=(const vector<SCALARTYPE, ALIGNMENT> & vec)
@@ -283,6 +308,21 @@ namespace viennacl
         {
           cl_int err;
           err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.handle().get(), elements_.get(), 0, 0, sizeof(SCALARTYPE)*internal_size(), 0, NULL, NULL);
+          VIENNACL_ERR_CHECK(err);
+        }
+        return *this;
+      }
+
+      /** @brief Assignment operator. This vector is resized if 'vec' is of a different size.
+       * EVAN BOLLIG (similar to routine above but added a "vec.GET().handle().get()" so we copy range to vector (NOTE: will resize vector to match range);
+      */
+      vector<SCALARTYPE, ALIGNMENT> & operator=(const vector_range< vector<SCALARTYPE, ALIGNMENT> > & vec)
+      {
+        resize(vec.size());
+        if (size() != 0)
+        {
+          cl_int err;
+          err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.get().handle().get(), elements_.get(), 0, 0, sizeof(SCALARTYPE)*internal_size(), 0, NULL, NULL);
           VIENNACL_ERR_CHECK(err);
         }
         return *this;
@@ -1679,6 +1719,23 @@ namespace viennacl
       return result;
     }
 
+    /** @brief Operator overload for the subtraction of a vector expression from the left, e.g. alpha * vec1 + vec2. Here, alpha * vec1 is wrapped into a vector_expression and then added to vec2.
+    *
+    * @param proxy   Left hand side vector expression
+    * @param vec     Right hand side vector
+    * EVAN BOLLIG
+    * Added vector_range - vector support
+    */
+    template <typename SCALARTYPE, unsigned int A, typename LHS, typename RHS, typename OP>
+    vector<SCALARTYPE, A> operator - (vector_expression< LHS, RHS, OP> const & proxy,
+                                      vector_range< vector<SCALARTYPE, A> > const & vec)
+    {
+      assert(proxy.size() == vec.size());
+      vector<SCALARTYPE, A> result(vec.size());
+      result = proxy;
+      result -= vec;
+      return result;
+    }
 
     /** @brief Operator overload for the multiplication of a vector expression with a scalar from the right, e.g. (beta * vec1) * alpha. Here, beta * vec1 is wrapped into a vector_expression and then multiplied with alpha from the right.
     *

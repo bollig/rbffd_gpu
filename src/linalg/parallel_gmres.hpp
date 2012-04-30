@@ -253,6 +253,7 @@ namespace viennacl
 
 
         namespace ublas = boost::numeric::ublas;
+        namespace vcl = viennacl;
 
 #if 1
         template <typename ValueType>
@@ -317,6 +318,184 @@ namespace viennacl
          * @return The result vector
          */
         template <typename MatrixType, typename PreconditionerType>
+                          vcl::vector<double> 
+                          solve(const MatrixType & A, vcl::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
+        {
+            std::cout << "INSIDE VCL PARALLEL\n";
+            typedef vcl::vector<double>                                             VectorType;
+            typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
+            typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
+
+            unsigned int NN = A.size1(); //viennacl::traits::size1(matrix);
+            unsigned int MM = A.size2(); //viennacl::traits::size2(matrix);
+            unsigned int R  = tag.krylov_dim();
+
+            // Solution
+            VectorType x_full(MM);
+            vcl::vector_range<VectorType> x(x_full, vcl::range(0,NN));
+            viennacl::traits::clear(x_full);
+            tag.alltoall_subset(x_full); 
+
+            vcl::vector_range<VectorType> b(b_full, vcl::range(0,NN));
+
+            // Workspace
+            VectorType w_full(MM);
+            vcl::vector_range<VectorType> w(w_full, vcl::range(0,NN)); 
+
+            // Arnoldi Matrix
+            std::vector< VectorType > v_full(R+1); 
+            std::vector< vcl::vector_range<VectorType> * > v(R+1);
+
+            VectorType v0_full(MM); 
+            vcl::vector_range< VectorType > v0(v0_full, vcl::range(0,NN)); 
+
+            // Givens rotations
+            ublas::vector<double> s(R+1);
+
+            // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)
+            //std::vector< std::vector<CPU_ScalarType> > H(R+1);
+            ublas::matrix<double> H(R+1,R);
+
+            // Rotations (cs = cosine; sn = sine)
+            ublas::vector<double> cs(R); 
+            ublas::vector<double> sn(R); 
+
+#if 0
+            //representing the scalar '-1' on the GPU. Prevents blocking write operations
+            const CPU_ScalarType gpu_scalar_minus_1 = static_cast<CPU_ScalarType>(-1);    
+            //representing the scalar '1' on the GPU. Prevents blocking write operations
+            const CPU_ScalarType gpu_scalar_1 = static_cast<CPU_ScalarType>(1);    
+            //representing the scalar '2' on the GPU. Prevents blocking write operations
+            const CPU_ScalarType gpu_scalar_2 = static_cast<CPU_ScalarType>(2);    
+#endif 
+
+            double beta = 0;
+            double rel_resid0 = 0;
+
+            for (unsigned int k = 0; k < R+1; ++k)
+            {
+                //H[k].resize(tag.krylov_dim()); 
+                v_full[k].resize(MM);
+                v[k] = new vcl::vector_range<VectorType>(v_full[k], vcl::range(0,NN)); 
+            }
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            if (tag.comm().isMaster()) 
+                std::cout << "Starting Parallel GMRES..." << std::endl;
+            tag.iters(0);
+
+            // Save very first residual norm so we know when to stop
+            double b_norm = viennacl::linalg::norm_2(b, tag.comm());
+            v0 = b_full; 
+            precond.apply(v0);
+            double resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
+            //            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
+
+
+            do{
+                // compute initial residual and its norm //
+                //w = b - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
+                // TODO: tell Karl that vcl_range = vcl_range - prod(vcl_mat,vcl_vec) doesnt work, but prod - range does. 
+                w = viennacl::linalg::prod(A,x_full) - b;
+                tag.alltoall_subset(w_full); 
+                precond.apply(w_full);                                  // V(0) = M*V(0)     //
+                beta = viennacl::linalg::norm_2(w, tag.comm()); 
+                w /= -beta;                                         // V(0) = -V(0)/beta //
+
+                //*(v[0]) = w; 
+
+                // First givens rotation 
+                for (int i = 0; i < R+1; i++) {
+                    s[i] = 0.;
+                }
+                s[0] = beta; 
+                int i = -1;
+
+                if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
+                {
+                    if (tag.comm().isMaster()) 
+                        std::cout << "Allowed Error reached at begin of loop" << std::endl;
+                    tag.error(beta / b_norm);
+                    return x_full;
+                }
+
+                do{
+#if 0
+                    ++i;
+                    tag.iters(tag.iters() + 1); 
+
+                    tag.alltoall_subset(w_full); 
+
+                    //apply preconditioner
+                    //can't pass in ref to column in V so need to use copy (w)
+                    v0 = viennacl::linalg::prod(A,w_full); 
+                    tag.alltoall_subset(v0_full); 
+                    //V(i+1) = A*w = M*A*V(i)    //
+                    precond.apply(v0_full); 
+                    w = v0; 
+
+                    for (int k = 0; k <= i; k++){
+                        //  H(k,i) = <V(i+1),V(k)>    //
+                        H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
+                        // V(i+1) -= H(k, i) * V(k)  //
+                        w -= H(k,i) * *(v[k]);
+                    }
+
+                    H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
+
+                    // V(i+1) = V(i+1) / H(i+1, i) //
+                    w *= 1.0/H(i+1,i); 
+                    v_full[i+1] = w; 
+
+                    //PlaneRotation(H,cs,sn,s,i);
+
+                    rel_resid0 = fabs(s[i+1]) / resid0;
+                    std::cout << "\t" << i << "\t" << rel_resid0 << std::endl;
+
+                    tag.error(rel_resid0);
+                    // We could add absolute tolerance here as well: 
+                    if (rel_resid0 < b_norm * tag.tolerance() ) {
+                        break;
+                    }
+#endif 
+                }while (i+1 < R && tag.iters()+1 <= tag.max_iterations());
+
+                // -------------------- SOLVE PROCESS ----------------------------------
+
+
+                // After the Givens rotations, we have H is an upper triangular matrix 
+                for (int j = i; j >= 0; j--) {
+                    s[j] /= H(j,j); 
+                    for (int k = j-1; k >= 0; k--) {
+                        s[k] -= H(k,j) * s[j];
+                    }  
+                }
+
+                // Update our solution
+                for (int j = 0 ; j < i; j++) {
+                    //x += *(v[j]) * s[j]; 
+                }
+                tag.alltoall_subset(x_full); 
+
+            } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
+
+            return x_full;
+        }
+
+
+        /** @brief Implementation of the GMRES solver.
+         *
+         * Following the algorithm 2.1 proposed by Walker in "A Simpler GMRES" (1988)
+         * (Evan Bollig): I changed variable names to be consistent with the paper and other literature
+         *
+         * @param matrix     The system matrix
+         * @param rhs        The load vector
+         * @param tag        Solver configuration tag
+         * @param precond    A preconditioner. Precondition operation is done via member function apply()
+         * @return The result vector
+         */
+        template <typename MatrixType, typename PreconditionerType>
                           ublas::vector<double> 
                           solve(const MatrixType & A, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
@@ -349,7 +528,6 @@ namespace viennacl
             ublas::vector_range< VectorType > v0(v0_full, ublas::range(0,NN)); 
 
             // Givens rotations
-            VectorType sDev(R+1);
             VectorType s(R+1);
 
             // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)

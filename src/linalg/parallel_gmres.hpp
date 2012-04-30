@@ -354,13 +354,13 @@ namespace viennacl
 
             // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)
             //std::vector< std::vector<CPU_ScalarType> > H(R+1);
-            ublas::matrix<double> H(R+1,R);
+            ublas::matrix<double> H(R+1,R, 0);
 
             // Rotations (cs = cosine; sn = sine)
             ublas::vector<double> cs(R); 
             ublas::vector<double> sn(R); 
 
-#if 0
+#if 1
             //representing the scalar '-1' on the GPU. Prevents blocking write operations
             const CPU_ScalarType gpu_scalar_minus_1 = static_cast<CPU_ScalarType>(-1);    
             //representing the scalar '1' on the GPU. Prevents blocking write operations
@@ -386,11 +386,11 @@ namespace viennacl
             tag.iters(0);
 
             // Save very first residual norm so we know when to stop
-            double b_norm = viennacl::linalg::norm_2(b, tag.comm());
+            CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
             v0 = b_full; 
             precond.apply(v0);
-            double resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
-            //            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
+            CPU_ScalarType resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
+            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
 
             do{
@@ -399,7 +399,7 @@ namespace viennacl
                 tag.alltoall_subset(w_full); 
                 precond.apply(w_full);                                  // V(0) = M*V(0)     //
                 beta = viennacl::linalg::norm_2(w, tag.comm()); 
-                w /= -beta;                                         // V(0) = -V(0)/beta //
+                w /= -gpu_scalar_minus_1 * beta;                                         // V(0) = -V(0)/beta //
 
                 *(v[0]) = w; 
 
@@ -436,25 +436,29 @@ namespace viennacl
                         //  H(k,i) = <V(i+1),V(k)>    //
                         H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
                         // V(i+1) -= H(k, i) * V(k)  //
-                        std::cout << v[k]->size() << "," << w.size() << H(k,i) * *(v[k])  << std::endl;
+                        //std::cout << v[k]->size() << "," << w.size() << H(k,i) * *(v[k])  << std::endl;
                         w -= H(k,i) * *(v[k]);
                     }
 
+                    H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
 #if 1
                    std::cout << "H[" << i << "] = "; 
-                    for (int k = 0; k <=i; k++) {
-                        std::cout << H(k,i) << ", "; 
+                   for (int j = 0; j < R+1; j++) {
+                    for (int k = 0; k < R; k++) {
+                        std::cout << H(j,k) << ", "; 
                     }
+                    std::cout << std::endl;
+                   }
                     std::cout << std::endl;
 #endif 
 
-                    H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
 
                     // V(i+1) = V(i+1) / H(i+1, i) //
-                    w *= 1.0/H(i+1,i); 
+                    w /= gpu_scalar_1*H(i+1,i); 
                     v_full[i+1] = w; 
 
-                    //PlaneRotation(H,cs,sn,s,i);
+                    // Rotation takes place on host
+                    PlaneRotation(H,cs,sn,s,i);
 
                     rel_resid0 = fabs(s[i+1]) / resid0;
                     std::cout << "\t" << i << "\t" << rel_resid0 << std::endl;
@@ -623,7 +627,16 @@ namespace viennacl
                     }
 
                     H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
-
+#if 1
+                   std::cout << "H[" << i << "] = "; 
+                   for (int j = 0; j < R+1; j++) {
+                    for (int k = 0; k < R; k++) {
+                        std::cout << H(j,k) << ", "; 
+                    }
+                    std::cout << std::endl;
+                   }
+                    std::cout << std::endl;
+#endif 
                     // V(i+1) = V(i+1) / H(i+1, i) //
                     w *= 1.0/H(i+1,i); 
                     v_full[i+1] = w; 

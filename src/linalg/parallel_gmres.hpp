@@ -342,12 +342,12 @@ namespace viennacl
          * @param precond    A preconditioner. Precondition operation is done via member function apply()
          * @return The result vector
          */
-        template <typename MatrixType, typename PreconditionerType>
-                          vcl::vector<double> 
-                          solve(const MatrixType & A, vcl::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
+        template <typename MatrixType, typename VectorType, typename PreconditionerType>
+                          VectorType 
+                          solve(const MatrixType & A, VectorType & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
             std::cout << "INSIDE VCL PARALLEL\n";
-            typedef vcl::vector<double>                                             VectorType;
+            //typedef vcl::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
             typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
 
@@ -374,7 +374,7 @@ namespace viennacl
             VectorType v0_full(MM); 
             vcl::vector_range< VectorType > v0(v0_full, vcl::range(0,NN)); 
 
-            // Givens rotations
+            // Givens rotations (NOTE: the R+1 x R least squares problem is solved on the CPU)
             ublas::vector<double> s(R+1);
 
             // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)
@@ -486,7 +486,7 @@ namespace viennacl
                     PlaneRotation(H,cs,sn,s,i);
 
                     rel_resid0 = fabs(s[i+1]) / resid0;
-                    std::cout << "\t" << i << "\t" << rel_resid0 << std::endl;
+                    std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
 
                     tag.error(rel_resid0);
                     // We could add absolute tolerance here as well: 
@@ -505,6 +505,7 @@ namespace viennacl
                         s[k] -= H(k,j) * s[j];
                     }  
                 }
+
 #ifdef VIENNACL_GMRES_DEBUG 
                     std::cout << "H[" << i << "] = "; 
                     for (int j = 0; j < R+1; j++) {
@@ -686,7 +687,7 @@ namespace viennacl
                     PlaneRotation(H,cs,sn,s,i);
 
                     rel_resid0 = fabs(s[i+1]) / resid0;
-                    std::cout << "\t" << i << "\t" << rel_resid0 << std::endl;
+                    std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
 
                     tag.error(rel_resid0);
                     // We could add absolute tolerance here as well: 

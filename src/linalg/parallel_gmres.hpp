@@ -390,8 +390,7 @@ namespace viennacl
             v0 = b_full; 
             precond.apply(v0);
             CPU_ScalarType resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
-            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
-
+            //std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
             do{
                 // compute initial residual and its norm //
@@ -399,10 +398,10 @@ namespace viennacl
                 tag.alltoall_subset(w_full); 
                 precond.apply(w_full);                                  // V(0) = M*V(0)     //
                 beta = viennacl::linalg::norm_2(w, tag.comm()); 
-                w /= -gpu_scalar_minus_1 * beta;                                         // V(0) = -V(0)/beta //
+                w /= gpu_scalar_minus_1 * beta;                                         // V(0) = -V(0)/beta //
 
                 *(v[0]) = w; 
-
+                
                 // First givens rotation 
                 for (int ii = 0; ii < R+1; ii++) {
                     s[ii] = 0.;
@@ -441,17 +440,18 @@ namespace viennacl
                     }
 
                     H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
-#if 1
-                   std::cout << "H[" << i << "] = "; 
-                   for (int j = 0; j < R+1; j++) {
-                    for (int k = 0; k < R; k++) {
-                        std::cout << H(j,k) << ", "; 
+
+
+#ifdef VIENNACL_GMRES_DEBUG 
+                    std::cout << "H[" << i << "] = "; 
+                    for (int j = 0; j < R+1; j++) {
+                        for (int k = 0; k < R; k++) {
+                            std::cout << H(j,k) << ", "; 
+                        }
+                        std::cout << std::endl;
                     }
                     std::cout << std::endl;
-                   }
-                    std::cout << std::endl;
 #endif 
-
 
                     // V(i+1) = V(i+1) / H(i+1, i) //
                     w /= gpu_scalar_1*H(i+1,i); 
@@ -480,6 +480,22 @@ namespace viennacl
                         s[k] -= H(k,j) * s[j];
                     }  
                 }
+#ifdef VIENNACL_GMRES_DEBUG 
+                    std::cout << "H[" << i << "] = "; 
+                    for (int j = 0; j < R+1; j++) {
+                        for (int k = 0; k < R; k++) {
+                            std::cout << H(j,k) << ", "; 
+                        }
+                        std::cout << std::endl;
+                    }
+                    std::cout << std::endl;
+    
+                    std::cout << "s[" << i << "] = "; 
+                    for (int j =0 ; j < R+1; j++) {
+                        std::cout << s[j] << ", ";
+                    }
+                    std::cout << std::endl;
+#endif 
 
                 // Update our solution
                 for (int j = 0 ; j < i; j++) {
@@ -627,7 +643,8 @@ namespace viennacl
                     }
 
                     H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
-#if 1
+                
+#ifdef VIENNACL_GMRES_DEBUG 
                    std::cout << "H[" << i << "] = "; 
                    for (int j = 0; j < R+1; j++) {
                     for (int k = 0; k < R; k++) {
@@ -664,6 +681,23 @@ namespace viennacl
                         s[k] -= H(k,j) * s[j];
                     }  
                 }
+
+#ifdef VIENNACL_GMRES_DEBUG 
+                    std::cout << "H[" << i << "] = "; 
+                    for (int j = 0; j < R+1; j++) {
+                        for (int k = 0; k < R; k++) {
+                            std::cout << H(j,k) << ", "; 
+                        }
+                        std::cout << std::endl;
+                    }
+                    std::cout << std::endl;
+    
+                    std::cout << "s[" << i << "] = "; 
+                    for (int j =0 ; j < R+1; j++) {
+                        std::cout << s[j] << ", ";
+                    }
+                    std::cout << std::endl;
+#endif 
 
                 // Update our solution
                 for (int j = 0 ; j < i; j++) {

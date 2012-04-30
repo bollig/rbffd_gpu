@@ -60,65 +60,6 @@ namespace viennacl
                                          op_prod> & proxy);
       
       
-#if 0
-       // Evan Bollig
-      // Added support for vector_range = prod(A,vector_range)
-      template <typename LHS, typename RHS, typename OP>
-      self_type & operator=(const vector_expression< LHS,
-                                                     vector_range< RHS >,
-                                                     op_prod > & proxy) 
-      {
-          // Inefficient, but it works: perform product and store in temp
-          // vector. Then copy the vector content into vector reference by the
-          // proxy
-
-//        assert( false && "Not implemented!");
-          assert( this->size() == proxy.lhs().size() ); 
-
-          RHS temp(this->size()); 
-
-          viennacl::linalg::mult(proxy.lhs(), proxy.rhs(), temp);
-
-          if (size() != 0)
-          {
-              cl_int err;
-              err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), temp.handle().get(), get().handle().get(), 0, 0, sizeof(value_type)*size(), 0, NULL, NULL);
-              //assert(err == CL_SUCCESS);
-              VIENNACL_ERR_CHECK(err);
-          }
-          return *this;
-      }      
-#endif 
-     
-#if 0
-      // Evan Bollig
-      // Added support for vector_range = prod(A,x)
-      template <typename LHS, typename RHS, typename OP>
-      self_type & operator=(const vector_expression< vector_range < LHS >,
-                                                     RHS,
-                                                     OP > & proxy) 
-      {
-          // Inefficient, but it works: perform product and store in temp
-          // vector. Then copy the vector content into vector reference by the
-          // proxy
-
-          LHS temp(proxy.lhs());
-          viennacl::linalg::mult(proxy.lhs(), proxy.rhs(), temp);
-
-//        assert( false && "Not implemented!");
-          assert( this->size() == temp.size() ); 
-
-          if (size() != 0)
-          {
-              cl_int err;
-              err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), temp.handle().get(), get().handle().get(), 0, 0, sizeof(value_type)*size(), 0, NULL, NULL);
-              //assert(err == CL_SUCCESS);
-              VIENNACL_ERR_CHECK(err);
-          }
-          return *this;
-      }      
-#endif 
-
       // EVAN BOLLIG
       // added support for copying vector_range into vector_range
       self_type & operator=(self_type & vec) 

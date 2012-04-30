@@ -38,6 +38,10 @@
 #include "linalg/parallel_gmres_vcl.hpp"
 #endif 
 
+#include "linalg/parallel_norm_1.hpp"
+#include "linalg/parallel_norm_2.hpp"
+#include "linalg/parallel_norm_inf.hpp"
+
 #include "manufactured_solution.h"
 #include "pdes/implicit_pde.h"
 
@@ -279,9 +283,9 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
         viennacl::linalg::sub(sol, exact_view, diff); 
 
-//        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
         std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
- //       std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
     }
 
 

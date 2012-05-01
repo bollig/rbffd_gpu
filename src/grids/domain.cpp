@@ -438,7 +438,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
     // Index of local map corresponds to position in G (list of all centers). 
     // The local map elements map G[i] back to global domain indices
 
-    // We want these maps in order: (Q\B B R) where B=(D O)
+    // We want these maps in order: (Q\B B\O O R) where B=(D O)
     // to make it more convenient when we work on memory management
     for (qit = QmB.begin(); qit != QmB.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);

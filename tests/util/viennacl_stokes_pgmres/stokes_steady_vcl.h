@@ -1,5 +1,5 @@
-#ifndef __POISSON1D_VCL_H__
-#define __POISSON1D_VCL_H__
+#ifndef __STOKES_STEADY_H__
+#define __STOKES_STEADY_H__
 
 // This is needed to make UBLAS variants of norm_* and GMRES
 #define VIENNACL_HAVE_UBLAS 1
@@ -45,7 +45,7 @@
 #include "manufactured_solution.h"
 #include "pdes/implicit_pde.h"
 
-class Poisson1D_PDE_VCL : public ImplicitPDE
+class StokesSteady_PDE_VCL : public ImplicitPDE
 {
 
     typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_MAT_t; 
@@ -85,7 +85,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -116,7 +116,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         boost::filesystem::create_directories(dir_str);
     }
 
-    ~Poisson1D_PDE_VCL() {
+    ~StokesSteady_PDE_VCL() {
         delete(LHS_host); 
         delete(RHS_host); 
         delete(U_exact_host);
@@ -323,7 +323,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     }
 
     virtual std::string className() {
-        return "Poisson1D_PDE_VCL"; 
+        return "StokesSteady_PDE_VCL"; 
     }
 };
 

@@ -1,0 +1,9 @@
+This test: 
+    - Load a sphere grid
+    - Partition into domains
+    - Assemble PDE
+    - Solve PDE
+    - Check Norms
+
+TODO: 
+    - Make sure to prime the GPU before benchmarking gmres 

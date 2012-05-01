@@ -1,0 +1,149 @@
+2/1/11
+==========
+DONE derivative_cl.cpp: 
+    - When FLOAT==double I should copy data directly to GPU instead of creating buffer on CPU
+    - I need to use Gordon's approach to load the kernel so I can write "#pragma OPENCL ..." directly instead of using a substitution for PRAGMA to get #pragma past the C preprocessor
+
+
+DONE RBF_TYPE: 
+    - finish gaussian and inv_multiquadric and test against the multiquadric
+
+
+
+
+
+- Push SOURCE only to a GitHub repo. I should have a separate repo for the doc subdir so the source is < 100MB
+
+
+
+
+
+(1/12/2011)
+	- The RBFFD Derivative class really should be the one to genreate stencils given a grid of nodes. WHy does our grid class have to compute stencils?
+		=> If RBFFD wants N nearest neighbors it can generate stencils like that. 
+		=> A domain decomposition will need to know the stencils though for ghost nodes. 
+		=> RBFFD already consumes Stencils and the Grid nodes in the constructor. We could have a Stencil class generate stencils outside Grid and a domain decomposition apply to stencils in subextents of the domain. Luckily this kind of code was already written by me (Evan) in march and forgotten until tonight
+
+
+
+TODO (8/19/2010) 
+==================
+- (DONE: NCARPoisson1_CL::write_to_file) Add uBLAS writer for matlab formatted output
+- (DONE: added matlab scripts) Add class to run diagnostics on a matrix (use Lapack backend)
+	- compute Eigenvalues
+	- compute Condition Number
+	- compute || (A - A') ./ 2 ||_2 (measure symmetry)
+NOTE: to use the scripts, run ./ncar_poisson1.x  test and then run:
+    %> octave --path ~/RBF.framework/scripts --eval "postRunDiagnostics('L.mtx')" --persist
+
+- Undirected Stencil Graph
+        - A -> B and B -> A
+        - How does this improve conditioning
+        - How does this influence eigenvalues
+	- How many zero eigenvalues?
+	- How many eigenvalues within 1e-6 of 0?
+        - What measure of Symmetry?
+	- What is effect of random perturbations in the nodes
+	- (DONE) Save evals and evecs to file
+	- Specify boundary type: 
+		- Dirichlet: Trim off boundary nodes and sol_constraint
+		- Neumann + Robin: Include all elements
+	- Plot Reverse Cuthill-McKee results (p=symrcm(B); R = B(p,p))
+		- Dirichlet: L(numbound:(end-1), numbound:(end-1))
+		- Neuman:    L(1:(end-1), 1:(end-1))
+		- Does RCM improve convergence iterations in solver? 
+		- Where are the largest weights? (Diagonally dominant?)
+		- Is there a Cuthill-McKee algorithm for C++? GPU? 
+
+- Improve PDE classes (i.e., NCARPoisson1)
+	- Base PDE class
+	- Explicit PDE inherit BasePDE
+		- Timestep (compute x' = x + dt*f(x)) {calls solve}
+		- Solve (compute f(x)) {override} 
+	- Implicit PDE inherit BasePDE
+		- Assemble (specify boundary conditions)
+		- Solve	{calls Assemble} 
+		- Timestep {calls solve}
+
+- Swap out RBF for SPH weight function. 
+	- Assume SPH nodes are fixed
+	- How does solution differ
+	- Which benchmark is faster
+	- Convergence plots?
+
+
+
+
+
+
+
+
+
+
+
+
+NOTE: if a stencil set contains a node whose respective stencil set does not contain the first's stencil center
+then it is not symmetric. If we identify all edges which are not symmetric (i.e., those that are uni-directional)
+then we can add or subtract nodes. The question is: do we add the first stencil center to the second set or do we
+subtract the second from the first set? With a locked espilon support for the basis functions,
+adding nodes can induce more ill-conditioning; removing nodes reduces ill-conditioning.
+However, if we remove too many nodes then the support might be insufficient to connect nodes.
+Lets write the code both ways: one routine to add, one to subtract. Then we can write a third hybrid method
+which
+
+
+Note: I broke away from Gordons code because I want to reorganize everything. I figure its easier to organize in my own repository because his will be a reference. 
+
+TODO: 
+=======
+- (DONE) Properly handle PDE boundary nodes
+- (DONE) Solve Heat equation
+- Add PARALLEL diagnostics for eigenvalue analysis, RMS, etc
+- (DONE) GIT repository!
+- Add command line options for CVT size, CVT input file, # of stencils, etc.
+- Submission scripts for ACM
+- (Done) 3D heat equation
+- Nonlinear diffusion
+- Improve and Compress Communication (non-blocking and asynchronous)
+- Visualize RBFs in 3D stereo (OpenGL/Avizo) 
+- (DONE) NOTE: used gordon's timers. Add Timers for benchmarking (Look at GPTL) 
+- OpenCL/Cuda implementations
+
+
+
+- (DONE) Pass stencils through GPU class. (note: sets Q\O, O, R give us idea of what nodes will be needed, but NOT their connectivity. We will need to send this once.)
+
+- (DONE) pass GPU.class properties to other CPUs
+- (DONE) Reconstruct GPU.class on CPUs using received data
+
+- (DONE) Compute Q\O (Interior) derivatives
+- (DONE) Send O to needy GPUs (bcast to all for now)
+- (DONE) Receive R
+- (DONE) Compute O derivatives
+- Verify solution
+- Non-blocking send/receive 
+
+- Compress sends (single ints can be grouped; arrays can be grouped)
+- Loop send/receive like sockets (for large amounts of information)
+- Classes inherit MPISendable (requires send and receive routines to automatically pass through communicator)
+
+- (DONE)Communicator class
+- Message structure defintion
+- Test stencil message passing
+- (DONE)GPU class use communicator to pass messages
+
+- (DONE) MPI build
+- (DONE) MPI tests (scalable tests): add_test(testname Exename arg1 arg2 ...)
+  where Exename can be arbitrary (i.e., add_test(name ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} PROCS ${MPIEXEC_PREFLAGS} EXECUTABLE  ${MPIEXEC_POSTFLAGS} ARGS")
+- (DONE) src directory for library
+- (DONE) tests directory for tests
+- cmake script to: 
+	- (DONE) Build library
+	- (DONE) Build Tests
+	- (DONE) Tar Distribution
+	- (DONE) Generate Doxygen
+	- (DONE) Run Tests
+	- Tar binaries + installers for distribution
+- Design idea: similar to a OSX framework. Idea is to first build a library and tests, then roll the library into framework and tests can bind to it independently.
+
+

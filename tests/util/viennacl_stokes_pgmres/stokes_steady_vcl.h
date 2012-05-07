@@ -405,7 +405,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         void solve(MAT_t& LHS, VEC_t& RHS, VEC_t& U_exact, VEC_t& U_approx_out)
         {
             // Solve on the CPU
-            int restart = 20; 
+            int restart = 3; 
             int krylov = 30;
             double tol = 1e-8; 
 

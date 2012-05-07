@@ -72,10 +72,6 @@ int main(int argc, char** argv) {
 
             int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
-            int N = settings->GetSettingAs<int>("NB_X", ProjectSettings::optional, "10"); 
-            double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "0"); 
-            double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1"); 
-
             tm["settings"]->stop(); 
 
             grid = new GridReader(grid_name, 4); 
@@ -95,10 +91,13 @@ int main(int argc, char** argv) {
             if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
                 std::cout << "Generating stencils files\n";
                 tm["stencils"]->start(); 
-                //            grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
-                //            grid->generateStencils(Grid::ST_HASH);   
+#if 1
+                grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
+                grid->generateStencils(Grid::ST_HASH);   
+#else 
                 //            grid->generateStencils(Grid::ST_BRUTE_FORCE);  
                 grid->generateStencils(Grid::ST_KDTREE);   
+#endif 
                 tm["stencils"]->stop();
                 grid->writeToFile(); 
                 tm.writeToFile("gridgen_timer_log"); 

@@ -154,7 +154,7 @@ namespace viennacl
                     viennacl::traits::resize(U[k], problem_size);
                 }
 
-                //std::cout << "Starting GMRES..." << std::endl;
+                std::cout << "Starting GMRES..." << std::endl;
                 tag.iters(0);
 
                 for (unsigned int it = 0; it <= tag.max_restarts(); ++it)
@@ -283,6 +283,7 @@ namespace viennacl
 
                         //std::cout << "Current residual: " << rho * rho_0 << std::endl;
                         //std::cout << " - End of Krylov space setup - " << std::endl;
+                        std::cout << "\t" << tag.iters() << "\t" << rho*rho_0 << std::endl;
                     } // for k
 
 #ifdef VIENNACL_GMRES_DEBUG

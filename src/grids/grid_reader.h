@@ -32,6 +32,9 @@ class GridReader : public Grid {
         std::vector<double>& getExtraCol(unsigned int i=0) { 
             return extra_cols[i]; 
         }
+        unsigned int getNumExtraLoaded() {
+            return extra_cols.size();
+        }
 
         // Overrides Grid::	
         virtual std::string getFileDetailString(); 

@@ -163,6 +163,20 @@ class ManufacturedSolution : public MathematicaBase
         virtual double RHS_P(double Xx, double Yy, double Zz) {
             return 0.; 
         }
+
+
+        // Approximate integrals computed as sum(U_exact(s1:s2)) where s1 = i*N+1; s = i*N+10201; (so integral over 10201 equally weighted nodes)
+#if 1
+        virtual double RHS_CU() { return 8.634921215; }
+        virtual double RHS_CV() { return -7.204768375; }
+        virtual double RHS_CW() { return 3.949225301; }
+        virtual double RHS_CP() { return -0.114522888; }
+#else 
+        virtual double RHS_CU() { return 0.; }
+        virtual double RHS_CV() { return 0.; }
+        virtual double RHS_CW() { return 0.; }
+        virtual double RHS_CP() { return 0.; }
+#endif 
 };
 
 

@@ -88,7 +88,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -227,6 +227,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
 #ifdef STOKES_CONSTRAINTS
+#if 0
         // Sum of U
         F(4*N+0) = 0.;
 
@@ -238,6 +239,19 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         // Sum of P
         F(4*N+3) = 0.;
+#else 
+        // Sum of U
+        F(4*N+0) = MS.RHS_CU();
+
+        // Sum of V
+        F(4*N+1) = MS.RHS_CV();
+
+        // Sum of W
+        F(4*N+2) = MS.RHS_CW();
+
+        // Sum of P
+        F(4*N+3) = MS.RHS_CP();
+#endif 
 #endif 
 
         // This should get values from neighboring processors into U_exact. 
@@ -358,12 +372,18 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
 #ifdef STOKES_CONSTRAINTS
         // ------ EXTRA CONSTRAINT ROWS -----
-        unsigned int diag_row_ind = 4*N;
         // U
+        GridReader g10("/panfs/panasas1/users/efb06/GRIDS/md/md100.10201", 4); 
+        g10.setLoadExtra(1); 
+        g10.generate();
+
+        unsigned int diag_row_ind = 4*N;
         for (unsigned int j = 0; j < N; j++) {
             unsigned int diag_col_ind = j + 0*N;
+            
+            A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
 
-            A(diag_row_ind, diag_col_ind) = 1.;  
+            //A(diag_row_ind, diag_col_ind) = 1.;  
         }
 
         diag_row_ind++; 
@@ -371,7 +391,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         for (unsigned int j = 0; j < N; j++) {
             unsigned int diag_col_ind = j + 1*N;
 
-            A(diag_row_ind, diag_col_ind) = 1.;  
+            A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
+            //A(diag_row_ind, diag_col_ind) = 1.;  
         }
 
         diag_row_ind++; 
@@ -379,7 +400,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         for (unsigned int j = 0; j < N; j++) {
             unsigned int diag_col_ind = j + 2*N;
 
-            A(diag_row_ind, diag_col_ind) = 1.;  
+            A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
+            //A(diag_row_ind, diag_col_ind) = 1.;  
         }
 
         diag_row_ind++; 
@@ -387,7 +409,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         for (unsigned int j = 0; j < N; j++) {
             unsigned int diag_col_ind = j + 3*N;
 
-            A(diag_row_ind, diag_col_ind) = 1.;  
+            A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
+            //A(diag_row_ind, diag_col_ind) = 1.;  
         }
 #endif 
 
@@ -407,8 +430,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         void solve(MAT_t& LHS, VEC_t& RHS, VEC_t& U_exact, VEC_t& U_approx_out)
         {
             // Solve on the CPU
-            int restart = 3; 
-            int krylov = 80;
+            int restart = 20; 
+            int krylov = 120;
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
@@ -417,6 +440,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
+            std::cout << "Generating preconditioner...\n";
             viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3*NN) ); 
 #if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
@@ -427,7 +451,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
-#if 0
+#if 1
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
 #else 
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
@@ -486,6 +510,10 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx"); 
         viennacl::io::write_matrix_market_file(*LHS_host,dir_str + "LHS.mtx"); 
+
+        UBLAS_VEC_t temp = boost::numeric::ublas::prod(*LHS_host, *U_exact_host); 
+        write_to_file(temp, dir_str + "RHS_discrete.mtx");
+        write_to_file(temp-*RHS_host, dir_str + "RHS_err.mtx");
     }
 
     void write_Solution()
@@ -493,8 +521,9 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
         // IF we want to write details we need to copy back to host. 
-        UBLAS_VEC_t U_approx(M, 0); 
+        UBLAS_VEC_t U_approx(U_exact_host->size(), 0); 
         if (solve_on_gpu) { 
+            copy(U_exact_host->begin(), U_exact_host->end(), U_approx.begin());
             copy(U_approx_dev->begin(), U_approx_dev->end(), U_approx.begin()+nb_bnd);
             write_to_file(U_approx, dir_str + "U_gpu.mtx"); 
         } else { 

@@ -28,7 +28,8 @@ using namespace EB;
 int main(int argc, char** argv) {
 
     std::vector<std::string> grids; 
-    grids.push_back("~/GRIDS/md/md063.04096"); 
+//    grids.push_back("~/GRIDS/md/md063.04096"); 
+    grids.push_back("~/GRIDS/md/md100.10201"); 
 //grids.push_back("~/GRIDS/md/md031.01024"); 
 
     TimerList tm;
@@ -76,7 +77,8 @@ int main(int argc, char** argv) {
             tm["settings"]->stop(); 
 
             grid = new GridReader(grid_name, 4); 
-
+            // Trickery. We load the quadrature weights from file
+            ((GridReader*)grid)->setLoadExtra(1);
             grid->setMaxStencilSize(stencil_size); 
 
             Grid::GridLoadErrType err = grid->loadFromFile(); 
@@ -151,37 +153,22 @@ int main(int argc, char** argv) {
 
         RBFFD* der = new RBFFD(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, subdomain, dim, comm_unit->getRank()); 
 
-        double alpha = settings->GetSettingAs<double>("EPSILON_C1", ProjectSettings::required); 
-        double beta = settings->GetSettingAs<double>("EPSILON_C2", ProjectSettings::required); 
-        //der->setVariableEpsilon(subdomain->getStencilRadii(), subdomain->getStencils(), alpha, beta); 
-        der->setVariableEpsilon(alpha, beta); 
-
-        // Try loading all the weight files
-        int err = der->loadFromFile(RBFFD::XSFC); 
-        err += der->loadFromFile(RBFFD::YSFC); 
-        err += der->loadFromFile(RBFFD::ZSFC); 
-        err += der->loadFromFile(RBFFD::LSFC); 
-
-        if (err) { 
-            printf("start computing weights\n");
+        double eps_c1 = settings->GetSettingAs<double>("EPSILON_C1", ProjectSettings::required); 
+        double eps_c2 = settings->GetSettingAs<double>("EPSILON_C2", ProjectSettings::required); 
+        
+        der->setEpsilonByParameters(eps_c1, eps_c2);
+        int der_err = der->loadAllWeightsFromFile(); 
+        if (der_err) {
             tm["weights"]->start(); 
+            der->computeAllWeightsForAllStencils(); 
 
-            // NOTE: good test for Direct vs Contour
-            // Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
-            // 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
-            der->computeAllWeightsForAllStencils();
             tm["weights"]->stop(); 
-
-            cout << "end computing weights" << endl;
-
-            der->writeToFile(RBFFD::XSFC);
-            der->writeToFile(RBFFD::YSFC);
-            der->writeToFile(RBFFD::ZSFC);
-            der->writeToFile(RBFFD::LSFC);
-
-            cout << "end write weights to file" << endl;
+#if 0
+            if (writeIntermediate) {
+                der->writeAllWeightsToFile(); 
+            }
+#endif 
         }
-
         StokesSteady_PDE_VCL* pde = new StokesSteady_PDE_VCL(subdomain, der, comm_unit); 
 
         pde->assemble();

@@ -28,7 +28,8 @@ using namespace EB;
 int main(int argc, char** argv) {
 
     std::vector<std::string> grids; 
-    grids.push_back("~/GRIDS/md/md031.01024"); 
+    grids.push_back("~/GRIDS/md/md063.04096"); 
+//grids.push_back("~/GRIDS/md/md031.01024"); 
 
     TimerList tm;
 
@@ -91,7 +92,7 @@ int main(int argc, char** argv) {
             if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
                 std::cout << "Generating stencils files\n";
                 tm["stencils"]->start(); 
-#if 1
+#if 0
                 grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
                 grid->generateStencils(Grid::ST_HASH);   
 #else 

@@ -4,6 +4,8 @@
 // This is needed to make UBLAS variants of norm_* and GMRES
 #define VIENNACL_HAVE_UBLAS 1
 
+#define STOKES_CONSTRAINTS 1
+
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
 #include <viennacl/linalg/gmres.hpp>
@@ -406,16 +408,16 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         {
             // Solve on the CPU
             int restart = 3; 
-            int krylov = 30;
+            int krylov = 80;
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
-#if 1
+#if 0
             viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
-            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag() ); 
+            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3*NN) ); 
 #if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
@@ -425,7 +427,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
-#if 1
+#if 0
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
 #else 
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 

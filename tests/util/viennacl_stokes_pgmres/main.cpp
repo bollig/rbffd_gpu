@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
             cout << "end write weights to file" << endl;
         }
 
-        Poisson1D_PDE_VCL* pde = new Poisson1D_PDE_VCL(subdomain, der, comm_unit); 
+        StokesSteady_PDE_VCL* pde = new StokesSteady_PDE_VCL(subdomain, der, comm_unit); 
 
         pde->assemble();
         pde->write_System(); 

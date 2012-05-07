@@ -281,6 +281,9 @@ namespace viennacl
         namespace vcl = viennacl;
 
 #if 1
+        // Taken directly from CUSP. 
+        // TODO: put cusp license in here. REfer to
+        // rbffd_gpu/external/cuda_libraries/cusp-v0.3 for the license. 
         template <typename ValueType>
             void ApplyPlaneRotation(ValueType& dx,
                     ValueType& dy,

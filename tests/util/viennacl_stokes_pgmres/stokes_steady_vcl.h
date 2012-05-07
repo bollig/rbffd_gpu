@@ -1,5 +1,5 @@
-#ifndef __POISSON1D_VCL_H__
-#define __POISSON1D_VCL_H__
+#ifndef __STOKES_STEADY_H__
+#define __STOKES_STEADY_H__
 
 // This is needed to make UBLAS variants of norm_* and GMRES
 #define VIENNACL_HAVE_UBLAS 1
@@ -46,7 +46,7 @@
 #include "utils/spherical_harmonics.h"
 #include "pdes/implicit_pde.h"
 
-class Poisson1D_PDE_VCL : public ImplicitPDE
+class StokesSteady_PDE_VCL : public ImplicitPDE
 {
 
     typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_MAT_t; 
@@ -86,7 +86,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -124,7 +124,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             U_approx_dev = new VCL_VEC_t(4*NN); 
         }
 #endif 
-        char dir[FILENAME_MAX]; 
+       char dir[FILENAME_MAX]; 
         sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
 
         dir_str = string(dir); 
@@ -132,7 +132,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         boost::filesystem::create_directories(dir_str);
     }
 
-    ~Poisson1D_PDE_VCL() {
+    ~StokesSteady_PDE_VCL() {
         delete(LHS_host); 
         delete(RHS_host); 
         delete(U_exact_host);
@@ -157,7 +157,8 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     }
 
 
-    void assemble() {
+    virtual void assemble() 
+    {
 
         UBLAS_MAT_t& A = *LHS_host; 
         UBLAS_VEC_t& F = *RHS_host;
@@ -191,7 +192,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         for (unsigned int j = 0; j < N; j++) {
             unsigned int row_ind = j + 1*N;
             NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
+           double Xx = node.x(); 
             double Yy = node.y(); 
             double Zz = node.z(); 
 
@@ -203,7 +204,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         for (unsigned int j = 0; j < N; j++) {
             unsigned int row_ind = j + 2*N;
             NodeType& node = nodes[j];
-            double Xx = node.x(); 
+           double Xx = node.x(); 
             double Yy = node.y(); 
             double Zz = node.z(); 
 
@@ -388,7 +389,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         }
 #endif 
 
-        if (solve_on_gpu) 
+       if (solve_on_gpu) 
         { 
             // Put all of the known system on the GPU. 
             copy(A, *LHS_dev);
@@ -396,10 +397,9 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
             viennacl::copy(U_exact_host->begin(),U_exact_host->end(), U_exact_dev->begin());
             viennacl::copy(U_approx_host->begin(),U_approx_host->end(), U_approx_dev->begin());
         }
- 
     }
 
-    
+
     // Use GMRES to solve the linear system. 
     template <class MAT_t, class VEC_t>
         void solve(MAT_t& LHS, VEC_t& RHS, VEC_t& U_exact, VEC_t& U_approx_out)
@@ -501,7 +501,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     }
 
     virtual std::string className() {
-        return "Poisson1D_PDE_VCL"; 
+        return "StokesSteady_PDE_VCL"; 
     }
 };
 

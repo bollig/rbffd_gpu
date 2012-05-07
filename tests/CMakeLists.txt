@@ -44,6 +44,7 @@
 		util/viennacl_spmv_benchmark
 		util/viennacl_gmres_poisson
 		util/viennacl_1d_pgmres
+		util/viennacl_stokes_pgmres
 		util/cusp_1d_pgmres
         #util/vtk_stencil_visualizer
 		util/test_complex

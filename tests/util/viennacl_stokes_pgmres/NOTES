@@ -1,0 +1,183 @@
+This test
+done    - construct a 1d line of points
+done    - decompose points into p-partitions (on independent processors)
+done    - assemble a sub DM for -lapl(u) = f on each processor
+done    - assume dirichlet boundary conditions
+done    - solve system using parallel GMRES and ViennaCL
+
+
+TODO: 
+    - avoid loading grid and generating stencils on one processor (need a parallel tree structure) 
+        - use a preprocessor like parmetis to generate partitions rather that write my own software for previous point
+        - From the generated stencils, we have a directed graph. METIS works only on undirected graphs. However, if we take our graph M and mulitply M * M' we get a undirected graph that has bijectivity of edges (assuming that M contains only 1's and 0's). METIS can make cuts on M*M' safely assuming that if edge (A,B)---that is the edge connecting stencil center A to node B---is cut, then (B,A) is simulataneously cut as well. In the case of a directed graph, this means at worst we have cuts on edges that dont actually exist and therefore won't cause any harm. Now all i need to do is figure out how to use METIS from my code. 
+
+
+
+    - GMRES Comm based on MATRIX-, not NODE-partitioning. 
+        - We perform domain decomposition on the nodes which gives us some projection R_p such that 
+                    u_full = \sum_p=1^P R_p' A R_p * u
+         where R_p contains only 1's and zero's. R is a projection matrix, so it has identity on the diagonals for rows kept within a partition and zeros elsewhere. Also, nonzero rows of R can be swapped to reorder the local domain for assembly. For example, each of our partitions orders the local nodes according to {Q\B B\O O R}. We have some reordering of R_p such that the rows corresponding to dependencies LEFT and RIGHT are grouped together at the end of the vector. For the dissertation I might give an example of this projection. NOTE: this projection gets us from the original node graph to the NODE-partitioning; another step is required to get us from NODE-partitioning to MATRIX-partitioning.
+         - Matrix-partitioning refers to the domain decomposition on the assembled differentiation matrix for our pde solution. In the case of a PDE without boundary conditions, the spy of the matrix matches that of our directed graph. However, when dirichlet boundary conditions are introduced and their solution values are applied to the RHS of the linear system in order to compress the LHS, our Matrix and graph do not match. Although the boundary nodes are included in the projection matrix R_p, they must be filtered off with another projection matrix S_p:
+
+        1) project nodes down to node subdomain R_p
+        2) project node subdomain down to PDE subdomain S_p
+        3) solve local PDE:         A * S_P * R_P * u = S_P * R_P * F - S_P' 
+
+         \sum_p=1^P R_P' S_P' A S_P R_P 
+
+
+    A           u    f      S_P         S_P'        R_P             
+ 11 12 13 14    1    1    1 0 0 0     1 0 0 0     1 0 0 0
+ 21 22 23 24    2    2    0 1 0 0     0 1 0 0     0 1 0 0
+ 31 32 33 34    3    3    0 0 0 1     0 0 0 x     0 0 1 0
+ 41 42 43 44    4    4    0 0 x 0     0 0 1 0     0 0 0 1
+
+ NOTE: S_P uses column change (4 to 3) to reduce size of A*S_P: 
+
+    S_P' S_P        S_P * S_P'
+    1 0 0 0         1 0 0 0
+    0 1 0 0         0 1 0 0
+    0 0 x 0         0 0 x 0
+    0 0 0 x         0 0 0 x
+
+
+     A*S_P'         A*S_P'*S_P      A*S_P*S_P'       S_P*A*S_P' 
+    11 12 14 x      11 12 x x       11 12 13 x      11 12 14 x
+    21 22 24 x      21 22 x x       21 22 23 x      21 22 24 x
+    31 32 34 x      31 32 x x       31 32 33 x      41 42 44 x
+    41 42 44 x      41 42 x x       x  x  x  x      x  x  x  x
+
+
+     A * S_P         S_P*A             S_P' A       S_P' * A * S_P
+    11 12 x 13      11 12 13 14     11 12 13 14     11 12 x 13
+    21 22 x 23      21 22 23 24     21 22 23 24     21 22 x 23
+    31 32 x 33      41 42 43 44     x  x  x  x      x  x  xx x
+    41 42 x 44      x  x  x  x      31 32 33 34     31 32 x 33
+
+    S_P' * S_P * A      S_P*S_P'*A
+    11 12 13 14         11 12 13 14
+    21 22 23 24         21 22 23 24
+    xx xx xx xx         31 32 33 34
+    41 42 43 44         xx xx xx xx
+
+    S_P^-1 (singular because of 0 row. However if it were invertable then S_P^1 = S_P')
+    1 0 0 0
+    0 1 0 0
+    0 0 0 1
+    0 0 0 0 
+
+How to get dependencies from other processors? Assume node 3 is on proc 2.
+
+If S_P were I, P*I would indicate a permutation of I to get nodes on proc 1
+included in the contiguous set of stencils. So the S_P i have above is really: 
+
+    S_P = P * I_sub     with        P         I_sub
+                                1 0 0 0     1 0 0 0
+                                0 1 0 0     0 1 0 0
+                                0 0 0 1     0 0 0 0
+                                0 0 1 0     0 0 0 1
+
+so I_sub indicates stencils under proc 1 control. (P_sub - I) indicates dependencies. Indices of nonzeros ABOVE the diagonal indicate dependence on another processor. Indices BELOW the diagonal indicate other processors dependence on this processor. Now, what if we have more than two processors?
+
+
+Lets construct it from our stencil sets.  Set QmB indicates stencils we control: 
+
+  Q\B           B\O           O             R
+1 0 0 0 0     0 0 0 0 0    0 0 0 0 0     0 0 0 0 0
+0 1 0 0 0     0 0 0 0 0    0 0 0 0 0     0 0 0 0 0
+0 0 0 0 0     0 0 1 0 0    0 0 0 0 0     0 0 0 0 0
+0 0 0 0 0     0 0 0 0 0    0 0 0 1 0     0 0 0 0 0
+0 0 0 0 0     0 0 0 0 0    0 0 0 0 0     0 0 0 0 1
+
+Indicate that Nodes 1 and 2 are entirely on proc 1. 
+Node 3 is required by other processors but has no dependence on another processor
+Node 4 is required by other processors and has    dependence on another processor
+Node 5 is required from other processors
+
+
+Try
+ R^0_p         R_p          A           F
+1 0 0 0     1 0 0 0     11 12  0 0      1
+0 1 0 0     0 1 0 0     0  22 23 0      2
+0 0 0 0     0 0 1 0     0  0  33 34     3
+0 0 0 0     0 0 0 0     0  0  0  44     4
+
+Then A*R^0_p 
+
+    11 12 0  0
+    0  22 23 0
+    x  x  x  x
+    x  x  x  x
+
+And R_P*(A*R^0_p)
+
+    11 12 0  0
+    0  22 23 0
+    x  x  YY YY
+    x  x  x  x
+
+But, (A*R)
+    11 12 0  0 
+    0  22 23 0 
+    0  0  33 34
+    x  x  x  x
+So we have  (R^0_P*A*R)
+    11 12 0  0
+    0  22 23 0
+    x  x  x  x
+    x  x  x  x
+NOTE: for Au=f we have
+
+    R^0_P * A * (R * u) = R^0_P * (R * F)
+
+but when we invert the projections swap:
+    
+    u =  R' * (A^-1 * R^0_P') * R^0_P * (R * F)
+
+    R^0_P'*R^0_P = I
+
+R*F     R^0_P * R * F
+1           1
+2           2
+3           x
+x           x
+
+but this simplifies to
+    u = (R' * A^-1)
+
+
+What about adding or subtracting projections: 
+    S_P' - S_P          (S_P'-S_P) A
+    0 0 0 0              0   0   0   0
+    0 0 0 0              0   0   0   0
+    0 0 0 -1            -41 -42 -43 -44
+    0 0 1 0              31  32  33  34
+Then (S_P' - S_P) provides nothing useful.
+
+
+So S_P*A will project the problem to a local set of stencils whose centers are
+under the control of one processor. S_P'*S_P*A will project the solution back
+to the original domain. 
+
+If 13 is 0, then Row 1 has no dependency on stencil 3. In S_P*A then the matrix  
+
+
+    S_P * u     S_P' * S_P * u     S_P * f
+        1           1                 9
+        2           2                 8
+        4           x                 6         
+        x           4                 x
+
+
+     S_P'*A         S_P*A
+    5 4 3 2        5 4 3 2
+    9 8 7 6        9 8 7 6
+    5 6 7 8        x x x x
+    x x x x        1 2 3 4
+
+
+    (S_P' * A) * (S_P * u) = S_P' * S_P * f
+       A_loc * u_loc = S_P * u
+
+REad this book: 
+http://www.springer.com/mathematics/computational+science+%26+engineering/book/978-3-540-20696-5?cm_mmc=sgw-_-ps-_-book-_-3-540-20696-5

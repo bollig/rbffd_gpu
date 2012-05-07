@@ -481,6 +481,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
+        // TODO: compute norms for indiviual components
         VCL_VEC_t diff(sol.size()); 
 
         viennacl::vector_range<VCL_VEC_t> exact_view( exact, viennacl::range(exact.size() - sol.size(), exact.size())); 

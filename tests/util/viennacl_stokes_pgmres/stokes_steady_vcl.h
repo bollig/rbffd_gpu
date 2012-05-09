@@ -481,12 +481,11 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
-        // TODO: compute norms for indiviual components
         VCL_VEC_t diff(sol.size()); 
 
         viennacl::vector_range<VCL_VEC_t> exact_view( exact, viennacl::range(exact.size() - sol.size(), exact.size())); 
 
-        viennacl::linalg::sub(sol, exact_view, diff); 
+        diff -= exact_view; 
 
         std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
         std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
@@ -501,12 +500,15 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         diff -= exact_view; 
 
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(exact) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(exact) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(exact) << std::endl;  
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
     }
 
-    void write_System ( )
+
+
+
+   void write_System ( )
     {
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx"); 

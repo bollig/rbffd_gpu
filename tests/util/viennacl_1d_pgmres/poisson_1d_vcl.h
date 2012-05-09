@@ -85,7 +85,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
+    Poisson1D_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -277,15 +277,15 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
         }
 
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
-        VCL_VEC_t diff(sol.size()); 
+        VCL_VEC_t diff = sol;
 
         viennacl::vector_range<VCL_VEC_t> exact_view( exact, viennacl::range(exact.size() - sol.size(), exact.size())); 
 
-        viennacl::linalg::sub(sol, exact_view, diff); 
+        diff -= exact_view; 
 
-        std::cout << "Rel l1*   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
-        std::cout << "Rel l2*   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
-        std::cout << "Rel linf* Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
     }
 
 

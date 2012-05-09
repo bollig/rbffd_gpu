@@ -292,7 +292,7 @@ namespace viennacl
         {
           elements_ = viennacl::ocl::current_context().create_memory(CL_MEM_READ_WRITE, sizeof(SCALARTYPE)*internal_size());
           cl_int err;
-          err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.get().handle().get(), elements_.get(), 0, 0, sizeof(SCALARTYPE)*internal_size(), 0, NULL, NULL);
+          err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.get().handle().get(), elements_.get(), sizeof(SCALARTYPE)*vec.start(), 0, sizeof(SCALARTYPE)*internal_size(), 0, NULL, NULL);
           //assert(err == CL_SUCCESS);
           VIENNACL_ERR_CHECK(err);
         }
@@ -322,7 +322,7 @@ namespace viennacl
         if (size() != 0)
         {
           cl_int err;
-          err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.get().handle().get(), elements_.get(), 0, 0, sizeof(SCALARTYPE)*internal_size(), 0, NULL, NULL);
+          err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), vec.get().handle().get(), elements_.get(), sizeof(SCALARTYPE)*vec.start(), 0, sizeof(SCALARTYPE)*internal_size(), 0, NULL, NULL);
           VIENNACL_ERR_CHECK(err);
         }
         return *this;

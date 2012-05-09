@@ -142,6 +142,9 @@ namespace viennacl
                     this->rbuf = new double[R_tot];
                 }
 
+                // TODO: (bug) fix the copy set R and set O so when a value is
+                // sent to multiple CPUs it is placed in the correct vector for
+                // alltoallv. 
                 template <typename GPUVectorType>
                 void syncSetR(double*& vec, GPUVectorType& gpu_vec) const {
                     //unsigned int nb_nodes = grid_ref.getNodeListSize();
@@ -198,6 +201,7 @@ namespace viennacl
                         if (comm_ref.getSize() > 1) {
                                     
                             // GPU array is arranged as {QmB BmO O R} 
+                            // TODO: however the set O and set R might have values that span multiple CPUs. 
 
                             //std::cout << "VCL TRANSFER " << grid_ref.O_by_rank.size() << "\n";
                             syncSetO(sbuf,vec);
@@ -245,7 +249,10 @@ namespace viennacl
                                 for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
                                     unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
                                     //                                    std::cout << "Receiving " << r_indx << "\n";
-                                    // TODO: need to translate to local indexing properly. This hack assumes all boundary are dirichlet and appear first in the list
+                                    // TODO: need to translate to local
+                                    // indexing properly. This hack assumes all
+                                    // boundary are dirichlet and appear first
+                                    // in the list
                                     vec[r_indx] = this->rbuf[k];  
                                     k++; 
                                 }

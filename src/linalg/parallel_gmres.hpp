@@ -146,12 +146,13 @@ namespace viennacl
                 // sent to multiple CPUs it is placed in the correct vector for
                 // alltoallv. 
                 template <typename GPUVectorType>
-                void syncSetR(double*& vec, GPUVectorType& gpu_vec) const {
+                void syncSetR(GPUVectorType& gpu_vec) const {
                     //unsigned int nb_nodes = grid_ref.getNodeListSize();
                     //unsigned int set_G_size = grid_ref.G.size();
                     unsigned int set_Q_size = grid_ref.Q.size();
                     //unsigned int set_O_size = grid_ref.O.size();
                     unsigned int set_R_size = grid_ref.R.size();
+                    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
                     // OUR SOLUTION IS ARRANGED IN THIS FASHION:
                     //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
@@ -160,17 +161,40 @@ namespace viennacl
                     // map to convert from local node indices to the linear
                     // system indices (i.e. filter off the dirichlet boundary
                     // node indices
-                    unsigned int offset_to_set_R = set_Q_size - grid_ref.getBoundaryIndicesSize();
+                    unsigned int offset_to_interior = nb_bnd; 
+                    unsigned int offset_to_set_R = set_Q_size;
 
+                   viennacl::vector_range< GPUVectorType > setR(gpu_vec, viennacl::range(offset_to_set_R-offset_to_interior, (offset_to_set_R-offset_to_interior)+set_R_size));
 
-                    viennacl::vector_range< GPUVectorType > setR(gpu_vec, viennacl::range(offset_to_set_R, offset_to_set_R+set_R_size));
-                    viennacl::copy(vec, setR, set_R_size);                    
+                    double* vec = new double[set_R_size]; 
+
+                    unsigned int k = 0; 
+                    for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
+                        k = this->rdispls[i]; 
+                        for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
+                            unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]); 
+                            // Offset the r_indx to 0 and we'll copy the subset
+                            // into the proper range
+                            r_indx -= offset_to_set_R; 
+
+                            // TODO: need to translate to local
+                            // indexing properly. This hack assumes all
+                            // boundary are dirichlet and appear first
+                            // in the list
+                            vec[r_indx] = this->rbuf[k];  
+                            k++; 
+                        }
+                    }
+                    delete [] vec;
+
+                    viennacl::copy(vec, setR, set_R_size);
                 }
 
                 template <typename GPUVectorType>
-                void syncSetO(double*& vec, GPUVectorType& gpu_vec) const {
+                void syncSetO(GPUVectorType& gpu_vec) const {
                     unsigned int set_Q_size = grid_ref.Q.size();
                     unsigned int set_O_size = grid_ref.O.size();
+                    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
                     // OUR SOLUTION IS ARRANGED IN THIS FASHION:
                     //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
@@ -180,10 +204,31 @@ namespace viennacl
                     // map to convert from local node indices to the linear
                     // system indices (i.e. filter off the dirichlet boundary
                     // node indices
-                    unsigned int offset_to_set_O = set_Q_size - set_O_size - grid_ref.getBoundaryIndicesSize();
+                    unsigned int offset_to_interior = nb_bnd; 
+                    unsigned int offset_to_set_O = (set_Q_size - set_O_size); 
 
-                    viennacl::vector_range< GPUVectorType > setO(gpu_vec, viennacl::range(offset_to_set_O, offset_to_set_O+set_O_size));
+//                    std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
+
+                    viennacl::vector_range< GPUVectorType > setO(gpu_vec, viennacl::range(offset_to_set_O - offset_to_interior, (offset_to_set_O-offset_to_interior)+set_O_size));
+
+                    double* vec = new double[set_O_size]; 
+
                     viennacl::copy(setO, vec, set_O_size);                    
+
+                    // Copy elements to sbuf individually in case multiple procs receive the values
+                    unsigned int k = 0; 
+                    for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
+                        k = this->sdispls[i]; 
+                        for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
+                            unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]);
+                            s_indx -= offset_to_set_O;
+
+                            this->sbuf[k] = vec[s_indx];
+                            k++; 
+                        }
+                    }
+
+                    delete [] vec; 
                 }
 
                 // Generic for GPU (transfer GPU subset to cpu buffer, alltoallv
@@ -204,12 +249,12 @@ namespace viennacl
                             // TODO: however the set O and set R might have values that span multiple CPUs. 
 
                             //std::cout << "VCL TRANSFER " << grid_ref.O_by_rank.size() << "\n";
-                            syncSetO(sbuf,vec);
+                            syncSetO(vec);
 
                             MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
                             comm_ref.barrier();
                             
-                            syncSetR(rbuf, vec); 
+                            syncSetR(vec); 
                         }
                     }
 

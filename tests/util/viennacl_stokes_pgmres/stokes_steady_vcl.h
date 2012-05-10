@@ -126,7 +126,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             U_approx_dev = new VCL_VEC_t(4*NN); 
         }
 #endif 
-       char dir[FILENAME_MAX]; 
+        char dir[FILENAME_MAX]; 
         sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
 
         dir_str = string(dir); 
@@ -194,7 +194,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         for (unsigned int j = 0; j < N; j++) {
             unsigned int row_ind = j + 1*N;
             NodeType& node = nodes[j]; 
-           double Xx = node.x(); 
+            double Xx = node.x(); 
             double Yy = node.y(); 
             double Zz = node.z(); 
 
@@ -206,7 +206,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         for (unsigned int j = 0; j < N; j++) {
             unsigned int row_ind = j + 2*N;
             NodeType& node = nodes[j];
-           double Xx = node.x(); 
+            double Xx = node.x(); 
             double Yy = node.y(); 
             double Zz = node.z(); 
 
@@ -380,7 +380,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         unsigned int diag_row_ind = 4*N;
         for (unsigned int j = 0; j < N; j++) {
             unsigned int diag_col_ind = j + 0*N;
-            
+
             A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
 
             //A(diag_row_ind, diag_col_ind) = 1.;  
@@ -414,7 +414,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 #endif 
 
-       if (solve_on_gpu) 
+        if (solve_on_gpu) 
         { 
             // Put all of the known system on the GPU. 
             copy(A, *LHS_dev);
@@ -451,12 +451,12 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
-#if 1
+#if 0
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
 #else 
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
 #endif 
-            
+
             if (tag.iters() < tag.max_iterations()) { 
                 std::cout << "\n[+++] Solver converged "; //<< tag.error() << " relative tolerance";       
                 std::cout << " after " << tag.iters() << " iterations" << std::endl << std::endl;
@@ -464,7 +464,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             else
             {
                 std::cout << "\n[XXX] Solver reached iteration limit " << tag.iters() << " before converging\n\n";
-            //    std::cout << " to " << tag.tolerance() << " relative tolerance " << std::endl << std::endl;
+                //    std::cout << " to " << tag.tolerance() << " relative tolerance " << std::endl << std::endl;
             }
 
 
@@ -481,15 +481,37 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
-        VCL_VEC_t diff(sol.size()); 
+        unsigned int start_indx = 0; 
+        unsigned int end_indx = NN; 
+        for (unsigned int i =0; i < 4; i++) {
+            VCL_VEC_t diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(start_indx, end_indx)); 
 
-        viennacl::vector_range<VCL_VEC_t> exact_view( exact, viennacl::range(exact.size() - sol.size(), exact.size())); 
+            viennacl::vector_range<VCL_VEC_t> exact_view( exact, viennacl::range(start_indx + nb_bnd, end_indx+nb_bnd)); 
 
-        diff -= exact_view; 
+            diff -= exact_view; 
 
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
+            std::cout << "COMPONENT [" << i << "]\n";
+            std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact_view, comm_ref) << std::endl;  
+            std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact_view, comm_ref) << std::endl;  
+            std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact_view, comm_ref) << std::endl;  
+
+            start_indx = end_indx; 
+            end_indx = start_indx + NN; 
+        }
+
+        // Global difference
+        VCL_VEC_t g_diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(0, sol.size()-4)); 
+
+        viennacl::vector_range<VCL_VEC_t> g_exact_view( exact, viennacl::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
+
+        g_diff -= g_exact_view; 
+
+        std::cout << "GLOBAL ERROR\n";
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(g_diff, comm_ref) / viennacl::linalg::norm_1(g_exact_view, comm_ref) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(g_diff, comm_ref) / viennacl::linalg::norm_2(g_exact_view, comm_ref) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(g_diff, comm_ref) / viennacl::linalg::norm_inf(g_exact_view, comm_ref) << std::endl;  
+
+
     }
 
 
@@ -508,7 +530,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
 
 
-   void write_System ( )
+    void write_System ( )
     {
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx"); 
@@ -521,8 +543,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
     void write_Solution()
     {
-        unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
-
         // IF we want to write details we need to copy back to host. 
         UBLAS_VEC_t U_approx(U_exact_host->size(), 0); 
         if (solve_on_gpu) { 

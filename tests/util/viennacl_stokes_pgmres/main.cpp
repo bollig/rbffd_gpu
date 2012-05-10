@@ -28,9 +28,14 @@ using namespace EB;
 int main(int argc, char** argv) {
 
     std::vector<std::string> grids; 
-//    grids.push_back("~/GRIDS/md/md063.04096"); 
+    grids.push_back("~/GRIDS/md/md031.01024"); 
+    grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/md/md100.10201"); 
-//grids.push_back("~/GRIDS/md/md031.01024"); 
+    grids.push_back("~/GRIDS/md/md127.16384"); 
+    grids.push_back("~/GRIDS/md/md141.20164");
+    grids.push_back("~/GRIDS/md/md159.25600"); 
+    grids.push_back("~/GRIDS/md/md165.27556"); 
+
 
     TimerList tm;
 

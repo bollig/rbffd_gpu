@@ -47,6 +47,7 @@
 #include "manufactured_solution.h"
 #include "utils/spherical_harmonics.h"
 #include "pdes/implicit_pde.h"
+#include "timer_eb.h"
 
 class StokesSteady_PDE_VCL : public ImplicitPDE
 {
@@ -70,6 +71,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     VCL_VEC_t* U_approx_dev; 
 
 
+    EB::TimerList tlist; 
+
     // Problem size (Num Rows)
     unsigned int N;
     // Problem size (Num Cols)
@@ -92,6 +95,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
+        setupTimers(); 
+
         N = grid_ref.getStencilsSize(); 
         M = grid_ref.getNodeListSize(); 
         n = grid_ref.getMaxStencilSize(); 
@@ -99,6 +104,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         NN = N - nb_bnd; 
         MM = M - nb_bnd; 
 
+        tlist["allocate"]->start();
 #ifdef STOKES_CONSTRAINTS
         unsigned int NNZ = 9*n*NN+2*(4*NN)+2*(3*NN);  
         LHS_host = new UBLAS_MAT_t(4*NN+4,4*MM+4,NNZ); 
@@ -126,6 +132,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             U_approx_dev = new VCL_VEC_t(4*NN); 
         }
 #endif 
+        tlist["allocate"]->stop(); 
+
         char dir[FILENAME_MAX]; 
         sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
 
@@ -146,6 +154,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             delete(U_exact_dev);
             delete(U_approx_dev);
         }
+
+        tlist.printAllNonStatic();
     }
 
     // Catch the call to "solve()" and allow users to specify "solve_on_gpu=1"
@@ -161,7 +171,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
     virtual void assemble() 
     {
-
+        tlist["assemble"]->start(); 
+        std::cout << "Assembling... \n";
         UBLAS_MAT_t& A = *LHS_host; 
         UBLAS_VEC_t& F = *RHS_host;
         UBLAS_VEC_t& U_exact = *U_exact_host;
@@ -170,6 +181,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         //------ RHS ----------
 
+        tlist["assemble_rhs"]->start(); 
         ManufacturedSolution MS; 
 
         double eta = 1.;
@@ -179,6 +191,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         //------------- Fill F -------------
 
         // U
+        double sumU = 0.;
         for (unsigned int j = 0; j < MM; j++) {
             unsigned int row_ind = j + 0*N;
             NodeType& node = nodes[j]; 
@@ -188,9 +201,11 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             U_exact(row_ind) = MS.U(Xx,Yy,Zz); 
             F(row_ind) = MS.RHS_U(Xx,Yy,Zz); 
+            sumU += U_exact(row_ind); 
         }
 
         // V
+        double sumV = 0.;
         for (unsigned int j = 0; j < N; j++) {
             unsigned int row_ind = j + 1*N;
             NodeType& node = nodes[j]; 
@@ -200,9 +215,11 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             U_exact(row_ind) = MS.V(Xx,Yy,Zz); 
             F(row_ind) = MS.RHS_V(Xx,Yy,Zz); 
+            sumV += U_exact(row_ind); 
         }
 
         // W
+        double sumW = 0.;
         for (unsigned int j = 0; j < N; j++) {
             unsigned int row_ind = j + 2*N;
             NodeType& node = nodes[j];
@@ -212,9 +229,11 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             U_exact(row_ind) = MS.W(Xx,Yy,Zz); 
             F(row_ind) = MS.RHS_W(Xx,Yy,Zz); 
+            sumW += U_exact(row_ind);
         }
 
         // P
+        double sumP = 0.;
         for (unsigned int j = 0; j < N; j++) {
             unsigned int row_ind = j + 3*N;
             NodeType& node = nodes[j]; 
@@ -224,6 +243,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             U_exact(row_ind) = MS.P(Xx,Yy,Zz); 
             F(row_ind) = MS.RHS_P(Xx,Yy,Zz); 
+            sumP += U_exact(row_ind);
         }
 
 #ifdef STOKES_CONSTRAINTS
@@ -240,6 +260,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         // Sum of P
         F(4*N+3) = 0.;
 #else 
+#if 0
         // Sum of U
         F(4*N+0) = MS.RHS_CU();
 
@@ -251,14 +272,29 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         // Sum of P
         F(4*N+3) = MS.RHS_CP();
+#else 
+        // Sum of U
+        F(4*N+0) = sumU; 
+
+        // Sum of V
+        F(4*N+1) = sumV; 
+
+        // Sum of W
+        F(4*N+2) = sumW; 
+
+        // Sum of P
+        F(4*N+3) = sumP;
 #endif 
+#endif
 #endif 
 
         // This should get values from neighboring processors into U_exact. 
         this->sendrecvUpdates(U_exact,"U_exact"); 
+        tlist["assemble_rhs"]->stop();
 
         // -----------------  Fill LHS --------------------
         //
+        tlist["assemble_lhs"]->start();
         // U (block)  row
         for (unsigned int i = 0; i < NN; i++) {
             StencilType& st = grid_ref.getStencil(i);
@@ -370,6 +406,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 #endif 
         }
 
+#if 0
 #ifdef STOKES_CONSTRAINTS
         // ------ EXTRA CONSTRAINT ROWS -----
         // U
@@ -413,15 +450,58 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             //A(diag_row_ind, diag_col_ind) = 1.;  
         }
 #endif 
+#else 
+#ifdef STOKES_CONSTRAINTS
+       // ------ EXTRA CONSTRAINT ROWS -----
+        // U
+        unsigned int diag_row_ind = 4*N;
+        for (unsigned int j = 0; j < N; j++) {
+            unsigned int diag_col_ind = j + 0*N;
+
+            A(diag_row_ind, diag_col_ind) = 1.;  
+        }
+
+        diag_row_ind++; 
+        // V
+        for (unsigned int j = 0; j < N; j++) {
+            unsigned int diag_col_ind = j + 1*N;
+
+            A(diag_row_ind, diag_col_ind) = 1.;  
+        }
+
+        diag_row_ind++; 
+        // W
+        for (unsigned int j = 0; j < N; j++) {
+            unsigned int diag_col_ind = j + 2*N;
+
+            A(diag_row_ind, diag_col_ind) = 1.;  
+        }
+
+        diag_row_ind++; 
+        // P
+        for (unsigned int j = 0; j < N; j++) {
+            unsigned int diag_col_ind = j + 3*N;
+
+            A(diag_row_ind, diag_col_ind) = 1.;  
+        }
+#endif 
+#endif 
+        tlist["assemble_lhs"]->stop();
 
         if (solve_on_gpu) 
         { 
+            std::cout << "Sending system to GPU...\n";
+            tlist["assemble_gpu"]->start();
             // Put all of the known system on the GPU. 
             copy(A, *LHS_dev);
             viennacl::copy(RHS_host->begin(),RHS_host->end(), RHS_dev->begin());
             viennacl::copy(U_exact_host->begin(),U_exact_host->end(), U_exact_dev->begin());
             viennacl::copy(U_approx_host->begin(),U_approx_host->end(), U_approx_dev->begin());
+            tlist["assemble_gpu"]->stop();
         }
+        std::cout << "done.\n";
+
+        tlist["assemble"]->stop();
     }
 
 
@@ -435,7 +515,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
-#if 0
+#if 1
             viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
@@ -451,11 +531,13 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
+            tlist["solve"]->start();
 #if 0
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
 #else 
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
 #endif 
+            tlist["solve"]->stop();
 
             if (tag.iters() < tag.max_iterations()) { 
                 std::cout << "\n[+++] Solver converged "; //<< tag.error() << " relative tolerance";       
@@ -481,8 +563,10 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
+        tlist["checkNorms"]->start();
         unsigned int start_indx = 0; 
         unsigned int end_indx = NN; 
+
         for (unsigned int i =0; i < 4; i++) {
             VCL_VEC_t diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(start_indx, end_indx)); 
 
@@ -490,7 +574,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             diff -= exact_view; 
 
-            std::cout << "COMPONENT [" << i << "]\n";
+            std::cout << "COMPONENT [" << i << " (" << start_indx << "->" << end_indx-1 << " of " << sol.size() << ")]\n";
             std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact_view, comm_ref) << std::endl;  
             std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact_view, comm_ref) << std::endl;  
             std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact_view, comm_ref) << std::endl;  
@@ -506,43 +590,72 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         g_diff -= g_exact_view; 
 
-        std::cout << "GLOBAL ERROR\n";
+        std::cout << "GLOBAL ERROR " << NN << "\n";
         std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(g_diff, comm_ref) / viennacl::linalg::norm_1(g_exact_view, comm_ref) << std::endl;  
         std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(g_diff, comm_ref) / viennacl::linalg::norm_2(g_exact_view, comm_ref) << std::endl;  
         std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(g_diff, comm_ref) / viennacl::linalg::norm_inf(g_exact_view, comm_ref) << std::endl;  
 
-
+        tlist["checkNorms"]->stop();
     }
 
 
     void checkNorms(UBLAS_VEC_t& sol, UBLAS_VEC_t& exact) {
-        UBLAS_VEC_t diff = sol; 
+        tlist["checkNorms"]->start();
+        unsigned int start_indx = 0; 
+        unsigned int end_indx = NN; 
 
-        boost::numeric::ublas::vector_range<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::range(exact.size() - sol.size(), exact.size())); 
+        for (unsigned int i =0; i < 4; i++) {
+            UBLAS_VEC_t diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(start_indx, end_indx)); 
 
-        diff -= exact_view; 
+            boost::numeric::ublas::vector_range<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::range(start_indx + nb_bnd, end_indx+nb_bnd)); 
 
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
-    }
+            diff -= exact_view; 
+
+            std::cout << "COMPONENT [" << i << " (" << start_indx << "->" << end_indx-1 << " of " << sol.size() << ")]\n";
+            std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact_view, comm_ref) << std::endl;  
+            std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact_view, comm_ref) << std::endl;  
+            std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact_view, comm_ref) << std::endl;  
+
+            start_indx = end_indx; 
+            end_indx = start_indx + NN; 
+        }
+
+        // Global difference
+        UBLAS_VEC_t g_diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(0, sol.size()-4)); 
+
+        boost::numeric::ublas::vector_range<UBLAS_VEC_t> g_exact_view( exact, boost::numeric::ublas::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
+
+        g_diff -= g_exact_view; 
+
+        std::cout << "GLOBAL ERROR " << NN << "\n";
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(g_diff, comm_ref) / viennacl::linalg::norm_1(g_exact_view, comm_ref) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(g_diff, comm_ref) / viennacl::linalg::norm_2(g_exact_view, comm_ref) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(g_diff, comm_ref) / viennacl::linalg::norm_inf(g_exact_view, comm_ref) << std::endl;  
+
+        tlist["checkNorms"]->stop();
+   }
 
 
 
 
     void write_System ( )
     {
+        tlist["writeSystem"]->start();
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
-        write_to_file(*U_exact_host, dir_str + "U_exact.mtx"); 
-        viennacl::io::write_matrix_market_file(*LHS_host,dir_str + "LHS.mtx"); 
+        write_to_file(*U_exact_host, dir_str + "U_exact.mtx");
+        if (LHS_host->size1() < 4000) {
+            viennacl::io::write_matrix_market_file(*LHS_host,dir_str + "LHS.mtx"); 
+        }
 
         UBLAS_VEC_t temp = boost::numeric::ublas::prod(*LHS_host, *U_exact_host); 
         write_to_file(temp, dir_str + "RHS_discrete.mtx");
         write_to_file(temp-*RHS_host, dir_str + "RHS_err.mtx");
+        tlist["writeSystem"]->stop(); 
     }
 
     void write_Solution()
     {
+        tlist["writeSolution"]->start(); 
         // IF we want to write details we need to copy back to host. 
         UBLAS_VEC_t U_approx(U_exact_host->size(), 0); 
         if (solve_on_gpu) { 
@@ -552,10 +665,26 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         } else { 
             write_to_file(*U_approx_host, dir_str + "U_gpu.mtx"); 
         }
+        tlist["writeSolution"]->stop(); 
     }
 
     virtual std::string className() {
         return "StokesSteady_PDE_VCL"; 
+    }
+
+
+    protected: 
+
+    void setupTimers() {
+        tlist["allocate"] = new EB::Timer("Allocate GPU vectors and matrices"); 
+        tlist["assemble"] = new EB::Timer("Assemble both RHS and LHS");
+        tlist["assemble_lhs"] = new EB::Timer("Assemble LHS");
+        tlist["assemble_rhs"] = new EB::Timer("Assemble RHS");
+        tlist["assemble_gpu"] = new EB::Timer("Send assembled system to GPU");
+        tlist["solve"] = new EB::Timer("Solve system with GMRES");
+        tlist["writeSystem"] = new EB::Timer("Write system to disk"); 
+        tlist["writeSolution"] = new EB::Timer("Write solution to disk"); 
+        tlist["checkNorms"] = new EB::Timer("Check solution norms");
     }
 };
 

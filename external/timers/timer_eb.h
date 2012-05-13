@@ -102,6 +102,19 @@ namespace EB {
             void printAll() {
                 (*(this->begin())).second->printAll(); 
             } 
+            void printAllNonStatic(FILE* fd=stdout, int label_width=40)
+            {
+                fprintf(fd, "====================================\n"); 
+                fprintf(fd, "Timers [All times in ms (1/1000 s)]: \n"); 		
+                fprintf(fd, "====================================\n\n");     
+                for (TimerList::iterator i=this->begin(); i != this->end(); i++) {
+                    Timer& tim = *(i->second); 
+                    tim.print(fd, label_width);
+                }
+                fprintf(fd, "\nNOTE: only timers that have called Timer::start() are shown. \n");
+                fprintf(fd, "      [A time of 0.0 may indicate the timer was not stopped.]\n"); 
+                fprintf(fd, "====================================\n"); 
+            }
     };
 
 };

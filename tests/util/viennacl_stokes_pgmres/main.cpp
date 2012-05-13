@@ -29,7 +29,9 @@ int main(int argc, char** argv) {
 
     std::vector<std::string> grids; 
     grids.push_back("~/GRIDS/md/md031.01024"); 
+    grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
+    grids.push_back("~/GRIDS/md/md079.06400"); 
     grids.push_back("~/GRIDS/md/md100.10201"); 
     grids.push_back("~/GRIDS/md/md127.16384"); 
     grids.push_back("~/GRIDS/md/md141.20164");
@@ -160,6 +162,7 @@ int main(int argc, char** argv) {
 
         double eps_c1 = settings->GetSettingAs<double>("EPSILON_C1", ProjectSettings::required); 
         double eps_c2 = settings->GetSettingAs<double>("EPSILON_C2", ProjectSettings::required); 
+        int writeIntermediate = settings->GetSettingAs<int>("WRITE_INTERMEDIATE", ProjectSettings::required); 
         
         der->setEpsilonByParameters(eps_c1, eps_c2);
         int der_err = der->loadAllWeightsFromFile(); 
@@ -177,9 +180,15 @@ int main(int argc, char** argv) {
         StokesSteady_PDE_VCL* pde = new StokesSteady_PDE_VCL(subdomain, der, comm_unit); 
 
         pde->assemble();
-        pde->write_System(); 
+        if (writeIntermediate) {
+            pde->write_System(); 
+        }
         pde->solve();
-        pde->write_Solution(); 
+        if (writeIntermediate) {
+            pde->write_Solution(); 
+        }
+
+        delete(pde);
     } 
 
     delete(subdomain);

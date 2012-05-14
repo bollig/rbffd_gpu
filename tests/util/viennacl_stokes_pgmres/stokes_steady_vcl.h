@@ -520,8 +520,10 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
+            tlist["precond"]->start();
             std::cout << "Generating preconditioner...\n";
             viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3*NN) ); 
+            tlist["precond"]->stop();
 #if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
@@ -682,6 +684,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         tlist["assemble_rhs"] = new EB::Timer("Assemble RHS");
         tlist["assemble_gpu"] = new EB::Timer("Send assembled system to GPU");
         tlist["solve"] = new EB::Timer("Solve system with GMRES");
+        tlist["precond"] = new EB::Timer("Construct preconditioner");
         tlist["writeSystem"] = new EB::Timer("Write system to disk"); 
         tlist["writeSolution"] = new EB::Timer("Write solution to disk"); 
         tlist["checkNorms"] = new EB::Timer("Check solution norms");

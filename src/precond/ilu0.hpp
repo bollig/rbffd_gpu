@@ -37,6 +37,8 @@ License:         MIT (X11), see file LICENSE in the base directory
 
 #include <map>
 
+#include "timer_eb.h"
+
 namespace viennacl
 {
     namespace linalg
@@ -357,6 +359,9 @@ namespace viennacl
                 //MatrixType LU;
                 public: std::vector< std::map<unsigned int, ScalarType> > LU;
                 private: mutable std::vector<ScalarType> temp_vec;
+                private: 
+                         EB::Timer* t1;
+                         EB::Timer* t2; 
             };
 
     }

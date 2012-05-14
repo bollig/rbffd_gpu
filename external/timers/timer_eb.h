@@ -115,6 +115,12 @@ namespace EB {
                 fprintf(fd, "      [A time of 0.0 may indicate the timer was not stopped.]\n"); 
                 fprintf(fd, "====================================\n"); 
             }
+            virtual void clear() {
+                for (TimerList::iterator i=this->begin(); i != this->end(); i++) {
+                    delete(i->second);
+                }
+                std::map<std::string, EB::Timer*>::clear();
+            }
     };
 
 };

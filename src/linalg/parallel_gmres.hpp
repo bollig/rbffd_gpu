@@ -461,8 +461,10 @@ namespace viennacl
 
             MPI_Barrier(MPI_COMM_WORLD);
 
+#if GMRES_DEBUG
             if (tag.comm().isMaster()) 
                 std::cout << "Starting Parallel GMRES..." << std::endl;
+#endif 
             tag.iters(0);
 
             // Save very first residual norm so we know when to stop
@@ -491,8 +493,10 @@ namespace viennacl
 
                 if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
                 {
+#if GMRES_DEBUG
                     if (tag.comm().isMaster()) 
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
+#endif
                     tag.error(beta / b_norm);
                     return x_full;
                 }
@@ -541,8 +545,9 @@ namespace viennacl
                     PlaneRotation(H,cs,sn,s,i);
 
                     rel_resid0 = fabs(s[i+1]) / resid0;
+#if GMRES_DEBUG
                     std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
-
+#endif 
                     tag.error(rel_resid0);
                     // We could add absolute tolerance here as well: 
                     if (rel_resid0 < b_norm * tag.tolerance() ) {
@@ -665,8 +670,10 @@ namespace viennacl
 
             MPI_Barrier(MPI_COMM_WORLD);
 
+#if GMRES_DEBUG
             if (tag.comm().isMaster()) 
                 std::cout << "Starting Parallel GMRES..." << std::endl;
+#endif 
             tag.iters(0);
 
             // Save very first residual norm so we know when to stop
@@ -696,8 +703,10 @@ namespace viennacl
 
                 if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
                 {
+#if GMRES_DEBUG
                     if (tag.comm().isMaster()) 
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
+#endif 
                     tag.error(beta / b_norm);
                     return x_full;
                 }
@@ -742,8 +751,9 @@ namespace viennacl
                     PlaneRotation(H,cs,sn,s,i);
 
                     rel_resid0 = fabs(s[i+1]) / resid0;
+#if GMRES_DEBUG
                     std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
-
+#endif 
                     tag.error(rel_resid0);
                     // We could add absolute tolerance here as well: 
                     if (rel_resid0 < b_norm * tag.tolerance() ) {

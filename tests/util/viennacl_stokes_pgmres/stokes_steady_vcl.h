@@ -156,6 +156,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
         tlist.printAllNonStatic();
+        tlist.clear();
     }
 
     // Catch the call to "solve()" and allow users to specify "solve_on_gpu=1"

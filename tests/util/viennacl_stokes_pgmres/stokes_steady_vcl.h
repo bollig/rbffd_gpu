@@ -296,6 +296,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         // -----------------  Fill LHS --------------------
         //
         tlist["assemble_lhs"]->start();
+#if 0
         // U (block)  row
         for (unsigned int i = 0; i < NN; i++) {
             StencilType& st = grid_ref.getStencil(i);
@@ -407,51 +408,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 #endif 
         }
 
-#if 0
-#ifdef STOKES_CONSTRAINTS
-        // ------ EXTRA CONSTRAINT ROWS -----
-        // U
-        GridReader g10("/panfs/panasas1/users/efb06/GRIDS/md/md100.10201", 4); 
-        g10.setLoadExtra(1); 
-        g10.generate();
-
-        unsigned int diag_row_ind = 4*N;
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int diag_col_ind = j + 0*N;
-
-            A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
-
-            //A(diag_row_ind, diag_col_ind) = 1.;  
-        }
-
-        diag_row_ind++; 
-        // V
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int diag_col_ind = j + 1*N;
-
-            A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
-            //A(diag_row_ind, diag_col_ind) = 1.;  
-        }
-
-        diag_row_ind++; 
-        // W
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int diag_col_ind = j + 2*N;
-
-            A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
-            //A(diag_row_ind, diag_col_ind) = 1.;  
-        }
-
-        diag_row_ind++; 
-        // P
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int diag_col_ind = j + 3*N;
-
-            A(diag_row_ind, diag_col_ind) = ((GridReader&)g10).getExtraCol()[j]; 
-            //A(diag_row_ind, diag_col_ind) = 1.;  
-        }
-#endif 
-#else 
 #ifdef STOKES_CONSTRAINTS
        // ------ EXTRA CONSTRAINT ROWS -----
         // U
@@ -486,7 +442,69 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             A(diag_row_ind, diag_col_ind) = 1.;  
         }
 #endif 
+#else 
+        // Number of components to interleave
+        unsigned int NC = 4; 
+
+        // U (block)  row
+        for (unsigned int i = 0; i < NN; i++) {
+            StencilType& st = grid_ref.getStencil(i);
+
+            double* ddx = der_ref.getStencilWeights(RBFFD::XSFC, i);
+            double* ddy = der_ref.getStencilWeights(RBFFD::YSFC, i);
+            double* ddz = der_ref.getStencilWeights(RBFFD::ZSFC, i);
+            double* lapl = der_ref.getStencilWeights(RBFFD::LSFC, i); 
+
+            unsigned int diag_row_ind = i * NC;
+
+
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_col_ind = st[j]*NC;
+                    A(diag_row_ind+0, diag_col_ind+0) = -eta * lapl[j];  
+                    A(diag_row_ind+0, diag_col_ind+3) = ddx[j];  
+                    A(diag_row_ind+0, 4*NN+0) = 1.;
+                }
+                
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_col_ind = st[j]*NC;
+                    A(diag_row_ind+1, diag_col_ind+1) = -eta * lapl[j];  
+                    A(diag_row_ind+1, diag_col_ind+3) = ddy[j];  
+                    A(diag_row_ind+1, 4*NN+1) = 1.;
+                }
+                
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_col_ind = st[j]*NC;
+                    A(diag_row_ind+2, diag_col_ind+2) = -eta * lapl[j];  
+                    A(diag_row_ind+2, diag_col_ind+3) = ddz[j];  
+                    A(diag_row_ind+2, 4*NN+2) = 1.;
+                }
+                    
+                for (unsigned int j = 0; j < st.size(); j++) {
+                    unsigned int diag_col_ind = st[j]*NC;
+                    A(diag_row_ind+3, diag_col_ind+0) = ddx[j];  
+                    A(diag_row_ind+3, diag_col_ind+1) = ddy[j];  
+                    A(diag_row_ind+3, diag_col_ind+2) = ddz[j];  
+                    A(diag_row_ind+3, 4*NN+3) = 1.;
+                }
+        }
+
+        for (unsigned int j = 0; j < NN; j++) {
+            A(4*NN+0, (j*NC)+0) = 1.;  
+        }
+        for (unsigned int j = 0; j < NN; j++) {
+            A(4*NN+1, (j*NC)+1) = 1.;  
+        }
+        for (unsigned int j = 0; j < NN; j++) {
+            A(4*NN+2, (j*NC)+2) = 1.;  
+        }
+        for (unsigned int j = 0; j < NN; j++) {
+            A(4*NN+3, (j*NC)+3) = 1.;  
+        }
+
 #endif 
+        viennacl::io::write_matrix_market_file(A, dir_str + "A.mtx"); 
+        exit(-1);
+
         tlist["assemble_lhs"]->stop();
 
         if (solve_on_gpu) 
@@ -516,7 +534,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
-#if 1
+#if 0
             viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 

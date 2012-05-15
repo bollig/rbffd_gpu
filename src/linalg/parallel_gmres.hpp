@@ -844,6 +844,8 @@ namespace viennacl
 
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
+            tlist.printAllNonStatic(); 
+            tlist.clear();
             return x_full;
         }
 

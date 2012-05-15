@@ -216,6 +216,7 @@ int main(int argc, char** argv) {
             tm["total"]->stop();
             tm.printAllNonStatic(); 
             tm.clear();
+            exit(-1);
         }
     } 
     delete(comm_unit); 

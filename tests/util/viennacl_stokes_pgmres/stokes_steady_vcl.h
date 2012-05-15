@@ -174,6 +174,10 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     {
         tlist["assemble"]->start(); 
         std::cout << "Assembling... \n";
+        
+        // Choose either grouped by component or interleaved components
+        // Number of components to interleave
+        unsigned int NC = 4; 
         UBLAS_MAT_t& A = *LHS_host; 
         UBLAS_VEC_t& F = *RHS_host;
         UBLAS_VEC_t& U_exact = *U_exact_host;
@@ -190,91 +194,33 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         std::vector<NodeType>& nodes = grid_ref.getNodeList(); 
 
         //------------- Fill F -------------
-
-        // U
         double sumU = 0.;
-        for (unsigned int j = 0; j < MM; j++) {
-            unsigned int row_ind = j + 0*N;
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
-
-            U_exact(row_ind) = MS.U(Xx,Yy,Zz); 
-            F(row_ind) = MS.RHS_U(Xx,Yy,Zz); 
-            sumU += U_exact(row_ind); 
-        }
-
-        // V
         double sumV = 0.;
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int row_ind = j + 1*N;
-            NodeType& node = nodes[j]; 
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
-
-            U_exact(row_ind) = MS.V(Xx,Yy,Zz); 
-            F(row_ind) = MS.RHS_V(Xx,Yy,Zz); 
-            sumV += U_exact(row_ind); 
-        }
-
-        // W
         double sumW = 0.;
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int row_ind = j + 2*N;
-            NodeType& node = nodes[j];
-            double Xx = node.x(); 
-            double Yy = node.y(); 
-            double Zz = node.z(); 
-
-            U_exact(row_ind) = MS.W(Xx,Yy,Zz); 
-            F(row_ind) = MS.RHS_W(Xx,Yy,Zz); 
-            sumW += U_exact(row_ind);
-        }
-
-        // P
         double sumP = 0.;
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int row_ind = j + 3*N;
+        for (unsigned int j = 0; j < MM; j++) {
+            unsigned int row_ind = j*NC;
             NodeType& node = nodes[j]; 
             double Xx = node.x(); 
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-            U_exact(row_ind) = MS.P(Xx,Yy,Zz); 
-            F(row_ind) = MS.RHS_P(Xx,Yy,Zz); 
-            sumP += U_exact(row_ind);
+            U_exact(row_ind+0) = MS.U(Xx,Yy,Zz); 
+            U_exact(row_ind+1) = MS.V(Xx,Yy,Zz); 
+            U_exact(row_ind+2) = MS.W(Xx,Yy,Zz); 
+            U_exact(row_ind+3) = MS.P(Xx,Yy,Zz); 
+            F(row_ind+0) = MS.RHS_U(Xx,Yy,Zz); 
+            F(row_ind+1) = MS.RHS_V(Xx,Yy,Zz); 
+            F(row_ind+2) = MS.RHS_W(Xx,Yy,Zz); 
+            F(row_ind+3) = MS.RHS_P(Xx,Yy,Zz); 
+            sumU += U_exact(row_ind+0); 
+            sumV += U_exact(row_ind+1); 
+            sumW += U_exact(row_ind+2); 
+            sumP += U_exact(row_ind+3); 
         }
 
 #ifdef STOKES_CONSTRAINTS
-#if 0
-        // Sum of U
-        F(4*N+0) = 0.;
-
-        // Sum of V
-        F(4*N+1) = 0.;
-
-        // Sum of W
-        F(4*N+2) = 0.;
-
-        // Sum of P
-        F(4*N+3) = 0.;
-#else 
-#if 0
-        // Sum of U
-        F(4*N+0) = MS.RHS_CU();
-
-        // Sum of V
-        F(4*N+1) = MS.RHS_CV();
-
-        // Sum of W
-        F(4*N+2) = MS.RHS_CW();
-
-        // Sum of P
-        F(4*N+3) = MS.RHS_CP();
-#else 
-        // Sum of U
+       // Sum of U
         F(4*N+0) = sumU; 
 
         // Sum of V
@@ -286,8 +232,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         // Sum of P
         F(4*N+3) = sumP;
 #endif 
-#endif
-#endif 
 
         // This should get values from neighboring processors into U_exact. 
         this->sendrecvUpdates(U_exact,"U_exact"); 
@@ -296,155 +240,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         // -----------------  Fill LHS --------------------
         //
         tlist["assemble_lhs"]->start();
-#if 0
-        // U (block)  row
-        for (unsigned int i = 0; i < NN; i++) {
-            StencilType& st = grid_ref.getStencil(i);
-
-            double* ddx = der_ref.getStencilWeights(RBFFD::XSFC, i);
-            double* lapl = der_ref.getStencilWeights(RBFFD::LSFC, i); 
-
-            unsigned int diag_row_ind = i + 0*N;
-
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 0*N;
-
-                A(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
-            }
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 3*N;
-
-                A(diag_row_ind, diag_col_ind) = ddx[j];  
-            }
-
-#ifdef STOKES_CONSTRAINTS
-            // Added constraint to square mat and close nullspace
-            A(diag_row_ind, 4*N+0) = 1.; 
-#endif 
-        }
-
-        // V (block)  row
-        for (unsigned int i = 0; i < NN; i++) {
-            StencilType& st = grid_ref.getStencil(i);
-
-            double* ddy = der_ref.getStencilWeights(RBFFD::YSFC, i);
-            double* lapl = der_ref.getStencilWeights(RBFFD::LSFC, i); 
-
-            unsigned int diag_row_ind = i + 1*N;
-
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 1*N;
-
-                A(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
-            }
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 3*N;
-
-                A(diag_row_ind, diag_col_ind) = ddy[j];  
-            }
-
-#ifdef STOKES_CONSTRAINTS
-            // Added constraint to square mat and close nullspace
-            A(diag_row_ind, 4*N+1) = 1.; 
-#endif 
-        }
-
-        // W (block)  row
-        for (unsigned int i = 0; i < NN; i++) {
-            StencilType& st = grid_ref.getStencil(i);
-
-            double* ddz = der_ref.getStencilWeights(RBFFD::ZSFC, i);
-            double* lapl = der_ref.getStencilWeights(RBFFD::LSFC, i); 
-
-            unsigned int diag_row_ind = i + 2*N;
-
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 2*N;
-
-                A(diag_row_ind, diag_col_ind) = -eta * lapl[j];  
-            }
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 3*N;
-
-                A(diag_row_ind, diag_col_ind) = ddz[j];  
-            }
-
-#ifdef STOKES_CONSTRAINTS
-            // Added constraint to square mat and close nullspace
-            A(diag_row_ind, 4*N+2) = 1.; 
-#endif 
-        }
-
-
-        // P (block)  row
-        for (unsigned int i = 0; i < NN; i++) {
-            StencilType& st = grid_ref.getStencil(i);
-
-            double* ddx = der_ref.getStencilWeights(RBFFD::XSFC, i);
-            double* ddy = der_ref.getStencilWeights(RBFFD::YSFC, i);
-            double* ddz = der_ref.getStencilWeights(RBFFD::ZSFC, i);
-
-            unsigned int diag_row_ind = i + 3*N;
-
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 0*N;
-
-                A(diag_row_ind, diag_col_ind) = ddx[j];  
-            }
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 1*N;
-
-                A(diag_row_ind, diag_col_ind) = ddy[j];  
-            }
-            for (unsigned int j = 0; j < st.size(); j++) {
-                unsigned int diag_col_ind = st[j] + 2*N;
-
-                A(diag_row_ind, diag_col_ind) = ddz[j];  
-            }
-
-#ifdef STOKES_CONSTRAINTS
-            // Added constraint to square mat and close nullspace
-            A(diag_row_ind, 4*N+3) = 1.;  
-#endif 
-        }
-
-#ifdef STOKES_CONSTRAINTS
-       // ------ EXTRA CONSTRAINT ROWS -----
-        // U
-        unsigned int diag_row_ind = 4*N;
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int diag_col_ind = j + 0*N;
-
-            A(diag_row_ind, diag_col_ind) = 1.;  
-        }
-
-        diag_row_ind++; 
-        // V
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int diag_col_ind = j + 1*N;
-
-            A(diag_row_ind, diag_col_ind) = 1.;  
-        }
-
-        diag_row_ind++; 
-        // W
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int diag_col_ind = j + 2*N;
-
-            A(diag_row_ind, diag_col_ind) = 1.;  
-        }
-
-        diag_row_ind++; 
-        // P
-        for (unsigned int j = 0; j < N; j++) {
-            unsigned int diag_col_ind = j + 3*N;
-
-            A(diag_row_ind, diag_col_ind) = 1.;  
-        }
-#endif 
-#else 
-        // Number of components to interleave
-        unsigned int NC = 4; 
 
         // U (block)  row
         for (unsigned int i = 0; i < NN; i++) {
@@ -462,21 +257,27 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
                     unsigned int diag_col_ind = st[j]*NC;
                     A(diag_row_ind+0, diag_col_ind+0) = -eta * lapl[j];  
                     A(diag_row_ind+0, diag_col_ind+3) = ddx[j];  
+#ifdef STOKES_CONSTRAINTS
                     A(diag_row_ind+0, 4*NN+0) = 1.;
+#endif
                 }
                 
                 for (unsigned int j = 0; j < st.size(); j++) {
                     unsigned int diag_col_ind = st[j]*NC;
                     A(diag_row_ind+1, diag_col_ind+1) = -eta * lapl[j];  
                     A(diag_row_ind+1, diag_col_ind+3) = ddy[j];  
+#ifdef STOKES_CONSTRAINTS
                     A(diag_row_ind+1, 4*NN+1) = 1.;
+#endif 
                 }
                 
                 for (unsigned int j = 0; j < st.size(); j++) {
                     unsigned int diag_col_ind = st[j]*NC;
                     A(diag_row_ind+2, diag_col_ind+2) = -eta * lapl[j];  
                     A(diag_row_ind+2, diag_col_ind+3) = ddz[j];  
+#ifdef STOKES_CONSTRAINTS
                     A(diag_row_ind+2, 4*NN+2) = 1.;
+#endif 
                 }
                     
                 for (unsigned int j = 0; j < st.size(); j++) {
@@ -484,10 +285,13 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
                     A(diag_row_ind+3, diag_col_ind+0) = ddx[j];  
                     A(diag_row_ind+3, diag_col_ind+1) = ddy[j];  
                     A(diag_row_ind+3, diag_col_ind+2) = ddz[j];  
+#ifdef STOKES_CONSTRAINTS
                     A(diag_row_ind+3, 4*NN+3) = 1.;
+#endif 
                 }
         }
 
+#ifdef STOKES_CONSTRAINTS
         for (unsigned int j = 0; j < NN; j++) {
             A(4*NN+0, (j*NC)+0) = 1.;  
         }
@@ -500,10 +304,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         for (unsigned int j = 0; j < NN; j++) {
             A(4*NN+3, (j*NC)+3) = 1.;  
         }
-
 #endif 
-        viennacl::io::write_matrix_market_file(A, dir_str + "A.mtx"); 
-        exit(-1);
 
         tlist["assemble_lhs"]->stop();
 

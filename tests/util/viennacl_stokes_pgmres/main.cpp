@@ -28,8 +28,10 @@ using namespace EB;
 int main(int argc, char** argv) {
 
     std::vector<std::string> grids; 
-    grids.push_back("~/GRIDS/md/md050.02601"); 
-#if 0
+#if 1
+    //grids.push_back("~/GRIDS/md/md063.04096"); 
+    grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
+#else 
     //grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
     grids.push_back("~/GRIDS/md/md063.04096"); 
@@ -39,6 +41,9 @@ int main(int argc, char** argv) {
     grids.push_back("~/GRIDS/md/md141.20164");
     grids.push_back("~/GRIDS/md/md159.25600"); 
     grids.push_back("~/GRIDS/md/md165.27556"); 
+    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtmesh_500k_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #endif 
 
     std::vector<std::tuple<int, double,double> > stencil_params; 
@@ -199,9 +204,9 @@ int main(int argc, char** argv) {
                 pde->write_System(); 
             }
             pde->solve();
-            if (writeIntermediate) {
+//            if (writeIntermediate) {
                 pde->write_Solution(); 
-            }
+//            }
 
             delete(pde);
 

@@ -70,6 +70,8 @@ License:         MIT (X11), see file LICENSE in the base directory
 #include <boost/numeric/ublas/lu.hpp>
 #include <boost/filesystem.hpp>
 
+#include "timer_eb.h"
+
 namespace viennacl
 {
     namespace linalg
@@ -91,6 +93,10 @@ namespace viennacl
                     comm_ref(comm_unit), grid_ref(decomposition), 
                     sol_dim(solution_dim_per_node)
             {
+                tlist["allocate"] = new EB::Timer("Allocate Comm Buffers");
+                tlist["alltoallv"] = new EB::Timer("MPI_Alltoallv");
+                tlist["setR"] = new EB::Timer("Sync set R");
+                tlist["setO"] = new EB::Timer("Sync set O");
                 allocateCommBuffers();            
             };
 
@@ -101,11 +107,19 @@ namespace viennacl
                     delete [] rdispls; 
                     delete [] recvcounts; 
                     delete [] rbuf; 
+
+                    tlist.printAllNonStatic(); 
+                    tlist.clear();
+                }
+
+                void appendTimer(EB::Timer* tm, std::string key) const {
+                    tlist[key] = tm; 
                 }
 
                 Communicator const& comm() const { return this->comm_ref; } 
 
                 void allocateCommBuffers() {
+                    tlist["allocate"]->start();
 #if 0
                     double* sbuf; 
                     int* sendcounts; 
@@ -140,96 +154,101 @@ namespace viennacl
                     // Not sure if we need to use malloc to guarantee contiguous?
                     this->sbuf = new double[O_tot];  
                     this->rbuf = new double[R_tot];
+                    tlist["allocate"]->stop();
                 }
 
                 // TODO: (bug) fix the copy set R and set O so when a value is
                 // sent to multiple CPUs it is placed in the correct vector for
                 // alltoallv. 
                 template <typename GPUVectorType>
-                void syncSetR(GPUVectorType& gpu_vec) const {
-                    //unsigned int nb_nodes = grid_ref.getNodeListSize();
-                    //unsigned int set_G_size = grid_ref.G.size();
-                    unsigned int set_Q_size = grid_ref.Q.size();
-                    //unsigned int set_O_size = grid_ref.O.size();
-                    unsigned int set_R_size = grid_ref.R.size();
-                    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
+                    void syncSetR(GPUVectorType& gpu_vec) const {
+                        tlist["setR"]->start(); 
+                        //unsigned int nb_nodes = grid_ref.getNodeListSize();
+                        //unsigned int set_G_size = grid_ref.G.size();
+                        unsigned int set_Q_size = grid_ref.Q.size();
+                        //unsigned int set_O_size = grid_ref.O.size();
+                        unsigned int set_R_size = grid_ref.R.size();
+                        unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
-                    // OUR SOLUTION IS ARRANGED IN THIS FASHION:
-                    //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
+                        // OUR SOLUTION IS ARRANGED IN THIS FASHION:
+                        //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
 
-                    // TODO: fix this. We have to maintain an additional index
-                    // map to convert from local node indices to the linear
-                    // system indices (i.e. filter off the dirichlet boundary
-                    // node indices
-                    unsigned int offset_to_interior = nb_bnd; 
-                    unsigned int offset_to_set_R = set_Q_size;
+                        // TODO: fix this. We have to maintain an additional index
+                        // map to convert from local node indices to the linear
+                        // system indices (i.e. filter off the dirichlet boundary
+                        // node indices
+                        unsigned int offset_to_interior = nb_bnd; 
+                        unsigned int offset_to_set_R = set_Q_size;
 
-                   viennacl::vector_range< GPUVectorType > setR(gpu_vec, viennacl::range(offset_to_set_R-offset_to_interior, (offset_to_set_R-offset_to_interior)+set_R_size));
+                        viennacl::vector_range< GPUVectorType > setR(gpu_vec, viennacl::range(offset_to_set_R-offset_to_interior, (offset_to_set_R-offset_to_interior)+set_R_size));
 
-                    double* vec = new double[set_R_size]; 
+                        double* vec = new double[set_R_size]; 
 
-                    unsigned int k = 0; 
-                    for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
-                        k = this->rdispls[i]; 
-                        for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
-                            unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]); 
-                            // Offset the r_indx to 0 and we'll copy the subset
-                            // into the proper range
-                            r_indx -= offset_to_set_R; 
+                        unsigned int k = 0; 
+                        for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
+                            k = this->rdispls[i]; 
+                            for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
+                                unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]); 
+                                // Offset the r_indx to 0 and we'll copy the subset
+                                // into the proper range
+                                r_indx -= offset_to_set_R; 
 
-                            // TODO: need to translate to local
-                            // indexing properly. This hack assumes all
-                            // boundary are dirichlet and appear first
-                            // in the list
-                            vec[r_indx] = this->rbuf[k];  
-                            k++; 
+                                // TODO: need to translate to local
+                                // indexing properly. This hack assumes all
+                                // boundary are dirichlet and appear first
+                                // in the list
+                                vec[r_indx] = this->rbuf[k];  
+                                k++; 
+                            }
                         }
-                    }
-                    delete [] vec;
+                        delete [] vec;
 
-                    viennacl::copy(vec, setR, set_R_size);
-                }
+                        viennacl::copy(vec, setR, set_R_size);
+                        tlist["setR"]->stop(); 
+                    }
 
                 template <typename GPUVectorType>
-                void syncSetO(GPUVectorType& gpu_vec) const {
-                    unsigned int set_Q_size = grid_ref.Q.size();
-                    unsigned int set_O_size = grid_ref.O.size();
-                    unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
+                    void syncSetO(GPUVectorType& gpu_vec) const {
+                        tlist["setO"]->start();
+                        unsigned int set_Q_size = grid_ref.Q.size();
+                        unsigned int set_O_size = grid_ref.O.size();
+                        unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
 
-                    // OUR SOLUTION IS ARRANGED IN THIS FASHION:
-                    //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
-                    //  Minus 1 because we start indexing at 0 
+                        // OUR SOLUTION IS ARRANGED IN THIS FASHION:
+                        //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
+                        //  Minus 1 because we start indexing at 0 
 
-                    // TODO: fix this. We have to maintain an additional index
-                    // map to convert from local node indices to the linear
-                    // system indices (i.e. filter off the dirichlet boundary
-                    // node indices
-                    unsigned int offset_to_interior = nb_bnd; 
-                    unsigned int offset_to_set_O = (set_Q_size - set_O_size); 
+                        // TODO: fix this. We have to maintain an additional index
+                        // map to convert from local node indices to the linear
+                        // system indices (i.e. filter off the dirichlet boundary
+                        // node indices
+                        unsigned int offset_to_interior = nb_bnd; 
+                        unsigned int offset_to_set_O = (set_Q_size - set_O_size); 
 
-//                    std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
+                        //                    std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
 
-                    viennacl::vector_range< GPUVectorType > setO(gpu_vec, viennacl::range(offset_to_set_O - offset_to_interior, (offset_to_set_O-offset_to_interior)+set_O_size));
+                        viennacl::vector_range< GPUVectorType > setO(gpu_vec, viennacl::range(offset_to_set_O - offset_to_interior, (offset_to_set_O-offset_to_interior)+set_O_size));
 
-                    double* vec = new double[set_O_size]; 
+                        double* vec = new double[set_O_size]; 
 
-                    viennacl::copy(setO, vec, set_O_size);                    
+                        viennacl::copy(setO, vec, set_O_size);                    
 
-                    // Copy elements to sbuf individually in case multiple procs receive the values
-                    unsigned int k = 0; 
-                    for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
-                        k = this->sdispls[i]; 
-                        for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
-                            unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]);
-                            s_indx -= offset_to_set_O;
+                        // Copy elements to sbuf individually in case multiple procs receive the values
+                        unsigned int k = 0; 
+                        for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
+                            k = this->sdispls[i]; 
+                            for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
+                                unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]);
+                                s_indx -= offset_to_set_O;
 
-                            this->sbuf[k] = vec[s_indx];
-                            k++; 
+                                this->sbuf[k] = vec[s_indx];
+                                k++; 
+                            }
                         }
-                    }
 
-                    delete [] vec; 
-                }
+                        delete [] vec; 
+                        tlist["setO"]->stop();
+                    }
 
                 // Generic for GPU (transfer GPU subset to cpu buffer, alltoallv
                 // and return to the gpu)
@@ -244,7 +263,8 @@ namespace viennacl
                         // Copies data from vec to transfer, then writes received data into vec
                         // before returning. 
                         if (comm_ref.getSize() > 1) {
-                                    
+                            tlist["alltoallv"]->start(); 
+
                             // GPU array is arranged as {QmB BmO O R} 
                             // TODO: however the set O and set R might have values that span multiple CPUs. 
 
@@ -253,8 +273,9 @@ namespace viennacl
 
                             MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
                             comm_ref.barrier();
-                            
+
                             syncSetR(vec); 
+                            tlist["alltoallv"]->stop(); 
                         }
                     }
 
@@ -273,6 +294,7 @@ namespace viennacl
                         // before returning. 
                         if (comm_ref.getSize() > 1) {
 
+                            tlist["alltoallv"]->start(); 
                             // Copy elements of set to sbuf
                             unsigned int k = 0; 
                             for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
@@ -302,6 +324,7 @@ namespace viennacl
                                     k++; 
                                 }
                             }
+                            tlist["alltoallv"]->stop(); 
                         }
                     }
 
@@ -326,6 +349,8 @@ namespace viennacl
                 mutable int* rdispls; 
                 mutable int* recvcounts; 
                 mutable double* rbuf; 
+            public: 
+                mutable EB::TimerList tlist; 
         };
 
 
@@ -402,6 +427,16 @@ namespace viennacl
                           solve(const MatrixType & A, VectorType & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
             std::cout << "INSIDE VCL PARALLEL\n";
+            EB::TimerList tm; 
+            EB::Timer* t1 = new EB::Timer("GMRES Inner Iteration"); 
+            EB::Timer* t2 = new EB::Timer("GMRES Outer Iteration"); 
+
+            tm["inner"] = t1; 
+            tm["outer"] = t2; 
+
+//            tag.appendTimer(t1,"gmres_inner"); 
+//            tag.appendTimer(t2,"gmres_outer");
+
             //typedef vcl::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
             typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
@@ -475,6 +510,7 @@ namespace viennacl
             //std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
             do{
+                t2->start(); 
                 // compute initial residual and its norm //
                 w = viennacl::linalg::prod(A, x_full) - b;                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full); 
@@ -483,7 +519,7 @@ namespace viennacl
                 w /= gpu_scalar_minus_1 * beta;                                         // V(0) = -V(0)/beta //
 
                 *(v[0]) = w; 
-                
+
                 // First givens rotation 
                 for (int ii = 0; ii < R+1; ii++) {
                     s[ii] = 0.;
@@ -498,10 +534,14 @@ namespace viennacl
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
 #endif
                     tag.error(beta / b_norm);
+                    t2->stop();
+                    tm.printAllNonStatic(); 
+                    tm.clear();
                     return x_full;
                 }
 
                 do{
+                    t1->start(); 
                     ++i;
                     tag.iters(tag.iters() + 1); 
 
@@ -515,7 +555,7 @@ namespace viennacl
                     precond.apply(v0_full); 
                     w = v0; 
 
-                   for (int k = 0; k <= i; k++){
+                    for (int k = 0; k <= i; k++){
                         //  H(k,i) = <V(i+1),V(k)>    //
                         H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
                         // V(i+1) -= H(k, i) * V(k)  //
@@ -549,6 +589,7 @@ namespace viennacl
                     std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
 #endif 
                     tag.error(rel_resid0);
+                    t1->stop();
                     // We could add absolute tolerance here as well: 
                     if (rel_resid0 < b_norm * tag.tolerance() ) {
                         break;
@@ -567,20 +608,20 @@ namespace viennacl
                 }
 
 #ifdef VIENNACL_GMRES_DEBUG 
-                    std::cout << "H[" << i << "] = "; 
-                    for (int j = 0; j < R+1; j++) {
-                        for (int k = 0; k < R; k++) {
-                            std::cout << H(j,k) << ", "; 
-                        }
-                        std::cout << std::endl;
+                std::cout << "H[" << i << "] = "; 
+                for (int j = 0; j < R+1; j++) {
+                    for (int k = 0; k < R; k++) {
+                        std::cout << H(j,k) << ", "; 
                     }
                     std::cout << std::endl;
-    
-                    std::cout << "s[" << i << "] = "; 
-                    for (int j =0 ; j < R+1; j++) {
-                        std::cout << s[j] << ", ";
-                    }
-                    std::cout << std::endl;
+                }
+                std::cout << std::endl;
+
+                std::cout << "s[" << i << "] = "; 
+                for (int j =0 ; j < R+1; j++) {
+                    std::cout << s[j] << ", ";
+                }
+                std::cout << std::endl;
 #endif 
 
                 // Update our solution
@@ -588,9 +629,12 @@ namespace viennacl
                     x +=  s[j] * *(v[j]); 
                 }
                 tag.alltoall_subset(x_full); 
+                t2->stop();
 
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
+            tm.printAllNonStatic(); 
+            tm.clear();
             return x_full;
         }
 
@@ -685,6 +729,7 @@ namespace viennacl
 
 
             do{
+                tag.tlist["gmres_iter"]->start(); 
                 // compute initial residual and its norm //
                 w = b - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full); 
@@ -733,15 +778,15 @@ namespace viennacl
                     }
 
                     H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());   
-                
+
 #ifdef VIENNACL_GMRES_DEBUG 
-                   std::cout << "H[" << i << "] = "; 
-                   for (int j = 0; j < R+1; j++) {
-                    for (int k = 0; k < R; k++) {
-                        std::cout << H(j,k) << ", "; 
+                    std::cout << "H[" << i << "] = "; 
+                    for (int j = 0; j < R+1; j++) {
+                        for (int k = 0; k < R; k++) {
+                            std::cout << H(j,k) << ", "; 
+                        }
+                        std::cout << std::endl;
                     }
-                    std::cout << std::endl;
-                   }
                     std::cout << std::endl;
 #endif 
                     // V(i+1) = V(i+1) / H(i+1, i) //
@@ -755,6 +800,7 @@ namespace viennacl
                     std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
 #endif 
                     tag.error(rel_resid0);
+                    tag.tlist["gmres_iter"]->stop();
                     // We could add absolute tolerance here as well: 
                     if (rel_resid0 < b_norm * tag.tolerance() ) {
                         break;
@@ -774,20 +820,20 @@ namespace viennacl
                 }
 
 #ifdef VIENNACL_GMRES_DEBUG 
-                    std::cout << "H[" << i << "] = "; 
-                    for (int j = 0; j < R+1; j++) {
-                        for (int k = 0; k < R; k++) {
-                            std::cout << H(j,k) << ", "; 
-                        }
-                        std::cout << std::endl;
+                std::cout << "H[" << i << "] = "; 
+                for (int j = 0; j < R+1; j++) {
+                    for (int k = 0; k < R; k++) {
+                        std::cout << H(j,k) << ", "; 
                     }
                     std::cout << std::endl;
-    
-                    std::cout << "s[" << i << "] = "; 
-                    for (int j =0 ; j < R+1; j++) {
-                        std::cout << s[j] << ", ";
-                    }
-                    std::cout << std::endl;
+                }
+                std::cout << std::endl;
+
+                std::cout << "s[" << i << "] = "; 
+                for (int j =0 ; j < R+1; j++) {
+                    std::cout << s[j] << ", ";
+                }
+                std::cout << std::endl;
 #endif 
 
                 // Update our solution

@@ -49,10 +49,11 @@ int main(int argc, char** argv) {
 #endif 
 
     std::vector<std::tuple<int, double,double> > stencil_params; 
-    //stencil_params.push_back(std::tuple<int, double,double>(40, 0.055, 0.239)); // Much better 
+    stencil_params.push_back(std::tuple<int, double,double>(40, 0.055, 0.239)); // EVEN better 
     stencil_params.push_back(std::tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
+    stencil_params.push_back(std::tuple<int, double,double>(40, 0.077, 0.220)); // BAD
     stencil_params.push_back(std::tuple<int, double,double>(40, 0.020, 0.295)); // Too IC to work. 
-    stencil_params.push_back(std::tuple<int, double,double>(40, 0.027, 0.274));  
+    stencil_params.push_back(std::tuple<int, double,double>(40, 0.027, 0.274)); // Nothing to write home about 
     stencil_params.push_back(std::tuple<int, double,double>(31, 0.035, 0.1));   // Works well
     stencil_params.push_back(std::tuple<int, double,double>(20, 0.01, 0.01));  
     stencil_params.push_back(std::tuple<int, double,double>(40, 0.027, 0.274));  

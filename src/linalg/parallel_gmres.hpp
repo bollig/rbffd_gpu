@@ -645,7 +645,7 @@ namespace viennacl
                           solve(const MatrixType & A, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
             std::cout << "INSIDE UBLAS PARALLEL\n";
-            
+
             EB::TimerList tlist; 
             tlist["inner"] = new EB::Timer("GMRES Inner Iteration"); 
             tlist["outer"] = new EB::Timer("GMRES Outer Iteration"); 

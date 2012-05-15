@@ -174,7 +174,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     {
         tlist["assemble"]->start(); 
         std::cout << "Assembling... \n";
-        
+
         // Choose either grouped by component or interleaved components
         // Number of components to interleave
         unsigned int NC = 4; 
@@ -220,7 +220,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
 #ifdef STOKES_CONSTRAINTS
-       // Sum of U
+        // Sum of U
         F(4*N+0) = sumU; 
 
         // Sum of V
@@ -252,43 +252,42 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             unsigned int diag_row_ind = i * NC;
 
-
-                for (unsigned int j = 0; j < st.size(); j++) {
-                    unsigned int diag_col_ind = st[j]*NC;
-                    A(diag_row_ind+0, diag_col_ind+0) = -eta * lapl[j];  
-                    A(diag_row_ind+0, diag_col_ind+3) = ddx[j];  
+            for (unsigned int j = 0; j < st.size(); j++) {
+                unsigned int diag_col_ind = st[j]*NC;
+                A(diag_row_ind+0, diag_col_ind+0) = -eta * lapl[j];  
+                A(diag_row_ind+0, diag_col_ind+3) = ddx[j];  
 #ifdef STOKES_CONSTRAINTS
-                    A(diag_row_ind+0, 4*NN+0) = 1.;
+                A(diag_row_ind+0, 4*NN+0) = 1.;
 #endif
-                }
-                
-                for (unsigned int j = 0; j < st.size(); j++) {
-                    unsigned int diag_col_ind = st[j]*NC;
-                    A(diag_row_ind+1, diag_col_ind+1) = -eta * lapl[j];  
-                    A(diag_row_ind+1, diag_col_ind+3) = ddy[j];  
+            }
+
+            for (unsigned int j = 0; j < st.size(); j++) {
+                unsigned int diag_col_ind = st[j]*NC;
+                A(diag_row_ind+1, diag_col_ind+1) = -eta * lapl[j];  
+                A(diag_row_ind+1, diag_col_ind+3) = ddy[j];  
 #ifdef STOKES_CONSTRAINTS
-                    A(diag_row_ind+1, 4*NN+1) = 1.;
+                A(diag_row_ind+1, 4*NN+1) = 1.;
 #endif 
-                }
-                
-                for (unsigned int j = 0; j < st.size(); j++) {
-                    unsigned int diag_col_ind = st[j]*NC;
-                    A(diag_row_ind+2, diag_col_ind+2) = -eta * lapl[j];  
-                    A(diag_row_ind+2, diag_col_ind+3) = ddz[j];  
+            }
+
+            for (unsigned int j = 0; j < st.size(); j++) {
+                unsigned int diag_col_ind = st[j]*NC;
+                A(diag_row_ind+2, diag_col_ind+2) = -eta * lapl[j];  
+                A(diag_row_ind+2, diag_col_ind+3) = ddz[j];  
 #ifdef STOKES_CONSTRAINTS
-                    A(diag_row_ind+2, 4*NN+2) = 1.;
+                A(diag_row_ind+2, 4*NN+2) = 1.;
 #endif 
-                }
-                    
-                for (unsigned int j = 0; j < st.size(); j++) {
-                    unsigned int diag_col_ind = st[j]*NC;
-                    A(diag_row_ind+3, diag_col_ind+0) = ddx[j];  
-                    A(diag_row_ind+3, diag_col_ind+1) = ddy[j];  
-                    A(diag_row_ind+3, diag_col_ind+2) = ddz[j];  
+            }
+
+            for (unsigned int j = 0; j < st.size(); j++) {
+                unsigned int diag_col_ind = st[j]*NC;
+                A(diag_row_ind+3, diag_col_ind+0) = ddx[j];  
+                A(diag_row_ind+3, diag_col_ind+1) = ddy[j];  
+                A(diag_row_ind+3, diag_col_ind+2) = ddz[j];  
 #ifdef STOKES_CONSTRAINTS
-                    A(diag_row_ind+3, 4*NN+3) = 1.;
+                A(diag_row_ind+3, 4*NN+3) = 1.;
 #endif 
-                }
+            }
         }
 
 #ifdef STOKES_CONSTRAINTS
@@ -457,7 +456,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(g_diff, comm_ref) / viennacl::linalg::norm_inf(g_exact_view, comm_ref) << std::endl;  
 
         tlist["checkNorms"]->stop();
-   }
+    }
 
 
 
@@ -467,7 +466,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         tlist["writeSystem"]->start();
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx");
-        if (LHS_host->size1() < 4000) {
+        if (NN < 4000) {
             viennacl::io::write_matrix_market_file(*LHS_host,dir_str + "LHS.mtx"); 
         }
 

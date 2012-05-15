@@ -112,10 +112,6 @@ namespace viennacl
                     tlist.clear();
                 }
 
-                void appendTimer(EB::Timer* tm, std::string key) const {
-                    tlist[key] = tm; 
-                }
-
                 Communicator const& comm() const { return this->comm_ref; } 
 
                 void allocateCommBuffers() {
@@ -349,7 +345,7 @@ namespace viennacl
                 mutable int* rdispls; 
                 mutable int* recvcounts; 
                 mutable double* rbuf; 
-            public: 
+            protected: 
                 mutable EB::TimerList tlist; 
         };
 
@@ -427,15 +423,9 @@ namespace viennacl
                           solve(const MatrixType & A, VectorType & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
             std::cout << "INSIDE VCL PARALLEL\n";
-            EB::TimerList tm; 
-            EB::Timer* t1 = new EB::Timer("GMRES Inner Iteration"); 
-            EB::Timer* t2 = new EB::Timer("GMRES Outer Iteration"); 
-
-            tm["inner"] = t1; 
-            tm["outer"] = t2; 
-
-//            tag.appendTimer(t1,"gmres_inner"); 
-//            tag.appendTimer(t2,"gmres_outer");
+            EB::TimerList tlist; 
+            tlist["inner"] = new EB::Timer("GMRES Inner Iteration"); 
+            tlist["outer"] = new EB::Timer("GMRES Outer Iteration"); 
 
             //typedef vcl::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
@@ -510,7 +500,7 @@ namespace viennacl
             //std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
             do{
-                t2->start(); 
+                tlist["outer"]->start(); 
                 // compute initial residual and its norm //
                 w = viennacl::linalg::prod(A, x_full) - b;                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full); 
@@ -534,14 +524,14 @@ namespace viennacl
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
 #endif
                     tag.error(beta / b_norm);
-                    t2->stop();
-                    tm.printAllNonStatic(); 
-                    tm.clear();
+                    tlist["outer"]->stop();
+                    tlist.printAllNonStatic(); 
+                    tlist.clear();
                     return x_full;
                 }
 
                 do{
-                    t1->start(); 
+                    tlist["inner"]->start(); 
                     ++i;
                     tag.iters(tag.iters() + 1); 
 
@@ -589,7 +579,7 @@ namespace viennacl
                     std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
 #endif 
                     tag.error(rel_resid0);
-                    t1->stop();
+                    tlist["inner"]->stop();
                     // We could add absolute tolerance here as well: 
                     if (rel_resid0 < b_norm * tag.tolerance() ) {
                         break;
@@ -629,12 +619,12 @@ namespace viennacl
                     x +=  s[j] * *(v[j]); 
                 }
                 tag.alltoall_subset(x_full); 
-                t2->stop();
+                tlist["outer"]->stop();
 
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
-            tm.printAllNonStatic(); 
-            tm.clear();
+            tlist.printAllNonStatic(); 
+            tlist.clear();
             return x_full;
         }
 
@@ -654,7 +644,12 @@ namespace viennacl
                           ublas::vector<double> 
                           solve(const MatrixType & A, ublas::vector<double> & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
-            std::cout << "INSIDE PARALLEL\n";
+            std::cout << "INSIDE UBLAS PARALLEL\n";
+            
+            EB::TimerList tlist; 
+            tlist["inner"] = new EB::Timer("GMRES Inner Iteration"); 
+            tlist["outer"] = new EB::Timer("GMRES Outer Iteration"); 
+
             typedef ublas::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
             typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
@@ -729,7 +724,7 @@ namespace viennacl
 
 
             do{
-                tag.tlist["gmres_iter"]->start(); 
+                tlist["outer"]->start(); 
                 // compute initial residual and its norm //
                 w = b - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full); 
@@ -753,10 +748,14 @@ namespace viennacl
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
 #endif 
                     tag.error(beta / b_norm);
+                    tlist["outer"]->stop();
+                    tlist.printAllNonStatic(); 
+                    tlist.clear();
                     return x_full;
                 }
 
                 do{
+                    tlist["inner"]->start();
                     ++i;
                     tag.iters(tag.iters() + 1); 
 
@@ -800,7 +799,7 @@ namespace viennacl
                     std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
 #endif 
                     tag.error(rel_resid0);
-                    tag.tlist["gmres_iter"]->stop();
+                    tlist["inner"]->stop();
                     // We could add absolute tolerance here as well: 
                     if (rel_resid0 < b_norm * tag.tolerance() ) {
                         break;
@@ -841,6 +840,7 @@ namespace viennacl
                     x += *(v[j]) * s[j]; 
                 }
                 tag.alltoall_subset(x_full); 
+                tlist["outer"]->stop();
 
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 

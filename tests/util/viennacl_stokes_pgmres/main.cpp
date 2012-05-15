@@ -28,7 +28,7 @@ using namespace EB;
 int main(int argc, char** argv) {
 
     std::vector<std::string> grids; 
-#if 1
+#if 0
     //grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #else 
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
                 if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
                     std::cout << "Generating stencils files\n";
                     tm["stencils"]->start(); 
-#if 0
+#if 1
                     grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
                     grid->generateStencils(Grid::ST_HASH);   
 #else 

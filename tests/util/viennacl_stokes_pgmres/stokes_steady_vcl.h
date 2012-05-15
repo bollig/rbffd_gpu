@@ -91,7 +91,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -521,6 +521,11 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
+#if 1
+            tlist["solve"]->start();
+            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
+            tlist["solve"]->stop();
+#else 
             tlist["precond"]->start();
             std::cout << "Generating preconditioner...\n";
             viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3*NN) ); 
@@ -535,12 +540,9 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
             tlist["solve"]->start();
-#if 0
-            U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
-#else 
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
-#endif 
             tlist["solve"]->stop();
+#endif 
 
             if (tag.iters() < tag.max_iterations()) { 
                 std::cout << "\n[+++] Solver converged "; //<< tag.error() << " relative tolerance";       

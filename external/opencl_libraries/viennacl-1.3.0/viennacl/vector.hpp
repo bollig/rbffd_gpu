@@ -1676,25 +1676,7 @@ namespace viennacl
             result -= vec;
             return result;
         }
-    
-    /** @brief Operator overload for the subtraction of a vector expression from the left, e.g. alpha * vec1 + vec2. Here, alpha * vec1 is wrapped into a vector_expression and then added to vec2.
-     *
-     * @param proxy   Left hand side vector expression
-     * @param vec     Right hand side vector
-     * EVAN BOLLIG
-     * Added vector_range - vector support
-     */
-    template <typename SCALARTYPE, unsigned int A, typename LHS, typename RHS, typename OP>
-        vector<SCALARTYPE, A> operator - (vector_expression< LHS, RHS, OP> const & proxy,
-                vector_range< vector<SCALARTYPE, A> > const & vec)
-        {
-            assert(proxy.size() == vec.size());
-            vector<SCALARTYPE, A> result(vec.size());
-            result = proxy;
-            result -= vec;
-            return result;
-        }
-
+   
     /** @brief Operator overload for the multiplication of a vector expression with a scalar from the right, e.g. (beta * vec1) * alpha. Here, beta * vec1 is wrapped into a vector_expression and then multiplied with alpha from the right.
      *
      * @param proxy   Left hand side vector expression

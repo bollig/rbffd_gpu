@@ -91,7 +91,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -385,25 +385,32 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             checkNorms(U_approx_out, U_exact);
         }
 
+
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
         tlist["checkNorms"]->start();
         unsigned int start_indx = 0; 
-        unsigned int end_indx = NN; 
+        unsigned int NC = 4; 
 
-        for (unsigned int i =0; i < 4; i++) {
-            VCL_VEC_t diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(start_indx, end_indx)); 
+        for (unsigned int i =0; i < NC; i++) {
+            VCL_VEC_t diff = viennacl::vector_slice<VCL_VEC_t>(sol, viennacl::slice(start_indx, NC, NN)); 
 
-            viennacl::vector_range<VCL_VEC_t> exact_view( exact, viennacl::range(start_indx + nb_bnd, end_indx+nb_bnd)); 
+            viennacl::vector_slice<VCL_VEC_t> exact_view( exact, viennacl::slice(start_indx + nb_bnd, NC, NN)); 
 
-            diff -= exact_view; 
+            diff -= exact_view;  
+            
+            double an1 = viennacl::linalg::norm_1(diff, comm_ref);
+            double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref); 
+            double an2 = viennacl::linalg::norm_2(diff, comm_ref);
+            double rn2 = an2 / viennacl::linalg::norm_2(exact_view, comm_ref); 
+            double aninf = viennacl::linalg::norm_inf(diff, comm_ref);
+            double rninf = aninf / viennacl::linalg::norm_inf(exact_view, comm_ref); 
 
-            std::cout << "COMPONENT [" << i << " (" << start_indx << "->" << end_indx-1 << " of " << sol.size() << ")]\n";
-            std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact_view, comm_ref) << std::endl;  
-            std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact_view, comm_ref) << std::endl;  
-            std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact_view, comm_ref) << std::endl;  
+            std::cout << "COMPONENT [" << i << "]\n";
+            std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1 << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1 << std::endl;  
+            std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2 << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2 << std::endl;  
+            std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf << std::endl;  
 
-            start_indx = end_indx; 
-            end_indx = start_indx + NN; 
+            start_indx++;
         }
 
         // Global difference
@@ -413,34 +420,44 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         g_diff -= g_exact_view; 
 
+        double an1_g = viennacl::linalg::norm_1(g_diff, comm_ref);
+        double rn1_g = an1_g / viennacl::linalg::norm_1(g_exact_view, comm_ref); 
+        double an2_g = viennacl::linalg::norm_2(g_diff, comm_ref);
+        double rn2_g = an2_g / viennacl::linalg::norm_2(g_exact_view, comm_ref); 
+        double aninf_g = viennacl::linalg::norm_inf(g_diff, comm_ref);
+        double rninf_g = aninf_g / viennacl::linalg::norm_inf(g_exact_view, comm_ref); 
+
         std::cout << "GLOBAL ERROR " << NN << "\n";
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(g_diff, comm_ref) / viennacl::linalg::norm_1(g_exact_view, comm_ref) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(g_diff, comm_ref) / viennacl::linalg::norm_2(g_exact_view, comm_ref) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(g_diff, comm_ref) / viennacl::linalg::norm_inf(g_exact_view, comm_ref) << std::endl;  
+        std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1_g << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1_g << std::endl;  
+        std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2_g << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2_g << std::endl;  
+        std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf_g << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf_g << std::endl;  
 
         tlist["checkNorms"]->stop();
     }
 
-
     void checkNorms(UBLAS_VEC_t& sol, UBLAS_VEC_t& exact) {
         tlist["checkNorms"]->start();
         unsigned int start_indx = 0; 
-        unsigned int end_indx = NN; 
         unsigned int NC = 4; 
 
         for (unsigned int i =0; i < NC; i++) {
-            //UBLAS_VEC_t diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(start_indx, end_indx)); 
-            //boost::numeric::ublas::vector_range<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::range(start_indx + nb_bnd, end_indx+nb_bnd)); 
             UBLAS_VEC_t diff = boost::numeric::ublas::vector_slice<UBLAS_VEC_t>(sol, boost::numeric::ublas::slice(start_indx, NC, NN)); 
 
             boost::numeric::ublas::vector_slice<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::slice(start_indx + nb_bnd, NC, NN)); 
 
-            diff -= exact_view; 
+            diff -= exact_view;  
+            
+            double an1 = viennacl::linalg::norm_1(diff, comm_ref);
+            double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref); 
+            double an2 = viennacl::linalg::norm_2(diff, comm_ref);
+            double rn2 = an2 / viennacl::linalg::norm_2(exact_view, comm_ref); 
+            double aninf = viennacl::linalg::norm_inf(diff, comm_ref);
+            double rninf = aninf / viennacl::linalg::norm_inf(exact_view, comm_ref); 
 
-            std::cout << "COMPONENT [" << i << " (" << start_indx << "->" << end_indx-1 << " of " << sol.size() << ")]\n";
-            std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact_view, comm_ref) << std::endl;  
-            std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact_view, comm_ref) << std::endl;  
-            std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact_view, comm_ref) << std::endl;  
+            std::cout << "COMPONENT [" << i << "]\n";
+            std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1 << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1 << std::endl;  
+            std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2 << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2 << std::endl;  
+            std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf << std::endl;  
 
             start_indx++;
         }
@@ -452,10 +469,17 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         g_diff -= g_exact_view; 
 
+        double an1_g = viennacl::linalg::norm_1(g_diff, comm_ref);
+        double rn1_g = an1_g / viennacl::linalg::norm_1(g_exact_view, comm_ref); 
+        double an2_g = viennacl::linalg::norm_2(g_diff, comm_ref);
+        double rn2_g = an2_g / viennacl::linalg::norm_2(g_exact_view, comm_ref); 
+        double aninf_g = viennacl::linalg::norm_inf(g_diff, comm_ref);
+        double rninf_g = aninf_g / viennacl::linalg::norm_inf(g_exact_view, comm_ref); 
+
         std::cout << "GLOBAL ERROR " << NN << "\n";
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(g_diff, comm_ref) / viennacl::linalg::norm_1(g_exact_view, comm_ref) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(g_diff, comm_ref) / viennacl::linalg::norm_2(g_exact_view, comm_ref) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(g_diff, comm_ref) / viennacl::linalg::norm_inf(g_exact_view, comm_ref) << std::endl;  
+        std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1_g << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1_g << std::endl;  
+        std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2_g << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2_g << std::endl;  
+        std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf_g << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf_g << std::endl;  
 
         tlist["checkNorms"]->stop();
     }

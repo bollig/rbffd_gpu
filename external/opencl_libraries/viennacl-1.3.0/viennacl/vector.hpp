@@ -291,9 +291,7 @@ namespace viennacl
        * Added a copy constructor for vector ranges so we can easily
        * interchange. This will resize the vector to match the range and create
        * a new copy of the data
-       * Similar to operator=(vector_range) below, I added a
-       * vec.GET().handle().get() to copy the data
-       * Entries of 'vec' are directly copied to this vector.
+       * Similar to operator=(vector_range) 
        */
       vector(const vector_range< vector<SCALARTYPE, ALIGNMENT> > & vec) :
           size_(vec.size())
@@ -309,6 +307,28 @@ namespace viennacl
                         VIENNACL_ERR_CHECK(err);
                 }
         }
+
+      /** @brief The copy constructor
+       * EVAN BOLLIG
+       * Added a copy constructor for vector slices so we can easily
+       * interchange. This will resize the vector to match the slice and create
+       * a new copy of the data
+       * Similar to operator=(vector_slice) 
+       */
+      vector(const vector_slice< vector<SCALARTYPE, ALIGNMENT> > & vec) :
+          size_(vec.size())
+        {
+            viennacl::linalg::kernels::vector<SCALARTYPE, 1>::init(); 
+                
+                if (size() != 0)
+                {
+                    elements_ = viennacl::ocl::current_context().create_memory(CL_MEM_READ_WRITE, sizeof(SCALARTYPE)*internal_size());
+                    // reuse the assign command Karl implemented for (vector = slice) 
+                    viennacl::linalg::assign(*this, vec);
+                }
+        }
+
+
 
       /** @brief Assignment operator. This vector is resized if 'vec' is of a different size.
       */

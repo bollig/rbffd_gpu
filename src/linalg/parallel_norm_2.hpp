@@ -141,6 +141,20 @@ namespace viennacl
 
             return sqrt(r[0]); 
     }
+    
+    template < >
+    double
+    norm_2(boost::numeric::ublas::vector_slice< boost::numeric::ublas::vector<double> > const& v, Communicator const& comm_unit) 
+    {
+            double norm = boost::numeric::ublas::norm_2(v);
+            norm *= norm;
+            double r[1]; 
+
+            MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, comm_unit.getComm()); 
+            MPI_Barrier(MPI_COMM_WORLD); 
+
+            return sqrt(r[0]); 
+    }
  } // end namespace linalg
 } // end namespace viennacl
 #endif

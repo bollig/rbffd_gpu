@@ -426,11 +426,14 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         tlist["checkNorms"]->start();
         unsigned int start_indx = 0; 
         unsigned int end_indx = NN; 
+        unsigned int NC = 4; 
 
-        for (unsigned int i =0; i < 4; i++) {
-            UBLAS_VEC_t diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(start_indx, end_indx)); 
+        for (unsigned int i =0; i < NC; i++) {
+            //UBLAS_VEC_t diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(start_indx, end_indx)); 
+            //boost::numeric::ublas::vector_range<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::range(start_indx + nb_bnd, end_indx+nb_bnd)); 
+            UBLAS_VEC_t diff = boost::numeric::ublas::vector_slice<UBLAS_VEC_t>(sol, boost::numeric::ublas::slice(start_indx, NC, NN)); 
 
-            boost::numeric::ublas::vector_range<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::range(start_indx + nb_bnd, end_indx+nb_bnd)); 
+            boost::numeric::ublas::vector_slice<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::slice(start_indx + nb_bnd, NC, NN)); 
 
             diff -= exact_view; 
 
@@ -439,8 +442,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact_view, comm_ref) << std::endl;  
             std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact_view, comm_ref) << std::endl;  
 
-            start_indx = end_indx; 
-            end_indx = start_indx + NN; 
+            start_indx++;
         }
 
         // Global difference

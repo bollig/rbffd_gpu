@@ -4,7 +4,7 @@
 // This is needed to make UBLAS variants of norm_* and GMRES
 #define VIENNACL_HAVE_UBLAS 1
 
-#define STOKES_CONSTRAINTS 1
+#define STOKES_CONSTRAINTS 0
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
@@ -45,6 +45,7 @@
 #include "linalg/parallel_norm_inf.hpp"
 
 #include "manufactured_solution.h"
+#include "manufactured_solution_alt.h"
 #include "utils/spherical_harmonics.h"
 #include "pdes/implicit_pde.h"
 #include "timer_eb.h"
@@ -163,8 +164,10 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     // which requires memory allocation, copy to, solve, copy back operators
     virtual void solve() {
         if (solve_on_gpu) {
+            std::cout << "Solve on GPU\n";
             this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
         } else {
+            std::cout << "Solve on CPU\n";
             this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 
         }
     }
@@ -187,7 +190,12 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         //------ RHS ----------
 
         tlist["assemble_rhs"]->start(); 
+#if 0
         ManufacturedSolution MS; 
+#else 
+        ManufacturedSolutionAlt MS; 
+#endif 
+        SphericalHarmonic::Sph32 UU; 
 
         double eta = 1.;
 
@@ -205,14 +213,29 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
+#if 0
+            // test convergence of the surface deriv approxs
+            U_exact(row_ind+0) = 0.;
+            U_exact(row_ind+1) = 0.;
+            U_exact(row_ind+2) = 0.;
+            U_exact(row_ind+3) = UU(Xx,Yy,Zz);
+
+            F(row_ind+0) = UU.d_dx(Xx,Yy,Zz); 
+            F(row_ind+1) = UU.d_dy(Xx,Yy,Zz); 
+            F(row_ind+2) = UU.d_dz(Xx,Yy,Zz); 
+            F(row_ind+3) = 0.;
+#else 
+            // Test problem for paper
             U_exact(row_ind+0) = MS.U(Xx,Yy,Zz); 
             U_exact(row_ind+1) = MS.V(Xx,Yy,Zz); 
             U_exact(row_ind+2) = MS.W(Xx,Yy,Zz); 
             U_exact(row_ind+3) = MS.P(Xx,Yy,Zz); 
+    
             F(row_ind+0) = MS.RHS_U(Xx,Yy,Zz); 
             F(row_ind+1) = MS.RHS_V(Xx,Yy,Zz); 
             F(row_ind+2) = MS.RHS_W(Xx,Yy,Zz); 
             F(row_ind+3) = MS.RHS_P(Xx,Yy,Zz); 
+#endif 
             sumU += U_exact(row_ind+0); 
             sumV += U_exact(row_ind+1); 
             sumW += U_exact(row_ind+2); 

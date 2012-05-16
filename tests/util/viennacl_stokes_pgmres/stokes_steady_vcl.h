@@ -106,7 +106,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         MM = M - nb_bnd; 
 
         tlist["allocate"]->start();
-#ifdef STOKES_CONSTRAINTS
+#if STOKES_CONSTRAINTS
         unsigned int NNZ = 9*n*NN+2*(4*NN)+2*(3*NN);  
         LHS_host = new UBLAS_MAT_t(4*NN+4,4*MM+4,NNZ); 
         RHS_host = new UBLAS_VEC_t(4*NN+4); 
@@ -242,10 +242,16 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             sumP += U_exact(row_ind+3); 
         }
 
-#ifdef STOKES_CONSTRAINTS
+        std::cout << "Sum U = " << sumU << std::endl;
+        std::cout << "Sum V = " << sumV << std::endl;
+        std::cout << "Sum W = " << sumW << std::endl;
+        std::cout << "Sum P = " << sumP << std::endl;
+
+
+#if STOKES_CONSTRAINTS
         // Sum of U
         F(4*N+0) = sumU; 
-
+        
         // Sum of V
         F(4*N+1) = sumV; 
 
@@ -279,7 +285,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
                 unsigned int diag_col_ind = st[j]*NC;
                 A(diag_row_ind+0, diag_col_ind+0) = -eta * lapl[j];  
                 A(diag_row_ind+0, diag_col_ind+3) = ddx[j];  
-#ifdef STOKES_CONSTRAINTS
+#if STOKES_CONSTRAINTS
                 A(diag_row_ind+0, 4*NN+0) = 1.;
 #endif
             }
@@ -288,7 +294,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
                 unsigned int diag_col_ind = st[j]*NC;
                 A(diag_row_ind+1, diag_col_ind+1) = -eta * lapl[j];  
                 A(diag_row_ind+1, diag_col_ind+3) = ddy[j];  
-#ifdef STOKES_CONSTRAINTS
+#if STOKES_CONSTRAINTS
                 A(diag_row_ind+1, 4*NN+1) = 1.;
 #endif 
             }
@@ -297,7 +303,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
                 unsigned int diag_col_ind = st[j]*NC;
                 A(diag_row_ind+2, diag_col_ind+2) = -eta * lapl[j];  
                 A(diag_row_ind+2, diag_col_ind+3) = ddz[j];  
-#ifdef STOKES_CONSTRAINTS
+#if STOKES_CONSTRAINTS
                 A(diag_row_ind+2, 4*NN+2) = 1.;
 #endif 
             }
@@ -307,13 +313,13 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
                 A(diag_row_ind+3, diag_col_ind+0) = ddx[j];  
                 A(diag_row_ind+3, diag_col_ind+1) = ddy[j];  
                 A(diag_row_ind+3, diag_col_ind+2) = ddz[j];  
-#ifdef STOKES_CONSTRAINTS
+#if STOKES_CONSTRAINTS
                 A(diag_row_ind+3, 4*NN+3) = 1.;
 #endif 
             }
         }
 
-#ifdef STOKES_CONSTRAINTS
+#if STOKES_CONSTRAINTS
         for (unsigned int j = 0; j < NN; j++) {
             A(4*NN+0, (j*NC)+0) = 1.;  
         }
@@ -357,7 +363,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
-#if 0
+#if 1
             viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 

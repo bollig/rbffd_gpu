@@ -197,9 +197,9 @@ namespace viennacl
                                 k++; 
                             }
                         }
-                        delete [] vec;
 
                         viennacl::copy(vec, setR, set_R_size);
+                        delete [] vec;
                         tlist["setR"]->stop(); 
                     }
 
@@ -422,6 +422,8 @@ namespace viennacl
                           VectorType 
                           solve(const MatrixType & A, VectorType & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
+#define GMRES_DEBUG 1
+#define VIENNACL_GMRES_DEBUG 1
             std::cout << "INSIDE VCL PARALLEL\n";
             EB::TimerList tlist; 
             tlist["inner"] = new EB::Timer("GMRES Inner Iteration"); 
@@ -569,7 +571,7 @@ namespace viennacl
 
                     // V(i+1) = V(i+1) / H(i+1, i) //
                     w /= gpu_scalar_1*H(i+1,i); 
-                    v_full[i+1] = w; 
+                    v_full[i+1] = w_full; 
 
                     // Rotation takes place on host
                     PlaneRotation(H,cs,sn,s,i);

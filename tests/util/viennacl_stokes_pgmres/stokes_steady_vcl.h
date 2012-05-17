@@ -92,7 +92,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     int solve_on_gpu; 
 
     public: 
-    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
     {   
@@ -206,7 +206,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         double sumV = 0.;
         double sumW = 0.;
         double sumP = 0.;
-        for (unsigned int j = 0; j < MM; j++) {
+        for (unsigned int j = 0; j < NN; j++) {
             unsigned int row_ind = j*NC;
             NodeType& node = nodes[j]; 
             double Xx = node.x(); 
@@ -242,13 +242,35 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             sumP += U_exact(row_ind+3); 
         }
 
+        for (unsigned int j = NN; j < MM; j++) {
+            unsigned int row_ind = j*NC;
+            NodeType& node = nodes[j]; 
+            double Xx = node.x(); 
+            double Yy = node.y(); 
+            double Zz = node.z(); 
+
+#if 0
+            // test convergence of the surface deriv approxs
+            U_exact(row_ind+0) = 0.;
+            U_exact(row_ind+1) = 0.;
+            U_exact(row_ind+2) = 0.;
+            U_exact(row_ind+3) = UU(Xx,Yy,Zz);
+#else 
+            // Test problem for paper
+            U_exact(row_ind+0) = MS.U(Xx,Yy,Zz); 
+            U_exact(row_ind+1) = MS.V(Xx,Yy,Zz); 
+            U_exact(row_ind+2) = MS.W(Xx,Yy,Zz); 
+            U_exact(row_ind+3) = MS.P(Xx,Yy,Zz); 
+#endif 
+        }
+ 
         std::cout << "Sum U = " << sumU << std::endl;
         std::cout << "Sum V = " << sumV << std::endl;
         std::cout << "Sum W = " << sumW << std::endl;
         std::cout << "Sum P = " << sumP << std::endl;
 
-
 #if STOKES_CONSTRAINTS
+        // TODO: get MPI_reduced sums here and only put on RHS for one processor
         // Sum of U
         F(4*N+0) = sumU; 
         
@@ -359,7 +381,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         {
             // Solve on the CPU
             int restart = 20; 
-            int krylov = 120;
+            int krylov = 10;
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)

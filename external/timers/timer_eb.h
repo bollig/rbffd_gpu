@@ -44,7 +44,7 @@ namespace EB {
     class Timer
     {
         public:
-            static std::vector<Timer*> timeList;
+            //static std::vector<Timer*> timeList;
 
         private:
             struct timeval t_start, t_end;
@@ -78,10 +78,11 @@ namespace EB {
 
             void set(float t); //add a time from an external timer (GPU)
 
-            static void printAll(FILE* fd=stdout, int label_width=40);
+            //static void printAll(FILE* fd=stdout, int label_width=40);
             void print(FILE* fd=stdout, int label_width=40);
-            void writeAllToFile(std::string filename="timer_log"); 
+            //void writeAllToFile(std::string filename="timer_log"); 
             void printReset();
+            std::string& getName() { return name; } 
     };
 
 
@@ -96,13 +97,22 @@ namespace EB {
                 } 
                 return false; 
             }
-            void writeToFile(std::string filename="timer_log") {
+
+            void writeAllToFile(std::string filename="timer_log"); 
+            void writeToFile(std::string filename="timer_log") { 
+                this->writeAllToFile(filename);
+            }
+#if 0
+            void writeAllToFile(std::string filename="timer_log") {
                 (*(this->begin())).second->writeAllToFile(filename); 
             } 
             void printAll() {
                 (*(this->begin())).second->printAll(); 
             } 
+#endif 
             void printAllNonStatic(FILE* fd=stdout, int label_width=40)
+            { this->printAll(fd, label_width); }
+            void printAll(FILE* fd=stdout, int label_width=40)
             {
                 fprintf(fd, "====================================\n"); 
                 fprintf(fd, "Timers [All times in ms (1/1000 s)]: \n"); 		

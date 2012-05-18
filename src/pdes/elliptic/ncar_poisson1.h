@@ -52,7 +52,6 @@ class NCARPoisson1
         bool weightsPrecomputed;
 
         EB::TimerList tm;
-        EB::Timer t1, t2, t3, t4, t5;
 
         // FLAGS
         bool disable_sol_constraint; // Disable the solution constraint for Neumann and Robin boundary conditions

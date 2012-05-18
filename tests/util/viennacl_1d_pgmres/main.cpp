@@ -361,8 +361,10 @@ int main(int argc, char** argv) {
     delete(comm_unit); 
 
     tm["total"]->stop();
-    tm["total"]->printAll(); 
-    tm["total"]->writeAllToFile();
+    std::cout << "PRINTING ALL TIMERS\n";
+    tm.printAll();
+    tm.writeAllToFile();
+    tm.clear();
 
     printf("\n\nREACHED THE END OF MAIN\n\n");
 

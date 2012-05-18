@@ -5,18 +5,21 @@
 #include <armadillo>
 #include "rbffd/rbffd.h"
 
+#include "timer_eb.h"
+
 using namespace std;
 
 NCARPoisson1::NCARPoisson1(ExactSolution* _solution, Grid* subdomain_, RBFFD* der_, int rank, int dim_num_, bool weightsAlreadyComputed) :
     dim_num(dim_num_), exactSolution(_solution), rbf_centers(&subdomain_->getNodeList()),
     boundary_set(&subdomain_->getBoundaryIndices()), der(der_), id(rank), subdomain(subdomain_),
-    weightsPrecomputed(weightsAlreadyComputed),
-    t1("[ncar_poisson_t1] Total"),
-    t2("[ncar_poisson_t2] Compute Weights"),
-    t3("[ncar_poisson_t3] Implicit Assemble"),
-    t4("[ncar_poisson_t4] Solve"),
-    t5("[ncar_poisson_t5] Solve w/o memcpy")
+    weightsPrecomputed(weightsAlreadyComputed)
 {
+    tm["t1"] = new EB::Timer("[ncar_poisson_t1] Total");
+    tm["t2"] = new EB::Timer("[ncar_poisson_t2] Compute Weights");
+    tm["t3"] = new EB::Timer("[ncar_poisson_t3] Implicit Assemble");
+    tm["t4"] = new EB::Timer("[ncar_poisson_t4] Solve");
+    tm["t5"] = new EB::Timer("[ncar_poisson_t5] Solve w/o memcpy");
+
     nb_stencils = subdomain->getStencils().size();
     nb_rbf = subdomain->getNodeList().size();
 
@@ -78,7 +81,8 @@ NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, 
 //----------------------------------------------------------------------
 
 NCARPoisson1::~NCARPoisson1() {
-    t1.printAll();
+    tm.printAll();
+    tm.clear();
 }
 //----------------------------------------------------------------------
 // Solve the poisson system.

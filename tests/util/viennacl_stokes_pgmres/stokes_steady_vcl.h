@@ -91,10 +91,13 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
     int solve_on_gpu; 
 
+    // Number of components
+    unsigned int NC;
+
     public: 
     StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
-        : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu)
+        : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu), NC(4)
     {   
         setupTimers(); 
 
@@ -180,7 +183,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         // Choose either grouped by component or interleaved components
         // Number of components to interleave
-        unsigned int NC = 4; 
         UBLAS_MAT_t& A = *LHS_host; 
         UBLAS_VEC_t& F = *RHS_host;
         UBLAS_VEC_t& U_exact = *U_exact_host;
@@ -386,7 +388,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
 #if 1
-            viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
+            viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov, NC); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
@@ -440,7 +442,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
         tlist["checkNorms"]->start();
         unsigned int start_indx = 0; 
-        unsigned int NC = 4; 
 
         for (unsigned int i =0; i < NC; i++) {
             VCL_VEC_t diff = viennacl::vector_slice<VCL_VEC_t>(sol, viennacl::slice(start_indx, NC, NN)); 
@@ -489,7 +490,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     void checkNorms(UBLAS_VEC_t& sol, UBLAS_VEC_t& exact) {
         tlist["checkNorms"]->start();
         unsigned int start_indx = 0; 
-        unsigned int NC = 4; 
 
         for (unsigned int i =0; i < NC; i++) {
             UBLAS_VEC_t diff = boost::numeric::ublas::vector_slice<UBLAS_VEC_t>(sol, boost::numeric::ublas::slice(start_indx, NC, NN)); 

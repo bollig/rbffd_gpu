@@ -50,7 +50,9 @@ License:         MIT (X11), see file LICENSE in the base directory
 #include "viennacl/linalg/gmres.hpp"
 
 // But we need our own parallel norms
+#include "linalg/parallel_norm_1.hpp"
 #include "linalg/parallel_norm_2.hpp"
+#include "linalg/parallel_norm_inf.hpp"
 #include "linalg/parallel_inner_prod.hpp"
 
 #include "utils/comm/communicator.h"
@@ -93,6 +95,7 @@ namespace viennacl
                     comm_ref(comm_unit), grid_ref(decomposition), 
                     sol_dim(solution_dim_per_node)
             {
+                std::cout << "GMRES for " << sol_dim << " components\n";
                 tlist["allocate"] = new EB::Timer("Allocate Comm Buffers");
                 tlist["alltoallv"] = new EB::Timer("MPI_Alltoallv");
                 tlist["setR"] = new EB::Timer("Sync set R");
@@ -124,8 +127,8 @@ namespace viennacl
                     int* recvcounts; 
                     double* rbuf; 
 #endif 
-                    this->sdispls = new int[sol_dim*grid_ref.O_by_rank.size()]; 
-                    this->sendcounts = new int[sol_dim*grid_ref.O_by_rank.size()]; 
+                    this->sdispls = new int[grid_ref.O_by_rank.size()]; 
+                    this->sendcounts = new int[grid_ref.O_by_rank.size()]; 
 
                     unsigned int O_tot = sol_dim*grid_ref.O_by_rank[0].size(); 
                     sdispls[0] = 0;
@@ -135,8 +138,8 @@ namespace viennacl
                         sendcounts[i] = sol_dim*grid_ref.O_by_rank[i].size(); 
                         O_tot += sendcounts[i]; 
                     }
-                    this->rdispls = new int[sol_dim*grid_ref.R_by_rank.size()]; 
-                    this->recvcounts = new int[sol_dim*grid_ref.R_by_rank.size()]; 
+                    this->rdispls = new int[grid_ref.R_by_rank.size()]; 
+                    this->recvcounts = new int[grid_ref.R_by_rank.size()]; 
 
                     unsigned int R_tot = sol_dim*grid_ref.R_by_rank[0].size(); 
                     rdispls[0] = 0; 
@@ -146,6 +149,9 @@ namespace viennacl
                         rdispls[i] = rdispls[i-1] + recvcounts[i-1];   
                         R_tot += recvcounts[i]; 
                     }
+
+                    std::cout << "O_tot = " << O_tot << std::endl;
+                    std::cout << "R_tot = " << R_tot << std::endl;
 
                     // Not sure if we need to use malloc to guarantee contiguous?
                     this->sbuf = new double[O_tot];  
@@ -176,29 +182,33 @@ namespace viennacl
                         unsigned int offset_to_interior = nb_bnd; 
                         unsigned int offset_to_set_R = set_Q_size;
 
-                        viennacl::vector_range< GPUVectorType > setR(gpu_vec, viennacl::range(offset_to_set_R-offset_to_interior, (offset_to_set_R-offset_to_interior)+set_R_size));
+                        viennacl::vector_range< GPUVectorType > setR(gpu_vec, viennacl::range((offset_to_set_R-offset_to_interior) * sol_dim, ((offset_to_set_R-offset_to_interior)+set_R_size) * sol_dim));
 
-                        double* vec = new double[set_R_size]; 
+                        double* vec = new double[set_R_size * sol_dim]; 
 
                         unsigned int k = 0; 
                         for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
                             k = this->rdispls[i]; 
                             for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
-                                unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]); 
+                                unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]);
                                 // Offset the r_indx to 0 and we'll copy the subset
                                 // into the proper range
                                 r_indx -= offset_to_set_R; 
+
+                                r_indx *= sol_dim; 
 
                                 // TODO: need to translate to local
                                 // indexing properly. This hack assumes all
                                 // boundary are dirichlet and appear first
                                 // in the list
-                                vec[r_indx] = this->rbuf[k];  
+                                for (unsigned int d = 0; d < sol_dim; d++) { 
+                                    vec[r_indx+d] = this->rbuf[k*sol_dim+d];  
+                                }
                                 k++; 
                             }
                         }
 
-                        viennacl::copy(vec, setR, set_R_size);
+                        viennacl::copy(vec, setR, set_R_size * sol_dim);
                         delete [] vec;
                         tlist["setR"]->stop(); 
                     }
@@ -209,6 +219,8 @@ namespace viennacl
                         unsigned int set_Q_size = grid_ref.Q.size();
                         unsigned int set_O_size = grid_ref.O.size();
                         unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
+
+                        //std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
 
                         // OUR SOLUTION IS ARRANGED IN THIS FASHION:
                         //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
@@ -223,11 +235,11 @@ namespace viennacl
 
                         //                    std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
 
-                        viennacl::vector_range< GPUVectorType > setO(gpu_vec, viennacl::range(offset_to_set_O - offset_to_interior, (offset_to_set_O-offset_to_interior)+set_O_size));
+                        viennacl::vector_range< GPUVectorType > setO(gpu_vec, viennacl::range((offset_to_set_O - offset_to_interior) * sol_dim, ((offset_to_set_O-offset_to_interior)+set_O_size) * sol_dim));
 
-                        double* vec = new double[set_O_size]; 
+                        double* vec = new double[set_O_size * sol_dim]; 
 
-                        viennacl::copy(setO, vec, set_O_size);                    
+                        viennacl::copy(setO, vec, set_O_size * sol_dim);
 
                         // Copy elements to sbuf individually in case multiple procs receive the values
                         unsigned int k = 0; 
@@ -235,9 +247,16 @@ namespace viennacl
                             k = this->sdispls[i]; 
                             for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
                                 unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]);
+
                                 s_indx -= offset_to_set_O;
 
-                                this->sbuf[k] = vec[s_indx];
+                                //std::cout << "offset_to_set_O = " << offset_to_set_O << ", s_indx = " << s_indx << std::endl;
+                                s_indx *= sol_dim;
+
+                                for (unsigned int d = 0; d < sol_dim; d++) { 
+                                    //std::cout << "k+d = " << k+d << ", s_ind+d = " << s_indx+d << std::endl;
+                                    this->sbuf[k*sol_dim+d] = vec[s_indx+d];
+                                }
                                 k++; 
                             }
                         }
@@ -290,6 +309,7 @@ namespace viennacl
                         // before returning. 
                         if (comm_ref.getSize() > 1) {
 
+                            //std::cout << "vec size = " << vec.size() << std::endl;
                             tlist["alltoallv"]->start(); 
                             // Copy elements of set to sbuf
                             unsigned int k = 0; 
@@ -297,8 +317,12 @@ namespace viennacl
                                 k = this->sdispls[i]; 
                                 for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
                                     unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
+                                    s_indx *= sol_dim; 
                                     //                                    std::cout << "Sending " << s_indx << "\n";
-                                    this->sbuf[k] = vec[s_indx];
+                                    //std::cout << "s_indx = " << s_indx << ", k = " << k << std::endl;
+                                    for (unsigned int d=0; d < sol_dim; d++) {
+                                        this->sbuf[k*sol_dim+d] = vec[s_indx+d];
+                                    }
                                     k++; 
                                 }
                             }
@@ -311,12 +335,16 @@ namespace viennacl
                                 k = this->rdispls[i]; 
                                 for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
                                     unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]) - grid_ref.getBoundaryIndicesSize();
+                                    r_indx *= sol_dim;
+                                    //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
                                     //                                    std::cout << "Receiving " << r_indx << "\n";
                                     // TODO: need to translate to local
                                     // indexing properly. This hack assumes all
                                     // boundary are dirichlet and appear first
                                     // in the list
-                                    vec[r_indx] = this->rbuf[k];  
+                                    for (unsigned int d=0; d < sol_dim; d++) { 
+                                        vec[r_indx+d] = this->rbuf[k*sol_dim+d];  
+                                    }
                                     k++; 
                                 }
                             }
@@ -422,8 +450,10 @@ namespace viennacl
                           VectorType 
                           solve(const MatrixType & A, VectorType & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
+#if 0
 #define GMRES_DEBUG 1
 #define VIENNACL_GMRES_DEBUG 1
+#endif 
             std::cout << "INSIDE VCL PARALLEL\n";
             EB::TimerList tlist; 
             tlist["inner"] = new EB::Timer("GMRES Inner Iteration"); 
@@ -567,6 +597,7 @@ namespace viennacl
                         std::cout << std::endl;
                     }
                     std::cout << std::endl;
+                    //exit(-1);
 #endif 
 
                     // V(i+1) = V(i+1) / H(i+1, i) //
@@ -684,7 +715,7 @@ namespace viennacl
 
             // Hessenberg matrix (if we do the givens rotations properly this ends as upper triangular)
             //std::vector< std::vector<CPU_ScalarType> > H(R+1);
-            ublas::matrix<double> H(R+1,R);
+            ublas::matrix<double> H(R+1,R,0);
 
             // Rotations (cs = cosine; sn = sine)
             VectorType cs(R); 
@@ -722,7 +753,7 @@ namespace viennacl
             v0 = b_full; 
             precond.apply(v0);
             double resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
-            //            std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
+            //std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
 
             do{
@@ -789,6 +820,7 @@ namespace viennacl
                         std::cout << std::endl;
                     }
                     std::cout << std::endl;
+                    //exit(-1);
 #endif 
                     // V(i+1) = V(i+1) / H(i+1, i) //
                     w *= 1.0/H(i+1,i); 

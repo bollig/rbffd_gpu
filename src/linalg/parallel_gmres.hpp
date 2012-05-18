@@ -450,7 +450,7 @@ namespace viennacl
                           VectorType 
                           solve(const MatrixType & A, VectorType & b_full, parallel_gmres_tag const & tag, PreconditionerType const & precond)
         {
-#if 0
+#if 1
 #define GMRES_DEBUG 1
 #define VIENNACL_GMRES_DEBUG 1
 #endif 
@@ -876,6 +876,12 @@ namespace viennacl
                 tag.alltoall_subset(x_full); 
                 tlist["outer"]->stop();
 
+#ifdef VIENNACL_GMRES_DEBUG
+                if (tag.iters()+1 > 2*R) {
+                    std::cout << "EXITING GMRES\n";
+                    exit(-1);
+                }
+#endif 
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
             tlist.printAllNonStatic(); 

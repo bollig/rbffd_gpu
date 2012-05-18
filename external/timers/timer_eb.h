@@ -91,8 +91,10 @@ namespace EB {
     {
         public: 
             virtual ~TimerList() { 
-                this->printAll(); 
-                this->clear();
+                if (!this->empty()) {
+                    this->printAll(); 
+                    this->clear();
+                }
             }
 
             bool contains (std::string timer_name) { 

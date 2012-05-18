@@ -95,7 +95,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     unsigned int NC;
 
     public: 
-    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 1 here indicates the solution will have one component
         : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu), NC(4)
     {   
@@ -489,12 +489,19 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
     void checkNorms(UBLAS_VEC_t& sol, UBLAS_VEC_t& exact) {
         tlist["checkNorms"]->start();
-        unsigned int start_indx = 0; 
+
+        UBLAS_VEC_t test(MM, 0); 
+
+        for (int ii = 0; ii < NN; ii++) {
+            test(ii) = 1; 
+        }
+        std::cout << viennacl::linalg::norm_1(test) << ", " << viennacl::linalg::norm_1(test, comm_ref) << std::endl;
+
 
         for (unsigned int i =0; i < NC; i++) {
-            UBLAS_VEC_t diff = boost::numeric::ublas::vector_slice<UBLAS_VEC_t>(sol, boost::numeric::ublas::slice(start_indx, NC, NN)); 
+            UBLAS_VEC_t diff = boost::numeric::ublas::vector_slice<UBLAS_VEC_t>(sol, boost::numeric::ublas::slice(i, NC, NN)); 
 
-            boost::numeric::ublas::vector_slice<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::slice(start_indx + nb_bnd, NC, NN)); 
+            boost::numeric::ublas::vector_slice<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::slice(i + nb_bnd, NC, NN)); 
 
             diff -= exact_view;  
             
@@ -509,12 +516,10 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1 << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1 << std::endl;  
             std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2 << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2 << std::endl;  
             std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf << std::endl;  
-
-            start_indx++;
         }
 
         // Global difference
-        UBLAS_VEC_t g_diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(0, sol.size()-4)); 
+        UBLAS_VEC_t g_diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(0, NC*NN)); 
 
         boost::numeric::ublas::vector_range<UBLAS_VEC_t> g_exact_view( exact, boost::numeric::ublas::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
 
@@ -527,7 +532,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         double aninf_g = viennacl::linalg::norm_inf(g_diff, comm_ref);
         double rninf_g = aninf_g / viennacl::linalg::norm_inf(g_exact_view, comm_ref); 
 
-        std::cout << "GLOBAL ERROR " << NN << "\n";
+        std::cout << "GLOBAL ERROR " << NN << " (CPU)\n";
         std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1_g << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1_g << std::endl;  
         std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2_g << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2_g << std::endl;  
         std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf_g << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf_g << std::endl;  

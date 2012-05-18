@@ -90,10 +90,11 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact) {
     std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
     std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
+    VCL_VEC_t diff = U_approx_gpu - U_exact; 
 
-    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(U_approx_gpu - U_exact) / viennacl::linalg::norm_1(U_exact) << std::endl;  
-    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(U_approx_gpu - U_exact) / viennacl::linalg::norm_2(U_exact) << std::endl;  
-    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(U_approx_gpu - U_exact) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
+    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(U_exact) << std::endl;  
+    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(U_exact) << std::endl;  
+    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(U_exact) << std::endl;  
 #endif 
 
     // IF we want to write details we need to copy back to host. 

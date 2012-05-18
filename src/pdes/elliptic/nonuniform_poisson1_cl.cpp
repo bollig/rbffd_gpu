@@ -41,7 +41,7 @@ NonUniformPoisson1_CL::~NonUniformPoisson1_CL() {
 // neumann boundary conditions. I am starting an alternate routine to solve the system
 // in the same fashion that Joe solved the system.
 void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
-    t1.start();
+    tm["t1"]->start();
     if (subdomain == NULL) {
         cerr
             << "In " << __FILE__
@@ -92,7 +92,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         // For w_ddr, weights for dA/dr, require (x*dPhi/dx + y*dPhi/dy + z*dPhi/dz). That means we will need to get
         // the stencil centers (Vec3) into the
 
-        t2.start();
+        tm["t2"]->start();
         int numNonZeros = 0;
         if (!weightsPrecomputed) {
 #if 1
@@ -119,14 +119,14 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             }
 #endif
         }
-        t2.end();
+        tm["t2"]->end();
         cout << "Weights computed" << endl;
         der->writeToFile(RBFFD::X, "x_weights.mtx"); 
         der->writeToFile(RBFFD::Y, "y_weights.mtx"); 
         der->writeToFile(RBFFD::Z, "z_weights.mtx"); 
         der->writeToFile(RBFFD::LAPL, "lapl_weights.mtx"); 
         cout << "Weights written to file" << endl;
-        t3.start();
+        tm["t3"]->start();
 
         int nm = nb + ni;
         if ((boundary_condition != DIRICHLET) && (!disable_sol_constraint)) {
@@ -227,7 +227,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             cerr << "WARNING! HOST MATRIX WAS NOT FILLED CORRECTLY. DISCREPANCY OF " << (indx - numNonZeros) << " NONZERO ELEMENTS!" << endl;
             //     exit(EXIT_FAILURE);
         }
-        t3.end();
+        tm["t3"]->end();
         cout << "Implicit system assembled" << endl;
         viennacl::io::write_matrix_market_file(L_host, "L_host.mtx");
 
@@ -245,7 +245,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         boost::numeric::ublas::vector<FLOAT> x_host(F_host.size());
 
-        t4.start();
+        tm["t4"]->start();
 
         cout << "Before copy to GPU" << endl;
         // copy to GPU
@@ -253,19 +253,19 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         copy(F_host, F_device);
 
         cout << "Solving system" <<endl;
-        t5.start();
+        tm["t5"]->start();
         //x_device = viennacl::linalg::prod(L_device, F_device);
         x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
 
         viennacl::ocl::get_queue().finish();
-        t5.end();
+        tm["t5"]->end();
 
         cout << "Done with solve" << endl;
 
         // Copy solution to host
         copy(x_device, x_host);
 
-        t4.end();
+        tm["t4"]->end();
 
         cout << "Results copied to host" << endl;
 
@@ -333,7 +333,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         }
 
 
-        t1.end();
+        tm["t1"]->end();
 
         return;
     }

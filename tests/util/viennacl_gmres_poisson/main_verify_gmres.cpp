@@ -9,6 +9,7 @@
 //      conditioning related issues that cause differences in our iterations
 //      for RBFFD 
 
+#include "precond/ilu0.hpp"
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
 #include <viennacl/linalg/ilu.hpp>
@@ -40,8 +41,6 @@
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/lu.hpp>
-
-#include "precond/ilu0.hpp"
 
 #include <iomanip>
 #include <iostream>

@@ -6,6 +6,13 @@
 // Evan Bollig 3/30/12
 // 
 // Adapted from viennacl/linalg/ilu.hpp
+//----------------------------------------------------
+
+// Override the version of ILU0 included in ViennaCL 1.3.0 
+// Be sure to include this header BEFORE the VCL version
+#ifndef VIENNACL_LINALG_DETAIL_ILU0_HPP_
+#define VIENNACL_LINALG_DETAIL_ILU0_HPP_
+#endif 
 
 #ifndef VIENNACL_LINALG_ILU0_HPP_
 #define VIENNACL_LINALG_ILU0_HPP_
@@ -35,6 +42,7 @@ License:         MIT (X11), see file LICENSE in the base directory
 #include "viennacl/forwards.h"
 #include "viennacl/tools/tools.hpp"
 
+#include <iostream> 
 #include <map>
 
 #include "timer_eb.h"

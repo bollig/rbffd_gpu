@@ -97,9 +97,11 @@ void benchmark_Multiply_Device(MatT& A, VecT& F, VecT& U_exact) {
     VecT F_discrete(F.size());
     F_discrete = viennacl::linalg::prod(A, U_exact); 
 
-    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(F_discrete - F) / viennacl::linalg::norm_1(F) << std::endl;  
-    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(F_discrete - F) / viennacl::linalg::norm_2(F) << std::endl;  
-    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(F_discrete - F) / viennacl::linalg::norm_inf(F) << std::endl;  
+    VecT diff = F_discrete - F; 
+
+    std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(F) << std::endl;  
+    std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(F) << std::endl;  
+    std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(F) << std::endl;  
 }
 
 void assemble_LHS(RBFFD& der, Grid& grid, STL_Sparse_Mat& A){

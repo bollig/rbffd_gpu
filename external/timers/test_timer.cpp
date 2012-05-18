@@ -47,8 +47,8 @@ int main()
 
     tm["test"]->stop(); 
 
-    tm["test"]->writeAllToFile(); 
-    tm["test"]->printAll(); 
+    tm.writeAllToFile(); 
+    tm.printAll(); 
 
     tm.writeToFile("alt_timer_log"); 
 

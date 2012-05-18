@@ -90,6 +90,11 @@ namespace EB {
     class TimerList : public std::map<std::string, EB::Timer*>
     {
         public: 
+            virtual ~TimerList() { 
+                this->printAll(); 
+                this->clear();
+            }
+
             bool contains (std::string timer_name) { 
                 std::map<std::string, EB::Timer*>::iterator iter = this->find(timer_name);
                 if ( this->end() != iter ) {

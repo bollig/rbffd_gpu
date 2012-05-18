@@ -360,8 +360,8 @@ int main(int argc, char** argv) {
     delete(comm_unit); 
 
     tm["total"]->stop();
-    tm["total"]->printAll(); 
-    tm["total"]->writeAllToFile();
+    tm.printAll(); 
+    tm.writeAllToFile();
 
     printf("\n\nREACHED THE END OF MAIN\n\n");
 

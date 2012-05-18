@@ -1,6 +1,7 @@
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
 #include "timer_eb.h" 
+#include "precond/ilu0.hpp"
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
@@ -35,7 +36,6 @@
 #include <boost/numeric/ublas/lu.hpp>
 
 #include "utils/spherical_harmonics.h"
-#include "precond/ilu0.hpp"
 
 #include <CL/opencl.h>
 
@@ -161,11 +161,12 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
         VCL_VEC_t uu_exact(N);
         viennacl::copy(U_exact.begin()+i*N, U_exact.begin()+((i*N)+N), uu_exact.begin()); 
         
+        VCL_VEC_t diff = uu - uu_exact;
 
         std::cout << "==> Component " << i << " (Integral constant: " << alpha << ")\n"; 
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(uu - uu_exact) / viennacl::linalg::norm_1(uu_exact) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(uu - uu_exact) / viennacl::linalg::norm_2(uu_exact) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(uu - uu_exact) / viennacl::linalg::norm_inf(uu_exact) << std::endl;  
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(uu_exact) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(uu_exact) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(uu_exact) << std::endl;  
         std::cout << "----------------------------\n";
     }
 }

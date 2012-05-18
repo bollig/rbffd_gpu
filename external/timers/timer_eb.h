@@ -121,16 +121,21 @@ namespace EB {
             { this->printAll(fd, label_width); }
             void printAll(FILE* fd=stdout, int label_width=40)
             {
-                fprintf(fd, "====================================\n"); 
-                fprintf(fd, "Timers [All times in ms (1/1000 s)]: \n"); 		
-                fprintf(fd, "====================================\n\n");     
+                if (fd != stdout ) {
+                    fprintf(fd, "====================================\n"); 
+                    fprintf(fd, "Timers [All times in ms (1/1000 s)]: \n"); 		
+                    fprintf(fd, "====================================\n\n");     
+                }
                 for (TimerList::iterator i=this->begin(); i != this->end(); i++) {
                     Timer& tim = *(i->second); 
                     tim.print(fd, label_width);
                 }
-                fprintf(fd, "\nNOTE: only timers that have called Timer::start() are shown. \n");
-                fprintf(fd, "      [A time of 0.0 may indicate the timer was not stopped.]\n"); 
-                fprintf(fd, "====================================\n"); 
+
+                if (fd != stdout ) {
+                    fprintf(fd, "\nNOTE: only timers that have called Timer::start() are shown. \n");
+                    fprintf(fd, "      [A time of 0.0 may indicate the timer was not stopped.]\n"); 
+                    fprintf(fd, "====================================\n"); 
+                }
             }
             virtual void clear() {
                 for (TimerList::iterator i=this->begin(); i != this->end(); i++) {

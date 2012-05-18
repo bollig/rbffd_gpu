@@ -168,16 +168,19 @@ void Timer::set(float tt)
 //----------------------------------------------------------------------
 void Timer::print(FILE* fd, int label_width)
 {
-	if (count <= 0) return;
-	int real_count = count - offset;
-	if (name.length() > label_width) { 
+    if (count <= 0) return;
+    if (fd == stdout) {
+        fprintf(fd, "[Timer] ");
+    }
+    int real_count = count - offset;
+    if (name.length() > label_width) { 
         fprintf(fd, "%-*.*s...  |  avg: %10.4f  |  tot: %10.4f  |  count=%6d\n", 
                 label_width-3, label_width-3, 
                 name.c_str(), t/real_count, t, real_count);
     } else {
-	fprintf(fd, "%-*.*s  |  avg: %10.4f  |  tot: %10.4f  |  count=%6d\n", 
-            label_width, label_width, 
-            name.c_str(), t/real_count, t, real_count);
+        fprintf(fd, "%-*.*s  |  avg: %10.4f  |  tot: %10.4f  |  count=%6d\n", 
+                label_width, label_width, 
+                name.c_str(), t/real_count, t, real_count);
     }
 }
 //----------------------------------------------------------------------

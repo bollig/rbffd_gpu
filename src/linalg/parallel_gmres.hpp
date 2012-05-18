@@ -452,7 +452,6 @@ namespace viennacl
         {
 #if 1
 #define GMRES_DEBUG 1
-#define VIENNACL_GMRES_DEBUG 1
 #endif 
             std::cout << "INSIDE VCL PARALLEL\n";
             EB::TimerList tlist; 
@@ -654,6 +653,13 @@ namespace viennacl
                 tag.alltoall_subset(x_full); 
                 tlist["outer"]->stop();
 
+#ifdef VIENNACL_GMRES_DEBUG
+                if (tag.iters()+1 > 2*R) {
+                    std::cout << "EXITING GMRES\n";
+                    exit(-1);
+                }
+#endif 
+ 
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
             tlist.printAllNonStatic(); 

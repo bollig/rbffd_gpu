@@ -10,6 +10,7 @@
 void PDE::setupTimers()
 {
     tm["sendrecv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
+    tm["alltoallv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
 }
 
 int PDE::send(int my_rank, int receiver_rank) {

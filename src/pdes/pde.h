@@ -202,16 +202,27 @@ class PDE : public MPISendable
         template <class VEC_t> 
             int sendrecvUpdates(VEC_t& vec, std::string label="") 
             {
-                tm["sendrecv"]->start();
+                // Share data in vector with all other processors. Will only transfer
+                // data associated with nodes in overlap between domains. 
+                // Uses MPI_Alltoallv and MPI_Barrier. 
+                // Copies data from vec to transfer, then writes received data into vec
+                // before returning. 
                 if (comm_ref.getSize() > 1) {
 
+                    //std::cout << "vec size = " << vec.size() << std::endl;
+                    tm["alltoallv"]->start(); 
                     // Copy elements of set to sbuf
                     unsigned int k = 0; 
                     for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
                         k = this->sdispls[i]; 
                         for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
-                            // this->sbuf[k] = grid_ref.O_by_rank[i][j];
-                            this->sbuf[k] = vec[grid_ref.g2l(grid_ref.O_by_rank[i][j])]; 
+                            unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]);
+                            s_indx *= sol_dim; 
+                            //                                    std::cout << "Sending " << s_indx << "\n";
+                            //std::cout << "s_indx = " << s_indx << ", k = " << k << std::endl;
+                            for (unsigned int d=0; d < sol_dim; d++) {
+                                this->sbuf[k*sol_dim+d] = vec[s_indx+d];
+                            }
                             k++; 
                         }
                     }
@@ -223,13 +234,22 @@ class PDE : public MPISendable
                     for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
                         k = this->rdispls[i]; 
                         for (size_t j = 0; j < grid_ref.R_by_rank[i].size(); j++) {
-                            // TODO: need to translate to local indexing
-                            vec[grid_ref.g2l(grid_ref.R_by_rank[i][j])] = this->rbuf[k];  
+                            unsigned int r_indx = grid_ref.g2l(grid_ref.R_by_rank[i][j]);
+                            r_indx *= sol_dim;
+                            //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
+                            //                                    std::cout << "Receiving " << r_indx << "\n";
+                            // TODO: need to translate to local
+                            // indexing properly. This hack assumes all
+                            // boundary are dirichlet and appear first
+                            // in the list
+                            for (unsigned int d=0; d < sol_dim; d++) { 
+                                vec[r_indx+d] = this->rbuf[k*sol_dim+d];  
+                            }
                             k++; 
                         }
                     }
+                    tm["alltoallv"]->stop(); 
                 }
-                tm["sendrecv"]->stop();
                 return 0;  // FIXME: return number of bytes received in case we want to monitor this 
             }
 
@@ -246,8 +266,8 @@ class PDE : public MPISendable
             int* recvcounts; 
             double* rbuf; 
 #endif 
-            this->sdispls = new int[sol_dim*grid_ref.O_by_rank.size()]; 
-            this->sendcounts = new int[sol_dim*grid_ref.O_by_rank.size()]; 
+            this->sdispls = new int[grid_ref.O_by_rank.size()]; 
+            this->sendcounts = new int[grid_ref.O_by_rank.size()]; 
 
             unsigned int O_tot = sol_dim*grid_ref.O_by_rank[0].size(); 
             sdispls[0] = 0;
@@ -257,8 +277,8 @@ class PDE : public MPISendable
                 sendcounts[i] = sol_dim*grid_ref.O_by_rank[i].size(); 
                 O_tot += sendcounts[i]; 
             }
-            this->rdispls = new int[sol_dim*grid_ref.R_by_rank.size()]; 
-            this->recvcounts = new int[sol_dim*grid_ref.R_by_rank.size()]; 
+            this->rdispls = new int[grid_ref.R_by_rank.size()]; 
+            this->recvcounts = new int[grid_ref.R_by_rank.size()]; 
 
             unsigned int R_tot = sol_dim*grid_ref.R_by_rank[0].size(); 
             rdispls[0] = 0; 
@@ -268,6 +288,9 @@ class PDE : public MPISendable
                 rdispls[i] = rdispls[i-1] + recvcounts[i-1];   
                 R_tot += recvcounts[i]; 
             }
+
+            std::cout << "O_tot = " << O_tot << std::endl;
+            std::cout << "R_tot = " << R_tot << std::endl;
 
             // Not sure if we need to use malloc to guarantee contiguous?
             this->sbuf = new double[O_tot];  

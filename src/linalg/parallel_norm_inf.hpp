@@ -112,7 +112,6 @@ namespace viennacl
     double
     norm_inf(boost::numeric::ublas::vector_slice< boost::numeric::ublas::vector<double> > const& v, Communicator const& comm_unit) 
     {
-        std::cout << "SLICE" << v.size() << "\n";
             double norm = boost::numeric::ublas::norm_inf(v);
             double r[1]; 
 

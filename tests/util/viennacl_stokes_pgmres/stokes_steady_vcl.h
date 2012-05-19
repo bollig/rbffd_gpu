@@ -95,9 +95,9 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     unsigned int NC;
 
     public: 
-    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
         // The 1 here indicates the solution will have one component
-        : ImplicitPDE(grid, der, comm, 1) , solve_on_gpu(use_gpu), NC(4)
+        : ImplicitPDE(grid, der, comm, 4) , solve_on_gpu(use_gpu), NC(4)
     {   
         setupTimers(); 
 
@@ -203,6 +203,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         std::vector<NodeType>& nodes = grid_ref.getNodeList(); 
 
+        std::cout << "NODES SIZE = " << nodes.size() << std::endl;
+
         //------------- Fill F -------------
         double sumU = 0.;
         double sumV = 0.;
@@ -215,7 +217,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-#if 0
+#if 1
             // test convergence of the surface deriv approxs
             U_exact(row_ind+0) = 0.;
             U_exact(row_ind+1) = 0.;
@@ -244,6 +246,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             sumP += U_exact(row_ind+3); 
         }
 
+#if 1
         for (unsigned int j = NN; j < MM; j++) {
             unsigned int row_ind = j*NC;
             NodeType& node = nodes[j]; 
@@ -251,7 +254,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-#if 0
+#if 1
             // test convergence of the surface deriv approxs
             U_exact(row_ind+0) = 0.;
             U_exact(row_ind+1) = 0.;
@@ -265,7 +268,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             U_exact(row_ind+3) = MS.P(Xx,Yy,Zz); 
 #endif 
         }
- 
+#endif 
+
         std::cout << "Sum U = " << sumU << std::endl;
         std::cout << "Sum V = " << sumV << std::endl;
         std::cout << "Sum W = " << sumW << std::endl;
@@ -392,6 +396,13 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
+            
+            std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
+            std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
+            std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
+            std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
+
+
 #if 1
             tlist["solve"]->start();
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
@@ -405,10 +416,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
 #endif        
-            std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
-            std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
-            std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
-            std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
             tlist["solve"]->start();
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
@@ -441,15 +448,21 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
         tlist["checkNorms"]->start();
-        unsigned int start_indx = 0; 
 
+        VCL_VEC_t g_diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(0, NC*NN)); 
+
+        VCL_VEC_t g_exact_view = viennacl::vector_range<VCL_VEC_t>( exact, viennacl::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
+
+        g_diff -= g_exact_view; 
+
+        // Compute by component (requires slices of the vector)
         for (unsigned int i =0; i < NC; i++) {
-            VCL_VEC_t diff = viennacl::vector_slice<VCL_VEC_t>(sol, viennacl::slice(start_indx, NC, NN)); 
 
-            viennacl::vector_slice<VCL_VEC_t> exact_view( exact, viennacl::slice(start_indx + nb_bnd, NC, NN)); 
+            // TODO: add slice of vector_range and vice versa
+            viennacl::vector_slice<VCL_VEC_t> exact_view( g_exact_view, viennacl::slice(i, NC, NN)); 
 
-            diff -= exact_view;  
-            
+            viennacl::vector_slice<VCL_VEC_t> diff(g_diff, viennacl::slice(i, NC, NN)); 
+
             double an1 = viennacl::linalg::norm_1(diff, comm_ref);
             double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref); 
             double an2 = viennacl::linalg::norm_2(diff, comm_ref);
@@ -461,17 +474,9 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1 << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1 << std::endl;  
             std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2 << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2 << std::endl;  
             std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf << std::endl;  
-
-            start_indx++;
         }
 
         // Global difference
-        VCL_VEC_t g_diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(0, sol.size()-4)); 
-
-        viennacl::vector_range<VCL_VEC_t> g_exact_view( exact, viennacl::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
-
-        g_diff -= g_exact_view; 
-
         double an1_g = viennacl::linalg::norm_1(g_diff, comm_ref);
         double rn1_g = an1_g / viennacl::linalg::norm_1(g_exact_view, comm_ref); 
         double an2_g = viennacl::linalg::norm_2(g_diff, comm_ref);
@@ -479,7 +484,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         double aninf_g = viennacl::linalg::norm_inf(g_diff, comm_ref);
         double rninf_g = aninf_g / viennacl::linalg::norm_inf(g_exact_view, comm_ref); 
 
-        std::cout << "GLOBAL ERROR " << NN << "\n";
+        std::cout << "GLOBAL ERROR " << NN << " (CPU)\n";
         std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1_g << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1_g << std::endl;  
         std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2_g << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2_g << std::endl;  
         std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf_g << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf_g << std::endl;  
@@ -487,24 +492,25 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         tlist["checkNorms"]->stop();
     }
 
+
+
     void checkNorms(UBLAS_VEC_t& sol, UBLAS_VEC_t& exact) {
         tlist["checkNorms"]->start();
 
-        UBLAS_VEC_t test(MM, 0); 
+        UBLAS_VEC_t g_diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(0, NC*NN)); 
 
-        for (int ii = 0; ii < NN; ii++) {
-            test(ii) = 1; 
-        }
-        std::cout << viennacl::linalg::norm_1(test) << ", " << viennacl::linalg::norm_1(test, comm_ref) << std::endl;
+        UBLAS_VEC_t g_exact_view = boost::numeric::ublas::vector_range<UBLAS_VEC_t>( exact, boost::numeric::ublas::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
 
+        g_diff -= g_exact_view; 
 
+        // Compute by component (requires slices of the vector)
         for (unsigned int i =0; i < NC; i++) {
-            UBLAS_VEC_t diff = boost::numeric::ublas::vector_slice<UBLAS_VEC_t>(sol, boost::numeric::ublas::slice(i, NC, NN)); 
 
-            boost::numeric::ublas::vector_slice<UBLAS_VEC_t> exact_view( exact, boost::numeric::ublas::slice(i + nb_bnd, NC, NN)); 
+            // TODO: add slice of vector_range and vice versa
+            boost::numeric::ublas::vector_slice<UBLAS_VEC_t> exact_view( g_exact_view, boost::numeric::ublas::slice(i, NC, NN)); 
 
-            diff -= exact_view;  
-            
+            boost::numeric::ublas::vector_slice<UBLAS_VEC_t> diff(g_diff, boost::numeric::ublas::slice(i, NC, NN)); 
+
             double an1 = viennacl::linalg::norm_1(diff, comm_ref);
             double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref); 
             double an2 = viennacl::linalg::norm_2(diff, comm_ref);
@@ -519,12 +525,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
         // Global difference
-        UBLAS_VEC_t g_diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(0, NC*NN)); 
-
-        boost::numeric::ublas::vector_range<UBLAS_VEC_t> g_exact_view( exact, boost::numeric::ublas::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
-
-        g_diff -= g_exact_view; 
-
         double an1_g = viennacl::linalg::norm_1(g_diff, comm_ref);
         double rn1_g = an1_g / viennacl::linalg::norm_1(g_exact_view, comm_ref); 
         double an2_g = viennacl::linalg::norm_2(g_diff, comm_ref);

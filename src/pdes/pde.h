@@ -218,7 +218,6 @@ class PDE : public MPISendable
                         for (size_t j = 0; j < grid_ref.O_by_rank[i].size(); j++) {
                             unsigned int s_indx = grid_ref.g2l(grid_ref.O_by_rank[i][j]);
                             s_indx *= sol_dim; 
-                            //                                    std::cout << "Sending " << s_indx << "\n";
                             //std::cout << "s_indx = " << s_indx << ", k = " << k << std::endl;
                             for (unsigned int d=0; d < sol_dim; d++) {
                                 this->sbuf[k*sol_dim+d] = vec[s_indx+d];
@@ -230,6 +229,7 @@ class PDE : public MPISendable
                     MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
 
                     comm_ref.barrier();
+
                     k = 0; 
                     for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
                         k = this->rdispls[i]; 

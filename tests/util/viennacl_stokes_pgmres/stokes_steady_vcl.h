@@ -95,11 +95,11 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     unsigned int NC;
 
     public: 
-    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=1) 
-        // The 1 here indicates the solution will have one component
+    StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
+        // The 4 here indicates the solution will have four components to our solution (IMPORTANT FOR MPI)
         : ImplicitPDE(grid, der, comm, 4) , solve_on_gpu(use_gpu), NC(4)
     {   
-        setupTimers(); 
+        setupMyTimers(); 
 
         N = grid_ref.getStencilsSize(); 
         M = grid_ref.getNodeListSize(); 
@@ -217,7 +217,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-#if 1
+#if 0
             // test convergence of the surface deriv approxs
             U_exact(row_ind+0) = 0.;
             U_exact(row_ind+1) = 0.;
@@ -246,7 +246,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             sumP += U_exact(row_ind+3); 
         }
 
-#if 1
+        // Get the rest of the exact solution from sendrecv
+#if 0
         for (unsigned int j = NN; j < MM; j++) {
             unsigned int row_ind = j*NC;
             NodeType& node = nodes[j]; 
@@ -254,7 +255,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             double Yy = node.y(); 
             double Zz = node.z(); 
 
-#if 1
+#if 0
             // test convergence of the surface deriv approxs
             U_exact(row_ind+0) = 0.;
             U_exact(row_ind+1) = 0.;
@@ -292,7 +293,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         // This should get values from neighboring processors into U_exact. 
         this->sendrecvUpdates(U_exact,"U_exact"); 
-        tlist["assemble_rhs"]->stop();
+        std::cout << "DEATH\n";
+        //tlist["assemble_rhs"]->stop();
 
         // -----------------  Fill LHS --------------------
         //
@@ -580,7 +582,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
     protected: 
 
-    void setupTimers() {
+    void setupMyTimers() {
         tlist["allocate"] = new EB::Timer("Allocate GPU vectors and matrices"); 
         tlist["assemble"] = new EB::Timer("Assemble both RHS and LHS");
         tlist["assemble_lhs"] = new EB::Timer("Assemble LHS");

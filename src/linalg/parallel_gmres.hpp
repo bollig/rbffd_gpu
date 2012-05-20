@@ -97,7 +97,7 @@ namespace viennacl
             {
                 std::cout << "GMRES for " << sol_dim << " components\n";
                 tlist["allocate"] = new EB::Timer("Allocate Comm Buffers");
-                tlist["alltoallv"] = new EB::Timer("MPI_Alltoallv");
+                tlist["gmres_alltoall"] = new EB::Timer("MPI_Alltoallv");
                 tlist["setR"] = new EB::Timer("Sync set R");
                 tlist["setO"] = new EB::Timer("Sync set O");
                 allocateCommBuffers();            
@@ -278,7 +278,7 @@ namespace viennacl
                         // Copies data from vec to transfer, then writes received data into vec
                         // before returning. 
                         if (comm_ref.getSize() > 1) {
-                            tlist["alltoallv"]->start(); 
+                            tlist["gmres_alltoall"]->start(); 
 
                             // GPU array is arranged as {QmB BmO O R} 
                             // TODO: however the set O and set R might have values that span multiple CPUs. 
@@ -290,7 +290,7 @@ namespace viennacl
                             comm_ref.barrier();
 
                             syncSetR(vec); 
-                            tlist["alltoallv"]->stop(); 
+                            tlist["gmres_alltoall"]->stop(); 
                         }
                     }
 
@@ -302,6 +302,7 @@ namespace viennacl
                     alltoall_subset(VectorType& vec, double& dummy) const
                     {
 
+#if 0
                         // Share data in vector with all other processors. Will only transfer
                         // data associated with nodes in overlap between domains. 
                         // Uses MPI_Alltoallv and MPI_Barrier. 
@@ -310,7 +311,7 @@ namespace viennacl
                         if (comm_ref.getSize() > 1) {
 
                             //std::cout << "vec size = " << vec.size() << std::endl;
-                            tlist["alltoallv"]->start(); 
+                            tlist["gmres_alltoall"]->start(); 
                             // Copy elements of set to sbuf
                             unsigned int k = 0; 
                             for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
@@ -348,8 +349,9 @@ namespace viennacl
                                     k++; 
                                 }
                             }
-                            tlist["alltoallv"]->stop(); 
+                            tlist["gmres_alltoall"]->stop(); 
                         }
+#endif 
                     }
 
                 template <typename VectorType>

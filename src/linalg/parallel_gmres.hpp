@@ -129,21 +129,20 @@ namespace viennacl
 #endif 
                     this->sdispls = new int[grid_ref.O_by_rank.size()]; 
                     this->sendcounts = new int[grid_ref.O_by_rank.size()]; 
-
-                    unsigned int O_tot = sol_dim*grid_ref.O_by_rank[0].size(); 
                     sdispls[0] = 0;
                     sendcounts[0] = sol_dim*grid_ref.O_by_rank[0].size(); 
+                    unsigned int O_tot = sendcounts[0];
                     for (size_t i = 1; i < grid_ref.O_by_rank.size(); i++) {
                         sdispls[i] = sdispls[i-1] + sendcounts[i-1];
                         sendcounts[i] = sol_dim*grid_ref.O_by_rank[i].size(); 
                         O_tot += sendcounts[i]; 
                     }
+
                     this->rdispls = new int[grid_ref.R_by_rank.size()]; 
                     this->recvcounts = new int[grid_ref.R_by_rank.size()]; 
-
-                    unsigned int R_tot = sol_dim*grid_ref.R_by_rank[0].size(); 
                     rdispls[0] = 0; 
                     recvcounts[0] = sol_dim*grid_ref.R_by_rank[0].size(); 
+                    unsigned int R_tot = recvcounts[0];
                     for (size_t i = 1; i < grid_ref.R_by_rank.size(); i++) {
                         recvcounts[i] = sol_dim*grid_ref.R_by_rank[i].size(); 
                         rdispls[i] = rdispls[i-1] + recvcounts[i-1];   
@@ -202,9 +201,9 @@ namespace viennacl
                                 // boundary are dirichlet and appear first
                                 // in the list
                                 for (unsigned int d = 0; d < sol_dim; d++) { 
-                                    vec[r_indx+d] = this->rbuf[k*sol_dim+d];  
-                                }
+                                    vec[r_indx+d] = this->rbuf[k];  
                                 k++; 
+                                }
                             }
                         }
 
@@ -254,10 +253,10 @@ namespace viennacl
                                 s_indx *= sol_dim;
 
                                 for (unsigned int d = 0; d < sol_dim; d++) { 
-                                    //std::cout << "k+d = " << k+d << ", s_ind+d = " << s_indx+d << std::endl;
-                                    this->sbuf[k*sol_dim+d] = vec[s_indx+d];
-                                }
+                                    //std::cout << "k = " << k << ", s_ind+d = " << s_indx+d << std::endl;
+                                    this->sbuf[k] = vec[s_indx+d];
                                 k++; 
+                                }
                             }
                         }
 
@@ -302,7 +301,7 @@ namespace viennacl
                     alltoall_subset(VectorType& vec, double& dummy) const
                     {
 
-#if 0
+#if 1
                         // Share data in vector with all other processors. Will only transfer
                         // data associated with nodes in overlap between domains. 
                         // Uses MPI_Alltoallv and MPI_Barrier. 
@@ -322,9 +321,9 @@ namespace viennacl
                                     //                                    std::cout << "Sending " << s_indx << "\n";
                                     //std::cout << "s_indx = " << s_indx << ", k = " << k << std::endl;
                                     for (unsigned int d=0; d < sol_dim; d++) {
-                                        this->sbuf[k*sol_dim+d] = vec[s_indx+d];
+                                        this->sbuf[k] = vec[s_indx+d];
+                                        k++; 
                                     }
-                                    k++; 
                                 }
                             }
 
@@ -344,9 +343,9 @@ namespace viennacl
                                     // boundary are dirichlet and appear first
                                     // in the list
                                     for (unsigned int d=0; d < sol_dim; d++) { 
-                                        vec[r_indx+d] = this->rbuf[k*sol_dim+d];  
+                                        vec[r_indx+d] = this->rbuf[k];  
+                                        k++; 
                                     }
-                                    k++; 
                                 }
                             }
                             tlist["gmres_alltoall"]->stop(); 

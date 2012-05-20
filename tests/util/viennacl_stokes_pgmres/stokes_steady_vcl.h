@@ -291,7 +291,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         F(4*N+3) = sumP;
 #endif 
 
-#if 0
+#if 1
         // This should get values from neighboring processors into U_exact. 
         this->sendrecvUpdates(U_exact,"U_exact"); 
 #endif 

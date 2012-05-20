@@ -20,18 +20,19 @@ class PDEWriter
         int local_write_freq; 
         int global_write_freq; 
 
-        EB::TimerList tm; 
+        EB::Timer* t_write;
 
     public: 
         PDEWriter(Domain* subdomain_, TimeDependentPDE* pde_, Communicator* comm_unit_, int local_write_freq_, int global_write_freq_)
             : subdomain(subdomain_), pde(pde_), comm_unit(comm_unit_), 
             local_write_freq(local_write_freq_), 
             global_write_freq(global_write_freq_) { 
-                tm["write"] = new EB::Timer("write grid info and solution to disk");
+                t_write = new EB::Timer("write grid info and solution to disk");
             } 
 
         virtual ~PDEWriter() {
             this->writeFinal(); 
+            t_write->print(); delete(t_write);
         }
 
         void setLocalWriteFrequency(int freq) { local_write_freq = freq; } 
@@ -44,22 +45,21 @@ class PDEWriter
          */
         void update(int iter) { 
             if (iter == 0) { 
-                tm["write"]->start(); 
+                t_write->start(); 
                 this->writeInitial(); 
-                tm["write"]->stop(); 
+                t_write->stop(); 
             }
 
             if ((local_write_freq > 0) && ((iter % local_write_freq) == 0)) { 
-                tm["write"]->start(); 
+                t_write->start(); 
                 this->writeLocal(iter); 
-                tm["write"]->stop(); 
+                t_write->stop(); 
             }
 
             if ((global_write_freq > 0) && ((iter % global_write_freq) == 0)) { 
-                tm["write"]->start(); 
+                t_write->start(); 
                 this->writeGlobal(iter); 
-                tm["write"]->stop();
-                tm.printAll(); 
+                t_write->stop();
             } 
         }
 

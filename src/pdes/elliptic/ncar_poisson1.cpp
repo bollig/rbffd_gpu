@@ -14,11 +14,11 @@ NCARPoisson1::NCARPoisson1(ExactSolution* _solution, Grid* subdomain_, RBFFD* de
     boundary_set(&subdomain_->getBoundaryIndices()), der(der_), id(rank), subdomain(subdomain_),
     weightsPrecomputed(weightsAlreadyComputed)
 {
-    tm["t1"] = new EB::Timer("[ncar_poisson_t1] Total");
-    tm["t2"] = new EB::Timer("[ncar_poisson_t2] Compute Weights");
-    tm["t3"] = new EB::Timer("[ncar_poisson_t3] Implicit Assemble");
-    tm["t4"] = new EB::Timer("[ncar_poisson_t4] Solve");
-    tm["t5"] = new EB::Timer("[ncar_poisson_t5] Solve w/o memcpy");
+    t_1 = new EB::Timer("[ncar_poisson_t1] Total");
+    t_2 = new EB::Timer("[ncar_poisson_t2] Compute Weights");
+    t_3 = new EB::Timer("[ncar_poisson_t3] Implicit Assemble");
+    t_4 = new EB::Timer("[ncar_poisson_t4] Solve");
+    t_5 = new EB::Timer("[ncar_poisson_t5] Solve w/o memcpy");
 
     nb_stencils = subdomain->getStencils().size();
     nb_rbf = subdomain->getNodeList().size();
@@ -81,8 +81,11 @@ NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, 
 //----------------------------------------------------------------------
 
 NCARPoisson1::~NCARPoisson1() {
-    tm.printAll();
-    tm.clear();
+    t_1->print(); delete(t_1);  
+    t_2->print(); delete(t_2);  
+    t_3->print(); delete(t_3);  
+    t_4->print(); delete(t_4);  
+    t_5->print(); delete(t_5);  
 }
 //----------------------------------------------------------------------
 // Solve the poisson system.

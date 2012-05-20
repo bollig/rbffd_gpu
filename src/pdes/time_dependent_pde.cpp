@@ -3,9 +3,9 @@
 #include <iostream>
 
 void TimeDependentPDE::setupTimers() {
-    tm["advance"] = new EB::Timer("[T_PDE] Advance timestep");
-    tm["rk4_eval"] = new EB::Timer("[T_PDE] RK4 Evaluate Substep on CPU");
-    tm["rk4_adv"] = new EB::Timer("[T_PDE] RK4 Advance on CPU");
+    t_advance = new EB::Timer("[T_PDE] Advance timestep");
+    t_rk4_eval = new EB::Timer("[T_PDE] RK4 Evaluate Substep on CPU");
+    t_rk4_adv = new EB::Timer("[T_PDE] RK4 Advance on CPU");
 }
 
 void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
@@ -44,7 +44,7 @@ void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
 //  - computing an update to the current solution (i.e., calling applyWeightsForDerivs(currentSolution)) 
 //  - applying the updates to the current solution (i.e., RK4 weighted summation of intermediate updates).
 void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
-    tm["advance"]->start(); 
+    t_advance->start(); 
     switch (which) 
     {
         case EULER: 
@@ -62,7 +62,7 @@ void TimeDependentPDE::advance(TimeScheme which, double delta_t) {
             break; 
     };
     cur_time += delta_t; 
-    tm["advance"]->stop(); 
+    t_advance->stop(); 
 }
 
 void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
@@ -186,7 +186,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // ------------------- K1 ------------------------
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in k1 
-    tm["rk4_eval"]->start();
+    t_rk4_eval->start();
     this->solve(input_sol, &k1, nb_stencils, nb_nodes, cur_time); 
 
     // ------------------- K2 ------------------------
@@ -197,7 +197,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + 0.5*dt * ( k1[i] + f);
     }
-    tm["rk4_eval"]->stop();
+    t_rk4_eval->stop();
 
     // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time+0.5*dt); 
@@ -209,7 +209,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
 //*********
     // y*(t) = y(t) + h * k2
     // but k2 = lapl[ y(t) + h/2 * k1 ] (content between [..] was computed above)
-    tm["rk4_eval"]->start();
+    t_rk4_eval->start();
     this->solve(s, &k2, nb_stencils, nb_nodes, cur_time+0.5*dt); 
 
     // ------------------- K3 ------------------------
@@ -220,7 +220,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + 0.5*dt * ( k2[i] + f);
     }
-    tm["rk4_eval"]->stop();
+    t_rk4_eval->stop();
 
     // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time+0.5*dt); 
@@ -230,7 +230,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     this->sendrecvUpdates(s, "k2");
 
 //*********
-    tm["rk4_eval"]->start();
+    t_rk4_eval->start();
     this->solve(s, &k3, nb_stencils, nb_nodes, cur_time+0.5*dt); 
 
     // ------------------- K4 ------------------------
@@ -241,7 +241,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + dt * ( k3[i] + f);
     }
-    tm["rk4_eval"]->stop();
+    t_rk4_eval->stop();
 
     // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time+dt); 
@@ -251,16 +251,16 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     this->sendrecvUpdates(s, "K3");
 
 //*********
-    tm["rk4_eval"]->start();
+    t_rk4_eval->start();
     this->solve(s, &k4, nb_stencils, nb_nodes, cur_time+dt); 
-    tm["rk4_eval"]->stop();
+    t_rk4_eval->stop();
     // NOTE: No more communication is required for evaluations:  
    //    this->sendrecvUpdates(k4, "k4");
 
     // ------------------- FINAL ------------------------
     // FINAL STEP: y_n+1 = y_n + 1/6 * h * (k1 + 2*k2 + 2*k3 + k4)
     //
-    tm["rk4_adv"]->start();
+    t_rk4_adv->start();
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term 
@@ -268,7 +268,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
         // y(t) + h/2 * feval1 
         input_sol[i] = input_sol[i] + (dt/6.) * ( k1[i] + 2.*k2[i] + 2.*k3[i] + k4[i]);
     }
-    tm["rk4_adv"]->stop();
+    t_rk4_adv->stop();
 
     // Make sure any boundary conditions are met. 
     this->enforceBoundaryConditions(input_sol, cur_time+dt);

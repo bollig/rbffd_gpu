@@ -14,6 +14,10 @@ class TimeDependentPDE : public PDE
         double start_time;    
         double end_time;    
 
+        EB::Timer* t_advance; 
+        EB::Timer* t_rk4_eval; 
+        EB::Timer* t_rk4_adv;
+
     // This count should match the number of TimeScheme types
     public:
 #define NUM_TIME_SCHEMES 3
@@ -24,6 +28,12 @@ class TimeDependentPDE : public PDE
             : PDE(grid, der, comm), cur_time(0.) 
         {
             setupTimers();
+        }
+        ~TimeDependentPDE() {
+            t_advance->print(); delete(t_advance); 
+            t_rk4_eval->print(); delete(t_rk4_eval); 
+            t_rk4_adv->print(); delete(t_rk4_adv); 
+            this->~PDE();
         }
 
         // Fill in the initial conditions of the PDE. (overwrite the solution)

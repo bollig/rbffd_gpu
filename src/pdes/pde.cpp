@@ -9,8 +9,7 @@
 
 void PDE::setupTimers()
 {
-    tm["sendrecv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
-    tm["alltoallv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
+    t_alltoallv = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
 }
 
 int PDE::send(int my_rank, int receiver_rank) {
@@ -216,7 +215,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
 // Send and receive updates in round-robin fashion (direct connect == slow)
 int PDE::sendrecvUpdates_rr(std::vector<SolutionType>& vec, std::string label) 
 {
-    tm["sendrecv"]->start();
+    t_alltoallv->start();
     if (comm_ref.getSize() > 1) {
         //        std::cout << "[PDE] SEND/RECEIVE\n";
         vector<int> receiver_list; 
@@ -244,7 +243,7 @@ int PDE::sendrecvUpdates_rr(std::vector<SolutionType>& vec, std::string label)
         }
     }
     comm_ref.barrier();
-    tm["sendrecv"]->stop();
+    t_alltoallv->stop();
     return 0;  // FIXME: return number of bytes received in case we want to monitor this 
 }
 

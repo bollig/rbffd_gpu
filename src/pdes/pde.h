@@ -16,7 +16,7 @@
 class PDE : public MPISendable
 {
     protected: 
-        EB::TimerList tm; 
+        EB::Timer* t_alltoallv;
 
         Domain& grid_ref;
         RBFFD& der_ref; 
@@ -75,6 +75,9 @@ class PDE : public MPISendable
             delete [] rdispls; 
             delete [] recvcounts; 
             delete [] rbuf; 
+
+            t_alltoallv->print();
+            delete(t_alltoallv); 
         }
 
         // This should assemble a matrix L of weights which can be used to solve the PDE
@@ -210,7 +213,7 @@ class PDE : public MPISendable
                 if (comm_ref.getSize() > 1) {
 
                     //std::cout << "vec size = " << vec.size() << std::endl;
-                    tm["alltoallv"]->start(); 
+                    t_alltoallv->start(); 
                     // Copy elements of set to sbuf
                     unsigned int k = 0; 
                     for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
@@ -248,7 +251,7 @@ class PDE : public MPISendable
                             k++; 
                         }
                     }
-                    tm["alltoallv"]->stop(); 
+                    t_alltoallv->stop(); 
                 }
                 return 0;  // FIXME: return number of bytes received in case we want to monitor this 
             }

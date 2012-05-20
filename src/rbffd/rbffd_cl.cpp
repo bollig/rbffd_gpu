@@ -28,22 +28,22 @@ using namespace std;
 //----------------------------------------------------------------------
 //
 void RBFFD_CL::setupTimers() {
-    tm["loadAttach"] = new Timer("[RBFFD_CL] Load and Attach Kernel"); 
-    tm["construct"] = new Timer("[RBFFD_CL] RBFFD_CL (constructor)"); 
-    tm["computeDerivs"] = new Timer("[RBFFD_CL] computeRBFFD_s (compute derivatives using OpenCL"); 
-    tm["sendWeights"] = new Timer("[RBFFD_CL]   (send stencil weights to GPU)"); 
-    tm["applyWeights"] = new Timer("[RBFFD_CL] Evaluate single derivative by applying weights to function");
+    t_loadAttach = new Timer("[RBFFD_CL] Load and Attach Kernel"); 
+    t_construct = new Timer("[RBFFD_CL] RBFFD_CL (constructor)"); 
+    t_computeDerivs = new Timer("[RBFFD_CL] computeRBFFD_s (compute derivatives using OpenCL"); 
+    t_sendWeights = new Timer("[RBFFD_CL]   (send stencil weights to GPU)"); 
+    t_applyWeights = new Timer("[RBFFD_CL] Evaluate single derivative by applying weights to function");
 }
 
 
 //----------------------------------------------------------------------
 //
 void RBFFD_CL::loadKernel() {
-    tm["construct"]->start(); 
+    t_construct->start(); 
 
     cout << "Inside RBFFD_CL constructor" << endl;
 
-    tm["loadAttach"]->start(); 
+    t_loadAttach->start(); 
 
     // Split the kernels by __kernel keyword and do not discards the keyword.
     // TODO: support extensions declared for kernels (this class can add FP64
@@ -84,7 +84,7 @@ void RBFFD_CL::loadKernel() {
     catch (cl::Error er) {
         printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
     }
-    tm["loadAttach"]->end(); 
+    t_loadAttach->end(); 
 }
 
 void RBFFD_CL::allocateGPUMem() {
@@ -288,7 +288,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
 
     if (weightsModified) {
 
-        tm["sendWeights"]->start();
+        t_sendWeights->start();
         unsigned int weights_mem_size = gpu_stencil_size * sizeof(double);  
 
         std::cout << "Writing weights to GPU memory\n"; 
@@ -350,7 +350,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
             deleteCPUWeightsBuffer = true;
         }
 
-        tm["sendWeights"]->end();
+        t_sendWeights->end();
 
         weightsModified = false;
 
@@ -363,7 +363,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
     if (weightsModified) {
 
-        tm["sendWeights"]->start();
+        t_sendWeights->start();
         unsigned int weights_mem_size = gpu_stencil_size * sizeof(float);  
 
         std::cout << "Writing weights to GPU memory\n"; 
@@ -425,7 +425,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
             deleteCPUWeightsBuffer = true;
         }
 
-        tm["sendWeights"]->end();
+        t_sendWeights->end();
 
         weightsModified = false;
 
@@ -495,7 +495,7 @@ void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool force
 void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
-    tm["applyWeights"]->start(); 
+    t_applyWeights->start(); 
 
     if (isChangedU) {
         this->updateFunctionOnGPU(nb_nodes, u, false); 
@@ -556,7 +556,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
     } else {
         //        std::cout << "CL program finished!" << std::endl;
     }
-    tm["applyWeights"]->end();
+    t_applyWeights->end();
 }
 //----------------------------------------------------------------------
 
@@ -569,7 +569,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
 void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
-    tm["applyWeights"]->start(); 
+    t_applyWeights->start(); 
 
     if (isChangedU) {
         this->updateFunctionOnGPU(nb_nodes, u, false); 
@@ -652,7 +652,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, 
 
     delete [] deriv_temp;
 
-    tm["applyWeights"]->end();
+    t_applyWeights->end();
 }
 //----------------------------------------------------------------------
 

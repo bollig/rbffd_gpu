@@ -6,10 +6,10 @@
 
 
 void StokesSteadyPDE::setupTimers() {
-    tm["RHS_discrete"] = new EB::Timer("[StokesSteadyPDE] Fill RHS Discrete"); 
-    tm["RHS_continuous"] = new EB::Timer("[StokesSteadyPDE] Fill RHS Continuous"); 
-    tm["LHS"] = new EB::Timer("[StokesSteadyPDE] Fill LHS"); 
-    tm["gmres"] = new EB::Timer("[StokesSteadyPDE] Compute GMRES (1e-8, 200)"); 
+    t_rhs_discrete = new EB::Timer("[StokesSteadyPDE] Fill RHS Discrete"); 
+    t_rhs_continuous = new EB::Timer("[StokesSteadyPDE] Fill RHS Continuous"); 
+    t_lhs = new EB::Timer("[StokesSteadyPDE] Fill LHS"); 
+    t_gmres = new EB::Timer("[StokesSteadyPDE] Compute GMRES (1e-8, 200)"); 
 
 }
 
@@ -60,7 +60,7 @@ void StokesSteadyPDE::assemble() {
 
 void StokesSteadyPDE::fillLHS_ConstViscosity() { 
 
-    tm["LHS"]->start(); 
+    t_lhs->start(); 
     double eta = 1.;
     //double Ra = 1.e6;
 
@@ -223,14 +223,14 @@ void StokesSteadyPDE::fillLHS_ConstViscosity() {
         (*LHS)(diag_row_ind, diag_col_ind) = 1.;  
     }
 
-    tm["LHS"]->stop(); 
+    t_lhs->stop(); 
 }
 
 /**************  RHS *****************/ 
 
 void StokesSteadyPDE::fillRHS_ConstViscosity() {
 
-    tm["RHS_continuous"]->start(); 
+    t_rhs_continuous->start(); 
     // This is our manufactured solution:
     SphericalHarmonic::SphericalHarmonicBase* UU = new SphericalHarmonic::Sph32(); 
     SphericalHarmonic::SphericalHarmonicBase* VV = new SphericalHarmonic::Sph32105(); 
@@ -307,7 +307,7 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
 
     // Sum of P
     (*RHS_continuous)(4*N+3) = 0.;
-    tm["RHS_continuous"]->stop();
+    t_rhs_continuous->stop();
 
     if (discreteRHS) {
         this->fillRHS_discrete();
@@ -317,10 +317,10 @@ void StokesSteadyPDE::fillRHS_ConstViscosity() {
 void StokesSteadyPDE::fillRHS_discrete() {
     std::cout << "Filling discrete RHS\n";
     RHS_discrete = new VecType(ncols);
-    tm["RHS_discrete"]->start();
+    t_rhs_discrete->start();
     // This takes 21832.6 ms for N=10201.  Slow. But its the same for ublas and viennacl.
     *RHS_discrete = prod(*LHS, *U_continuous); 
-    tm["RHS_discrete"]->stop();
+    t_rhs_discrete->stop();
 }
 
 void StokesSteadyPDE::writeToFile() 
@@ -368,12 +368,12 @@ void StokesSteadyPDE::solve_original()
     // SCALAR  std::copy(U_vec.begin(), U_vec.end(), U_G.begin()); 
 
     // Solve system using Stabilized BiConjugate Gradients from ViennaCL
-    tm["gmres"]->start(); 
+    t_gmres->start(); 
 
     viennacl::linalg::gmres_tag custom_gmres(1e-8, 100, 30);
     
     *U_computed = viennacl::linalg::solve(*LHS, *RHS_continuous, custom_gmres);
-    tm["gmres"]->stop(); 
+    t_gmres->stop(); 
     
     std::cout << "No. of iters: " << custom_gmres.iters() << std::endl;
     std::cout << "Est. error: " << custom_gmres.error() << std::endl;

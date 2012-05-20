@@ -87,6 +87,7 @@ namespace EB {
 
 
 
+#if 0
     class TimerList : public std::map<std::string, EB::Timer*>
     {
         public: 
@@ -105,7 +106,21 @@ namespace EB {
                 return false; 
             }
 
-            void writeAllToFile(std::string filename="timer_log"); 
+            void writeAllToFile(std::string filename="timer_log") 
+            {
+                // Get the max label width so we can show all columns the same
+                // width and show the FULL label for each timer
+                unsigned int label_width = 50; 
+                for (TimerList::iterator i=this->begin(); i != this->end(); i++) {
+                    if (i->second->getName().length() > label_width) {
+                        label_width = i->second->getName().length(); 
+                    }
+                }
+                FILE* fd = fopen(filename.c_str(), "w"); 
+                this->printAll(fd, label_width); 
+                fclose(fd); 
+            }
+
             void writeToFile(std::string filename="timer_log") { 
                 this->writeAllToFile(filename);
             }
@@ -144,6 +159,7 @@ namespace EB {
                 std::map<std::string, EB::Timer*>::clear();
             }
     };
+#endif 
 
 };
 #endif

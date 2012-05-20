@@ -96,10 +96,10 @@ namespace viennacl
                     sol_dim(solution_dim_per_node)
             {
                 std::cout << "GMRES for " << sol_dim << " components\n";
-                tlist["allocate"] = new EB::Timer("Allocate Comm Buffers");
-                tlist["alltoallv"] = new EB::Timer("MPI_Alltoallv");
-                tlist["setR"] = new EB::Timer("Sync set R");
-                tlist["setO"] = new EB::Timer("Sync set O");
+                t_allocate = new EB::Timer("Allocate Comm Buffers");
+                t_alltoallv = new EB::Timer("MPI_Alltoallv");
+                t_setR = new EB::Timer("Sync set R");
+                t_setO = new EB::Timer("Sync set O");
                 allocateCommBuffers();            
             };
 
@@ -111,14 +111,16 @@ namespace viennacl
                     delete [] recvcounts; 
                     delete [] rbuf; 
 
-                    tlist.printAllNonStatic(); 
-                    tlist.clear();
+                    t_allocate->print(); delete(t_allocate);
+                    t_alltoallv->print(); delete(t_alltoallv);
+                    t_setR->print(); delete(t_setR);
+                    t_setO->print(); delete(t_setO);
                 }
 
                 Communicator const& comm() const { return this->comm_ref; } 
 
                 void allocateCommBuffers() {
-                    tlist["allocate"]->start();
+                    t_allocate->start();
 #if 0
                     double* sbuf; 
                     int* sendcounts; 
@@ -156,7 +158,7 @@ namespace viennacl
                     // Not sure if we need to use malloc to guarantee contiguous?
                     this->sbuf = new double[O_tot];  
                     this->rbuf = new double[R_tot];
-                    tlist["allocate"]->stop();
+                    t_allocate->stop();
                 }
 
                 // TODO: (bug) fix the copy set R and set O so when a value is
@@ -164,7 +166,7 @@ namespace viennacl
                 // alltoallv. 
                 template <typename GPUVectorType>
                     void syncSetR(GPUVectorType& gpu_vec) const {
-                        tlist["setR"]->start(); 
+                        t_setR->start(); 
                         //unsigned int nb_nodes = grid_ref.getNodeListSize();
                         //unsigned int set_G_size = grid_ref.G.size();
                         unsigned int set_Q_size = grid_ref.Q.size();
@@ -210,12 +212,12 @@ namespace viennacl
 
                         viennacl::copy(vec, setR, set_R_size * sol_dim);
                         delete [] vec;
-                        tlist["setR"]->stop(); 
+                        t_setR->stop(); 
                     }
 
                 template <typename GPUVectorType>
                     void syncSetO(GPUVectorType& gpu_vec) const {
-                        tlist["setO"]->start();
+                        t_setO->start();
                         unsigned int set_Q_size = grid_ref.Q.size();
                         unsigned int set_O_size = grid_ref.O.size();
                         unsigned int nb_bnd = grid_ref.getBoundaryIndicesSize();
@@ -262,7 +264,7 @@ namespace viennacl
                         }
 
                         delete [] vec; 
-                        tlist["setO"]->stop();
+                        t_setO->stop();
                     }
 
                 // Generic for GPU (transfer GPU subset to cpu buffer, alltoallv
@@ -278,7 +280,7 @@ namespace viennacl
                         // Copies data from vec to transfer, then writes received data into vec
                         // before returning. 
                         if (comm_ref.getSize() > 1) {
-                            tlist["alltoallv"]->start(); 
+                            t_alltoallv->start(); 
 
                             // GPU array is arranged as {QmB BmO O R} 
                             // TODO: however the set O and set R might have values that span multiple CPUs. 
@@ -290,7 +292,7 @@ namespace viennacl
                             comm_ref.barrier();
 
                             syncSetR(vec); 
-                            tlist["alltoallv"]->stop(); 
+                            t_alltoallv->stop(); 
                         }
                     }
 
@@ -310,7 +312,7 @@ namespace viennacl
                         if (comm_ref.getSize() > 1) {
 
                             //std::cout << "vec size = " << vec.size() << std::endl;
-                            tlist["alltoallv"]->start(); 
+                            t_alltoallv->start(); 
                             // Copy elements of set to sbuf
                             unsigned int k = 0; 
                             for (size_t i = 0; i < grid_ref.O_by_rank.size(); i++) {
@@ -348,7 +350,7 @@ namespace viennacl
                                     k++; 
                                 }
                             }
-                            tlist["alltoallv"]->stop(); 
+                            t_alltoallv->stop(); 
                         }
                     }
 
@@ -374,7 +376,10 @@ namespace viennacl
                 mutable int* recvcounts; 
                 mutable double* rbuf; 
             protected: 
-                mutable EB::TimerList tlist; 
+                mutable EB::Timer* t_allocate;
+                mutable EB::Timer* t_alltoallv;
+                mutable EB::Timer* t_setR;
+                mutable EB::Timer* t_setO;
         };
 
 
@@ -454,9 +459,8 @@ namespace viennacl
 #define GMRES_DEBUG 1
 #endif 
             std::cout << "INSIDE VCL PARALLEL\n";
-            EB::TimerList tlist; 
-            tlist["inner"] = new EB::Timer("GMRES Inner Iteration"); 
-            tlist["outer"] = new EB::Timer("GMRES Outer Iteration"); 
+            EB::Timer *t_inner = new EB::Timer("GMRES Inner Iteration"); 
+            EB::Timer *t_outer = new EB::Timer("GMRES Outer Iteration"); 
 
             //typedef vcl::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
@@ -531,7 +535,7 @@ namespace viennacl
             //std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
             do{
-                tlist["outer"]->start(); 
+                t_outer->start(); 
                 // compute initial residual and its norm //
                 w = viennacl::linalg::prod(A, x_full) - b;                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full); 
@@ -555,14 +559,14 @@ namespace viennacl
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
 #endif
                     tag.error(beta / b_norm);
-                    tlist["outer"]->stop();
-                    tlist.printAllNonStatic(); 
-                    tlist.clear();
+                    t_outer->stop();
+                    t_outer->print(); delete(t_outer);
+                    t_inner->print(); delete(t_inner);
                     return x_full;
                 }
 
                 do{
-                    tlist["inner"]->start(); 
+                    t_inner->start(); 
                     ++i;
                     tag.iters(tag.iters() + 1); 
 
@@ -611,7 +615,7 @@ namespace viennacl
                     std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
 #endif 
                     tag.error(rel_resid0);
-                    tlist["inner"]->stop();
+                    t_inner->stop();
                     // We could add absolute tolerance here as well: 
                     if (rel_resid0 < b_norm * tag.tolerance() ) {
                         break;
@@ -651,7 +655,7 @@ namespace viennacl
                     x +=  s[j] * *(v[j]); 
                 }
                 tag.alltoall_subset(x_full); 
-                tlist["outer"]->stop();
+                t_outer->stop();
 
 #ifdef VIENNACL_GMRES_DEBUG
                 if (tag.iters()+1 > 2*R) {
@@ -662,8 +666,8 @@ namespace viennacl
  
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
-            tlist.printAllNonStatic(); 
-            tlist.clear();
+            t_outer->print(); delete(t_outer);
+            t_inner->print(); delete(t_inner);
             return x_full;
         }
 
@@ -685,9 +689,8 @@ namespace viennacl
         {
             std::cout << "INSIDE UBLAS PARALLEL\n";
 
-            EB::TimerList tlist; 
-            tlist["inner"] = new EB::Timer("GMRES Inner Iteration"); 
-            tlist["outer"] = new EB::Timer("GMRES Outer Iteration"); 
+            EB::Timer* t_inner = new EB::Timer("GMRES Inner Iteration"); 
+            EB::Timer* t_outer = new EB::Timer("GMRES Outer Iteration"); 
 
             typedef ublas::vector<double>                                             VectorType;
             typedef typename viennacl::result_of::value_type<VectorType>::type        ScalarType;
@@ -763,7 +766,7 @@ namespace viennacl
 
 
             do{
-                tlist["outer"]->start(); 
+                t_outer->start(); 
                 // compute initial residual and its norm //
                 w = b - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full); 
@@ -787,14 +790,15 @@ namespace viennacl
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
 #endif 
                     tag.error(beta / b_norm);
-                    tlist["outer"]->stop();
-                    tlist.printAllNonStatic(); 
-                    tlist.clear();
+                    t_outer->stop();
+
+                    t_outer->print(); delete(t_outer); 
+                    t_outer->print(); delete(t_outer); 
                     return x_full;
                 }
 
                 do{
-                    tlist["inner"]->start();
+                    t_inner->start();
                     ++i;
                     tag.iters(tag.iters() + 1); 
 
@@ -839,7 +843,7 @@ namespace viennacl
                     std::cout << "\t" << tag.iters() << "\t" << rel_resid0 << std::endl;
 #endif 
                     tag.error(rel_resid0);
-                    tlist["inner"]->stop();
+                    t_inner->stop();
                     // We could add absolute tolerance here as well: 
                     if (rel_resid0 < b_norm * tag.tolerance() ) {
                         break;
@@ -880,7 +884,7 @@ namespace viennacl
                     x += *(v[j]) * s[j]; 
                 }
                 tag.alltoall_subset(x_full); 
-                tlist["outer"]->stop();
+                t_outer->stop();
 
 #ifdef VIENNACL_GMRES_DEBUG
                 if (tag.iters()+1 > 2*R) {
@@ -890,8 +894,8 @@ namespace viennacl
 #endif 
             } while (rel_resid0 >= b_norm*tag.tolerance() && tag.iters()+1 <= tag.max_iterations());
 
-            tlist.printAllNonStatic(); 
-            tlist.clear();
+            t_outer->print(); delete(t_outer); 
+            t_inner->print(); delete(t_inner); 
             return x_full;
         }
 

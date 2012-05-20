@@ -6,8 +6,8 @@
 
 void HeatPDE_CL::setupTimers()
 {
-   tm["advance_gpu"] = new EB::Timer("Advance the PDE one step on the GPU") ;
-   tm["loadAttach"] = new EB::Timer("Load the GPU Kernels for HeatPDE");
+   t_advance_gpu = new EB::Timer("Advance the PDE one step on the GPU") ;
+   t_load_attach = new EB::Timer("Load the GPU Kernels for HeatPDE");
 }
 
 void HeatPDE_CL::fillInitialConditions(ExactSolution* exact) {
@@ -116,7 +116,7 @@ void HeatPDE_CL::assemble()
 //----------------------------------------------------------------------
 
 void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
-    tm["advance_gpu"]->start(); 
+    t_advance_gpu->start(); 
     switch (which) 
     {
         case EULER: 
@@ -137,7 +137,7 @@ void HeatPDE_CL::advance(TimeScheme which, double delta_t) {
             break; 
     };
     cur_time += delta_t; 
-    tm["advance_gpu"]->stop(); 
+    t_advance_gpu->stop(); 
 }
 
 void HeatPDE_CL::syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec) {
@@ -669,14 +669,14 @@ void HeatPDE_CL::advanceRungeKutta4(double delta_t) {
 //----------------------------------------------------------------------
 //
 void HeatPDE_CL::loadKernels(std::string& local_sources) {
-    tm["loadAttach"]->start(); 
+    t_load_attach->start(); 
 
     this->loadBCKernel(local_sources);
     this->loadStepKernel(local_sources); 
 #if EVAN_UPDATE_THESE
     this->loadRK4Kernels(local_sources); 
 #endif 
-    tm["loadAttach"]->stop(); 
+    t_load_attach->stop(); 
 }
 
 void HeatPDE_CL::loadBCKernel(std::string& local_sources) {

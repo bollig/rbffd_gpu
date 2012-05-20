@@ -104,8 +104,13 @@ class RBFFD
         // This stores a list of weights we need to compute or have computed
         DerTypes computedTypes; 
 
-        EB::TimerList tm; 
-
+        EB::Timer* t_all_weights_all; 
+        EB::Timer* t_all_weights_one; 
+        EB::Timer* t_one_weights; 
+        EB::Timer* t_fill_dmat; 
+        EB::Timer* t_apply; 
+        EB::Timer* t_apply_all; 
+        
         Grid& grid_ref;
 
         std::string eps_string;

@@ -80,6 +80,18 @@ RBFFD::~RBFFD() {
         }
         //}
     }
+    t_all_weights_all->print();
+    delete(t_all_weights_all); 
+    t_all_weights_one->print();
+    delete(t_all_weights_one); 
+    t_one_weights->print();
+    delete(t_one_weights); 
+    t_fill_dmat->print();
+    delete(t_fill_dmat); 
+    t_apply->print();
+    delete(t_apply); 
+    t_apply_all->print();
+    delete(t_apply_all); 
 }
 
 //--------------------------------------------------------------------
@@ -222,7 +234,7 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
 
 void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
-    tm["computeAllWeightsOne"]->start(); 
+    t_all_weights_one->start(); 
     StencilType& stencil = grid_ref.getStencil(st_indx); 
     int n = stencil.size();
 #if ONE_MONOMIAL
@@ -344,7 +356,7 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
         }
     }
 
-    tm["computeAllWeightsOne"]->end();
+    t_all_weights_one->end();
 
     weightsModified = true;
 }
@@ -561,7 +573,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
     void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
         // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
-        tm["computeOneWeights"]->start(); 
+        t_one_weights->start(); 
 
         StencilType stencil = grid_ref.getStencil(st_indx); 
         std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
@@ -654,7 +666,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         }
 #endif // DEBUG
 
-        tm["computeOneWeights"]->end();
+        t_one_weights->end();
 
         weightsModified = true;
     }
@@ -664,7 +676,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     // void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
     void RBFFD::applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU) {
         //    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << " (weights[" << getDerTypeIndx(which) << "])" << std::endl;
-        tm["applyAll"]->start(); 
+        t_apply_all->start(); 
         //        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
         double der;
 
@@ -680,7 +692,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             }
             deriv[i] = der;
         }
-        tm["applyAll"]->stop();
+        t_apply_all->stop();
     }
 
     //----------------------------------------------------------------------
@@ -871,12 +883,12 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     void RBFFD::setupTimers() {
-        tm["computeAllWeightsAll"] = new EB::Timer("[RBFFD] Compute All Weights For ALL Stencils (CPU)"); 
-        tm["computeAllWeightsOne"] = new EB::Timer("[RBFFD] Compute All Weights For One Stencil (CPU)"); 
-        tm["computeOneWeights"] = new EB::Timer("[RBFFD] Compute One Weights For One Stencil (CPU)"); 
-        tm["fillDMat"] = new EB::Timer("[RBFFD] Fill Distance Matrix"); 
-        tm["apply"] = new EB::Timer("[RBFFD] Apply Weights for a single derivative type of u"); 
-        tm["applyAll"] = new EB::Timer("[RBFFD] Apply Weights for all derivative types of u"); 
+        t_all_weights_all = new EB::Timer("[RBFFD] Compute All Weights For ALL Stencils (CPU)"); 
+        t_all_weights_one = new EB::Timer("[RBFFD] Compute All Weights For One Stencil (CPU)"); 
+        t_one_weights = new EB::Timer("[RBFFD] Compute One Weights For One Stencil (CPU)"); 
+        t_fill_dmat = new EB::Timer("[RBFFD] Fill Distance Matrix"); 
+        t_apply = new EB::Timer("[RBFFD] Apply Weights for a single derivative type of u"); 
+        t_apply_all = new EB::Timer("[RBFFD] Apply Weights for all derivative types of u"); 
     }
 
     //--------------------------------------------------------------------

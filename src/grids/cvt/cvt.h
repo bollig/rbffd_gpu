@@ -25,7 +25,15 @@ class CVT : public Grid
 
         // 0 = Debug output off; 1 = Verbose output and write intermediate files
         int DEBUG;
-        EB::TimerList timers;
+        EB::Timer *t_total;
+        EB::Timer *t_iter;
+        EB::Timer *t_initial;
+        EB::Timer *t_sample;
+        EB::Timer *t_energy;
+        EB::Timer *t_kbuild;
+        EB::Timer *t_kupdate;
+        EB::Timer *t_neighbor;
+
         KDTree* kdtree;
 
         double PI;
@@ -77,6 +85,23 @@ class CVT : public Grid
             delete(kdtree);
 #endif
             delete [] generators;
+
+            t_total->print();
+            delete(t_total);
+            t_iter->print();
+            delete(t_iter);
+            t_initial->print();
+            delete(t_initial);
+            t_sample->print();
+            delete(t_sample);
+            t_energy->print();
+            delete(t_energy);
+            t_kbuild->print();
+            delete(t_kbuild);
+            t_kupdate->print();
+            delete(t_kupdate);
+            t_neighbor->print();
+            delete(t_neighbor);
         }
 
         // Override this if we want to project boundary nodes back to the boundary: 

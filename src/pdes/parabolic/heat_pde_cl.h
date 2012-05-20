@@ -57,6 +57,9 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
         int INDX_INTERMEDIATE_2;
         int INDX_INTERMEDIATE_3;
 
+        EB::Timer* t_advance_gpu;
+        EB::Timer* t_load_attach;
+        
     public: 
         // Note: we specifically require the OpenCL version of RBFFD
         HeatPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, std::string& local_cl_sources, bool useUniformDiffusion, bool weightsComputed=false) 
@@ -70,6 +73,11 @@ class HeatPDE_CL : public HeatPDE, public CLBaseClass
             this->setupTimers(); 
             this->loadKernels(local_cl_sources); 
             this->allocateGPUMem();
+        }
+
+        ~HeatPDE_CL () {
+            t_advance_gpu->print(); delete(t_advance_gpu);
+            t_load_attach->print(); delete(t_load_attach);
         }
 
         // Build DM (essentially call RBFFD_CL to compute weights and update them on the GPU)  

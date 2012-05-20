@@ -192,33 +192,4 @@ void Timer::printReset()
 	reset();
 }
 //----------------------------------------------------------------------
-#if 0
-void TimerList::printAll(FILE* fd, int label_width)
-{
-	fprintf(fd, "====================================\n"); 
-	fprintf(fd, "Timers [All times in ms (1/1000 s)]: \n"); 		
-	fprintf(fd, "====================================\n\n");     
-    for (TimerList::iterator i=this->begin(); i != this->end(); i++) {
-        i->second->print(fd, label_width);
-    }
-	fprintf(fd, "\nNOTE: only timers that have called Timer::start() are shown. \n");
-	fprintf(fd, "      [A time of 0.0 may indicate the timer was not stopped.]\n"); 
-	fprintf(fd, "====================================\n"); 
-}
-#endif 
-//----------------------------------------------------------------------
-void TimerList::writeAllToFile(std::string filename) 
-{
-    // Get the max label width so we can show all columns the same
-    // width and show the FULL label for each timer
-    int label_width = 50; 
-    for (TimerList::iterator i=this->begin(); i != this->end(); i++) {
-        if (i->second->getName().length() > label_width) {
-            label_width = i->second->getName().length(); 
-        }
-    }
-    FILE* fd = fopen(filename.c_str(), "w"); 
-    this->printAll(fd, label_width); 
-    fclose(fd); 
-}
 

@@ -14,7 +14,9 @@
 #include <getopt.h>		// for getopt
 
 // Definition of the static tm in project settings
+#if 0
 EB::TimerList ProjectSettings::tm;
+#endif 
 
 void closeLogFile(void) {
     fprintf(stderr, "Closing STDOUT file\n");
@@ -23,6 +25,7 @@ void closeLogFile(void) {
 
 void debugExit(void) {
 
+#if 0
     ProjectSettings::tm["total"]->stop();
     //ProjectSettings::tm.printAll();
     ProjectSettings::tm.writeToFile("atExit_timers.log");
@@ -33,6 +36,7 @@ void debugExit(void) {
     fprintf(stderr, "EXIT CALLED\n");
 
     fflush(stderr);
+#endif 
 
 }
 
@@ -48,15 +52,16 @@ void ProjectSettings::default_config() {
     cli_filename.append("/test.conf"); 
 }
 
+#if 0
 void ProjectSettings::setupTimers() {
     tm["total"] = new EB::Timer("[AT EXIT] Total runtime until EXIT was called"); 
     tm["total"]->start();
 }
+#endif 
 
 ProjectSettings::ProjectSettings(int argc, char** argv) :
     cwd(".")
 {
-    setupTimers();
     this->default_config(); 
 
     this->parseCommandLineArgs(argc, argv, 0);
@@ -66,7 +71,6 @@ ProjectSettings::ProjectSettings(int argc, char** argv) :
 ProjectSettings::ProjectSettings(int argc, char** argv, int mpi_rank):
     cwd(".")
 {
-    setupTimers(); 
     this->default_config(); 
 
     this->parseCommandLineArgs(argc, argv, mpi_rank);
@@ -77,7 +81,6 @@ ProjectSettings::ProjectSettings(int argc, char** argv, int mpi_rank):
 // Read the file and add settings to the settings map
 ProjectSettings::ProjectSettings(const std::string filename)
 {
-    setupTimers();
     this->ParseFile(filename);
 }
 

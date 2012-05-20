@@ -28,8 +28,10 @@ public:
     // "0" will be returned by GetSettingAs
     enum settings_priority_t {required = 0, optional};
 
+#if 0
 // Static so we can call in atExit
     static EB::TimerList tm; 
+#endif 
 
 protected:
     // The map of KEY = VALUE settings
@@ -97,7 +99,6 @@ public:
     int parseCommandLineArgs(int argc, char** argv, int my_rank);
 
 protected:
-    void setupTimers();
 
     // This routine is adapted from post on GameDev:
     // http://www.gamedev.net/community/forums/topic.asp?topic_id=190991

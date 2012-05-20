@@ -16,14 +16,14 @@
 using namespace std;
 using namespace EB;
 void CVT::setupTimers() {
-    timers["total"] = new Timer("[CVT] Total time in CVT::generate()");
-    timers["iter"] = new Timer("[CVT] perform one iteraton of Lloyd's");
-    timers["initial"] = new Timer("[CVT] Initialize CVT generators"); 
-    timers["sample"] = new Timer("[CVT] generate set of probabilistic samples");
-    timers["energy"] = new Timer("[CVT] compute system energy");
-    timers["kbuild"] = new Timer("[CVT] construct new KDTree");
-    timers["kupdate"] = new Timer("[CVT] update KDTree");
-    timers["neighbor"] = new Timer("[CVT] nearest neighbor search");
+    t_total = new EB::Timer("[CVT] Total time in CVT::generate()");
+    t_iter = new EB::Timer("[CVT] perform one iteraton of Lloyd's");
+    t_initial = new EB::Timer("[CVT] Initialize CVT generators"); 
+    t_sample = new EB::Timer("[CVT] generate set of probabilistic samples");
+    t_energy = new EB::Timer("[CVT] compute system energy");
+    t_kbuild = new EB::Timer("[CVT] construct new KDTree");
+    t_kupdate = new EB::Timer("[CVT] update KDTree");
+    t_neighbor = new EB::Timer("[CVT] nearest neighbor search");
 }
 //****************************************************************************80
 CVT::CVT (unsigned int nb_nodes_, unsigned int dimension, unsigned int nb_locked, Density* density_function, unsigned int num_samples, unsigned int max_num_iters, unsigned int write_frequency, unsigned int sample_batch_size) 
@@ -303,7 +303,7 @@ void CVT::cvt(unsigned int *it_num, double *it_diff, double *energy)
     //    by the number of sample points.
     //
 {
-    timers["total"]->start();
+    t_total->start();
     //int i;
     bool initialize;
     int seed_base = 0;
@@ -432,7 +432,7 @@ void CVT::cvt(unsigned int *it_num, double *it_diff, double *energy)
         }
     }
     this->syncCVTandGrid();
-    timers["total"]->end();
+    t_total->end();
     return;
 }
 //****************************************************************************80
@@ -494,7 +494,7 @@ double CVT::cvt_energy(int dim_num, int n, int batch, int sample, bool initializ
 //    Output, double CVT_ENERGY, the estimated CVT energy.
 //
 {
-    timers["energy"]->start();
+    t_energy->start();
     double energy;
     int get;
     int have;
@@ -532,7 +532,7 @@ double CVT::cvt_energy(int dim_num, int n, int batch, int sample, bool initializ
     delete [] nearest;
     delete [] s;
 
-    timers["energy"]->end();
+    t_energy->end();
     return energy;
 }
 //****************************************************************************80
@@ -624,7 +624,7 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
 //    by the number of sample points.
 //
 {
-    timers["iter"]->start();
+    t_iter->start();
     int *count;
     int get;
     int have;
@@ -742,24 +742,24 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
 
 #if USE_KDTREE
 #if 0
-    timers["kbuild"]->start();
+    t_kbuild->start();
     delete(kdtree);
     kdtree = new KDTree(r, n, dim_num);
     //kdtree->linear_tree_print();
     //cout << "NOW AN UPDATE: \n\n";
-    timers["kbuild"]->end();
+    t_kbuild->end();
 #else
-    timers["kupdate"]->start();
+    t_kupdate->start();
     kdtree->updateTree(r, n, dim_num);
     //kdtree->linear_tree_print();
-    timers["kupdate"]->end();
+    t_kupdate->end();
 #endif
 #endif
 
     //cout << "DONE: \n\n";
     //exit(0);
 
-    timers["iter"]->end();
+    t_iter->end();
     return;
 }
 //****************************************************************************80
@@ -824,7 +824,7 @@ void CVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize,
 //
 {
 
-    timers["sample"]->start();
+    t_sample->start();
     double exponent;
     static int *halton_base = NULL;
     static int *halton_leap = NULL;
@@ -936,7 +936,7 @@ void CVT::cvt_sample(int dim_num, int n, int n_now, int sample, bool initialize,
     printf("  -  end initial seeds --------------------\n");
 #endif 
 
-    timers["sample"]->end();
+    t_sample->end();
     return;
 }
 
@@ -1002,7 +1002,7 @@ void CVT::cvt_init(int dim_num, int n, int n_now, int sample, bool initialize,
 //
 {
 
-    timers["sample"]->start();
+    t_sample->start();
     double exponent;
     static int *halton_base = NULL;
     static int *halton_leap = NULL;
@@ -1113,7 +1113,7 @@ void CVT::cvt_init(int dim_num, int n, int n_now, int sample, bool initialize,
     }
     printf("  -  end initial seeds --------------------\n");
 #endif 
-    timers["sample"]->end();
+    t_sample->end();
     return;
 }
 
@@ -1214,7 +1214,7 @@ void CVT::find_closest(int dim_num, int n, int sample_num, double s[], double r[
 //    cell generator.
 //
 {
-    timers["neighbor"]->start();
+    t_neighbor->start();
     // Original: 
 #if USE_KDTREE
 
@@ -1250,7 +1250,7 @@ void CVT::find_closest(int dim_num, int n, int sample_num, double s[], double r[
         }
     }
 #endif 
-    timers["neighbor"]->end();
+    t_neighbor->end();
     return;
 }
 //****************************************************************************80

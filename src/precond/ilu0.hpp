@@ -282,8 +282,8 @@ namespace viennacl
                 public:
                 ilu0_precond(MatrixType const & mat, ilu0_tag const & tag) : _tag(tag), LU(mat.size1())
                 {
-                    tlist["precond_init"] = new EB::Timer("Generate ILU0 Preconditioner"); 
-                    tlist["precond_apply"] = new EB::Timer("Apply ILU0 Preconditioner"); 
+                    t_precond_init = new EB::Timer("Generate ILU0 Preconditioner"); 
+                    t_precond_apply = new EB::Timer("Apply ILU0 Preconditioner"); 
                     //initialize preconditioner:
                     //std::cout << "Start CPU precond" << std::endl;
                     init(mat);          
@@ -291,34 +291,36 @@ namespace viennacl
                 }
 
                 ~ilu0_precond() {
-                    tlist.printAllNonStatic(); 
-                    tlist.clear();
+                    t_precond_init->print(); delete(t_precond_init); 
+                    t_precond_apply->print(); delete(t_precond_apply); 
                 }
 
 
                 template <typename VectorType>
                     void apply(VectorType & vec) const
                     {
-                    tlist["precond_apply"]->start(); 
+                    t_precond_apply->start(); 
                         viennacl::tools::const_sparse_matrix_adapter<ScalarType> LU_const_adapter(LU);
                         viennacl::linalg::ilu0_lu_substitute(LU_const_adapter, vec);
-                    tlist["precond_apply"]->stop(); 
+                    t_precond_apply->stop(); 
                     }
 
                 private:
                 void init(MatrixType const & mat)
                 {
-                    tlist["precond_init"]->start(); 
+                    t_precond_init->start(); 
                     viennacl::tools::sparse_matrix_adapter<ScalarType>       LU_adapter(LU, mat.size1(), mat.size2());
                     std::cout << "LU.size == " << LU_adapter.size1() << ", " << LU_adapter.size2() << std::endl;
                     viennacl::linalg::precondition(mat, LU_adapter, _tag);
-                    tlist["precond_init"]->stop(); 
+                    t_precond_init->stop(); 
                 }
 
                 ilu0_tag const & _tag;
                 public: std::vector< std::map<unsigned int, ScalarType> > LU;
                 private: 
-                         mutable EB::TimerList tlist;
+                        mutable EB::Timer* t_precond_init; 
+                        mutable EB::Timer* t_precond_apply; 
+
             };
 
 
@@ -334,8 +336,8 @@ namespace viennacl
                 public:
                 ilu0_precond(MatrixType const & mat, ilu0_tag const & tag) : _tag(tag), LU(mat.size1())
                 {
-                    tlist["precond_init"] = new EB::Timer("Generate ILU0 Preconditioner"); 
-                    tlist["precond_apply"] = new EB::Timer("Apply ILU0 Preconditioner"); 
+                    t_precond_init = new EB::Timer("Generate ILU0 Preconditioner"); 
+                    t_precond_apply = new EB::Timer("Apply ILU0 Preconditioner"); 
                     //initialize preconditioner:
                     //std::cout << "Start GPU precond" << std::endl;
                     init(mat);          
@@ -343,26 +345,26 @@ namespace viennacl
                 }
 
                 ~ilu0_precond() {
-                    tlist.printAllNonStatic(); 
-                    tlist.clear();
+                    t_precond_init->print(); delete(t_precond_init); 
+                    t_precond_apply->print(); delete(t_precond_apply); 
                 }
 
                 void apply(vector<ScalarType> & vec) const
                 {
-                    tlist["precond_apply"]->start(); 
+                    t_precond_apply->start(); 
                     copy(vec, temp_vec);
                     //lu_substitute(LU, vec);
                     viennacl::tools::const_sparse_matrix_adapter<ScalarType> LU_const_adapter(LU);
                     viennacl::linalg::ilu0_lu_substitute(LU_const_adapter, temp_vec);
 
                     copy(temp_vec, vec);
-                    tlist["precond_apply"]->stop(); 
+                    t_precond_apply->stop(); 
                 }
 
                 private:
                 void init(MatrixType const & mat)
                 {
-                    tlist["precond_init"]->start(); 
+                    t_precond_init->start(); 
                     std::vector< std::map<unsigned int, ScalarType> > temp(mat.size1());
                     //std::vector< std::map<unsigned int, ScalarType> > LU_cpu(mat.size1());
 
@@ -385,7 +387,7 @@ namespace viennacl
 
                     //copy resulting preconditioner back to gpu:
                     //copy(LU_cpu, LU);
-                    tlist["precond_init"]->stop(); 
+                    t_precond_init->stop(); 
                 }
 
                 ilu0_tag const & _tag;
@@ -393,7 +395,10 @@ namespace viennacl
                 public: std::vector< std::map<unsigned int, ScalarType> > LU;
                 private: mutable std::vector<ScalarType> temp_vec;
                 private: 
-                         mutable EB::TimerList tlist;
+                         mutable EB::Timer* t_precond_init; 
+                         mutable EB::Timer* t_precond_apply; 
+
+
             };
 
     }

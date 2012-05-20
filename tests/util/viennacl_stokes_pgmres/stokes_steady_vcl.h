@@ -72,8 +72,6 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     VCL_VEC_t* U_approx_dev; 
 
 
-    EB::TimerList tlist; 
-
     // Problem size (Num Rows)
     unsigned int N;
     // Problem size (Num Cols)
@@ -94,6 +92,18 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     // Number of components
     unsigned int NC;
 
+    EB::Timer* t_allocate; 
+    EB::Timer* t_assemble;
+    EB::Timer* t_assemble_lhs;
+    EB::Timer* t_assemble_rhs;
+    EB::Timer* t_assemble_gpu;
+    EB::Timer* t_solve;
+    EB::Timer* t_precond;
+    EB::Timer* t_writeSystem; 
+    EB::Timer* t_writeSolution; 
+    EB::Timer* t_checkNorms;
+
+
     public: 
     StokesSteady_PDE_VCL(Domain* grid, RBFFD* der, Communicator* comm, int use_gpu=0) 
         // The 4 here indicates the solution will have four components to our solution (IMPORTANT FOR MPI)
@@ -108,7 +118,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         NN = N - nb_bnd; 
         MM = M - nb_bnd; 
 
-        tlist["allocate"]->start();
+        t_allocate->start();
 #if STOKES_CONSTRAINTS
         unsigned int NNZ = 9*n*NN+2*(4*NN)+2*(3*NN);  
         LHS_host = new UBLAS_MAT_t(4*NN+4,4*MM+4,NNZ); 
@@ -136,7 +146,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             U_approx_dev = new VCL_VEC_t(4*NN); 
         }
 #endif 
-        tlist["allocate"]->stop(); 
+        t_allocate->stop(); 
 
         char dir[FILENAME_MAX]; 
         sprintf(dir, "output/%d_of_%d/", comm_ref.getRank()+1, comm_ref.getSize()); 
@@ -159,8 +169,16 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             delete(U_approx_dev);
         }
 
-        tlist.printAllNonStatic();
-        tlist.clear();
+        t_allocate->print(); delete(t_allocate); 
+        t_assemble->print(); delete(t_assemble);
+        t_assemble_lhs->print(); delete(t_assemble_lhs);
+        t_assemble_rhs->print(); delete(t_assemble_rhs);
+        t_assemble_gpu->print(); delete(t_assemble_gpu);
+        t_solve->print(); delete(t_solve);
+        t_precond->print(); delete(t_precond);
+        t_writeSystem->print(); delete(t_writeSystem); 
+        t_writeSolution->print(); delete(t_writeSolution); 
+        t_checkNorms->print(); delete(t_checkNorms);
     }
 
     // Catch the call to "solve()" and allow users to specify "solve_on_gpu=1"
@@ -178,7 +196,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
     virtual void assemble() 
     {
-        tlist["assemble"]->start(); 
+        t_assemble->start(); 
         std::cout << "Assembling... \n";
 
         // Choose either grouped by component or interleaved components
@@ -191,7 +209,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
         //------ RHS ----------
 
-        tlist["assemble_rhs"]->start(); 
+        t_assemble_rhs->start(); 
 #if 0
         ManufacturedSolution MS; 
 #else 
@@ -294,11 +312,11 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         // This should get values from neighboring processors into U_exact. 
         this->sendrecvUpdates(U_exact,"U_exact"); 
         std::cout << "DEATH\n";
-        //tlist["assemble_rhs"]->stop();
+        t_assemble_rhs->stop();
 
         // -----------------  Fill LHS --------------------
         //
-        tlist["assemble_lhs"]->start();
+        t_assemble_lhs->start();
 
         // U (block)  row
         for (unsigned int i = 0; i < NN; i++) {
@@ -364,22 +382,22 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 #endif 
 
-        tlist["assemble_lhs"]->stop();
+        t_assemble_lhs->stop();
 
         if (solve_on_gpu) 
         { 
             std::cout << "Sending system to GPU...\n";
-            tlist["assemble_gpu"]->start();
+            t_assemble_gpu->start();
             // Put all of the known system on the GPU. 
             copy(A, *LHS_dev);
             viennacl::copy(RHS_host->begin(),RHS_host->end(), RHS_dev->begin());
             viennacl::copy(U_exact_host->begin(),U_exact_host->end(), U_exact_dev->begin());
             viennacl::copy(U_approx_host->begin(),U_approx_host->end(), U_approx_dev->begin());
-            tlist["assemble_gpu"]->stop();
+            t_assemble_gpu->stop();
         }
         std::cout << "done.\n";
 
-        tlist["assemble"]->stop();
+        t_assemble->stop();
     }
 
 
@@ -406,22 +424,22 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
 
 #if 1
-            tlist["solve"]->start();
+            t_solve->start();
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
-            tlist["solve"]->stop();
+            t_solve->stop();
 #else 
-            tlist["precond"]->start();
+            t_precond->start();
             std::cout << "Generating preconditioner...\n";
             viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3*NN) ); 
-            tlist["precond"]->stop();
+            t_precond->stop();
 #if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
 #endif        
 
-            tlist["solve"]->start();
+            t_solve->start();
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag, vcl_ilu0); 
-            tlist["solve"]->stop();
+            t_solve->stop();
 #endif 
 
             if (tag.iters() < tag.max_iterations()) { 
@@ -449,7 +467,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
 
     void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
-        tlist["checkNorms"]->start();
+        t_checkNorms->start();
 
         VCL_VEC_t g_diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(0, NC*NN)); 
 
@@ -491,13 +509,13 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2_g << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2_g << std::endl;  
         std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf_g << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf_g << std::endl;  
 
-        tlist["checkNorms"]->stop();
+        t_checkNorms->stop();
     }
 
 
 
     void checkNorms(UBLAS_VEC_t& sol, UBLAS_VEC_t& exact) {
-        tlist["checkNorms"]->start();
+        t_checkNorms->start();
 
         UBLAS_VEC_t g_diff = boost::numeric::ublas::vector_range<UBLAS_VEC_t>(sol, boost::numeric::ublas::range(0, NC*NN)); 
 
@@ -539,7 +557,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2_g << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2_g << std::endl;  
         std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf_g << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf_g << std::endl;  
 
-        tlist["checkNorms"]->stop();
+        t_checkNorms->stop();
     }
 
 
@@ -547,7 +565,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
     void write_System ( )
     {
-        tlist["writeSystem"]->start();
+        t_writeSystem->start();
         write_to_file(*RHS_host, dir_str + "F.mtx"); 
         write_to_file(*U_exact_host, dir_str + "U_exact.mtx");
         if (NN < 4000) {
@@ -557,12 +575,12 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         UBLAS_VEC_t temp = boost::numeric::ublas::prod(*LHS_host, *U_exact_host); 
         write_to_file(temp, dir_str + "RHS_discrete.mtx");
         write_to_file(temp-*RHS_host, dir_str + "RHS_err.mtx");
-        tlist["writeSystem"]->stop(); 
+        t_writeSystem->stop(); 
     }
 
     void write_Solution()
     {
-        tlist["writeSolution"]->start(); 
+        t_writeSolution->start(); 
         // IF we want to write details we need to copy back to host. 
         UBLAS_VEC_t U_approx(U_exact_host->size(), 0); 
         if (solve_on_gpu) { 
@@ -572,7 +590,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         } else { 
             write_to_file(*U_approx_host, dir_str + "U_gpu.mtx"); 
         }
-        tlist["writeSolution"]->stop(); 
+        t_writeSolution->stop(); 
     }
 
     virtual std::string className() {
@@ -583,16 +601,17 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
     protected: 
 
     void setupMyTimers() {
-        tlist["allocate"] = new EB::Timer("Allocate GPU vectors and matrices"); 
-        tlist["assemble"] = new EB::Timer("Assemble both RHS and LHS");
-        tlist["assemble_lhs"] = new EB::Timer("Assemble LHS");
-        tlist["assemble_rhs"] = new EB::Timer("Assemble RHS");
-        tlist["assemble_gpu"] = new EB::Timer("Send assembled system to GPU");
-        tlist["solve"] = new EB::Timer("Solve system with GMRES");
-        tlist["precond"] = new EB::Timer("Construct preconditioner");
-        tlist["writeSystem"] = new EB::Timer("Write system to disk"); 
-        tlist["writeSolution"] = new EB::Timer("Write solution to disk"); 
-        tlist["checkNorms"] = new EB::Timer("Check solution norms");
+        t_allocate = new EB::Timer("Allocate GPU vectors and matrices"); 
+        t_assemble = new EB::Timer("Assemble both RHS and LHS");
+        t_assemble_lhs = new EB::Timer("Assemble LHS");
+        t_assemble_rhs = new EB::Timer("Assemble RHS");
+        t_assemble_gpu = new EB::Timer("Send assembled system to GPU");
+        t_solve = new EB::Timer("Solve system with GMRES");
+        t_precond = new EB::Timer("Construct preconditioner");
+        t_writeSystem = new EB::Timer("Write system to disk"); 
+        t_writeSolution = new EB::Timer("Write solution to disk"); 
+        t_checkNorms = new EB::Timer("Check solution norms");
+
     }
 };
 

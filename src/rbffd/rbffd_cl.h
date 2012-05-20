@@ -56,6 +56,12 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // the stencil center index for the padded indices. 
         unsigned int stencil_padded_size; 
 
+        EB::Timer* t_loadAttach; 
+        EB::Timer* t_construct; 
+        EB::Timer* t_computeDerivs; 
+        EB::Timer* t_sendWeights; 
+        EB::Timer* t_applyWeights;
+
     public: 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives        
         // (up to 3 right now) 
@@ -69,6 +75,12 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} 
             if (deleteCPUNodesBuffer) { this->clearCPUNodes();}
             if (deleteCPUStencilsBuffer) { this->clearCPUStencils();}
+
+            t_loadAttach->print(); delete(t_loadAttach); 
+            t_construct->print(); delete(t_construct); 
+            t_computeDerivs->print(); delete(t_computeDerivs); 
+            t_sendWeights->print(); delete(t_sendWeights); 
+            t_applyWeights->print(); delete(t_applyWeights);
         }; 
 
 

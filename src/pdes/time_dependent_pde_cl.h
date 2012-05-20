@@ -73,6 +73,22 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
 
         int gpuType; 
 
+        EB::Timer* t_initialize;
+        EB::Timer* t_gpu_dump;
+        EB::Timer* t_advance_gpu;
+        EB::Timer* t_assemble_gpu;
+        EB::Timer* t_rk4_adv_gpu;
+        EB::Timer* t_rk4_eval_gpu; 
+        EB::Timer* t_rk4_adv_setargs;
+        EB::Timer* t_rk4_eval_setargs; 
+        EB::Timer* t_rk4_adv_kern;
+        EB::Timer* t_rk4_eval_kern; 
+        EB::Timer* t_rk4_full_comm; 
+        EB::Timer* t_rk4_O; 
+        EB::Timer* t_rk4_R; 
+        EB::Timer* t_rk4_mpi_comm;
+        EB::Timer* t_loadAttach;
+        
     public: 
         // USE_GPU=0 (pass over this constructor), =1 (use a block approach per stencil), =2 (use a thread approach per stencil)
         TimeDependentPDE_CL(Domain* grid, RBFFD_CL* der, Communicator* comm, int gpu_type, bool weightsComputed=false) 
@@ -88,6 +104,24 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
             cpu_dirty(0), assembled(false),
             gpuType(gpu_type)
         {;}
+
+        ~TimeDependentPDE_CL() {
+            t_initialize->print(); delete(t_initialize);
+            t_gpu_dump->print(); delete(t_gpu_dump);
+            t_advance_gpu->print(); delete(t_advance_gpu);
+            t_assemble_gpu->print(); delete(t_assemble_gpu);
+            t_rk4_adv_gpu->print(); delete(t_rk4_adv_gpu);
+            t_rk4_eval_gpu->print(); delete(t_rk4_eval_gpu); 
+            t_rk4_adv_setargs->print(); delete(t_rk4_adv_setargs);
+            t_rk4_eval_setargs->print(); delete(t_rk4_eval_setargs); 
+            t_rk4_adv_kern->print(); delete(t_rk4_adv_kern);
+            t_rk4_eval_kern->print(); delete(t_rk4_eval_kern); 
+            t_rk4_full_comm->print(); delete(t_rk4_full_comm); 
+            t_rk4_O->print(); delete(t_rk4_O); 
+            t_rk4_R->print(); delete(t_rk4_R); 
+            t_rk4_mpi_comm->print(); delete(t_rk4_mpi_comm);
+            t_loadAttach->print(); delete(t_loadAttach);
+        }
 
         void setGPUType(int type) {
             gpuType=type;

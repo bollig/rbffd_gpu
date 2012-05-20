@@ -51,6 +51,11 @@ typedef boost::graph_traits<GraphType>::vertices_size_type                      
 
 class StokesSteadyPDE : public PDE
 {
+    EB::Timer* t_rhs_discrete; 
+    EB::Timer* t_rhs_continuous; 
+    EB::Timer* t_lhs; 
+    EB::Timer* t_gmres; 
+
     unsigned int N; 
     unsigned int nrows; 
     unsigned int ncols; 
@@ -87,6 +92,13 @@ class StokesSteadyPDE : public PDE
     {
         std::cout << "INSIDE STOKES CONSTRUCTOR" << std::endl;
         setupTimers();
+    }
+
+    ~StokesSteadyPDE() {
+        t_rhs_discrete->print(); delete(t_rhs_discrete); 
+        t_rhs_continuous->print(); delete(t_rhs_continuous); 
+        t_lhs->print(); delete(t_lhs); 
+        t_gmres->print(); delete(t_gmres); 
     }
 
     virtual void setupTimers();

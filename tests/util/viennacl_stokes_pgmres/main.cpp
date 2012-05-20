@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <utility>
 #include <map> 
 
 #include "grids/grid_reader.h"
@@ -26,6 +27,7 @@ using namespace EB;
 //----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
+    typedef std::pair< int , std::pair< double, double > > TRIPLE; 
 
     std::vector<std::string> grids; 
 #if 1
@@ -49,8 +51,8 @@ int main(int argc, char** argv) {
     grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #endif 
 
-    std::vector<std::tuple<int, double,double> > stencil_params; 
-    stencil_params.push_back(std::tuple<int, double,double>(10, 0.038, 0.222)); // Much better 
+    std::vector< TRIPLE > stencil_params; 
+    stencil_params.push_back(TRIPLE(10, std::pair<double,double>(0.038, 0.222))); // Much better 
 #if 0
     stencil_params.push_back(std::tuple<int, double,double>(40, 0.055, 0.239)); // EVEN better (for N6400) 
     stencil_params.push_back(std::tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
@@ -71,19 +73,17 @@ int main(int argc, char** argv) {
     for (size_t st = 0; st < stencil_params.size(); st++) {
         for (size_t gr = 0; gr < grids.size(); gr++) {
 
-            TimerList tm;
-
-            tm["total"] = new Timer("[Main] Total runtime for this proc");
-            tm["grid"] = new Timer("[Main] Grid generation");
-            tm["stencils"] = new Timer("[Main] Stencil generation");
-            tm["settings"] = new Timer("[Main] Load settings"); 
-            tm["decompose"] = new Timer("[Main] Decompose domain"); 
-            tm["consolidate"] = new Timer("[Main] Consolidate subdomain solutions"); 
-            tm["updates"] = new Timer("[Main] Broadcast solution updates"); 
-            tm["send"] = new Timer("[Main] Send subdomains to other processors (master only)"); 
-            tm["receive"] = new Timer("[Main] Receive subdomain from master (clients only)"); 
-            tm["weights"] = new Timer("[Main] Compute all stencils weights"); 
-            tm["oneWeight"] = new Timer("[Main] Compute single stencil weights"); 
+            EB::Timer* t_total = new Timer("[Main] Total runtime for this proc");
+            EB::Timer* t_grid = new Timer("[Main] Grid generation");
+            EB::Timer* t_stencils = new Timer("[Main] Stencil generation");
+            EB::Timer* t_settings = new Timer("[Main] Load settings"); 
+            EB::Timer* t_decompose = new Timer("[Main] Decompose domain"); 
+            EB::Timer* t_consolidate = new Timer("[Main] Consolidate subdomain solutions"); 
+            EB::Timer* t_updates = new Timer("[Main] Broadcast solution updates"); 
+            EB::Timer* t_send = new Timer("[Main] Send subdomains to other processors (master only)"); 
+            EB::Timer* t_receive = new Timer("[Main] Receive subdomain from master (clients only)"); 
+            EB::Timer* t_weights = new Timer("[Main] Compute all stencils weights"); 
+            EB::Timer* t_oneWeight = new Timer("[Main] Compute single stencil weights"); 
 
             // grid should only be valid instance for MASTER
             Grid* grid=NULL; 
@@ -91,13 +91,13 @@ int main(int argc, char** argv) {
 
             int dim = 1; 
 
-            tm["total"]->start(); 
+            t_total->start(); 
 
 
             cout << " Got Rank: " << comm_unit->getRank() << endl;
             cout << " Got Size: " << comm_unit->getSize() << endl;
 
-            tm["settings"]->start(); 
+            t_settings->start(); 
 
             ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
@@ -112,28 +112,28 @@ int main(int argc, char** argv) {
 
                 //            int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
-                tm["settings"]->stop(); 
+                t_settings->stop(); 
 
                 grid = new GridReader(grid_name, 4); 
                 // Trickery. We load the quadrature weights from file
                 ((GridReader*)grid)->setLoadExtra(1);
-                grid->setMaxStencilSize(std::get<0>(stencil_params[st])); 
+                grid->setMaxStencilSize(stencil_params[st].first); 
 
                 Grid::GridLoadErrType err = grid->loadFromFile(); 
                 if (err == Grid::NO_GRID_FILES) 
                 {
                     printf("\n************** Generating new Grid **************\n"); 
                     grid->setSortBoundaryNodes(true); 
-                    tm["grid"]->start(); 
+                    t_grid->start(); 
                     grid->generate();
-                    tm["grid"]->stop(); 
+                    t_grid->stop(); 
                     if (writeIntermediate) {
                         grid->writeToFile(); 
                     }
                 } 
                 if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
                     std::cout << "Generating stencils files\n";
-                    tm["stencils"]->start(); 
+                    t_stencils->start(); 
 #if 1
                     grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
                     grid->generateStencils(Grid::ST_HASH);   
@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
                     //            grid->generateStencils(Grid::ST_BRUTE_FORCE);  
                     grid->generateStencils(Grid::ST_KDTREE);   
 #endif 
-                    tm["stencils"]->stop();
+                    t_stencils->stop();
                     if (writeIntermediate) {
                         grid->writeToFile(); 
                     }
@@ -159,12 +159,12 @@ int main(int argc, char** argv) {
                 // allocate and fill in details on subdivisions
 
                 std::cout << "Generating subdomains\n";
-                tm["decompose"]->start();
+                t_decompose->start();
                 //original_domain->printVerboseDependencyGraph();
                 original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
-                tm["decompose"]->stop();
+                t_decompose->stop();
 
-                tm["send"]->start(); 
+                t_send->start(); 
                 subdomain = subdomain_list[0]; 
                 for (int i = 1; i < comm_unit->getSize(); i++) {
                     std::cout << "Sending subdomain[" << i << "]\n";
@@ -173,20 +173,20 @@ int main(int argc, char** argv) {
                     // Now that its sent, we can free the memory for domains on other processors.
                     delete(subdomain_list[i]);
                 }
-                tm["send"]->stop(); 
+                t_send->stop(); 
 
                 printf("----------------------\nEND MASTER ONLY\n----------------------\n\n\n");
 
             } else {
-                tm["settings"]->stop(); 
+                t_settings->stop(); 
                 cout << "MPI RANK " << comm_unit->getRank() << ": waiting to receive subdomain"
                     << endl;
 
-                tm["receive"]->start(); 
+                t_receive->start(); 
                 subdomain = new Domain(); // EMPTY object that will be filled by MPI
                 comm_unit->receiveObject(subdomain, 0); // Receive from CPU (0)
                 subdomain->setCommSize(comm_unit->getSize());
-                tm["receive"]->stop(); 
+                t_receive->stop(); 
                 //subdomain->writeToFile();
             }
 
@@ -197,13 +197,13 @@ int main(int argc, char** argv) {
 //            double eps_c1 = settings->GetSettingAs<double>("EPSILON_C1", ProjectSettings::required); 
 //            double eps_c2 = settings->GetSettingAs<double>("EPSILON_C2", ProjectSettings::required); 
 
-            der->setEpsilonByParameters(std::get<1>(stencil_params[st]),std::get<2>(stencil_params[st]));
+            der->setEpsilonByParameters(stencil_params[st].second.first,stencil_params[st].second.second);
             int der_err = der->loadAllWeightsFromFile(); 
             if (der_err) {
-                tm["weights"]->start(); 
+                t_weights->start(); 
                 der->computeAllWeightsForAllStencils(); 
 
-                tm["weights"]->stop(); 
+                t_weights->stop(); 
 #if 0
                 if (writeIntermediate) {
                     der->writeAllWeightsToFile(); 
@@ -226,9 +226,20 @@ int main(int argc, char** argv) {
             delete(subdomain);
             delete(settings);
 
-            tm["total"]->stop();
-            tm.printAllNonStatic(); 
-            tm.clear();
+            t_total->stop();
+            
+
+            t_total->print(); delete(t_total);
+            t_grid->print(); delete(t_grid);
+            t_stencils->print(); delete(t_stencils);
+            t_settings->print(); delete(t_settings); 
+            t_decompose->print(); delete(t_decompose); 
+            t_consolidate->print(); delete(t_consolidate); 
+            t_updates->print(); delete(t_updates); 
+            t_send->print(); delete(t_send); 
+            t_receive->print(); delete(t_receive); 
+            t_weights->print(); delete(t_weights); 
+            t_oneWeight->print(); delete(t_oneWeight); 
         }
     } 
     delete(comm_unit); 

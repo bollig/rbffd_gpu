@@ -4,7 +4,7 @@
 // This is needed to make UBLAS variants of norm_* and GMRES
 #define VIENNACL_HAVE_UBLAS 1
 
-#define STOKES_CONSTRAINTS 0
+#define STOKES_CONSTRAINTS 1
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
@@ -390,7 +390,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         {
             // Solve on the CPU
             int restart = 5; 
-            int krylov = 10;
+            int krylov = 60;
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
@@ -406,16 +406,16 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
 
-#if 0
+#if 1
             tlist["solve"]->start();
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
             tlist["solve"]->stop();
 #else 
             tlist["precond"]->start();
             std::cout << "Generating preconditioner...\n";
-            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3,4) ); 
+            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3,4, 0, 4*NN) ); 
             tlist["precond"]->stop();
-#if 1
+#if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
 #endif        

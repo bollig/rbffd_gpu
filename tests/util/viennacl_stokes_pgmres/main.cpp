@@ -31,8 +31,8 @@ int main(int argc, char** argv) {
 #if 1
     //grids.push_back("~/GRIDS/md/md031.01024"); 
    // grids.push_back("~/GRIDS/md/md050.02601"); 
-    grids.push_back("~/GRIDS/md/md063.04096"); 
-    //grids.push_back("~/GRIDS/md/md079.06400"); 
+   // grids.push_back("~/GRIDS/md/md063.04096"); 
+    grids.push_back("~/GRIDS/md/md079.06400"); 
     //grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #else 
     //grids.push_back("~/GRIDS/md/md031.01024"); 

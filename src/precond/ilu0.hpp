@@ -79,6 +79,7 @@ namespace viennacl
                  * want to precondition for the first three we would use
                  * ilu0_tag(0,3, 4);
                  */ 
+#if 0
                 ilu0_tag(unsigned int int_row_start = 0, unsigned int int_row_end = 1, unsigned int int_row_tot=1)
                     : _row_start(0),  
                     _row_end(-1),
@@ -86,6 +87,15 @@ namespace viennacl
                     _int_row_end(int_row_end), 
                     _int_row_tot(int_row_tot)
             {}
+#endif 
+                ilu0_tag(unsigned int int_row_start = 0, unsigned int int_row_end = 1, unsigned int int_row_tot=1, unsigned int row_start = 0, unsigned int row_end = -1)
+                    : _row_start(row_start),  
+                    _row_end(row_end), 
+                    _int_row_start(int_row_start), 
+                    _int_row_end(int_row_end), 
+                    _int_row_tot(int_row_tot)
+            {}
+ 
 
             public: 
                 unsigned int _row_start, _row_end;
@@ -181,8 +191,20 @@ namespace viennacl
                                         w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
                                     }
                                 } else {
-                                    // Put identity on the excluded diagonal
-                                    //w[static_cast<unsigned int>(row_iter.index1())] = 1.; 
+#if 1
+                                    // WORKS AND IS FAST
+#if 0
+                                    // DIVERGES
+                                    unsigned int rind = static_cast<unsigned int>(row_iter.index1()) % tag._int_row_tot; 
+                                    // We need to get the number of interleaved blocks to the current block and add the offset to the current diagonal
+                                    unsigned int cind = (static_cast<unsigned int>(col_iter.index2()) / tag._int_row_tot) * tag._int_row_tot + rind;
+#else 
+                                    // WORKS BUT NOT FAST
+                                    unsigned int cind = static_cast<unsigned int>(row_iter.index1()); 
+#endif
+                                    // Put 1 at column of nonzero
+                                    w[cind] = 1.;
+#endif 
                                 }
                             } 
                         } else {

@@ -295,8 +295,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         // This should get values from neighboring processors into U_exact. 
         this->sendrecvUpdates(U_exact,"U_exact"); 
 #endif 
-        std::cout << "DEATH\n";
-        //tlist["assemble_rhs"]->stop();
+        tlist["assemble_rhs"]->stop();
 
         // -----------------  Fill LHS --------------------
         //
@@ -390,7 +389,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         void solve(MAT_t& LHS, VEC_t& RHS, VEC_t& U_exact, VEC_t& U_approx_out)
         {
             // Solve on the CPU
-            int restart = 20; 
+            int restart = 5; 
             int krylov = 10;
             double tol = 1e-8; 
 
@@ -407,16 +406,16 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
             std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
 
-#if 1
+#if 0
             tlist["solve"]->start();
             U_approx_out = viennacl::linalg::solve(LHS, RHS, tag); 
             tlist["solve"]->stop();
 #else 
             tlist["precond"]->start();
             std::cout << "Generating preconditioner...\n";
-            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3*NN) ); 
+            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3,4) ); 
             tlist["precond"]->stop();
-#if 0
+#if 1
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 
             std::cout << "Wrote preconditioner to ILU.mtx\n";
 #endif        

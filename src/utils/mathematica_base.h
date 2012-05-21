@@ -21,7 +21,7 @@ class MathematicaBase
         // casting causes 1e-5 error in production of sph32105, no noticeable
         // error in sph32 or sph2020.  Presumably the lack of error is
         // because the pow is integer, not double/float.  
-#if 0
+#if 1
         double Power(double x, double y) { return    (pow((double)(x), (double)(y))) ; }
 #else 
         inline double Power(double x, double y) { return    (double)(pow((float)(x), (float)(y))) ; }

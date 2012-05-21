@@ -29,9 +29,9 @@ int main(int argc, char** argv) {
 
     std::vector<std::string> grids; 
 #if 1
-    grids.push_back("~/GRIDS/md/md031.01024"); 
-    //grids.push_back("~/GRIDS/md/md050.02601"); 
-    //grids.push_back("~/GRIDS/md/md063.04096"); 
+    //grids.push_back("~/GRIDS/md/md031.01024"); 
+    grids.push_back("~/GRIDS/md/md050.02601"); 
+   // grids.push_back("~/GRIDS/md/md063.04096"); 
     //grids.push_back("~/GRIDS/md/md079.06400"); 
     //grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #else 
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
 #endif 
 
     std::vector<std::tuple<int, double,double> > stencil_params; 
-    stencil_params.push_back(std::tuple<int, double,double>(10, 0.038, 0.222)); // Much better 
+    stencil_params.push_back(std::tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
 #if 0
     stencil_params.push_back(std::tuple<int, double,double>(40, 0.055, 0.239)); // EVEN better (for N6400) 
     stencil_params.push_back(std::tuple<int, double,double>(40, 0.038, 0.222)); // Much better 

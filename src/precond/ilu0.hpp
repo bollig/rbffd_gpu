@@ -61,13 +61,35 @@ namespace viennacl
                  *
                  * @param row_start     The starting row for the block to which we apply ILU
                  * @param row_end       The end column of the block to which we apply ILU
-                 */
+                 */ 
                 ilu0_tag(unsigned int row_start = 0, unsigned int row_end = -1)
                     : _row_start(row_start),  
-                    _row_end(row_end) 
+                    _row_end(row_end), 
+                    _int_row_start(0), 
+                    _int_row_end(1), 
+                    _int_row_tot(1)
             {}
+ 
+                /** @brief The constructor.
+                 *
+                 * @param int_row_start    interleaved rows to start precond on
+                 * @param int_row_end      interleaved rows to end precond on 
+                 * @param int_row_tot      total number of interleaved rows
+                 * (i.e., if PDE has 4 components then this would be 4. if we
+                 * want to precondition for the first three we would use
+                 * ilu0_tag(0,3, 4);
+                 */ 
+                ilu0_tag(unsigned int int_row_start = 0, unsigned int int_row_end = 1, unsigned int int_row_tot=1)
+                    : _row_start(0),  
+                    _row_end(-1),
+                    _int_row_start(int_row_start), 
+                    _int_row_end(int_row_end), 
+                    _int_row_tot(int_row_tot)
+            {}
+
             public: 
                 unsigned int _row_start, _row_end;
+                unsigned int _int_row_start, _int_row_end, _int_row_tot;
         };
 
 
@@ -151,8 +173,21 @@ namespace viennacl
                         // Only work on the block described by (row_start:row_end, row_start:row_end)
                         if ((static_cast<unsigned int>(row_iter.index1()) >= tag._row_start) && (static_cast<unsigned int>(row_iter.index1()) < tag._row_end)) {
                             if ((static_cast<unsigned int>(col_iter.index2()) >= tag._row_start) && (static_cast<unsigned int>(col_iter.index2()) < tag._row_end)) {
-                                w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
-                            }
+                                // Handle interleaved blocks (if int_row_tot is
+                                // 1 then we apply to anything that makes it
+                                // here. 
+                                if ((static_cast<unsigned int>(row_iter.index1()) % tag._int_row_tot >= tag._int_row_start) && (static_cast<unsigned int>(row_iter.index1()) % tag._int_row_tot < tag._int_row_end)) {
+                                    if ((static_cast<unsigned int>(col_iter.index2()) % tag._int_row_tot >= tag._int_row_start) && (static_cast<unsigned int>(col_iter.index2()) % tag._int_row_tot < tag._int_row_end)) {
+                                        w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
+                                    }
+                                } else {
+                                    unsigned int rind = static_cast<unsigned int>(row_iter.index1()) % tag._int_row_tot; 
+                                    // We need to get the number of interleaved blocks to the current block and add the offset to the current diagonal
+                                    unsigned int cind = (static_cast<unsigned int>(col_iter.index2()) / tag._int_row_tot) * tag._int_row_tot + rind;
+                                    // Put 1 at column of nonzero
+                                    w[cind] = 1.;
+                                }
+                            } 
                         } else {
                             // Put identity on the excluded diagonal
                             w[static_cast<unsigned int>(row_iter.index1())] = 1.; 

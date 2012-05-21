@@ -181,15 +181,8 @@ namespace viennacl
                                         w[static_cast<unsigned int>(col_iter.index2())] = *col_iter;
                                     }
                                 } else {
-#if 0
-                                    unsigned int rind = static_cast<unsigned int>(row_iter.index1()) % tag._int_row_tot; 
-                                    // We need to get the number of interleaved blocks to the current block and add the offset to the current diagonal
-                                    unsigned int cind = (static_cast<unsigned int>(col_iter.index2()) / tag._int_row_tot) * tag._int_row_tot + rind;
-#else 
-                                    unsigned int cind = static_cast<unsigned int>(row_iter.index1()); 
-#endif 
-                                    // Put 1 at column of nonzero
-                                    w[cind] = 1.;
+                                    // Put identity on the excluded diagonal
+                                    //w[static_cast<unsigned int>(row_iter.index1())] = 1.; 
                                 }
                             } 
                         } else {

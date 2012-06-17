@@ -1,5 +1,5 @@
-#ifndef __HEAT_PDE_CL_H__
-#define __HEAT_PDE_CL_H__
+#ifndef __HEAT_PDE_CUSP_H__
+#define __HEAT_PDE_CUSP_H__
 
 #include <cusp/multiply.h>
 #include <cusp/blas.h>
@@ -23,7 +23,7 @@ typedef cusp::array1d<double, cusp::device_memory> GPU_VEC_t;
 typedef cusp::array1d<double, cusp::host_memory> CPU_VEC_t; 
 
 
-class HeatPDE_CL : public HeatPDE
+class HeatPDE_CUSP : public HeatPDE
 {
     protected: 
         GPU_MAT_t* x_weights_gpu; 
@@ -68,7 +68,7 @@ class HeatPDE_CL : public HeatPDE
 
     public: 
         // Note: we specifically require the OpenCL version of RBFFD
-        HeatPDE_CL(Domain* grid, RBFFD* der, Communicator* comm, std::string& local_cl_sources, bool useUniformDiffusion, bool weightsComputed=false) 
+        HeatPDE_CUSP(Domain* grid, RBFFD* der, Communicator* comm, std::string& local_cl_sources, bool useUniformDiffusion, bool weightsComputed=false) 
             : HeatPDE(grid, der, comm, useUniformDiffusion, weightsComputed), 
                 useDouble(true),
                 assembled(false),
@@ -81,7 +81,7 @@ class HeatPDE_CL : public HeatPDE
             this->allocateGPUMem();
         }
 
-        // Build DM (essentially call RBFFD_CL to compute weights and update them on the GPU)  
+        // Build DM (essentially call RBFFD_CUSP to compute weights and update them on the GPU)  
         virtual void assemble();
         
         // This will apply the weights appropriately for an explicit (del_u =
@@ -91,7 +91,7 @@ class HeatPDE_CL : public HeatPDE
             // We done actually solve independent from the time stepper. The
             // stepper will internally call to a GPU device kernel to apply the
             // DM and "solve" 
-            std::cout << "[HeatPDE_CL] Error: solve should not be called. The time stepper should call a device kernel for solving\n";
+            std::cout << "[HeatPDE_CUSP] Error: solve should not be called. The time stepper should call a device kernel for solving\n";
         };
     
         virtual void fillInitialConditions(ExactSolution* exact=NULL);

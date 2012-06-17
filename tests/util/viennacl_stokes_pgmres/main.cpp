@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <map> 
+#include "boost/tuple/tuple.hpp" 
 
 #include "grids/grid_reader.h"
 
@@ -20,6 +21,7 @@
 
 using namespace std;
 using namespace EB;
+using namespace boost::tuples; 
 
 //----------------------------------------------------------------------
 //NOTE: EVERYTHING BELOW IN MAIN WAS COPIED FROM heat_regulargrid_2d/main.cpp
@@ -49,21 +51,21 @@ int main(int argc, char** argv) {
     grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #endif 
 
-    std::vector<std::tuple<int, double,double> > stencil_params; 
-    stencil_params.push_back(std::tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
+    std::vector<tuple<int, double,double> > stencil_params; 
+    stencil_params.push_back(tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
 #if 0
-    stencil_params.push_back(std::tuple<int, double,double>(40, 0.055, 0.239)); // EVEN better (for N6400) 
-    stencil_params.push_back(std::tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
-    stencil_params.push_back(std::tuple<int, double,double>(40, 0.077, 0.220)); // BAD
-    stencil_params.push_back(std::tuple<int, double,double>(40, 0.020, 0.295)); // Too IC to work. 
-    stencil_params.push_back(std::tuple<int, double,double>(40, 0.027, 0.274)); // Nothing to write home about 
+    stencil_params.push_back(tuple<int, double,double>(40, 0.055, 0.239)); // EVEN better (for N6400) 
+    stencil_params.push_back(tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
+    stencil_params.push_back(tuple<int, double,double>(40, 0.077, 0.220)); // BAD
+    stencil_params.push_back(tuple<int, double,double>(40, 0.020, 0.295)); // Too IC to work. 
+    stencil_params.push_back(tuple<int, double,double>(40, 0.027, 0.274)); // Nothing to write home about 
 #endif 
 #if 0
-    stencil_params.push_back(std::tuple<int, double,double>(31, 0.035, 0.1));   // Works well
-    stencil_params.push_back(std::tuple<int, double,double>(20, 0.01, 0.01));  
-    stencil_params.push_back(std::tuple<int, double,double>(60, 0.037, 0.262));  
-    stencil_params.push_back(std::tuple<int, double,double>(80, 0.045, 0.311));  
-    stencil_params.push_back(std::tuple<int, double,double>(100, 0.050, 0.308));  
+    stencil_params.push_back(tuple<int, double,double>(31, 0.035, 0.1));   // Works well
+    stencil_params.push_back(tuple<int, double,double>(20, 0.01, 0.01));  
+    stencil_params.push_back(tuple<int, double,double>(60, 0.037, 0.262));  
+    stencil_params.push_back(tuple<int, double,double>(80, 0.045, 0.311));  
+    stencil_params.push_back(tuple<int, double,double>(100, 0.050, 0.308));  
 #endif 
 
     Communicator* comm_unit = new Communicator(argc, argv);
@@ -117,7 +119,7 @@ int main(int argc, char** argv) {
                 grid = new GridReader(grid_name, 4); 
                 // Trickery. We load the quadrature weights from file
                 ((GridReader*)grid)->setLoadExtra(1);
-                grid->setMaxStencilSize(std::get<0>(stencil_params[st])); 
+                grid->setMaxStencilSize(get<0>(stencil_params[st])); 
 
                 Grid::GridLoadErrType err = grid->loadFromFile(); 
                 if (err == Grid::NO_GRID_FILES) 
@@ -197,7 +199,7 @@ int main(int argc, char** argv) {
 //            double eps_c1 = settings->GetSettingAs<double>("EPSILON_C1", ProjectSettings::required); 
 //            double eps_c2 = settings->GetSettingAs<double>("EPSILON_C2", ProjectSettings::required); 
 
-            der->setEpsilonByParameters(std::get<1>(stencil_params[st]),std::get<2>(stencil_params[st]));
+            der->setEpsilonByParameters(get<1>(stencil_params[st]),get<2>(stencil_params[st]));
             int der_err = der->loadAllWeightsFromFile(); 
             if (der_err) {
                 tm["weights"]->start(); 

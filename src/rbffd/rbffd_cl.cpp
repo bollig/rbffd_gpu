@@ -149,6 +149,11 @@ void RBFFD_CL::allocateGPUMem() {
             bytesAllocated += weights_mem_bytes; 
             type_i+=1; 
         }
+        else {
+            // HACK: my gpu kernels take ALL weights on gpu as parameters. This allows me to put only one value for "empty" weight types
+            // minimal memory consumption. It works but its a band-aid
+            gpu_weights[which] = cl::Buffer(context, CL_MEM_READ_ONLY, 1*float_size, NULL, &err); 
+        }
         iterator >>= 1; 
         which += 1;
     }

@@ -75,7 +75,7 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
                 }
         }
         catch (cl::Error er) {
-                printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
+                printf("[InitialConditions] ERROR: %s(%d)\n", er.what(), er.err());
         }
 #if 0
         std::vector<unsigned int>& bindices = grid_ref.getBoundaryIndices();
@@ -650,19 +650,27 @@ void TimeDependentPDE_CL::loadRK4Kernels(std::string& local_sources) {
         this->loadProgram(my_source, useDouble);
 
         try{
-                std::cout << "Loading kernel \""<< rk4_substep_kernel_name << "\" with double precision = " << useDouble << "\n";
-                rk4_substep_kernel = cl::Kernel(program, rk4_substep_kernel_name.c_str(), &err);
-                
-                std::cout << "Loading kernel \""<< rk4_substep_block_kernel_name << "\" with double precision = " << useDouble << "\n";
-                rk4_substep_block_kernel = cl::Kernel(program, rk4_substep_block_kernel_name.c_str(), &err);
-
-                std::cout << "Loading kernel \""<< rk4_advance_substep_kernel_name << "\" with double precision = " << useDouble << "\n";
-                rk4_advance_substep_kernel = cl::Kernel(program, rk4_advance_substep_kernel_name.c_str(), &err);
-                std::cout << "Done attaching kernels!" << std::endl;
+            std::cout << "Loading kernel \""<< rk4_substep_kernel_name << "\" with double precision = " << useDouble << "\n";
+            rk4_substep_kernel = cl::Kernel(program, rk4_substep_kernel_name.c_str(), &err);
         }
         catch (cl::Error er) {
-                printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
+            printf("[AttachKernel] rk4_substep_kernel ERROR: %s(%d)\n", er.what(), er.err());
         }
+        try {
+            std::cout << "Loading kernel \""<< rk4_substep_block_kernel_name << "\" with double precision = " << useDouble << "\n";
+            rk4_substep_block_kernel = cl::Kernel(program, rk4_substep_block_kernel_name.c_str(), &err);
+        }
+        catch (cl::Error er) {
+            printf("[AttachKernel] rk4_substep_block_kernel ERROR: %s(%d)\n", er.what(), er.err());
+        }
+        try {
+            std::cout << "Loading kernel \""<< rk4_advance_substep_kernel_name << "\" with double precision = " << useDouble << "\n";
+            rk4_advance_substep_kernel = cl::Kernel(program, rk4_advance_substep_kernel_name.c_str(), &err);
+        }
+        catch (cl::Error er) {
+            printf("[AttachKernel] rk4_advance_substep_kernel ERROR: %s(%d)\n", er.what(), er.err());
+        }
+        std::cout << "Done attaching kernels!" << std::endl;
 }
 
 //----------------------------------------------------------------------

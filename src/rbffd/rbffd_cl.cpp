@@ -82,7 +82,7 @@ void RBFFD_CL::loadKernel() {
         std::cout << "Done attaching kernels!" << std::endl;
     }
     catch (cl::Error er) {
-        printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
+        printf("[AttachKernel RBFFD] ERROR: %s(%d)\n", er.what(), er.err());
     }
     tm["loadAttach"]->end(); 
 }

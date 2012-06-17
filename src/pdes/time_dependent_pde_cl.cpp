@@ -508,22 +508,27 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
         // ----------------------------------
         // NOTE: INDX_IN maps to "u", INDX_K1 to "F1" and INDX_TEMP to "u+0.5*F1"
 
+        std::cout << "Eval k1\n";
         // Compute K1, K2, K3 and K4 in separate kernel launches (required to ensure global barrier between evaluations)
         evaluateRK4_WithComm(INDX_IN, INDX_IN, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);  
         this->sendrecvBuf(gpu_solution[INDX_TEMP1]);
 
+        std::cout << "Eval k2\n";
         // We use INDX_TEMP1 (== u+0.5*K1) to compute K2 and write INDX_TEMP2 with "u+0.5*K2"
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K2, INDX_TEMP2, delta_t, cur_time+0.5*delta_t, 0.5);  
         this->sendrecvBuf(gpu_solution[INDX_TEMP2]);
 
+        std::cout << "Eval k3\n";
         // We use INDX_TEMP2 (== u+0.5*K2) to compute K3 and write INDX_TEMP1 with "u+K3"
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP2, INDX_K3, INDX_TEMP1, delta_t, cur_time+0.5*delta_t, 1.0);  
         this->sendrecvBuf(gpu_solution[INDX_TEMP1]);
 
+        std::cout << "Eval k4\n";
         // We use INDX_TEMP1 (== u+K3) to compute K4 (NOTE: no communication is required at this step since we
         // wont be evaluating anymore)
         evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K4, INDX_TEMP2, delta_t, cur_time+delta_t, 0.0);  
 
+        std::cout << "Advance u_n\n";
         // Finally, we combine all terms to get the update to u
         advanceRK4_WithComm(INDX_IN, INDX_K1, INDX_K2, INDX_K3, INDX_K4, INDX_OUT);
         this->sendrecvBuf(gpu_solution[INDX_OUT]);

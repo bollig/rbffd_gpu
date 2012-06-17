@@ -75,7 +75,7 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
                 }
         }
         catch (cl::Error er) {
-                printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
+                printf("[InitialConditions] ERROR: %s(%d)\n", er.what(), er.err());
         }
 #if 0
         std::vector<unsigned int>& bindices = grid_ref.getBoundaryIndices();

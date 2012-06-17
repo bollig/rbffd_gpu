@@ -49,7 +49,6 @@ evaluateRK4_block(
     __local FLOAT* shared
 )
 {
-#if 0
     // This is our stencil index
     uint i = get_group_id(0);    
     // This is the real starting index for our stencil
@@ -98,7 +97,6 @@ evaluateRK4_block(
             u_plus_scaled_k_out[j] = u_in[j] + k_scale * dt * feval1;
         }
     }
-#endif 
 }
 
 // We'll re-use the existing kernels

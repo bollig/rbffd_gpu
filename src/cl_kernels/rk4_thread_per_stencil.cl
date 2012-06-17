@@ -47,7 +47,6 @@ evaluateRK4_classic(
     int useHyperviscosity
 )
 {
-#if 0
     uint i = get_global_id(0);
     uint j = i + offset_to_set;
     if(j < nb_stencils_to_compute) {
@@ -79,7 +78,6 @@ evaluateRK4_classic(
             u_plus_scaled_k_out[j] = u_in[j] + k_scale * dt * feval1;
 
     }
-#endif 
 }
 
 

@@ -88,7 +88,8 @@ namespace viennacl
                     _int_row_tot(int_row_tot)
             {}
 #endif 
-                ilu0_tag(unsigned int int_row_start = 0, unsigned int int_row_end = 1, unsigned int int_row_tot=1, unsigned int row_start = 0, unsigned int row_end = -1)
+                ilu0_tag(unsigned int int_row_start , unsigned int int_row_end , unsigned int int_row_tot, unsigned int row_start = 0, unsigned int row_end = -1)
+                //ilu0_tag(unsigned int int_row_start = 0, unsigned int int_row_end = 1, unsigned int int_row_tot=1, unsigned int row_start = 0, unsigned int row_end = -1)
                     : _row_start(row_start),  
                     _row_end(row_end), 
                     _int_row_start(int_row_start), 

@@ -2,8 +2,9 @@
 #include <map> 
 
 #include "pdes/parabolic/heat_pde.h"
+#if 0
 #include "pdes/parabolic/heat_pde_cusp.h"
-
+#endif 
 #include "grids/regulargrid.h"
 
 #include "grids/domain.h"
@@ -329,10 +330,10 @@ int main(int argc, char** argv) {
     TimeDependentPDE* pde; 
     tm["heat_init"]->start(); 
     // We need to provide comm_unit to pass ghost node info
-#if 1
+#if 0
     if (use_gpu) {
         std::string local_sources = getLocalGPUFuncs(); 
-        pde = new HeatPDE_CL(subdomain, der, comm_unit, local_sources, uniformDiffusion, true); 
+        pde = new HeatPDE_CUSP(subdomain, der, comm_unit, local_sources, uniformDiffusion, true); 
     } else 
 #endif
     { 

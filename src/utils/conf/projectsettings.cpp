@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 //----------------------------------------------------------------------
 #include <stdlib.h>
+#include <unistd.h>
 #include <limits.h>
 #include <getopt.h>		// for getopt
 
@@ -133,7 +134,8 @@ void ProjectSettings::trim( std::string& str )
 
 int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
 
-    char* myhostname = getenv("HOSTNAME"); 
+    char myhostname[FILENAME_MAX]; 
+    int err = gethostname(myhostname, FILENAME_MAX-1);
     printf("[Rank %d is on host: %s\n",  my_rank, myhostname);
 
     // Borrowed from Getopt-Long Example in GNU LibC manual

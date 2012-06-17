@@ -2,6 +2,8 @@
 #include <cmath>
 #include <iostream>
 #include <stdlib.h> 
+#include <limits.h> 
+#include <unistd.h> 
 
 using namespace std; 
 
@@ -13,8 +15,8 @@ extern "C" {
 void closeAllMPI(void) {
     std::cout << "[Communicator] Comm Unit Destroyed?: " << comm_destruct_called << std::endl;
     if (!comm_destruct_called) {
-	char* myhostname; 
-	myhostname = getenv("HOSTNAME"); 	
+	char myhostname[FILENAME_MAX]; 
+    int err = gethostname(myhostname, FILENAME_MAX-1);
 
         std::cout << "[Communicator] calling MPI_Abort on host: " << myhostname << std::endl;
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);

@@ -1,6 +1,10 @@
 #ifndef __PDE_H__
 #define __PDE_H__
 
+#ifndef USE_ALLTOALLV
+#define USE_ALLTOALLV 1
+#endif 
+
 #include "grids/grid_interface.h"
 #include "rbffd/rbffd.h"
 #include "utils/comm/communicator.h"
@@ -194,13 +198,25 @@ class PDE : public MPISendable
         int receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
         int sendUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_rank, std::string label="");
 
+        template <class VEC_t>
+        int sendrecvUpdates(VEC_t& vec, std::string label="")
+        {
+#if USE_ALLTOALLV
+            return this->sendrecvUpdates_alltoall(vec, label); 
+#else
+            // Else use the round-robin send/recv stuff
+            return this->sendrecvUpdates_rr(vec, label); 
+#endif 
+        }
+
         // Share data in vector with all other processors. Will only transfer
         // data associated with nodes in overlap between domains. 
         // Uses MPI_Alltoallv and MPI_Barrier. 
         // Copies data from vec to transfer, then writes received data into vec
         // before returning. 
         template <class VEC_t> 
-            int sendrecvUpdates(VEC_t& vec, std::string label="") 
+            inline 
+            int sendrecvUpdates_alltoall(VEC_t& vec, std::string label="") 
             {
                 // Share data in vector with all other processors. Will only transfer
                 // data associated with nodes in overlap between domains. 
@@ -209,7 +225,10 @@ class PDE : public MPISendable
                 // before returning. 
                 if (comm_ref.getSize() > 1) {
 
-                    //std::cout << "vec size = " << vec.size() << std::endl;
+                    // Added a barrier here to ensure that we only time the
+                    // communication and copy into CPU memory. Copy to GPU
+                    // memory is another timer
+                    comm_ref.barrier();
                     tm["alltoallv"]->start(); 
                     // Copy elements of set to sbuf
                     unsigned int k = 0; 
@@ -253,7 +272,48 @@ class PDE : public MPISendable
                 return 0;  // FIXME: return number of bytes received in case we want to monitor this 
             }
 
-        int sendrecvUpdates_rr(std::vector<SolutionType>& vec, std::string label=""); 
+// Send and receive updates in round-robin fashion (direct connect == slow)
+        template <class VEC_t> 
+            inline 
+            int sendrecvUpdates_rr(VEC_t& vec, std::string label) 
+            {
+
+                // Added a barrier here to ensure that we only time the
+                // communication and copy into CPU memory. Copy to GPU
+                // memory is another timer
+                comm_ref.barrier();
+                tm["sendrecv"]->start();
+                if (comm_ref.getSize() > 1) {
+                    //        std::cout << "[PDE] SEND/RECEIVE\n";
+                    vector<int> receiver_list; 
+
+                    // This is BAD: we should only send to CPUs in need. 
+                    for (int i = 0; i < comm_ref.getSize(); i++) {
+                        // FIXME: we need an R_by_rank to knwo when to receive from another CPU
+                        // unless we use some sort of BCAST mechanism in MPI and MPI determines the details. 
+                        // For now we allow 0 byte transfers but this should be improved
+                        if (i != comm_ref.getRank()) 
+                        {
+                            receiver_list.push_back(i); 	
+                        }
+                    }
+
+                    // Round robin: each CPU takes a turn at sending message to CPUs that need nodes
+                    for (int j = 0; j < comm_ref.getSize(); j++) {
+                        if (comm_ref.getRank() == j) {		// My turn
+                            for (size_t i = 0; i < receiver_list.size(); i++) {
+                                this->sendUpdate(vec, comm_ref.getRank(), receiver_list[i], label);
+                            }
+                        } else {						// All CPUs listen
+                            this->receiveUpdate(vec, comm_ref.getRank(), j, label);
+                        }
+                    }
+                }
+                comm_ref.barrier();
+                tm["sendrecv"]->stop();
+                return 0;  // FIXME: return number of bytes received in case we want to monitor this 
+            }
+
 
         void setupTimers();
 

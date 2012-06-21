@@ -42,8 +42,9 @@
 
 - FSU Spear
     - Armadillo
-    - Boost
-    - FFTW3
+    - (DONE) Boost
+    - (module load gnu-openmpi) FFTW3
+    - (module load gnu-openmpi) VTK
 
 ====================== 
 

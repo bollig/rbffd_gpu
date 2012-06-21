@@ -1,0 +1,39 @@
+I got the source built on FSU spear
+
+1) add
+
+	source /etc/profile 
+	module load gnu-openmpi
+	export ARMADILLO_ROOT=~/local-gnu
+	export FFTW_ROOT=/opt/hpc/gnu
+	export BOOST_ROOT=~/local-gnu/boost-1.49.0
+
+   to the top of the ~/.bashrc file
+
+2) Build boost: 
+
+	wget boost_1_49_0.tar.gz
+	tar xfz boost_1_49_0.tar.gz
+	mkdir ~/local-gnu
+	cd boost_1_49_0
+	./bootstrap.sh --prefix=$HOME/local-gnu/boost-1.49.0
+	./b2 install --prefix=$HOME/local-gnu/boost-1.49.0
+	rm -rf boost_1_49_0
+
+3) Build armadillo: 
+
+   wget armadillo-3.2.2.tar.gz
+   tar xvfz armadillo-3.2.2.tar.gz 
+   cd armadillo-3.2.2
+   cmake -DCMAKE_INSTALL_PREFIX=$HOME/local-gnu .
+   make install
+
+4) Build the source (note the definition on cmake line. Spears VTK
+installation is non-standard)
+
+	mkdir build
+	cd build
+	cmake -DFORCE_VTK_LIB=1 ../rbffd_gpu
+	make -j 4
+	
+5) 

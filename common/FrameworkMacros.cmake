@@ -144,11 +144,15 @@ MACRO ( LOAD_VTK )
     # if VTK_FOUND and ENABLED
     #   assume the rbf_vtk lib was built
     if (USE_VTK)
-        find_package(VTK)
+        find_package(VTK REQUIRED)
         if (VTK_FOUND)
-            INCLUDE( ${USE_VTK_FILE} )
-            message( STATUS "VTK found, updating FRAMEWORK_{...} variables.")
+            INCLUDE( ${VTK_USE_FILE} )
+	if (FORCE_VTK_LIB) 
+		link_directories( ${VTK_LIBRARY_DIRS}/.. )
+	endif ()
+            message( STATUS "VTK found: ${VTK_INCLUDE_DIRS}")
             set (FRAMEWORK_DEP_INCLUDE_DIRS ${FRAMEWORK_DEP_INCLUDE_DIRS} ${VTK_INCLUDE_DIRS})
+            set (FRAMEWORK_DEP_LINK_DIRS ${FRAMEWORK_DEP_LINK_DIRS} ${VTK_LIBRARY_DIRS})
             # NOTE: we need to fix these libraries in the future
             set (FRAMEWORK_DEPENDENCIES ${FRAMEWORK_DEPENDENCIES} vtkHybrid vtkWidgets)
             ADD_DEFINITIONS("-DUSE_VTK=1")

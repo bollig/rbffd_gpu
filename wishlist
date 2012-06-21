@@ -1,0 +1,56 @@
+- METIS/parMETiS, Chaco, Scotch
+
+- Parallel LSH for Stencil Gen
+
+- GPU LU for weights
+- GPU Assemble LHS stokes
+
+- GPU ILU for stokes
+- Hyperviscosity stokes
+
+
+- SCVT generator
+
+- Heat on Ellipsoid 
+    -require ellipsoid projection in CVT
+    -Forcing function remove analytic du/dt leave error behind; check rate of growth
+    -GPU kernel for boundary conditions
+    -leverage viennacl and cusp for DM and RHS (move boundary nodes to RHS)
+
+- Hyperbolic kernel optimizations
+    - Test current vs viennacl version
+    - Implement cusp version for comparison
+    - Benchmark with overlapped comm and comp
+
+- Elliptic
+    - Revive annulus cvt
+    - Solve with Dirichlet conditions; review robin and neumann (need linear nullspace term)
+    - Test parallel GMRES solve
+    - Try parallel ILU0 on elliptic problem
+
+- Stokes
+    - Hyperviscosity
+    - Test ContourSVD for higher cond num on weight systs
+    - GPU ILU0 (Li and Saad, 2011) 
+    - Compare convergence before and after interleaving
+        - No precond
+        - With precond
+
+- CUSP parallel gmres
+    - CPU ILU0 
+    - GPU ILU0
+
+- FSU Spear
+    - Armadillo
+    - Boost
+    - FFTW3
+
+====================== 
+
+- Petsc RBF-FD 
+    - Should leverage the parallel solvers and preconditioners
+    - May need to modify communication
+
+- Review multi-Coloring and block-ILU
+    - Coloring nodes to split matrix into blocks that can be easily updated in parallel
+    - Apply ILU to small blocks; how to handle block connectors?

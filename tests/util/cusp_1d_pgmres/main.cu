@@ -180,7 +180,9 @@ int main(int argc, char** argv) {
         cout << "end write weights to file" << endl;
     }
 
-    Poisson1D_PDE_CU* pde = new Poisson1D_PDE_CU(subdomain, der, comm_unit); 
+    int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1");
+
+    Poisson1D_PDE_CU* pde = new Poisson1D_PDE_CU(subdomain, der, comm_unit, use_gpu); 
 
     pde->assemble();
     pde->write_System(); 

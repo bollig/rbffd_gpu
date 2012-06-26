@@ -16,12 +16,17 @@ FIND_PACKAGE (MPI)
 
 # Let Armadillo find MKL stuff
 OPTION (USE_MKL "Enable/Disable the linking to MKL drop in replacements to BLAS and LAPACK" ON)
+if (CMAKE_C_COMPILER MATCHES "icc") 
+	
 if (USE_MKL) 
     include(ARMA_FindMKL)
     message(STATUS "MKL_FOUND     = ${MKL_FOUND}")
     include_directories(${MKL_INCLUDE_DIRS})
     SET (ENV{EXTERNAL_LIB_DEPENDENCIES} "$ENV{EXTERNAL_LIB_DEPENDENCIES};${MKL_LIBRARIES}")
 endif(USE_MKL)
+else () 
+	message ("Disabled MKL support. You are not using an intel compiler.")
+endif ()
 
 
 IF (NOT USE_OPENCL)
@@ -118,6 +123,30 @@ endif()
 SET(CMAKE_FIND_LIBRARY_SUFFIXES_SAVED ${CMAKE_FIND_LIBRARY_SUFFIXES}) #Backup
 LIST(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.3")
 
+
+if (DEFINED ENV{FFTW_ROOT})
+    set(FFTW_INCLUDE "${FFTW_INCLUDE};$ENV{FFTW_ROOT}/include" )
+    set(FFTW_LIB_PATH "${FFTW_LIB_PATH};$ENV{FFTW_ROOT}/lib;$ENV{FFTW_ROOT}/lib64")
+endif()
+
+if (DEFINED ENV{FFTWROOT})
+    set(FFTW_INCLUDE "${FFTW_INCLUDE};$ENV{FFTWROOT}/include" )
+    set(FFTW_LIB_PATH "${FFTW_LIB_PATH};$ENV{FFTWROOT}/lib;$ENV{FFTWROOT}/lib64")
+endif()
+
+
+if (DEFINED FFTW_ROOT )
+    set(FFTW_INCLUDE "${FFTW_ROOT}/include;${FFTW_INCLUDE}" )
+    set(FFTW_LIB_PATH "${FFTW_ROOT}/lib;${FFTW_ROOT}/lib64;${FFTW_LIB_PATH}")
+endif()
+if (DEFINED FFTWROOT )
+    set(FFTW_INCLUDE "${FFTWROOT}/include;${FFTW_INCLUDE}" )
+    set(FFTW_LIB_PATH "${FFTWROOT}/lib;${FFTWROOT}/lib64;${FFTW_LIB_PATH}")
+endif() 
+
+MESSAGE(STATUS "SEARCHING FOR FFTW3 IN LIB PATH: ${FFTW_LIB_PATH}")
+
+
 # Typically installed separately. Same rules as Armadillo (local dir here; global unecessary)
 FIND_LIBRARY(fftw3 fftw3 PATHS 
     /Users/erlebach/Documents/src/fftw-3.2.2/.libs
@@ -129,6 +158,7 @@ FIND_LIBRARY(fftw3 fftw3 PATHS
     /usr/local/lib
     /usr/lib64
     /usr/local/lib64
+    ${FFTW_LIB_PATH}
     #	NO_DEFAULT_PATH
     )
 SET(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_SAVED}) #Restore

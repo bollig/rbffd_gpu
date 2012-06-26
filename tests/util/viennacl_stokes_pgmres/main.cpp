@@ -1,6 +1,8 @@
-#include <stdlib.h>
-#include <map> 
 #include "boost/tuple/tuple.hpp" 
+#include "boost/tuple/tuple_comparison.hpp" 
+#include "boost/tuple/tuple_io.hpp" 
+#include <map> 
+#include <stdlib.h>
 
 #include "grids/grid_reader.h"
 
@@ -21,7 +23,7 @@
 
 using namespace std;
 using namespace EB;
-using namespace boost::tuples; 
+namespace b=boost::tuples; 
 
 //----------------------------------------------------------------------
 //NOTE: EVERYTHING BELOW IN MAIN WAS COPIED FROM heat_regulargrid_2d/main.cpp
@@ -51,21 +53,21 @@ int main(int argc, char** argv) {
     grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #endif 
 
-    std::vector<tuple<int, double,double> > stencil_params; 
-    stencil_params.push_back(tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
+    std::vector<b::tuple<int, double,double> > stencil_params; 
+    stencil_params.push_back(b::tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
 #if 0
-    stencil_params.push_back(tuple<int, double,double>(40, 0.055, 0.239)); // EVEN better (for N6400) 
-    stencil_params.push_back(tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
-    stencil_params.push_back(tuple<int, double,double>(40, 0.077, 0.220)); // BAD
-    stencil_params.push_back(tuple<int, double,double>(40, 0.020, 0.295)); // Too IC to work. 
-    stencil_params.push_back(tuple<int, double,double>(40, 0.027, 0.274)); // Nothing to write home about 
+    stencil_params.push_back(b::tuple<int, double,double>(40, 0.055, 0.239)); // EVEN better (for N6400) 
+    stencil_params.push_back(b::tuple<int, double,double>(40, 0.038, 0.222)); // Much better 
+    stencil_params.push_back(b::tuple<int, double,double>(40, 0.077, 0.220)); // BAD
+    stencil_params.push_back(b::tuple<int, double,double>(40, 0.020, 0.295)); // Too IC to work. 
+    stencil_params.push_back(b::tuple<int, double,double>(40, 0.027, 0.274)); // Nothing to write home about 
 #endif 
 #if 0
-    stencil_params.push_back(tuple<int, double,double>(31, 0.035, 0.1));   // Works well
-    stencil_params.push_back(tuple<int, double,double>(20, 0.01, 0.01));  
-    stencil_params.push_back(tuple<int, double,double>(60, 0.037, 0.262));  
-    stencil_params.push_back(tuple<int, double,double>(80, 0.045, 0.311));  
-    stencil_params.push_back(tuple<int, double,double>(100, 0.050, 0.308));  
+    stencil_params.push_back(b::tuple<int, double,double>(31, 0.035, 0.1));   // Works well
+    stencil_params.push_back(b::tuple<int, double,double>(20, 0.01, 0.01));  
+    stencil_params.push_back(b::tuple<int, double,double>(60, 0.037, 0.262));  
+    stencil_params.push_back(b::tuple<int, double,double>(80, 0.045, 0.311));  
+    stencil_params.push_back(b::tuple<int, double,double>(100, 0.050, 0.308));  
 #endif 
 
     Communicator* comm_unit = new Communicator(argc, argv);

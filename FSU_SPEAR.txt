@@ -50,6 +50,7 @@ with content:
 
 git push 
 ====
-and chmod +x permissions
+and "chmod +x" permissions
+
 So that git will automatically push changes from the mirror repo to the github
 repo. 

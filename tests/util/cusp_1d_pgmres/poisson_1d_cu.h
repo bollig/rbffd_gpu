@@ -120,6 +120,7 @@ class Poisson1D_PDE_CU : public ImplicitPDE
     // which requires memory allocation, copy to, solve, copy back operators
     virtual void solve() {
         if (solve_on_gpu) {
+		std::cout << "Solving on the GPU: \n";
             this->solve(*LHS_dev, *RHS_dev, *U_exact_dev, *U_approx_dev); 
         } else {
             this->solve(*LHS_host, *RHS_host, *U_exact_host, *U_approx_host); 

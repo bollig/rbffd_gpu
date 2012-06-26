@@ -48,7 +48,7 @@ with content:
 ====
 #!/bin/bash
 
-nohup git push &>/dev/null &
+git push 
 ====
 
 So that git will automatically push changes from the mirror repo to the github

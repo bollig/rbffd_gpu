@@ -60,7 +60,7 @@ const char* matTypeStrings[] =
 // NOTE: I did this sorting and benchmarked. There was no difference in timing.
 // The STL maps auto sort and the assembly on the GPU sorts as well. 
 
-EB::TimerList tm;
+EB::TimerList timers;
 
 
 //---------------------------------
@@ -134,9 +134,9 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     sprintf(copy_timer_name,     "%u %s Copy To %s", N, matTypeStrings[matType], matTypeStrings[multType]); 
     sprintf(multiply_timer_name, "%u %s Multiply", N, matTypeStrings[multType]);
 
-    if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
-    if (!tm.contains(copy_timer_name)) { tm[copy_timer_name] = new EB::Timer(copy_timer_name); } 
-    if (!tm.contains(multiply_timer_name)) { tm[multiply_timer_name] = new EB::Timer(multiply_timer_name); } 
+    if (!timers.contains(assemble_timer_name)) { timers[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
+    if (!timers.contains(copy_timer_name)) { timers[copy_timer_name] = new EB::Timer(copy_timer_name); } 
+    if (!timers.contains(multiply_timer_name)) { timers[multiply_timer_name] = new EB::Timer(multiply_timer_name); } 
 
 
     std::cout << test_name << std::endl;
@@ -146,19 +146,19 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 
     // Assemble the matrix
     // ----------------------
-    tm[assemble_timer_name]->start(); 
+    timers[assemble_timer_name]->start(); 
     A = new MatType(N); 
     assemble_LHS<MatType>(der, grid, *A);  
-    tm[assemble_timer_name]->stop(); 
+    timers[assemble_timer_name]->stop(); 
 
-    tm[copy_timer_name]->start();
+    timers[copy_timer_name]->start();
     A_mult = new MultMatType(N,N); 
     copy(*A, *A_mult);
-    tm[copy_timer_name]->stop();
+    timers[copy_timer_name]->stop();
 
-    tm[multiply_timer_name]->start();
+    timers[multiply_timer_name]->start();
     benchmarkMultiplyDevice<MultMatType>(*A_mult);
-    tm[multiply_timer_name]->stop();
+    timers[multiply_timer_name]->stop();
 
     // Cleanup
     delete(A);
@@ -178,22 +178,22 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     sprintf(assemble_timer_name, "%u %s Assemble", N, matTypeStrings[matType]); 
     sprintf(multiply_timer_name, "%u %s Multiply", N, matTypeStrings[matType]);
 
-    if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
-    if (!tm.contains(multiply_timer_name)) { tm[multiply_timer_name] = new EB::Timer(multiply_timer_name); } 
+    if (!timers.contains(assemble_timer_name)) { timers[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
+    if (!timers.contains(multiply_timer_name)) { timers[multiply_timer_name] = new EB::Timer(multiply_timer_name); } 
 
     std::cout << test_name << std::endl;
 
     // Assemble the matrix
     // ----------------------
-    tm[assemble_timer_name]->start(); 
+    timers[assemble_timer_name]->start(); 
     MatType* A = new MatType(N); 
     assemble_LHS<MatType>(der, grid, *A);  
-    tm[assemble_timer_name]->stop(); 
+    timers[assemble_timer_name]->stop(); 
 
     
-    tm[multiply_timer_name]->start();
+    timers[multiply_timer_name]->start();
     benchmarkMultiplyHost<MatType>(*A);
-    tm[multiply_timer_name]->stop();
+    timers[multiply_timer_name]->stop();
 
     // Cleanup
     delete(A);
@@ -249,18 +249,18 @@ int main(void)
     grids.push_back("~/GRIDS/md/md165.27556"); 
 #endif 
 #if 0
-    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_500k_nodes.ascii"); 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtimersesh_100k_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtimersesh_500k_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtimersesh_1m_nodes.ascii"); 
 #endif 
-    //grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
+    //grids.push_back("~/GRIDS/geoff/scvtimersesh_1m_nodes.ascii"); 
 
     for (size_t i = 0; i < grids.size(); i++) {
         std::string& grid_name = grids[i]; 
 
         std::string weight_timer_name = grid_name + " Calc Weights";  
 
-        tm[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
+        timers[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
         unsigned int stencil_size = 40;
@@ -297,14 +297,14 @@ int main(void)
 
 
         std::cout << "Generate RBFFD Weights\n"; 
-        tm[weight_timer_name]->start(); 
+        timers[weight_timer_name]->start(); 
         RBFFD der(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, grid, 3, 0); 
         der.setEpsilonByParameters(eps_c1, eps_c2);
         int der_err = der.loadAllWeightsFromFile(); 
         if (der_err) {
             der.computeAllWeightsForAllStencils(); 
 
-            tm[weight_timer_name]->start(); 
+            timers[weight_timer_name]->start(); 
             if (writeIntermediate) {
                 der.writeAllWeightsToFile(); 
             }
@@ -329,8 +329,8 @@ int main(void)
         delete(grid); 
     }
 
-    tm.printAll();
-    tm.writeToFile();
+    timers.printAll();
+    timers.writeToFile();
     return EXIT_SUCCESS;
 }
 

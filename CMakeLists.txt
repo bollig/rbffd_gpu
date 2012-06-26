@@ -3,6 +3,12 @@ IF (USE_GCC)
     set (CMAKE_CXX_COMPILER "g++")      
 ENDIF (USE_GCC)
 
+IF (USE_GCC47) 
+    set (CMAKE_C_COMPILER "gcc-4.7")
+    set (CMAKE_CXX_COMPILER "g++-4.7")      
+ENDIF (USE_GCC47)
+
+
 IF (USE_GCC44) 
     set (CMAKE_C_COMPILER "gcc-4.4")
     set (CMAKE_CXX_COMPILER "g++-4.4")      
@@ -107,7 +113,8 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 
 #add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -no-vec -opt-report -vec-report -par-report)
 #ICC:  add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -opt-report -vec-report -par-report)
-add_definitions(-std=c++0x -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall 
+add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall 
+    -std=c++0x 
     -O3 
     # -g 
     -DNDEBUG 

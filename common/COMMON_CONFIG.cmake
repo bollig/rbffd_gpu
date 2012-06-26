@@ -93,6 +93,7 @@ MESSAGE(STATUS "SEARCHING FOR ARMADILLO IN LIB PATH: ${ARMADILLO_LIB_PATH}")
 # Specify local installation dir here. If installed globally the dir is unnecessary.
 FIND_LIBRARY (armadillo armadillo PATHS
     # efb06: bollig account
+    ${ARMADILLO_LIB_PATH}
     /Users/erlebach/Documents/src/armadillo-0.9.52 
     ~/local/usr/lib64
     ~/local/usr/lib
@@ -102,7 +103,6 @@ FIND_LIBRARY (armadillo armadillo PATHS
     /usr/local/lib
     /usr/lib64
     /usr/local/lib64
-    ${ARMADILLO_LIB_PATH}
     NO_DEFAULT_PATH
     )
 if (DEFINED armadillo) 

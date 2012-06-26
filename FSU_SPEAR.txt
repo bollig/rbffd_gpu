@@ -36,4 +36,20 @@ installation is non-standard)
 	cmake -DFORCE_VTK_LIB=1 ../rbffd_gpu
 	make -j 4
 	
-5) 
+==========
+
+NOTE: spear cannot access github but it can access pamd. So I created a mirror
+clone (git clone --mirror <repo>) for the source on pamd (~/repos). I added
+the file
+
+<repo>/hooks/post-receive
+
+with content: 
+====
+#!/bin/bash
+
+nohup git push &>/dev/null &
+====
+
+So that git will automatically push changes from the mirror repo to the github
+repo. 

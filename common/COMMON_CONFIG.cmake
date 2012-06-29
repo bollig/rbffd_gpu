@@ -48,21 +48,45 @@ ELSE ()
 ENDIF ()
 
 
+
+###############################################
+# Setup MPI 
+###############################################
+
+IF (MPI_FOUND AND USE_MPI)
+    SET (CMAKE_CXX_FLAGS ${MPI_COMPILE_FLAGS})
+    SET (CMAKE_C_FLAGS ${MPI_COMPILE_FLAGS})
+    SET (CMAKE_LINK_FLAGS ${MPI_LINK_FLAGS})
+
+    INCLUDE_DIRECTORIES (${MPI_INCLUDE_PATH})
+    # NOTE: add a target_link_library( MPI_LIBRARIES) for libs and bins
+    # TESTS that run parallel should use MPIEXEC
+ENDIF (MPI_FOUND AND USE_MPI) 
+
+
+
 # This makes finding boost more robust when we have custom installs
 set ( Boost_NO_BOOST_CMAKE  true ) 
 set ( Boost_NO_SYSTEM_PATHS true )
 set ( BOOST_MIN_VERSION     1.48.0)
 
 # This guarantees geometry and other features we use will exist.
-find_package(Boost ${BOOST_MIN_VERSION} COMPONENTS system filesystem REQUIRED)
+find_package(Boost ${BOOST_MIN_VERSION} COMPONENTS filesystem system REQUIRED)
 
 if(Boost_FOUND)
   
   message(STATUS "Boost_MAJOR_VERSION = ${Boost_MAJOR_VERSION}")
   message(STATUS "Boost_MINOR_VERSION = ${Boost_MINOR_VERSION}")
   
-  message(STATUS "Boost_INCLUDE_DIR = ${Boost_INCLUDE_DIR}")
-  
+  message(STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}")
+  message(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}")
+  include_directories(BEFORE ${Boost_INCLUDE_DIRS})
+  #SET (ENV{EXTERNAL_LIB_DEPENDENCIES} "$ENV{EXTERNAL_LIB_DEPENDENCIES};${Boost_LIBRARIES}")
+#   if(Boost_FOUND)
+#      include_directories(${Boost_INCLUDE_DIRS})
+#      add_executable(foo foo.cc)
+#      target_link_libraries(foo ${Boost_LIBRARIES})
+#   endif()
 endif()
 
 
@@ -116,12 +140,13 @@ endif()
 
 if (ARMADILLO_FOUND)
  MESSAGE(STATUS "Found armadillo in: ${armadillo} (Include: ${ARMADILLO_INCLUDE})")
+ include_directories( ${ARMADILLO_INCLUDE} )
 else() 
     MESSAGE(FATAL_ERROR " Armadillo Not Found! ")
 endif() 
 
-SET(CMAKE_FIND_LIBRARY_SUFFIXES_SAVED ${CMAKE_FIND_LIBRARY_SUFFIXES}) #Backup
-LIST(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.3")
+#SET(CMAKE_FIND_LIBRARY_SUFFIXES_SAVED ${CMAKE_FIND_LIBRARY_SUFFIXES}) #Backup
+#LIST(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.3")
 
 
 if (DEFINED ENV{FFTW_ROOT})
@@ -162,8 +187,8 @@ FIND_LIBRARY(fftw3 fftw3 PATHS
     #	NO_DEFAULT_PATH
     )
 SET(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_SAVED}) #Restore
-MESSAGE(STATUS "Found fftw3 in: ${fftw3}")
-
+MESSAGE(STATUS "Found fftw3 in: ${fftw3} (Include: ${FFTW_INCLUDE}")
+include_directories(AFTER ${FFTW_INCLUDE} )
 
 
 ###############################################
@@ -176,30 +201,15 @@ MESSAGE(STATUS "Found fftw3 in: ${fftw3}")
 ###############################################
 # Directories searched for headers ORDER does not matter. 
 # If a directory does not exist it is skipped
-SET (RBF_INCLUDE_DIRS 
-    .
-    /Users/erlebach/Documents/src/fftw-3.2.2/include
-    /Users/erlebach/Documents/src/armadillo-0.9.52/include
-    $ENV{INCLUDE_PATH}
-    /opt/local/include   # for boost
-    ~/local/include
-    ~/local/usr/include
-    ${ARMADILLO_INCLUDE}
-    ${Boost_INCLUDE_DIRS}
-    )
+#SET (RBF_INCLUDE_DIRS 
+#    .
+#    /Users/erlebach/Documents/src/fftw-3.2.2/include
+#    /Users/erlebach/Documents/src/armadillo-0.9.52/include
+#    $ENV{INCLUDE_PATH}
+#    /opt/local/include   # for boost
+#    ~/local/include
+#    ~/local/usr/include
+#    ${ARMADILLO_INCLUDE}
+#    )
 
-INCLUDE_DIRECTORIES ( ${RBF_INCLUDE_DIRS} )
-
-###############################################
-# Setup MPI 
-###############################################
-
-IF (MPI_FOUND AND USE_MPI)
-    SET (CMAKE_CXX_FLAGS ${MPI_COMPILE_FLAGS})
-    SET (CMAKE_C_FLAGS ${MPI_COMPILE_FLAGS})
-    SET (CMAKE_LINK_FLAGS ${MPI_LINK_FLAGS})
-
-    INCLUDE_DIRECTORIES (${MPI_INCLUDE_PATH})
-    # NOTE: add a target_link_library( MPI_LIBRARIES) for libs and bins
-    # TESTS that run parallel should use MPIEXEC
-ENDIF (MPI_FOUND AND USE_MPI) 
+#INCLUDE_DIRECTORIES ( ${RBF_INCLUDE_DIRS} )

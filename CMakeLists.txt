@@ -98,7 +98,7 @@ include_directories(${inc_paths})
 # Its name should not change
 SET( FRAMEWORK_DEPENDENCIES
 	$ENV{EXTERNAL_LIB_DEPENDENCIES}
-    ${Boost_LIBRARIES}
+	${Boost_LIBRARIES}
 	#${CUDA_LIBRARIES}
 )
 

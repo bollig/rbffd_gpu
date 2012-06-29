@@ -148,6 +148,7 @@ MACRO ( LOAD_VTK )
         if (VTK_FOUND)
             INCLUDE( ${VTK_USE_FILE} )
 	if (FORCE_VTK_LIB) 
+	#	MESSAGE("FROCED VTK LINK DIRS: ${VTK_LIBRARY_DIRS}/..")
 		link_directories( ${VTK_LIBRARY_DIRS}/.. )
 	endif ()
             message( STATUS "VTK found: ${VTK_INCLUDE_DIRS}")
@@ -188,7 +189,7 @@ ENDMACRO( REQUIRE_PETSC )
 
 MACRO ( PRINT_DEPS )
 
-    message( STATUS "Framework Dependency Includes: ${FRAMEWORK_DEP_INCLUDE_DIRS}")
+    message( STATUS "Framework Dependency Includes: ${FRAMEWORK_INCLUDES} ${FRAMEWORK_DEP_INCLUDE_DIRS}")
     message( STATUS "Framework Dependency Libraries: ${FRAMEWORK_DEPENDENCIES}")
 
 ENDMACRO ( PRINT_DEPS )
@@ -348,9 +349,14 @@ ENDMACRO (ADD_PARALLEL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv _numpro
 MACRO ( ADD_SERIAL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv)
     SET (_full_test_name "${_execname}_serial_cuda_test${TEST_COUNT}") 
     IF (CUDA_FOUND )
+	PRINT_DEPS()
+
+	# All includes necessary for this project. We'll put them first
+	get_directory_property(_include_directories INCLUDE_DIRECTORIES)
+
         # Make sure the RBF.framework library is built and linked to this test
-        INCLUDE_DIRECTORIES(${FRAMEWORK_INCLUDE_DIR} ${FRAMEWORK_DEP_INCLUDE_DIRS})
-        CUDA_INCLUDE_DIRECTORIES(${FRAMEWORK_INCLUDE_DIR} ${FRAMEWORK_DEP_INCLUDE_DIRS})
+        #INCLUDE_DIRECTORIES(${FRAMEWORK_INCLUDE_DIR} ${FRAMEWORK_DEP_INCLUDE_DIRS})
+        CUDA_INCLUDE_DIRECTORIES(${_include_directories} ${FRAMEWORK_INCLUDE_DIR} ${FRAMEWORK_DEP_INCLUDE_DIRS})
         IF (NOT DEFINED ${TEST_COUNT_${_execname}})
             SET(TEST_COUNT_${_execname} 0 CACHE TYPE INTERNAL)
             MARK_AS_ADVANCED(TEST_COUNT_${_execname})
@@ -364,8 +370,8 @@ MACRO ( ADD_SERIAL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv)
 
         ADD_DEPENDENCIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
         ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
-        TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
-        TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
+        TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES} ${FRAMEWORK_CUDA_LIBRARY}) 
+        #TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
         # Number tests according 
         MESSAGE(STATUS "ADDING TEST: ${_full_test_name}" )
         ADD_TEST (NAME ${_full_test_name} COMMAND "${_execname}" ${_argv})

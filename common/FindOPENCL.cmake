@@ -60,25 +60,34 @@ MESSAGE("GPU_TOOLKIT/include= ${GPU_TOOLKIT}/include")
     FIND_LIBRARY(OPENCL_LIBRARIES 
                 NAMES OpenCL opencl64 
                 PATHS 
+		    $ENV{OPENCL_ROOT}/lib
+		    $ENV{OPENCL_ROOT}/lib64
                     /cygdrive/c/Windows/SysWOW64
                     /cygdrive/c/Windows/System32
                     ${GPU_TOOLKIT}/lib/Win32
                     ${GPU_TOOLKIT}/lib/x64
                     $ENV{CUDA_PATH}/lib/Win32
-                    $ENV{CUDA_PATH}/lib/x64
+                    $ENV{CUDA_PATH}/lib64
+                    $ENV{CUDA_PATH}/lib
                     ~/local/lib
+		    NO_DEFAULT_PATH
                     )
     IF( OPENCL_LIBRARIES )
         FIND_LIBRARY(OPENCL_LIBRARIES 
                 NAMES OpenCL opencl32
                 PATHS 
+		    $ENV{OPENCL_ROOT}/lib
+		    $ENV{OPENCL_ROOT}/lib32
                     /cygdrive/c/Windows/SysWOW64
                     /cygdrive/c/Windows/System32
                     ${GPU_TOOLKIT}/lib/Win32
                     ${GPU_TOOLKIT}/lib/x64
                     $ENV{CUDA_PATH}/lib/Win32
                     $ENV{CUDA_PATH}/lib/x64
+                    $ENV{CUDA_PATH}/lib64
+                    $ENV{CUDA_PATH}/lib
                     ~/local/lib
+		    NO_DEFAULT_PATH
                     )
     ENDIF( OPENCL_LIBRARIES )
 
@@ -103,8 +112,19 @@ ELSE (WIN32 OR CYGWIN)
 				/usr/include 
 	)
 
-    FIND_LIBRARY(OPENCL_LIBRARIES OpenCL ENV LD_LIBRARY_PATH)
+	    FIND_LIBRARY(OPENCL_LIBRARIES OpenCL ENV 
+			    LD_LIBRARY_PATH
+			    NO_DEFAULT_PATH
+			)
 
+	if (OPENCL_LIBRARIES)
+		message(STATUS "OPENCL library is on LD_LIBRARY_PATH")
+	else()
+		FIND_LIBRARY(OPENCL_LIBRARIES OpenCL ENV 
+		# Include the default search path here
+				LD_LIBRARY_PATH
+			    )
+	endif()
 	message(STATUS "OPENCL_INCLUDE_DIR:  ${OPENCL_INCLUDE_DIR}")
 	message(STATUS "OPENCL_LIBRARIES:  ${OPENCL_LIBRARIES}")
 	#message(***** OPENCL ENV: "$ENV{GPU_SDK}" ********)

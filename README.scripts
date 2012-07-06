@@ -1,0 +1,7 @@
+The scripts dir contains a collection of unix shell and matlab scripts for job submission, post processing and visualization
+
+The scripts dir is a submodule in git. To obtain it: 
+
+
+git submodule init 
+git submodule update

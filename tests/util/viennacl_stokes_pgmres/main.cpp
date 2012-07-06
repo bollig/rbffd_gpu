@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
                 grid = new GridReader(grid_name, 4); 
                 // Trickery. We load the quadrature weights from file
                 ((GridReader*)grid)->setLoadExtra(1);
-                grid->setMaxStencilSize(get<0>(stencil_params[st])); 
+                grid->setMaxStencilSize(b::get<0>(stencil_params[st])); 
 
                 Grid::GridLoadErrType err = grid->loadFromFile(); 
                 if (err == Grid::NO_GRID_FILES) 
@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
 //            double eps_c1 = settings->GetSettingAs<double>("EPSILON_C1", ProjectSettings::required); 
 //            double eps_c2 = settings->GetSettingAs<double>("EPSILON_C2", ProjectSettings::required); 
 
-            der->setEpsilonByParameters(get<1>(stencil_params[st]),get<2>(stencil_params[st]));
+            der->setEpsilonByParameters(b::get<1>(stencil_params[st]),b::get<2>(stencil_params[st]));
             int der_err = der->loadAllWeightsFromFile(); 
             if (der_err) {
                 tm["weights"]->start(); 

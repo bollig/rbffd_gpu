@@ -242,7 +242,6 @@ class PDE : public MPISendable
                                 k++; 
                             }
                         }
-                        std::cout << "\n";
                     }
 
                     MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 

@@ -246,7 +246,11 @@ class PDE : public MPISendable
 
                     MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm()); 
 
-                    comm_ref.barrier();
+                    // IF we need this barrier then our results will vary as #proc increases
+                    // but I dont think alltoall requires a barrier. internally
+                    // it can be isend/irecv but there should be a barrier
+                    // internally
+                    //comm_ref.barrier();
 
                     k = 0; 
                     for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
@@ -266,6 +270,9 @@ class PDE : public MPISendable
                             }
                         }
                     }
+                    // Make sure to barrier here so we know when all communication is done for all processors
+                    // Equiv to MPI_Barrier (might not be COMM_WORLD though)
+                    comm_ref.barrier();
                     tm["alltoallv"]->stop(); 
                 }
                 return 0;  // FIXME: return number of bytes received in case we want to monitor this 

@@ -6,6 +6,7 @@ void TimeDependentPDE::setupTimers() {
     tm["advance"] = new EB::Timer("[T_PDE] Advance timestep");
     tm["rk4_eval"] = new EB::Timer("[T_PDE] RK4 Evaluate Substep on CPU");
     tm["rk4_adv"] = new EB::Timer("[T_PDE] RK4 Advance on CPU");
+    tm["rk4_mpi_comm"] = new EB::Timer("[T_PDE] RK4 MPI Comm (Including Wait)"); 
 }
 
 void TimeDependentPDE::fillInitialConditions(ExactSolution* exactSolution) {
@@ -205,7 +206,9 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     // FIXME: might not be necessary unless we strictly believe that enforcing
     // BC can only be done by controlling CPU
     // NOTE: increases s from nb_stencils to nb_nodes
+    tm["rk4_mpi_comm"]->start(); 
     this->sendrecvUpdates(s, "k1");
+    tm["rk4_mpi_comm"]->stop(); 
 //*********
     // y*(t) = y(t) + h * k2
     // but k2 = lapl[ y(t) + h/2 * k1 ] (content between [..] was computed above)
@@ -227,7 +230,9 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
 
     // FIXME: might not be necessary unless we strictly believe that enforcing
     // BC can only be done by controlling CPU
+    tm["rk4_mpi_comm"]->start(); 
     this->sendrecvUpdates(s, "k2");
+    tm["rk4_mpi_comm"]->stop(); 
 
 //*********
     tm["rk4_eval"]->start();
@@ -248,14 +253,15 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
 
     // FIXME: might not be necessary unless we strictly believe that enforcing
     // BC can only be done by controlling CPU
+    tm["rk4_mpi_comm"]->start(); 
     this->sendrecvUpdates(s, "K3");
+    tm["rk4_mpi_comm"]->stop(); 
 
 //*********
     tm["rk4_eval"]->start();
     this->solve(s, &k4, nb_stencils, nb_nodes, cur_time+dt); 
     tm["rk4_eval"]->stop();
     // NOTE: No more communication is required for evaluations:  
-   //    this->sendrecvUpdates(k4, "k4");
 
     // ------------------- FINAL ------------------------
     // FINAL STEP: y_n+1 = y_n + 1/6 * h * (k1 + 2*k2 + 2*k3 + k4)
@@ -274,5 +280,7 @@ void TimeDependentPDE::advanceRungeKutta4(double dt)
     this->enforceBoundaryConditions(input_sol, cur_time+dt);
     
     // Ensure we have consistent values across the board
+    tm["rk4_mpi_comm"]->start(); 
     this->sendrecvUpdates(input_sol, "U_G");
+    tm["rk4_mpi_comm"]->stop(); 
 }

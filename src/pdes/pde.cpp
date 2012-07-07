@@ -10,7 +10,7 @@
 void PDE::setupTimers()
 {
     tm["sendrecv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
-    tm["sendrecv_wait"] = new EB::Timer("[PDE] Time Spent Waiting for MPI Barrier CPU to CPU"); 
+    tm["sendrecv_wait"] = new EB::Timer("[PDE] Wait for MPI Barrier CPU to CPU"); 
     tm["alltoallv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
 }
 

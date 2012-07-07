@@ -30,7 +30,8 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
         // Fill U_G with initial conditions
         this->TimeDependentPDE::fillInitialConditions(exact);
 
-        this->sendrecvUpdates(U_G, "U_G");
+// EB: this is unnecessary
+// this->sendrecvUpdates(U_G, "U_G");
 
         unsigned int nb_nodes = grid_ref.G.size();
         unsigned int solution_mem_bytes = nb_nodes*this->getFloatSize();

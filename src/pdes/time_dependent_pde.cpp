@@ -99,6 +99,7 @@ void TimeDependentPDE::advanceFirstOrderEuler(double dt) {
 
     //comm_ref.broadcastObjectUpdates(this);
     this->sendrecvUpdates(s, "U_G");
+    exit(-1); 
 }
 
 

@@ -224,11 +224,14 @@ class PDE : public MPISendable
                 // Copies data from vec to transfer, then writes received data into vec
                 // before returning. 
                 if (comm_ref.getSize() > 1) {
+                    tm["sendrecv_wait"]->start();
 
                     // Added a barrier here to ensure that we only time the
                     // communication and copy into CPU memory. Copy to GPU
                     // memory is another timer
                     comm_ref.barrier();
+                    tm["sendrecv_wait"]->stop();
+                    // TODO: the barrier can happen after this memcpy that preceeds the Alltoall 
                     tm["alltoallv"]->start(); 
                     // Copy elements of set to sbuf
                     unsigned int k = 0; 
@@ -283,11 +286,14 @@ class PDE : public MPISendable
             inline 
             int sendrecvUpdates_rr(VEC_t& vec, std::string label) 
             {
+                // First thing...find out how much time we waste on this barrier
+                tm["sendrecv_wait"]->start();
 
                 // Added a barrier here to ensure that we only time the
                 // communication and copy into CPU memory. Copy to GPU
                 // memory is another timer
                 comm_ref.barrier();
+                tm["sendrecv_wait"]->stop();
                 tm["sendrecv"]->start();
                 if (comm_ref.getSize() > 1) {
                     //        std::cout << "[PDE] SEND/RECEIVE\n";

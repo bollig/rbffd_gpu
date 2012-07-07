@@ -131,9 +131,9 @@ int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
         }
         tm["rk4_O"]->stop();
 
-        tm["rk4_mpi_comm_cl"]->start(); 
         // 3) OVERLAP: Transmit between CPUs
         // NOTE: Require an MPI barrier here
+        tm["rk4_mpi_comm_cl"]->start(); 
         this->sendrecvUpdates(this->cpu_buf, label);
         tm["rk4_mpi_comm_cl"]->stop(); 
 

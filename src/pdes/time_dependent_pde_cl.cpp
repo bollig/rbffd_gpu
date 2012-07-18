@@ -18,7 +18,7 @@ void TimeDependentPDE_CL::setupTimers()
         tm["rk4_full_comm"] = new EB::Timer("[T_PDE_CL] RK4 Communicate GPU>CPU>CPU>GPU"); 
         tm["rk4_O"] = new EB::Timer("[T_PDE_CL] RK4 Transfer Set O (GPU to CPU)"); 
         tm["rk4_R"] = new EB::Timer("[T_PDE_CL] RK4 Transfer Set R (CPU to GPU)"); 
-        tm["rk4_mpi_comm"] = new EB::Timer("[T_PDE_CL] RK4 MPI Comm");
+        tm["rk4_mpi_comm_cl"] = new EB::Timer("[T_PDE_CL] RK4 MPI Comm (Including Wait)");
         tm["loadAttach"] = new EB::Timer("[T_PDE_CL] Load the GPU Kernels for TimeDependentPDE_CL");
 }
 
@@ -30,7 +30,8 @@ void TimeDependentPDE_CL::fillInitialConditions(ExactSolution* exact) {
         // Fill U_G with initial conditions
         this->TimeDependentPDE::fillInitialConditions(exact);
 
-        this->sendrecvUpdates(U_G, "U_G");
+// EB: this is unnecessary
+// this->sendrecvUpdates(U_G, "U_G");
 
         unsigned int nb_nodes = grid_ref.G.size();
         unsigned int solution_mem_bytes = nb_nodes*this->getFloatSize();
@@ -131,11 +132,11 @@ int TimeDependentPDE_CL::sendrecvBuf(cl::Buffer& buf, std::string label) {
         }
         tm["rk4_O"]->stop();
 
-        tm["rk4_mpi_comm"]->start(); 
         // 3) OVERLAP: Transmit between CPUs
         // NOTE: Require an MPI barrier here
+        tm["rk4_mpi_comm_cl"]->start(); 
         this->sendrecvUpdates(this->cpu_buf, label);
-        tm["rk4_mpi_comm"]->stop(); 
+        tm["rk4_mpi_comm_cl"]->stop(); 
 
         tm["rk4_R"]->start();
         // 4) OVERLAP: Update the input with set R
@@ -510,30 +511,28 @@ void TimeDependentPDE_CL::advanceRK4(double delta_t) {
 
 //        std::cout << "Eval k1\n";
         // Compute K1, K2, K3 and K4 in separate kernel launches (required to ensure global barrier between evaluations)
-        evaluateRK4_WithComm(INDX_IN, INDX_IN, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);  
+        evaluateRK4_NoComm(INDX_IN, INDX_IN, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);  
         this->sendrecvBuf(gpu_solution[INDX_TEMP1]);
 
  //       std::cout << "Eval k2\n";
         // We use INDX_TEMP1 (== u+0.5*K1) to compute K2 and write INDX_TEMP2 with "u+0.5*K2"
-        evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K2, INDX_TEMP2, delta_t, cur_time+0.5*delta_t, 0.5);  
+        evaluateRK4_NoComm(INDX_IN, INDX_TEMP1, INDX_K2, INDX_TEMP2, delta_t, cur_time+0.5*delta_t, 0.5);  
         this->sendrecvBuf(gpu_solution[INDX_TEMP2]);
 
   //      std::cout << "Eval k3\n";
         // We use INDX_TEMP2 (== u+0.5*K2) to compute K3 and write INDX_TEMP1 with "u+K3"
-        evaluateRK4_WithComm(INDX_IN, INDX_TEMP2, INDX_K3, INDX_TEMP1, delta_t, cur_time+0.5*delta_t, 1.0);  
+        evaluateRK4_NoComm(INDX_IN, INDX_TEMP2, INDX_K3, INDX_TEMP1, delta_t, cur_time+0.5*delta_t, 1.0);  
         this->sendrecvBuf(gpu_solution[INDX_TEMP1]);
 
    //     std::cout << "Eval k4\n";
         // We use INDX_TEMP1 (== u+K3) to compute K4 (NOTE: no communication is required at this step since we
         // wont be evaluating anymore)
-        evaluateRK4_WithComm(INDX_IN, INDX_TEMP1, INDX_K4, INDX_TEMP2, delta_t, cur_time+delta_t, 0.0);  
+        evaluateRK4_NoComm(INDX_IN, INDX_TEMP1, INDX_K4, INDX_TEMP2, delta_t, cur_time+delta_t, 0.0);  
 
     //    std::cout << "Advance u_n\n";
         // Finally, we combine all terms to get the update to u
-        advanceRK4_WithComm(INDX_IN, INDX_K1, INDX_K2, INDX_K3, INDX_K4, INDX_OUT);
+        advanceRK4_NoComm(INDX_IN, INDX_K1, INDX_K2, INDX_K3, INDX_K4, INDX_OUT);
         this->sendrecvBuf(gpu_solution[INDX_OUT]);
-
-        //this->sendrecvBuf(gpu_solution[INDX_OUT]); 
 }
 
 //----------------------------------------------------------------------
@@ -851,7 +850,7 @@ void TimeDependentPDE_CL::launchStepKernel( double dt, cl::Buffer& sol_in, cl::B
 
 //----------------------------------------------------------------------
 // NOTE: the communciation in this routine is to synchronize the input to the INTERMEDIATE STEPS, not the solution
-void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
+void TimeDependentPDE_CL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
 {
         tm["rk4_eval_gpu"]->start();
 
@@ -862,32 +861,11 @@ void TimeDependentPDE_CL::evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_sc
     }
 
         tm["rk4_eval_gpu"]->stop();
-
-   //EVAN  
-
-#if 0
-    double* buf = new double[grid_ref.Q.size()]; 
-
-    err = queue.enqueueReadBuffer(gpu_solution[indx_k_out], CL_TRUE, 0, grid_ref.Q.size()*sizeof(double), &buf[0], NULL, &event);
-    queue.finish();
-
-    for (unsigned int i = 0; i < grid_ref.Q.size(); i++) {
-        std::cout << "vec[" << i << "] = " << buf[i] << std::endl;
-    }
-    delete [] buf; 
-    exit(EXIT_SUCCESS);
-#endif 
-
-
-#if 0
-        // Disable comm here and do it outside so we dont have to do as many
-    this->sendrecvBuf(gpu_solution[indx_u_plus_scaled_k_out]);
-#endif 
 }
 
 //----------------------------------------------------------------------
 /// NOTE: the communciation in this routine is to synchronize the solution OUTPUT (not intermediate steps)
-void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ) {
+void TimeDependentPDE_CL::advanceRK4_NoComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ) {
 
     // Advane only needs K1[{Q}], K2[{Q}], K3[{Q}] and K4[{Q}]
     // RK4 requires U[{Q, R}] going into the method. This implies we need to transfer U[{R}] at the end of the iteration.
@@ -896,11 +874,6 @@ void TimeDependentPDE_CL::advanceRK4_WithComm( int indx_u_in, int indx_k1, int i
     this->launchRK4_adv(0, grid_ref.Q.size(), this->gpu_solution[indx_u_in], this->gpu_solution[indx_k1],this->gpu_solution[indx_k2],this->gpu_solution[indx_k3],this->gpu_solution[indx_k4],this->gpu_solution[indx_u_out]);
         
         tm["rk4_adv_gpu"]->stop();
-
-#if 0
-        // Disable comm here and do it outside so we dont have to do as many
-        this->sendrecvBuf(gpu_solution[indx_u_out]);
-#endif 
 }
 
 

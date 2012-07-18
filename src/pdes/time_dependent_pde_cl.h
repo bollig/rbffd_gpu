@@ -157,8 +157,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // Runge Kutta 4
         // --------------------------------------
         virtual void loadRK4Kernels(std::string& local_sources); 
-        virtual void evaluateRK4_WithComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double current_time, double substep_scale); 
-        virtual void advanceRK4_WithComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ); 
+        virtual void evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double current_time, double substep_scale); 
+        virtual void advanceRK4_NoComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ); 
 
         virtual void loadEulerKernel(std::string& local_sources);
         virtual void loadMidpointKernel(std::string& local_sources);

@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
-            if (writeIntermediate) {
+            if (writeIntermediate > 0) {
                 grid->writeToFile(); 
             }
         } 
@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
             }
 
             tm["stencils"]->stop();
-            if (writeIntermediate) {
+            if (writeIntermediate > 0) {
                 grid->writeToFile(); 
             }
             //tm.writeToFile("gridgen_timer_log"); 
@@ -271,7 +271,7 @@ int main(int argc, char** argv) {
 
         cout << "end computing weights" << endl;
 
-        if (writeIntermediate) {
+        if (writeIntermediate > 1) {
             der->writeAllWeightsToFile(); 
             cout << "end write weights to file" << endl;
         }
@@ -405,7 +405,7 @@ int main(int argc, char** argv) {
     std::cout << "NUM_ITERS = " << num_iters << std::endl;
 
     for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
-        if (writeIntermediate) {
+        if (writeIntermediate > 2) {
             writer->update(iter);
         }
 #if 1
@@ -461,7 +461,7 @@ int main(int argc, char** argv) {
 #if 1
     printf("DONE SOLVING\n");
 
-    if(writeIntermediate) {
+    if(writeIntermediate > 2) {
         writer->writeLocal(iter);
     }
 
@@ -474,7 +474,7 @@ int main(int argc, char** argv) {
     //    subdomain->writeGlobalSolutionToFile(-1); 
     std::cout << "Checking Solution on Master\n";
     if (comm_unit->getRank() == 0) {
-        if(writeIntermediate) {
+        if(writeIntermediate > 2) {
             pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
         }
 #if 0

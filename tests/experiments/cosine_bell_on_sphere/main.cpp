@@ -82,6 +82,9 @@ int main(int argc, char** argv) {
 
     tm["total"] = new Timer("[Main] Total runtime for this proc");
     tm["grid"] = new Timer("[Main] Grid generation");
+    tm["gridReader"] = new Timer("[Main] Grid Reader Load File From Disk");
+    tm["loadGrid"] = new Timer("[Main] Load Grid (and Stencils) from Disk");
+    tm["writeGrid"] = new Timer("[Main] Write Grid (and Stencils) to Disk");
     tm["stencils"] = new Timer("[Main] Stencil generation");
     tm["settings"] = new Timer("[Main] Load settings"); 
     tm["decompose"] = new Timer("[Main] Decompose domain"); 
@@ -90,10 +93,17 @@ int main(int argc, char** argv) {
     tm["send"] = new Timer("[Main] Send subdomains to other processors (master only)"); 
     tm["receive"] = new Timer("[Main] Receive subdomain from master (clients only)"); 
     tm["timestep"] = new Timer("[Main] Advance One Timestep"); 
+    tm["derSetup"] = new Timer("[Main] Setup RBFFD Derivative Settings");
     tm["tests"] = new Timer("[Main] Test stencil weights"); 
     tm["weights"] = new Timer("[Main] Compute all stencils weights"); 
+    tm["writeWeights"] = new Timer("[Main] Write Weights to Disk");
+    tm["loadWeights"] = new Timer("[Main] Load Weights from Disk");
     tm["oneWeight"] = new Timer("[Main] Compute single stencil weights"); 
     tm["heat_init"] = new Timer("[Main] Initialize heat"); 
+    tm["cleanup"] = new Timer("[Main] Destruct objects");
+    tm["misc"] = new Timer("[Main] Misc.");
+    tm["CFL"] = new Timer("[Main] Compute CFL and max dt.");
+    tm["pdewriter"] = new Timer("[Main] Construct PDEWriter");
     // grid should only be valid instance for MASTER
     
     Grid* grid = NULL; 
@@ -101,10 +111,13 @@ int main(int argc, char** argv) {
 
     tm["total"]->start(); 
 
+    tm["misc"]->start();
     Communicator* comm_unit = new Communicator(argc, argv);
 
     cout << " Got Rank: " << comm_unit->getRank() << endl;
     cout << " Got Size: " << comm_unit->getSize() << endl;
+    
+    tm["misc"]->stop();
 
     tm["settings"]->start(); 
 
@@ -121,6 +134,8 @@ int main(int argc, char** argv) {
     double max_local_rel_error = settings->GetSettingAs<double>("MAX_LOCAL_REL_ERROR", ProjectSettings::optional, "1e-1"); 
 
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
+
+    // 0: NO files; <1: Write grid and stencils; <2: Write stencil weights; 3+: Write solution 
     int writeIntermediate = settings->GetSettingAs<int>("WRITE_INTERMEDIATE_FILES", ProjectSettings::optional, "0"); 
     
     int local_err_dump_frequency = settings->GetSettingAs<int>("LOCAL_ERR_DUMP_FREQ", ProjectSettings::optional, "1"); 
@@ -150,11 +165,15 @@ int main(int argc, char** argv) {
 
         tm["settings"]->stop(); 
 
+        tm["gridReader"]->start();
         grid = getGrid(dim);
 
         grid->setMaxStencilSize(stencil_size); 
+        tm["gridReader"]->stop();
 
+        tm["loadGrid"]->start(); 
         Grid::GridLoadErrType err = grid->loadFromFile(); 
+        tm["loadGrid"]->stop(); 
         if (err == Grid::NO_GRID_FILES) 
         {
             printf("************** Generating new Grid **************\n"); 
@@ -163,8 +182,10 @@ int main(int argc, char** argv) {
             tm["grid"]->start(); 
             grid->generate();
             tm["grid"]->stop(); 
-            if(writeIntermediate) {
+            if(writeIntermediate > 0) {
+                tm["writeGrid"]->start();
                 grid->writeToFile(); 
+                tm["writeGrid"]->stop();
             }
         } 
         if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
@@ -175,12 +196,15 @@ int main(int argc, char** argv) {
 //            grid->generateStencils(Grid::ST_KDTREE);   
             grid->generateStencils(Grid::ST_HASH);   
             tm["stencils"]->stop();
-            if(writeIntermediate) {
-            grid->writeToFile(); 
+            if(writeIntermediate > 0) {
+                tm["writeGrid"]->start();
+                grid->writeToFile(); 
+                tm["writeGrid"]->stop();
             }
             tm.writeToFile("gridgen_timer_log"); 
         }
 
+    tm["misc"]->start();
         int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
         int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
 
@@ -192,6 +216,7 @@ int main(int argc, char** argv) {
         // pre allocate pointers to all of the subdivisions
         std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
         // allocate and fill in details on subdivisions
+    tm["misc"]->stop();
 
         std::cout << "Generating subdomains\n";
         tm["decompose"]->start();
@@ -221,6 +246,7 @@ int main(int argc, char** argv) {
         //subdomain->writeToFile();
     }
 
+    tm["misc"]->start();
     comm_unit->barrier();
 
     if (debug) {
@@ -236,12 +262,19 @@ int main(int argc, char** argv) {
                 //    subdomain->printStencil(s, "S"); 
             } else {
                 printf("FAIL on stencil %d\n", irbf);
+                
+                tm["total"]->stop();
+                tm.printAll();
+                tm.writeAllToFile();
+
                 exit(EXIT_FAILURE);
             }
         }
         printf("OK\n");
     }
+    tm["misc"]->stop();
 
+    tm["derSetup"]->start();
     RBFFD* der;
     if (use_gpu) {
         der = new RBFFD_CL(RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, dim, comm_unit->getRank()); 
@@ -265,9 +298,12 @@ int main(int argc, char** argv) {
     }
     der->setWeightType((RBFFD::WeightType)weight_method);
     der->setComputeConditionNumber(true);
+    tm["derSetup"]->stop();
  
     // Try loading all the weight files
+    tm["loadWeights"]->start();
     int err = der->loadAllWeightsFromFile();
+    tm["loadWeights"]->stop();
 
     if (err) { 
         printf("start computing weights\n");
@@ -281,9 +317,11 @@ int main(int argc, char** argv) {
 
         cout << "end computing weights" << endl;
 
-        if (writeIntermediate) {
-        der->writeAllWeightsToFile(); 
-        cout << "end write weights to file" << endl;
+        if (writeIntermediate > 1) {
+            tm["writeWeights"]->start();
+            der->writeAllWeightsToFile(); 
+            cout << "end write weights to file" << endl;
+            tm["writeWeights"]->stop();
         }
     }
 
@@ -320,10 +358,10 @@ int main(int argc, char** argv) {
 
     // SOLVE HEAT EQUATION
 
+    tm["heat_init"]->start(); 
     ExactSolution* exact = getExactSolution(dim); 
 
     TimeDependentPDE* pde; 
-    tm["heat_init"]->start(); 
 
     if (use_gpu) {
         pde = new CosineBell_CL(subdomain, (RBFFD_CL*)der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, use_gpu, useHyperviscosity, true);
@@ -344,6 +382,7 @@ int main(int argc, char** argv) {
 
     tm["heat_init"]->stop(); 
 
+    tm["pdewriter"]->start();
     //TODO:    pde->setRelErrTol(max_global_rel_error); 
 
     // Setup a logging class that will monitor our iteration and dump intermediate files
@@ -353,7 +392,9 @@ int main(int argc, char** argv) {
 #else 
     PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, sol_dump_frequency, 0);
 #endif 
+    tm["pdewriter"]->stop();
 
+    tm["CFL"]->start();
     // Test DT: 
     // 1) get the minimum avg stencil radius (for stencil area--i.e., dx^2)
     double min_dx = 1000.;
@@ -379,149 +420,163 @@ int main(int argc, char** argv) {
     // The 2 here comes from RK4 CFL max
     double cfl_dt = (CFL_NUM*min_dx) / max_vel;
     printf("Max dt (for RK4-4) = %f\n", cfl_dt); 
+    tm["CFL"]->stop();
 
     // Only use the CFL dt if our current choice is greater and we insist it be used
     if (dt > cfl_dt) {
         printf("ERROR: dt too high. Adjust and re-execute.\n");
+
+        tm["cleanup"]->start();
+        delete(der);
+        delete(subdomain);
+        delete(settings);
+        delete(comm_unit); 
+        tm["cleanup"]->stop();
+
+        tm["total"]->stop();
+        tm.printAll();
         exit(EXIT_FAILURE);
-//        dt = cfl_dt;
-    }
-
-#if 0
-    // This appears to be consistent with Chinchipatnam2006 (Thesis)
-    // TODO: get more details on CFL for RBFFD
-    // note: checking stability only works if we have all weights for all
-    // nodes, so we dont do it in parallel
-    if (compute_eigenvalues && (comm_unit->getSize() == 1)) {
-        RBFFD::EigenvalueOutput eigs = der->getEigenvalues();
-        // Not sure why this is 2 (doesnt seem to be correct)
-        max_dt = 2. / eigs.max_neg_eig;
-        printf("Suggested max_dt based on eigenvalues (1/lambda_max)= %f\n", max_dt);
         
-        // CFL condition:
-        if (dt > max_dt) {
-            std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. According to eigenvalues, it must be less than " << max_dt << std::endl;
-            if (use_eigen_dt) {
-                dt = max_dt;
-            } else {
-                //exit(EXIT_FAILURE);
-            }
-        }
-    }
-#endif 
-    std::cout << "[MAIN] ********* USING TIMESTEP dt=" << dt << " ********** " << std::endl;
+//        dt = cfl_dt;
+    } 
 
-    //    subdomain->printCenterMemberships(subdomain->G, "G = " );
-    //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
-    int iter = 0;
-
-    int num_iters = (int) ((end_time - start_time) / dt);
-    std::cout << "NUM_ITERS = " << num_iters << std::endl;
-            
-    if (writeIntermediate) {
-        writer->update(iter);
-    }
-
-//    for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
-    for (int revs = 1; revs <= num_revolutions; revs++) {
-        for (int rev_iter =0; rev_iter < num_timesteps; rev_iter++) {
-
-            tm["timestep"]->start(); 
-            pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
-            tm["timestep"]->stop(); 
-
-            // This just double checks that all procs have ghost node info.
-            // pde->advance(..) should broadcast intermediate updates as needed,
-            // but updated solution. 
-            tm["updates"]->start(); 
-            comm_unit->broadcastObjectUpdates(pde);
-            comm_unit->barrier();
-            tm["updates"]->stop();
-
-            iter++;
-            if (writeIntermediate) {
-            writer->update(iter);
-            }
-        }
-#if 1
-        if (!(revs % local_err_dump_frequency)) {
-            std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
-            pde->checkLocalError(exact, max_local_rel_error); 
-            pde->checkNorms();
-        }
-
-        if (!(revs % global_err_dump_frequency)) {
-            tm["consolidate"]->start(); 
-            comm_unit->consolidateObjects(pde);
-            comm_unit->barrier();
-            tm["consolidate"]->stop(); 
-            if (comm_unit->isMaster()) {
-                std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
-                pde->checkGlobalError(exact, grid, max_global_rel_error); 
-            }
-        }
-#endif 
-        //        double nrm = pde->maxNorm();
-        if (prompt_to_continue && comm_unit->isMaster()) {
-            std::string buf; 
-            cout << "Press [Enter] to continue" << std::endl;
-            cin.get(); 
-        }
-    }
-#if 1
-    printf("after %d revolutions, %d iters\n", num_revolutions, iter);
-
-    // NOTE: all local subdomains have a U_G solution which is consolidated
-    // into the MASTER process "global_U_G" solution. 
-    tm["consolidate"]->start(); 
-    comm_unit->consolidateObjects(pde);
-    comm_unit->barrier();
-    tm["consolidate"]->stop(); 
-    //    subdomain->writeGlobalSolutionToFile(-1); 
-    std::cout << "Checking Solution on Master\n";
-    if (comm_unit->getRank() == 0) {
-        if(writeIntermediate) {
-        pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
-        }
 #if 0
-        // NOTE: the final solution is assembled, but we have to use the 
-        // GLOBAL node list instead of a local subdomain node list
-        cout << "FINAL ITER: " << iter << endl;
-        std::vector<double> final_sol(grid->getNodeListSize()); 
-        ifstream fin; 
-        fin.open("FINAL_SOLUTION.txt"); 
-
-        int count = 0; 
-        for (int count = 0; count < final_sol.size(); count++) {
-            Vec3 node; 
-            double val;
-            fin >> node[0] >> node[1] >> node[2] >> val;
-            if (fin.good()) {
-                final_sol[count] = val;
-                // std::cout << "Read: " << node << ", " << final_sol[count] << std::endl; 
+        // This appears to be consistent with Chinchipatnam2006 (Thesis)
+        // TODO: get more details on CFL for RBFFD
+        // note: checking stability only works if we have all weights for all
+        // nodes, so we dont do it in parallel
+        if (compute_eigenvalues && (comm_unit->getSize() == 1)) {
+            RBFFD::EigenvalueOutput eigs = der->getEigenvalues();
+            // Not sure why this is 2 (doesnt seem to be correct)
+            max_dt = 2. / eigs.max_neg_eig;
+            printf("Suggested max_dt based on eigenvalues (1/lambda_max)= %f\n", max_dt);
+            
+            // CFL condition:
+            if (dt > max_dt) {
+                std::cout << "WARNING! your choice of timestep (" << dt << ") is TOO LARGE for to maintain stability of system. According to eigenvalues, it must be less than " << max_dt << std::endl;
+                if (use_eigen_dt) {
+                    dt = max_dt;
+                } else {
+                    //exit(EXIT_FAILURE);
+                }
             }
         }
-        fin.close();
 #endif 
-        std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
-        std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
-        pde->checkGlobalError(exact, grid, max_global_rel_error); 
-        std::cout << "============== Solution Valid =============\n"; 
+        std::cout << "[MAIN] ********* USING TIMESTEP dt=" << dt << " ********** " << std::endl;
 
-        delete(grid);
-    }
+        //    subdomain->printCenterMemberships(subdomain->G, "G = " );
+        //subdomain->printBoundaryIndices("INDICES OF GLOBAL BOUNDARY NODES: ");
+        int iter = 0;
 
+        int num_iters = (int) ((end_time - start_time) / dt);
+        std::cout << "NUM_ITERS = " << num_iters << std::endl;
+                
+        if (writeIntermediate > 2) {
+            writer->update(iter);
+        }
+
+    //    for (iter = 0; iter < num_iters && iter < max_num_iters; iter++) {
+        for (int revs = 1; revs <= num_revolutions; revs++) {
+            for (int rev_iter =0; rev_iter < num_timesteps; rev_iter++) {
+
+                tm["timestep"]->start(); 
+                pde->advance((TimeDependentPDE::TimeScheme)timescheme, dt);
+                tm["timestep"]->stop(); 
+
+                // This just double checks that all procs have ghost node info.
+                // pde->advance(..) should broadcast intermediate updates as needed,
+                // but updated solution. 
+                tm["updates"]->start(); 
+                comm_unit->broadcastObjectUpdates(pde);
+                comm_unit->barrier();
+                tm["updates"]->stop();
+
+                iter++;
+                if (writeIntermediate > 2) {
+                    writer->update(iter);
+                }
+            }
+#if 1
+            if (!(revs % local_err_dump_frequency)) {
+                std::cout << "\n*********** Rank " << comm_unit->getRank() << " Local Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
+                pde->checkLocalError(exact, max_local_rel_error); 
+                pde->checkNorms();
+            }
+
+            if (!(revs % global_err_dump_frequency)) {
+                tm["consolidate"]->start(); 
+                comm_unit->consolidateObjects(pde);
+                comm_unit->barrier();
+                tm["consolidate"]->stop(); 
+                if (comm_unit->isMaster()) {
+                    std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
+                    pde->checkGlobalError(exact, grid, max_global_rel_error); 
+                }
+            }
+#endif 
+            //        double nrm = pde->maxNorm();
+            if (prompt_to_continue && comm_unit->isMaster()) {
+                std::string buf; 
+                cout << "Press [Enter] to continue" << std::endl;
+                cin.get(); 
+            }
+        }
+#if 1
+        printf("after %d revolutions, %d iters\n", num_revolutions, iter);
+
+        // NOTE: all local subdomains have a U_G solution which is consolidated
+        // into the MASTER process "global_U_G" solution. 
+        tm["consolidate"]->start(); 
+        comm_unit->consolidateObjects(pde);
+        comm_unit->barrier();
+        tm["consolidate"]->stop(); 
+        //    subdomain->writeGlobalSolutionToFile(-1); 
+        std::cout << "Checking Solution on Master\n";
+        if (comm_unit->getRank() == 0) {
+            if(writeIntermediate > 2) {
+                pde->writeGlobalGridAndSolutionToFile(grid->getNodeList(), (char*) "FINAL_SOLUTION.txt");
+            }
+#if 0
+            // NOTE: the final solution is assembled, but we have to use the 
+            // GLOBAL node list instead of a local subdomain node list
+            cout << "FINAL ITER: " << iter << endl;
+            std::vector<double> final_sol(grid->getNodeListSize()); 
+            ifstream fin; 
+            fin.open("FINAL_SOLUTION.txt"); 
+
+            int count = 0; 
+            for (int count = 0; count < final_sol.size(); count++) {
+                Vec3 node; 
+                double val;
+                fin >> node[0] >> node[1] >> node[2] >> val;
+                if (fin.good()) {
+                    final_sol[count] = val;
+                    // std::cout << "Read: " << node << ", " << final_sol[count] << std::endl; 
+                }
+            }
+            fin.close();
+#endif 
+            std::cout << "============== Verifying Accuracy of Final Solution =============\n"; 
+            std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ") ] *************" << endl;
+            pde->checkGlobalError(exact, grid, max_global_rel_error); 
+            std::cout << "============== Solution Valid =============\n"; 
+
+            delete(grid);
+        }
 
     cout.flush();
     printf("Cleaning up objects\n");
 
+    tm["cleanup"]->start(); 
     // Writer first so we can dump final solution
     delete(writer);
     delete(pde);
+    delete(der);
 #endif 
     delete(subdomain);
     delete(settings);
     delete(comm_unit); 
+    tm["cleanup"]->stop();
 
     tm["total"]->stop();
     tm.printAll();

@@ -1046,10 +1046,21 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         //if (f !=stdin) 
         fclose(f);
 
-        // Convert to our weights: 
+        // EVAN! Do NOT allocate N*M. Thats a dense matrix!
+        // Expect the grid to be able to tell us what we need to load
+        int req_nz = 0;
+
+        // Convert to our weights (CSR FORMAT): 
         for (int irbf = 0; irbf < N; irbf++) {
-            this->weights[getDerTypeIndx(which)][irbf] = new double[M]; 
+            req_nz += stencil[irbf].size(); 
+            this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()]; 
         }
+
+        if (req_nz < nz) {
+            printf("[RBFFD] ERROR! File contains too many nonzeros. I have not allocated enough memory!\n");
+            exit(EXIT_FAILURE);
+        }
+
         int j = 0; 
         int local_i = 0; 
         for (i = 0; i < nz; i++) {
@@ -1125,7 +1136,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             return 5;
         }
 
-        /* reseve memory for matrices */
+        /* reseve memory for matrices (COO format) */
 
         I = new int[nz]; 
         J = new int[nz];
@@ -1153,10 +1164,22 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         //if (f !=stdin) 
         fclose(f);
 
-        // Convert to our weights: 
+
+        // EVAN! Do NOT allocate N*M. Thats a dense matrix!
+        // Expect the grid to be able to tell us what we need to load
+        int req_nz = 0;
+
+        // Convert to our weights (CSR FORMAT): 
         for (int irbf = 0; irbf < N; irbf++) {
-            this->weights[getDerTypeIndx(which)][irbf] = new double[M]; 
+            req_nz += stencil[irbf].size(); 
+            this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()]; 
         }
+
+        if (req_nz < nz) {
+            printf("[RBFFD] ERROR! File contains too many nonzeros. I have not allocated enough memory!\n");
+            exit(EXIT_FAILURE);
+        }
+        
         int j = 0; 
         int local_i = 0; 
         for (i = 0; i < nz; i++) {

@@ -301,6 +301,8 @@ int main(int argc, char** argv) {
     der->setWeightType((RBFFD::WeightType)weight_method);
     der->setComputeConditionNumber(true);
     tm["derSetup"]->stop();
+
+    printf("Attempting to load Stencil Weights\n");
  
     // Try loading all the weight files
     tm["loadWeights"]->start();

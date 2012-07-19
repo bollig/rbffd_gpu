@@ -22,6 +22,7 @@
 #endif 
 
 std::string md_grid_filename;
+int         md_grid_size;
 int         md_grid_num_cols;
 
 double sphere_radius; 
@@ -37,6 +38,7 @@ int num_revolutions;
 // Get specific settings for this test case
 void fillGlobalProjectSettings(int dim_num, ProjectSettings* settings) {
     md_grid_filename = settings->GetSettingAs<string>("GRID_FILENAME", ProjectSettings::required); 
+    md_grid_size = settings->GetSettingAs<int>("GRID_SIZE", ProjectSettings::required); 
     md_grid_num_cols = settings->GetSettingAs<int>("GRID_FILE_NUM_COLS", ProjectSettings::optional, "4"); 
     sphere_radius = settings->GetSettingAs<double>("SPHERE_RADIUS", ProjectSettings::optional, "1.0"); 
     double velocity_angle_denom = settings->GetSettingAs<double>("VELOCITY_ANGLE_DENOM", ProjectSettings::optional, "2"); 
@@ -65,7 +67,7 @@ ExactSolution* getExactSolution(int dim_num) {
 
 // Choose a specific type of Grid for the test case
 Grid* getGrid(int dim_num) {
-    Grid* grid = new GridReader(md_grid_filename, md_grid_num_cols);
+    Grid* grid = new GridReader(md_grid_filename, md_grid_num_cols, md_grid_size);
     return grid; 
 }
 
@@ -374,12 +376,13 @@ int main(int argc, char** argv) {
 
     pde->fillInitialConditions(exact);
 
+#if 0
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
     tm["updates"]->start(); 
     comm_unit->broadcastObjectUpdates(pde);
     comm_unit->barrier();
     tm["updates"]->stop();
-
+#endif 
     tm["heat_init"]->stop(); 
 
     tm["pdewriter"]->start();

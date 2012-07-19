@@ -391,8 +391,10 @@ int main(int argc, char** argv) {
     // Setup a logging class that will monitor our iteration and dump intermediate files
 #if USE_VTK
     // TODO: update VtuPDEWriter for the new PDE classes
+    printf("Using VtuPDEWriter\n");
     PDEWriter* writer = new VtuPDEWriter(subdomain, pde, comm_unit, sol_dump_frequency,0);
 #else 
+    printf("Using PDEWriter\n");
     PDEWriter* writer = new PDEWriter(subdomain, pde, comm_unit, sol_dump_frequency, 0);
 #endif 
     tm["pdewriter"]->stop();

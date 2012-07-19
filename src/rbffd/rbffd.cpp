@@ -978,6 +978,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     int RBFFD::loadFromAsciiFile(DerType which, std::string filename) {
+        std::cout << "Loading file: " << filename << std::endl;
         int ret_code; 
         MM_typecode matcode;
         FILE *f;
@@ -1138,12 +1139,12 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         {
             //        fscanf(f, "%d %d %24le\n", &I[i], &J[i], &val[i]);
            // fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
-            unsigned int ii; 
-            unsigned int jj; 
+            int ii; 
+            int jj; 
             double kk;
 
-            fread(&I[i], sizeof(unsigned int), 1, f);           
-            fread(&J[i], sizeof(unsigned int), 1, f);           
+            fread(&I[i], sizeof(int), 1, f);           
+            fread(&J[i], sizeof(int), 1, f);           
             fread(&val[i], sizeof(double), 1, f);           
             I[i]--;  /* adjust from 1-based to 0-based */
             J[i]--;
@@ -1322,11 +1323,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             for (unsigned int j = 0; j < stencil[i].size(); j++) {
                 // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
                 //fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
-                unsigned int ii = stencil[i][0]+1;
-                unsigned int jj = stencil[i][j]+1;
+                int ii = stencil[i][0]+1;
+                int jj = stencil[i][j]+1;
                 double kk = (*deriv_choice_ptr)[i][j];
-                fwrite(&ii, 1 , sizeof(unsigned int), f);  
-                fwrite(&jj, 1 , sizeof(unsigned int), f); 
+                fwrite(&ii, 1 , sizeof(int), f);  
+                fwrite(&jj, 1 , sizeof(int), f); 
                 fwrite(&kk, 1, sizeof(double), f); 
             }
         }

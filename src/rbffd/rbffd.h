@@ -160,6 +160,7 @@ class RBFFD
         bool eigenvalues_computed;
         bool computeCondNums; 
         bool computeSFCoperators;
+        bool asciiWeights;
 
     protected: 
 #if 0
@@ -386,11 +387,17 @@ class RBFFD
 
 
 
+        // Read/Write weights to disk in ascii matrix market format. 0 = binary (default), 1 = ascii 
+        void setAsciiWeights(int binary_or_ascii) { asciiWeights = binary_or_ascii; }
         void writeAllWeightsToFile(); 
         void writeToFile(DerType which, std::string filename);
+        void writeToAsciiFile(DerType which, std::string filename);
+        void writeToBinaryFile(DerType which, std::string filename);
         void writeToFile(DerType which) { this->writeToFile(which, this->getFilename(which)); }
         int  loadAllWeightsFromFile();
         int  loadFromFile(DerType which, std::string filename);
+        int  loadFromAsciiFile(DerType which, std::string filename);
+        int  loadFromBinaryFile(DerType which, std::string filename);
         int  loadFromFile(DerType which){ return this->loadFromFile(which, this->getFilename(which)); }
 
         EigenvalueOutput getEigenvalues() {

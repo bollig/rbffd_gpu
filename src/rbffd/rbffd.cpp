@@ -26,7 +26,7 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
         weightsModified(false), weightMethod(RBFFD::Direct), 
         hv_k(2), hv_gamma(8e-4), useHyperviscosity(0), 
         eigenvalues_computed(false), computeCondNums(false),
-        computeSFCoperators(false)
+        computeSFCoperators(false), asciiWeights(0)
 {
     int nb_rbfs = grid_ref.getNodeListSize(); 
 
@@ -968,6 +968,16 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     int RBFFD::loadFromFile(DerType which, std::string filename) {
+        if (asciiWeights) {
+            return this->loadFromAsciiFile(which, filename);
+        } else {
+            return this->loadFromBinaryFile(which, filename);
+        }
+    }
+    
+    //--------------------------------------------------------------------
+
+    int RBFFD::loadFromAsciiFile(DerType which, std::string filename) {
         int ret_code; 
         MM_typecode matcode;
         FILE *f;
@@ -1064,6 +1074,113 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     }
     //--------------------------------------------------------------------
 
+
+    //--------------------------------------------------------------------
+
+    int RBFFD::loadFromBinaryFile(DerType which, std::string filename) {
+        int ret_code; 
+        MM_typecode matcode;
+        FILE *f;
+        int M, N, nz;   
+        int i, *I, *J;
+        double *val;    
+        if ((f = fopen(filename.c_str(), "r")) == NULL)
+        {
+            std::cout << "File not found: " << filename << std::endl;
+            return 1; 
+        }
+        if (mm_read_banner(f, &matcode) != 0) 
+        {
+            std::cout << "Could not process MatrixMarket Banner in " << filename << std::endl;
+            return 2; 
+        }
+
+        if ((ret_code = mm_read_mtx_crd_size(f, &M, &N, &nz)) != 0)
+        {
+            std::cout << "Error! failed to parse file contents" << std::endl;
+            return 4; 
+        }
+
+        std::vector<StencilType>& stencil = grid_ref.getStencils(); 
+        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]); 
+        // number of non-zeros (should be close to max_st_size*num_stencils)
+        unsigned int expected_nz = 0;
+        // Num stencils (x_weights.size())
+        const unsigned int expected_M = (*deriv_choice_ptr).size();
+
+
+        for (unsigned int i = 0; i < stencil.size(); i++) {
+            expected_nz += stencil[i].size();
+        }
+        fprintf(stdout, "Attempting to read %u weights (%u, %u) from %s\n", expected_nz, M, N, filename.c_str()); 
+
+        if (M != (int) expected_M) {
+            std::cout << "Error! not enough stencils in the file" << std::endl;
+            return 5;
+        }
+
+        if (nz != (int) expected_nz) {
+            std::cout << "Error! not enough weights in the file" << std::endl;
+            return 5;
+        }
+
+        /* reseve memory for matrices */
+
+        I = new int[nz]; 
+        J = new int[nz];
+        val = new double[nz];
+
+        /* NOTE: when reading in doubles, ANSI C requires the use of the "l"  */
+        /*   specifier as in "%lg", "%lf", "%le", otherwise errors will occur */
+        /*  (ANSI C X3.159-1989, Sec. 4.9.6.2, p. 136 lines 13-15)            */
+
+        for (i=0; i<nz; i++)
+        {
+            //        fscanf(f, "%d %d %24le\n", &I[i], &J[i], &val[i]);
+           // fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
+            unsigned int ii; 
+            unsigned int jj; 
+            double kk;
+
+            fread(&I[i], sizeof(unsigned int), 1, f);           
+            fread(&J[i], sizeof(unsigned int), 1, f);           
+            fread(&val[i], sizeof(double), 1, f);           
+            I[i]--;  /* adjust from 1-based to 0-based */
+            J[i]--;
+        }
+
+        //if (f !=stdin) 
+        fclose(f);
+
+        // Convert to our weights: 
+        for (int irbf = 0; irbf < N; irbf++) {
+            this->weights[getDerTypeIndx(which)][irbf] = new double[M]; 
+        }
+        int j = 0; 
+        int local_i = 0; 
+        for (i = 0; i < nz; i++) {
+            if (local_i != I[i]) {
+                j = 0; 
+                local_i = I[i]; 
+            }
+            this->weights[getDerTypeIndx(which)][local_i][j] = val[i];
+            //std::cout << "Placing: weights[" << which << "][ " << local_i << "(" << I[i] << ") ][ " << j << "(" << J[i] << ") ] = " << val[i] << std::endl;;
+            j++;
+        }
+
+        delete [] I; 
+        delete [] J; 
+        delete [] val;
+
+        std::cout << "Loaded.\n";
+        // let routines like RBFFD_CL::updateWeights(..) know that its time for
+        // them to do some work
+        weightsModified = true;
+        return 0;
+
+    }
+    //--------------------------------------------------------------------
+
     int RBFFD::loadAllWeightsFromFile() {
         int err = 0;
 
@@ -1100,10 +1217,19 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         }  
     }
 
-
     //--------------------------------------------------------------------
 
     void RBFFD::writeToFile(DerType which, std::string filename) {
+        if (asciiWeights) {
+            this->writeToAsciiFile(which, filename); 
+        } else {
+            this->writeToBinaryFile(which, filename); 
+        }
+    }
+
+    //--------------------------------------------------------------------
+
+    void RBFFD::writeToAsciiFile(DerType which, std::string filename) {
 
         // number of non-zeros (should be close to max_st_size*num_stencils)
         unsigned int nz = 0;
@@ -1146,6 +1272,62 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             for (unsigned int j = 0; j < stencil[i].size(); j++) {
                 // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
                 fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+            }
+        }
+
+        fclose(f);
+    }
+    //--------------------------------------------------------------------
+
+    void RBFFD::writeToBinaryFile(DerType which, std::string filename) {
+
+        // number of non-zeros (should be close to max_st_size*num_stencils)
+        unsigned int nz = 0;
+
+        std::vector<StencilType>& stencil = grid_ref.getStencils(); 
+        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]); 
+
+        for (unsigned int i = 0; i < stencil.size(); i++) {
+            nz += stencil[i].size();
+        }
+        fprintf(stdout, "Writing %u weights to %s\n", nz, filename.c_str()); 
+
+        // Num stencils (x_weights.size())
+        const unsigned int M = (*deriv_choice_ptr).size();
+        // We have a square MxN matrix
+        const unsigned int N = M;
+
+        // Value obtained from mm_set_* routine
+        MM_typecode matcode;                        
+
+        //  int I[nz] = { 0, 4, 2, 8 };
+        //  int J[nz] = { 3, 8, 7, 5 };
+        //  double val[nz] = {1.1, 2.2, 3.2, 4.4};
+
+        int err = 0; 
+        FILE *f; 
+        f = fopen(filename.c_str(), "w"); 
+        err += mm_initialize_typecode(&matcode);
+        err += mm_set_matrix(&matcode);
+        err += mm_set_coordinate(&matcode);
+        err += mm_set_real(&matcode);
+
+        err += mm_write_banner(f, matcode); 
+        err += mm_write_mtx_crd_size(f, M, N, nz);
+
+        /* NOTE: matrix market files use 1-based indices, i.e. first element
+           of a vector has index 1, not 0.  */
+        //    fprintf(stdout, "Writing file contents: \n"); 
+        for (unsigned int i = 0; i < stencil.size(); i++) {
+            for (unsigned int j = 0; j < stencil[i].size(); j++) {
+                // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
+                //fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+                unsigned int ii = stencil[i][0]+1;
+                unsigned int jj = stencil[i][j]+1;
+                double kk = (*deriv_choice_ptr)[i][j];
+                fwrite(&ii, 1 , sizeof(unsigned int), f);  
+                fwrite(&jj, 1 , sizeof(unsigned int), f); 
+                fwrite(&kk, 1, sizeof(double), f); 
             }
         }
 
@@ -1362,7 +1544,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //----------------------------------------------------------------------------
     std::string RBFFD::getFilename(DerType which, std::string base_filename) {
         std::stringstream ss(std::stringstream::out);
-        ss << this->getFileDetailString(which) << ".mtx";
+        if (asciiWeights) {
+            ss << this->getFileDetailString(which) << ".mtx";
+        } else {
+            ss << this->getFileDetailString(which) << ".bmtx";
+        }
         std::string filename = ss.str();
         return filename;
     }

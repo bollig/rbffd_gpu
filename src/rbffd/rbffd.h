@@ -252,8 +252,8 @@ class RBFFD
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             //            std::cout << "CPU: ";
             deriv.resize(u.size()); 
-            unsigned int nb_stencils = grid_ref.getStencilsSize(); 
-            RBFFD::applyWeightsForDeriv(which, u.size(), nb_stencils, &u[0], &deriv[0], isChangedU);
+            // Start at index 0 and apply weights to nb_stencils associated with solution values u[0]->u[nb_stencils]
+            RBFFD::applyWeightsForDeriv(which, 0, u.size(), &u[0], &deriv[0], isChangedU);
         }
 
         // Can be CPU or GPU depending on Subclasses
@@ -261,11 +261,11 @@ class RBFFD
         //       That is, we see L{u}(x,y,z) evaluated all ALL points
         //       Also, if isChangedU==false then we can avoid overwriting a
         //       local u with the one passed in (e.g., when using the GPU)
-        // TODO: npts is unused at the momement. Could prove useful if we had a
-        //      applyWeightsForDerivAtNode(i) routine
-        //        virtual void applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU=true);
-        virtual void applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        // PARAM start_indx= offset index to start applying weights (i.e., u[start_indx] -> u[start_indx+nb+stencils])
+        virtual void applyWeightsForDeriv(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
+        // TODO: need a way to specify apply weights for u[< setR start], then return and incrementally apply weights for u[>setR start]. 
+        // TODO: if we have the above start and end index requirements we could apply all u[< R] then add u[>R] 
 
         // Returns MAXIMUM negative eigenvalue
         // Use output to obtain MINIMUM and MAXIMUM

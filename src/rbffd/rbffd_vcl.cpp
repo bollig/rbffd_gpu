@@ -17,7 +17,6 @@ using namespace std;
     this->setupTimers();
     this->loadKernel();
     this->allocateGPUMem();
-    this->updateStencilsOnGPU(false);
     std::cout << "Done copying stencils\n"; 
 
     this->updateNodesOnGPU(false);
@@ -92,89 +91,10 @@ void RBFFD_VCL::loadKernel() {
 }
 
 void RBFFD_VCL::allocateGPUMem() {
-
-#if 0
-    std::vector<StencilType>& stencil_map = grid_ref.getStencils();
-    unsigned int nb_nodes = grid_ref.getNodeListSize();
-    unsigned int nb_stencils = stencil_map.size();
-
-    cout << "Allocating GPU memory for stencils, solution, weights and derivative" << endl;
-
-    unsigned int max_stencil_size = grid_ref.getMaxStencilSize();
-    if (alignWeights) {
-        stencil_padded_size =  this->getNextMultiple(max_stencil_size);  
-        std::cout << "STENCIL ALIGNED TO SIZE: " << stencil_padded_size << std::endl;
-    } else {
-        stencil_padded_size = max_stencil_size;  
-#if 0
-        // No need to assume we're goign to have non-uniform stencil sizes. If we do, we'll pad them all to be 
-        // the max_stencil_size. 
-       gpu_stencil_size = 0; 
-        for (unsigned int i = 0; i < stencil_map.size(); i++) {
-            gpu_stencil_size += stencil_map[i].size(); 
-        }
-#endif 
-    }
-
-    gpu_stencil_size = stencil_padded_size * stencil_map.size();  
-
-    unsigned int float_size; 
-    if (useDouble) {
-        float_size = sizeof(double); 
-    } else {
-        float_size = sizeof(float);
-    }
-    std::cout << "FLOAT_SIZE=" << float_size << std::endl;;
-
-    stencil_mem_bytes = gpu_stencil_size * sizeof(unsigned int); 
-    function_mem_bytes = nb_nodes * float_size; 
-    weights_mem_bytes = gpu_stencil_size * float_size; 
-    deriv_mem_bytes = nb_stencils * float_size;
-
-    nodes_mem_bytes = nb_nodes * sizeof(double4);
-
-    std::cout << "Allocating GPU memory\n"; 
-
-    unsigned int bytesAllocated = 0;
-
-    // Two input arrays: 
-    // 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
-    gpu_stencils = cl::Buffer(context, CL_MEM_READ_WRITE, stencil_mem_bytes, NULL, &err);
-    bytesAllocated += stencil_mem_bytes; 
-
-    gpu_function = cl::Buffer(context, CL_MEM_READ_ONLY, function_mem_bytes, NULL, &err);
-
-    int iterator = computedTypes; 
-    int which = 0;
-    int type_i       = 0;     
-    // Iterate until we get all 0s. This allows SOME shortcutting.
-    while (iterator) {
-        if (computedTypes & getDerType(which)) {
-            gpu_weights[which] = cl::Buffer(context, CL_MEM_READ_ONLY, weights_mem_bytes, NULL, &err); 
-            bytesAllocated += weights_mem_bytes; 
-            type_i+=1; 
-        }
-        else {
-            // HACK: my gpu kernels take ALL weights on gpu as parameters. This allows me to put only one value for "empty" weight types
-            // minimal memory consumption. It works but its a band-aid
-            gpu_weights[which] = cl::Buffer(context, CL_MEM_READ_ONLY, 1*float_size, NULL, &err); 
-        }
-        iterator >>= 1; 
-        which += 1;
-    }
-
-    gpu_deriv_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
-    bytesAllocated += deriv_mem_bytes; 
-
-    gpu_nodes = cl::Buffer(context, CL_MEM_READ_ONLY, nodes_mem_bytes, NULL, &err);
-    bytesAllocated += nodes_mem_bytes;
-    
-#endif  
     unsigned int bytesAllocated = 0;
 
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     unsigned int N = grid_ref.getStencilsSize(); 
-    gpu_stencil_size = N;
     unsigned int n = grid_ref.getMaxStencilSize(); 
     unsigned int NNZ = n*N;
     unsigned int nrows = N;
@@ -211,6 +131,12 @@ void RBFFD_VCL::allocateGPUMem() {
     gpu_nodes = new VCL_VEC4_t(nb_nodes, 4);
 
     bytesAllocated += nodes_mem_bytes;
+    
+    gpu_nnz = NNZ;
+
+    function_mem_bytes = ncols * sizeof(double); 
+    gpu_function = new VCL_VEC_t(ncols); 
+    bytesAllocated += function_mem_bytes; 
 
     std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 }
@@ -279,17 +205,18 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
     if (weightsModified) {
 
         tm["sendWeights"]->start();
-        unsigned int weights_mem_size = gpu_stencil_size * sizeof(double);  
+        unsigned int weights_mem_size = gpu_nnz * sizeof(double);  
 
-        std::cout << "Writing weights to GPU memory\n"; 
+        std::cout << "[RBFFD_VCL] Writing weights to GPU memory\n"; 
 
         unsigned int nb_stencils = grid_ref.getStencilsSize();
         unsigned int nb_nodes = grid_ref.getNodeListSize();
         unsigned int n = grid_ref.getMaxStencilSize();
 
-        if ((nb_stencils * stencil_padded_size) != gpu_stencil_size) {
+        if ((nb_stencils * n) != gpu_nnz) {
             // Critical error between allocate and update
-            std::cout << "nb_stencils*stencil_padded_size != gpu_stencil_size" << std::endl;
+            std::cout << "nb_stencils*n != gpu_nnz" << std::endl;
+            std::cout << "NS: " << nb_stencils << ", n: " << n << ", nnz: " << gpu_nnz << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -304,7 +231,6 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
             if (computedTypes & getDerType(which)) {
                 cpu_weights_d[which] = new UBLAS_MAT_t(nb_stencils, nb_nodes, nb_stencils*n );  
 
-
                 // Weights should be in csr format
                 for (unsigned int i = nb_stencils; i < nb_stencils; i++) {
                     StencilType& sten = grid_ref.getStencil(i); 
@@ -315,8 +241,9 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
                     }
                 }
 
-                viennacl::copy(*(gpu_weights[which]), *(cpu_weights_d[which]));
+                viennacl::copy(*(cpu_weights_d[which]), *(gpu_weights[which]));
 
+                std::cout << "COPIED WEIGHT " << derTypeStr[which] << std::endl;
                 type_i+=1; 
             }
             iterator >>= 1; 
@@ -335,8 +262,9 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
         weightsModified = false;
 
     } else {
-        //        std::cout << "No need to update gpu_weights" << std::endl;
+                std::cout << "No need to update gpu_weights" << std::endl;
     }
+    std::cout << "DONE\n";
 }
 
 
@@ -345,7 +273,6 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
 void RBFFD_VCL::updateFunctionDouble(unsigned int nb_nodes, double* u, bool forceFinish) {
 
     //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
-
 
     // There is a bug fi this works
     if (function_mem_bytes != nb_nodes*sizeof(double)) {
@@ -365,7 +292,7 @@ void RBFFD_VCL::updateFunctionDouble(unsigned int nb_nodes, double* u, bool forc
 //
 void RBFFD_VCL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
-    //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
+    cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
@@ -376,13 +303,20 @@ void RBFFD_VCL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes,
     // false here implies that we should not block on the update to finish
     this->updateWeightsOnGPU(false);
 
+    std::cout << "Sizes: " << gpu_deriv_out->size() << std::endl;
+    std::cout << "\t" << gpu_weights[which]->size1() << "," << gpu_weights[which]->size2() << std::endl;
+    std::cout << "\t" << gpu_function->size() << std::endl;
 
     // Apply DM as product
 //TODO    *gpu_deriv_out = viennacl::prod(*(gpu_weights[which]), *gpu_function);  
     // Pull the computed derivative back to the CPU
     //viennacl::copy(*deriv, *gpu_deriv_out);
 
+    *gpu_deriv_out = viennacl::linalg::prod(*(gpu_weights[which]), *gpu_function); 
+
+
     tm["applyWeights"]->end();
+    std::cout << "DONE\n";
 }
 //----------------------------------------------------------------------
 

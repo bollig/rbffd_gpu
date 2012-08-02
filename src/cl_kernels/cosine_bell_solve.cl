@@ -48,7 +48,9 @@ FLOAT solve(__global FLOAT* u_t,
 
         // dh/dt + u / cos(theta) * dh/d(lambda) + v * dh/d(theta) = 0
         // dh/dt = - [diag(u/cos(theta)) * D_LAMBDA * h + diag(v/a) * D_THETA * h] + H
-        FLOAT f_out = -((vel_u/(a * cos(theta))) * dh_dlambda + (vel_v/a) * dh_dtheta);
+        //FLOAT f_out = -((vel_u/(a * cos(theta))) * dh_dlambda + (vel_v/a) * dh_dtheta);
+        // NOTE: the 1/cos was analyticaly removed
+        FLOAT f_out = -((vel_u/(a)) * dh_dlambda + (vel_v/a) * dh_dtheta);
 
         if (useHyperviscosity) {
                 FLOAT hv_filter = applyWeights(hv_weights, u_t, indx, stencils, stencil_size, stencil_padded_size);

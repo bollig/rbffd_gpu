@@ -36,7 +36,9 @@ void CosineBell::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>
 
         // dh/dt + u / cos(theta) * dh/d(lambda) + v * dh/d(theta) = 0
         // dh/dt = - [diag(u/cos(theta)) * D_LAMBDA * h + diag(v/a) * D_THETA * h] + H
-        (*f_out)[i] = -((vel_u/(a * cos(theta))) * dh_dlambda[i] + (vel_v/a) * dh_dtheta[i]);
+        //(*f_out)[i] = -((vel_u/(a * cos(theta))) * dh_dlambda[i] + (vel_v/a) * dh_dtheta[i]);
+        //NOTE: the 1/cos is analyticaly removed: 
+        (*f_out)[i] = -((vel_u/(a)) * dh_dlambda[i] + (vel_v/a) * dh_dtheta[i]);
     
     }
     if (useHyperviscosity) {

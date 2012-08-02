@@ -19,7 +19,6 @@ class RBFFD_VCL : public RBFFD
         UBLAS_VEC4_t* cpu_nodes;
         bool deleteCPUWeightsBuffer;
         bool deleteCPUNodesBuffer;
-        bool deleteCPUStencilsBuffer;
 
         unsigned int*    cpu_stencils;
 
@@ -27,9 +26,7 @@ class RBFFD_VCL : public RBFFD
 
         VCL_VEC_t* gpu_function; 
 
-        // Total size of the gpu-stencils buffer. This should also be the size
-        // of a single element of gpu_weights array. 
-        unsigned int gpu_stencil_size; 
+        unsigned int gpu_nnz; 
 
         // number of bytes for: 
         //      - gpu_stencils
@@ -49,13 +46,6 @@ class RBFFD_VCL : public RBFFD
         bool alignWeights; 
         unsigned int alignMultiple;
 
-        // This will be either the MAX_STENCIL_SIZE (computed by
-        // GridInterface), or the stencil size rounded to nearest
-        // multiple of 16 or 32. Any stencils that do not meet the
-        // stencil_padded_size are padded with 0s for weights and 
-        // the stencil center index for the padded indices. 
-        unsigned int stencil_padded_size; 
-
     public: 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives        
         // (up to 3 right now) 
@@ -68,7 +58,6 @@ class RBFFD_VCL : public RBFFD
         virtual ~RBFFD_VCL() { 
             if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} 
             if (deleteCPUNodesBuffer) { this->clearCPUNodes();}
-            if (deleteCPUStencilsBuffer) { this->clearCPUStencils();}
         }; 
 
 
@@ -110,8 +99,6 @@ class RBFFD_VCL : public RBFFD
 
         // forceFinish ==> should we fire a queue.finish() and make sure all
         // tasks are completed (synchronously) before returning
-        void updateStencilsOnGPU(bool forceFinish);
-        
         void updateWeightsOnGPU(bool forceFinish)
         { 
                 updateWeightsDouble(forceFinish); 
@@ -125,9 +112,6 @@ class RBFFD_VCL : public RBFFD
 
         bool areGPUKernelsDouble() { return useDouble; }
         
-        unsigned int getStencilPaddedSize() {
-            return stencil_padded_size;
-        }
 
     protected: 
         void setupTimers(); 
@@ -135,7 +119,6 @@ class RBFFD_VCL : public RBFFD
         void allocateGPUMem(); 
 
         void clearCPUWeights();
-        void clearCPUStencils();
         void clearCPUNodes();
 
         void updateWeightsDouble(bool forceFinish);

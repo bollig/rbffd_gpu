@@ -7,14 +7,6 @@
 
 #include "utils/opencl/viennacl_typedefs.h"
 
-#include <iomanip>
-#include <iostream>
-#include <sstream> 
-#include <map>
-#include <fstream> 
-#include <typeinfo> 
-using namespace std;
-
 
 class TimeDependentPDE_VCL : public TimeDependentPDE
 {
@@ -115,16 +107,18 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
         virtual int sendrecvBuf(VCL_VEC_t* buf, std::string label=""); 
 
         // Sync set R from the vec into the gpu_vec (host to device)
-        void syncSetRSingle(std::vector<SolutionType>& vec, VCL_VEC_t* gpu_vec); 
         void syncSetRDouble(std::vector<SolutionType>& vec, VCL_VEC_t* gpu_vec);
 
         // Sync set O from the gpu_vec to the vec (device to host) 
-        void syncSetOSingle(std::vector<SolutionType>& vec, VCL_VEC_t* gpu_vec); 
         void syncSetODouble(std::vector<SolutionType>& vec, VCL_VEC_t* gpu_vec); 
 
         // Sync the solution from GPU to the CPU (device to host)
         // NOTE: copies FULL solution to CPU.
-        virtual void syncCPUtoGPU(); 
+        virtual void syncCPUtoGPU() {
+            
+            std::cout << "*************** FULL MEMCOPY DEVICE -> HOST ***************\n"; 
+            viennacl::copy(gpu_solution[INDX_OUT]->begin(), gpu_solution[INDX_OUT]->end(), &U_G[0]);            
+        }
 
         void advanceRK4(double delta_t); 
     

@@ -72,6 +72,14 @@ void TimeDependentPDE_VCL::fillInitialConditions(ExactSolution* exact) {
         assembled = true;
     }
 
+    std::vector<double> u_t(nb_nodes, 1.); 
+    std::vector<double> dh_dlambda(nb_nodes, 0.); 
+der_ref_gpu.applyWeightsForDeriv(RBFFD::LAMBDA, u_t, dh_dlambda, true);
+    double tot = 0.0; 
+    for (int i = 0; i < nb_nodes; i++) {
+        tot += dh_dlambda[i];
+    }
+    std::cout << "l1 norm: " << tot << std::endl;
 
     tm["initialize"]->stop();
     std::cout << "[TimeDependentPDE_VCL] Done\n";

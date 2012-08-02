@@ -433,7 +433,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 {
                     // Stencil center is P_j = xjv
                     //double dr_dlambda = cos(thetaP_i) * cos(thetaP_j) * sin(lambdaP_i - lambdaP_j);
-                    double dr_dlambda = cos(thetaP_i) * sin(lambdaP_i - lambdaP_j);
+                    double dr_dlambda = cos(thetaP_j) * sin(lambdaP_i - lambdaP_j);
 
                     if (fabs(dr_dlambda) > 0.) {
                         // See equation below eq 20 in Flyer Wright, Transport schemes paper

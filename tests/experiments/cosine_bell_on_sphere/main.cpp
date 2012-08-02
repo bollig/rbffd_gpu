@@ -417,15 +417,21 @@ int main(int argc, char** argv) {
     //double min_sten_area = min_dx*min_dx;
     
     // Get the max velocity at t=0.
-    double max_vel = ((CosineBell*)pde)->CosineBell::getMaxVelocity(start_time);
+    double max_vel = 0.;
+    if (use_gpu) {
+        max_vel  = ((CosineBell_CL*)pde)->getMaxVelocity(start_time);
+    } else {
+        max_vel  = ((CosineBell*)pde)->getMaxVelocity(start_time);
+    }
 
 	printf("dt = %f, min dx=%f, abs(vel)= %f\n", dt, min_dx, max_vel); 
     printf("CFL Number (for specified dt) = %f\n", max_vel * (dt / min_dx)); 
 
     // Got this via trial and error for my code. Roughly 0.5 for RBF-FD + RK4.
-    double CFL_NUM = 0.40;
-    // The 2 here comes from RK4 CFL max
+    double CFL_NUM = 0.50;
+    // Assume that we have uniform velocity in each dimension
     double cfl_dt = (CFL_NUM*min_dx) / max_vel;
+
     printf("Max dt (for RK4-4) = %f\n", cfl_dt); 
     tm["CFL"]->stop();
 

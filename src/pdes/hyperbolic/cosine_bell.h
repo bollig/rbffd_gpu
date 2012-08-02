@@ -45,6 +45,7 @@ class CosineBell : public TimeDependentPDE
         { 
             // RADIUS OF THE BELL
             R = a/3.;
+            std::cout << "Earth Radius = " << a << std::endl;
             // The initial velocity (NOTE: scalar in denom is 12 days in seconds)
             u0 = (2.*M_PI*a)/time_for_revolution; 
         }

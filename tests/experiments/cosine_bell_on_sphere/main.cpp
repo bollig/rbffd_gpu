@@ -428,7 +428,7 @@ int main(int argc, char** argv) {
     printf("CFL Number (for specified dt) = %f\n", max_vel * (dt / min_dx)); 
 
     // Got this via trial and error for my code. Roughly 0.5 for RBF-FD + RK4.
-    double CFL_NUM = 0.50;
+    double CFL_NUM = 0.51;
     // Assume that we have uniform velocity in each dimension
     double cfl_dt = (CFL_NUM*min_dx) / max_vel;
 

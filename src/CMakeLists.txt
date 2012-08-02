@@ -70,7 +70,9 @@ SET( REQUIRED_CL_SOURCE_FILES
     pdes/parabolic/heat_pde_cl.cpp
     #    pdes/hyperbolic/cosine_bell_cl.cpp
     pdes/time_dependent_pde_cl.cpp
+    pdes/time_dependent_pde_vcl.cpp
     rbffd/rbffd_cl.cpp
+    rbffd/rbffd_vcl.cpp
 )
 
 ###############################################

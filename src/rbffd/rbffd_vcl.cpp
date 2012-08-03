@@ -213,10 +213,10 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
         unsigned int nb_nodes = grid_ref.getNodeListSize();
         unsigned int n = grid_ref.getMaxStencilSize();
 
+        std::cout << "NS: " << nb_stencils << ", n: " << n << ", nnz: " << gpu_nnz << std::endl;
         if ((nb_stencils * n) != gpu_nnz) {
             // Critical error between allocate and update
             std::cout << "nb_stencils*n != gpu_nnz" << std::endl;
-            std::cout << "NS: " << nb_stencils << ", n: " << n << ", nnz: " << gpu_nnz << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -232,7 +232,7 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
                 cpu_weights_d[which] = new UBLAS_MAT_t(nb_stencils, nb_nodes, nb_stencils*n );  
 
                 // Weights should be in csr format
-                for (unsigned int i = nb_stencils; i < nb_stencils; i++) {
+                for (unsigned int i = 0; i < nb_stencils; i++) {
                     StencilType& sten = grid_ref.getStencil(i); 
 
                     // Ublas assembles csr fast with an accumulator
@@ -244,6 +244,8 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
                 viennacl::copy(*(cpu_weights_d[which]), *(gpu_weights[which]));
 
                 std::cout << "COPIED WEIGHT " << derTypeStr[which] << std::endl;
+
+                //viennacl::io::write_matrix_market_file(*(cpu_weights_d[which]), derTypeStr[which] + "_weights.mtx");
                 type_i+=1; 
             }
             iterator >>= 1; 
@@ -292,7 +294,7 @@ void RBFFD_VCL::updateFunctionDouble(unsigned int nb_nodes, double* u, bool forc
 //
 void RBFFD_VCL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
-    cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
+    //     cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
@@ -303,20 +305,14 @@ void RBFFD_VCL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes,
     // false here implies that we should not block on the update to finish
     this->updateWeightsOnGPU(false);
 
-    std::cout << "Sizes: " << gpu_deriv_out->size() << std::endl;
-    std::cout << "\t" << gpu_weights[which]->size1() << "," << gpu_weights[which]->size2() << std::endl;
-    std::cout << "\t" << gpu_function->size() << std::endl;
+    int which_indx = getDerTypeIndx(which);
 
     // Apply DM as product
-//TODO    *gpu_deriv_out = viennacl::prod(*(gpu_weights[which]), *gpu_function);  
-    // Pull the computed derivative back to the CPU
-    //viennacl::copy(*deriv, *gpu_deriv_out);
+    *gpu_deriv_out = viennacl::linalg::prod(*(gpu_weights[which_indx]), *gpu_function); 
 
-    *gpu_deriv_out = viennacl::linalg::prod(*(gpu_weights[which]), *gpu_function); 
-
+    viennacl::copy(gpu_deriv_out->begin(),gpu_deriv_out->end(), deriv);
 
     tm["applyWeights"]->end();
-    std::cout << "DONE\n";
 }
 //----------------------------------------------------------------------
 

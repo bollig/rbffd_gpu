@@ -19,7 +19,7 @@ int PDE::send(int my_rank, int receiver_rank) {
     return 0; 
 }
 
-int PDE::receive(int my_rank, int sender_rank) {
+int PDE::receive(int my_rank, int sender_rank, int comm_size) {
     // Initially we have nothing to receive 
     return 0;
 }

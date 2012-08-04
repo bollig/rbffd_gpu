@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
     int compute_eigenvalues = settings->GetSettingAs<int>("DERIVATIVE_EIGENVALUE_TEST", ProjectSettings::optional, "0");
     int useHyperviscosity = settings->GetSettingAs<int>("USE_HYPERVISCOSITY", ProjectSettings::optional, "0");
     //int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
-    //int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "1");
+    int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "0");
 
     int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
@@ -428,7 +428,8 @@ int main(int argc, char** argv) {
     printf("CFL Number (for specified dt) = %f\n", max_vel * (dt / min_dx)); 
 
     // Got this via trial and error for my code. Roughly 0.5 for RBF-FD + RK4.
-    double CFL_NUM = 0.51;
+    // Using 0.45 for guaranteed stability on large problem.
+    double CFL_NUM = 0.45;
     // Assume that we have uniform velocity in each dimension
     double cfl_dt = (CFL_NUM*min_dx) / max_vel;
 
@@ -437,20 +438,22 @@ int main(int argc, char** argv) {
 
     // Only use the CFL dt if our current choice is greater and we insist it be used
     if (dt > cfl_dt) {
-        printf("ERROR: dt too high. Adjust and re-execute.\n");
+        if (use_cfl_dt) {
+            dt = cfl_dt;
+        } else {
+            printf("ERROR: dt too high. Adjust and re-execute.\n");
 
-        tm["cleanup"]->start();
-        delete(der);
-        delete(subdomain);
-        delete(settings);
-        delete(comm_unit); 
-        tm["cleanup"]->stop();
+            tm["cleanup"]->start();
+            delete(der);
+            delete(subdomain);
+            delete(settings);
+            delete(comm_unit); 
+            tm["cleanup"]->stop();
 
-        tm["total"]->stop();
-        tm.printAll();
-        exit(EXIT_FAILURE);
-        
-//        dt = cfl_dt;
+            tm["total"]->stop();
+            tm.printAll();
+            exit(EXIT_FAILURE);
+        }        
     } 
 
 #if 0

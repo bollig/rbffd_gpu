@@ -251,9 +251,13 @@ class RBFFD
         // Apply weights to an input solution vector and get the corresponding derivatives out
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             //            std::cout << "CPU: ";
-            deriv.resize(u.size()); 
+            unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+            if (deriv.size() < nb_stencils) { 
+                std::cout << "[RBFFD] Resizing deriv to nb_stencils=" << nb_stencils << " (was: " << deriv.size() << ")\n";
+                deriv.resize(nb_stencils); 
+            }
             // Start at index 0 and apply weights to nb_stencils associated with solution values u[0]->u[nb_stencils]
-            RBFFD::applyWeightsForDeriv(which, 0, u.size(), &u[0], &deriv[0], isChangedU);
+            RBFFD::applyWeightsForDeriv(which, 0, nb_stencils, &u[0], &deriv[0], isChangedU);
         }
 
         // Can be CPU or GPU depending on Subclasses

@@ -19,7 +19,7 @@ public:
 	virtual int send(int my_rank, int receiver_rank)  =0; 
 	
 	// [Pure virtual] Receive and unpack an instance of MPISendable from the sender_rank CPU
-	virtual int receive(int my_rank, int sender_rank) =0; 
+	virtual int receive(int my_rank, int sender_rank, int comm_size) =0; 
 	
 	// [Pure virtual] Pack and send updates to an MPISendable object to the receiver_rank CPU
 	virtual int sendUpdate(int my_rank, int receiver_rank)  =0; 

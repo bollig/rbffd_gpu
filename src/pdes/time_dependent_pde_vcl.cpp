@@ -290,6 +290,7 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
 {
     tm["rk4_eval_gpu"]->start();
 
+#if 0 
 //    this->launchRK4_classic_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
 
     VCL_MAT_t& A = *(der_ref_gpu.getGPUWeights(RBFFD::LAMBDA));
@@ -421,6 +422,7 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
     this->sendrecvUpdates(input_sol, "U_G");
     tm["rk4_mpi_comm"]->stop(); 
 
+#endif 
     tm["rk4_eval_gpu"]->stop();
 }
 
@@ -432,8 +434,9 @@ void TimeDependentPDE_VCL::advanceRK4_NoComm( int indx_u_in, int indx_k1, int in
     // RK4 requires U[{Q, R}] going into the method. This implies we need to transfer U[{R}] at the end of the iteration.
     tm["rk4_adv_gpu"]->start();
 
+#if 0
     this->launchRK4_adv(0, grid_ref.Q.size(), this->gpu_solution[indx_u_in], this->gpu_solution[indx_k1],this->gpu_solution[indx_k2],this->gpu_solution[indx_k3],this->gpu_solution[indx_k4],this->gpu_solution[indx_u_out]);
-
+#endif 
     tm["rk4_adv_gpu"]->stop();
 }
 

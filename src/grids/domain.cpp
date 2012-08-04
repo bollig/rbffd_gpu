@@ -181,7 +181,7 @@ int Domain::send(int my_rank, int receiver_rank) {
     return 0;           // FIXME: return bytes sent (in case we need to monitor this)
 }
 
-int Domain::receive(int my_rank, int sender_rank) {
+int Domain::receive(int my_rank, int sender_rank, int _comm_size) {
 
     MPI_Status stat;
 
@@ -229,8 +229,8 @@ int Domain::receive(int my_rank, int sender_rank) {
     this->nb_nodes = node_list.size();
 
     set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
-
-    cout << "RANK " << my_rank << " REPORTS: received Domain object" << endl;
+    this->comm_size = _comm_size; 
+    cout << "RANK " << my_rank << " of " << comm_size << " REPORTS: received Domain object" << endl;
     return 0;           // FIXME: return bytes sent (in case we need to monitor this)
 }
 

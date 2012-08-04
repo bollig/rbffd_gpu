@@ -60,7 +60,7 @@ int Communicator::sendObject(MPISendable* object, int receiver_rank)
 
 int Communicator::receiveObject(MPISendable* object, int sender_rank)
 {
-	return object->receive(this->getRank(), sender_rank); 
+	return object->receive(this->getRank(), sender_rank, this->getSize()); 
 }
 
 // As a CPU, loop through CPUs and send updates required by each. 

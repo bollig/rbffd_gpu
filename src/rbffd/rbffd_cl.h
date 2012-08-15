@@ -102,17 +102,17 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             deriv.resize(nb_stencils); 
             applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
         }
-        virtual void applyWeightsForDeriv(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true) {
+        virtual void applyWeightsForDeriv(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true) {
             if (useDouble) {
-                this->applyWeightsForDerivDouble(which, nb_nodes, nb_stencils, u, deriv, isChangedU);
+                this->applyWeightsForDerivDouble(which, start_indx, nb_stencils, u, deriv, isChangedU);
             } else {
-                this->applyWeightsForDerivSingle(which, nb_nodes, nb_stencils, u, deriv, isChangedU);
+                this->applyWeightsForDerivSingle(which, start_indx, nb_stencils, u, deriv, isChangedU);
             }
         }
 
-        virtual void applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
-        virtual void applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDerivSingle(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
         // forceFinish ==> should we fire a queue.finish() and make sure all
         // tasks are completed (synchronously) before returning
@@ -123,10 +123,10 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             if (useDouble) { updateWeightsDouble(forceFinish); 
             } else { updateWeightsSingle(forceFinish); }
         }
-        void updateFunctionOnGPU(unsigned int nb_nodes, double* u, bool forceFinish)
+        void updateFunctionOnGPU(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish)
         { 
-            if (useDouble) { updateFunctionDouble(nb_nodes, u, forceFinish); 
-            } else { updateFunctionSingle(nb_nodes, u, forceFinish); }
+            if (useDouble) { updateFunctionDouble(start_indx, nb_vals, u, forceFinish); 
+            } else { updateFunctionSingle(start_indx, nb_vals, u, forceFinish); }
         }
 
         void updateNodesOnGPU(bool forceFinish);
@@ -148,8 +148,8 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         void updateWeightsDouble(bool forceFinish);
         void updateWeightsSingle(bool forceFinish);
-        void updateFunctionDouble(unsigned int nb_nodes, double* u, bool forceFinish);
-        void updateFunctionSingle(unsigned int nb_nodes, double* u, bool forceFinish);
+        void updateFunctionDouble(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish);
+        void updateFunctionSingle(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish);
 
 
     protected: 

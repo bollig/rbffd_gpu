@@ -443,19 +443,19 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
 //----------------------------------------------------------------------
 //
-void RBFFD_CL::updateFunctionDouble(unsigned int nb_nodes, double* u, bool forceFinish) {
+void RBFFD_CL::updateFunctionDouble(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish) {
 
     //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
 
 
     // There is a bug fi this works
-    if (function_mem_bytes != nb_nodes*sizeof(double)) {
+    if (function_mem_bytes != nb_vals*sizeof(double)) {
         std::cout << "function_mem_bytes != nb_nodes*sizeof(double)" << std::endl;
         exit(EXIT_FAILURE);
     }
 
     // TODO: mask off fields not update
-    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, 0, function_mem_bytes, &u[0], NULL, &event);
+    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &u[start_indx], NULL, &event);
     //    queue.flush();
 
     if (forceFinish) {
@@ -465,25 +465,25 @@ void RBFFD_CL::updateFunctionDouble(unsigned int nb_nodes, double* u, bool force
 
 //----------------------------------------------------------------------
 //
-void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool forceFinish) {
+void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish) {
 
     //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
 
     // TODO: mask off fields not update
     // update the GPU's view of our solution 
-    float* cpu_u = new float[nb_nodes]; 
-    for (unsigned int i = 0; i < nb_nodes; i++) {
-        cpu_u[i] = (float)u[i]; 
+    float* cpu_u = new float[nb_vals]; 
+    for (unsigned int i = 0; i < nb_vals; i++) {
+        cpu_u[i] = (float)u[start_indx + i]; 
         //  std::cout << cpu_u[i] << "  "; 
     }
 
     // There is a bug fi this works
-    if (function_mem_bytes != nb_nodes*sizeof(float)) {
-        std::cout << "function_mem_bytes != nb_nodes*sizeof(float)" << std::endl;
+    if (function_mem_bytes != nb_vals*sizeof(float)) {
+        std::cout << "function_mem_bytes != nb_vals*sizeof(float)" << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, 0, function_mem_bytes, &cpu_u[0], NULL, &event);
+    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &cpu_u[0], NULL, &event);
 
     //    if (forceFinish) {
     queue.finish(); 
@@ -497,13 +497,15 @@ void RBFFD_CL::updateFunctionSingle(unsigned int nb_nodes, double* u, bool force
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
+    //TODO: FIX case when start_indx != 0
+
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
-        this->updateFunctionOnGPU(nb_nodes, u, false); 
+        this->updateFunctionOnGPU(start_indx, nb_stencils, u, false); 
     }
 
     // Will only update if necessary
@@ -571,13 +573,13 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, 
 //	This needs to be offloaded to an OpenCL Kernel
 //	
 //
-void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
+void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start(); 
 
     if (isChangedU) {
-        this->updateFunctionOnGPU(nb_nodes, u, false); 
+        this->updateFunctionOnGPU(start_indx, nb_stencils, u, false); 
     }
 
     // Will only update if necessary

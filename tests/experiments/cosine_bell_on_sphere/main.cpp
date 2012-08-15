@@ -156,6 +156,7 @@ int main(int argc, char** argv) {
     int useHyperviscosity = settings->GetSettingAs<int>("USE_HYPERVISCOSITY", ProjectSettings::optional, "0");
     //int use_eigen_dt = settings->GetSettingAs<int>("USE_EIG_DT", ProjectSettings::optional, "1");
     int use_cfl_dt = settings->GetSettingAs<int>("USE_CFL_DT", ProjectSettings::optional, "0");
+    bool ignore_solution_error = settings->GetSettingAs<int>("IGNORE_SOLUTION_ERROR", ProjectSettings::optional, "1");
 
     int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
 
@@ -526,7 +527,7 @@ int main(int argc, char** argv) {
                 tm["consolidate"]->stop(); 
                 if (comm_unit->isMaster()) {
                     std::cout << "\n*********** Global Solution [ Iteration: " << iter << " (t = " << pde->getTime() << ", dt = " << dt << ") ] *************" << endl;
-                    pde->checkGlobalError(exact, grid, max_global_rel_error); 
+                    pde->checkGlobalError(exact, grid, max_global_rel_error, ignore_solution_error); 
                 }
             }
 #endif 

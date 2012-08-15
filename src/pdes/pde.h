@@ -122,29 +122,32 @@ class PDE : public MPISendable
             this->checkError(exactSolution, this->U_G, this->grid_ref, rel_err_max); 
         }
 
-        void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1.) {
-            exact_ptr = exact;
-            std::vector<NodeType>& nodes = global_grid->getNodeList();
-            //std::vector<unsigned int>& bounds = global_grid->getBoundaryIndices();
+        // Use ignore_sol_error to disable checks altogether.
+        void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1., bool ignore_sol_error=false) {
+            if (!ignore_sol_error) {
+                exact_ptr = exact;
+                std::vector<NodeType>& nodes = global_grid->getNodeList();
+                //std::vector<unsigned int>& bounds = global_grid->getBoundaryIndices();
 
-            std::vector<SolutionType> sol(nodes.size(), 0.);
-            std::vector<SolutionType> exactSolution(nodes.size());
+                std::vector<SolutionType> sol(nodes.size(), 0.);
+                std::vector<SolutionType> exactSolution(nodes.size());
 
-            // TODO: call for all subdomains to send final to master
+                // TODO: call for all subdomains to send final to master
 
-            // Should synchronize the U_G on CPU and GPU
-            this->syncCPUtoGPU(); 
+                // Should synchronize the U_G on CPU and GPU
+                this->syncCPUtoGPU(); 
 
-            this->getGlobalSolution(&sol);
-            this->getExactSolution(exact, nodes, &exactSolution); 
+                this->getGlobalSolution(&sol);
+                this->getExactSolution(exact, nodes, &exactSolution); 
 
 #if 0
-            std::cout << "Global Grid nodelist size is " << global_grid->getNodeListSize() << std::endl;
-            for (unsigned int i = 0; i < global_grid->getNodeListSize(); i++) {
-                std::cout << i << "\t" << sol[i] << "\t" << exactSolution[i] << std::endl;
-            }
+                std::cout << "Global Grid nodelist size is " << global_grid->getNodeListSize() << std::endl;
+                for (unsigned int i = 0; i < global_grid->getNodeListSize(); i++) {
+                    std::cout << i << "\t" << sol[i] << "\t" << exactSolution[i] << std::endl;
+                }
 #endif 
-            this->checkError(exactSolution, sol, *global_grid, rel_err_max); 
+                this->checkError(exactSolution, sol, *global_grid, rel_err_max); 
+            } 
         }
 
 

@@ -381,7 +381,7 @@ struct ltclass {
 } srtobject; 
 
 
-void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, Grid& grid, double rel_err_max)
+void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, Grid& grid, double rel_err_max, bool ignore_high_error)
 {
     std::set<unsigned int>& b_indices = grid.getSortedBoundarySet();
     std::set<unsigned int>& i_indices = grid.getSortedInteriorSet(); 
@@ -450,16 +450,16 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
         }
     }
 
-    calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max);  // Boundary only
+    calcSolNorms(sol_vec_bnd, sol_exact_bnd, "Boundary", rel_err_max, ignore_high_error);  // Boundary only
 
-    calcSolNorms(sol_vec_int_no_bnd, sol_exact_int_no_bnd, "Interior Stencils w/o Boundary", rel_err_max);  // Interior only (excludes unbalanced stencils)
+    calcSolNorms(sol_vec_int_no_bnd, sol_exact_int_no_bnd, "Interior Stencils w/o Boundary", rel_err_max, ignore_high_error);  // Interior only (excludes unbalanced stencils)
 
-    calcSolNorms(sol_vec_int, sol_exact_int, "All Interior", rel_err_max);  // Interior only
+    calcSolNorms(sol_vec_int, sol_exact_int, "All Interior", rel_err_max, ignore_high_error);  // Interior only
 
-    calcSolNorms(sol_vec, sol_exact, "Interior & Boundary", rel_err_max);  // Full domain
+    calcSolNorms(sol_vec, sol_exact, "Interior & Boundary", rel_err_max, ignore_high_error);  // Full domain
 }
 
-void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max) {
+void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max, bool ignore_high_error) {
     // We want: || x_exact - x_approx ||_{1,2,inf} 
     // and  || x_exact - x_approx ||_{1,2,inf} / || x_exact ||_{1,2,inf}
 
@@ -507,7 +507,8 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
 #endif 
     if (l2rel > rel_err_max) {
         printf("[PDE] Error! l2 relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*l2rel, 100.*rel_err_max); 
-        exit(EXIT_FAILURE);
+        if (!ignore_high_error)
+            exit(EXIT_FAILURE);
     }
 #if 0
     if (lirel > rel_err_max) {
@@ -529,7 +530,7 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
 }
 
 
-void PDE::checkNorms(double max_l2_norm) {
+void PDE::checkNorms(double max_l2_norm, bool ignore_high_error) {
     this->syncCPUtoGPU();
     std::vector<SolutionType>& sol_vec = this->U_G;
     int nb_pts = sol_vec.size();
@@ -544,7 +545,8 @@ void PDE::checkNorms(double max_l2_norm) {
     if (max_l2_norm > 0) {
         if (l2fabs > max_l2_norm) {
             printf("Approx Solution l2 norm exceeds %le!", max_l2_norm); 
-            exit(EXIT_FAILURE);
+            if (!ignore_high_error)
+                exit(EXIT_FAILURE);
         }
     }
 
@@ -552,7 +554,8 @@ void PDE::checkNorms(double max_l2_norm) {
 
         if (l2fabs > 1e100) {
             printf("Approx Solution l2 norm exceeds 1.0e100. Assuming instability!"); 
-            exit(EXIT_FAILURE);
+            if (!ignore_high_error)
+                exit(EXIT_FAILURE);
         }
 
     }

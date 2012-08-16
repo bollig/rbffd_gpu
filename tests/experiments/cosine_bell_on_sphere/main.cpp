@@ -379,7 +379,7 @@ int main(int argc, char** argv) {
 
     pde->fillInitialConditions(exact);
 
-#if 0
+#if 1
     // Broadcast updates for timestep, initial conditions for ghost nodes, etc. 
     tm["updates"]->start(); 
     comm_unit->broadcastObjectUpdates(pde);

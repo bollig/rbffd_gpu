@@ -119,12 +119,11 @@ class PDE : public MPISendable
             // Should synchronize the U_G on CPU and GPU
             this->syncCPUtoGPU(); 
             this->getExactSolution(exact, this->grid_ref.getNodeList(), &exactSolution); 
-            this->checkError(exactSolution, this->U_G, this->grid_ref, rel_err_max); 
+            this->checkError(exactSolution, this->U_G, this->grid_ref, rel_err_max, true); 
         }
 
         // Use ignore_sol_error to disable checks altogether.
-        void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1., bool ignore_sol_error=false) {
-            if (!ignore_sol_error) {
+        void checkGlobalError(ExactSolution* exact, Grid* global_grid, double rel_err_max=-1., bool ignore_sol_error=true) {
                 exact_ptr = exact;
                 std::vector<NodeType>& nodes = global_grid->getNodeList();
                 //std::vector<unsigned int>& bounds = global_grid->getBoundaryIndices();
@@ -146,15 +145,14 @@ class PDE : public MPISendable
                     std::cout << i << "\t" << sol[i] << "\t" << exactSolution[i] << std::endl;
                 }
 #endif 
-                this->checkError(exactSolution, sol, *global_grid, rel_err_max); 
-            } 
+                this->checkError(exactSolution, sol, *global_grid, rel_err_max, ignore_sol_error); 
         }
 
 
         // Check the L1, L2 and Linf norms of our approximate solution.
         // This does not break the code, but will allow us to monitor decay and perhaps
         // notice when the solution explodes due to instability. 
-        void checkNorms(double rel_err_max=-1.);
+        void checkNorms(double rel_err_max=-1., bool ignore_high_error=true);
 
         SolutionType getLocalSolution(unsigned int indx) { return U_G[indx]; }
 
@@ -179,8 +177,8 @@ class PDE : public MPISendable
         }
 
         // Check our approximate solution against and exact solution. 
-        void checkError(std::vector<SolutionType>& exactSolution, std::vector<SolutionType>& solution, Grid& grid, double rel_err_max=-1.);
-        void calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max=1.);
+        void checkError(std::vector<SolutionType>& exactSolution, std::vector<SolutionType>& solution, Grid& grid, double rel_err_max=-1., bool ignore_high_error=true);
+        void calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max=1., bool ignore_high_error=false);
 
     protected:
         // ******** BEGIN MPISENDABLE ************

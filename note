@@ -1,0 +1,9 @@
+- Parmetis decompose grid
+- Write grid pieces to file
+- Domain load grid pieces
+- Final solution gather (ignore)
+    - We can ignore gathering the final solution UNLESS we want to visualize
+- Norm solution reduction 
+
+- Domain need to load grid
+    - Loaded grid

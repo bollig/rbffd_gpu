@@ -21,6 +21,7 @@ SET (ARGV
 )
 
 require_config()
+require_config(test_annulus.conf)
 
 #FIND_PACKAGE(Boost) 
 

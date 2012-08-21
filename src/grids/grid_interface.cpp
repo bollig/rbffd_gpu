@@ -241,6 +241,13 @@ Grid::GridLoadErrType Grid::loadNodesFromFile(std::string filename) {
     std::ifstream fin(filename.c_str());
 
     if (fin.is_open()) {
+    } else {
+        std::string alt_name = this->genericGridFilename();
+        std::cout << "Trying generic filename: " << alt_name << std::endl;
+        fin.open(alt_name.c_str());
+    }
+
+    if (fin.is_open()) {
         while (fin.good()) {
             NodeType node; 
             fin >> node; 
@@ -269,6 +276,13 @@ Grid::GridLoadErrType Grid::loadBoundaryFromFile(std::string filename) {
 
     std::ifstream fin; 
     fin.open(fname.c_str()); 
+
+    if (fin.is_open()) {
+    } else {
+        std::string alt_name = this->genericBoundaryFilename();
+        std::cout << "Trying generic filename: " << alt_name << std::endl;
+        fin.open(alt_name.c_str());
+    }
 
     if (fin.is_open()) {
         boundary_indices.clear(); 
@@ -300,6 +314,13 @@ Grid::GridLoadErrType Grid::loadNormalsFromFile(std::string filename) {
 
     std::ifstream fin; 
     fin.open(fname.c_str()); 
+
+    if (fin.is_open()) {
+    } else {
+        std::string alt_name = this->genericNormalsFilename();
+        std::cout << "Trying generic filename: " << alt_name << std::endl;
+        fin.open(alt_name.c_str());
+    }
 
     if (fin.is_open()) {
         boundary_normals.clear(); 

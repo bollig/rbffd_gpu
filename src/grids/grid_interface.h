@@ -333,6 +333,27 @@ class Grid
             return ss.str();
         }
 
+        virtual std::string genericGridFilename() {
+            char prefix[256]; 
+            sprintf(prefix, "input_grid.ascii");
+            std::string s(prefix);
+            return s;
+        }
+
+        virtual std::string genericBoundaryFilename() {
+            char prefix[256]; 
+            sprintf(prefix, "input_boundary.ascii");
+            std::string s(prefix);
+            return s;
+        }
+
+        virtual std::string genericNormalsFilename() {
+            char prefix[256]; 
+            sprintf(prefix, "input_normals.ascii");
+            std::string s(prefix);
+            return s;
+        }
+
         virtual std::string className() { return "grid"; }
 
 

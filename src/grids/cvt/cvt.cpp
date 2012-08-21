@@ -84,6 +84,7 @@ void CVT::generate() {
     double it_diff; 
     this->resizeNodeList(nb_pts);
     this->cvt(&it_num, &it_diff, &energy);
+    this->refreshExtents();
 }
 
 

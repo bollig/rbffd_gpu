@@ -19,6 +19,9 @@ typedef std::vector<CenterType >                         CenterListType;
 
 class NonUniformPoisson1_CL : public NCARPoisson1
 {
+    protected: 
+        MatType* L_host_ptr; 
+        VecType* F_host_ptr;
 public:
         NonUniformPoisson1_CL(ExactSolution* _solution, Grid* subdomain_, RBFFD* der_, int rank, int dim_num_);
         ~NonUniformPoisson1_CL();

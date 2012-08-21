@@ -7,10 +7,10 @@
 using namespace std;
 
 //----------------------------------------------------------------------
-ExactNCARPoisson2::ExactNCARPoisson2() : ExactSolution(3), SCALE(100000.)
+ExactNCARPoisson2::ExactNCARPoisson2() : ExactSolution(2), SCALE(100000.)
 {
-    printf("[ExactNCARPoisson2] ERROR: need to update the exact solution to handle dim_num. Check the laplacian to ensure that terms for Y and Z are necessary.\n");
-    exit(EXIT_FAILURE); 
+//    printf("[ExactNCARPoisson2] ERROR: need to update the exact solution to handle dim_num. Check the laplacian to ensure that terms for Y and Z are necessary.\n");
+//    exit(EXIT_FAILURE); 
 }
 //----------------------------------------------------------------------
 ExactNCARPoisson2::~ExactNCARPoisson2()

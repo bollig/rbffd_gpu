@@ -380,10 +380,10 @@ class RBFFD
         std::vector<double*>& getYWeights() { return weights[this->Y]; }
         std::vector<double*>& getZWeights() { return weights[this->Z]; }
         std::vector<double*>& getLaplWeights() { return weights[this->LAPL]; }
-        double* getXWeights(int indx) { return (getXWeights())[indx]; }
-        double* getYWeights(int indx) { return (getYWeights())[indx]; }
-        double* getZWeights(int indx) { return (getZWeights())[indx]; }
-        double* getLaplWeights(int indx) { return (getLaplWeights())[indx]; }
+        double* getXWeights(int indx) { return getXWeights()[indx]; }
+        double* getYWeights(int indx) { return getYWeights()[indx]; }
+        double* getZWeights(int indx) { return getZWeights()[indx]; }
+        double* getLaplWeights(int indx) { return getLaplWeights()[indx]; }
 
         std::vector<double*>& getWeights(DerType choice) { return weights[getDerTypeIndx(choice)]; }
         std::vector<NodeType> getNodes() { return grid_ref.getNodeList(); }

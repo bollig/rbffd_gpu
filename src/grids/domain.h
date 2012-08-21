@@ -101,6 +101,29 @@ class Domain : public Grid, public MPISendable
             s.append(prefix); 
             return s;
         }
+
+        virtual std::string genericGridFilename() {
+            char prefix[256]; 
+            sprintf(prefix, "input_grid_rank_%d_of_%d.ascii", this->id, this->comm_size); 
+            std::string s(prefix);
+            return s;
+        }
+
+        virtual std::string genericNormalsFilename() {
+            char prefix[256]; 
+            sprintf(prefix, "input_normals_rank_%d_of_%d.ascii", this->id, this->comm_size); 
+            std::string s(prefix);
+            return s;
+        }
+
+
+        virtual std::string genericBoundaryFilename() {
+            char prefix[256]; 
+            sprintf(prefix, "input_boundary_rank_%d_of_%d.ascii", this->id, this->comm_size); 
+            std::string s(prefix);
+            return s;
+        }
+
         virtual void printNodeList(std::string label) { 
             // More verbose print: 
             printCenters(this->node_list, label); 

@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     NestedEllipseCVT* grid;
     if (nb_boundary) {
         // Specify the exact number of nodes on the boundary
-        grid = new NestedEllipseCVT(nb_total, nb_inner_boundary, nb_outer_boundary, dim, new ExpDensity(), 0, nb_samples, it_max_interior); 
+        grid = new NestedEllipseCVT(nb_total, nb_inner_boundary, nb_outer_boundary, dim, new UniformDensity(), 0, nb_samples, it_max_interior); 
     } else {
         // Guess the number of nodes on the boundary (usually looks nicer)
         grid = new NestedEllipseCVT(nb_total, dim, new UniformDensity(), 0, nb_samples, it_max_interior); 
@@ -92,22 +92,32 @@ int main(int argc, char** argv) {
     grid->setDebug(debug);
     grid->setMaxStencilSize(stencil_size);
     grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
-    if(grid->loadFromFile())
-    {
-        printf("************** Generating new Grid **************\n"); 
-        grid->setSortBoundaryNodes(true); 
-        //            tm["grid"]->start(); 
-        grid->generate();
-        //          tm["grid"]->stop(); 
-        std::cout << "Generating stencils\n";
-        //        tm["stencils"]->start(); 
-        grid->generateStencils(Grid::ST_HASH);   // nearest stencil_size 
-        //grid->generateStencils(Grid::ST_BRUTE_FORCE);   // nearest stencil_size 
-        //      tm["stencils"]->stop();
-        grid->writeToFile(); 
-    }
 
-    // 0: 2D problem; 1: 3D problem
+
+    int writeIntermediate = 2; 
+
+    Grid::GridLoadErrType err = grid->loadFromFile(); 
+        if (err == Grid::NO_GRID_FILES) 
+        {
+            printf("************** Generating new Grid **************\n"); 
+            grid->setSortBoundaryNodes(true); 
+            grid->generate();
+            if(writeIntermediate > 0) {
+                grid->writeToFile(); 
+            }
+        } 
+        if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
+            std::cout << "Generating stencils files\n";
+            grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
+//            grid->generateStencils(Grid::ST_BRUTE_FORCE);   
+//            grid->generateStencils(Grid::ST_KDTREE);   
+            grid->generateStencils(Grid::ST_HASH);   
+            if(writeIntermediate > 0) {
+                grid->writeToFile(); 
+            }
+        }
+
+        // 0: 2D problem; 1: 3D problem
     ExactSolution* exact_poisson;
     if (dim == 3) {
         std::cout << "ERROR! 3D not verified yet! exiting..." << std::endl;
@@ -118,12 +128,17 @@ int main(int argc, char** argv) {
     }
 
     RBFFD* der;
+#if 0
     if (use_gpu) {
         der = new RBFFD_CL(RBFFD::X|RBFFD::Y|RBFFD::Z|RBFFD::LAPL,grid, dim); 
     } else {
         der = new RBFFD(RBFFD::X|RBFFD::Y|RBFFD::Z|RBFFD::LAPL,grid, dim); 
     }
+#endif 
 
+    std::cout << "Computing weights for DIM = " << dim << std::endl;
+    // No support for ViennaCL generated weights yet.
+    der = new RBFFD(RBFFD::X|RBFFD::Y|RBFFD::Z|RBFFD::LAPL,grid, dim); 
 
    // Enable variable epsilon. Not verified to be perfected in the derivative calculation.
    // But it has improved the heat equation already
@@ -140,6 +155,7 @@ int main(int argc, char** argv) {
     der->computeAllWeightsForAllStencils();
 
     if (run_derivative_tests) {
+        std::cout << "Running Derivative Tests\n";
         DerivativeTests* der_test = new DerivativeTests(dim, der, grid, true);
         if (use_gpu) {
             // Applies weights on both GPU and CPU and compares results for the first 10 stencils

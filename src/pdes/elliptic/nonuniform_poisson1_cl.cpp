@@ -34,6 +34,10 @@ NonUniformPoisson1_CL::NonUniformPoisson1_CL(ExactSolution* _solution, Grid* sub
 //----------------------------------------------------------------------
 
 NonUniformPoisson1_CL::~NonUniformPoisson1_CL() {
+    if (L_host_ptr) 
+        delete(L_host_ptr);
+    if (F_host_ptr)
+        delete(F_host_ptr); 
 }
 //----------------------------------------------------------------------
 // Solve the poisson system.
@@ -137,8 +141,11 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         // 1) Fill the ublas matrix on the CPU
         //boost::numeric::ublas::compressed_matrix<FLOAT> L_host(nm, nm);
         //boost::numeric::ublas::vector<FLOAT> F_host(nm);
-        MatType L_host(nm, nm);
-        VecType F_host(nm);
+        L_host_ptr = new MatType(nm, nm, numNonZeros);
+        MatType& L_host = *L_host_ptr;
+        std::cout << "L_Host = " << L_host.size1() << ", " << L_host.size2() << ", nnz=" << numNonZeros << std::endl;
+        F_host_ptr = new VecType(nm);
+        VecType F_host = *F_host_ptr;
 
         F_host(nm-1) = 0.;
 
@@ -243,7 +250,7 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         viennacl::vector<FLOAT> F_device(F_host.size());
         viennacl::vector<FLOAT> x_device(F_host.size());
 
-        boost::numeric::ublas::vector<FLOAT> x_host(F_host.size());
+        boost::numeric::ublas::vector<FLOAT> x_host(F_host.size(), 0.);
 
         tm["t4"]->start();
 
@@ -255,12 +262,23 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         cout << "Solving system" <<endl;
         tm["t5"]->start();
         //x_device = viennacl::linalg::prod(L_device, F_device);
-        x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-24, 3000));
+        //x_device = viennacl::linalg::solve(L_device, F_device, viennacl::linalg::bicgstab_tag(1.e-8, 3000));
+        double tol = 1e-8; 
+        int restart = 20; 
+        int krylov = 60;
+        viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov);
 
+        std::cout << "GMRES Max Number of Iterations: " << tag.max_iterations() << std::endl;
+        std::cout << "GMRES Krylov Dim: " << tag.krylov_dim() << std::endl;
+        std::cout << "GMRES Max Number of Restarts (max_iter/krylov_dim - 1): " << tag.max_restarts() << std::endl;
+        std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
+
+        x_device = viennacl::linalg::solve(L_device, F_device, tag);
         viennacl::ocl::get_queue().finish();
         tm["t5"]->end();
 
         cout << "Done with solve" << endl;
+        std::cout << "L1 of host = " << norm_1(x_host) << std::endl;
 
         // Copy solution to host
         copy(x_device, x_host);
@@ -269,9 +287,9 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
 
         cout << "Results copied to host" << endl;
 
-        boost::numeric::ublas::vector<FLOAT> exact_host(nb+ni);
-        boost::numeric::ublas::vector<FLOAT> error_host(nb+ni);
-        boost::numeric::ublas::vector<FLOAT> rel_error_host(nb+ni);
+        boost::numeric::ublas::vector<FLOAT> exact_host(nb+ni, 0.);
+        boost::numeric::ublas::vector<FLOAT> error_host(nb+ni, 0.);
+        boost::numeric::ublas::vector<FLOAT> rel_error_host(nb+ni, 0.);
 
         for (int i = 0; i < nb + ni; i++) {
             exact_host(subdomain->getStencil(i)[0]) = (FLOAT) (exactSolution->at(subdomain->getNode( subdomain->getStencil(i)[0] ), 0.));
@@ -280,6 +298,8 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
             exact_host(i) = 0.;
         }
 
+        std::cout << "L1 of host = " << norm_1(x_host) << std::endl;
+        std::cout << "L1 of exact = " << norm_1(exact_host) << std::endl;
         double max_rel_err = 0.0; 
         unsigned int max_rel_err_indx = 0;
         //error_host = x_host - exact_host;
@@ -659,21 +679,24 @@ void NonUniformPoisson1_CL::solve(Communicator* comm_unit) {
         //--------------------------------------------------
         // Fill Interior weights (LHS)
         if (use_uniform_diffusivity) {
-            double* lapl_weights = der->getLaplWeights(stencil[0]);
+            //double* lapl_weights = der->getLaplWeights(stencil[0]);
+            double* lapl_weights = der->getWeights(RBFFD::LAPL)[stencil[0]]; //der->getLaplWeights(stencil[0]);
             for (unsigned int j = 0; j < stencil.size(); j++) {
                 L(stencil[0],stencil[j]) = (FLOAT) lapl_weights[j];
-                //cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
+            //    cout << "lapl_weights[" << j << "] = " << lapl_weights[j] << endl;
                 indx++;
             }
         } else {
-            double* x_weights = der->getXWeights(stencil[0]);
-            double* y_weights = der->getYWeights(stencil[0]);
-            double* z_weights = der->getZWeights(stencil[0]);
-            double* lapl_weights = der->getLaplWeights(stencil[0]);
+            double* x_weights = der->getWeights(RBFFD::X)[stencil[0]]; //der->getXWeights(stencil[0]);
+            double* y_weights = der->getWeights(RBFFD::Y)[stencil[0]]; //der->getYWeights(stencil[0]);
+            double* z_weights = der->getWeights(RBFFD::Z)[stencil[0]]; //der->getZWeights(stencil[0]);
+            double* lapl_weights = der->getWeights(RBFFD::LAPL)[stencil[0]]; //der->getLaplWeights(stencil[0]);
 
             for (unsigned int j = 0; j < stencil.size(); j++) {
-
-                double grad_k_grad_phi_weight = gradK.x()*x_weights[j] + gradK.y()*y_weights[j] + gradK.z()*z_weights[j];
+                double grad_k_grad_phi_weight = gradK.x()*x_weights[j] + gradK.y()*y_weights[j];
+                if (dim_num > 2) {
+                       grad_k_grad_phi_weight += gradK.z()*z_weights[j];
+                }
                 double k_lapl_phi_weight = diffusivity*lapl_weights[j];
 
                 // Our non-uniform diffusivity: grad(K) * grad(Phi) + K * lapl(Phi) = div(K*grad(Phi))

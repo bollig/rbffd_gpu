@@ -153,6 +153,7 @@ class KDTree {
          */
     protected: 
         void setupTimers() {
+            std::cout << "Setup Timers" << std::endl;
 #ifdef BENCHMARK_KDTREE 
             t1 = new EB::Timer("[kdtree_t1] Update Recursively");
             t2 = new EB::Timer("[kdtree_t2] Build Recursively");
@@ -544,7 +545,9 @@ class KDTree {
                 t5->start();
 #endif 
                 heapsort(dim, pidx, pidx.size());
+#ifdef BENCHMARK_KDTREE 
                 t5->end();
+#endif 
                 std::copy(pidx.begin(), pidx.begin() + Larray.size(), Larray.begin());
                 std::copy(pidx.begin() + Larray.size(), pidx.end(), Rarray.begin());
                 pivot = pidx[(pidx.size() - 1) / 2];

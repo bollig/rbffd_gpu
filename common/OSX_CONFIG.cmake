@@ -1,7 +1,7 @@
 FIND_LIBRARY (accelerate NAMES Accelerate)
 # CLAPACK is available from netlib.org or linux repositories
 # Use Accelerate library on OSX
-FIND_LIBRARY (clapack clapack PATHS /usr/lib) 
+#FIND_LIBRARY (clapack clapack PATHS /usr/lib) 
 
 MESSAGE(STATUS "MacOS X detected. Added '-framework Accelerate' to compiler flags")
 
@@ -27,7 +27,7 @@ LINK_DIRECTORIES (
 # NOTE: order of libraries is important in Linux. 
 # 	does not matter on macOSX
 SET (ADDITIONAL_REQUIRED_LIBRARIES 
-	${clapack}
+  #${clapack}
 	${accelerate}
 )
 

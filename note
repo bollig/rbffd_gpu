@@ -7,3 +7,20 @@
 
 - Domain need to load grid
     - Loaded grid
+
+
+In addition to my idea for scaling epsilon as a function of the minimum enclosing sphere/circle I think I have a good idea for hyperviscosity. 
+
+The reason my solutions on the sphere fail for the CVT meshes is in part due to uncertainty on how accurate a stable solution could be (need to check), and partly due to hyperviscosity. Because the nodes are not distributed the same as MD, the eigenvalues are perturbed which means the likelihood of hyperviscosity working the same as the md nodes is low. What I suggest is that we take hyperviscosity of the form
+
+du/dt = diag(vel_u) D_lambda u + diag(vel_v) D_theta u - H u 
+
+and rewrite it as 
+
+du/dt = diag(vel_u) (D_lambda u - H_lambda u) + diag(vel_v) (D_theta u - H_theta u)
+
+This will allow us to tune parameters for H_theta in the vortex roll-up case that are 
+    1) Velocity scaling independent
+    2) Reusable for the cosine bell problem
+Then we can tune the H_lambda for the cosine bell. What this would really show is that hyperviscosity can be used to smooth the DMs BEFORE velocity scaling, which means we could change the velocity parameter without retuning HV. I hope this works!
+

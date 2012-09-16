@@ -24,3 +24,23 @@ This will allow us to tune parameters for H_theta in the vortex roll-up case tha
     2) Reusable for the cosine bell problem
 Then we can tune the H_lambda for the cosine bell. What this would really show is that hyperviscosity can be used to smooth the DMs BEFORE velocity scaling, which means we could change the velocity parameter without retuning HV. I hope this works!
 
+
+
+
+
+-----------------------------
+
+- Need VCL RK4 working
+    -- NO support for queues yet. Assume all work is in one queue. 
+    -- That means we need RK4 simple (saxpys)
+    -- Then we can assume we have vector views, build RK4 subset saxpys (NO overlap) 
+    -- Benchmark and compare performance of Cosine Bell in thesis. 
+    -- Add overlapping comm/comp (requires rewriting VCL with queues).  
+    -- Benchmark and compare performance in thesis.
+
+- Extend GMRES with overlap
+    -- Benchmark current for thesis
+    -- Overlap comm/comp
+    -- Benchmark for thesis
+
+----> Thesis introduces OVERLAPPED comm/comp AND GPU. Most other libraries CANNOT match this feature because MPI-2 does not support overlapping comm and comp in MPI_Alltoallv, but MPI-3 would add this. We could use isend/irecv to program a custom overlapped comm/comp.

@@ -50,6 +50,9 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
         // IN and OUT
         VCL_VEC_t* gpu_solution[8];
 
+        // The solution used within this class
+        UBLAS_VEC_t* cpu_solution;
+
         std::string kernel_source_file;
 
         int gpuType; 
@@ -82,6 +85,8 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
             this->setupTimers();
             this->allocateGPUMem(); 
         }
+
+        virtual void solve(VCL_VEC_t& y_t, VCL_VEC_t& f_out, unsigned int n_stencils, unsigned int n_nodes, double t)=0; 
 
         // This will apply the weights appropriately for an explicit (del_u = L*u) or implicit (u = L^-1 del_u)
         virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes, double t) {

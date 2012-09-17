@@ -63,6 +63,7 @@ class RBFFD_VCL : public RBFFD
 
         // This should be: 
         VCL_MAT_t* getGPUWeights(DerType which) { return gpu_weights[getDerTypeIndx(which)]; }
+        VCL_MAT_t* getGPUWeights(DerTypeIndx which_i) { return gpu_weights[which_i]; }
 
 
         // FIXME: assumes size of buffers does not change (should check if it
@@ -96,6 +97,7 @@ class RBFFD_VCL : public RBFFD
 
         virtual void applyWeightsForDerivDouble(DerType which, unsigned int nb_nodes, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
+        virtual void applyWeightsForDeriv(DerType which, VCL_VEC_t& u, VCL_VEC_t& deriv, bool isChangedU=true); 
 
         // forceFinish ==> should we fire a queue.finish() and make sure all
         // tasks are completed (synchronously) before returning

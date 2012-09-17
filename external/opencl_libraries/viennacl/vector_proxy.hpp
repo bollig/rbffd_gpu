@@ -83,42 +83,14 @@ namespace viennacl
       /** @brief Convenience function, which allows to assign a vector directly to a vector range of suitable size */
       self_type & operator=(const VectorType & v) 
       {
-        assert(size() == v.size() && "Vector range and vector size mismatch!");
-        
-        if (size() > 0)
-        {
-          cl_int err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(),
-                                           v.handle().get(),     // src buffer
-                                           v_.handle().get(),    //dest buffer
-                                           0,                    // src offset
-                                           sizeof(cpu_value_type) * start(), //dest offset
-                                           sizeof(cpu_value_type) * size(),  //number of bytes to be copied
-                                           0, NULL, NULL);
-                                           
-          VIENNACL_ERR_CHECK(err);
-        }
-        
+        viennacl::linalg::assign(*this, v);
         return *this;
       }      
 
       /** @brief Convenience function, which allows to assign a vector range directly to another vector range of suitable size */
       self_type & operator=(const self_type & v) 
       {
-        assert(size() == v.size() && "Sizes of vector ranges don't match!");
-        
-        if (size() > 0)
-        {
-          cl_int err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(),
-                                           v.get().handle().get(),   // src buffer
-                                           v_.handle().get(),        //dest buffer
-                                           sizeof(cpu_value_type) * v.start(),   // src offset
-                                           sizeof(cpu_value_type) * start(),     //dest offset
-                                           sizeof(cpu_value_type) * size(),      //number of bytes to be copied
-                                           0, NULL, NULL);
-                                           
-          VIENNACL_ERR_CHECK(err);
-        }
-        
+        viennacl::linalg::assign(*this, v);
         return *this;
       }      
 
@@ -248,26 +220,32 @@ namespace viennacl
   };
   
   
+  //implement copy-CTOR for vector from vector_range:
+  
+  template <typename SCALARTYPE, unsigned int ALIGNMENT>
+  viennacl::vector<SCALARTYPE, ALIGNMENT>::vector(const vector_range< viennacl::vector<SCALARTYPE, ALIGNMENT> > & r) : size_(r.size())
+  {
+    assert(this->size() == r.size() && "Vector size mismatch!");
+    
+    if (this->size() > 0)
+    {
+      this->elements_ = viennacl::ocl::current_context().create_memory(CL_MEM_READ_WRITE, sizeof(SCALARTYPE)*internal_size());
+      
+      viennacl::linalg::assign(*this, r);
+    }
+    
+  }
+  
+  
+  
   //implement operator= for vector:
   
   template <typename SCALARTYPE, unsigned int ALIGNMENT>
   viennacl::vector<SCALARTYPE, ALIGNMENT> & 
   viennacl::vector<SCALARTYPE, ALIGNMENT>::operator=(const vector_range< viennacl::vector<SCALARTYPE, ALIGNMENT> > & r) 
   {
-    assert(this->size() == r.size() && "Vector size mismatch!");
-    
     if (this->size() > 0)
-    {
-      cl_int err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(),
-                                        r.get().handle().get(),      // src buffer
-                                        this->handle().get(),        //dest buffer
-                                        sizeof(SCALARTYPE) * r.start(),       // src offset
-                                        0,                                    //dest offset
-                                        sizeof(SCALARTYPE) * r.size(), //number of bytes to be copied
-                                        0, NULL, NULL);
-                                        
-      VIENNACL_ERR_CHECK(err);
-    }
+      viennacl::linalg::assign(*this, r);
     
     return *this;
   }
@@ -589,6 +567,22 @@ namespace viennacl
   };
   
   
+  //implement copy-CTOR for vector from vector_slice:
+  
+  template <typename SCALARTYPE, unsigned int ALIGNMENT>
+  viennacl::vector<SCALARTYPE, ALIGNMENT>::vector(const vector_slice< viennacl::vector<SCALARTYPE, ALIGNMENT> > & r) : size_(r.size())
+  {
+    if (this->size() > 0)
+    {
+      this->elements_ = viennacl::ocl::current_context().create_memory(CL_MEM_READ_WRITE, sizeof(SCALARTYPE)*internal_size());
+      
+      viennacl::linalg::assign(*this, r);
+    }
+    
+  }
+  
+  
+  
   //implement operator= for vector:
   
   template <typename SCALARTYPE, unsigned int ALIGNMENT>
@@ -694,50 +688,6 @@ namespace viennacl
   }
 
 
-  // UTILITY COPIES 
-  //------------------------ 
-    // EVAN BOLLIG:
-    // Added support to copy directly from a double array. Ignores vector length checks
-    //row_major:
-    template <typename SCALARTYPE>
-        void copy(const double* cpu_vector,
-                vector_range< vector<SCALARTYPE> > & gpu_vector_range, 
-                unsigned int copy_size)
-        {
-            if (copy_size) 
-            {
-                //we require that the size of the gpu_vector is larger or equal to the cpu-size
-                cl_int err = clEnqueueWriteBuffer(viennacl::ocl::get_queue().handle().get(),
-                        gpu_vector_range.get().handle().get(), CL_TRUE, sizeof(SCALARTYPE)*gpu_vector_range.start(),
-                        sizeof(SCALARTYPE)*copy_size,
-                        &(cpu_vector[0]), 0, NULL, NULL);
-                VIENNACL_ERR_CHECK(err);
-            }
-        }
-
-
-    // EVAN BOLLIG:
-    // Added support to copy directly to a double array. Ignores vector length checks
-    template <typename SCALARTYPE>
-        void copy(vector_range<vector<SCALARTYPE> > const & gpu_vector_range,
-                double* cpu_vector, unsigned int copy_size)
-        {
-            // LEt the assertions rest
-            // assert(cpu_vector.end() - cpu_vector.begin() >= 0);
-
-            if (copy_size)
-            {
-                cl_int err = clEnqueueReadBuffer(viennacl::ocl::get_queue().handle().get(),
-                        gpu_vector_range.get().handle().get(), CL_TRUE, sizeof(SCALARTYPE)*gpu_vector_range.start(), 
-                        sizeof(SCALARTYPE)*copy_size,
-                        &(cpu_vector[0]), 0, NULL, NULL);
-                VIENNACL_ERR_CHECK(err);
-                viennacl::ocl::get_queue().finish();
-            }
-        }
-
-
-
 
 
 
@@ -749,42 +699,6 @@ namespace viennacl
   {
     return vector_slice<VectorType>(vec, s1);
   }
-
-
-    ////////// operations /////////////
-    // EVAN BOLLIG Added support for oeprator * required for GMRES
-    /** @brief Operator overload for the expression alpha * v1, where alpha is
-     * a host scalar (float or double) and v1 is a ViennaCL vector.
-     *
-     * @param value   The host scalar (float or double)
-     * @param vec     A ViennaCL vector
-     */
-  template <typename SCALARTYPE, unsigned int A>
-      //    vector_expression< const vector<SCALARTYPE, A>, const SCALARTYPE, op_prod>
-      vector<SCALARTYPE, A> operator * (SCALARTYPE const & value, vector_range< vector<SCALARTYPE, A> > const & vec)
-      {
-          vector<SCALARTYPE, A> temp1 = vec; 
-          return vector_expression< const vector<SCALARTYPE, A>, const SCALARTYPE, op_prod>(temp1, value);
-      }
-
-
-    /** @brief Operator overload for the subtraction of a vector expression from the left, e.g. alpha * vec1 + vec2. Here, alpha * vec1 is wrapped into a vector_expression and then added to vec2.
-    *
-    * @param proxy   Left hand side vector expression
-    * @param vec     Right hand side vector
-    * EVAN BOLLIG
-    * Added vector_range - vector support
-    */
-    template <typename SCALARTYPE, unsigned int A, typename LHS, typename RHS, typename OP>
-    vector<SCALARTYPE, A> operator - (vector_expression< LHS, RHS, OP> const & proxy,
-                                      vector_range< vector<SCALARTYPE, A> > const & vec)
-    {
-      assert(proxy.size() == vec.size());
-      vector<SCALARTYPE, A> result(vec.size());
-      result = proxy;
-      result -= vec;
-      return result;
-    }
 
 }
 

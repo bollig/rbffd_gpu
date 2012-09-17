@@ -99,21 +99,30 @@ namespace viennacl
         typedef long                          difference_type;
         
         const_vector_iterator() {};
+        
         /** @brief Constructor
         *   @param vec    The vector over which to iterate
         *   @param index  The starting index of the iterator
+        *   @param start  First index of the element in the vector pointed to be the iterator (for vector_range and vector_slice)
+        *   @param stride Stride for the support of vector_slice
         */        
         const_vector_iterator(vector<SCALARTYPE, ALIGNMENT> const & vec,
                               cl_uint index,
                               cl_uint start = 0,
                               vcl_ptrdiff_t stride = 1) : elements_(vec.handle()), index_(index), start_(start), stride_(stride) {};
                               
+        /** @brief Constructor for vector-like treatment of arbitrary buffers
+        *   @param elements  The buffer over which to iterate
+        *   @param index     The starting index of the iterator
+        *   @param start     First index of the element in the vector pointed to be the iterator (for vector_range and vector_slice)
+        *   @param stride    Stride for the support of vector_slice
+        */        
         const_vector_iterator(viennacl::ocl::handle<cl_mem> const & elements,
                               cl_uint index,
                               cl_uint start = 0,
                               vcl_ptrdiff_t stride = 1) : elements_(elements), index_(index), start_(start), stride_(stride) {};
 
-        
+        /** @brief Dereferences the iterator and returns the value of the element. For convenience only, performance is poor due to OpenCL overhead! */
         value_type operator*(void) const 
         { 
            value_type result;
@@ -137,7 +146,10 @@ namespace viennacl
         self_type operator+(difference_type diff) const { return self_type(elements_, index_ + diff * stride_, start_, stride_); }
         
         //std::size_t index() const { return index_; }
+        /** @brief Offset of the current element index with respect to the beginning of the buffer */
         std::size_t offset() const { return start_ + index_ * stride_; }
+        
+        /** @brief Index increment in the underlying buffer when incrementing the iterator to the next element */
         std::size_t stride() const { return stride_; }
         viennacl::ocl::handle<cl_mem> const & handle() const { return elements_; }
 
@@ -285,56 +297,12 @@ namespace viennacl
           VIENNACL_ERR_CHECK(err);
         }
       }
-
-      /** @brief The copy constructor
-       * EVAN BOLLIG
-       * Added a copy constructor for vector ranges so we can easily
-       * interchange. This will resize the vector to match the range and create
-       * a new copy of the data
-       * Similar to operator=(vector_range) 
-       */
-      vector(const vector_range< vector<SCALARTYPE, ALIGNMENT> > & vec) :
-          size_(vec.size())
-        {
-            viennacl::linalg::kernels::vector<SCALARTYPE, 1>::init(); 
-                
-                if (size() != 0)
-                {
-                    elements_ = viennacl::ocl::current_context().create_memory(CL_MEM_READ_WRITE, sizeof(SCALARTYPE)*internal_size());
-                        cl_int err;
-                        err = clEnqueueCopyBuffer(viennacl::ocl::get_queue().handle().get(), 
-                                vec.get().handle().get(), // src
-                                elements_.get(),          // dest
-                                sizeof(SCALARTYPE)*vec.start(), // src offset
-                                0,  // dest offset
-                                sizeof(SCALARTYPE)*internal_size(), 
-                                0, NULL, NULL);
-                        //assert(err == CL_SUCCESS);
-                        VIENNACL_ERR_CHECK(err);
-                }
-        }
-
-      /** @brief The copy constructor
-       * EVAN BOLLIG
-       * Added a copy constructor for vector slices so we can easily
-       * interchange. This will resize the vector to match the slice and create
-       * a new copy of the data
-       * Similar to operator=(vector_slice) 
-       */
-      vector(const vector_slice< vector<SCALARTYPE, ALIGNMENT> > & vec) :
-          size_(vec.size())
-        {
-            viennacl::linalg::kernels::vector<SCALARTYPE, 1>::init(); 
-                
-                if (size() != 0)
-                {
-                    elements_ = viennacl::ocl::current_context().create_memory(CL_MEM_READ_WRITE, sizeof(SCALARTYPE)*internal_size());
-                    // reuse the assign command Karl implemented for (vector = slice) 
-                    viennacl::linalg::assign(*this, vec);
-                }
-        }
-
-
+      
+      // copy-create vector range or vector slice (implemented in vector_proxy.hpp)
+      vector(const vector_range<self_type> &);
+      vector(const vector_slice<self_type> &);
+      
+      
 
       /** @brief Assignment operator. This vector is resized if 'vec' is of a different size.
       */
@@ -948,6 +916,22 @@ namespace viennacl
         return *this;
       }
 
+      /** @brief Inplace addition of a vector with a range
+      */
+      self_type & operator += (const vector_range<self_type> & vec)
+      {
+        viennacl::linalg::inplace_add(*this, vec);
+        return *this;
+      }
+
+      /** @brief Inplace addition of a vector with a slice
+      */
+      self_type & operator += (const vector_slice<self_type> & vec)
+      {
+        viennacl::linalg::inplace_add(*this, vec);
+        return *this;
+      }
+      
       /** @brief Inplace addition of a scaled vector, i.e. v1 += alpha * v2, where alpha is a GPU scalar
       */
       self_type & operator += (const vector_expression< const self_type,
@@ -988,6 +972,22 @@ namespace viennacl
         return *this;
       }
 
+      /** @brief Inplace addition of a vector with a range
+      */
+      self_type & operator -= (const vector_range<self_type> & vec)
+      {
+        viennacl::linalg::inplace_sub(*this, vec);
+        return *this;
+      }
+
+      /** @brief Inplace addition of a vector with a slice
+      */
+      self_type & operator -= (const vector_slice<self_type> & vec)
+      {
+        viennacl::linalg::inplace_sub(*this, vec);
+        return *this;
+      }
+      
       /** @brief Inplace subtraction of a scaled vector, i.e. v1 -= alpha * v2, where alpha is a GPU scalar
       */
       self_type & operator -= (const vector_expression< const self_type,

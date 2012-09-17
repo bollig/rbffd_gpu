@@ -52,6 +52,12 @@ namespace viennacl
       
       ////////// operator= //////////////////////////
       
+      matrix_range<MatrixType> & operator = (const matrix_range<MatrixType> & other) 
+      {
+        viennacl::linalg::assign(*this, other);
+        return *this;
+      }
+      
       template <typename MatrixType2>
       matrix_range<MatrixType> & operator = (const MatrixType2 & other) 
       {
@@ -65,7 +71,7 @@ namespace viennacl
                                                                       MatrixType2,
                                                                       op_prod > & proxy) 
       {
-        viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this);
+        viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this, 1.0, 0.0);
         return *this;
       }
       
@@ -92,7 +98,19 @@ namespace viennacl
 
       ////////// operator+= //////////////////////////
 
+      matrix_range<MatrixType> & operator += (MatrixType const & other)
+      {
+        viennacl::linalg::inplace_add(*this, other);
+        return *this;
+      }
+      
       matrix_range<MatrixType> & operator += (matrix_range<MatrixType> const & other)
+      {
+        viennacl::linalg::inplace_add(*this, other);
+        return *this;
+      }
+
+      matrix_range<MatrixType> & operator += (matrix_slice<MatrixType> const & other)
       {
         viennacl::linalg::inplace_add(*this, other);
         return *this;
@@ -103,26 +121,38 @@ namespace viennacl
                                                                        MatrixType2,
                                                                        op_prod > & proxy)
       {
-        MatrixType temp = proxy;
-        viennacl::linalg::inplace_add(*this, temp);
+        viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this, 1.0, 1.0);
         return *this;
       }
       
       
       ////////// operator-= //////////////////////////
+
+      matrix_range<MatrixType> & operator -= (MatrixType const & other)
+      {
+        viennacl::linalg::inplace_sub(*this, other);
+        return *this;
+      }
+      
       matrix_range<MatrixType> & operator -= (matrix_range<MatrixType> const & other)
       {
         viennacl::linalg::inplace_sub(*this, other);
         return *this;
       }
+
+      matrix_range<MatrixType> & operator -= (matrix_slice<MatrixType> const & other)
+      {
+        viennacl::linalg::inplace_sub(*this, other);
+        return *this;
+      }
+
       
       template <typename MatrixType1, typename MatrixType2>
       matrix_range<MatrixType> & operator -= (const matrix_expression< MatrixType1,
                                                                        MatrixType2,
                                                                        op_prod > & proxy)
       {
-        MatrixType temp = proxy;
-        viennacl::linalg::inplace_sub(*this, temp);
+        viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this, -1.0, 1.0);
         return *this;
       }
 
@@ -504,6 +534,12 @@ namespace viennacl
       size_type size2() const { return col_slice_.size(); }
       
       ////////// operator= //////////////////////////
+
+      matrix_slice<MatrixType> & operator = (const matrix_slice<MatrixType> & other) 
+      {
+        viennacl::linalg::assign(*this, other);
+        return *this;
+      }
       
       template <typename MatrixType2>
       matrix_slice<MatrixType> & operator = (const MatrixType2 & other) 
@@ -518,7 +554,7 @@ namespace viennacl
                                                                       MatrixType2,
                                                                       op_prod > & proxy) 
       {
-        viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this);
+        viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this, 1.0, 0.0);
         return *this;
       }
       
@@ -545,6 +581,18 @@ namespace viennacl
 
       ////////// operator+= //////////////////////////
 
+      matrix_slice<MatrixType> & operator += (MatrixType const & other)
+      {
+        viennacl::linalg::inplace_add(*this, other);
+        return *this;
+      }
+      
+      matrix_slice<MatrixType> & operator += (matrix_range<MatrixType> const & other)
+      {
+        viennacl::linalg::inplace_add(*this, other);
+        return *this;
+      }
+
       matrix_slice<MatrixType> & operator += (matrix_slice<MatrixType> const & other)
       {
         viennacl::linalg::inplace_add(*this, other);
@@ -556,13 +604,24 @@ namespace viennacl
                                                                        MatrixType2,
                                                                        op_prod > & proxy)
       {
-        MatrixType temp = proxy;
-        viennacl::linalg::inplace_add(*this, temp);
+        viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this, 1.0, 1.0);
         return *this;
       }
       
       
       ////////// operator-= //////////////////////////
+      matrix_slice<MatrixType> & operator -= (MatrixType const & other)
+      {
+        viennacl::linalg::inplace_sub(*this, other);
+        return *this;
+      }
+      
+      matrix_slice<MatrixType> & operator -= (matrix_range<MatrixType> const & other)
+      {
+        viennacl::linalg::inplace_sub(*this, other);
+        return *this;
+      }
+
       matrix_slice<MatrixType> & operator -= (matrix_slice<MatrixType> const & other)
       {
         viennacl::linalg::inplace_sub(*this, other);
@@ -574,8 +633,7 @@ namespace viennacl
                                                                        MatrixType2,
                                                                        op_prod > & proxy)
       {
-        MatrixType temp = proxy;
-        viennacl::linalg::inplace_sub(*this, temp);
+        viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this, -1.0, 1.0);
         return *this;
       }
 

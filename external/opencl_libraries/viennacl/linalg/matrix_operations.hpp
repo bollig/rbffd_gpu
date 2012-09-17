@@ -440,31 +440,24 @@ namespace viennacl
                                          op_prod >(proxy, vec);
     }
 
-    /** @brief Unwraps the transposed matrix proxy and forwards to trans_prod_impl()
-    */
-    template<class SCALARTYPE, typename F, unsigned int ALIGNMENT, unsigned int VECTOR_ALIGNMENT>
-    void prod_impl(const viennacl::matrix_expression< const matrix<SCALARTYPE, F, ALIGNMENT>,
-                                                      const matrix<SCALARTYPE, F, ALIGNMENT>,
-                                                      op_trans> & mat,
-                    const viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & vec, 
-                          viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & result)
-    {
-      trans_prod_impl(mat.lhs(), vec, result);
-    }
     
     /** @brief Carries out matrix-vector multiplication with a transposed matrix
     *
     * Implementation of the convenience expression result = trans(mat) * vec;
     *
-    * @param mat    The matrix
-    * @param vec    The vector
-    * @param result The result vector
+    * @param mat_trans  The transposed matrix proxy
+    * @param vec        The vector
+    * @param result     The result vector
     */
     template<class SCALARTYPE, typename F, unsigned int ALIGNMENT, unsigned int VECTOR_ALIGNMENT>
-    void trans_prod_impl(const matrix<SCALARTYPE, F, ALIGNMENT> & mat,
-                          const viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & vec, 
-                                viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & result)
+    void prod_impl(const viennacl::matrix_expression< const matrix<SCALARTYPE, F, ALIGNMENT>,
+                                                      const matrix<SCALARTYPE, F, ALIGNMENT>,
+                                                      op_trans> & mat_trans,
+                    const viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & vec, 
+                          viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & result)
     {
+      const matrix<SCALARTYPE, F, ALIGNMENT> & mat = mat_trans.lhs();
+      
       assert(mat.size1() == vec.size());  //remember: mat is transposed!
       // Inplace matrix-vector products like x = prod(A, x) are currently illegal: Introduce a temporary like y = prod(A, x); x = y; instead
       assert(vec.handle().get() != result.handle().get() && "No direct inplace matrix-vector product possible. Introduce a temporary!");
@@ -491,9 +484,6 @@ namespace viennacl
     }
 
 
-
-
-
     //
     /////////////////////////   matrix-matrix products /////////////////////////////////
     //
@@ -501,10 +491,12 @@ namespace viennacl
     namespace detail
     {
       // C = A * B and possibly transposed variants
-      template <typename T1, typename T2, typename T3 >
+      template <typename T1, typename T2, typename T3, typename ScalarType >
       void prod_slow_kernel(const T1 & A, 
                             const T2 & B, 
                             T3 & C,
+                            ScalarType alpha,
+                            ScalarType beta,
                             std::string kernel_name)
       {
         typedef typename viennacl::result_of::cpu_value_type< typename T1::value_type >::type   cpu_value_type;
@@ -520,10 +512,10 @@ namespace viennacl
         k.local_work_size(0, 16);
         k.local_work_size(1, 16);
         
-        cpu_value_type alpha(1);
-        cpu_value_type beta(0);
+        cpu_value_type cl_alpha = static_cast<cpu_value_type>(alpha);
+        cpu_value_type cl_beta  = static_cast<cpu_value_type>(beta);
         
-        viennacl::ocl::enqueue(k(alpha,
+        viennacl::ocl::enqueue(k(cl_alpha,
                                  viennacl::traits::handle(A), 
                                         cl_uint(viennacl::traits::start1(A)),           cl_uint(viennacl::traits::start2(A)), 
                                         cl_uint(viennacl::traits::stride1(A)),             cl_uint(viennacl::traits::stride2(A)),
@@ -534,7 +526,7 @@ namespace viennacl
                                         cl_uint(viennacl::traits::stride1(B)),             cl_uint(viennacl::traits::stride2(B)),
                                         cl_uint(viennacl::traits::size1(B)),            cl_uint(viennacl::traits::size2(B)),
                                         cl_uint(viennacl::traits::internal_size1(B)),   cl_uint(viennacl::traits::internal_size2(B)),
-                                 beta,
+                                 cl_beta,
                                  viennacl::traits::handle(C), 
                                         cl_uint(viennacl::traits::start1(C)),           cl_uint(viennacl::traits::start2(C)), 
                                         cl_uint(viennacl::traits::stride1(C)),             cl_uint(viennacl::traits::stride2(C)),
@@ -545,10 +537,12 @@ namespace viennacl
       }
       
       // C = A * B, using fast kernel
-      template <typename T1, typename T2, typename T3 >
+      template <typename T1, typename T2, typename T3, typename ScalarType >
       void prod_fast_kernel(const T1 & A, 
                             const T2 & B, 
                             T3 & C,
+                            ScalarType alpha,
+                            ScalarType beta,
                             std::string kernel_name)
       {
         typedef typename viennacl::result_of::cpu_value_type< typename T1::value_type >::type   cpu_value_type;
@@ -564,34 +558,36 @@ namespace viennacl
         k.local_work_size(0, 16);  //columns
         k.local_work_size(1, 4);   //rows
         
-        cpu_value_type alpha(1);
-        cpu_value_type beta(0);
+        cpu_value_type cl_alpha = static_cast<cpu_value_type>(alpha);
+        cpu_value_type cl_beta  = static_cast<cpu_value_type>(beta);
         
-        viennacl::ocl::enqueue(k(alpha,
+        viennacl::ocl::enqueue(k(cl_alpha,
                                  viennacl::traits::handle(A), 
                                         cl_uint(viennacl::traits::start1(A)),           cl_uint(viennacl::traits::start2(A)), 
-                                        cl_uint(viennacl::traits::stride1(A)),             cl_uint(viennacl::traits::stride2(A)),
+                                        cl_uint(viennacl::traits::stride1(A)),          cl_uint(viennacl::traits::stride2(A)),
                                         cl_uint(viennacl::traits::size1(A)),            cl_uint(viennacl::traits::size2(A)),
                                         cl_uint(viennacl::traits::internal_size1(A)),   cl_uint(viennacl::traits::internal_size2(A)),
                                  viennacl::traits::handle(B), 
                                         cl_uint(viennacl::traits::start1(B)),           cl_uint(viennacl::traits::start2(B)), 
-                                        cl_uint(viennacl::traits::stride1(B)),             cl_uint(viennacl::traits::stride2(B)),
+                                        cl_uint(viennacl::traits::stride1(B)),          cl_uint(viennacl::traits::stride2(B)),
                                         cl_uint(viennacl::traits::size1(B)),            cl_uint(viennacl::traits::size2(B)),
                                         cl_uint(viennacl::traits::internal_size1(B)),   cl_uint(viennacl::traits::internal_size2(B)),
-                                 beta,
+                                 cl_beta,
                                  viennacl::traits::handle(C), 
                                         cl_uint(viennacl::traits::start1(C)),           cl_uint(viennacl::traits::start2(C)), 
-                                        cl_uint(viennacl::traits::stride1(C)),             cl_uint(viennacl::traits::stride2(C)),
+                                        cl_uint(viennacl::traits::stride1(C)),          cl_uint(viennacl::traits::stride2(C)),
                                         cl_uint(viennacl::traits::size1(C)),            cl_uint(viennacl::traits::size2(C)),
                                         cl_uint(viennacl::traits::internal_size1(C)),   cl_uint(viennacl::traits::internal_size2(C))
                                 )
                               );        
       }
       
-      template <typename T1, typename T2, typename T3 >
+      template <typename T1, typename T2, typename T3, typename ScalarType >
       void prod(const T1 & A, 
                 const T2 & B, 
                 T3 & C,
+                ScalarType alpha,
+                ScalarType beta,
                 std::string fast_kernel_name,
                 std::string slow_kernel_name)
       {
@@ -599,18 +595,18 @@ namespace viennacl
             || (viennacl::traits::size2(A) < 64)
             || (viennacl::traits::size1(B) < 64) )   //there is most likely not enough to compute, rendering kernel launch overhead considerable
         {
-          prod_slow_kernel(A, B, C, slow_kernel_name);
+          prod_slow_kernel(A, B, C, alpha, beta, slow_kernel_name);
         }
         else if (   (viennacl::traits::size1(A) % 64 == 0)
                  && (viennacl::traits::size2(A) % 64 == 0)
                  && (viennacl::traits::size1(B) % 64 == 0) )   // allows the use of the fast kernel only
         {
-          prod_fast_kernel(A, B, C, fast_kernel_name);
+          prod_fast_kernel(A, B, C, alpha, beta, fast_kernel_name);
           //prod_slow_kernel(A, B, C, slow_kernel_name);
         }
         else //TODO: use four kernels
         {
-          prod_slow_kernel(A, B, C, slow_kernel_name);
+          prod_slow_kernel(A, B, C, alpha, beta, slow_kernel_name);
         }
         
       }
@@ -622,14 +618,16 @@ namespace viennacl
     * Implementation of C = prod(A, B);
     *
     */
-    template <typename T1, typename T2, typename T3 >
+    template <typename T1, typename T2, typename T3, typename ScalarType >
     typename viennacl::enable_if<    viennacl::is_matrix<T1>::value
                                   && viennacl::is_matrix<T2>::value
                                   && viennacl::is_matrix<T3>::value
                                 >::type
     prod_impl(const T1 & A, 
               const T2 & B, 
-                    T3 & C)
+                    T3 & C,
+              ScalarType alpha,
+              ScalarType beta)
     {
       assert(viennacl::traits::size1(A) == viennacl::traits::size1(C));
       assert(viennacl::traits::size2(A) == viennacl::traits::size1(B));
@@ -640,7 +638,7 @@ namespace viennacl
             && "No direct inplace matrix-matrix product possible. Introduce a temporary!");
 
       
-      detail::prod(A, B, C, "prod16_AA", "prod_AA");
+      detail::prod(A, B, C, alpha, beta, "prod16_AA", "prod_AA");
     }
 
 
@@ -650,7 +648,7 @@ namespace viennacl
     * Implementation of C = prod(trans(A), B);
     *
     */
-    template <typename T1, typename T2, typename T3 >
+    template <typename T1, typename T2, typename T3, typename ScalarType >
     typename viennacl::enable_if<    viennacl::is_matrix<T1>::value
                                   && viennacl::is_matrix<T2>::value
                                   && viennacl::is_matrix<T3>::value
@@ -659,7 +657,9 @@ namespace viennacl
                                                  const T1,
                                                  op_trans> & A, 
               const T2 & B, 
-                    T3 & C)
+                    T3 & C,
+              ScalarType alpha,
+              ScalarType beta)
     {
       //std::cout << "size2(A): " << viennacl::traits::size2(A.lhs()) << std::endl;
       //std::cout << "size1(C): " << viennacl::traits::size1(C) << std::endl;
@@ -671,7 +671,7 @@ namespace viennacl
             && viennacl::traits::handle(C).get() != viennacl::traits::handle(B).get()
             && "No direct inplace matrix-matrix product possible. Introduce a temporary!");
       
-      detail::prod(A.lhs(), B, C, "prod16_TA", "prod_TA");
+      detail::prod(A.lhs(), B, C, alpha, beta, "prod16_TA", "prod_TA");
     }
 
 
@@ -682,7 +682,7 @@ namespace viennacl
     * Implementation of C = prod(A, trans(B));
     *
     */
-    template <typename T1, typename T2, typename T3 >
+    template <typename T1, typename T2, typename T3, typename ScalarType >
     typename viennacl::enable_if<    viennacl::is_matrix<T1>::value
                                   && viennacl::is_matrix<T2>::value
                                   && viennacl::is_matrix<T3>::value
@@ -691,7 +691,9 @@ namespace viennacl
               const viennacl::matrix_expression< const T2,
                                                  const T2,
                                                  op_trans> & B,
-              T3 & C)
+                    T3 & C,
+              ScalarType alpha,
+              ScalarType beta)
     {
       assert(viennacl::traits::size1(A) == viennacl::traits::size1(C));
       assert(viennacl::traits::size2(A) == viennacl::traits::size2(B.lhs()));
@@ -701,7 +703,7 @@ namespace viennacl
             && viennacl::traits::handle(C).get() != viennacl::traits::handle(B.lhs()).get()
             && "No direct inplace matrix-matrix product possible. Introduce a temporary!");
       
-      detail::prod(A, B.lhs(), C, "prod16_AT", "prod_AT");
+      detail::prod(A, B.lhs(), C, alpha, beta, "prod16_AT", "prod_AT");
     }
 
 
@@ -711,7 +713,7 @@ namespace viennacl
     * Implementation of C = prod(trans(A), trans(B));
     *
     */
-    template <typename T1, typename T2, typename T3 >
+    template <typename T1, typename T2, typename T3, typename ScalarType >
     typename viennacl::enable_if<    viennacl::is_matrix<T1>::value
                                   && viennacl::is_matrix<T2>::value
                                   && viennacl::is_matrix<T3>::value
@@ -722,7 +724,9 @@ namespace viennacl
               const viennacl::matrix_expression< const T2,
                                                  const T2,
                                                  op_trans> & B,
-              T3 & C)
+                    T3 & C,
+              ScalarType alpha,
+              ScalarType beta)
     {
       assert(viennacl::traits::size2(A.lhs()) == viennacl::traits::size1(C));
       assert(viennacl::traits::size1(A.lhs()) == viennacl::traits::size2(B.lhs()));
@@ -732,7 +736,7 @@ namespace viennacl
             && viennacl::traits::handle(C).get() != viennacl::traits::handle(B.lhs()).get()
             && "No direct inplace matrix-matrix product possible. Introduce a temporary!");
       
-      detail::prod(A.lhs(), B.lhs(), C, "prod16_TT", "prod_TT");
+      detail::prod(A.lhs(), B.lhs(), C, alpha, beta, "prod16_TT", "prod_TT");
     }
 
 

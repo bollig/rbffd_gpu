@@ -143,12 +143,15 @@ namespace viennacl
     viennacl::scalar_expression< const viennacl::vector<ScalarType, alignment1>, 
                                  const viennacl::vector<ScalarType, alignment2>,
                                  viennacl::op_inner_prod >
-    inner_prod(viennacl::vector<ScalarType, alignment1> const & vector1, viennacl::vector<ScalarType, alignment2> const & vector2, 
+    inner_prod(viennacl::vector<ScalarType, alignment1> const & vector1,
+               viennacl::vector<ScalarType, alignment2> const & vector2, 
          typename viennacl::enable_if< viennacl::is_viennacl< typename viennacl::traits::tag_of< viennacl::vector<ScalarType, alignment1> >::type >::value
                                             >::type* dummy = 0)
     {
       //std::cout << "viennacl .. " << std::endl;
-      return viennacl::linalg::inner_prod_impl(vector1, vector2);
+      return viennacl::scalar_expression< const viennacl::vector<ScalarType, alignment1>, 
+                                          const viennacl::vector<ScalarType, alignment2>,
+                                          viennacl::op_inner_prod >(vector1, vector2);
     }
     
     template< typename VectorType >

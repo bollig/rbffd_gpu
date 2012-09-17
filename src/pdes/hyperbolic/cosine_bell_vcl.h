@@ -21,8 +21,9 @@
 // Algorithm: set result[i] <- - (v1[i] * v2[i])
 //            or  result[i] <- v1[i] * v2[i]
 //            (in MATLAB notation this is something like 'result = -(v1 .* v2)' and 'result = v1 .* v2');
-//
+// NOTE: need to allow support for double manually, no elegant way to my knowledge to do this in VCL
 const char * my_compute_program = 
+"#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n\n"
 "__kernel void elementwise_prod_neg(\n"
 "          __global const double * vec1,\n"
 "          __global const double * vec2, \n"

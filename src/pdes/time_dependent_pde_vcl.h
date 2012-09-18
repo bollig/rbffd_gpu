@@ -143,5 +143,10 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
        // We'll hide this routine because we want one based on time (see above)
         virtual void solve(std::vector<SolutionType>& y_t, std::vector<SolutionType>* f_out, unsigned int n_stencils, unsigned int n_nodes) 
         { std::cout << "[T_PDE_VCL] ERROR! SHOULD CALL THE TIME BASE SOLVE\n"; exit(EXIT_FAILURE); } 
+
+        // Do nothing for the boundary by default. Can override this in subclasses
+        virtual void enforceBoundaryConditions(VCL_VEC_t& sol, double cur_time) {
+                // NOTE: be sure to modify the sol buffer directly. 
+        }
 }; 
 #endif 

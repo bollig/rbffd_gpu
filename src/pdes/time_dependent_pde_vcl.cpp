@@ -98,7 +98,7 @@ void TimeDependentPDE_VCL::fillInitialConditions(ExactSolution* exact) {
 void TimeDependentPDE_VCL::assemble()
 {
 
-    std::cout << "*********** ASSEMBLE (Swap PingPong Solution Buffer)\n";
+//    std::cout << "*********** ASSEMBLE (Swap PingPong Solution Buffer)\n";
     tm["assemble_gpu"]->start();
     // Flip our ping pong buffers.
     // NOTE: we need to initialize into INDX_OUT
@@ -240,7 +240,7 @@ void TimeDependentPDE_VCL::advance(TimeScheme which, double delta_t) {
 //----------------------------------------------------------------------
 
 // This is the NON-Overlapped version
-void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
+void TimeDependentPDE_VCL::advanceRK4(double dt) {
 
     unsigned int nb_stencils = grid_ref.getStencilsSize();
     unsigned int nb_nodes = grid_ref.getNodeListSize();
@@ -249,8 +249,10 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
     // backup the current solution so we can perform intermediate steps
     //std::vector<double>& input_sol = this->U_G;
     VCL_VEC_t& input_sol = *(gpu_solution[INDX_IN]);
+    VCL_VEC_t& output_sol = *(gpu_solution[INDX_OUT]);
 
     //std::vector<double> s(nb_nodes, 0.);
+    VCL_VEC_t& s = *(gpu_solution[INDX_TEMP1]);
 
     //---------------------------------
     // f(t_n, y_n)
@@ -275,8 +277,8 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
     tm["rk4_eval"]->start();
     this->solve(input_sol, k1, nb_stencils, nb_nodes, cur_time);
 
-#if 0
     // ------------------- K2 ------------------------
+#if 0
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term
@@ -284,6 +286,9 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + 0.5*dt * ( k1[i] + f);
     }
+#endif
+    s = input_sol + 0.5*dt * k1;
+
     tm["rk4_eval"]->stop();
 
     // reset boundary solution
@@ -299,8 +304,9 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
     // y*(t) = y(t) + h * k2
     // but k2 = lapl[ y(t) + h/2 * k1 ] (content between [..] was computed above)
     tm["rk4_eval"]->start();
-    this->solve(s, &k2, nb_stencils, nb_nodes, cur_time+0.5*dt);
+    this->solve(s, k2, nb_stencils, nb_nodes, cur_time+0.5*dt);
 
+#if 0
     // ------------------- K3 ------------------------
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
@@ -309,6 +315,9 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + 0.5*dt * ( k2[i] + f);
     }
+#endif
+
+    s = input_sol + 0.5*dt * k2 ;
     tm["rk4_eval"]->stop();
 
     // reset boundary solution
@@ -322,8 +331,9 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
 
     //*********
     tm["rk4_eval"]->start();
-    this->solve(s, &k3, nb_stencils, nb_nodes, cur_time+0.5*dt);
+    this->solve(s, k3, nb_stencils, nb_nodes, cur_time+0.5*dt);
 
+#if 0
     // ------------------- K4 ------------------------
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
@@ -332,6 +342,8 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + dt * ( k3[i] + f);
     }
+#endif
+    s = input_sol + dt * k3;
     tm["rk4_eval"]->stop();
 
     // reset boundary solution
@@ -345,7 +357,7 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
 
     //*********
     tm["rk4_eval"]->start();
-    this->solve(s, &k4, nb_stencils, nb_nodes, cur_time+dt);
+    this->solve(s, k4, nb_stencils, nb_nodes, cur_time+dt);
     tm["rk4_eval"]->stop();
     // NOTE: No more communication is required for evaluations:
 
@@ -353,6 +365,7 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
     // FINAL STEP: y_n+1 = y_n + 1/6 * h * (k1 + 2*k2 + 2*k3 + k4)
     //
     tm["rk4_adv"]->start();
+#if 0
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term
@@ -360,19 +373,20 @@ void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
         // y(t) + h/2 * feval1
         input_sol[i] = input_sol[i] + (dt/6.) * ( k1[i] + 2.*k2[i] + 2.*k3[i] + k4[i]);
     }
+#endif
+    output_sol = input_sol + (dt/6.) * ( k1 + 2.*k2 + 2.*k3 + k4);
     tm["rk4_adv"]->stop();
 
     // Make sure any boundary conditions are met.
-    this->enforceBoundaryConditions(input_sol, cur_time+dt);
+    this->enforceBoundaryConditions(output_sol, cur_time+dt);
 
     // Ensure we have consistent values across the board
     tm["rk4_mpi_comm"]->start();
-    this->sendrecvUpdates(input_sol, "U_G");
+    this->sendrecvUpdates(output_sol, "U_G");
     tm["rk4_mpi_comm"]->stop();
 
-#endif
     tm["rk4_eval_gpu"]->stop();
-    exit(-1);
+    //exit(-1);
 }
 
 

@@ -191,7 +191,7 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
                 f_out += hv_filter; 
             }
 
-#if 1
+#if 0
             // IF we want to write details we need to copy back to host. 
             UBLAS_VEC_t U_approx(f_out.size());
             copy(f_out.begin(), f_out.end(), U_approx.begin());

@@ -56,7 +56,7 @@ void CosineBell::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>
         }
     }
 
-#if 1
+#if 0
     std::ofstream fout;
     fout.open("output/f_out.mtx");
     for (size_t i = 0; i < n_stencils; i++) {

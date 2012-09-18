@@ -161,11 +161,12 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
 
         virtual void solve(VCL_VEC_t& y_t, VCL_VEC_t& f_out, unsigned int n_stencils, unsigned int n_nodes, double t)
         {    
+#if 0
             UBLAS_VEC_t zero(n_stencils, 0.); 
             UBLAS_VEC_t ones(n_stencils, 1.); 
 //            viennacl::copy(zero.begin(), zero.end(), f_out.begin());
 //            viennacl::copy(ones.begin(), ones.end(), f_out.begin());
-
+#endif 
             // Apply DM as product
             VCL_VEC_t dh_dlambda = viennacl::linalg::prod(*(der_ref_gpu.getGPUWeights(RBFFD::LAMBDA_i)), y_t);
             VCL_VEC_t dh_dtheta  = viennacl::linalg::prod(*(der_ref_gpu.getGPUWeights(RBFFD::THETA_i)), y_t);

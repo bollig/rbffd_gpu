@@ -386,7 +386,15 @@ void TimeDependentPDE_VCL::advanceRK4(double dt) {
     tm["rk4_mpi_comm"]->stop();
 
     tm["rk4_eval_gpu"]->stop();
-    //exit(-1);
+//std::cout << "\n";
+//    std::cout << "OUTPUT_SOL = " << output_sol << std::endl;
+
+static int i = 0;
+if (i) {
+//exit(-1);
+} else { i++;}
+
+
 }
 
 

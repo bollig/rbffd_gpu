@@ -122,7 +122,7 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
         virtual void syncCPUtoGPU() {
             
             std::cout << "*************** FULL MEMCOPY DEVICE -> HOST ***************\n"; 
-            viennacl::copy(gpu_solution[INDX_OUT]->begin(), gpu_solution[INDX_OUT]->end(), &U_G[0]);            
+            viennacl::copy(gpu_solution[INDX_IN]->begin(), gpu_solution[INDX_IN]->end(), &U_G[0]);            
         }
 
         void advanceRK4(double delta_t); 

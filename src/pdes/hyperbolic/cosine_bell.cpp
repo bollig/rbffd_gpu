@@ -2,14 +2,12 @@
 #include "cosine_bell.h"
 #include "utils/geom/cart2sph.h"
 
-
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <map>
 #include <fstream>
 #include <typeinfo>
-
 
 
 // This should assemble a matrix L of weights which can be used to solve the PDE
@@ -52,23 +50,20 @@ void CosineBell::solve(std::vector<SolutionType>& u_t, std::vector<SolutionType>
 
     }
     if (useHyperviscosity) {
- #if 0
-       // Filter is ONLY applied after the rest of the RHS is evaluated
+        // Filter is ONLY applied after the rest of the RHS is evaluated
         for (unsigned int i =0; i < n_stencils; i++) {
             (*f_out)[i] += hv_filter[i];
         }
-#endif
     }
 
 #if 1
     std::ofstream fout;
     fout.open("output/f_out.mtx");
     for (size_t i = 0; i < n_stencils; i++) {
-        fout << std::setprecision(10) << dh_dlambda[i] << std::endl;
+        fout << std::setprecision(10) << (*f_out)[i] << std::endl;
     }
     fout.close();
-    std::cout << "Wrote " << "output/f_out.mtx" << std::endl;
-    exit(-1);
+exit(-1);
 #endif
 
 

@@ -25,22 +25,22 @@
 const char * my_compute_program = 
 "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n\n"
 "__kernel void elementwise_prod_neg(\n"
+"          double vel_scale,\n" 
 "          __global const double * vec1,\n"
-"          __global const double * vec2, \n"
 "          __global double * result,\n"
 "          unsigned int size) \n"
 "{ \n"
 "  for (unsigned int i = get_global_id(0); i < size; i += get_global_size(0))\n"
-"    result[i] = - vec1[i] * vec2[i];\n"
+"    result[i] *= - vel_scale * vec1[i];\n"
 "};\n\n"
 "__kernel void elementwise_prod(\n"
+"          double vel_scale,\n" 
 "          __global const double * vec1,\n"
-"          __global const double * vec2, \n"
 "          __global double * result,\n"
 "          unsigned int size) \n"
 "{ \n"
 "  for (unsigned int i = get_global_id(0); i < size; i += get_global_size(0))\n"
-"    result[i] = vec1[i] * vec2[i];\n"
+"    result[i] *= vel_scale * vec1[i];\n"
 "};\n\n";
 
 // ---------------------------------------------- END Snip
@@ -81,7 +81,10 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
                 time_for_revolution(1036800.)
 
                 {
-
+                    unsigned int n_stencils = grid_ref.getStencilsSize(); 
+                    this->vel_u = new VCL_VEC_t(n_stencils); 
+                    this->vel_v = new VCL_VEC_t(n_stencils); 
+                
                     // RADIUS OF THE BELL
                     R = a/3.;
                     // The initial velocity (NOTE: scalar in denom is 12 days in seconds)
@@ -101,9 +104,6 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
                     VCL_VEC_t hv_filter(n_stencils);  
 #endif 
 
-                    unsigned int n_stencils = grid_ref.getStencilsSize(); 
-                    this->vel_u = new VCL_VEC_t(n_stencils); 
-                    this->vel_v = new VCL_VEC_t(n_stencils); 
                 }
 
         virtual void assembleDM() {
@@ -123,13 +123,13 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
             // (Note that first all kernels need to be registered via add_kernel() before get_kernel() can be called,
             // otherwise existing references might be invalidated)
             //
-            my_kernel_mul = &(my_prog.get_kernel("elementwise_prod_neg"));
+            my_kernel_mul = &(my_prog.get_kernel("elementwise_prod"));
 
             std::cout << "----------> ViennaCL registered elementwise_prod\n";
 
             // Need to assemble a diagonal matrix containing velocity 
-            UBLAS_VEC_t vel_u_cpu(n_stencils); 
-            UBLAS_VEC_t vel_v_cpu(n_stencils); 
+            UBLAS_VEC_t vel_u_cpu(n_stencils, 0.); 
+            UBLAS_VEC_t vel_v_cpu(n_stencils, 0.); 
 
             for (unsigned int i = 0; i < n_stencils; i++) {
                 NodeType& v = grid_ref.getNode(i);
@@ -139,10 +139,8 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
                 double lambda = spherical_coords.theta; 
                 double theta = spherical_coords.phi; 
 
-                vel_u_cpu[i] =   u0 * (cos(theta) * cos(alpha) + sin(theta) * cos(lambda) * sin(alpha)); 
-                vel_u_cpu[i] /= a; 
-                vel_v_cpu[i] = - u0 * (sin(lambda) * sin(alpha));
-                vel_v_cpu[i] /= a; 
+                vel_u_cpu[i] =  ( u0 * (cos(theta) * cos(alpha) + sin(theta) * cos(lambda) * sin(alpha)) ) ;
+                vel_v_cpu[i] =  ( - u0 * (sin(lambda) * sin(alpha)) ) ;
             }
 
             this->vel_u = new VCL_VEC_t(vel_u_cpu.size());
@@ -163,6 +161,10 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
 
         virtual void solve(VCL_VEC_t& y_t, VCL_VEC_t& f_out, unsigned int n_stencils, unsigned int n_nodes, double t)
         {    
+            UBLAS_VEC_t zero(n_stencils, 0.); 
+            UBLAS_VEC_t ones(n_stencils, 1.); 
+//            viennacl::copy(zero.begin(), zero.end(), f_out.begin());
+//            viennacl::copy(ones.begin(), ones.end(), f_out.begin());
 
             // Apply DM as product
             VCL_VEC_t dh_dlambda = viennacl::linalg::prod(*(der_ref_gpu.getGPUWeights(RBFFD::LAMBDA_i)), y_t);
@@ -176,26 +178,28 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
             // Launch the kernel with 'vector_size' threads in one work group
             // Note that size_t might differ between host and device. Thus, a cast to cl_uint is necessary for the forth argument.
             //
-            viennacl::ocl::enqueue((*my_kernel_mul)(*vel_u, dh_dlambda, result_mul1, static_cast<cl_uint>(dh_dlambda.size())));  
-            viennacl::ocl::enqueue((*my_kernel_mul)(*vel_v, dh_dtheta, result_mul2, static_cast<cl_uint>(dh_dlambda.size())));  
+            viennacl::ocl::enqueue((*my_kernel_mul)(-1./a, *vel_u, dh_dlambda, static_cast<cl_uint>(dh_dlambda.size())));  
+            viennacl::ocl::enqueue((*my_kernel_mul)(-1./a, *vel_v, dh_dtheta, static_cast<cl_uint>(dh_dtheta.size())));  
 
             // Compute the dh/dt
             // dh/dt = -(vel_u * dh_dlambda) - (vel_v * dh_dtheta) 
-            f_out = (result_mul1 + result_mul2); 
+            // Note: negative out front is handled in 1/(-a) above!
+            f_out = dh_dlambda + dh_dtheta; 
 
             // Optionally add HV filter
             if (useHyperviscosity) {
-                //f_out += hv_filter; 
+                f_out += hv_filter; 
             }
 
+#if 1
             // IF we want to write details we need to copy back to host. 
             UBLAS_VEC_t U_approx(f_out.size());
-            //copy(f_out.begin(), f_out.end(), U_approx.begin());
             copy(f_out.begin(), f_out.end(), U_approx.begin());
 
             write_to_file(U_approx, "output/U_gpu.mtx"); 
-            std::cout << "ERROR\n";
+            std::cout << viennacl::linalg::norm_1(f_out) << std::endl;
             exit(-1);   
+#endif 
         }
 
         template <typename VecT>

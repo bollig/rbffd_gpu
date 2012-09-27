@@ -79,6 +79,8 @@ class PDE : public MPISendable
             delete [] rdispls; 
             delete [] recvcounts; 
             delete [] rbuf; 
+            tm.printAll();
+            tm.clear();
         }
 
         // This should assemble a matrix L of weights which can be used to solve the PDE

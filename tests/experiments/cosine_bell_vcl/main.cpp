@@ -586,6 +586,7 @@ int main(int argc, char** argv) {
             std::cout << "============== Solution Valid =============\n";
 
             delete(grid);
+            std::cout << "Deleted grid\n";
         }
 
     cout.flush();
@@ -594,17 +595,27 @@ int main(int argc, char** argv) {
     tm["cleanup"]->start();
     // Writer first so we can dump final solution
     delete(writer);
+    std::cout << "Deleted writer\n";
     delete(pde);
+    std::cout << "Deleted pde\n";
     delete(der);
+    std::cout << "Deleted der\n";
 #endif
     delete(subdomain);
+    std::cout << "Deleted subdomain\n";
     delete(settings);
+    std::cout << "Deleted settings\n";
     delete(comm_unit);
+    std::cout << "Deleted comm_unit\n";
     tm["cleanup"]->stop();
 
     tm["total"]->stop();
     tm.printAll();
+
+
+    std::cout << "----------------  END OF MAIN ------------------\n";
     tm.writeAllToFile();
+    tm.clear();
 
     printf("\n\nREACHED THE END OF MAIN\n\n");
 

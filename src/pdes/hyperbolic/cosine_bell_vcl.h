@@ -105,6 +105,12 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
 #endif 
 
                 }
+        virtual ~CosineBell_VCL() {
+            delete(vel_u); 
+            delete(vel_v); 
+            delete(my_kernel_mul);
+            std::cout << "CosineBell_VCL destroyed\n";
+        }
 
         virtual void assembleDM() {
 

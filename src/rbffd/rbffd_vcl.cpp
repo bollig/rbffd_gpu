@@ -177,6 +177,7 @@ void RBFFD_VCL::clearCPUNodes() {
 
 
 void RBFFD_VCL::clearCPUWeights() {
+    std::cout << "CLEAR CPU WEIGHTS CALLED\n";
     // Clear out buffer. No need to keep it since this should only happen once
     // NOTE: make sure we delete only the single or double precision cpu side buffers;
     int iterator = computedTypes;
@@ -185,7 +186,7 @@ void RBFFD_VCL::clearCPUWeights() {
     // Iterate until we get all 0s. This allows SOME shortcutting.
     while (iterator) {
         if (computedTypes & getDerType(which)) {
-            delete [] cpu_weights_d[which];
+            delete(cpu_weights_d[which]);
             type_i+=1;
         }
         iterator >>= 1;
@@ -230,6 +231,7 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
         // Iterate until we get all 0s. This allows SOME shortcutting.
         while (iterator) {
             if (computedTypes & getDerType(which)) {
+                std::cout << "Allocating CPU_WEIGHTS_D["<< which << "]\n";
                 cpu_weights_d[which] = new UBLAS_MAT_t(nb_stencils, nb_nodes, nb_stencils*n );
 
                 // Weights should be in csr format
@@ -254,6 +256,7 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
         }
 
         if (forceFinish) {
+            std::cout << "CLEARING OUT THE WEIGHTS\n";
             this->clearCPUWeights();
             deleteCPUWeightsBuffer = false;
         } else {

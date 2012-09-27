@@ -58,6 +58,9 @@ class RBFFD_VCL : public RBFFD
         virtual ~RBFFD_VCL() { 
             if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} 
             if (deleteCPUNodesBuffer) { this->clearCPUNodes();}
+            this->tm.printAll(); 
+            this->tm.clear();
+            std::cout << "RBFFD_VCL destroyed\n";
         }; 
 
 

@@ -72,6 +72,11 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
             cpu_dirty(0), assembled(false),
             gpuType(gpu_type)
         {;}
+        virtual ~TimeDependentPDE_VCL() {
+                this->tm.printAll(); 
+                this->tm.clear(); 
+                std::cout << "TPDE_VCL destroyed\n";
+        }
 
         void setGPUType(int type) {
             gpuType=type;

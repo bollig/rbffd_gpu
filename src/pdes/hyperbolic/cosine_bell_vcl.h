@@ -84,7 +84,7 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
                     unsigned int n_stencils = grid_ref.getStencilsSize(); 
                     this->vel_u = new VCL_VEC_t(n_stencils); 
                     this->vel_v = new VCL_VEC_t(n_stencils); 
-                
+
                     // RADIUS OF THE BELL
                     R = a/3.;
                     // The initial velocity (NOTE: scalar in denom is 12 days in seconds)
@@ -164,8 +164,8 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
 #if 0
             UBLAS_VEC_t zero(n_stencils, 0.); 
             UBLAS_VEC_t ones(n_stencils, 1.); 
-//            viennacl::copy(zero.begin(), zero.end(), f_out.begin());
-//            viennacl::copy(ones.begin(), ones.end(), f_out.begin());
+            //            viennacl::copy(zero.begin(), zero.end(), f_out.begin());
+            //            viennacl::copy(ones.begin(), ones.end(), f_out.begin());
 #endif 
             // Apply DM as product
             VCL_VEC_t dh_dlambda = viennacl::linalg::prod(*(der_ref_gpu.getGPUWeights(RBFFD::LAMBDA_i)), y_t);

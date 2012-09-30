@@ -52,8 +52,8 @@ void TimeDependentPDE_VCL::fillInitialConditions(ExactSolution* exact) {
     // EB: this is unnecessary
     // this->sendrecvUpdates(U_G, "U_G");
 
-    unsigned int nb_nodes = grid_ref.G.size();
-    unsigned int solution_mem_bytes = nb_nodes*this->getFloatSize();
+    //unsigned int nb_nodes = grid_ref.G.size();
+    //unsigned int solution_mem_bytes = nb_nodes*this->getFloatSize();
 
     std::cout << "[TimeDependentPDE_VCL] Writing initial conditions to GPU\n";
     // Fill GPU mem with initial solution
@@ -140,6 +140,7 @@ int TimeDependentPDE_VCL::sendrecvBuf(VCL_VEC_t* buf, std::string label) {
 
 // General routine to copy the set R indices vec up to gpu_vec
 void TimeDependentPDE_VCL::syncSetRDouble(std::vector<SolutionType>& vec, VCL_VEC_t* gpu_vec) {
+#if 0
     //unsigned int nb_nodes = grid_ref.getNodeListSize();
     //unsigned int set_G_size = grid_ref.G.size();
     unsigned int set_Q_size = grid_ref.Q.size();
@@ -167,7 +168,6 @@ void TimeDependentPDE_VCL::syncSetRDouble(std::vector<SolutionType>& vec, VCL_VE
 
 
     }
-#if 0
 
     for (unsigned int i = offset_to_set_O - 5; i < set_G_size; i++) {
         std::cout << "vec[" << set_O_size << "," << i << "] = " << vec[i] << std::endl;
@@ -178,6 +178,7 @@ void TimeDependentPDE_VCL::syncSetRDouble(std::vector<SolutionType>& vec, VCL_VE
 //----------------------------------------------------------------------
 
 void TimeDependentPDE_VCL::syncSetODouble(std::vector<SolutionType>& vec, VCL_VEC_t* gpu_vec) {
+#if 0
     //    std::cout << "Download from GPU\n";
     //unsigned int nb_nodes = grid_ref.getNodeListSize();
     //unsigned int set_G_size = grid_ref.G.size();
@@ -202,6 +203,7 @@ void TimeDependentPDE_VCL::syncSetODouble(std::vector<SolutionType>& vec, VCL_VE
         //               cpu_view_O = gpu_view_O
         //queue.finish();
     }
+#endif
 }
 
 //----------------------------------------------------------------------

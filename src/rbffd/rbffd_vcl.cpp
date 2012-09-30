@@ -207,7 +207,7 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
     if (weightsModified) {
 
         tm["sendWeights"]->start();
-        unsigned int weights_mem_size = gpu_nnz * sizeof(double);
+        //unsigned int weights_mem_size = gpu_nnz * sizeof(double);
 
         std::cout << "[RBFFD_VCL] Writing weights to GPU memory\n";
 

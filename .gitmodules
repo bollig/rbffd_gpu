@@ -10,3 +10,6 @@
 [submodule "external/boost-numeric-bindings"]
 	path = external/boost-numeric-bindings
 	url = http://git.tiker.net/trees/boost-numeric-bindings.git
+[submodule "external/opencl_libraries/viennacl"]
+	path = external/opencl_libraries/viennacl
+	url = git@github.com:bollig/viennacl.git

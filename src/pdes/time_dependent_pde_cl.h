@@ -46,7 +46,7 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // K1, K2, K3 and K4
         //cl::Buffer gpu_feval[4];
         // IN and OUT
-        cl::Buffer gpu_solution[8];
+        cl::Buffer* gpu_solution[8];
 
 
         // RK4 requires 4 substeps with a barrier between each. 
@@ -94,6 +94,10 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
             this->tm.clear(); 
 
             // TODO: cleanup buffers and kernels. 
+        
+            for (int i = 0; i < 8; i++) {
+                if (gpu_solution[i] != NULL) {  delete(gpu_solution[i]); }
+            }
 
             std::cout << "TPDE_CL Destroyed\n";
         }
@@ -137,15 +141,15 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         //  MPI+GPU related properties and routines
         // --------------------------------------
     protected:
-        virtual int sendrecvBuf(cl::Buffer& buf, std::string label=""); 
+        virtual int sendrecvBuf(cl::Buffer* buf, std::string label=""); 
 
         // Sync set R from the vec into the gpu_vec (host to device)
-        void syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec); 
-        void syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec);
+        void syncSetRSingle(std::vector<SolutionType>& vec, cl::Buffer* gpu_vec); 
+        void syncSetRDouble(std::vector<SolutionType>& vec, cl::Buffer* gpu_vec);
 
         // Sync set O from the gpu_vec to the vec (device to host) 
-        void syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec); 
-        void syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer& gpu_vec); 
+        void syncSetOSingle(std::vector<SolutionType>& vec, cl::Buffer* gpu_vec); 
+        void syncSetODouble(std::vector<SolutionType>& vec, cl::Buffer* gpu_vec); 
 
         // Sync the solution from GPU to the CPU (device to host)
         // NOTE: copies FULL solution to CPU.
@@ -177,12 +181,12 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         // For example, if set D starts at index 15 and is 5 elements wide,
         // then call n_stencils_in_set=5, offset_to_set=15 (this routine
         // calculates the BYTE offset on its own. 
-        void launchStepKernel( double dt, cl::Buffer& sol_in, cl::Buffer& deriv_sol, cl::Buffer& sol_out, unsigned int n_stencils_in_set, unsigned int offset_to_set);
-        void launchEulerKernel( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double dt, cl::Buffer& sol_in, cl::Buffer& sol_out);
+        void launchStepKernel( double dt, cl::Buffer* sol_in, cl::Buffer* deriv_sol, cl::Buffer* sol_out, unsigned int n_stencils_in_set, unsigned int offset_to_set);
+        void launchEulerKernel( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double dt, cl::Buffer* sol_in, cl::Buffer* sol_out);
 
-        void launchRK4_classic_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale);
-        void launchRK4_block_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer& u_in, cl::Buffer& u_plus_scaled_k_in,  cl::Buffer& k_out,  cl::Buffer& u_plus_scaled_k_out, double substep_scale);
-        void launchRK4_adv( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, cl::Buffer& u_in, cl::Buffer& k1, cl::Buffer k2, cl::Buffer& k3, cl::Buffer& k4, cl::Buffer& u_out);
+        void launchRK4_classic_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer* u_in, cl::Buffer* u_plus_scaled_k_in,  cl::Buffer* k_out,  cl::Buffer* u_plus_scaled_k_out, double substep_scale);
+        void launchRK4_block_eval( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, double adjusted_t, double dt, cl::Buffer* u_in, cl::Buffer* u_plus_scaled_k_in,  cl::Buffer* k_out,  cl::Buffer* u_plus_scaled_k_out, double substep_scale);
+        void launchRK4_adv( unsigned int offset_to_set, unsigned int nb_stencils_to_compute, cl::Buffer* u_in, cl::Buffer* k1, cl::Buffer* k2, cl::Buffer* k3, cl::Buffer* k4, cl::Buffer* u_out);
 
         virtual std::string className() {return "heat_cl";}
 

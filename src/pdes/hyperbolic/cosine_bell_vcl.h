@@ -115,7 +115,7 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
         virtual void assembleDM() {
 
             unsigned int n_stencils = grid_ref.getStencilsSize(); 
-            unsigned int n_nodes = grid_ref.getNodeListSize(); 
+            //unsigned int n_nodes = grid_ref.getNodeListSize(); 
 
             //
             // Set up the OpenCL program given in my_compute_kernel:

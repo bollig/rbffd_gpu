@@ -69,6 +69,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} 
             if (deleteCPUNodesBuffer) { this->clearCPUNodes();}
             if (deleteCPUStencilsBuffer) { this->clearCPUStencils();}
+            std::cout << "RBFFD_CL Destroyed\n";
         }; 
 
 

@@ -89,6 +89,15 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
             gpuType(gpu_type)
         {;}
 
+        virtual ~TimeDependentPDE_CL() {
+            this->tm.printAll(); 
+            this->tm.clear(); 
+
+            // TODO: cleanup buffers and kernels. 
+
+            std::cout << "TPDE_CL Destroyed\n";
+        }
+
         void setGPUType(int type) {
             gpuType=type;
         }

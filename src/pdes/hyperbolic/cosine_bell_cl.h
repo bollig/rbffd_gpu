@@ -44,6 +44,12 @@ class CosineBell_CL : public TimeDependentPDE_CL
         this->initialize("cosine_bell_solve.cl");
     }
 
+
+        virtual ~CosineBell_CL() {
+                // Do nothing.
+            std::cout << "CosineBell_CL Destroyed\n";
+        }
+
         virtual void enforceBoundaryConditions(std::vector<SolutionType>& y_t, double t) { 
             //DO NOTHING;
         }

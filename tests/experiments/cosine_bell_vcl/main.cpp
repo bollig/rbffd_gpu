@@ -371,7 +371,7 @@ int main(int argc, char** argv) {
 
     TimeDependentPDE* pde;
 
-    if (use_gpu) {
+    if (use_gpu > 2) {
         pde = new CosineBell_VCL(subdomain, (RBFFD_VCL*)der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, use_gpu, useHyperviscosity, true);
     } else if (use_gpu) {
         pde = new CosineBell_CL(subdomain, (RBFFD_CL*)der, comm_unit, sphere_radius, velocity_angle, time_for_one_revolution, use_gpu, useHyperviscosity, true);

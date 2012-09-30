@@ -90,8 +90,6 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
         {;}
 
         virtual ~TimeDependentPDE_CL() {
-            this->tm.printAll(); 
-            this->tm.clear(); 
 
             // TODO: cleanup buffers and kernels. 
         
@@ -99,6 +97,8 @@ class TimeDependentPDE_CL : public TimeDependentPDE, public CLBaseClass
                 if (gpu_solution[i] != NULL) {  delete(gpu_solution[i]); }
             }
 
+            this->tm.printAll(); 
+            this->tm.clear(); 
             std::cout << "TPDE_CL Destroyed\n";
         }
 

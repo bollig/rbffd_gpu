@@ -27,7 +27,7 @@ void debugExit(void) {
     ProjectSettings::tm["total"]->stop();
     //ProjectSettings::tm.printAll();
     ProjectSettings::tm.writeToFile("atExit_timers.log");
-    
+
     std::cout.flush();
     fflush(stdout);
 
@@ -38,19 +38,19 @@ void debugExit(void) {
 }
 
 void ProjectSettings::default_config() {
-    char ldirbuf[FILENAME_MAX]; 
+    char ldirbuf[FILENAME_MAX];
     if (getcwd(ldirbuf, sizeof(ldirbuf)) != NULL) {
-        printf("Current Working Directory: %s\n", ldirbuf); 
-        launch_dir = ldirbuf;  
+        printf("Current Working Directory: %s\n", ldirbuf);
+        launch_dir = ldirbuf;
     } else {
-        perror("Couldnt get CWD"); 
+        perror("Couldnt get CWD");
     }
-    cli_filename = launch_dir; 
-    cli_filename.append("/test.conf"); 
+    cli_filename = launch_dir;
+    cli_filename.append("/test.conf");
 }
 
 void ProjectSettings::setupTimers() {
-    tm["total"] = new EB::Timer("[AT EXIT] Total runtime until EXIT was called"); 
+    tm["total"] = new EB::Timer("[AT EXIT] Total runtime until EXIT was called");
     tm["total"]->start();
 }
 
@@ -58,7 +58,7 @@ ProjectSettings::ProjectSettings(int argc, char** argv) :
     cwd(".")
 {
     setupTimers();
-    this->default_config(); 
+    this->default_config();
 
     this->parseCommandLineArgs(argc, argv, 0);
     this->ParseFile(cli_filename);
@@ -67,8 +67,8 @@ ProjectSettings::ProjectSettings(int argc, char** argv) :
 ProjectSettings::ProjectSettings(int argc, char** argv, int mpi_rank):
     cwd(".")
 {
-    setupTimers(); 
-    this->default_config(); 
+    setupTimers();
+    this->default_config();
 
     this->parseCommandLineArgs(argc, argv, mpi_rank);
     this->ParseFile(cli_filename);
@@ -134,15 +134,15 @@ void ProjectSettings::trim( std::string& str )
 
 int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
 
-    char myhostname[FILENAME_MAX]; 
+    char myhostname[FILENAME_MAX];
     int err = gethostname(myhostname, FILENAME_MAX-1);
-    printf("[Rank %d is on host: %s\n",  my_rank, myhostname);
+    printf("[Rank %d is on host: %s (%d)]\n",  my_rank, myhostname, err);
 
     // Borrowed from Getopt-Long Example in GNU LibC manual
     int verbose_flag = 0; /* Flag set by '--verbose' and '--brief'. */
     int c;
     int hostname_flag = 0; // Non-zero if hostname is set;
-    int output_log_flag = 0; 
+    int output_log_flag = 0;
 
     while (1) {
         // Struct order: { Long_name, Arg_required?, FLAG_TO_SET, Short_name}
@@ -189,29 +189,29 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                 // we need to change stdout to the specified file,
                 // but it should be with respect to our output directory
                 // specified via to -d flag.
-                output_log_flag = 1; 
+                output_log_flag = 1;
                 char logname[256];
                 sprintf(logname, "%s.%d", optarg, my_rank);
-                log_file = logname; 
+                log_file = logname;
                 break;
             case 'c':
-                // Handle some relative and absolute paths (in case our 
+                // Handle some relative and absolute paths (in case our
                 // shell (read: submit script) cant help us on this one)
-                if (optarg[0] == '/') { 
-                    cli_filename = optarg; 
+                if (optarg[0] == '/') {
+                    cli_filename = optarg;
                 } else if (optarg[0] == '~') {
-                    cli_filename = getenv("HOME"); 
-                    cli_filename.append("/"); 
+                    cli_filename = getenv("HOME");
+                    cli_filename.append("/");
                     cli_filename.append(&optarg[1]);
                 } else if (optarg[0] == '.') {
-                    char rpat[PATH_MAX]; 
-                    //char* p = realpath(optarg,rpat); 
+                    char rpat[PATH_MAX];
+                    //char* p = realpath(optarg,rpat);
                     //printf("<--%s-->file\n", rpat);
-                    cli_filename = rpat; 
-                } else { 
-                    cli_filename = launch_dir; 
-                    cli_filename.append("/"); 
-                    cli_filename.append(optarg); 
+                    cli_filename = rpat;
+                } else {
+                    cli_filename = launch_dir;
+                    cli_filename.append("/");
+                    cli_filename.append(optarg);
                 }
                 break;
 
@@ -223,27 +223,27 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
                 // 1) copy name into logdir (global) variable = argv/RANK
                 // 2) mkdir logdir if not already made
                 // 3) set logdir in all classes that write files (Heat, Derivative)
-                char dirbuf[FILENAME_MAX]; 
+                char dirbuf[FILENAME_MAX];
 #if 0
                 if (getcwd(dirbuf, sizeof(dirbuf)) != NULL) {
-                    printf("Current dir: %s\n", dirbuf); 
-                    cwd = dirbuf;  
+                    printf("Current dir: %s\n", dirbuf);
+                    cwd = dirbuf;
                 } else {
-                    perror("Couldnt get CWD"); 
+                    perror("Couldnt get CWD");
                 }
-#endif 
+#endif
                 mkdir(optarg, 0744);
-                //printf("Made dir: %s\n", optarg); 
+                //printf("Made dir: %s\n", optarg);
                 if (chdir(optarg) != 0) {
-                    perror("Couldnt change directory!"); 
+                    perror("Couldnt change directory!");
                     exit(EXIT_FAILURE);
                 }
-                //printf("New Working Directory: %s\n", optarg); 
+                //printf("New Working Directory: %s\n", optarg);
                 if (getcwd(dirbuf, sizeof(dirbuf)) != NULL) {
-                    printf("New Working Directory: %s\n", dirbuf); 
-                    cwd = dirbuf; 
+                    printf("New Working Directory: %s\n", dirbuf);
+                    cwd = dirbuf;
                 } else {
-                    perror("Couldnt get new CWD"); 
+                    perror("Couldnt get new CWD");
                 }
                 break;
 
@@ -270,11 +270,12 @@ int ProjectSettings::parseCommandLineArgs(int argc, char** argv, int my_rank) {
         printf("verbose flag is set\n");
 
     if (output_log_flag) {
-        std::string rfile = cwd; 
-        rfile.append("/"); 
-        rfile.append(log_file); 
+        std::string rfile = cwd;
+        rfile.append("/");
+        rfile.append(log_file);
         printf("Redirecting STDOUT to file: `%s'\n", rfile.c_str());
-        FILE* temp = freopen(rfile.c_str(), "w", stdout);
+        //FILE* temp = freopen(rfile.c_str(), "w", stdout);
+        freopen(rfile.c_str(), "w", stdout);
         atexit(closeLogFile);
     }
 

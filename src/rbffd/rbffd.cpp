@@ -1,6 +1,6 @@
 #define ONE_MONOMIAL 1
-#define SCALE_BY_H 0 
-#define SCALE_OUT_BY_H 0 
+#define SCALE_BY_H 0
+#define SCALE_OUT_BY_H 0
 // Default: 0
 #define SCALE_B_BY_GAMMA 0
 
@@ -18,17 +18,17 @@ typedef RBF_Gaussian IRBF;
 
 
 // Note: dim_num here is the desired dimensions for which we calculate derivatives
-// (up to 3 right now) 
-RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice) 
-    :   
+// (up to 3 right now)
+RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RBF_Type rbf_choice)
+    :
         computedTypes(typesToCompute),
-        grid_ref(*grid), dim_num(dim_num_), rank(rank_), 
-        weightsModified(false), weightMethod(RBFFD::Direct), 
-        hv_k(2), hv_gamma(8e-4), useHyperviscosity(0), 
+        grid_ref(*grid), dim_num(dim_num_), rank(rank_),
+        weightsModified(false), weightMethod(RBFFD::Direct),
+        hv_k(2), hv_gamma(8e-4), useHyperviscosity(0),
         eigenvalues_computed(false), computeCondNums(false),
         computeSFCoperators(false), asciiWeights(0)
 {
-    int nb_rbfs = grid_ref.getNodeListSize(); 
+    int nb_rbfs = grid_ref.getNodeListSize();
 
     for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
         // Set all weights to point to NULL
@@ -41,32 +41,32 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
     derTypeStr[Z_i] = "z";
     derTypeStr[LAPL_i] = "lapl";
     derTypeStr[HV_i] = "hv";
-    derTypeStr[R_i] = "r";   // radial deriv 
+    derTypeStr[R_i] = "r";   // radial deriv
     derTypeStr[LAMBDA_i] = "lambda";   // Longitude
     derTypeStr[THETA_i] = "theta";   // Latitude
     derTypeStr[LSFC_i] = "Lsfc";   // Surface laplacian of sphere (Laplace-Beltrami)
 #if 1
-    derTypeStr[XSFC_i] = "Xsfc";   // Surface gradient (x direction) of sphere 
-    derTypeStr[YSFC_i] = "Ysfc";   // Surface gradient (y direction) of sphere 
-    derTypeStr[ZSFC_i] = "Zsfc";   // Surface gradient (z direction) of sphere 
-    derTypeStr[ALT_XSFC_i] = "Alt_Xsfc";   // Surface gradient (z direction) of sphere 
-    derTypeStr[ALT_YSFC_i] = "Alt_Ysfc";   // Surface gradient (z direction) of sphere 
-    derTypeStr[ALT_ZSFC_i] = "Alt_Zsfc";   // Surface gradient (z direction) of sphere 
-#endif 
+    derTypeStr[XSFC_i] = "Xsfc";   // Surface gradient (x direction) of sphere
+    derTypeStr[YSFC_i] = "Ysfc";   // Surface gradient (y direction) of sphere
+    derTypeStr[ZSFC_i] = "Zsfc";   // Surface gradient (z direction) of sphere
+    derTypeStr[ALT_XSFC_i] = "Alt_Xsfc";   // Surface gradient (z direction) of sphere
+    derTypeStr[ALT_YSFC_i] = "Alt_Ysfc";   // Surface gradient (z direction) of sphere
+    derTypeStr[ALT_ZSFC_i] = "Alt_Zsfc";   // Surface gradient (z direction) of sphere
+#endif
     derTypeStr[INTERP_i] = "interp";
 
 
-    weightTypeStr[0] = "direct"; 
-    weightTypeStr[1] = "contoursvd"; 
+    weightTypeStr[0] = "direct";
+    weightTypeStr[1] = "contoursvd";
 
     // each stencil has a support specified at its center
-    // but more importantly, the stencil nodes (neighbors) 
-    // also have their own supports 
+    // but more importantly, the stencil nodes (neighbors)
+    // also have their own supports
     // TODO: verify that the Domain class passes all nb_rbf support params to each subdomain
-    var_epsilon.resize(nb_rbfs); 
-    condNums.resize(nb_rbfs); 
+    var_epsilon.resize(nb_rbfs);
+    condNums.resize(nb_rbfs);
 
-    this->setupTimers(); 
+    this->setupTimers();
 }
 //--------------------------------------------------------------------
 
@@ -85,17 +85,17 @@ RBFFD::~RBFFD() {
 
 //--------------------------------------------------------------------
 
-// Compute the full set of derivative weights for all stencils 
+// Compute the full set of derivative weights for all stencils
 void RBFFD::computeAllWeightsForAllStencils() {
 
-    adjustForSFCTypes(); 
+    adjustForSFCTypes();
     printComputedTypes();
 
-    std::vector<StencilType>& st_map = grid_ref.getStencils(); 
-    unsigned int nb_st = st_map.size(); 
+    std::vector<StencilType>& st_map = grid_ref.getStencils();
+    unsigned int nb_st = st_map.size();
 
     for (unsigned int i = 0; i < nb_st; i++) {
-        this->computeAllWeightsForStencil(i); 
+        this->computeAllWeightsForStencil(i);
     }
 
     weightsModified = true;
@@ -103,23 +103,23 @@ void RBFFD::computeAllWeightsForAllStencils() {
 
 //--------------------------------------------------------------------
 void RBFFD::getStencilMultiRHS(std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h) {
-    unsigned int nn = stencil.size()+num_monomials; 
+    unsigned int nn = stencil.size()+num_monomials;
 
-    int iterator = computedTypes; 
+    int iterator = computedTypes;
     int j = 0;     // Counts the number of checks for derivative type flags
     int i = 0;      // Counts the number of types we will compute
     // Iterate until we get all 0s. This allows SOME shortcutting.
     while (iterator) {
-        if (computedTypes & getDerType(j)) {    
-            arma::mat col(nn,1); 
+        if (computedTypes & getDerType(j)) {
+            arma::mat col(nn,1);
             // Fill by column
-            this->getStencilRHS(getDerType(j), rbf_centers, stencil, num_monomials, col, h); 
+            this->getStencilRHS(getDerType(j), rbf_centers, stencil, num_monomials, col, h);
             // we want a( : , i ) where : is a vec of length nn
-            rhs.submat(0,i,nn-1,i) = col; 
-            i+= 1; 
+            rhs.submat(0,i,nn-1,i) = col;
+            i+= 1;
         }
-        iterator >>= 1; 
-        j+= 1; 
+        iterator >>= 1;
+        j+= 1;
     }
 }
 //--------------------------------------------------------------------
@@ -133,11 +133,11 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
     // n+4 = 1 + dim(3) for x,y,z
     //    arma::mat d_matrix(n+np, n+np);
     //    d_matrix.zeros(n+np,n+np);
-    d_matrix.zeros(); 
+    d_matrix.zeros();
 
     // Acceptable range: [1e-8, 1e-9]
-    //while (condNums[stencil[0]] > 1e-9) && (condNums[stencil[0]] < 1e-8)     
-    { 
+    //while (condNums[stencil[0]] > 1e-9) && (condNums[stencil[0]] < 1e-8)
+    {
         // value 0 => stencil center is at index 0 in "stencil"
         // dim_num required for RBF
         this->distanceMatrix(rbf_centers, stencil, dim_num, d_matrix, h);
@@ -172,18 +172,18 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 
 
 #if 0
-        // Compute the condition numbers of the matrices? 
+        // Compute the condition numbers of the matrices?
         if (computeCondNums)
-            //|| true) 
+            //|| true)
         {
             arma::cx_colvec eigval;
             arma::cx_mat eigvec;
             eig_gen(eigval, eigvec, d_matrix);
             //eigval.print();
-            condNums[stencil[0]] = max(eigval) / min(eigval); 
+            condNums[stencil[0]] = max(eigval) / min(eigval);
             //std::cout << "Cond(" << st_indx << ") = " << condNums[st_indx] << std::endl;
         }
-#endif 
+#endif
     }
 
     // d_matrix.print("DISTANCE MATRIX BEFORE: ");
@@ -201,17 +201,17 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
             break;
         case RBFFD::ContourSVD:
             {
-                int iterator = computedTypes; 
+                int iterator = computedTypes;
                 int i = 0;     // Counts the number of checks for derivative type flags
                 int j = 0;      // Counts the number of types we will compute
                 // Iterate until we get all 0s. This allows SOME shortcutting.
                 while (iterator) {
-                    if (computedTypes & getDerType(i)) {    
+                    if (computedTypes & getDerType(i)) {
                         this->computeWeightsForStencil_ContourSVD(getDerType(i), st_indx);
-                        j+= 1; 
+                        j+= 1;
                     }
-                    iterator >>= 1; 
-                    i+= 1; 
+                    iterator >>= 1;
+                    i+= 1;
                 }
             }
             break;
@@ -223,29 +223,29 @@ void RBFFD::computeAllWeightsForStencil(int st_indx) {
 
 void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
-    tm["computeAllWeightsOne"]->start(); 
-    StencilType& stencil = grid_ref.getStencil(st_indx); 
+    tm["computeAllWeightsOne"]->start();
+    StencilType& stencil = grid_ref.getStencil(st_indx);
     int n = stencil.size();
 #if ONE_MONOMIAL
     int np = 1;//+dim_num; // +3 for the x,y,z monomials
-#else 
+#else
     int np = 1+dim_num; // +3 for the x,y,z monomials
-#endif 
-    std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
+#endif
+    std::vector<NodeType>& rbf_centers = grid_ref.getNodeList();
 
     // Stencil center
     //Vec3& x0v = rbf_centers[stencil[0]];
 
-    int numSelectedDerTypes = getNumSelectedDerTypes(); 
+    int numSelectedDerTypes = getNumSelectedDerTypes();
 
-    arma::mat rhs = arma::mat(n+np, numSelectedDerTypes); 
-    arma::mat lhs = arma::mat(n+np, n+np); 
+    arma::mat rhs = arma::mat(n+np, numSelectedDerTypes);
+    arma::mat lhs = arma::mat(n+np, n+np);
 
     // We pass h (the minimum dist to nearest node) so we can potentially factor it out
     double h = 1.;
 #if SCALE_BY_H
-    h = grid_ref.getMaxStencilRadius(st_indx); 
-#endif 
+    h = grid_ref.getMaxStencilRadius(st_indx);
+#endif
 
     this->getStencilLHS(rbf_centers, stencil, np, lhs, h);
     this->getStencilMultiRHS(rbf_centers, stencil, np, rhs, h);
@@ -258,22 +258,22 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
     arma::mat weights_new = arma::solve(lhs, rhs); //bx*Ainv;
 
 #if 0
-    char buf[256]; 
-    sprintf(buf, "LHS(%d)=", st_indx); 
-    lhs.print(buf); 
-    sprintf(buf, "RHS(%d)=", st_indx); 
-    rhs.print(buf); 
+    char buf[256];
+    sprintf(buf, "LHS(%d)=", st_indx);
+    lhs.print(buf);
+    sprintf(buf, "RHS(%d)=", st_indx);
+    rhs.print(buf);
     weights_new.print("weights");
-#endif 
+#endif
 
     int irbf = st_indx;
 
-    int iterator = computedTypes; 
+    int iterator = computedTypes;
     int which_i = 0;
-    int i       = 0;     
+    int i       = 0;
     // Iterate until we get all 0s. This allows SOME shortcutting.
     while (iterator) {
-        if (computedTypes & getDerType(i)) {    
+        if (computedTypes & getDerType(i)) {
 
             // X,Y,Z weights should scale by 1/h
             // FIXME: for 3D, h^2
@@ -283,18 +283,18 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
             scale = 1./h;
             // LAPL should scale by 1/h^2
             if (i == LAPL_i) {
-                scale *= scale; 
+                scale *= scale;
             }
             if (i == INTERP_i) {
-                scale = 1.; 
+                scale = 1.;
             }
-#endif 
+#endif
 
 #if 1
             if (i == HV_i) {
-                scale = this->getHVScalar(); 
+                scale = this->getHVScalar();
             }
-#endif 
+#endif
 
             if (this->weights[i][irbf] == NULL) {
                 this->weights[i][irbf] = new double[n+np];
@@ -327,21 +327,21 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
             }
 #endif // DEBUG
 
-            which_i+= 1; 
+            which_i+= 1;
         }
-        iterator >>= 1; 
-        i+= 1; 
+        iterator >>= 1;
+        i+= 1;
     }
 
     if (computeSFCoperators) {
-        NodeType center = rbf_centers[irbf]; 
-        double xx = center.x(); 
-        double yy = center.y(); 
-        double zz = center.z(); 
+        NodeType center = rbf_centers[irbf];
+        double xx = center.x();
+        double yy = center.y();
+        double zz = center.z();
         for (int j = 0; j < n; j++) {
-            this->weights[ALT_XSFC_i][irbf][j] = (1-xx*xx) * this->weights[X_i][irbf][j] + (-xx*yy) * this->weights[Y_i][irbf][j] + (-xx*zz) * this->weights[Z_i][irbf][j]; 
-            this->weights[ALT_YSFC_i][irbf][j] = (-xx*yy) * this->weights[X_i][irbf][j] + (1-yy*yy) * this->weights[Y_i][irbf][j] + (-yy*zz) * this->weights[Z_i][irbf][j]; 
-            this->weights[ALT_ZSFC_i][irbf][j] = (-xx*zz) * this->weights[X_i][irbf][j] + (-yy*zz) * this->weights[Y_i][irbf][j] + (1-zz*zz) * this->weights[Z_i][irbf][j];  
+            this->weights[ALT_XSFC_i][irbf][j] = (1-xx*xx) * this->weights[X_i][irbf][j] + (-xx*yy) * this->weights[Y_i][irbf][j] + (-xx*zz) * this->weights[Z_i][irbf][j];
+            this->weights[ALT_YSFC_i][irbf][j] = (-xx*yy) * this->weights[X_i][irbf][j] + (1-yy*yy) * this->weights[Y_i][irbf][j] + (-yy*zz) * this->weights[Z_i][irbf][j];
+            this->weights[ALT_ZSFC_i][irbf][j] = (-xx*zz) * this->weights[X_i][irbf][j] + (-yy*zz) * this->weights[Y_i][irbf][j] + (1-zz*zz) * this->weights[Z_i][irbf][j];
         }
     }
 
@@ -352,10 +352,10 @@ void RBFFD::computeAllWeightsForStencil_Direct(int st_indx) {
 
 //--------------------------------------------------------------------
 
-void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h) { 
+void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, StencilType& stencil, int num_monomials, arma::mat& rhs, double h) {
 
-    int np = num_monomials; 
-    int n = stencil.size(); 
+    int np = num_monomials;
+    int n = stencil.size();
 
     // Assume single RHS
     rhs.zeros(n+np,1);
@@ -364,11 +364,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     NodeType& x0v = rbf_centers[stencil[0]];
 
     // NOTE: we want to evaluate the analytic derivs of phi at the stencil center point
-    // using every stencil RBF: 
-    //  RHS: 
+    // using every stencil RBF:
+    //  RHS:
     //  | phi_0(x_0)  phi_1(x_0) ... phi_N(x_0) |^T
-    //  LHS: 
-    //  DMat(stencil) 
+    //  LHS:
+    //  DMat(stencil)
     // CONSISTENCY: index x_"j" indices stencil center in all papers
     for (int j=0; j < n; j++) {
         // We want to evaluate every basis function. Each stencil node xjv has
@@ -379,12 +379,12 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         //
         // FIXME: allow var_epsilon[stencil[j]] (we need to pass stencil info for ghost nodes if this is to be allowed)
 #if SCALE_BY_H
-        double eps = var_epsilon[stencil[0]] * h; 
-#else 
-        double eps = var_epsilon[stencil[0]]; 
-#endif 
+        double eps = var_epsilon[stencil[0]] * h;
+#else
+        double eps = var_epsilon[stencil[0]];
+#endif
 
-        IRBF rbf(eps, dim_num); 
+        IRBF rbf(eps, dim_num);
 
         // printf("%d\t%d\n", j, stencil[j]);
         Vec3 xjv = rbf_centers[stencil[j]];
@@ -394,41 +394,41 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // This scales the stencil to the unit disk. This seems to improve the conditioning
         // when solving for weights in domains with high numbers of nodes
         Vec3 diff = (x0v - xjv) * (1./h);
-#else 
+#else
         Vec3 diff = (x0v - xjv);
-#endif 
+#endif
 
-        // yes, i know: we're swapping theta and phi here. This is consistent with 
+        // yes, i know: we're swapping theta and phi here. This is consistent with
         // Natashas paper.
         sph_coords_type spherical_coords_j = cart2sph(xjv.x(), xjv.y(), xjv.z());
-        double lambdaP_j = spherical_coords_j.theta; 
-        double thetaP_j = spherical_coords_j.phi; 
-        //double r_j = spherical_coords_j.r; 
+        double lambdaP_j = spherical_coords_j.theta;
+        double thetaP_j = spherical_coords_j.phi;
+        //double r_j = spherical_coords_j.r;
 
         sph_coords_type spherical_coords_i = cart2sph(x0v.x(), x0v.y(), x0v.z());
-        double lambdaP_i = spherical_coords_i.theta; 
-        double thetaP_i = spherical_coords_i.phi; 
-        //double r_i = spherical_coords_i.r; 
+        double lambdaP_i = spherical_coords_i.theta;
+        double thetaP_i = spherical_coords_i.phi;
+        //double r_i = spherical_coords_i.r;
 
         switch (which) {
             case X:
                 rhs(j,0) = rbf.xderiv(diff);
-                break; 
-            case Y: 
+                break;
+            case Y:
                 rhs(j,0) = rbf.yderiv(diff);
-                break; 
+                break;
             case Z:
                 rhs(j,0) = rbf.zderiv(diff);
-                break; 
-            case LAPL: 
+                break;
+            case LAPL:
                 rhs(j,0) = rbf.lapl_deriv(diff);
-                break; 
-            case INTERP: 
+                break;
+            case INTERP:
                 rhs(j,0) = rbf.eval(diff);
-                break; 
-            case R: 
+                break;
+            case R:
                 rhs(j,0) = rbf.rderiv(diff);
-                break; 
+                break;
             case LAMBDA:
                 {
                     // Stencil center is P_j = xjv
@@ -437,99 +437,99 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
                     if (fabs(dr_dlambda) > 0.) {
                         // See equation below eq 20 in Flyer Wright, Transport schemes paper
-                        rhs(j,0) = dr_dlambda * rbf.rderiv_over_r(diff); 
+                        rhs(j,0) = dr_dlambda * rbf.rderiv_over_r(diff);
                     } else {
-                        rhs(j,0) = 0.; 
+                        rhs(j,0) = 0.;
                     }
                 }   // Note: use the {'s to allow new declarations inside case
-                break; 
+                break;
             case THETA:
                 {
                     double dr_dtheta = cos(thetaP_j) * sin(thetaP_i) * cos(lambdaP_i - lambdaP_j) - sin(thetaP_j) * cos(thetaP_i);
                     if (fabs(dr_dtheta) > 0.) {
                         // See equation below eq 20 in Flyer Wright, Transport schemes paper
-                        rhs(j,0) = dr_dtheta * rbf.rderiv_over_r(diff); 
+                        rhs(j,0) = dr_dtheta * rbf.rderiv_over_r(diff);
                     } else {
-                        rhs(j,0) = 0.; 
+                        rhs(j,0) = 0.;
                     }
                 }
-                break; 
-            case LSFC: 
+                break;
+            case LSFC:
                 {
                     double r2 = diff.square();
                     // Laplace-Beltrami Operator for surface of sphere (Equation 20 in Flyer,Wright,Yuen paper)
                     rhs(j,0) = (1./4.) * ( (4.-r2)*rbf.rderiv2(diff) + (4. - 3.*r2)*rbf.rderiv_over_r(diff) );
                 }
                 break;
-            case XSFC: 
+            case XSFC:
                 {
-                // Dot product
-                double xTx_k = xjv * x0v; 
-                //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z(); 
-                double xdv = x0v.x() * xTx_k - xjv.x(); 
-                rhs(j,0) = xdv * rbf.rderiv_over_r(diff); 
+                    // Dot product
+                    double xTx_k = xjv * x0v;
+                    //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z();
+                    double xdv = x0v.x() * xTx_k - xjv.x();
+                    rhs(j,0) = xdv * rbf.rderiv_over_r(diff);
                 }
-                break; 
-            case YSFC: 
+                break;
+            case YSFC:
                 {
-                double xTx_k = xjv * x0v; 
-                //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z(); 
-                double ydv = x0v.y() * xTx_k - xjv.y(); 
-                rhs(j,0) = ydv * rbf.rderiv_over_r(diff); 
+                    double xTx_k = xjv * x0v;
+                    //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z();
+                    double ydv = x0v.y() * xTx_k - xjv.y();
+                    rhs(j,0) = ydv * rbf.rderiv_over_r(diff);
                 }
-                break; 
-            case ZSFC: 
+                break;
+            case ZSFC:
                 {
-                double xTx_k = xjv * x0v; 
-                //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z(); 
-                double zdv = x0v.z() * xTx_k - xjv.z(); 
-                rhs(j,0) = zdv * rbf.rderiv_over_r(diff);            
+                    double xTx_k = xjv * x0v;
+                    //double xTx_k = xjv.x() * x0v.x() + xjv.y() * x0v.y() + xjv.z() * x0v.z();
+                    double zdv = x0v.z() * xTx_k - xjv.z();
+                    rhs(j,0) = zdv * rbf.rderiv_over_r(diff);
                 }
                 break ;
             case ALT_XSFC:
             case ALT_YSFC:
             case ALT_ZSFC:
-                rhs(j,0) = 0; 
+                rhs(j,0) = 0;
                 break;
-            case HV: 
+            case HV:
                 // FIXME: this is only for 2D right now
                 rhs(j,0) = rbf.hyperviscosity(diff, hv_k);
-                break; 
+                break;
             default:
                 std::cout << "[RBFFD] ERROR: deriv type " << which << " is not supported yet\n" << std::endl;
-                exit(EXIT_FAILURE); 
+                exit(EXIT_FAILURE);
         }
         }
 
 
         if (np > 0) {
-            rhs(n) = 0.0; 
+            rhs(n) = 0.0;
         }
 
         if (np > 1) {
             // Analytic derivs of monomial terms
             switch (which) {
-                case X: 
+                case X:
                     if (np > 1) {
-                        rhs(n+1) = 1.; 
+                        rhs(n+1) = 1.;
                     }
-                    break; 
-                case Y: 
+                    break;
+                case Y:
                     if (np > 2) {
-                        rhs(n+2) = 1.; 
+                        rhs(n+2) = 1.;
                     }
-                    break; 
+                    break;
                 case Z:
                     if (np > 3) {
-                        rhs(n+3) = 1.; 
+                        rhs(n+3) = 1.;
                     }
-                    break; 
-                case LAPL: 
+                    break;
+                case LAPL:
                     // all 3 dims for LAPL are 0.0
-                    break; 
+                    break;
                 default:
                     std::cout << "[RBFFD] warning. np > 1 not supported for deriv type: " << which << std::endl;
-                    break; 
+                    break;
             }
         }
         //        rhs.print("RHS before");
@@ -538,7 +538,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
     //
     void RBFFD::computeWeightsForAllStencils(DerType which) {
-        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+        unsigned int nb_stencils = grid_ref.getStencilsSize();
         for (unsigned int i = 0; i < nb_stencils; i++) {
             this->computeWeightsForStencil(which, i);
         }
@@ -552,11 +552,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         switch (weightMethod) {
             case RBFFD::Direct:
                 this->computeWeightsForStencil_Direct(which, st_indx);
-                break; 
+                break;
             case RBFFD::ContourSVD:
                 this->computeWeightsForStencil_ContourSVD(which, st_indx);
                 break;
-            default: 
+            default:
                 std::cout << "Unknown method to compute weights for single stencil" << std::endl;
                 exit(EXIT_FAILURE);
         }
@@ -564,32 +564,32 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
     void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
         // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
-        tm["computeOneWeights"]->start(); 
+        tm["computeOneWeights"]->start();
 
-        StencilType stencil = grid_ref.getStencil(st_indx); 
-        std::vector<NodeType>& rbf_centers = grid_ref.getNodeList(); 
+        StencilType stencil = grid_ref.getStencil(st_indx);
+        std::vector<NodeType>& rbf_centers = grid_ref.getNodeList();
 
 #if ONE_MONOMIAL
         int np = 1;//+dim_num; // +3 for the x,y,z monomials
-#else 
+#else
         int np = 1+dim_num; // +3 for the x,y,z monomials
-#endif 
+#endif
 
         int n = stencil.size();
 
         // Stencil center
         //Vec3& x0v = rbf_centers[stencil[0]];
-        arma::mat rhs(n+np, 1); 
+        arma::mat rhs(n+np, 1);
         rhs.zeros();
-        arma::mat lhs(n+np, n+np); 
+        arma::mat lhs(n+np, n+np);
         lhs.zeros();
 
         double h = 1.;
 #if SCALE_BY_H
         h = grid_ref.getMaxStencilRadius(st_indx);
-#endif 
+#endif
 
-        this->getStencilLHS(rbf_centers, stencil, np, lhs, h); 
+        this->getStencilLHS(rbf_centers, stencil, np, lhs, h);
         this->getStencilRHS(which, rbf_centers, stencil, np, rhs, h);
 
         // Remember: b*(A^-1) = (b*(A^-1))^T = (A^-T) * b^T = (A^-1) * b^T
@@ -600,13 +600,13 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         int irbf = st_indx;
 
 #if 0
-        char buf[256]; 
-        sprintf(buf, "LHS(%d)=", st_indx); 
-        lhs.print(buf); 
-        sprintf(buf, "RHS(%d)=", st_indx); 
-        rhs.print(buf); 
+        char buf[256];
+        sprintf(buf, "LHS(%d)=", st_indx);
+        lhs.print(buf);
+        sprintf(buf, "RHS(%d)=", st_indx);
+        rhs.print(buf);
         weights_new.print("weights");
-#endif 
+#endif
 
         // X,Y,Z weights should scale by 1/h
         double scale = 1.;
@@ -616,19 +616,19 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // LAPL should scale by 1/h^2
         if (which & LAPL) {
             for (int i = 1; i < dim_num; i++) {
-                scale *= scale; 
+                scale *= scale;
             }
         }
         if (which & INTERP) {
-            scale = 1.; 
+            scale = 1.;
         }
-#endif 
+#endif
 
 #if 1
         if (which & HV) {
-            scale = this->getHVScalar(); 
+            scale = this->getHVScalar();
         }
-#endif 
+#endif
         if (this->weights[getDerTypeIndx(which)][irbf] == NULL) {
             this->weights[getDerTypeIndx(which)][irbf] = new double[n+np];
         }
@@ -667,19 +667,19 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     // void RBFFD::applyWeightsForDeriv(DerType which, int npts, double* u, double* deriv, bool isChangedU) {
     void RBFFD::applyWeightsForDeriv(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU) {
         //    std::cout << "CPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << " (weights[" << getDerTypeIndx(which) << "])" << std::endl;
-        tm["applyAll"]->start(); 
-        //        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+        tm["applyAll"]->start();
+        //        unsigned int nb_stencils = grid_ref.getStencilsSize();
         double der;
 
         // TODO: this if we took advantage of a sparse matrix container, we might be able to
         // improve this Mat-Vec multiply. We could also do it on the GPU.
         for (unsigned int i=start_indx; i < start_indx+nb_stencils; i++) {
-            double* w = this->weights[getDerTypeIndx(which)][i]; 
+            double* w = this->weights[getDerTypeIndx(which)][i];
             StencilType& st = grid_ref.getStencil(i);
             der = 0.0;
             unsigned int n = st.size();
             for (unsigned int s=0; s < n; s++) {
-                der += w[s] * u[st[s]]; 
+                der += w[s] * u[st[s]];
             }
             deriv[i] = der;
         }
@@ -698,48 +698,48 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     // than 1. The logic for this break is based on Parabolic PDEs having ALL
     // positive save for one eigenvalue equal to 0, or ALL negative save for one
     // equal to 0. If we have a mix of positive and negative we might have an
-    // unstable laplace operator 
-    double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output) 
+    // unstable laplace operator
+    double RBFFD::computeEigenvalues(DerType which, bool exit_on_fail, EigenvalueOutput* output)
     {
         std::vector<double*>& weights_r = this->weights[getDerTypeIndx(which)];
 
         // Use a std::set because it auto sorts as we insert
         std::set<unsigned int>& b_indices = grid_ref.getSortedBoundarySet();
-        std::set<unsigned int>& i_indices = grid_ref.getSortedInteriorSet(); 
+        std::set<unsigned int>& i_indices = grid_ref.getSortedInteriorSet();
         unsigned int nb_bnd = b_indices.size();
 #if 0
         unsigned int nb_int = i_indices.size();
         int nb_centers = grid_ref.getNodeListSize();
         int nb_stencils = grid_ref.getStencilsSize();
-#endif 
+#endif
         // compute eigenvalues of derivative operator
         unsigned int sz = weights_r.size();
 
 #if 0
         printf("sz= %lu\n", sz);
         printf("weights.size= %d\n", (int) weights_r.size());
-#endif 
+#endif
 
         printf("Generating matrix of weights for interior nodes ONLY\n");
         arma::mat eigmat(sz, sz);
         eigmat.zeros();
 
         // Boundary nodes first with diagonal 1's.
-        std::set<unsigned int>::iterator it; 
+        std::set<unsigned int>::iterator it;
         int i = 0;
         for (it = b_indices.begin(); it != b_indices.end(); it++, i++) {
             eigmat(*it,*it) = 1.0;
         }
 
         if (useHyperviscosity) {
-            // Compute Eigenvalues of DM + Hyperviscosity term. 
+            // Compute Eigenvalues of DM + Hyperviscosity term.
             // hyperviscosity = - gamma * N_nodes^-k * (lapl)^k
             std::cout << "USING HYPERVISCOSITY\n";
             // We put our interior nodes after the boundary nodes in matrix
             for (it = i_indices.begin(); it != i_indices.end(); it++, i++) {
                 //double* w = weights_r[*it];
                 double* w = this->getStencilWeights(which, *it);
-                double* hv = this->getStencilWeights(HV, *it); //weights_hv[*it]; 
+                double* hv = this->getStencilWeights(HV, *it); //weights_hv[*it];
                 StencilType& st = grid_ref.getStencil(*it);
                 for (size_t j=0; j < st.size(); j++) {
                     eigmat(*it,st[j])  = w[j] + hv[j];
@@ -778,9 +778,9 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         double min_neg_eig = fabs(real(eigval(0)));
 
 
-        //int err = 0; 
-        FILE *f; 
-        std::string filename = "eigenvalues_"; 
+        //int err = 0;
+        FILE *f;
+        std::string filename = "eigenvalues_";
         filename.append(this->getFileDetailString(which));
         filename.append(".ascii");
         f = fopen(filename.c_str(), "w");
@@ -809,14 +809,14 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             } else {
                 zero_count++;
             }
-            fprintf(f, "%+lf%+lfi\n",real(eigval(i)),imag(eigval(i))); 
+            fprintf(f, "%+lf%+lfi\n",real(eigval(i)),imag(eigval(i)));
         }
 
         fclose(f);
 #if 0
         count -= nb_bnd; // since we know at least nb_bnd eigenvalues are are (1+0i)
 
-#endif 
+#endif
         printf("\n[RBFFD] ****** Number positive eigenvalues: %d (nb_bnd: %d) *******\n\n", pos_count, nb_bnd);
         printf("\n[RBFFD] ****** Number negative eigenvalues: %d *******\n\n", neg_count);
         printf("\n[RBFFD] ****** Number zero (-1e-8 <= eval <= 1e-8) eigenvalues: %d *******\n\n", zero_count);
@@ -828,23 +828,23 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         printf("max abs(real(eig)) (among positive reals): %f\n", max_pos_eig);
 
         if (output) {
-            output->max_pos_eig = max_pos_eig; 
-            output->min_pos_eig = min_pos_eig; 
-            output->max_neg_eig = max_neg_eig; 
-            output->min_neg_eig = min_neg_eig; 
-            output->nb_positive = pos_count; 
-            output->nb_negative = neg_count; 
-            output->nb_zero     = zero_count; 
+            output->max_pos_eig = max_pos_eig;
+            output->min_pos_eig = min_pos_eig;
+            output->max_neg_eig = max_neg_eig;
+            output->min_neg_eig = min_neg_eig;
+            output->nb_positive = pos_count;
+            output->nb_negative = neg_count;
+            output->nb_zero     = zero_count;
         }
 
         eigenvalues_computed = true;
-        cachedEigenvalues.max_pos_eig = max_pos_eig; 
+        cachedEigenvalues.max_pos_eig = max_pos_eig;
         cachedEigenvalues.min_pos_eig = min_pos_eig;
-        cachedEigenvalues.max_neg_eig = max_neg_eig; 
+        cachedEigenvalues.max_neg_eig = max_neg_eig;
         cachedEigenvalues.min_neg_eig = min_neg_eig;
-        cachedEigenvalues.nb_positive = pos_count; 
-        cachedEigenvalues.nb_negative = neg_count; 
-        cachedEigenvalues.nb_zero     = zero_count; 
+        cachedEigenvalues.nb_positive = pos_count;
+        cachedEigenvalues.nb_negative = neg_count;
+        cachedEigenvalues.nb_zero     = zero_count;
 
         // If both are greater than 0 then we have a problem
         if ((neg_count - nb_bnd > 0) && (pos_count - nb_bnd > 0)){
@@ -860,7 +860,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 exit(EXIT_FAILURE);
             }
         }
-#endif 
+#endif
         if (zero_count > 1) {
             std::cout << "[RBFFD] Error: parabolic PDEs have either all positive or all negative eigenvalues (except one that is zero).\n";
             if (exit_on_fail) {
@@ -874,19 +874,19 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     void RBFFD::setupTimers() {
-        tm["computeAllWeightsAll"] = new EB::Timer("[RBFFD] Compute All Weights For ALL Stencils (CPU)"); 
-        tm["computeAllWeightsOne"] = new EB::Timer("[RBFFD] Compute All Weights For One Stencil (CPU)"); 
-        tm["computeOneWeights"] = new EB::Timer("[RBFFD] Compute One Weights For One Stencil (CPU)"); 
-        tm["fillDMat"] = new EB::Timer("[RBFFD] Fill Distance Matrix"); 
-        tm["apply"] = new EB::Timer("[RBFFD] Apply Weights for a single derivative type of u"); 
-        tm["applyAll"] = new EB::Timer("[RBFFD] Apply Weights for all derivative types of u"); 
+        tm["computeAllWeightsAll"] = new EB::Timer("[RBFFD] Compute All Weights For ALL Stencils (CPU)");
+        tm["computeAllWeightsOne"] = new EB::Timer("[RBFFD] Compute All Weights For One Stencil (CPU)");
+        tm["computeOneWeights"] = new EB::Timer("[RBFFD] Compute One Weights For One Stencil (CPU)");
+        tm["fillDMat"] = new EB::Timer("[RBFFD] Fill Distance Matrix");
+        tm["apply"] = new EB::Timer("[RBFFD] Apply Weights for a single derivative type of u");
+        tm["applyAll"] = new EB::Timer("[RBFFD] Apply Weights for all derivative types of u");
     }
 
     //--------------------------------------------------------------------
 
     void RBFFD::distanceMatrix(std::vector<NodeType>& rbf_centers, StencilType& stencil, int dim_num, arma::mat& ar, double h) {
         // We assume that all stencils are centered around the first node in the Stencil node list.
-        int irbf = stencil[0]; 
+        int irbf = stencil[0];
         //Vec3& c = rbf_centers[irbf];
         int n = (int)stencil.size();
         //printf("stencil size= %d\n", n);
@@ -911,7 +911,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         } else {
             ar.zeros(n,n);
         }
-#endif 
+#endif
         int st_center = -1;
 
         // which stencil point is irbf
@@ -926,11 +926,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             exit(0);
         }
 
-        // DMat: (note: phi_0(x_N) is the 0th RBF evaluated at x_N) 
+        // DMat: (note: phi_0(x_N) is the 0th RBF evaluated at x_N)
         //
         //  | phi_0(x_0)   phi_0(x_1)   ... phi_0(x_N) |
         //  | phi_1(x_0)   phi_1(x_1)   ... phi_1(x_N) |
-        //  |     ...         ...             ...      | 
+        //  |     ...         ...             ...      |
         //  | phi_N(x_0)   phi_N(x_1)   ... phi_N(x_N) |
         //
         // stencil includes the point itself
@@ -939,25 +939,25 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             // TODO: test when its a uniq var_epsilon by stencil, not by RBF *WITHIN* a stencil
             // FIXME: allow var_epsilon[stencil[j]] (we need to pass stencil info for ghost nodes if this is to be allowed)
 #if SCALE_BY_H
-            double eps = var_epsilon[stencil[0]] * h; 
-#else 
-            double eps = var_epsilon[stencil[0]]; 
-#endif 
+            double eps = var_epsilon[stencil[0]] * h;
+#else
+            double eps = var_epsilon[stencil[0]];
+#endif
 
             IRBF rbf(eps, dim_num);
             // rbf centered at xj
             Vec3& xjv = rbf_centers[stencil[j]];
             for (int i=0; i < n; i++) {
                 // by row
-                Vec3 xiv = rbf_centers[stencil[i]]; 
+                Vec3 xiv = rbf_centers[stencil[i]];
 #if SCALE_BY_H
                 // Center is on right:
                 // NOTE we scale this by h so we are computing weights of the
                 // stencil spanning the unit disk
-                Vec3 diff = (xiv - xjv) * (1./h); 
-#else 
+                Vec3 diff = (xiv - xjv) * (1./h);
+#else
                 Vec3 diff = (xiv - xjv);
-#endif 
+#endif
                 //        std::cout << xiv << "\t" << xjv << "\t" << diff <<  std::endl;
                 ar(j,i) = rbf.eval(diff);
             }
@@ -976,36 +976,36 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             return this->loadFromBinaryFile(which, filename);
         }
     }
-    
+
     //--------------------------------------------------------------------
 
     int RBFFD::loadFromAsciiFile(DerType which, std::string filename) {
         std::cout << "Loading file: " << filename << std::endl;
-        int ret_code; 
+        int ret_code;
         MM_typecode matcode;
         FILE *f;
-        int M, N, nz;   
+        int M, N, nz;
         int i, *I, *J;
-        double *val;    
+        double *val;
         if ((f = fopen(filename.c_str(), "r")) == NULL)
         {
             std::cout << "File not found: " << filename << std::endl;
-            return 1; 
+            return 1;
         }
-        if (mm_read_banner(f, &matcode) != 0) 
+        if (mm_read_banner(f, &matcode) != 0)
         {
             std::cout << "Could not process MatrixMarket Banner in " << filename << std::endl;
-            return 2; 
+            return 2;
         }
 
         if ((ret_code = mm_read_mtx_crd_size(f, &M, &N, &nz)) != 0)
         {
             std::cout << "Error! failed to parse file contents" << std::endl;
-            return 4; 
+            return 4;
         }
 
-        std::vector<StencilType>& stencil = grid_ref.getStencils(); 
-        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]); 
+        std::vector<StencilType>& stencil = grid_ref.getStencils();
+        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]);
         // number of non-zeros (should be close to max_st_size*num_stencils)
         unsigned int expected_nz = 0;
         // Num stencils (x_weights.size())
@@ -1015,7 +1015,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         for (unsigned int i = 0; i < stencil.size(); i++) {
             expected_nz += stencil[i].size();
         }
-        fprintf(stdout, "Attempting to read %u weights (%u, %u) from %s\n", expected_nz, M, N, filename.c_str()); 
+        fprintf(stdout, "Attempting to read %u weights (%u, %u) from %s\n", expected_nz, M, N, filename.c_str());
 
         if (M != (int) expected_M) {
             std::cout << "Error! not enough stencils in the file" << std::endl;
@@ -1029,7 +1029,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
         /* reseve memory for matrices */
 
-        I = new int[nz]; 
+        I = new int[nz];
         J = new int[nz];
         val = new double[nz];
 
@@ -1045,17 +1045,17 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             J[i]--;
         }
 
-        //if (f !=stdin) 
+        //if (f !=stdin)
         fclose(f);
 
         // EVAN! Do NOT allocate N*M. Thats a dense matrix!
         // Expect the grid to be able to tell us what we need to load
         int req_nz = 0;
 
-        // Convert to our weights (CSR FORMAT): 
+        // Convert to our weights (CSR FORMAT):
         for (int irbf = 0; irbf < N; irbf++) {
-            req_nz += stencil[irbf].size(); 
-            this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()]; 
+            req_nz += stencil[irbf].size();
+            this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()];
         }
 
         if (req_nz < nz) {
@@ -1063,20 +1063,20 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             exit(EXIT_FAILURE);
         }
 
-        int j = 0; 
-        int local_i = 0; 
+        int j = 0;
+        int local_i = 0;
         for (i = 0; i < nz; i++) {
             if (local_i != I[i]) {
-                j = 0; 
-                local_i = I[i]; 
+                j = 0;
+                local_i = I[i];
             }
             this->weights[getDerTypeIndx(which)][local_i][j] = val[i];
             //std::cout << "Placing: weights[" << which << "][ " << local_i << "(" << I[i] << ") ][ " << j << "(" << J[i] << ") ] = " << val[i] << std::endl;;
             j++;
         }
 
-        delete [] I; 
-        delete [] J; 
+        delete [] I;
+        delete [] J;
         delete [] val;
 
         std::cout << "Loaded.\n";
@@ -1092,31 +1092,31 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     int RBFFD::loadFromBinaryFile(DerType which, std::string filename) {
-        int ret_code; 
+        int ret_code;
         MM_typecode matcode;
         FILE *f;
-        int M, N, nz;   
+        int M, N, nz;
         int i, *I, *J;
-        double *val;    
+        double *val;
         if ((f = fopen(filename.c_str(), "r")) == NULL)
         {
             std::cout << "File not found: " << filename << std::endl;
-            return 1; 
+            return 1;
         }
-        if (mm_read_banner(f, &matcode) != 0) 
+        if (mm_read_banner(f, &matcode) != 0)
         {
             std::cout << "Could not process MatrixMarket Banner in " << filename << std::endl;
-            return 2; 
+            return 2;
         }
 
         if ((ret_code = mm_read_mtx_crd_size(f, &M, &N, &nz)) != 0)
         {
             std::cout << "Error! failed to parse file contents" << std::endl;
-            return 4; 
+            return 4;
         }
 
-        std::vector<StencilType>& stencil = grid_ref.getStencils(); 
-        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]); 
+        std::vector<StencilType>& stencil = grid_ref.getStencils();
+        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]);
         // number of non-zeros (should be close to max_st_size*num_stencils)
         unsigned int expected_nz = 0;
         // Num stencils (x_weights.size())
@@ -1126,7 +1126,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         for (unsigned int i = 0; i < stencil.size(); i++) {
             expected_nz += stencil[i].size();
         }
-        fprintf(stdout, "Attempting to read %u weights (%u, %u) from %s\n", expected_nz, M, N, filename.c_str()); 
+        fprintf(stdout, "Attempting to read %u weights (%u, %u) from %s\n", expected_nz, M, N, filename.c_str());
 
         if (M != (int) expected_M) {
             std::cout << "Error! not enough stencils in the file" << std::endl;
@@ -1140,7 +1140,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
         /* reseve memory for matrices (COO format) */
 
-        I = new int[nz]; 
+        I = new int[nz];
         J = new int[nz];
         val = new double[nz];
 
@@ -1151,19 +1151,19 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         for (i=0; i<nz; i++)
         {
             //        fscanf(f, "%d %d %24le\n", &I[i], &J[i], &val[i]);
-           // fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
-            int ii; 
-            int jj; 
-            double kk;
+            // fscanf(f, "%d %d %le\n", &I[i], &J[i], &val[i]);
+            //int ii;
+            //int jj;
+            //double kk;
 
-            fread(&I[i], sizeof(int), 1, f);           
-            fread(&J[i], sizeof(int), 1, f);           
-            fread(&val[i], sizeof(double), 1, f);           
+            fread(&I[i], sizeof(int), 1, f);
+            fread(&J[i], sizeof(int), 1, f);
+            fread(&val[i], sizeof(double), 1, f);
             I[i]--;  /* adjust from 1-based to 0-based */
             J[i]--;
         }
 
-        //if (f !=stdin) 
+        //if (f !=stdin)
         fclose(f);
 
 
@@ -1171,31 +1171,31 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // Expect the grid to be able to tell us what we need to load
         int req_nz = 0;
 
-        // Convert to our weights (CSR FORMAT): 
+        // Convert to our weights (CSR FORMAT):
         for (int irbf = 0; irbf < N; irbf++) {
-            req_nz += stencil[irbf].size(); 
-            this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()]; 
+            req_nz += stencil[irbf].size();
+            this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()];
         }
 
         if (req_nz < nz) {
             printf("[RBFFD] ERROR! File contains too many nonzeros. I have not allocated enough memory!\n");
             exit(EXIT_FAILURE);
         }
-        
-        int j = 0; 
-        int local_i = 0; 
+
+        int j = 0;
+        int local_i = 0;
         for (i = 0; i < nz; i++) {
             if (local_i != I[i]) {
-                j = 0; 
-                local_i = I[i]; 
+                j = 0;
+                local_i = I[i];
             }
             this->weights[getDerTypeIndx(which)][local_i][j] = val[i];
             //std::cout << "Placing: weights[" << which << "][ " << local_i << "(" << I[i] << ") ][ " << j << "(" << J[i] << ") ] = " << val[i] << std::endl;;
             j++;
         }
 
-        delete [] I; 
-        delete [] J; 
+        delete [] I;
+        delete [] J;
         delete [] val;
 
         std::cout << "Loaded.\n";
@@ -1210,18 +1210,18 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     int RBFFD::loadAllWeightsFromFile() {
         int err = 0;
 
-        int iterator = computedTypes; 
+        int iterator = computedTypes;
         int i = 0;     // Counts the number of checks for derivative type flags
         int j = 0;      // Counts the number of types we will compute
         // Iterate until we get all 0s. This allows SOME shortcutting.
         while (iterator) {
-            if (computedTypes & getDerType(i)) {    
+            if (computedTypes & getDerType(i)) {
                 err += this->loadFromFile(getDerType(i));
-                j+= 1; 
+                j+= 1;
             }
-            iterator >>= 1; 
-            i+= 1; 
-        } 
+            iterator >>= 1;
+            i+= 1;
+        }
 
         return err;
     }
@@ -1229,27 +1229,27 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     void RBFFD::writeAllWeightsToFile() {
-        int iterator = computedTypes; 
+        int iterator = computedTypes;
         int i = 0;     // Counts the number of checks for derivative type flags
         int j = 0;      // Counts the number of types we will compute
         // Iterate until we get all 0s. This allows SOME shortcutting.
         while (iterator) {
-            if (computedTypes & getDerType(i)) {    
+            if (computedTypes & getDerType(i)) {
                 this->writeToFile(getDerType(i));
-                j+= 1; 
+                j+= 1;
             }
-            iterator >>= 1; 
-            i+= 1; 
-        }  
+            iterator >>= 1;
+            i+= 1;
+        }
     }
 
     //--------------------------------------------------------------------
 
     void RBFFD::writeToFile(DerType which, std::string filename) {
         if (asciiWeights) {
-            this->writeToAsciiFile(which, filename); 
+            this->writeToAsciiFile(which, filename);
         } else {
-            this->writeToBinaryFile(which, filename); 
+            this->writeToBinaryFile(which, filename);
         }
     }
 
@@ -1260,13 +1260,13 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // number of non-zeros (should be close to max_st_size*num_stencils)
         unsigned int nz = 0;
 
-        std::vector<StencilType>& stencil = grid_ref.getStencils(); 
-        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]); 
+        std::vector<StencilType>& stencil = grid_ref.getStencils();
+        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]);
 
         for (unsigned int i = 0; i < stencil.size(); i++) {
             nz += stencil[i].size();
         }
-        fprintf(stdout, "Writing %u weights to %s\n", nz, filename.c_str()); 
+        fprintf(stdout, "Writing %u weights to %s\n", nz, filename.c_str());
 
         // Num stencils (x_weights.size())
         const unsigned int M = (*deriv_choice_ptr).size();
@@ -1274,30 +1274,30 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         const unsigned int N = M;
 
         // Value obtained from mm_set_* routine
-        MM_typecode matcode;                        
+        MM_typecode matcode;
 
         //  int I[nz] = { 0, 4, 2, 8 };
         //  int J[nz] = { 3, 8, 7, 5 };
         //  double val[nz] = {1.1, 2.2, 3.2, 4.4};
 
-        int err = 0; 
-        FILE *f; 
-        f = fopen(filename.c_str(), "w"); 
+        int err = 0;
+        FILE *f;
+        f = fopen(filename.c_str(), "w");
         err += mm_initialize_typecode(&matcode);
         err += mm_set_matrix(&matcode);
         err += mm_set_coordinate(&matcode);
         err += mm_set_real(&matcode);
 
-        err += mm_write_banner(f, matcode); 
+        err += mm_write_banner(f, matcode);
         err += mm_write_mtx_crd_size(f, M, N, nz);
 
         /* NOTE: matrix market files use 1-based indices, i.e. first element
            of a vector has index 1, not 0.  */
-        //    fprintf(stdout, "Writing file contents: \n"); 
+        //    fprintf(stdout, "Writing file contents: \n");
         for (unsigned int i = 0; i < stencil.size(); i++) {
             for (unsigned int j = 0; j < stencil[i].size(); j++) {
                 // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
-                fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+                fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]);
             }
         }
 
@@ -1310,13 +1310,13 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // number of non-zeros (should be close to max_st_size*num_stencils)
         unsigned int nz = 0;
 
-        std::vector<StencilType>& stencil = grid_ref.getStencils(); 
-        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]); 
+        std::vector<StencilType>& stencil = grid_ref.getStencils();
+        std::vector<double*>* deriv_choice_ptr = &(weights[getDerTypeIndx(which)]);
 
         for (unsigned int i = 0; i < stencil.size(); i++) {
             nz += stencil[i].size();
         }
-        fprintf(stdout, "Writing %u weights to %s\n", nz, filename.c_str()); 
+        fprintf(stdout, "Writing %u weights to %s\n", nz, filename.c_str());
 
         // Num stencils (x_weights.size())
         const unsigned int M = (*deriv_choice_ptr).size();
@@ -1324,36 +1324,36 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         const unsigned int N = M;
 
         // Value obtained from mm_set_* routine
-        MM_typecode matcode;                        
+        MM_typecode matcode;
 
         //  int I[nz] = { 0, 4, 2, 8 };
         //  int J[nz] = { 3, 8, 7, 5 };
         //  double val[nz] = {1.1, 2.2, 3.2, 4.4};
 
-        int err = 0; 
-        FILE *f; 
-        f = fopen(filename.c_str(), "w"); 
+        int err = 0;
+        FILE *f;
+        f = fopen(filename.c_str(), "w");
         err += mm_initialize_typecode(&matcode);
         err += mm_set_matrix(&matcode);
         err += mm_set_coordinate(&matcode);
         err += mm_set_real(&matcode);
 
-        err += mm_write_banner(f, matcode); 
+        err += mm_write_banner(f, matcode);
         err += mm_write_mtx_crd_size(f, M, N, nz);
 
         /* NOTE: matrix market files use 1-based indices, i.e. first element
            of a vector has index 1, not 0.  */
-        //    fprintf(stdout, "Writing file contents: \n"); 
+        //    fprintf(stdout, "Writing file contents: \n");
         for (unsigned int i = 0; i < stencil.size(); i++) {
             for (unsigned int j = 0; j < stencil[i].size(); j++) {
                 // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
-                //fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]); 
+                //fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]);
                 int ii = stencil[i][0]+1;
                 int jj = stencil[i][j]+1;
                 double kk = (*deriv_choice_ptr)[i][j];
-                fwrite(&ii, 1 , sizeof(int), f);  
-                fwrite(&jj, 1 , sizeof(int), f); 
-                fwrite(&kk, 1, sizeof(double), f); 
+                fwrite(&ii, 1 , sizeof(int), f);
+                fwrite(&jj, 1 , sizeof(int), f);
+                fwrite(&kk, 1, sizeof(double), f);
             }
         }
 
@@ -1367,45 +1367,45 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         std::cout << "DERIVATIVE:: SET VARIABLE EPSILON = " << alpha << "/(avg_st_radius^" << beta << ")" << std::endl;
         std::vector<double>& avg_stencil_radius = avg_radius_;
 
-        unsigned int nb_stencils = grid_ref.getStencilsSize(); 
-        unsigned int nb_radii = avg_stencil_radius.size(); 
+        unsigned int nb_stencils = grid_ref.getStencilsSize();
+        unsigned int nb_radii = avg_stencil_radius.size();
 
         std::cout << "NB_STENCILS: " << nb_stencils << ", NB_RADII: " << nb_radii << std::endl;
-        // Types: 0 : Mine. 1 : Sarler2006 
+        // Types: 0 : Mine. 1 : Sarler2006
 #define VARIABLE_EPS_TYPE 1
         var_epsilon.resize(nb_stencils);
         for (unsigned int i=0; i < nb_stencils; i++) {
             StencilType& stencil = grid_ref.getStencil(i);
 #if 0
             var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
-            printf("avg_stencil_radius(%d) = %10.10f\n", i , avg_stencil_radius[i]); 
+            printf("avg_stencil_radius(%d) = %10.10f\n", i , avg_stencil_radius[i]);
             printf("var_epsilon(%d) = %10.10f\n", i, var_epsilon[i]);
-#endif                
+#endif
             // var_epsilon[i] = alpha / std::pow(avg_stencil_radius[i], beta);
             //            var_epsilon[i] = alpha * avg_stencil_radius[i] / sqrt(beta);
 
-            // Hardy 1972: 
+            // Hardy 1972:
             //var_epsilon[stencil[i][0]] = 1.0 / (0.815 * avg_stencil_radius[stencil[i][0]]);
 
-            // Franke 1982: 
+            // Franke 1982:
             // TODO: franke actually had max_stencil_radius in denom
             //var_epsilon[i] = 0.8 * sqrt(stencils[i].size()) / max_stencil_radius[i] ;
 
             // Note: for 24x24, alpha = 0.04. For 64x64, alpha = 0.05; for 1000x1000, alpha = 0.07
-            // we use stencils[i][0] to get the index for the stencil center and its corresponding "avg_radius" 
-            //std::cout << "var_epsilon[" << i << "] = " << alpha << " * sqrt( " << stencils[i].size() << " / avg_radius_[ " << stencils[i][0] << " ] " << std::endl; 
+            // we use stencils[i][0] to get the index for the stencil center and its corresponding "avg_radius"
+            //std::cout << "var_epsilon[" << i << "] = " << alpha << " * sqrt( " << stencils[i].size() << " / avg_radius_[ " << stencils[i][0] << " ] " << std::endl;
             // the indx on var_epsilon should be linear 0->stencils.size(), but just in case we have random access based on stencil center index
 #if (VARIABLE_EPS_TYPE == 0)
             var_epsilon[stencil[0]] = (alpha * sqrt(stencil.size())) / avg_radius_[stencil[0]] ;
-#else 
-            // alpha = c. Sarler2006 (Meshfree Explicit Local Radial Basis Function ...) 
+#else
+            // alpha = c. Sarler2006 (Meshfree Explicit Local Radial Basis Function ...)
             // cr = c * max(r_i) where r_i is the distance to each node in the stencil
             // Of course we have eps = 1/(cr)
-            var_epsilon[stencil[0]] = 1./ ( alpha * grid_ref.getMaxStencilRadius(stencil[0]) ); 
-#endif 
+            var_epsilon[stencil[0]] = 1./ ( alpha * grid_ref.getMaxStencilRadius(stencil[0]) );
+#endif
             //printf("var_epsilon(%d) = %f (%f, %f, %f)\n", i, var_epsilon[i], alpha, sqrt(stencils[i].size()), avg_stencil_radius[i]);
         }
-        std::stringstream ss(std::stringstream::out); 
+        std::stringstream ss(std::stringstream::out);
         ss << "variable_epsilon_" << alpha << "_" << beta;
         eps_string = ss.str();
     }
@@ -1417,7 +1417,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         //void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, const char* choice)
         {
             unsigned int irbf = st_indx;
-            StencilType& stencil = grid_ref.getStencil(st_indx); 
+            StencilType& stencil = grid_ref.getStencil(st_indx);
 
             std::vector<NodeType>& rbf_centers = grid_ref.getNodeList();
 
@@ -1473,16 +1473,16 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             double eps = 1.0; // * var_eps[irbf]; // variable epsilon (for 300 pts)
             //double eps = 1.1; // * var_eps[irbf]; // variable epsilon (for 300 pts)
             //double eps = 1.5 * var_eps[irbf]; // variable epsilon (for 1000 pts)
-#else 
-            // FIXME: Gordons comments above indicate a desire to vary the rad with avg_stencil_radii. 
+#else
+            // FIXME: Gordons comments above indicate a desire to vary the rad with avg_stencil_radii.
             //
             // Rad is the Radius for ContourSVD method. (???) No paper on ContourSVD yet.
             // For both options below, a grid 41x41 over [-10,10] x [-10,10]
             // Up to 933 for st=13 and eps = 0.01
-            // double rad = 1. / ( 0.185 * grid_ref.getMaxStencilRadius(st_indx));  
+            // double rad = 1. / ( 0.185 * grid_ref.getMaxStencilRadius(st_indx));
             //      -- better: --
             // up to 1063 for st=13 and eps=0.01 (eps=0.1 gives 1061)
-            //        double rad = 1. / ( 0.100 * grid_ref.getStencilRadius(st_indx));  
+            //        double rad = 1. / ( 0.100 * grid_ref.getStencilRadius(st_indx));
             //NOTE: the 1063 above is reduced to 178 when grid is 41x41 [-1,1]x[-1,1]
             //NOTE: the 1063 above is reduced to 1059 when grid is 41x41 [-100,100]x[-100,100]
             // That leads me to believe out [-1,1]x[-1,1] domain may have been
@@ -1498,24 +1498,24 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             //  double rad = 1.;
             //  double h = grid_ref.getMaxStencilRadius(st_indx);
             double h = 1.;
-#else 
+#else
             double rad = 1.;
             double h = 1.;
-#endif 
-            double eps = var_epsilon[st_indx]; 
-#endif 
+#endif
+            double eps = var_epsilon[st_indx];
+#endif
             //printf("var_eps[%d]= %f\n", irbf, var_eps[irbf]);
             //cout << "CHOICE: " << choice << endl;
 
-            // NOTE: this was 3 and caused the original heat problem to fail. WHY? 
+            // NOTE: this was 3 and caused the original heat problem to fail. WHY?
             // Answer: the laplacian is not dimensionless. It increases as the
             // dimension changes. Not only do we need to double check out laplacian
-            // in the RBFs, but also in the ExactSolution 
+            // in the RBFs, but also in the ExactSolution
             IRBF rbf(eps, dim_num);
 
-            std::string choice = derTypeStr[getDerTypeIndx(which)];  
+            std::string choice = derTypeStr[getDerTypeIndx(which)];
 
-            // This is a 
+            // This is a
             Stencils sten(&rbf, rad, h, eps, &xd, choice.c_str());
             //arma::mat rd2 = sten.computeDistMatrix2(xd,xd);
 
@@ -1562,8 +1562,8 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
     //----------------------------------------------------------------------------
     std::string RBFFD::getFileDetailString(DerType which) {
-        std::stringstream ss(std::stringstream::out); 
-        ss << derTypeStr[getDerTypeIndx(which)] << "_weights_" << weightTypeStr[weightMethod] << "_" << this->getEpsString() << "_" << this->getHVString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();  
+        std::stringstream ss(std::stringstream::out);
+        ss << derTypeStr[getDerTypeIndx(which)] << "_weights_" << weightTypeStr[weightMethod] << "_" << this->getEpsString() << "_" << this->getHVString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();
         return ss.str();
     }
 
@@ -1581,8 +1581,8 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
     //----------------------------------------------------------------------------
     std::string RBFFD::getFilename(DerType which) {
-        std::stringstream ss(std::stringstream::out); 
+        std::stringstream ss(std::stringstream::out);
         ss << "weights_" << this->className();
-        return this->getFilename(which, ss.str()); 
+        return this->getFilename(which, ss.str());
     }
 

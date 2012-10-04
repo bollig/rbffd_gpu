@@ -16,6 +16,7 @@
 #include <viennacl/vector_proxy.hpp> 
 #include <viennacl/linalg/vector_operations.hpp> 
 
+
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
@@ -42,5 +43,8 @@ typedef viennacl::vector<double> VCL_VEC_t;
 
 typedef viennacl::matrix<double> VCL_VEC4_t; 
 typedef boost::numeric::ublas::matrix<double> UBLAS_VEC4_t; 
+
+
+typedef viennacl::matrix<double> VCL_DENSE_MAT_t;
 
 #endif

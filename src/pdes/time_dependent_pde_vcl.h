@@ -85,7 +85,7 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
         try {
             viennacl::io::read_kernel_parameters< VCL_VEC_t >("vector_parameters.xml");
             viennacl::io::read_kernel_parameters< VCL_DENSE_MAT_t >("matrix_parameters.xml");
-            viennacl::io::read_kernel_parameters< VCL_MAT_t >("sparse_parameters.xml");
+            viennacl::io::read_kernel_parameters< VCL_CSR_MAT_t >("sparse_parameters.xml");
             // -----------------------------------------
 
             //check:

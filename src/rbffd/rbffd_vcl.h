@@ -11,7 +11,7 @@
 class RBFFD_VCL : public RBFFD
 {    protected: 
         // Weight buffers matching number of weights we have in super class
-        VCL_MAT_t* gpu_weights[NUM_DERIVATIVE_TYPES]; 
+        VCL_ELL_MAT_t* gpu_weights[NUM_DERIVATIVE_TYPES]; 
         // Nodes are X, Y, Z vectors (will transform to theta, lambda)
         VCL_VEC4_t* gpu_nodes;
 
@@ -65,8 +65,8 @@ class RBFFD_VCL : public RBFFD
 
 
         // This should be: 
-        VCL_MAT_t* getGPUWeights(DerType which) { return gpu_weights[getDerTypeIndx(which)]; }
-        VCL_MAT_t* getGPUWeights(DerTypeIndx which_i) { return gpu_weights[which_i]; }
+        VCL_ELL_MAT_t* getGPUWeights(DerType which) { return gpu_weights[getDerTypeIndx(which)]; }
+        VCL_ELL_MAT_t* getGPUWeights(DerTypeIndx which_i) { return gpu_weights[which_i]; }
 
 
         // FIXME: assumes size of buffers does not change (should check if it

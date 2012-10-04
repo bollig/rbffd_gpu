@@ -1,6 +1,7 @@
 #ifndef __VIENNACL_TYPEDEFS_H__
 #define __VIENNACL_TYPEDEFS_H__
 
+#include <viennacl/ell_matrix.hpp>
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
 #if 0
@@ -34,7 +35,8 @@
 typedef std::vector< std::map< unsigned int, double> > STL_MAT_t; 
 typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_MAT_t; 
 typedef boost::numeric::ublas::coordinate_matrix<double> UBLAS_ALT_MAT_t; 
-typedef viennacl::compressed_matrix<double> VCL_MAT_t; 
+typedef viennacl::compressed_matrix<double> VCL_CSR_MAT_t; 
+typedef viennacl::ell_matrix<double> VCL_ELL_MAT_t; 
 typedef viennacl::coordinate_matrix<double> VCL_ALT_MAT_t; 
 
 typedef std::vector<double> STL_VEC_t; 

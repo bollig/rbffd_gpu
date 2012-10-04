@@ -109,7 +109,7 @@ void RBFFD_VCL::allocateGPUMem() {
     // Iterate until we get all 0s. This allows SOME shortcutting.
     while (iterator) {
         if (computedTypes & getDerType(which)) {
-            gpu_weights[which] = new VCL_MAT_t(nrows, ncols, NNZ);
+            gpu_weights[which] = new VCL_ELL_MAT_t(nrows, ncols);//, NNZ);
             bytesAllocated += weights_mem_bytes;
             type_i+=1;
         }

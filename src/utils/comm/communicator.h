@@ -9,7 +9,7 @@
 class Communicator {
 public:
     Communicator(int argc, char** argv);
-    ~Communicator();
+    virtual ~Communicator();
 
     MPI_Comm getComm() const { 
         return MPI_COMM_WORLD; 

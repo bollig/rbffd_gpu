@@ -15,6 +15,9 @@ protected:
  	static const int TAG = 0; 		// All MPISendable messages will have tag=0
 	
 public: 
+    virtual ~MPISendable() {}
+
+
 	// [Pure virtual] Pack and send an instance of MPISendable to the receiver_rank CPU
 	virtual int send(int my_rank, int receiver_rank)  =0; 
 	

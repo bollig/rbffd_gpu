@@ -104,6 +104,8 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
             std::cout << "[TPDE_VCL] There was an exception thrown when reading optimal parameters. Please ensure that files vector_parameters.xml, matrix_parametes.xml and sparse_parameters.xml are in the proper directiry (PWD)\n";
         } 
     }
+        
+
         virtual ~TimeDependentPDE_VCL() {
             this->tm.printAll(); 
             this->tm.clear(); 

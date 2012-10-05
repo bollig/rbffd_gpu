@@ -72,7 +72,7 @@ class PDE : public MPISendable
         allocateCommBuffers(); 
     }
 
-        ~PDE() {
+        virtual ~PDE() {
             delete [] sbuf; 
             delete [] sendcounts; 
             delete [] sdispls; 

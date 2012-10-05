@@ -106,9 +106,14 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
 
                 }
         virtual ~CosineBell_VCL() {
+            std::cout << "Destroying CosineBell_VCL\n";
+            tm.printAll();
+            tm.clear(); 
+
             delete(vel_u); 
             delete(vel_v); 
-            delete(my_kernel_mul);
+// Calling delete on this causes problems. Not sure what VCL is doing for cleanup:
+//            delete(my_kernel_mul);
             std::cout << "CosineBell_VCL destroyed\n";
         }
 

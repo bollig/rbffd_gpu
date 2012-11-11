@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <map> 
 
+#include "poisson_1d_vcl.h"
+
 #include "grids/regulargrid.h"
 
 #include "grids/domain.h"
@@ -16,7 +18,6 @@
 #include "utils/io/vtu_pde_writer.h"
 #endif 
 
-#include "poisson_1d_vcl.h"
 
 using namespace std;
 using namespace EB;

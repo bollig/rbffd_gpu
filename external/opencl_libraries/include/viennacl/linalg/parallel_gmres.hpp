@@ -41,6 +41,7 @@ License:         MIT (X11), see file LICENSE in the base directory
 #include <limits>
 #include "viennacl/forwards.h"
 #include "viennacl/tools/tools.hpp"
+#include "viennacl/vector_proxy.hpp"
 #include "viennacl/linalg/norm_2.hpp"
 #include "viennacl/linalg/prod.hpp"
 #include "viennacl/linalg/inner_prod.hpp"
@@ -52,10 +53,10 @@ License:         MIT (X11), see file LICENSE in the base directory
 #include "viennacl/linalg/gmres.hpp"
 
 // But we need our own parallel norms
-#include "linalg/parallel_norm_1.hpp"
-#include "linalg/parallel_norm_2.hpp"
-#include "linalg/parallel_norm_inf.hpp"
-#include "linalg/parallel_inner_prod.hpp"
+#include "viennacl/linalg/parallel_norm_1.hpp"
+#include "viennacl/linalg/parallel_norm_2.hpp"
+#include "viennacl/linalg/parallel_norm_inf.hpp"
+#include "viennacl/linalg/parallel_inner_prod.hpp"
 
 #include "utils/comm/communicator.h"
 #include "grids/domain.h"
@@ -604,6 +605,7 @@ namespace viennacl
                         // V(i+1) -= H(k, i) * V(k)  //
                         //std::cout << v[k]->size() << "," << w.size() << H(k,i) * *(v[k])  << std::endl;
                         w -= H(k,i) * *(v[k]);
+                        //VectorType new = H(k,i) * *(v[k]);
                     }
 
                     H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());

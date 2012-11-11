@@ -7,6 +7,24 @@ namespace viennacl
  {
   namespace kernels
   {
+const char * const svd_align1_bidiag_pack = 
+"__kernel void bidiag_pack(__global float* A,\n"
+"                          __global float* D,\n"
+"                          __global float* S,\n"
+"                          uint size1,\n"
+"                          uint size2,\n"
+"                          uint stride\n"
+"                          ) {\n"
+"    uint size = min(size1, size2);\n"
+"    if(get_global_id(0) == 0)\n"
+"        S[0] = 0;\n"
+"    for(uint i = get_global_id(0); i < size ; i += get_global_size(0)) {\n"
+"        D[i] = A[i*stride + i];\n"
+"        S[i + 1] = (i + 1 < size2) ? A[i*stride + (i + 1)] : 0;\n"
+"    }\n"
+"}\n"
+; //svd_align1_bidiag_pack
+
 const char * const svd_align1_copy_col = 
 "// probably, this is a ugly way\n"
 "__kernel void copy_col(__global float* A,\n"
@@ -40,40 +58,6 @@ const char * const svd_align1_copy_row =
 "    }\n"
 "}\n"
 ; //svd_align1_copy_row
-
-const char * const svd_align1_transpose_inplace = 
-"__kernel void transpose_inplace(__global float* input,\n"
-"                        unsigned int row_num,\n"
-"                        unsigned int col_num) {\n"
-"    unsigned int size = row_num * col_num;\n"
-"    for(unsigned int i = get_global_id(0); i < size; i+= get_global_size(0)) {\n"
-"        unsigned int row = i / col_num;\n"
-"        unsigned int col = i - row*col_num;\n"
-"        unsigned int new_pos = col * row_num + row;\n"
-"        //new_pos = (col < row) ? 0 : 1;\n"
-"        //input[i] = new_pos;\n"
-"        if(i < new_pos) {\n"
-"            float val = input[i];\n"
-"            input[i] = input[new_pos];\n"
-"            input[new_pos] = val;\n"
-"        }\n"
-"    }\n"
-"}\n"
-; //svd_align1_transpose_inplace
-
-const char * const svd_align1_inverse_signs = 
-"__kernel void inverse_signs(__global float* v,\n"
-"                            __global float* signs,\n"
-"                            uint size,\n"
-"                            uint stride \n"
-"                            )\n"
-"{\n"
-"    uint glb_id_x = get_global_id(0);\n"
-"    uint glb_id_y = get_global_id(1);\n"
-"    if((glb_id_x < size) && (glb_id_y < size))\n"
-"        v[glb_id_x * stride + glb_id_y] *= signs[glb_id_x];\n"
-"}\n"
-; //svd_align1_inverse_signs
 
 const char * const svd_align1_givens_prev = 
 "__kernel void givens_prev(__global float* matr,\n"
@@ -122,24 +106,6 @@ const char * const svd_align1_givens_prev =
 "        matr[(end_i - 1) * stride + j] = x;\n"
 "}\n"
 ; //svd_align1_givens_prev
-
-const char * const svd_align1_bidiag_pack = 
-"__kernel void bidiag_pack(__global float* A,\n"
-"                          __global float* D,\n"
-"                          __global float* S,\n"
-"                          uint size1,\n"
-"                          uint size2,\n"
-"                          uint stride\n"
-"                          ) {\n"
-"    uint size = min(size1, size2);\n"
-"    if(get_global_id(0) == 0)\n"
-"        S[0] = 0;\n"
-"    for(uint i = get_global_id(0); i < size ; i += get_global_size(0)) {\n"
-"        D[i] = A[i*stride + i];\n"
-"        S[i + 1] = (i + 1 < size2) ? A[i*stride + (i + 1)] : 0;\n"
-"    }\n"
-"}\n"
-; //svd_align1_bidiag_pack
 
 const char * const svd_align1_house_col = 
 "// calculates a sum of local array elements\n"
@@ -260,6 +226,40 @@ const char * const svd_align1_house_row =
 "    }\n"
 "}\n"
 ; //svd_align1_house_row
+
+const char * const svd_align1_inverse_signs = 
+"__kernel void inverse_signs(__global float* v,\n"
+"                            __global float* signs,\n"
+"                            uint size,\n"
+"                            uint stride \n"
+"                            )\n"
+"{\n"
+"    uint glb_id_x = get_global_id(0);\n"
+"    uint glb_id_y = get_global_id(1);\n"
+"    if((glb_id_x < size) && (glb_id_y < size))\n"
+"        v[glb_id_x * stride + glb_id_y] *= signs[glb_id_x];\n"
+"}\n"
+; //svd_align1_inverse_signs
+
+const char * const svd_align1_transpose_inplace = 
+"__kernel void transpose_inplace(__global float* input,\n"
+"                        unsigned int row_num,\n"
+"                        unsigned int col_num) {\n"
+"    unsigned int size = row_num * col_num;\n"
+"    for(unsigned int i = get_global_id(0); i < size; i+= get_global_size(0)) {\n"
+"        unsigned int row = i / col_num;\n"
+"        unsigned int col = i - row*col_num;\n"
+"        unsigned int new_pos = col * row_num + row;\n"
+"        //new_pos = (col < row) ? 0 : 1;\n"
+"        //input[i] = new_pos;\n"
+"        if(i < new_pos) {\n"
+"            float val = input[i];\n"
+"            input[i] = input[new_pos];\n"
+"            input[new_pos] = val;\n"
+"        }\n"
+"    }\n"
+"}\n"
+; //svd_align1_transpose_inplace
 
   }  //namespace kernels
  }  //namespace linalg

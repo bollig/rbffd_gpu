@@ -29,7 +29,7 @@
 #include "viennacl/vector.hpp"
 #include "viennacl/matrix.hpp"
 #include "viennacl/linalg/ilu.hpp"
-#include "viennacl/linalg/jacobi_precond.hpp"
+//#include "viennacl/linalg/jacobi_precond.hpp"
 #include "viennacl/linalg/direct_solve.hpp"
 #include "viennacl/linalg/prod.hpp"       //generic matrix-vector product
 #include "viennacl/linalg/norm_2.hpp"     //generic l2-norm for vectors

@@ -120,12 +120,20 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 #add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -no-vec -opt-report -vec-report -par-report)
 #ICC:  add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -opt-report -vec-report -par-report)
 add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall 
-    -std=c++0x 
+  -std=c++0x 
     -O3 
     # -g 
     -DNDEBUG 
     #-DTHRUST_DEBUG )  
     ) 
+
+message(STATUS "CompilerID: ${CMAKE_CXX_COMPILER_ID}")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  add_definitions(
+      -DUSE_CLANG
+      -stdlib=libc++
+  )
+endif()
 
 #INCLUDE_DIRECTORIES($ENV{EXTERNAL_INCLUDE_DIRS})
 

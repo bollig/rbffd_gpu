@@ -164,7 +164,7 @@ void ContourSVD::execute(int N_)
     }
 
     /*
-       % Extract every other circle value of C. These values will be used to 
+       % Extract every other circle value of C. These values will be used to
        % determine whether any singularities of C are enclosed within the contour.
        testC = C(:,:,1:2:numCoeffs);
        */
@@ -203,7 +203,7 @@ void ContourSVD::execute(int N_)
 
     /*
        % Set N to be N/2, since we have reduced the number of laurent coeffs by 1/2.
-       % Remember only the even terms are present in the expansion of C due to the 
+       % Remember only the even terms are present in the expansion of C due to the
        % 4 fold symmetry.
        N = N/2;
        */
@@ -252,7 +252,7 @@ void ContourSVD::execute(int N_)
     //print(columnCoeffsCounter, "columnCoeffsCounter");
 
     /*
-       % Row vector indicating which columns of the C matrix need to have a 
+       % Row vector indicating which columns of the C matrix need to have a
        % polynomial denominator computed
        computeDenomFlag = (columnCoeffsCounter >= NUM_AGREEING_COEFFS);
        % find: returns column indices
@@ -738,7 +738,7 @@ mat ContourSVD::rbffdapp(double eps, mat& rd, ArrayT<Vec3>& re, const char* choi
 
     return fds;
 }
-#endif 
+#endif
 //----------------------------------------------------------------------
 cx_mat ContourSVD::rbffdapp(CMPLX eps, cx_mat& rd, ArrayT<CVec3>& re, const char* choice)
     // relates to computation of derivative coefficients
@@ -835,9 +835,9 @@ cx_rowvec ContourSVD::solver(cx_rowvec& A, cx_mat& B)
     // right / operator:  A * inv(B)
 {
     // htrans is deprecated.
-    // after v1.2 of armadillo, the htrans (Hermitian transpose) is no longer needed 
+    // after v1.2 of armadillo, the htrans (Hermitian transpose) is no longer needed
     // because the trans() routine does Hermitian for complex and strans does simple transpose
-    // without conjugates 
+    // without conjugates
     cx_mat ac = trans(A); // htrans?
 
     cx_mat c = solve(trans(B), ac);
@@ -952,8 +952,13 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
             fftw_plan p = NULL;
             for (int j=0; j < mc; j++) {
                 for (int i=0; i < mg; i++) {
+#if defined(USE_CLANG)
+                    CMPLX* si = new CMPLX[M];
+                    CMPLX* so = new CMPLX[M];
+#else
                     CMPLX si[M];
                     CMPLX so[M];
+#endif
                     for (int k=0; k < M; k++) {
                         si[k] = sC(i,j,k);
                     }
@@ -966,6 +971,10 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
                         //printf("temp(0,0,%d)= (%f,%f)\n", k, real(so[k]), imag(so[k]));
                         temp(i,j,k) = so[k] * minv;
                     }
+#if defined (USE_CLANG)
+                delete [] si;
+                delete [] so;
+#endif
                 }}
 
             // ifft is 10-11 significant digit accurate with respect to Octave
@@ -993,7 +1002,7 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
                 for (int j=0; j < mc; j++) {
                     for (int i=0; i < mg; i++) {
                         // off by 1024 = 32*32 from results from matlab *SVD*.m
-                        // Check values of C[M] (and C[M-1] . Something is wrong.  Fixed. 
+                        // Check values of C[M] (and C[M-1] . Something is wrong.  Fixed.
                         temp2(i,j,k) = (1./(2.*M))*real((*C[M])(i,j));
                         //if (i == 0 && j == 0) { printf("temp2(0,0,%d)= %f\n", k, temp2(0,0,k)); }
                     }}}
@@ -1024,7 +1033,7 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
             /*
                % To get the actual Laurent coefficients we need to scale the values
                % from the inverse fft by the appropriate power of the radius
-               % used to compute the function values around the circle in the 
+               % used to compute the function values around the circle in the
                % complex epsilon plane.
                negPows = coeffs(:,:,2:M).*...
                repmat(reshape(erad.^(2*(1:M-1)),[1 1 M-1]),[mg mc 1]);
@@ -1047,7 +1056,7 @@ void ContourSVD::computeLaurentCoeffs(vector<cx_mat*> C, double erad, ArrayT<dou
             for (int k=0; k < M-1; k++) {
                 for (int i=0; i < mg; i++) {
                     for (int j=0; j < mc; j++) {
-                        negPows(i,j,k) = coeffs(i,j,k+1)*neg_pow[k]; 
+                        negPows(i,j,k) = coeffs(i,j,k+1)*neg_pow[k];
                     }}}
 
             //for (int k=0; k < M+1; k++) {
@@ -1129,7 +1138,7 @@ ArrayT<double> ContourSVD::valsAgree(ArrayT<T>& val1, ArrayT<T>& val2, double re
        [mv1 nv1] = size(val1);
        [mv2 nv2] = size(val2);
 
-       % GE: WHAT IF BOTH ARE SCALARS? 
+       % GE: WHAT IF BOTH ARE SCALARS?
 
        % Check to see if either val1 or val2 is a scalar.
        if ( (mv1 == 1) & (nv1 == 1) )
@@ -1257,7 +1266,7 @@ void ContourSVD::squeeze(Arrayt<T> arr)
 
     if (sz[0] == 1 && sz[1] == 1) {
     } else if (sz[0] == 1 && sz[1] != 1) {
-        else if (sz[0] != 1 && sz[1] == 1) 
+        else if (sz[0] != 1 && sz[1] == 1)
     }
 }
 #endif

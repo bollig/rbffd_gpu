@@ -151,7 +151,11 @@ public:
 	
 	/// check recursively if the substructures is correct using STL provided algorithm
 	bool verifyHeap(  ){
+#if defined(USE_CLANG)
+		return std::is_heap(heap.begin(), heap.end() );
+#else 
 		return std::__is_heap(heap.begin(), heap.end() );
+#endif 
 	}
 	
 private:

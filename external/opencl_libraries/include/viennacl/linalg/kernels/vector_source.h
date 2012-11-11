@@ -7,185 +7,6 @@ namespace viennacl
  {
   namespace kernels
   {
-const char * const vector_align16_add = 
-"__kernel void add(\n"
-"          __global const float16 * vec1,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float16 * vec2, \n"
-"          unsigned int start2,\n"
-"          unsigned int inc2,\n"
-"          unsigned int size2,\n"
-"          __global float16 * result,\n"
-"          unsigned int start3,\n"
-"          unsigned int inc3,\n"
-"          unsigned int size3)\n"
-"{ \n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    result[i*inc3+start3] = vec1[i*inc1+start1] + vec2[i*inc2+start2];\n"
-"}\n"
-; //vector_align16_add
-
-const char * const vector_align16_cpu_inplace_mul = 
-"\n"
-"__kernel void cpu_inplace_mult(\n"
-"          __global float16 * vec,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          float factor) \n"
-"{ \n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    vec[i*inc1+start1] *= factor;\n"
-"}\n"
-"\n"
-; //vector_align16_cpu_inplace_mul
-
-const char * const vector_align16_cpu_mult = 
-"__kernel void cpu_mult(\n"
-"          __global const float16 * vec,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          float factor, \n"
-"          __global float16 * result,\n"
-"          unsigned int start2,\n"
-"          unsigned int inc2,\n"
-"          unsigned int size2) \n"
-"{ \n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    result[i*inc2+start2] = vec[i*inc1+start1] * factor;\n"
-"}\n"
-; //vector_align16_cpu_mult
-
-const char * const vector_align16_divide = 
-"//Note: 'div' cannot be used because of complaints by the jit-compiler\n"
-"__kernel void divide(\n"
-"          __global const float16 * vec,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float * fac,  //note: CPU variant is mapped to prod_scalar\n"
-"          __global float16 * result,\n"
-"          unsigned int start2,\n"
-"          unsigned int inc2,\n"
-"          unsigned int size2)  \n"
-"{ \n"
-"  float factor = *fac;\n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    result[i*inc2+start2] = vec[i*inc1+start1] / factor;\n"
-"}\n"
-; //vector_align16_divide
-
-const char * const vector_align16_inplace_add = 
-"__kernel void inplace_add(\n"
-"          __global float16 * vec1,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float16 * vec2,\n"
-"          unsigned int start2,\n"
-"          unsigned int inc2,\n"
-"          unsigned int size2) \n"
-"{ \n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    vec1[i*inc1+start1] += vec2[i*inc2+start2];\n"
-"}\n"
-; //vector_align16_inplace_add
-
-const char * const vector_align16_inplace_divide = 
-"__kernel void inplace_divide(\n"
-"          __global float16 * vec,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float * fac)  //note: CPU variant is mapped to prod_scalar\n"
-"{ \n"
-"  float factor = *fac;\n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    vec[i*inc1+start1] /= factor;\n"
-"}\n"
-; //vector_align16_inplace_divide
-
-const char * const vector_align16_inplace_mult = 
-"__kernel void inplace_mult(\n"
-"          __global float16 * vec,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float * fac) \n"
-"{ \n"
-"  float factor = *fac;\n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    vec[i*inc1+start1] *= factor;\n"
-"}\n"
-; //vector_align16_inplace_mult
-
-const char * const vector_align16_inplace_sub = 
-"__kernel void inplace_sub(\n"
-"          __global float16 * vec1,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float16 * vec2,\n"
-"          unsigned int start2,\n"
-"          unsigned int inc2,\n"
-"          unsigned int size2) \n"
-"{ \n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    vec1[i*inc1+start1] -= vec2[i*inc2+start2];\n"
-"}\n"
-; //vector_align16_inplace_sub
-
-const char * const vector_align16_mult = 
-"__kernel void mult(\n"
-"          __global const float16 * vec,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float * fac, \n"
-"          __global float16 * result,\n"
-"          unsigned int start2,\n"
-"          unsigned int inc2,\n"
-"          unsigned int size2) \n"
-"{ \n"
-"  float factor = *fac;\n"
-"  unsigned int i_end = size1/16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    result[i*inc2+start2] = vec[i*inc1+start1] * factor;\n"
-"}\n"
-; //vector_align16_mult
-
-const char * const vector_align16_sub = 
-"__kernel void sub(\n"
-"          __global const float16 * vec1,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float16 * vec2, \n"
-"          unsigned int start2,\n"
-"          unsigned int inc2,\n"
-"          unsigned int size2,\n"
-"          __global float16 * result,\n"
-"          unsigned int start3,\n"
-"          unsigned int inc3,\n"
-"          unsigned int size3)\n"
-"{ \n"
-"  unsigned int i_end = size1 / 16;\n"
-"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
-"    result[i*inc3+start3] = vec1[i*inc1+start1] - vec2[i*inc2+start2];\n"
-"}\n"
-; //vector_align16_sub
-
 const char * const vector_align1_add = 
 "__kernel void add(\n"
 "          __global const float * vec1,\n"
@@ -496,20 +317,6 @@ const char * const vector_align1_inplace_div_add =
 "}\n"
 ; //vector_align1_inplace_div_add
 
-const char * const vector_align1_inplace_divide = 
-"__kernel void inplace_divide(\n"
-"          __global float * vec,\n"
-"          unsigned int start1,\n"
-"          unsigned int inc1,\n"
-"          unsigned int size1,\n"
-"          __global const float * fac)  //note: CPU variant is mapped to prod_scalar\n"
-"{ \n"
-"  float factor = *fac;\n"
-"  for (unsigned int i = get_global_id(0); i < size1; i += get_global_size(0))\n"
-"    vec[i*inc1+start1] /= factor;\n"
-"}\n"
-; //vector_align1_inplace_divide
-
 const char * const vector_align1_inplace_div_sub = 
 "///// divide substract:\n"
 "__kernel void inplace_div_sub(\n"
@@ -528,6 +335,20 @@ const char * const vector_align1_inplace_div_sub =
 "    vec1[i*inc1+start1] -= vec2[i*inc2+start2] / factor;\n"
 "}\n"
 ; //vector_align1_inplace_div_sub
+
+const char * const vector_align1_inplace_divide = 
+"__kernel void inplace_divide(\n"
+"          __global float * vec,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float * fac)  //note: CPU variant is mapped to prod_scalar\n"
+"{ \n"
+"  float factor = *fac;\n"
+"  for (unsigned int i = get_global_id(0); i < size1; i += get_global_size(0))\n"
+"    vec[i*inc1+start1] /= factor;\n"
+"}\n"
+; //vector_align1_inplace_divide
 
 const char * const vector_align1_inplace_mul_add = 
 "__kernel void inplace_mul_add(\n"
@@ -949,6 +770,185 @@ const char * const vector_align1_vmax =
 "    *result = vec1[start1];\n"
 "}\n"
 ; //vector_align1_vmax
+
+const char * const vector_align16_add = 
+"__kernel void add(\n"
+"          __global const float16 * vec1,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float16 * vec2, \n"
+"          unsigned int start2,\n"
+"          unsigned int inc2,\n"
+"          unsigned int size2,\n"
+"          __global float16 * result,\n"
+"          unsigned int start3,\n"
+"          unsigned int inc3,\n"
+"          unsigned int size3)\n"
+"{ \n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    result[i*inc3+start3] = vec1[i*inc1+start1] + vec2[i*inc2+start2];\n"
+"}\n"
+; //vector_align16_add
+
+const char * const vector_align16_cpu_inplace_mul = 
+"\n"
+"__kernel void cpu_inplace_mult(\n"
+"          __global float16 * vec,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          float factor) \n"
+"{ \n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    vec[i*inc1+start1] *= factor;\n"
+"}\n"
+"\n"
+; //vector_align16_cpu_inplace_mul
+
+const char * const vector_align16_cpu_mult = 
+"__kernel void cpu_mult(\n"
+"          __global const float16 * vec,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          float factor, \n"
+"          __global float16 * result,\n"
+"          unsigned int start2,\n"
+"          unsigned int inc2,\n"
+"          unsigned int size2) \n"
+"{ \n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    result[i*inc2+start2] = vec[i*inc1+start1] * factor;\n"
+"}\n"
+; //vector_align16_cpu_mult
+
+const char * const vector_align16_divide = 
+"//Note: 'div' cannot be used because of complaints by the jit-compiler\n"
+"__kernel void divide(\n"
+"          __global const float16 * vec,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float * fac,  //note: CPU variant is mapped to prod_scalar\n"
+"          __global float16 * result,\n"
+"          unsigned int start2,\n"
+"          unsigned int inc2,\n"
+"          unsigned int size2)  \n"
+"{ \n"
+"  float factor = *fac;\n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    result[i*inc2+start2] = vec[i*inc1+start1] / factor;\n"
+"}\n"
+; //vector_align16_divide
+
+const char * const vector_align16_inplace_add = 
+"__kernel void inplace_add(\n"
+"          __global float16 * vec1,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float16 * vec2,\n"
+"          unsigned int start2,\n"
+"          unsigned int inc2,\n"
+"          unsigned int size2) \n"
+"{ \n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    vec1[i*inc1+start1] += vec2[i*inc2+start2];\n"
+"}\n"
+; //vector_align16_inplace_add
+
+const char * const vector_align16_inplace_divide = 
+"__kernel void inplace_divide(\n"
+"          __global float16 * vec,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float * fac)  //note: CPU variant is mapped to prod_scalar\n"
+"{ \n"
+"  float factor = *fac;\n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    vec[i*inc1+start1] /= factor;\n"
+"}\n"
+; //vector_align16_inplace_divide
+
+const char * const vector_align16_inplace_mult = 
+"__kernel void inplace_mult(\n"
+"          __global float16 * vec,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float * fac) \n"
+"{ \n"
+"  float factor = *fac;\n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    vec[i*inc1+start1] *= factor;\n"
+"}\n"
+; //vector_align16_inplace_mult
+
+const char * const vector_align16_inplace_sub = 
+"__kernel void inplace_sub(\n"
+"          __global float16 * vec1,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float16 * vec2,\n"
+"          unsigned int start2,\n"
+"          unsigned int inc2,\n"
+"          unsigned int size2) \n"
+"{ \n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    vec1[i*inc1+start1] -= vec2[i*inc2+start2];\n"
+"}\n"
+; //vector_align16_inplace_sub
+
+const char * const vector_align16_mult = 
+"__kernel void mult(\n"
+"          __global const float16 * vec,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float * fac, \n"
+"          __global float16 * result,\n"
+"          unsigned int start2,\n"
+"          unsigned int inc2,\n"
+"          unsigned int size2) \n"
+"{ \n"
+"  float factor = *fac;\n"
+"  unsigned int i_end = size1/16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    result[i*inc2+start2] = vec[i*inc1+start1] * factor;\n"
+"}\n"
+; //vector_align16_mult
+
+const char * const vector_align16_sub = 
+"__kernel void sub(\n"
+"          __global const float16 * vec1,\n"
+"          unsigned int start1,\n"
+"          unsigned int inc1,\n"
+"          unsigned int size1,\n"
+"          __global const float16 * vec2, \n"
+"          unsigned int start2,\n"
+"          unsigned int inc2,\n"
+"          unsigned int size2,\n"
+"          __global float16 * result,\n"
+"          unsigned int start3,\n"
+"          unsigned int inc3,\n"
+"          unsigned int size3)\n"
+"{ \n"
+"  unsigned int i_end = size1 / 16;\n"
+"  for (unsigned int i = get_global_id(0); i < i_end; i += get_global_size(0))\n"
+"    result[i*inc3+start3] = vec1[i*inc1+start1] - vec2[i*inc2+start2];\n"
+"}\n"
+; //vector_align16_sub
 
 const char * const vector_align4_cpu_inplace_mul_add = 
 "__kernel void cpu_inplace_mul_add(\n"

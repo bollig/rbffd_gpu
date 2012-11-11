@@ -109,8 +109,8 @@ namespace viennacl
       
       viennacl::linalg::kernels::nmf<ScalarType, 1>::init();
       
-      assert(V.size1() == W.size1() && V.size2() == H.size2() && "Dimensions of W and H don't allow for V = W * H");
-      assert(W.size2() == H.size1() && "Dimensions of W and H don't match, prod(W, H) impossible");
+      assert(V.size1() == W.size1() && V.size2() == H.size2() && bool("Dimensions of W and H don't allow for V = W * H"));
+      assert(W.size2() == H.size1() && bool("Dimensions of W and H don't match, prod(W, H) impossible"));
 
       std::size_t k = W.size2();
       conf.iters_ = 0;
@@ -174,7 +174,7 @@ namespace viennacl
             break;
 
           // Stagnation check
-          if (fabs(diff_val - last_diff) / (diff_val * conf.check_after_steps()) < conf.stagnation_tolerance()) //avoid situations where convergence stagnates
+          if (std::fabs(diff_val - last_diff) / (diff_val * conf.check_after_steps()) < conf.stagnation_tolerance()) //avoid situations where convergence stagnates
           {
             if (stagnation_flag)       // iteration stagnates (two iterates with no notable progress)
               break;

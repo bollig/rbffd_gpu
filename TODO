@@ -12,3 +12,11 @@ Stokes multi-CPU
 
 With ViennaCL can I create a vector of type "vcl::vector<double4>" ? would make my stokes life much much easier. 
     -- Could use a sparse permutation matrix to permute the vectors back to proper order.
+
+
+
+
+- FInish Cosine Benchmark main loop (destroy, reconstruct)
+- MPI CosineVCL
+- Overlapping comm VCL
+- GFLOPS (plug-in formula. Assume 1 : 1 ratio on memloads and compute. (1 op for muladd)

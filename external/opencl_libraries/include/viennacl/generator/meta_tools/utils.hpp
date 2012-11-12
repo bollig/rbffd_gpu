@@ -29,18 +29,9 @@
 #include <iostream>
 #include "viennacl/matrix.hpp"
 
-namespace viennacl
-{
-  template<bool> struct vcl_static_assert;
-  template<> struct vcl_static_assert<true>{ typedef int type; };
-}
-#define VIENNACL_STATIC_ASSERT(expr,msg) \
-    struct __##msg{\
-    typedef typename vcl_static_assert<expr>::type type;\
-    };\
-    typedef typename __##msg::type __dummy_##msg\
+#define VIENNACL_STATIC_ASSERT( x ) typedef char __STATIC_ASSERT__[( x )?1:-1]
 
-namespace viennacl
+namespace viennacl 
 {
 
   class any;
@@ -88,7 +79,7 @@ namespace viennacl
       template <class value_type>
       any(const value_type& v_) : v(new value<value_type>(v_)) { }
 
-      any(any const & other) : v(other.v ? other.v->clone() : 0) {      }
+      any(any const & other) : v(other.v ? other.v->clone() : 0) {}
 
       any& operator=(const any& other)
       {
@@ -127,62 +118,21 @@ namespace viennacl
   T any_cast(any& a)
   {
     value<T>* v = dynamic_cast<value<T>*>(a.v);
+    
     if(v == 0)
       throw bad_any_cast();
     else
       return v->t;
   }
 
-  template<class T>
-  struct true_pred{
-      enum { value = 1 };
-  };
-
-
 
   namespace generator
   {
-
-  namespace result_of
-  {
-
-    template<template<class> class T>
-    struct is_not{
-      template<class U>
-      struct Pred{
-        enum {
-          value = !T<U>::value
-        };
-      };
-    };
-
-    template<template<class> class S, template<class> class T>
-    struct and_is{
-      template<class U>
-      struct Pred{
-        enum {
-          value = S<U>::value && T<U>::value
-        };
-      };
-    };
-
-    template<template<class> class S, template<class> class T>
-    struct or_is{
-      template<class U>
-      struct Pred{
-        enum {
-          value = S<U>::value || T<U>::value
-        };
-      };
-    };
-
-  }
-
     struct NullType 
     {
       static const std::string name() 
       {
-          return "" ;
+          return "Null\n" ;
       }
     };
 
@@ -331,21 +281,6 @@ namespace viennacl
         return print_type<T,ALIGNMENT>::value() + "*" ;
       }
     };
-    
-    
-
-  }
-
-  namespace tools{
-
-    template<typename T>
-    struct cl_type;
-
-    template<> struct cl_type<float>{ typedef cl_float Result; };
-    template<> struct cl_type<double>{ typedef cl_double Result; };
-    template<> struct cl_type<int>{ typedef cl_int Result; };
-    template<> struct cl_type<long>{ typedef cl_long Result; };
-    template<> struct cl_type<bool>{ typedef cl_bool Result; };
 
   }
 }

@@ -60,43 +60,43 @@ namespace viennacl
              */
             //getter
             ScalarType& operator[] (const unsigned int ind){
-                return v_[ind];
+                return _v[ind];
                 
             }
             
             void clear(){
-                v_.clear();
+                _v.clear();
             }
             
             const_iterator find(const unsigned int var) const{
-                return v_.find(var);
+                return _v.find(var);
             }
             
             iterator find(const unsigned int var){
-                return v_.find(var);
+                return _v.find(var);
             }
             
             const_iterator begin() const{
-                return v_.begin();
+                return _v.begin();
             }
             
             const_iterator end() const{
-                return v_.end();
+                return _v.end();
             }
             
             
             iterator begin(){
-                return v_.begin();
+                return _v.begin();
             }
             
             iterator end(){
-                return v_.end();
+                return _v.end();
             }
             
             
         private:
-            unsigned int size_;
-            std::map<unsigned int, ScalarType> v_;
+            unsigned int _size;
+            std::map<unsigned int, ScalarType> _v;
         };
       }
     }

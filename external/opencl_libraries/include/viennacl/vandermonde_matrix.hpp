@@ -41,9 +41,6 @@ namespace viennacl {
     class vandermonde_matrix
     {
       public:
-        typedef viennacl::backend::mem_handle                                                              handle_type;
-        typedef scalar<typename viennacl::tools::CHECK_SCALAR_TEMPLATE_ARGUMENT<SCALARTYPE>::ResultType>   value_type;
-        
         /**
          * @brief The default constructor. Does not allocate any memory.
          *
@@ -61,7 +58,7 @@ namespace viennacl {
          */
         explicit vandermonde_matrix(std::size_t rows, std::size_t cols) : elements_(rows)
         {
-          assert(rows == cols && bool("Vandermonde matrix must be square in this release!"));
+          assert(rows == cols && "Vandermonde matrix must be square in this release!");
           viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
         }
 
@@ -79,7 +76,7 @@ namespace viennacl {
         *
         *   @return OpenCL handle
         */
-        handle_type const & handle() const { return elements_.handle(); }
+        viennacl::ocl::handle<cl_mem> handle() const { return elements_.handle(); }
 
         /**
          * @brief Returns an internal viennacl::vector, which represents a Vandermonde matrix elements
@@ -125,14 +122,14 @@ namespace viennacl {
          */
         SCALARTYPE operator()(std::size_t row_index, std::size_t col_index) const
         {
-            assert(row_index < size1() && col_index < size2() && bool("Invalid access"));
+            assert(row_index < size1() && col_index < size2() && "Invalid access");
             
             return pow(elements_[row_index], static_cast<int>(col_index));
         }
 
     private:
         vandermonde_matrix(vandermonde_matrix const & t) {}
-        vandermonde_matrix & operator=(vandermonde_matrix const & t);
+        vandermonde_matrix & operator=(vandermonde_matrix const & t) {}
         
         viennacl::vector<SCALARTYPE, ALIGNMENT> elements_;
     };
@@ -146,7 +143,7 @@ namespace viennacl {
     template <typename SCALARTYPE, unsigned int ALIGNMENT>
     void copy(std::vector<SCALARTYPE>& cpu_vec, vandermonde_matrix<SCALARTYPE, ALIGNMENT>& gpu_mat)
     {
-        assert(cpu_vec.size() == gpu_mat.size1()  && bool("Size mismatch"));
+        assert(cpu_vec.size() == gpu_mat.size1()  && "Size mismatch");
         copy(cpu_vec, gpu_mat.elements());
     }
 
@@ -159,7 +156,7 @@ namespace viennacl {
     template <typename SCALARTYPE, unsigned int ALIGNMENT>
     void copy(vandermonde_matrix<SCALARTYPE, ALIGNMENT>& gpu_mat, std::vector<SCALARTYPE>& cpu_vec)
     {
-        assert(cpu_vec.size() == gpu_mat.size1() && bool("Size mismatch"));
+        assert(cpu_vec.size() == gpu_mat.size1() && "Size mismatch");
         copy(gpu_mat.elements(), cpu_vec);
     }
 
@@ -173,8 +170,8 @@ namespace viennacl {
     void copy(vandermonde_matrix<SCALARTYPE, ALIGNMENT>& vander_src, MATRIXTYPE& com_dst)
     {
         std::size_t size = vander_src.size1();
-        assert(size == com_dst.size1() && bool("Size mismatch"));
-        assert(size == com_dst.size2() && bool("Size mismatch"));
+        assert(size == com_dst.size1() && "Size mismatch");
+        assert(size == com_dst.size2() && "Size mismatch");
         std::vector<SCALARTYPE> tmp(size);
         copy(vander_src, tmp);
 
@@ -195,8 +192,8 @@ namespace viennacl {
     void copy(MATRIXTYPE& com_src, vandermonde_matrix<SCALARTYPE, ALIGNMENT>& vander_dst) 
     {
         std::size_t size = vander_dst.size1();
-        assert(size == com_src.size1() && bool("Size mismatch"));
-        assert(size == com_src.size2() && bool("Size mismatch"));
+        assert(size == com_src.size1() && "Size mismatch");
+        assert(size == com_src.size2() && "Size mismatch");
         std::vector<SCALARTYPE> tmp(size);
 
         for(std::size_t i = 0; i < size; i++)
@@ -241,4 +238,4 @@ namespace viennacl {
 
 }
 
-#endif // VIENNACL_VANDERMONDE_MATRIX_HPP
+#endif // _VIENNACL_VANDERMONDE_MATRIX_HPP

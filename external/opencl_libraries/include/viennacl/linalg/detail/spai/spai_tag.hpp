@@ -25,6 +25,8 @@
 */
 
 
+
+//#define __NO_STD_VECTOR
 #include <utility>
 #include <iostream>
 #include <fstream>
@@ -75,69 +77,69 @@ namespace viennacl
                       double residual_threshold = 1e-2,
                       bool is_static = false,
                       bool is_right = false) :
-              residual_norm_threshold_(residual_norm_threshold),
-              iteration_limit_(iteration_limit),
-              residual_threshold_(residual_threshold),
-              is_static_(is_static),
-              is_right_(is_right) {};
+              _residual_norm_threshold(residual_norm_threshold),
+              _iteration_limit(iteration_limit),
+              _residual_threshold(residual_threshold),
+              _is_static(is_static),
+              _is_right(is_right) {};
               
               double getResidualNormThreshold() const
-              { return residual_norm_threshold_; }
+              { return _residual_norm_threshold; }
               
               double getResidualThreshold() const
-              { return residual_threshold_; }
+              { return _residual_threshold; }
               
               unsigned int getIterationLimit () const
-              { return iteration_limit_; }
+              { return _iteration_limit; }
               
               bool getIsStatic() const
-              { return is_static_; }
+              { return _is_static; }
               
               bool getIsRight() const
-              { return is_right_; }
+              { return _is_right; }
               
               long getBegInd() const
-              { return beg_ind_; }
+              { return _beg_ind; }
               
               long getEndInd() const 
-              { return end_ind_; }
+              { return _end_ind; }
               
               
               
               void setResidualNormThreshold(double residual_norm_threshold)
               {
                   if(residual_norm_threshold > 0)
-                      residual_norm_threshold_ = residual_norm_threshold;
+                      _residual_norm_threshold = residual_norm_threshold;
               }
               
               void setResidualThreshold(double residual_threshold)
               {
                   if(residual_threshold > 0)
-                      residual_threshold_ = residual_threshold;
+                      _residual_threshold = residual_threshold;
               }
               
               void setIterationLimit(unsigned int iteration_limit)
               {
                   if(iteration_limit > 0)
-                      iteration_limit_ = iteration_limit;
+                      _iteration_limit = iteration_limit;
               }
               
-              void setIsRight(bool is_right) { is_right_ = is_right; }
+              void setIsRight(bool is_right) { _is_right = is_right; }
               
-              void setIsStatic(bool is_static) { is_static_ = is_static; }
+              void setIsStatic(bool is_static) { _is_static = is_static; }
               
-              void setBegInd(long beg_ind) { beg_ind_ = beg_ind; }
+              void setBegInd(long beg_ind) { _beg_ind = beg_ind; }
               
-              void setEndInd(long end_ind){ end_ind_ = end_ind; }
+              void setEndInd(long end_ind){ _end_ind = end_ind; }
               
               
             private:
-              double residual_norm_threshold_;
-              unsigned int iteration_limit_;
-              long beg_ind_, end_ind_;
-              double residual_threshold_;
-              bool is_static_;
-              bool is_right_;
+              double _residual_norm_threshold;
+              unsigned int _iteration_limit;
+              long _beg_ind, _end_ind;
+              double _residual_threshold;
+              bool _is_static;
+              bool _is_right;
           };
         
         }

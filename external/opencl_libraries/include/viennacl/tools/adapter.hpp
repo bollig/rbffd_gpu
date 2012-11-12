@@ -58,15 +58,15 @@ namespace viennacl
         {
           if (i < 0) //reverse iterator end
           {
-            //iter2 = mat_[0].rend();  //reverse iterator end
+            //iter2 = _mat[0].rend();  //reverse iterator end
           }
-          else  //i_ is valid
+          else  //_i is valid
           {
             if (j < 0)
             {
-              //iter2 = mat_[i].rend();
+              //iter2 = _mat[i].rend();
             }
-            else //j_ is valid
+            else //_j is valid
             {
               if (i_ < mat_.size() && mat_[i].size() > 0 )
               {
@@ -134,7 +134,9 @@ namespace viennacl
         
         bool operator==(self_type const & other) const
         {
-          return is_iterator1 ? (i_ == other.i_) : (iter2 == other.iter2);
+          if (is_iterator1)
+            return (i_ == other.i_);
+          return (iter2 == other.iter2);
         }
         
         bool operator!=(self_type const & other) const { return !(*this == other); }
@@ -190,6 +192,7 @@ namespace viennacl
          
         size_type size1() const { return size1_; }
         size_type size2() const { return size2_; }
+        //size_type size2() const { return (_mat.size() > 0) ? _mat.back().size() : 0; }
 
         const_iterator1 begin1() const { return const_iterator1(mat_, 0, 0); }
         const_iterator1 end1() const   { return const_iterator1(mat_, size1(), size2()); }
@@ -240,13 +243,13 @@ namespace viennacl
         {
           if (i < 0) //reverse iterator end
           {
-            //iter2 = mat_[0].rend();  //reverse iterator end
+            //iter2 = _mat[0].rend();  //reverse iterator end
           }
           else  //_i is valid
           {
             if (j < 0)
             {
-              //iter2 = mat[i]_.rend();
+              //iter2 = _mat[i].rend();
             }
             else //_j is valid
             {

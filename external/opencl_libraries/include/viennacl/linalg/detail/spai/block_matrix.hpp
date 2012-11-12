@@ -45,40 +45,41 @@ namespace viennacl
           * @brief Represents a contigious matrices on GPU
           */
           
-          class block_matrix
-          {
-            public:
-              block_matrix() : elements_(NULL), matrix_dimensions_(NULL), start_block_inds_(NULL) {}
-              
+          class block_matrix{
+          public:
+              block_matrix(){
+                  
+              }
               /**
               * @brief Returns a handle to the elements
               */
-              viennacl::ocl::handle<cl_mem>& handle(){ return elements_; }
+              viennacl::ocl::handle<cl_mem>& handle(){ return _elements; }
               /**
               * @brief Returns a handle to the matrix dimensions
               */
-              viennacl::ocl::handle<cl_mem>& handle1() { return matrix_dimensions_; }
+              viennacl::ocl::handle<cl_mem>& handle1() { return _matrix_dimensions; }
               /**
               * @brief Returns a handle to the start indices of matrix
               */
-              viennacl::ocl::handle<cl_mem>& handle2() { return start_block_inds_; }
+              viennacl::ocl::handle<cl_mem>& handle2() { return _start_block_inds; }
               
               /**
               * @brief Returns a handle to the const elements
               */
-              const viennacl::ocl::handle<cl_mem>& handle() const { return elements_; }
+              const viennacl::ocl::handle<cl_mem>& handle() const { return _elements; }
               /**
               * @brief Returns a handle to the const matrix dimensions
               */
-              const viennacl::ocl::handle<cl_mem>& handle1() const { return matrix_dimensions_; }
+              const viennacl::ocl::handle<cl_mem>& handle1() const { return _matrix_dimensions; }
               /**
               * @brief Returns a handle to the const start indices of matrix
               */
-              const viennacl::ocl::handle<cl_mem>& handle2() const { return start_block_inds_; }
-            private:
-              viennacl::ocl::handle<cl_mem> elements_;
-              viennacl::ocl::handle<cl_mem> matrix_dimensions_;
-              viennacl::ocl::handle<cl_mem> start_block_inds_;
+              const viennacl::ocl::handle<cl_mem>& handle2() const { return _start_block_inds; }
+          private:
+              //unsigned int _vectorIndex;
+              viennacl::ocl::handle<cl_mem> _elements;
+              viennacl::ocl::handle<cl_mem> _matrix_dimensions;
+              viennacl::ocl::handle<cl_mem> _start_block_inds;
           };
         
         

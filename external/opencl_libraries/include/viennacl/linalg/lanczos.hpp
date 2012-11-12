@@ -23,7 +23,7 @@
 *   Contributed by Guenther Mader and Astrid Rupp.
 */
 
-#include <cmath>
+#include <math.h>    //for sqrt()
 #include <vector>
 #include "viennacl/vector.hpp"
 #include "viennacl/compressed_matrix.hpp"
@@ -161,9 +161,9 @@ namespace viennacl
 
         second_step = false;
         eps = std::numeric_limits<double>::epsilon();
-        squ_eps = std::sqrt(eps);
+        squ_eps = sqrt(eps);
         retry_th = 1e-2;
-        eta = std::exp(std::log(eps) * tag.factor());
+        eta =  exp(log(eps) * tag.factor());
         reorths = 0;
         retry = 0;
         
@@ -225,7 +225,7 @@ namespace viennacl
 
           for(j = 0;j < i;j++)
           { 
-            if(std::fabs(w[index][j]) >= squ_eps)
+            if(fabs(w[index][j]) >= squ_eps)
             {
               detail::copy_vec_to_vec(boost::numeric::ublas::column(Q, j), t);
               inner_rt = viennacl::linalg::inner_prod(r,t);
@@ -233,7 +233,7 @@ namespace viennacl
               w[index][j] = 1.5 * eps * get_N();
               k = j - 1;
               reorths++;
-              while(k >= 0 && std::fabs(w[index][k]) > eta)
+              while(k >= 0 && fabs(w[index][k]) > eta)
               {
                 detail::copy_vec_to_vec(boost::numeric::ublas::column(Q, k), t);
                 inner_rt = viennacl::linalg::inner_prod(r,t);
@@ -245,7 +245,7 @@ namespace viennacl
               l_bound[batches] = k + 1;
               k = j + 1;
               
-              while(k < i && std::fabs(w[index][k]) > eta)
+              while(k < i && fabs(w[index][k]) > eta)
               {
                 detail::copy_vec_to_vec(boost::numeric::ublas::column(Q, k), t);
                 inner_rt = viennacl::linalg::inner_prod(r,t);
@@ -312,7 +312,7 @@ namespace viennacl
       std::vector<
               typename viennacl::result_of::cpu_value_type<typename MatrixT::value_type>::type
               >
-      lanczos (MatrixT const& A, VectorT & r, int size, lanczos_tag)
+      lanczos (MatrixT const& A, VectorT & r, int size, lanczos_tag const & tag)
       {
       
         typedef typename viennacl::result_of::value_type<MatrixT>::type        ScalarType;
@@ -370,7 +370,7 @@ namespace viennacl
       std::vector<
               typename viennacl::result_of::cpu_value_type<typename MatrixT::value_type>::type
               >
-      lanczosFRO (MatrixT const& A, VectorT & r, int size, lanczos_tag)
+      lanczosFRO (MatrixT const& A, VectorT & r, int size, lanczos_tag const & tag)
       {
         
         typedef typename viennacl::result_of::value_type<MatrixT>::type        ScalarType;

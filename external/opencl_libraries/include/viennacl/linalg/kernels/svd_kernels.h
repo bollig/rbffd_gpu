@@ -40,8 +40,6 @@ namespace viennacl
         source.append(svd_align1_final_iter_update);
         source.append(svd_align1_givens_next);
         source.append(svd_align1_givens_prev);
-        source.append(svd_align1_house_col);
-        source.append(svd_align1_house_row);
         source.append(svd_align1_house_update_A_left);
         source.append(svd_align1_house_update_A_right);
         source.append(svd_align1_house_update_QL);
@@ -49,6 +47,8 @@ namespace viennacl
         source.append(svd_align1_inverse_signs);
         source.append(svd_align1_transpose_inplace);
         source.append(svd_align1_update_qr_column);
+        source.append(svd_align1_house_col);
+        source.append(svd_align1_house_row);
         std::string prog_name = program_name();
         #ifdef VIENNACL_BUILD_INFO
         std::cout << "Creating program " << prog_name << std::endl;
@@ -62,8 +62,6 @@ namespace viennacl
         prog_.add_kernel("final_iter_update");
         prog_.add_kernel("givens_next");
         prog_.add_kernel("givens_prev");
-        prog_.add_kernel("house_col");
-        prog_.add_kernel("house_row");
         prog_.add_kernel("house_update_A_left");
         prog_.add_kernel("house_update_A_right");
         prog_.add_kernel("house_update_QL");
@@ -71,6 +69,8 @@ namespace viennacl
         prog_.add_kernel("inverse_signs");
         prog_.add_kernel("transpose_inplace");
         prog_.add_kernel("update_qr_column");
+        prog_.add_kernel("house_col");
+        prog_.add_kernel("house_row");
         init_done[context_.handle().get()] = true;
        } //if
      } //init
@@ -102,8 +102,6 @@ namespace viennacl
         source.append(viennacl::tools::make_double_kernel(svd_align1_final_iter_update, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(svd_align1_givens_next, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(svd_align1_givens_prev, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(svd_align1_house_col, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(svd_align1_house_row, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(svd_align1_house_update_A_left, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(svd_align1_house_update_A_right, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(svd_align1_house_update_QL, fp64_ext));
@@ -111,6 +109,8 @@ namespace viennacl
         source.append(viennacl::tools::make_double_kernel(svd_align1_inverse_signs, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(svd_align1_transpose_inplace, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(svd_align1_update_qr_column, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(svd_align1_house_col, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(svd_align1_house_row, fp64_ext));
         std::string prog_name = program_name();
         #ifdef VIENNACL_BUILD_INFO
         std::cout << "Creating program " << prog_name << std::endl;
@@ -124,8 +124,6 @@ namespace viennacl
         prog_.add_kernel("final_iter_update");
         prog_.add_kernel("givens_next");
         prog_.add_kernel("givens_prev");
-        prog_.add_kernel("house_col");
-        prog_.add_kernel("house_row");
         prog_.add_kernel("house_update_A_left");
         prog_.add_kernel("house_update_A_right");
         prog_.add_kernel("house_update_QL");
@@ -133,6 +131,8 @@ namespace viennacl
         prog_.add_kernel("inverse_signs");
         prog_.add_kernel("transpose_inplace");
         prog_.add_kernel("update_qr_column");
+        prog_.add_kernel("house_col");
+        prog_.add_kernel("house_row");
         init_done[context_.handle().get()] = true;
        } //if
      } //init

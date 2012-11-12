@@ -38,13 +38,6 @@ namespace viennacl
 {
   namespace ocl
   {
-    struct packed_cl_uint
-    {
-      cl_uint start;
-      cl_uint stride;
-      cl_uint size;
-      cl_uint internal_size;
-    };
     
     /** @brief Represents an OpenCL kernel within ViennaCL */
     class kernel
@@ -108,29 +101,18 @@ namespace viennacl
       {
         init();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Setting unsigned long kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        std::cout << "ViennaCL: Setting unsigned long kernel argument at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_uint), (void*)&val);
         VIENNACL_ERR_CHECK(err);
       }
 
-      /** @brief Sets four packed unsigned integers as argument at the provided position */
-      void arg(unsigned int pos, packed_cl_uint val)
-      {
-        init();
-        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Setting unsigned long kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
-        #endif
-        cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(packed_cl_uint), (void*)&val);
-        VIENNACL_ERR_CHECK(err);
-      }
-      
       /** @brief Sets a single precision floating point argument at the provided position */
       void arg(unsigned int pos, float val)
       {
         init();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Setting floating point kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        std::cout << "ViennaCL: Setting floating point kernel argument at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(float), (void*)&val);
         VIENNACL_ERR_CHECK(err);
@@ -141,7 +123,7 @@ namespace viennacl
       {
         init();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Setting double precision kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        std::cout << "ViennaCL: Setting double precision kernel argument at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(double), (void*)&val);
         VIENNACL_ERR_CHECK(err);
@@ -153,10 +135,10 @@ namespace viennacl
       void arg(unsigned int pos, VCL_TYPE const & val)
       {
         init();
-        cl_mem temp = val.handle().opencl_handle().get();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Setting generic kernel argument " << temp << " at pos " << pos << " for kernel " << name_ << std::endl;
+        std::cout << "ViennaCL: Setting generic kernel argument at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
+        cl_mem temp = val.handle().get();
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_mem), (void*)&temp);
         VIENNACL_ERR_CHECK(err);
       }
@@ -168,10 +150,10 @@ namespace viennacl
       {
         //arg(pos, h);
         init();
-        CL_TYPE temp = h.get();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Setting handle kernel argument " << temp << " at pos " << pos << " for kernel " << name_ << std::endl;
+        std::cout << "ViennaCL: Setting handle kernel argument at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
+        CL_TYPE temp = h.get();
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(CL_TYPE), (void*)&temp);
         VIENNACL_ERR_CHECK(err);
       }

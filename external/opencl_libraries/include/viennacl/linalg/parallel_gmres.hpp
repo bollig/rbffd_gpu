@@ -41,7 +41,6 @@ License:         MIT (X11), see file LICENSE in the base directory
 #include <limits>
 #include "viennacl/forwards.h"
 #include "viennacl/tools/tools.hpp"
-#include "viennacl/vector_proxy.hpp"
 #include "viennacl/linalg/norm_2.hpp"
 #include "viennacl/linalg/prod.hpp"
 #include "viennacl/linalg/inner_prod.hpp"
@@ -605,7 +604,6 @@ namespace viennacl
                         // V(i+1) -= H(k, i) * V(k)  //
                         //std::cout << v[k]->size() << "," << w.size() << H(k,i) * *(v[k])  << std::endl;
                         w -= H(k,i) * *(v[k]);
-                        //VectorType new = H(k,i) * *(v[k]);
                     }
 
                     H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());

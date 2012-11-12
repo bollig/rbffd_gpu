@@ -25,12 +25,8 @@
 
 
 #include "viennacl/generator/meta_tools/utils.hpp"
+#include "viennacl/generator/traits/general_purpose_traits.hpp"
 
-#define VIENNACL_TYPELIST1( type1 ) viennacl::generator::typelist<type1, NullType>
-#define VIENNACL_TYPELIST2( type1, type2) viennacl::generator::typelist<type1, VIENNACL_TYPELIST1(type2) >
-#define VIENNACL_TYPELIST3( type1, type2, type3) viennacl::generator::typelist<type1, VIENNACL_TYPELIST2(type2,type3) >
-#define VIENNACL_TYPELIST4( type1, type2, type3, type4) viennacl::generator::typelist<type1, VIENNACL_TYPELIST3(type2,type3,type4) >
-#define VIENNACL_TYPELIST5( type1, type2, type3, type4, type5) viennacl::generator::typelist<type1, VIENNACL_TYPELIST4(type2,type3,type4,type5) >
 
 namespace viennacl 
 {
@@ -42,20 +38,10 @@ namespace viennacl
       typedef T Head;
       typedef U Tail;
 
-      static std::string name()
+      static const std::string name()
       {
-        return Head::name() + "   ||   " + Tail::name();
+        return Head::name() + "  ;  " + Tail::name();
       }
-    };
-
-    template<class T>
-    struct is_typelist{
-        enum { value = 0 };
-    };
-
-    template<class Head, class Tail>
-    struct is_typelist<typelist<Head,Tail> >{
-        enum { value = 1 };
     };
 
     namespace typelist_utils 
@@ -112,25 +98,6 @@ namespace viennacl
 
 
       /*
-       * FOREACH TYPE
-       */
-
-      template <class T,template<class> class Functor>
-      struct ForEachType;
-
-      template<template<class> class Functor>
-      struct ForEachType<NullType,Functor>
-      {
-          typedef NullType Result;
-      };
-
-      template<class Head, class Tail, template<class> class Functor>
-      struct ForEachType<typelist<Head,Tail>,Functor>
-      {
-          typedef typelist<typename Functor<Head>::Result,typename ForEachType<Tail,Functor>::Result> Result;
-      };
-
-      /*
        * FOREACH
        */
 
@@ -144,19 +111,19 @@ namespace viennacl
         static void execute() {}
         
         template <class T1>
-        static void execute(T1 &) {}
+        static void execute(T1  & t1) {}
         
         template <class T1, class T2>
-        static void execute(T1 &, T2 & ) {}
+        static void execute(T1  & t1, T2  & t2) {}
         
         template <class T1, class T2, class T3>
-        static void execute(T1 &, T2 &, T3 &) {}
+        static void execute(T1  & t1, T2  & t2, T3 & t3) {}
         
         template <class T1, class T2, class T3, class T4>
-        static void execute(T1 &, T2 &, T3 &, T4 &) {}
+        static void execute(T1  & t1, T2  & t2, T3 & t3, T4 & t4) {}
         
         template <class T1, class T2, class T3, class T4, class T5>
-        static void execute(T1 &, T2 &, T3 &, T4 &, T5 &) {}
+        static void execute(T1  & t1, T2  & t2, T3 & t3, T4 & t4, T5 & t5) {}
           
       };
 
@@ -170,7 +137,7 @@ namespace viennacl
         }
         
         template <class T1>
-        static void execute(T1 & t1)
+        static void execute(T1  & t1)
         {
           Functor<T>::execute(t1);
           ForEach<U,Functor>::execute(t1);
@@ -233,12 +200,6 @@ namespace viennacl
       template <class TList, unsigned int i>
       struct type_at;
 
-      template <unsigned int i>
-      struct type_at<NullType,i>
-      {
-          typedef NullType Result;
-      };
-
       template <class Head, class Tail>
       struct type_at<typelist<Head, Tail>, 0> 
       {
@@ -300,7 +261,7 @@ namespace viennacl
       template <class T1, class T2>
       struct true_comp 
       {
-        enum { value = 0 };
+        enum { value = 1 };
       };
 
       template <class TList, class T, template<class,class> class Compare = true_comp>
@@ -318,11 +279,11 @@ namespace viennacl
         typedef typelist<T,NullType> Result;
       };
 
-//      template <class Head, class Tail, template<class,class> class Compare>
-//      struct append<NullType, typelist<Head, Tail>, Compare >
-//      {
-//        typedef typelist<Head, Tail> Result;
-//      };
+      template <class Head, class Tail, template<class,class> class Compare>
+      struct append<NullType, typelist<Head, Tail>, Compare > 
+      {
+        typedef typelist<Head, Tail> Result;
+      };
 
       template <class Head, class Tail, template<class,class> class Compare>
       struct append<typelist<Head, Tail>, NullType, Compare > 
@@ -359,36 +320,6 @@ namespace viennacl
 
         public:
           typedef typename fuse< NewResult, Tail2, Compare >::Result Result;
-      };
-
-      template <class Head2, class Tail2, template<class,class> class Compare >
-      struct fuse<NullType, typelist<Head2,Tail2>, Compare >
-      {
-          typedef typelist<Head2,Tail2> Result;
-      };
-
-      /*
-       *  replace
-       */
-      template<class TList, class Previous, class New>
-      struct replace;
-
-      template<class Head, class Tail, class Previous, class New>
-      struct replace<typelist<Head,Tail>,Previous,New>
-      {
-          typedef typelist<Head, typename replace<Tail,Previous,New>::Result> Result;
-      };
-
-      template<class Tail, class Previous, class New>
-      struct replace<typelist<Previous,Tail>,Previous,New>
-      {
-          typedef typelist<New, typename replace<Tail,Previous,New>::Result> Result;
-      };
-
-      template<class Previous, class New>
-      struct replace<NullType,Previous,New>
-      {
-          typedef NullType Result;
       };
 
       /*
@@ -447,52 +378,6 @@ namespace viennacl
         public:
           typedef typelist<Head, L2> Result;
       };
-
-      /*
-       * FIND IF
-       */
-
-      template<class TList, template<class> class Pred>
-      struct find_if;
-
-      template<class Head,class Tail, template<class> class Pred>
-      struct find_if<typelist<Head,Tail>,Pred>
-      {
-      private:
-          typedef typename find_if<Tail,Pred>::Result TailResult;
-      public:
-          typedef typename get_type_if<typelist_utils::append<TailResult,Head>, TailResult, Pred<Head>::value>::Result Result;
-      };
-
-      template<template<class> class Pred>
-      struct find_if<NullType,Pred>
-      {
-          typedef NullType Result;
-      };
-
-
-      /*
-       * FIND FIRST
-       */
-
-      template<class TList, template<class> class Pred>
-      struct find_first_if;
-
-      template<class Head,class Tail, template<class> class Pred>
-      struct find_first_if<typelist<Head,Tail>,Pred>
-      {
-      private:
-          typedef typename find_first_if<Tail,Pred>::Result TailResult;
-      public:
-          typedef typename get_type_if<Head, TailResult, Pred<Head>::value>::Result Result;
-      };
-
-      template<template<class> class Pred>
-      struct find_first_if<NullType,Pred>
-      {
-          typedef NullType Result;
-      };
-
 
     }
   }

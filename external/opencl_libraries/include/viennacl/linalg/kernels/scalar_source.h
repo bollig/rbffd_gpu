@@ -7,19 +7,6 @@ namespace viennacl
  {
   namespace kernels
   {
-const char * const scalar_align1_add = 
-" \n"
-"__kernel void add(\n"
-"          __global const float * val1,\n"
-"          __global const float * val2, \n"
-"          __global float * result) \n"
-"{ \n"
-"  if (get_global_id(0) == 0)\n"
-"    *result = *val1 + *val2;\n"
-"}\n"
-" \n"
-; //scalar_align1_add
-
 const char * const scalar_align1_as_cpu = 
 "// generic kernel for the scalar operation s1 = alpha * s2, where s1, s2 are not necessarily distinct GPU scalars\n"
 "__kernel void as_cpu(\n"
@@ -320,6 +307,19 @@ const char * const scalar_align1_asbs_s_gpu_gpu =
 "  *s1 += *s2 * alpha + *s3 * beta;\n"
 "}\n"
 ; //scalar_align1_asbs_s_gpu_gpu
+
+const char * const scalar_align1_add = 
+" \n"
+"__kernel void add(\n"
+"          __global const float * val1,\n"
+"          __global const float * val2, \n"
+"          __global float * result) \n"
+"{ \n"
+"  if (get_global_id(0) == 0)\n"
+"    *result = *val1 + *val2;\n"
+"}\n"
+" \n"
+; //scalar_align1_add
 
 const char * const scalar_align1_cpu_add = 
 " \n"

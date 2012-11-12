@@ -27,17 +27,17 @@
 #include "viennacl/forwards.h"
 
 
-#ifdef VIENNACL_WITH_UBLAS  
+#ifdef VIENNACL_HAVE_UBLAS  
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #endif
 
-#ifdef VIENNACL_WITH_EIGEN  
+#ifdef VIENNACL_HAVE_EIGEN  
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #endif
 
-#ifdef VIENNACL_WITH_MTL4
+#ifdef VIENNACL_HAVE_MTL4
 #include <boost/numeric/mtl/mtl.hpp>
 #endif
 
@@ -49,113 +49,6 @@ namespace viennacl
     namespace result_of
     {
       //
-      // Retrieve alignment from vector
-      //
-      template <typename T>
-      struct alignment
-      {
-        typedef typename T::ERROR_ARGUMENT_PROVIDED_IS_NOT_A_VECTOR_OR_A_MATRIX   error_type;
-        enum { value = 1 };
-      };
-      
-      template <typename T>
-      struct alignment<const T>
-      {
-        enum { value = alignment<T>::value };
-      };
-      
-      template <typename SCALARTYPE, unsigned int ALIGNMENT>
-      struct alignment< vector<SCALARTYPE, ALIGNMENT> >
-      {
-        enum { value = ALIGNMENT };
-      };
-
-      template <typename T>
-      struct alignment< vector_range<T> >
-      {
-        enum { value = alignment<T>::value };
-      };
-
-      template <typename T>
-      struct alignment< vector_slice<T> >
-      {
-        enum { value = alignment<T>::value };
-      };
-
-      // support for a*x with scalar a and vector x
-      template <typename LHS, typename RHS>
-      struct alignment< vector_expression<LHS, RHS, op_prod> >
-      {
-        enum { value = alignment<LHS>::value };
-      };
-
-
-      // Matrices
-      template <typename SCALARTYPE, typename F, unsigned int ALIGNMENT>
-      struct alignment< matrix<SCALARTYPE, F, ALIGNMENT> >
-      {
-        enum { value = ALIGNMENT };
-      };
-
-      template <typename T>
-      struct alignment< matrix_range<T> >
-      {
-        enum { value = alignment<T>::value };
-      };
-
-      template <typename T>
-      struct alignment< matrix_slice<T> >
-      {
-        enum { value = alignment<T>::value };
-      };
-      
-      template <typename LHS, typename RHS>
-      struct alignment< matrix_expression<LHS, RHS, op_trans> >
-      {
-        enum { value = alignment<LHS>::value };
-      };
-      
-      //
-      // Majority specifier for matrices (row_major, column_major)
-      //
-      template <typename T>
-      struct orientation_functor
-      {
-        typedef typename T::ERROR_ARGUMENT_PROVIDED_IS_NOT_A_MATRIX     type;
-      };
-
-      template <typename T>
-      struct orientation_functor<const T>
-      {
-        typedef typename orientation_functor<T>::type  type;
-      };
-      
-      template <typename SCALARTYPE, typename F, unsigned int ALIGNMENT>
-      struct orientation_functor< matrix<SCALARTYPE, F, ALIGNMENT> >
-      {
-        typedef F     type;
-      };
-
-      template <typename T>
-      struct orientation_functor< matrix_range<T> >
-      {
-        typedef typename orientation_functor<T>::type  type;
-      };
-
-      template <typename T>
-      struct orientation_functor< matrix_slice<T> >
-      {
-        typedef typename orientation_functor<T>::type  type;
-      };
-
-      template <typename LHS, typename RHS>
-      struct orientation_functor< matrix_expression<LHS, RHS, op_trans> >
-      {
-        typedef typename orientation_functor<LHS>::type  type;
-      };
-      
-      
-      //
       // Retrieve size_type 
       //
       template <typename T>
@@ -164,7 +57,7 @@ namespace viennacl
         typedef typename T::size_type   type;
       };
 
-      #ifdef VIENNACL_WITH_EIGEN
+      #ifdef VIENNACL_HAVE_EIGEN
       template <class T, int a, int b, int c, int d, int e>
       struct size_type< Eigen::Matrix<T, a, b, c, d, e> >
       {
@@ -208,12 +101,6 @@ namespace viennacl
         typedef typename T::ERROR_CANNOT_DEDUCE_CPU_SCALAR_TYPE_FOR_T    type; 
       };
 
-      template <typename T>
-      struct cpu_value_type<const T>
-      {
-        typedef typename cpu_value_type<T>::type    type;
-      };
-      
       template <>
       struct cpu_value_type<float>
       {
@@ -251,16 +138,11 @@ namespace viennacl
       };
       
       template <typename T1, typename T2, typename OP>
-      struct cpu_value_type<viennacl::vector_expression<const T1, const T2, OP> >
+      struct cpu_value_type<viennacl::vector_expression<T1, T2, OP> >
       {
         typedef typename cpu_value_type<T1>::type    type; 
       };
       
-      template <typename T1, typename T2, typename OP>
-      struct cpu_value_type<const viennacl::vector_expression<const T1, const T2, OP> >
-      {
-        typedef typename cpu_value_type<T1>::type    type; 
-      };
       
       
       template <typename T, typename F, unsigned int ALIGNMENT>
@@ -288,7 +170,7 @@ namespace viennacl
       };
       
       
-    #ifdef VIENNACL_WITH_EIGEN  
+    #ifdef VIENNACL_HAVE_EIGEN  
       template <>
       struct value_type<Eigen::MatrixXf>
       {
@@ -373,7 +255,7 @@ namespace viennacl
         typedef viennacl::vector<T,A>   type;
       };
 
-      #ifdef VIENNACL_WITH_UBLAS
+      #ifdef VIENNACL_HAVE_UBLAS
       //Boost:
       template <typename T, typename F, typename A>
       struct vector_for_matrix< boost::numeric::ublas::matrix<T, F, A> >
@@ -395,35 +277,6 @@ namespace viennacl
       #endif
 
       
-      template <typename T>
-      struct reference_if_nonscalar
-      {
-        typedef T &    type;
-      };
-    
-      template <>
-      struct reference_if_nonscalar<float>
-      {
-        typedef float    type;
-      };
-
-      template <>
-      struct reference_if_nonscalar<const float>
-      {
-        typedef const float    type;
-      };
-      
-      template <>
-      struct reference_if_nonscalar<double>
-      {
-        typedef double    type;
-      };
-      
-      template <>
-      struct reference_if_nonscalar<const double>
-      {
-        typedef const double    type;
-      };
       
     } //namespace result_of
 } //namespace viennacl

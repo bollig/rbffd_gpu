@@ -48,7 +48,7 @@ namespace viennacl
       public:
         context() : initialized_(false),
                     device_type_(CL_DEVICE_TYPE_DEFAULT),
-                    current_device_id_(0),
+                    current_device_id(0),
                     default_device_num_(1),
                     pf_index_(0) {}
         
@@ -86,15 +86,15 @@ namespace viennacl
         /** @brief Returns the current device */
         viennacl::ocl::device const & current_device() const
         {
-          //std::cout << "Current device id in context: " << current_device_id_ << std::endl;
-          return devices_[current_device_id_];
+          //std::cout << "Current device id in context: " << current_device_id << std::endl;
+          return devices_[current_device_id];
         }
         
         /** @brief Switches the current device to the i-th device in this context */
-        void switch_device(std::size_t i)
+        void switch_device(size_t i)
         {
-          assert(i < devices_.size() && bool("Provided device index out of range!"));
-          current_device_id_ = i;
+          assert(i >= 0 && i < devices_.size());
+          current_device_id = i;
         }
 
         /** @brief If the supplied device is used within the context, it becomes the current active device. */
@@ -104,12 +104,12 @@ namespace viennacl
           std::cout << "ViennaCL: Setting new current device for context " << h_ << std::endl;
           #endif
           bool found = false;
-          for (std::size_t i=0; i<devices_.size(); ++i)
+          for (size_t i=0; i<devices_.size(); ++i)
           {
             if (devices_[i] == d)
             {
               found = true;
-              current_device_id_ = i;
+              current_device_id = i;
               break;
             }
           }
@@ -120,7 +120,7 @@ namespace viennacl
         /** @brief Add a device to the context. Must be done before the context is initialized */
         void add_device(viennacl::ocl::device const & d)
         {
-          assert(!initialized_ && bool("Device must be added to context before it is initialized!"));
+          assert(!initialized_ && "Device must be added to context before it is initialized!");
           #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
           std::cout << "ViennaCL: Adding new device to context " << h_ << std::endl;
           #endif
@@ -131,7 +131,7 @@ namespace viennacl
         /** @brief Add a device to the context. Must be done before the context is initialized */
         void add_device(cl_device_id d)
         {
-          assert(!initialized_ && bool("Device must be added to context before it is initialized!"));
+          assert(!initialized_ && "Device must be added to context before it is initialized!");
           add_device(viennacl::ocl::device(d));
         }
 
@@ -152,7 +152,7 @@ namespace viennacl
 
 /*        void existing_context(cl_context context_id)
         {
-          assert(!initialized_ && bool("ViennaCL: FATAL error: Provided a new context for an already initialized context."));
+          assert(!initialized_ && "ViennaCL: FATAL error: Provided a new context for an already initialized context.");
           #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
           std::cout << "ViennaCL: Reusing existing context " << h_ << std::endl;
           #endif
@@ -160,28 +160,6 @@ namespace viennacl
         }*/
         
         ////////////////////// create memory /////////////////////////////
-        
-        /** @brief Creates a memory buffer within the context. Does not wrap the OpenCL handle into the smart-pointer-like viennacl::ocl::handle, which saves an OpenCL backend call, yet the user has to ensure that the OpenCL memory handle is free'd or passed to a viennacl::ocl::handle later on.
-        *
-        *  @param flags  OpenCL flags for the buffer creation
-        *  @param size   Size of the memory buffer in bytes
-        *  @param ptr    Optional pointer to CPU memory, with which the OpenCL memory should be initialized
-        *  @return       A plain OpenCL handle. Either assign it to a viennacl::ocl::handle<cl_mem> directly, or make sure that you free to memory manually if you no longer need the allocated memory.
-        */
-        cl_mem create_memory_without_smart_handle(cl_mem_flags flags, unsigned int size, void * ptr = NULL)
-        {
-          #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
-          std::cout << "ViennaCL: Creating memory of size " << size << " for context " << h_ << " (unsafe, returning cl_mem directly)" << std::endl;
-          #endif
-          if (ptr)
-            flags |= CL_MEM_COPY_HOST_PTR;
-          cl_int err;
-          cl_mem mem = clCreateBuffer(h_.get(), flags, size, ptr, &err);
-          VIENNACL_ERR_CHECK(err);
-          return mem;
-        }
-        
-        
         /** @brief Creates a memory buffer within the context
         *
         *  @param flags  OpenCL flags for the buffer creation
@@ -190,18 +168,26 @@ namespace viennacl
         */
         viennacl::ocl::handle<cl_mem> create_memory(cl_mem_flags flags, unsigned int size, void * ptr = NULL)
         {
-          return create_memory_without_smart_handle(flags, size, ptr);
+          #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
+          std::cout << "ViennaCL: Creating memory of size " << size << " for context " << h_ << std::endl;
+          #endif
+          if (ptr)
+            flags |= CL_MEM_COPY_HOST_PTR;
+          cl_int err;
+          viennacl::ocl::handle<cl_mem> mem = clCreateBuffer(h_.get(), flags, size, ptr, &err);
+          VIENNACL_ERR_CHECK(err);
+          return mem;
         }
 
         /** @brief Creates a memory buffer within the context initialized from the supplied data
         *
         *  @param flags  OpenCL flags for the buffer creation
-        *  @param buffer A vector (STL vector, ublas vector, etc.)
+        *  @param _buffer A vector (STL vector, ublas vector, etc.)
         */
         template < typename SCALARTYPE, typename A, template <typename, typename> class VectorType >
-        viennacl::ocl::handle<cl_mem> create_memory(cl_mem_flags flags, const VectorType<SCALARTYPE, A> & buffer)
+        viennacl::ocl::handle<cl_mem> create_memory(cl_mem_flags flags, const VectorType<SCALARTYPE, A> & _buffer)
         {
-          return create_memory_without_smart_handle(flags, static_cast<cl_uint>(sizeof(SCALARTYPE) * buffer.size()), (void*)&buffer[0]);
+          return create_memory(flags, static_cast<cl_uint>(sizeof(SCALARTYPE) * _buffer.size()), (void*)&_buffer[0]);
         }
         
         //////////////////// create queues ////////////////////////////////
@@ -212,7 +198,7 @@ namespace viennacl
           #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
           std::cout << "ViennaCL: Adding existing queue " << q << " for device " << dev << " to context " << h_ << std::endl;
           #endif
-          queues_[dev].push_back(viennacl::ocl::command_queue(q));
+          queues_[dev].push_back(viennacl::ocl::command_queue(q, dev));
         }
         
         /** @brief Adds a queue for the given device to the context */
@@ -225,7 +211,7 @@ namespace viennacl
           viennacl::ocl::handle<cl_command_queue> temp = clCreateCommandQueue(h_.get(), dev, 0, &err);
           VIENNACL_ERR_CHECK(err);
           
-          queues_[dev].push_back(viennacl::ocl::command_queue(temp));
+          queues_[dev].push_back(viennacl::ocl::command_queue(temp, dev));
         }
 
         /** @brief Adds a queue for the given device to the context */
@@ -234,14 +220,14 @@ namespace viennacl
         //get queue for default device:
         viennacl::ocl::command_queue & get_queue()
         {
-          return queues_[devices_[current_device_id_].id()][0];
+          return queues_[devices_[current_device_id].id()][0];
         }
         
         //get a particular queue:
         /** @brief Returns the queue with the provided index for the given device */
-        viennacl::ocl::command_queue & get_queue(cl_device_id dev, std::size_t i = 0)
+        viennacl::ocl::command_queue & get_queue(cl_device_id dev, size_t i = 0)
         {
-          assert(i < queues_.size() && bool("In class 'context': id invalid in get_queue()"));
+          assert(i >= 0 && i < queues_.size() && "In class 'context': id invalid in get_queue()");
           #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
           std::cout << "ViennaCL: Getting queue " << i << " for device " << dev << " in context " << h_ << std::endl;
           #endif
@@ -252,7 +238,7 @@ namespace viennacl
               break;
           }
           
-          assert(device_index < devices_.size() && bool("Device not within context"));
+          assert(device_index < devices_.size() && "Device not within context");
           
           return queues_[devices_[device_index].id()][i];
         }
@@ -271,7 +257,7 @@ namespace viennacl
         viennacl::ocl::program & add_program(std::string const & source, std::string const & prog_name)
         {
           const char * source_text = source.c_str();
-          std::size_t source_size = source.size();
+          size_t source_size = source.size();
           cl_int err;
           
           #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
@@ -313,22 +299,22 @@ namespace viennacl
               return *it;
           }
           std::cerr << "Could not find program '" << name << "'" << std::endl;
-          throw "In class 'context': name invalid in get_program()";
-          //return programs_[0];  //return a defined object
+          assert(!"In class 'context': name invalid in get_program()");
+          return programs_[0];  //return a defined object
         }
         
         /** @brief Returns the program with the provided id */
-        viennacl::ocl::program & get_program(std::size_t id)
+        viennacl::ocl::program & get_program(size_t id)
         {
-          assert(id < programs_.size() && bool("In class 'context': id invalid in get_program()"));
+          assert(id >= 0 && id < programs_.size() && "In class 'context': id invalid in get_program()");
           return programs_[id];
         }
         
         /** @brief Returns the number of programs within this context */
-        std::size_t program_num() { return programs_.size(); }
+        size_t program_num() { return programs_.size(); }
 
         /** @brief Returns the number of devices within this context */
-        std::size_t device_num() { return devices_.size(); }
+        size_t device_num() { return devices_.size(); }
         
         /** @brief Returns the context handle */
         const viennacl::ocl::handle<cl_context> & handle() const { return h_; }
@@ -345,7 +331,7 @@ namespace viennacl
         /** @brief Sets the platform ID of the platform to be used for the context */
         void platform_index(std::size_t new_index)
         {
-          assert(!initialized_ && bool("Platform ID must be set before context is initialized!"));
+          assert(!initialized_ && "Platform ID must be set before context is initialized!");
           pf_index_ = new_index; 
         }
         
@@ -359,7 +345,7 @@ namespace viennacl
         /** @brief Initialize a new context. Reuse any previously supplied information (devices, queues) */
         void init_new()
         {
-          assert(!initialized_ && bool("ViennaCL FATAL error: Context already created!"));
+          assert(!initialized_ && "ViennaCL FATAL error: Context already created!");
 
           #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
           std::cout << "ViennaCL: Initializing new ViennaCL context." << std::endl;
@@ -379,7 +365,7 @@ namespace viennacl
             #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
             std::cout << "ViennaCL: Number of devices for context: " << devices.size() << std::endl;
             #endif
-            for (std::size_t i=0; i<devices.size(); ++i)
+            for (size_t i=0; i<devices.size(); ++i)
               devices_.push_back(devices[i]);
             
             if (devices.size() == 0)
@@ -420,7 +406,7 @@ namespace viennacl
         /** @brief Reuses a supplied context. */
         void init_existing(cl_context c)
         {
-          assert(!initialized_ && bool("ViennaCL FATAL error: Context already created!"));
+          assert(!initialized_ && "ViennaCL FATAL error: Context already created!");
           #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
           std::cout << "ViennaCL: Initialization of ViennaCL context from existing context." << std::endl;
           #endif
@@ -433,13 +419,13 @@ namespace viennacl
             //get devices for context:
             cl_int err;
             cl_uint num_devices;
-            std::size_t temp;
+            size_t temp;
             //Note: The obvious
             //  err = clGetContextInfo(h_, CL_CONTEXT_NUM_DEVICES, sizeof(cl_uint), &num_devices, NULL);
             //does not work with NVIDIA OpenCL stack!
             err = clGetContextInfo(h_.get(), CL_CONTEXT_DEVICES, VIENNACL_OCL_MAX_DEVICE_NUM * sizeof(cl_device_id), NULL, &temp);
             VIENNACL_ERR_CHECK(err);
-            assert(temp > 0 && bool("ViennaCL: FATAL error: Provided context does not contain any devices!"));
+            assert(temp > 0 && "ViennaCL: FATAL error: Provided context does not contain any devices!");
             num_devices = temp / sizeof(cl_device_id);
             
             #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
@@ -450,10 +436,10 @@ namespace viennacl
             err = clGetContextInfo(h_.get(), CL_CONTEXT_DEVICES, num_devices * sizeof(cl_device_id), &(device_ids[0]), NULL);
             VIENNACL_ERR_CHECK(err);
             
-            for (std::size_t i=0; i<num_devices; ++i)
+            for (size_t i=0; i<num_devices; ++i)
               devices_.push_back(viennacl::ocl::device(device_ids[i]));
           }
-          current_device_id_ = 0;
+          current_device_id = 0;
           
           initialized_ = true;
           #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_CONTEXT)
@@ -466,7 +452,7 @@ namespace viennacl
         cl_device_type device_type_;
         viennacl::ocl::handle<cl_context> h_;
         std::vector< viennacl::ocl::device > devices_;
-        unsigned int current_device_id_;
+        unsigned int current_device_id;
         std::size_t default_device_num_;
         ProgramContainer programs_;
         std::map< cl_device_id, std::vector< viennacl::ocl::command_queue> > queues_;

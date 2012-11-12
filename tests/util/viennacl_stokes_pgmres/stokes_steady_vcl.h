@@ -35,14 +35,14 @@
 
 #include "precond/ilu0.hpp"
 #if 1
-#include "linalg/parallel_gmres.hpp"
+#include "viennacl/linalg/parallel_gmres.hpp"
 #else
-#include "linalg/parallel_gmres_vcl.hpp"
+#include "viennacl/linalg/parallel_gmres_vcl.hpp"
 #endif 
 
-#include "linalg/parallel_norm_1.hpp"
-#include "linalg/parallel_norm_2.hpp"
-#include "linalg/parallel_norm_inf.hpp"
+#include "viennacl/linalg/parallel_norm_1.hpp"
+#include "viennacl/linalg/parallel_norm_2.hpp"
+#include "viennacl/linalg/parallel_norm_inf.hpp"
 
 #include "manufactured_solution.h"
 #include "manufactured_solution_alt.h"

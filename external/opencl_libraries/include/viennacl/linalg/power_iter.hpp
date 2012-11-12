@@ -95,7 +95,7 @@ namespace viennacl
 
       for (std::size_t i=0; i<tag.max_iterations(); ++i)
       {
-        if (std::fabs(norm - norm_prev) / std::fabs(norm) < epsilon)
+        if (std::abs<CPU_ScalarType>(norm - norm_prev) / std::abs<CPU_ScalarType>(norm) < epsilon)
           break; 
            
         r /= norm;

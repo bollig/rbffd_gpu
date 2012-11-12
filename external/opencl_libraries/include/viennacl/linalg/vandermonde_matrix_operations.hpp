@@ -22,11 +22,14 @@
 */
 
 #include "viennacl/forwards.h"
+#include "viennacl/ocl/device.hpp"
+#include "viennacl/ocl/handle.hpp"
+#include "viennacl/ocl/kernel.hpp"
 #include "viennacl/scalar.hpp"
 #include "viennacl/vector.hpp"
 #include "viennacl/tools/tools.hpp"
 #include "viennacl/fft.hpp"
-#include "viennacl/linalg/opencl/vandermonde_matrix_operations.hpp"
+//#include "viennacl/linalg/kernels/coordinate_matrix_kernels.h"
 
 namespace viennacl
 {
@@ -90,14 +93,13 @@ namespace viennacl
         assert(mat.size1() == result.size());
         assert(mat.size2() == vec.size());
         
-        switch (viennacl::traits::handle(mat).get_active_handle_id())
-        {
-          case viennacl::backend::OPENCL_MEMORY:
-            viennacl::linalg::opencl::prod_impl(mat, vec, result);
-            break;
-          default:
-            throw "not implemented";
-        }
+        //fft::vandermonde_prod<SCALARTYPE>(mat.handle(), vec.handle(), result.handle(), mat.size1());      
+        viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
+        
+        viennacl::ocl::kernel& kernel = viennacl::ocl::current_context()
+                                          .get_program(viennacl::linalg::kernels::fft<SCALARTYPE, 1>::program_name())
+                                          .get_kernel("vandermonde_prod");
+        viennacl::ocl::enqueue(kernel(mat, vec, result, static_cast<cl_uint>(mat.size1())));
       }
 
   } //namespace linalg
@@ -116,15 +118,17 @@ namespace viennacl
                                                                                           viennacl::op_prod> & proxy) 
     {
       // check for the special case x = A * x
-      if (viennacl::traits::handle(proxy.rhs()) == viennacl::traits::handle(*this))
+      if (proxy.rhs().handle().get() == this->handle().get())
       {
         viennacl::vector<SCALARTYPE, ALIGNMENT> result(proxy.rhs().size());
         viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), result);
         *this = result;
+        return *this;
       }
       else
       {
         viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this);
+        return *this;
       }
       return *this;
     }

@@ -3,6 +3,7 @@
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
+#include <viennacl/ell_matrix.hpp>
 #include <viennacl/linalg/gmres.hpp>
 #include <viennacl/linalg/norm_1.hpp>
 #include <viennacl/linalg/norm_2.hpp>
@@ -51,6 +52,7 @@ typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_CSR_Mat;
 typedef boost::numeric::ublas::coordinate_matrix<double> UBLAS_COO_Mat;
 typedef viennacl::compressed_matrix<double> VCL_CSR_Mat;
 typedef viennacl::coordinate_matrix<double> VCL_COO_Mat;
+typedef viennacl::ell_matrix<double> VCL_ELL_Mat;
 
 //typedef std::vector<double> UBLAS_Vec;
 typedef boost::numeric::ublas::vector<double> UBLAS_Vec;
@@ -58,7 +60,7 @@ typedef viennacl::vector<double> VCL_Vec;
 
 enum MatrixType : int
 {
-    COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, DUMMY
+    COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, ELL_GPU, DUMMY
 };
 
 const char* assemble_t_eStrings[] =
@@ -67,6 +69,7 @@ const char* assemble_t_eStrings[] =
     stringify( VCL_COO_GPU ),
     stringify( UBLAS_CSR_CPU ),
     stringify( VCL_CSR_GPU ),
+    stringify( VCL_ELL_GPU ),
     stringify( DUMMY )
 };
 
@@ -236,9 +239,11 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     viennacl::copy(U_exact->begin(), U_exact->end(), U_exact_op->begin());
     timers[copy_timer_name]->stop();
 
-    timers[test_timer_name]->start();
-    benchmark_Multiply_Device<OpMatType>(*A_op, *F_op, *U_exact_op);
-    timers[test_timer_name]->stop();
+    for (int ii=0; ii<10; ii++) {
+	    timers[test_timer_name]->start();
+	    benchmark_Multiply_Device<OpMatType>(*A_op, *F_op, *U_exact_op);
+	    timers[test_timer_name]->stop();
+    }
 
     // Cleanup
     delete(A);
@@ -287,9 +292,11 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     f_out.close();
 #endif
 
-    timers[test_timer_name]->start();
-    benchmark_Multiply_Host<MatType>(*A, *F, *U_exact);
-    timers[test_timer_name]->stop();
+    for (int ii=0; ii<10; ii++) {
+	    timers[test_timer_name]->start();
+	    benchmark_Multiply_Host<MatType>(*A, *F, *U_exact);
+	    timers[test_timer_name]->stop();
+    }
 
     // Cleanup
     delete(A);
@@ -304,7 +311,12 @@ void run_test(RBFFD& der, Grid& grid) {
         case CSR_GPU:
             run_SpMV<MatType, VCL_CSR_Mat, assemble_t_e, operate_t_e>(der, grid);
             break;
+	case ELL_GPU:
+            run_SpMV<MatType, VCL_ELL_Mat, assemble_t_e, operate_t_e>(der, grid);
+            break;
         case COO_CPU:
+            run_SpMV<MatType, assemble_t_e, operate_t_e>(der, grid);
+	    break;
         case CSR_CPU:
             run_SpMV<MatType, assemble_t_e, operate_t_e>(der, grid);
             break;
@@ -336,15 +348,30 @@ int main(void)
     bool primed = false;
 
     std::vector<std::string> grids;
+    grids.clear();
 
     //grids.push_back("~/GRIDS/md/md005.00036");
-    grids.push_back("~/GRIDS/md/md031.01024");
 #if 1
+#if 0
+    grids.push_back("~/GRIDS/md/md031.01024");
     grids.push_back("~/GRIDS/md/md050.02601");
     grids.push_back("~/GRIDS/md/md063.04096");
     grids.push_back("~/GRIDS/md/md089.08100");
     grids.push_back("~/GRIDS/md/md127.16384");
     grids.push_back("~/GRIDS/md/md165.27556");
+    grids.push_back("~/GRIDS/gw/md165.27556");
+#endif 
+    grids.push_back("~/sphere_grids/md063.04096");
+    grids.push_back("~/sphere_grids/md079.06400"); 
+    grids.push_back("~/sphere_grids/md089.08100");
+    grids.push_back("~/sphere_grids/md100.10201");
+    grids.push_back("~/sphere_grids/md127.16384");
+    grids.push_back("~/sphere_grids/md141.20164");
+    grids.push_back("~/sphere_grids/md165.27556");  
+    grids.push_back("~/sphere_grids/scvtmesh001.100000");
+    grids.push_back("~/sphere_grids/scvtmesh002.500000");
+    grids.push_back("~/sphere_grids/scvtmesh003.1000000");
+
 #endif
 #if 0
     grids.push_back("~/GRIDS/geoff/scvtimersesh_100k_nodes.ascii");
@@ -361,6 +388,10 @@ int main(void)
         timers[weight_timer_name] = new EB::Timer(weight_timer_name.c_str());
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
+	// NOTE: for benchmarking the size matters but eps_c* do not. We can
+	// get junk derivatives and benchmark the same (the FLOP count matters,
+	// not the accuracy). 
+	// Also, the sparsity pattern matters (KDTree vs LSH) 
 #if 0
         unsigned int stencil_size = 40;
         double eps_c1 = 0.027;
@@ -421,13 +452,17 @@ int main(void)
 
         cout << "Running Tests\n" << std::endl;
         {
-#if 1
+#if 0
             run_test<COO_CPU, COO_CPU>(der, *grid);
+#endif 
             run_test<COO_CPU, COO_GPU>(der, *grid);
+#if 1
             run_test<CSR_CPU, CSR_CPU>(der, *grid);
             run_test<CSR_CPU, CSR_GPU>(der, *grid);
             run_test<COO_CPU, CSR_GPU>(der, *grid);
             run_test<CSR_CPU, COO_GPU>(der, *grid);
+            run_test<COO_CPU, ELL_GPU>(der, *grid);
+            run_test<CSR_CPU, ELL_GPU>(der, *grid);
 #endif
         }
 

@@ -47,16 +47,22 @@ using namespace std;
 // Define a couple types that we will work with.
 // Then we can templatize most routines and specialize as necessary
 
-typedef std::vector< std::map< unsigned int, double> > STL_Sparse_Mat;
-typedef boost::numeric::ublas::compressed_matrix<double> UBLAS_CSR_Mat;
-typedef boost::numeric::ublas::coordinate_matrix<double> UBLAS_COO_Mat;
-typedef viennacl::compressed_matrix<double> VCL_CSR_Mat;
-typedef viennacl::coordinate_matrix<double> VCL_COO_Mat;
-typedef viennacl::ell_matrix<double> VCL_ELL_Mat;
+#if 0
+typedef double SCALARTYPE; 
+#else 
+typedef float SCALARTYPE; 
+#endif 
 
-//typedef std::vector<double> UBLAS_Vec;
-typedef boost::numeric::ublas::vector<double> UBLAS_Vec;
-typedef viennacl::vector<double> VCL_Vec;
+typedef std::vector< std::map< unsigned int, SCALARTYPE> > STL_Sparse_Mat;
+typedef boost::numeric::ublas::compressed_matrix<SCALARTYPE> UBLAS_CSR_Mat;
+typedef boost::numeric::ublas::coordinate_matrix<SCALARTYPE> UBLAS_COO_Mat;
+typedef viennacl::compressed_matrix<SCALARTYPE> VCL_CSR_Mat;
+typedef viennacl::coordinate_matrix<SCALARTYPE> VCL_COO_Mat;
+typedef viennacl::ell_matrix<SCALARTYPE> VCL_ELL_Mat;
+
+//typedef std::vector<SCALARTYPE> UBLAS_Vec;
+typedef boost::numeric::ublas::vector<SCALARTYPE> UBLAS_Vec;
+typedef viennacl::vector<SCALARTYPE> VCL_Vec;
 
 enum MatrixType : int
 {
@@ -83,13 +89,17 @@ const char* assemble_t_eStrings[] =
 
 EB::TimerList timers;
 
+char test_timer_name[256];
+
 
 //---------------------------------
 
 template <typename MatT, typename VecT>
 void benchmark_Multiply_Host(MatT& A, VecT& F, VecT& U_exact) {
     VecT F_discrete(F.size(), 1);
+	    timers[test_timer_name]->start();
     F_discrete = boost::numeric::ublas::prod(A, U_exact);
+	    timers[test_timer_name]->stop();
 
     std::cout << "Rel l1   Norm: " << boost::numeric::ublas::norm_1(F_discrete - F) / boost::numeric::ublas::norm_1(F) << std::endl;
     std::cout << "Rel l2   Norm: " << boost::numeric::ublas::norm_2(F_discrete - F) / boost::numeric::ublas::norm_2(F) << std::endl;
@@ -99,7 +109,9 @@ void benchmark_Multiply_Host(MatT& A, VecT& F, VecT& U_exact) {
 template <typename MatT, typename VecT>
 void benchmark_Multiply_Device(MatT& A, VecT& F, VecT& U_exact) {
     VecT F_discrete(F.size());
+	    timers[test_timer_name]->start();
     F_discrete = viennacl::linalg::prod(A, U_exact);
+	    timers[test_timer_name]->stop();
 
     VecT diff = F_discrete - F;
 
@@ -124,7 +136,7 @@ void assemble_LHS(RBFFD& der, Grid& grid, STL_Sparse_Mat& A){
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A[i][sten[j]] = -lapl[j];
+            A[i][sten[j]] = (SCALARTYPE)-lapl[j];
         }
     }
 }
@@ -145,7 +157,7 @@ void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_COO_Mat& A){
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A.append_element(i, sten[j], -lapl[j]);
+            A.append_element(i, sten[j], (SCALARTYPE) -lapl[j]);
         }
     }
 }
@@ -166,7 +178,7 @@ void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_CSR_Mat& A){
 
         // Off diagonals
         for (unsigned int j = 0; j < n; j++) {
-            A(i,sten[j]) += -lapl[j];
+            A(i,sten[j]) += (SCALARTYPE)-lapl[j];
             //A(i,sten[j]) = -lapl[j];
         }
     }
@@ -183,9 +195,9 @@ void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
 
     for (unsigned int i = 0; i < N; i++) {
         NodeType& node = nodes[i];
-        double Xx = node.x();
-        double Yy = node.y();
-        double Zz = node.z();
+        SCALARTYPE Xx = node.x();
+        SCALARTYPE Yy = node.y();
+        SCALARTYPE Zz = node.z();
 
         U_exact[i] = UU.eval(Xx, Yy, Zz);
         // Solving -lapl(u) = f
@@ -201,7 +213,6 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     char test_name[256];
     char assemble_timer_name[256];
     char copy_timer_name[512];
-    char test_timer_name[256];
 
     sprintf(test_name, "%u SpMV (%s -> %s)", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]);
     sprintf(assemble_timer_name, "%u %s Assemble", N, assemble_t_eStrings[assemble_t_e]);
@@ -240,9 +251,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     timers[copy_timer_name]->stop();
 
     for (int ii=0; ii<10; ii++) {
-	    timers[test_timer_name]->start();
 	    benchmark_Multiply_Device<OpMatType>(*A_op, *F_op, *U_exact_op);
-	    timers[test_timer_name]->stop();
     }
 
     // Cleanup
@@ -262,7 +271,6 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 
     char test_name[256];
     char assemble_timer_name[256];
-    char test_timer_name[256];
 
     sprintf(test_name, "%u SpMV (%s -> %s)", N, assemble_t_eStrings[assemble_t_e], assemble_t_eStrings[operate_t_e]);
     sprintf(assemble_timer_name, "%u %s Assemble", N, assemble_t_eStrings[assemble_t_e]);
@@ -293,9 +301,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 #endif
 
     for (int ii=0; ii<10; ii++) {
-	    timers[test_timer_name]->start();
 	    benchmark_Multiply_Host<MatType>(*A, *F, *U_exact);
-	    timers[test_timer_name]->stop();
     }
 
     // Cleanup
@@ -342,7 +348,7 @@ void run_test(RBFFD& der, Grid& grid) {
     }
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
     bool writeIntermediate = true;
     bool primed = false;
@@ -396,12 +402,16 @@ int main(void)
 	// Also, the sparsity pattern matters (KDTree vs LSH) 
 #if 0
         unsigned int stencil_size = 40;
-        double eps_c1 = 0.027;
-        double eps_c2 = 0.274;
+        SCALARTYPE eps_c1 = 0.027;
+        SCALARTYPE eps_c2 = 0.274;
 #else
         unsigned int stencil_size = 50;
-        double eps_c1 = 0.027;
-        double eps_c2 = 0.274;
+	if (argc > 1) { 
+		stencil_size = atoi(argv[1]); 
+		std::cout << "USING STENCIL SIZE: " << stencil_size << std::endl;
+	} 
+        SCALARTYPE eps_c1 = 0.027;
+        SCALARTYPE eps_c2 = 0.274;
 #endif
 
         GridReader* grid = new GridReader(grid_name, 4);
@@ -451,6 +461,23 @@ int main(void)
                 der.writeAllWeightsToFile();
             }
         }
+
+#if 0
+	{
+		// Test custom SpMV 
+		std::string stencil_timer_name = grid_name + " Apply Weights";
+		timers[apply_timer_name] = new EB::Timer(apply_timer_name.c_str());
+		unsigned int nb_centers = grid->getNodeListSize();
+		unsigned int nb_stencils = grid->getStencilsSize();
+		std::vector<SCALARTYPE> u(nb_centers, 1.);
+		std::vector<SCALARTYPE> xderiv_gpu(nb_stencils);
+		for (int nn=0; nn< 10; nn++) { 
+			timers[apply_timer_name]->start(); 
+			der->applyWeightsForDeriv(RBFFD::XSFC, u, xderiv_gpu, true);
+			timers[apply_timer_name]->stop(); 
+		}
+	}
+#endif 
 
         if (!primed)  {
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";

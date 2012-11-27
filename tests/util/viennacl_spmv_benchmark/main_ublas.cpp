@@ -384,8 +384,10 @@ int main(void)
         std::string& grid_name = grids[i];
 
         std::string weight_timer_name = grid_name + " Calc Weights";
+        std::string stencil_timer_name = grid_name + " Generate Stencils";
 
         timers[weight_timer_name] = new EB::Timer(weight_timer_name.c_str());
+	timers[stencil_timer_name] = new EB::Timer(stencil_timer_name.c_str());
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
 	// NOTE: for benchmarking the size matters but eps_c* do not. We can
@@ -417,13 +419,19 @@ int main(void)
         std::cout << "Generate Stencils\n";
         Grid::GridLoadErrType st_err = grid->loadStencilsFromFile();
         if (st_err == Grid::NO_STENCIL_FILES) {
+	    timers[stencil_timer_name]->start();
             //            grid->generateStencils(Grid::ST_BRUTE_FORCE);
-#if 1
+#if 0
             grid->generateStencils(Grid::ST_KDTREE);
 #else
+#if 0
             grid->setNSHashDims(50, 50,50);
+#else 
+            grid->setNSHashDims(100, 100, 100);
+#endif 
             grid->generateStencils(Grid::ST_HASH);
 #endif
+	    timers[stencil_timer_name]->stop();
             if (writeIntermediate) {
                 grid->writeToFile();
             }
@@ -438,7 +446,7 @@ int main(void)
         if (der_err) {
             der.computeAllWeightsForAllStencils();
 
-            timers[weight_timer_name]->start();
+            timers[weight_timer_name]->stop();
             if (writeIntermediate) {
                 der.writeAllWeightsToFile();
             }

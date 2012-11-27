@@ -516,12 +516,15 @@ void Grid::generateStencils(st_generator_t generator_choice)
     switch (generator_choice)
     {
         case ST_BRUTE_FORCE:
+            std::cout << "Stencil Generator: Brute Force\n"; 
             this->generateStencilsBruteForce(); 
             break; 
         case ST_KDTREE: 
+            std::cout << "Stencil Generator: KDTree \n"; 
             this->generateStencilsKDTree(); 
             break; 
         case ST_HASH: 
+            std::cout << "Stencil Generator: LSH Raster \n"; 
             this->generateStencilsHash(); 
             break; 
         default: 

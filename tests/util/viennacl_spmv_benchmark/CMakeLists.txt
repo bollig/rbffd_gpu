@@ -21,5 +21,8 @@ SET (ARGV
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
-add_serial_opencl_framework_test( "viennacl_ublas_spmv_benchmark.x"
-    "main_ublas.cpp" "${ARGV}" )
+add_serial_opencl_framework_test( "viennacl_ublas_spmv_benchmark.x" "main_ublas.cpp" "${ARGV}" )
+
+add_serial_opencl_framework_test( "viennacl_ublas_spmv_mpi_benchmark.x" "main_ublas_mpi.cpp" "${ARGV}" )
+add_parallel_opencl_framework_test( "viennacl_ublas_spmv_mpi_benchmark.x"
+	"main_ublas_mpi.cpp" "${ARGV}" ${NUM_PROCS} )

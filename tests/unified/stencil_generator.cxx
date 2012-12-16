@@ -25,9 +25,8 @@ int main(int argc, char** argv) {
     tm["loadGrid"] = new Timer("[Main] Load Grid (and Stencils) from Disk");
     tm["writeGrid"] = new Timer("[Main] Write Grid (and Stencils) to Disk");
     tm["stencils"] = new Timer("[Main] Stencil generation");
+    tm["writeStencils"] = new Timer("[Main] Write Stencils to Disk");
     tm["settings"] = new Timer("[Main] Load settings");
-
-    Grid* grid = NULL;
 
     tm["total"]->start();
 
@@ -38,7 +37,12 @@ int main(int argc, char** argv) {
     po::options_description desc("Allowed options");
     desc.add_options()
 	    ("help", "produce help message")
+	    ("grid_filename,g", po::value<string>(), "Grid filename (flat file, tab delimited columns). Required.")
+	    ("grid_num_cols,c", po::value<int>(), "Number of columns to expect in the grid file (X,Y,Z first)")
+	    ("grid_size,N", po::value<int>(), "Number of nodes to expect in the grid file") 
+	    ("stencil_size,n", po::value<int>(), "Number of nodes per stencil (assume all stencils are the same size)")
 	    ("weight_method,w", po::value<int>(), "Set weight method (0:LSH, 1:KDTree, 2:BruteForce)")
+	    ("lsh_resolution,l", po::value<int>(), "Set the coarse grid resolution for LSH overlay (same for all dimensions)") 
 	    ;
 
     po::variables_map vm;
@@ -50,34 +54,64 @@ int main(int argc, char** argv) {
 	    return 1;
     }
 
-    if (vm.count("weight_method")) {
-	    cout << "Weight method is set to: "
-		    << vm["weight_method"].as<int>() << ".\n";
+    string grid_filename; 
+    if (vm.count("grid_filename")) {
+	grid_filename = vm["grid_filename"].as<string>(); 
+	    cout << "Loading grid: " << grid_filename<< ".\n";
     } else {
-	    cout << "Weight method was not set.\n";
+	cout << "ERROR: grid_filename not specified\n";
+	exit(-1); 
     }
 
-#if 0
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
+    int grid_num_cols; 
+    if (vm.count("grid_num_cols")) {
+	grid_num_cols = vm["grid_num_cols"].as<int>(); 
+	cout << "Number of expected columns: " << grid_num_cols << ".\n";
+    } else {
+	cout << "grid_num_cols was not set. Defaulting to 3.\n";
+    }
 
-    int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required);
-    int debug = settings->GetSettingAs<int>("DEBUG", ProjectSettings::optional, "0");
+    int grid_size; 
+    if (vm.count("grid_size")) {
+	grid_size = vm["grid_size"].as<int>(); 
+	cout << "Number of expected nodes: " << grid_size << ".\n";
+    } else {
+	cout << "ERROR: grid_size was not set.\n";
+	exit(-2); 
+    }
 
-    int weight_method = settings->GetSettingAs<int>("WEIGHT_METHOD", ProjectSettings::optional, "0");
-    int stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required);
+    int stencil_size; 
+    if (vm.count("stencil_size")) {
+	stencil_size = vm["stencil_size"].as<int>(); 
+	cout << "Number of nodes per stencil: " << stencil_size << ".\n";
+    } else {
+	cout << "ERROR: stencil_size was not set.\n";
+	exit(-3); 
+    }
 
-    int ns_nx = settings->GetSettingAs<int>("NS_NB_X", ProjectSettings::optional, "10");
-    int ns_ny = settings->GetSettingAs<int>("NS_NB_Y", ProjectSettings::optional, "10");
-    int ns_nz = settings->GetSettingAs<int>("NS_NB_Z", ProjectSettings::optional, "10");
+    int weight_method = 0; 
+    if (vm.count("weight_method")) {
+	weight_method = vm["weight_method"].as<int>(); 
+	    cout << "Weight method is set to: "
+		    << weight_method << ".\n";
+    } else {
+	    cout << "weight_method was not set. Defaulting to 0.\n";
+    }
 
-    string grid_filename = settings->GetSettingAs<string>("GRID_FILENAME", ProjectSettings::required);
-    int grid_size = settings->GetSettingAs<int>("GRID_SIZE", ProjectSettings::required);
-    int grid_num_cols = settings->GetSettingAs<int>("GRID_FILE_NUM_COLS", ProjectSettings::optional, "3");
+    int lsh_resolution = 100;
+    if ((weight_method == 0) && (vm.count("lsh_resolution"))) {
+	lsh_resolution = vm["lsh_resolution"].as<int>(); 
+	cout << "Number of coarse grid cells per dimension: " << lsh_resolution << ".\n";
+    } else {
+	cout << "lsh_resolution was not set. Defaulting to 100 per dimension.\n";
+    }
 
-    tm["settings"]->stop();
+    int ns_nx, ns_ny, ns_nz; 
+    ns_nx = ns_ny = ns_nz = lsh_resolution; 
+
 
     tm["gridReader"]->start();
-    grid = new GridReader(grid_filename, grid_num_cols, grid_size);
+    Grid* grid = new GridReader(grid_filename, grid_num_cols, grid_size);
     grid->setMaxStencilSize(stencil_size);
     tm["gridReader"]->stop();
 
@@ -86,7 +120,7 @@ int main(int argc, char** argv) {
     tm["loadGrid"]->stop();
     if (err == Grid::NO_GRID_FILES)
     {
-	    printf("************** Generating new Grid **************\n");
+	    std::cout << "************** Generating new Grid **************\n";
 	    grid->setSortBoundaryNodes(true);
 	    tm["grid"]->start();
 	    grid->generate();
@@ -96,7 +130,7 @@ int main(int argc, char** argv) {
 	    tm["writeGrid"]->stop();
     }
     if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
-	    std::cout << "Generating stencils files\n";
+	    std::cout << "************** Generating Stencils **************\n"; 
 	    tm["stencils"]->start();
 	    switch (weight_method) {
 		    case 2: 
@@ -128,8 +162,6 @@ int main(int argc, char** argv) {
     tm.writeAllToFile("time_log.stencils");
     tm.clear();
 
-    printf("\n\nREACHED THE END OF MAIN\n\n");
-#endif 
     return 0;
 }
 //----------------------------------------------------------------------

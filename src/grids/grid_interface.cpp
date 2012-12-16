@@ -196,7 +196,7 @@ Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
     boundary_normals.clear();
 
     if (this->loadNodesFromFile(filename)) {
-        printf("Error loading nodes from file"); 
+        printf("Error loading nodes from file\n"); 
         return NO_GRID_FILES;
     }
     

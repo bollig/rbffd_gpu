@@ -134,10 +134,10 @@ int main(int argc, char** argv) {
 	    tm["stencils"]->start();
 	    switch (weight_method) {
 		    case 2: 
-			    grid->generateStencils(Grid::ST_KDTREE);
+			    grid->generateStencils(Grid::ST_BRUTE_FORCE);
 			    break; 
 		    case 1: 
-			    grid->generateStencils(Grid::ST_BRUTE_FORCE);
+			    grid->generateStencils(Grid::ST_KDTREE);
 			    break; 
 		    case 0: 
 		    default: 

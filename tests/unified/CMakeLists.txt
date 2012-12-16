@@ -21,9 +21,9 @@ SET (ARGV
 )
 
 require_config()   # Default is to require test.conf
-require_config(run.sh)   # Default is to require test.conf
+require_file(run.sh) 
 
-load_vtk()
+add_serial_framework_test( "sten_gen.x" "stencil_generator.cxx" "${ARGV}" )
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 

@@ -36,7 +36,7 @@ typedef std::vector< std::map< unsigned int, double> > STL_Sparse_Mat;
 typedef viennacl::compressed_matrix<double> VCL_CSR_Mat; 
 typedef viennacl::coordinate_matrix<double> VCL_COO_Mat; 
 
-enum MatrixType : int
+enum MatrixType //: int
 {
     COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, DUMMY
 };
@@ -100,8 +100,7 @@ void benchmarkMultiplyDevice(MatT& A) {
     std::cout << "linf Norm: " << viennacl::linalg::norm_inf(b) << std::endl;  
 }
 
-template <class MatType=STL_Sparse_Mat>
-void assemble_LHS ( RBFFD& der, Grid& grid, MatType& A){
+void assemble_LHS ( RBFFD& der, Grid& grid, STL_Sparse_Mat& A){
 
     unsigned int N = grid.getNodeListSize(); 
     unsigned int n = grid.getMaxStencilSize(); 
@@ -148,7 +147,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     // ----------------------
     timers[assemble_timer_name]->start(); 
     A = new MatType(N); 
-    assemble_LHS<MatType>(der, grid, *A);  
+    assemble_LHS(der, grid, *A);  
     timers[assemble_timer_name]->stop(); 
 
     timers[copy_timer_name]->start();
@@ -187,7 +186,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     // ----------------------
     timers[assemble_timer_name]->start(); 
     MatType* A = new MatType(N); 
-    assemble_LHS<MatType>(der, grid, *A);  
+    assemble_LHS(der, grid, *A);  
     timers[assemble_timer_name]->stop(); 
 
     
@@ -239,7 +238,7 @@ int main(void)
 
     std::vector<std::string> grids; 
 
-#if 1 
+#if 0 
     //grids.push_back("~/GRIDS/md/md005.00036"); 
     grids.push_back("~/GRIDS/md/md031.01024"); 
     grids.push_back("~/GRIDS/md/md050.02601"); 
@@ -254,6 +253,16 @@ int main(void)
     grids.push_back("~/GRIDS/geoff/scvtimersesh_1m_nodes.ascii"); 
 #endif 
     //grids.push_back("~/GRIDS/geoff/scvtimersesh_1m_nodes.ascii"); 
+    grids.push_back("~/sphere_grids/md063.04096");
+    grids.push_back("~/sphere_grids/md079.06400"); 
+    grids.push_back("~/sphere_grids/md089.08100");
+    grids.push_back("~/sphere_grids/md100.10201");
+    grids.push_back("~/sphere_grids/md127.16384");
+    grids.push_back("~/sphere_grids/md141.20164");
+    grids.push_back("~/sphere_grids/md165.27556");  
+    grids.push_back("~/sphere_grids/scvtmesh001.100000");
+    grids.push_back("~/sphere_grids/scvtmesh002.500000");
+    grids.push_back("~/sphere_grids/scvtmesh003.1000000");
 
     for (size_t i = 0; i < grids.size(); i++) {
         std::string& grid_name = grids[i]; 

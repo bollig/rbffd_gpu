@@ -48,7 +48,7 @@ typedef cusp::array1d<double, cusp::device_memory> DEVICE_VEC_t;
 typedef cusp::csr_matrix<unsigned int, double, cusp::host_memory> HOST_MAT_t; 
 typedef cusp::csr_matrix<unsigned int, double, cusp::device_memory> DEVICE_MAT_t; 
 
-EB::TimerList tm;
+EB::TimerList timers;
 
 //---------------------------------
 
@@ -207,22 +207,22 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
         sprintf(test_timer_name, "%u GPU GMRES test", N); 
     }
 
-    if (!tm.contains(assemble_timer_name)) { tm[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
-    if (!tm.contains(copy_timer_name)) { tm[copy_timer_name] = new EB::Timer(copy_timer_name); } 
-    if (!tm.contains(test_timer_name)) { tm[test_timer_name] = new EB::Timer(test_timer_name); } 
+    if (!timers.contains(assemble_timer_name)) { timers[assemble_timer_name] = new EB::Timer(assemble_timer_name); } 
+    if (!timers.contains(copy_timer_name)) { timers[copy_timer_name] = new EB::Timer(copy_timer_name); } 
+    if (!timers.contains(test_timer_name)) { timers[test_timer_name] = new EB::Timer(test_timer_name); } 
 
 
     std::cout << test_name << std::endl;
 
 
     // ----- ASSEMBLE -----
-    tm[assemble_timer_name]->start(); 
+    timers[assemble_timer_name]->start(); 
     // Keep rows in system for boundary
     HOST_MAT_t* A = new HOST_MAT_t(N, N, n*N); 
     HOST_VEC_t* F = new HOST_VEC_t(N, 1);
     HOST_VEC_t* U_exact = new HOST_VEC_t(N, 1);
     assemble_System(der, grid, *A, *F, *U_exact); 
-    tm[assemble_timer_name]->stop(); 
+    timers[assemble_timer_name]->stop(); 
     
     if (!primeGPU) {
         write_System(*A, *F, *U_exact); 
@@ -231,20 +231,20 @@ void gpuTest(RBFFD& der, Grid& grid, int primeGPU=0) {
     // ----- SOLVE -----
 
     std::cout << "COPYING\n"; 
-    tm[copy_timer_name]->start();
+    timers[copy_timer_name]->start();
 
     DEVICE_MAT_t* A_gpu = new DEVICE_MAT_t(*A); 
     DEVICE_VEC_t* F_gpu = new DEVICE_VEC_t(*F); 
     DEVICE_VEC_t* U_exact_gpu = new DEVICE_VEC_t(*U_exact); 
     DEVICE_VEC_t* U_approx_gpu = new DEVICE_VEC_t(*F);
 
-    tm[copy_timer_name]->stop();
+    timers[copy_timer_name]->stop();
 
     std::cout << "COMPUTING GMRES\n";
-    tm[test_timer_name]->start();
+    timers[test_timer_name]->start();
     // Use GMRES to solve A*u = F
     GMRES_Device(*A_gpu, *F_gpu, *U_exact_gpu, *U_approx_gpu);
-    tm[test_timer_name]->stop();
+    timers[test_timer_name]->stop();
 
     write_Solution(grid, *U_exact, *U_approx_gpu); 
 
@@ -278,18 +278,18 @@ int main(void)
     grids.push_back("~/GRIDS/md/md165.27556"); 
 #endif 
 #if 0
-    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_500k_nodes.ascii"); 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtimersesh_100k_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtimersesh_500k_nodes.ascii"); 
+    grids.push_back("~/GRIDS/geoff/scvtimersesh_1m_nodes.ascii"); 
 #endif 
-    //grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
+    //grids.push_back("~/GRIDS/geoff/scvtimersesh_1m_nodes.ascii"); 
 
     for (size_t i = 0; i < grids.size(); i++) {
         std::string& grid_name = grids[i]; 
 
         std::string weight_timer_name = grid_name + " Calc Weights";  
 
-        tm[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
+        timers[weight_timer_name] = new EB::Timer(weight_timer_name.c_str()); 
 
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
         unsigned int stencil_size = 40;
@@ -335,14 +335,14 @@ int main(void)
 
 
         std::cout << "Generate RBFFD Weights\n"; 
-        tm[weight_timer_name]->start(); 
+        timers[weight_timer_name]->start(); 
         RBFFD der(RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC, grid, 3, 0); 
         der.setEpsilonByParameters(eps_c1, eps_c2);
         int der_err = der.loadAllWeightsFromFile(); 
         if (der_err) {
             der.computeAllWeightsForAllStencils(); 
 
-            tm[weight_timer_name]->start(); 
+            timers[weight_timer_name]->start(); 
             if (writeIntermediate) {
                 der.writeAllWeightsToFile(); 
             }
@@ -364,8 +364,8 @@ int main(void)
         delete(grid); 
     }
 
-    tm.printAll();
-    tm.writeToFile();
+    timers.printAll();
+    timers.writeToFile();
     return EXIT_SUCCESS;
 }
 

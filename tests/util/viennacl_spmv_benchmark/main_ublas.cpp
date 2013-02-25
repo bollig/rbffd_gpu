@@ -64,7 +64,7 @@ typedef viennacl::ell_matrix<SCALARTYPE> VCL_ELL_Mat;
 typedef boost::numeric::ublas::vector<SCALARTYPE> UBLAS_Vec;
 typedef viennacl::vector<SCALARTYPE> VCL_Vec;
 
-enum MatrixType : int
+enum MatrixType //: int
 {
     COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, ELL_GPU, DUMMY
 };
@@ -90,6 +90,9 @@ const char* assemble_t_eStrings[] =
 EB::TimerList timers;
 
 char test_timer_name[256];
+
+
+
 
 
 //---------------------------------
@@ -119,6 +122,7 @@ void benchmark_Multiply_Device(MatT& A, VecT& F, VecT& U_exact) {
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(F) << std::endl;
     std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff) / viennacl::linalg::norm_inf(F) << std::endl;
 }
+
 
 void assemble_LHS(RBFFD& der, Grid& grid, STL_Sparse_Mat& A){
 
@@ -185,8 +189,8 @@ void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_CSR_Mat& A){
 }
 
 
-template <class MatType, class VecType=UBLAS_Vec>
-void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
+template <class MatType>
+void assemble_RHS ( RBFFD& der, Grid& grid, UBLAS_Vec& F, UBLAS_Vec& U_exact){
     SphericalHarmonic::Sph32 UU;
 
     unsigned int N = grid.getNodeListSize();
@@ -204,6 +208,10 @@ void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
         F[i] = -UU.lapl(Xx, Yy, Zz);
     }
 }
+
+
+
+
 
 template <class MatType, class OpMatType, MatrixType assemble_t_e, MatrixType operate_t_e>
 void run_SpMV(RBFFD& der, Grid& grid) {

@@ -165,6 +165,7 @@ class TimeDependentPDE_VCL : public TimeDependentPDE
         }
 
         void advanceRK4(double delta_t); 
+        void advanceRK4_OverlapComm(double delta_t); 
         virtual void evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double current_time, double substep_scale); 
         virtual void advanceRK4_NoComm( int indx_u_in, int indx_k1, int indx_k2, int indx_k3, int indx_k4, int indx_u_out ); 
 

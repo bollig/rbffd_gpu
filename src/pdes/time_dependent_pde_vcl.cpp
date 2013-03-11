@@ -392,89 +392,33 @@ void TimeDependentPDE_VCL::advanceRK4(double dt) {
 //    std::cout << "OUTPUT_SOL = " << output_sol << std::endl;
 }
 
-
-#if 0
-
-// This is the Overlapped version. NEed to debug for VCL
-
-void TimeDependentPDE_VCL::advanceRK4(double delta_t) {
-#if 1
-
-    // If we need to assemble a matrix L for solving implicitly, this is the routine to do that.
-    // For explicit schemes we can just solve for our weights and have them stored in memory.
-    this->assemble();
-
-    // ----------------------------------
-    //
-    //    k1 = dt*func(DM_Lambda, DM_Theta, H, u, t, nodes, useHV);
-    //    k2 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F1, t+0.5*dt, nodes, useHV);
-    //    k3 = dt*func(DM_Lambda, DM_Theta, H, u+0.5*F2, t+0.5*dt, nodes, useHV);
-    //    k4 = dt*func(DM_Lambda, DM_Theta, H, u+F3, t+dt, nodes, useHV);
-    //
-    // ----------------------------------
-    // NOTE: INDX_IN maps to "u", INDX_K1 to "F1" and INDX_TEMP to "u+0.5*F1"
-
-    //        std::cout << "Eval k1\n";
-    // Compute K1, K2, K3 and K4 in separate kernel launches (required to ensure global barrier between evaluations)
-    evaluateRK4_NoComm(INDX_IN, INDX_IN, INDX_K1, INDX_TEMP1, delta_t, cur_time, 0.5);
-    this->sendrecvBuf(gpu_solution[INDX_TEMP1]);
-
-    //       std::cout << "Eval k2\n";
-    // We use INDX_TEMP1 (== u+0.5*K1) to compute K2 and write INDX_TEMP2 with "u+0.5*K2"
-    evaluateRK4_NoComm(INDX_IN, INDX_TEMP1, INDX_K2, INDX_TEMP2, delta_t, cur_time+0.5*delta_t, 0.5);
-    this->sendrecvBuf(gpu_solution[INDX_TEMP2]);
-
-    //      std::cout << "Eval k3\n";
-    // We use INDX_TEMP2 (== u+0.5*K2) to compute K3 and write INDX_TEMP1 with "u+K3"
-    evaluateRK4_NoComm(INDX_IN, INDX_TEMP2, INDX_K3, INDX_TEMP1, delta_t, cur_time+0.5*delta_t, 1.0);
-    this->sendrecvBuf(gpu_solution[INDX_TEMP1]);
-
-    //     std::cout << "Eval k4\n";
-    // We use INDX_TEMP1 (== u+K3) to compute K4 (NOTE: no communication is required at this step since we
-    // wont be evaluating anymore)
-    evaluateRK4_NoComm(INDX_IN, INDX_TEMP1, INDX_K4, INDX_TEMP2, delta_t, cur_time+delta_t, 0.0);
-
-    //    std::cout << "Advance u_n\n";
-    // Finally, we combine all terms to get the update to u
-    advanceRK4_NoComm(INDX_IN, INDX_K1, INDX_K2, INDX_K3, INDX_K4, INDX_OUT);
-    this->sendrecvBuf(gpu_solution[INDX_OUT]);
-#endif
-}
-#endif
-
-
 //----------------------------------------------------------------------
-// NOTE: the communciation in this routine is to synchronize the input to the INTERMEDIATE STEPS, not the solution
-void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
-{
-    tm["rk4_eval_gpu"]->start();
 
-    std::cout << "Entered evaluateRK4_NoComm\n";
-//    this->launchRK4_classic_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+// This is the Overlapped version
+void TimeDependentPDE_VCL::advanceRK4_OverlapComm(double dt) {
 
-#if 0
-    VCL_MAT_t& A = *(der_ref_gpu.getGPUWeights(RBFFD::LAMBDA));
-    VCL_VEC_t& u_in = *(gpu_solution[indx_u_in]);
-    VCL_VEC_t& u_plus_scaled_k_in = *(gpu_solution[indx_u_plus_scaled_k_in]);
-    VCL_VEC_t& k_out = *(gpu_solution[indx_k_out]);
-    VCL_VEC_t& u_plus_scaled_k_out = *(gpu_solution[indx_u_plus_scaled_k_out]);
-
-    u_in + 0.5 * dt * u_plus_scaled_k_in
-    A * u_plus_scaled_k_in
-
-        unsigned int nb_stencils = grid_ref.getStencilsSize();
+    unsigned int nb_stencils = grid_ref.getStencilsSize();
     unsigned int nb_nodes = grid_ref.getNodeListSize();
     //std::vector<NodeType>& nodes = grid_ref.getNodeList();
 
     // backup the current solution so we can perform intermediate steps
-    std::vector<double>& input_sol = this->U_G;
+    //std::vector<double>& input_sol = this->U_G;
+    VCL_VEC_t& input_sol = *(gpu_solution[INDX_IN]);
+    VCL_VEC_t& output_sol = *(gpu_solution[INDX_OUT]);
 
-    std::vector<double> s(nb_nodes, 0.);
+    //std::vector<double> s(nb_nodes, 0.);
+    VCL_VEC_t& s = *(gpu_solution[INDX_TEMP1]);
 
-    VCL_VEC_t k1(nb_stencils); // f(t_n, y_n)
-    VCL_VEC_t k2(nb_stencils); // f(t_n + 0.5dt, y_n + 0.5dt*k1)
-    VCL_VEC_t k3(nb_stencils,0.); // f(t_n + 0.5dt, y_n + 0.5dt*k2)
-    VCL_VEC_t k4(nb_stencils,0.); // f(t_n + dt, y_n + dt*k3)
+    //---------------------------------
+    // f(t_n, y_n)
+    // f(t_n + 0.5dt, y_n + 0.5dt*k1)
+    // f(t_n + 0.5dt, y_n + 0.5dt*k2)
+    // f(t_n + dt, y_n + dt*k3)
+    //---------------------------------
+    VCL_VEC_t& k1 = *(gpu_solution[INDX_K1]);
+    VCL_VEC_t& k2 = *(gpu_solution[INDX_K2]);
+    VCL_VEC_t& k3 = *(gpu_solution[INDX_K3]);
+    VCL_VEC_t& k4 = *(gpu_solution[INDX_K4]);
 
     // If we need to assemble a matrix L for solving implicitly, this is the routine to do that.
     // For explicit schemes we can just solve for our weights and have them stored in memory.
@@ -486,9 +430,13 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
     // This routine will apply our weights to "s" in however many intermediate steps are required
     // and store the results in k1
     tm["rk4_eval"]->start();
-    this->solve(input_sol, &k1, nb_stencils, nb_nodes, cur_time);
+
+    // The first solve works on a complete vector in memory and needs no
+    // communication. The second is different.
+    this->solve(input_sol, k1, nb_stencils, nb_nodes, cur_time);
 
     // ------------------- K2 ------------------------
+#if 0
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term
@@ -496,10 +444,20 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + 0.5*dt * ( k1[i] + f);
     }
+#endif
+    // No need to overlap comm here all these values are local
+    s = input_sol + 0.5*dt * k1;
+
     tm["rk4_eval"]->stop();
 
     // reset boundary solution
     this->enforceBoundaryConditions(s, cur_time+0.5*dt);
+
+
+    // Evan: The second solve requires communication and can be overlapped. We
+    // need to first launch Q\B and sendrecv. Then we need to
+
+
 
     // FIXME: might not be necessary unless we strictly believe that enforcing
     // BC can only be done by controlling CPU
@@ -511,8 +469,9 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
     // y*(t) = y(t) + h * k2
     // but k2 = lapl[ y(t) + h/2 * k1 ] (content between [..] was computed above)
     tm["rk4_eval"]->start();
-    this->solve(s, &k2, nb_stencils, nb_nodes, cur_time+0.5*dt);
+    this->solve(s, k2, nb_stencils, nb_nodes, cur_time+0.5*dt);
 
+#if 0
     // ------------------- K3 ------------------------
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
@@ -521,6 +480,9 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + 0.5*dt * ( k2[i] + f);
     }
+#endif
+
+    s = input_sol + 0.5*dt * k2 ;
     tm["rk4_eval"]->stop();
 
     // reset boundary solution
@@ -534,8 +496,9 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
 
     //*********
     tm["rk4_eval"]->start();
-    this->solve(s, &k3, nb_stencils, nb_nodes, cur_time+0.5*dt);
+    this->solve(s, k3, nb_stencils, nb_nodes, cur_time+0.5*dt);
 
+#if 0
     // ------------------- K4 ------------------------
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
@@ -544,6 +507,8 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
         // y(t) + h/2 * k1
         s[i] = input_sol[i] + dt * ( k3[i] + f);
     }
+#endif
+    s = input_sol + dt * k3;
     tm["rk4_eval"]->stop();
 
     // reset boundary solution
@@ -557,7 +522,7 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
 
     //*********
     tm["rk4_eval"]->start();
-    this->solve(s, &k4, nb_stencils, nb_nodes, cur_time+dt);
+    this->solve(s, k4, nb_stencils, nb_nodes, cur_time+dt);
     tm["rk4_eval"]->stop();
     // NOTE: No more communication is required for evaluations:
 
@@ -565,6 +530,7 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
     // FINAL STEP: y_n+1 = y_n + 1/6 * h * (k1 + 2*k2 + 2*k3 + k4)
     //
     tm["rk4_adv"]->start();
+#if 0
     for (unsigned int i = 0; i < nb_stencils; i++) {
         //NodeType& v = nodes[i];
         // FIXME: allow the use of a forcing term
@@ -572,17 +538,32 @@ void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_sca
         // y(t) + h/2 * feval1
         input_sol[i] = input_sol[i] + (dt/6.) * ( k1[i] + 2.*k2[i] + 2.*k3[i] + k4[i]);
     }
+#endif
+    output_sol = input_sol + (dt/6.) * ( k1 + 2.*k2 + 2.*k3 + k4);
     tm["rk4_adv"]->stop();
 
     // Make sure any boundary conditions are met.
-    this->enforceBoundaryConditions(input_sol, cur_time+dt);
+    this->enforceBoundaryConditions(output_sol, cur_time+dt);
 
     // Ensure we have consistent values across the board
     tm["rk4_mpi_comm"]->start();
-    this->sendrecvUpdates(input_sol, "U_G");
+    this->sendrecvUpdates(output_sol, "U_G");
     tm["rk4_mpi_comm"]->stop();
 
-#endif
+    tm["rk4_eval_gpu"]->stop();
+//std::cout << "\n";
+//    std::cout << "OUTPUT_SOL = " << output_sol << std::endl;
+}
+
+//----------------------------------------------------------------------
+// NOTE: the communciation in this routine is to synchronize the input to the INTERMEDIATE STEPS, not the solution
+void TimeDependentPDE_VCL::evaluateRK4_NoComm(int indx_u_in, int indx_u_plus_scaled_k_in, int indx_k_out, int indx_u_plus_scaled_k_out, double del_t, double adjusted_time, double substep_scale)
+{
+    tm["rk4_eval_gpu"]->start();
+
+    std::cout << "Entered evaluateRK4_NoComm\n";
+//    this->launchRK4_classic_eval(0, grid_ref.Q.size(), adjusted_time, del_t, this->gpu_solution[indx_u_in], this->gpu_solution[indx_u_plus_scaled_k_in], this->gpu_solution[indx_k_out], this->gpu_solution[indx_u_plus_scaled_k_out], substep_scale);
+
     tm["rk4_eval_gpu"]->stop();
     exit(-1);
 }

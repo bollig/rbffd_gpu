@@ -60,7 +60,7 @@ typedef viennacl::ell_matrix<double> VCL_ELL_Mat;
 typedef boost::numeric::ublas::vector<double> UBLAS_Vec;
 typedef viennacl::vector<double> VCL_Vec;
 
-enum MatrixType : int
+enum MatrixType //: int
 {
 	COO_CPU=0, COO_GPU, CSR_CPU, CSR_GPU, ELL_GPU, DUMMY
 };
@@ -175,8 +175,7 @@ void assemble_LHS( RBFFD& der, Grid& grid, UBLAS_CSR_Mat& A){
 }
 
 
-template <class MatType, class VecType=UBLAS_Vec>
-void assemble_RHS ( RBFFD& der, Grid& grid, VecType& F, VecType& U_exact){
+void assemble_RHS ( RBFFD& der, Grid& grid, UBLAS_Vec& F, UBLAS_Vec& U_exact){
 	SphericalHarmonic::Sph32 UU;
 
 	unsigned int N = grid.getNodeListSize();
@@ -228,7 +227,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 
 	UBLAS_Vec* F = new UBLAS_Vec(N, 1);
 	UBLAS_Vec* U_exact = new UBLAS_Vec(N, 1);
-	assemble_RHS<MatType>(der, grid, *F, *U_exact);
+	assemble_RHS(der, grid, *F, *U_exact);
 	timers[assemble_timer_name]->stop();
 
 	timers[copy_timer_name]->start();
@@ -283,7 +282,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
 
 	UBLAS_Vec* F = new UBLAS_Vec(N, 1);
 	UBLAS_Vec* U_exact = new UBLAS_Vec(N, 1);
-	assemble_RHS<MatType>(der, grid, *F, *U_exact);
+	assemble_RHS(der, grid, *F, *U_exact);
 	timers[assemble_timer_name]->stop();
 
 #if 0

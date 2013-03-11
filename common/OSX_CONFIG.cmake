@@ -10,6 +10,8 @@ IF (CUDA_FOUND)
 	# THESE ARE FOR OSX and older versions of CUDA (i think <= 3.0) 
 	#SET(CUDA_NVCC_FLAGS "-Xcompiler;-D__builtin_stdarg_start=__builtin_va_start")
 	#MESSAGE("CUDA NVCCFLAGS SET: ${CUDA_NVCC_FLAGS}")
+    # We need sm_30 or sm_35 to take advantage of Kepler hardware
+    SET(CUDA_NVCC_FLAGS "-arch=sm_35")
 ENDIF (CUDA_FOUND)
 
 

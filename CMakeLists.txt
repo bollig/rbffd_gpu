@@ -8,6 +8,12 @@ IF (USE_GCC46)
     set (CMAKE_CXX_COMPILER "g++-4.6")      
 ENDIF (USE_GCC46)
 
+IF (USE_APPLE_GCC) 
+    set (CMAKE_C_COMPILER "llvm-gcc")
+    set (CMAKE_CXX_COMPILER "llvm-g++")      
+ENDIF (USE_APPLE_GCC)
+
+
 
 IF (USE_GCC47) 
     set (CMAKE_C_COMPILER "gcc-4.7")
@@ -120,7 +126,7 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 #add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -no-vec -opt-report -vec-report -par-report)
 #ICC:  add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -opt-report -vec-report -par-report)
 add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall 
-  -std=c++0x 
+  #-std=c++0x 
     -O3 
     # -g 
     -DNDEBUG 
@@ -131,6 +137,7 @@ message(STATUS "CompilerID: ${CMAKE_CXX_COMPILER_ID}")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   add_definitions(
       -DUSE_CLANG
+      -DDEBUG_ALL
       -stdlib=libc++
   )
 endif()

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <sstream>
 #include <map>
 
 #include "grids/grid_reader.h"
@@ -189,10 +190,10 @@ int main(int argc, char** argv) {
 
 		// Dump the graph file for METIS
 
-		std::ofstream grout("stencils.graph"); 
+		std::ostringstream grouts;
 		// First the number of vertices, edges
-		grout << boost::num_vertices(g) << " " << boost::num_edges(g) << "\n"; 
 		// Then all connections for each node (assumes at least one connection per node
+		unsigned int num_edges = 0;
 	      	for (int i = 0; i < boost::num_vertices(g); i++) {
 			boost::graph_traits<Graph>::adjacency_iterator e, e_end;
 			boost::graph_traits<Graph>::vertex_descriptor 
@@ -205,10 +206,16 @@ int main(int argc, char** argv) {
 			for (std::set<unsigned int>::iterator it = unique_verts.begin(); it != unique_verts.end(); it++) {
 				// Add 1 to the index to make sure we are indexing from 1 in metis
 			//	std::cout << (*it) + 1 << "\n";
-				grout << (*it) + 1 << " ";
+				grouts << (*it) + 1 << " ";
+				num_edges++; 
 			}
-			grout << "\n";
+			grouts << "\n";
 		}	
+
+		std::ofstream grout("metis_stencils.graph"); 
+		// We can divide num_edges by 2 to get correct count because edges are symmetric
+		grout << boost::num_vertices(g) << " " << num_edges / 2 << "\n"; 
+		grout << grouts.str();
 		
 		grout.close();
 

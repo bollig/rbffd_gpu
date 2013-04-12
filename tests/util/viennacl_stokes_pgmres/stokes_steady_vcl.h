@@ -4,7 +4,7 @@
 // This is needed to make UBLAS variants of norm_* and GMRES
 #define VIENNACL_HAVE_UBLAS 1
 
-#define STOKES_CONSTRAINTS 1
+#define STOKES_CONSTRAINTS 0
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
@@ -33,7 +33,11 @@
 #include <boost/numeric/ublas/lu.hpp>
 #include <boost/filesystem.hpp>
 
+#if 0
+#include <viennacl/linalg/ilu.hpp> 
+#else 
 #include "precond/ilu0.hpp"
+#endif 
 #if 1
 #include "viennacl/linalg/parallel_gmres.hpp"
 #else
@@ -389,8 +393,8 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         void solve(MAT_t& LHS, VEC_t& RHS, VEC_t& U_exact, VEC_t& U_approx_out)
         {
             // Solve on the CPU
-            int restart = 5; 
-            int krylov = 60;
+            int restart = 30; 
+            int krylov = 30;
             double tol = 1e-8; 
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
@@ -413,7 +417,9 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 #else 
             tlist["precond"]->start();
             std::cout << "Generating preconditioner...\n";
-            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0,3,4, 0, 4*NN) ); 
+            //viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0, 3, 4, 0, 4*NN) ); 
+            viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0, 3, 4) ); 
+            //viennacl::linalg::ilu0_precond< MAT_t > vcl_ilu0( LHS, viennacl::linalg::ilu0_tag(0, 3*NN) );
             tlist["precond"]->stop();
 #if 0
             viennacl::io::write_matrix_market_file(vcl_ilu0.LU, dir_str + "ILU.mtx"); 

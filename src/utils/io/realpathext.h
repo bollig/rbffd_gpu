@@ -7,7 +7,7 @@
 
 // Extended realpath to support ~ at the beginning of the line
 // From: http://www.dreamincode.net/forums/topic/218601-realpath-and-tilde/
-char *realpathExt(const char *path, char *buff) {
+char * realpathExt(const char *path, char *buff) {
     char *home;
     if (*path=='~' && (home = getenv("HOME"))) {
         char s[PATH_MAX];

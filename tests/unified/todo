@@ -1,0 +1,9 @@
+- simplify the file output names.
+	- no need to write out the grid size....we could keep a log file with metadata
+	- esp. signficant for decomposed problem
+
+- test when -np > P (*.part.P), can we elegantly handle?
+
+- compute and write weights for subdomain
+
+- GPU compute weights for subdomain 

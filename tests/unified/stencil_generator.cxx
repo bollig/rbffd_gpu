@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 		("grid_num_cols,c", po::value<int>(), "Number of columns to expect in the grid file (X,Y,Z first)")
 		("grid_size,N", po::value<int>(), "Number of nodes to expect in the grid file") 
 		("stencil_size,n", po::value<int>(), "Number of nodes per stencil (assume all stencils are the same size)")
-		("weight_method,w", po::value<int>(), "Set weight method (0:LSH, 1:KDTree, 2:BruteForce)")
+		("neighbor_method,w", po::value<int>(), "Set neighbor query method (0:LSH, 1:KDTree, 2:BruteForce)")
 		("lsh_resolution,l", po::value<int>(), "Set the coarse grid resolution for LSH overlay (same for all dimensions)") 
 		;
 
@@ -96,17 +96,18 @@ int main(int argc, char** argv) {
 		exit(-3); 
 	}
 
-	int weight_method = 0; 
-	if (vm.count("weight_method")) {
-		weight_method = vm["weight_method"].as<int>(); 
+	int neighbor_method = 0; 
+	if (vm.count("neighbor_method")) {
+		neighbor_method = vm["neighbor_method"].as<int>(); 
 		cout << "Weight method is set to: "
-			<< weight_method << ".\n";
+			<< neighbor_method << ".\n";
 	} else {
-		cout << "weight_method was not set. Defaulting to 0.\n";
+		cout << "neighbor_method was not set. Defaulting to 0.\n";
 	}
 
 	int lsh_resolution = 100;
-	if ((weight_method == 0) && (vm.count("lsh_resolution"))) {
+	// Why is neighbor_method == 0 required?
+	if ((neighbor_method == 0) && (vm.count("lsh_resolution"))) {
 		lsh_resolution = vm["lsh_resolution"].as<int>(); 
 		cout << "Number of coarse grid cells per dimension: " << lsh_resolution << ".\n";
 	} else {
@@ -139,7 +140,7 @@ int main(int argc, char** argv) {
 	if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
 		std::cout << "************** Generating Stencils **************\n"; 
 		tm["stencils"]->start();
-		switch (weight_method) {
+		switch (neighbor_method) {
 			case 2: 
 				grid->generateStencils(Grid::ST_BRUTE_FORCE);
 				break; 

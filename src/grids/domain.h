@@ -74,6 +74,7 @@ class Domain : public Grid, public MPISendable
         std::vector<std::vector<int> > R_by_rank;
 
     private: 
+	// Should the AABB bounds include (i.e., <= instead of <) maximum edge? 
         bool inclMX, inclMY, inclMZ;
 
     public: 	// Member Functions: 
@@ -175,7 +176,7 @@ class Domain : public Grid, public MPISendable
 
         // When we move to 3D this should be updated to reflect zmin, zmax
         // We could also make this polar coords, striped subdomains etcs. 
-        bool isInsideSubdomain(NodeType& pt) 
+        virtual bool isInsideSubdomain(NodeType& pt, int pt_indx) 
         {
             // TODO : need to support xmin != xmax && zmin != zmax but ymin==ymax 
             // 		  and other combinations

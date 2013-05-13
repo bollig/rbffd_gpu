@@ -1,17 +1,36 @@
+/*
+ *  
+ *  load full grid
+ *  if metis part file not exists
+ *  	load full stencils
+ *  else 
+ *  	load metis part file
+ *  	for each metis line
+ *  		if part equals mpi_rank
+ *  			read stencil
+ *  		else 
+ *  			discard stencil
+ *  for each stencil
+ *  	compute weight
+ *  
+ *  for each stencil
+ *  	write weights
+ **/
+
 #include <stdlib.h>
 #include <sstream>
 #include <map>
+#include <iostream> 
 
 #include "grids/grid_reader.h"
+#include "grids/domain.h"
+#include "grids/metis_domain.h"
 
 #include <boost/program_options.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/graph_traits.hpp>
-#include <boost/graph/undirected_graph.hpp>
-#include <boost/graph/directed_graph.hpp>
-#include <boost/graph/graphviz.hpp>
 
 #include "timer_eb.h"
+
+#include <mpi.h> 
 
 using namespace std;
 using namespace EB;
@@ -24,6 +43,7 @@ namespace po = boost::program_options;
 //----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
+
 	TimerList tm;
 
 	tm["total"] = new Timer("[Main] Total runtime for this proc");
@@ -43,11 +63,13 @@ int main(int argc, char** argv) {
 	// Declare the supported options.
 	po::options_description desc("Allowed options");
 	desc.add_options()
-		("help", "produce help message")
+		("help,h", "produce help message")
+		("debug,d", "enable verbose debug messages")
 		("grid_filename,g", po::value<string>(), "Grid filename (flat file, tab delimited columns). Required.")
 		("grid_num_cols,c", po::value<int>(), "Number of columns to expect in the grid file (X,Y,Z first)")
 		("grid_size,N", po::value<int>(), "Number of nodes to expect in the grid file") 
 		("stencil_size,n", po::value<int>(), "Number of nodes per stencil (assume all stencils are the same size)")
+		("partition_filename,p", po::value<string>(), "METIS Output Partition Filename (*.part.<P-processors>)")
 		("neighbor_method,w", po::value<int>(), "Set neighbor query method (0:LSH, 1:KDTree, 2:BruteForce)")
 		("lsh_resolution,l", po::value<int>(), "Set the coarse grid resolution for LSH overlay (same for all dimensions)") 
 		;
@@ -61,12 +83,26 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
+	int debug = 0;
+	if (vm.count("debug")) {
+		debug = 1; 
+	}
+
 	string grid_filename; 
 	if (vm.count("grid_filename")) {
 		grid_filename = vm["grid_filename"].as<string>(); 
 		cout << "Loading grid: " << grid_filename<< ".\n";
 	} else {
 		cout << "ERROR: grid_filename not specified\n";
+		exit(-1); 
+	}
+
+	string partition_filename; 
+	if (vm.count("partition_filename")) {
+		partition_filename = vm["partition_filename"].as<string>(); 
+		cout << "Loading partition file: " << partition_filename << ".\n";
+	} else {
+		cout << "ERROR: partition_filename not specified\n";
 		exit(-1); 
 	}
 
@@ -117,6 +153,14 @@ int main(int argc, char** argv) {
 	int ns_nx, ns_ny, ns_nz; 
 	ns_nx = ns_ny = ns_nz = lsh_resolution; 
 
+#if 1
+    MPI::Init(argc, argv);
+    int mpi_rank = MPI::COMM_WORLD.Get_rank();
+    int mpi_size = MPI::COMM_WORLD.Get_size();
+#else 
+	int mpi_rank = 0; 
+	int mpi_size = 1;
+#endif 
 
 	tm["gridReader"]->start();
 	Grid* grid = new GridReader(grid_filename, grid_num_cols, grid_size);
@@ -126,110 +170,58 @@ int main(int argc, char** argv) {
 	tm["loadGrid"]->start();
 	Grid::GridLoadErrType err = grid->loadFromFile();
 	tm["loadGrid"]->stop();
-	if (err == Grid::NO_GRID_FILES)
-	{
-		std::cout << "************** Generating new Grid **************\n";
-		grid->setSortBoundaryNodes(true);
-		tm["grid"]->start();
-		grid->generate();
-		tm["grid"]->stop();
-		tm["writeGrid"]->start();
-		grid->writeToFile();
-		tm["writeGrid"]->stop();
-	}
 	if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
-		std::cout << "************** Generating Stencils **************\n"; 
-		tm["stencils"]->start();
-		switch (neighbor_method) {
-			case 2: 
-				grid->generateStencils(Grid::ST_BRUTE_FORCE);
-				break; 
-			case 1: 
-				grid->generateStencils(Grid::ST_KDTREE);
-				break; 
-			case 0: 
-			default: 
-				grid->setNSHashDims(ns_nx, ns_ny, ns_nz);
-				grid->generateStencils(Grid::ST_HASH);
-				break; 
-		}
-		tm["stencils"]->stop();
-		tm["writeStencils"]->start();
-		grid->writeToFile();
-		tm["writeStencils"]->stop();
+		std::cout << "ERROR: unable to read grid. Exiting..." << std::endl;
+		exit(-1);
 	}
 
-	{
-		// Assemble a DIRECTED graph that is the spadjacency_list our stencils
-//		typedef adjacency_list <boost::vecS, boost::setS, boost::bidirectionalS> Graph;
-
-#if 0
-		typedef boost::undirected_graph<> Graph;
-#else
-        typedef boost::adjacency_list < boost::vecS, boost::vecS, boost::undirectedS> Graph;
-#endif
-		Graph g;
-		Graph::vertex_descriptor vds[grid_size]; 
-
-		// Since the graph uses setS we cant use int indices for
-		// vertices. These will be our ref indices
-		for (int i = 0; i < grid_size; i++) {
-			vds[i] = g.add_vertex();
-		}
-
-		for (int i = 0; i < grid_size; i++) { 
-			StencilType& s = grid->getStencil(i); 
-			// Start with index 1 to neglect the connection to
-			// itself (the 1 on diag of matrix). Its assumed by metis. 
-			for (int j = 1; j < stencil_size; j++) {
-				if (s[j] < grid_size) 
-				{
-					g.add_edge(vds[i], vds[s[j]]);
-				}
-			}
-		}
-
-		std::ofstream gvout("undirected_graph.graphviz"); 
-		write_graphviz(gvout, g);
-		gvout.close();
-		std::cout << "Wrote the graphviz file: undirected_graph.graphviz" << std::endl;
-
-		// Dump the graph file for METIS
-
-		std::ostringstream grouts;
-		// First the number of vertices, edges
-		// Then all connections for each node (assumes at least one connection per node
-		unsigned int num_edges = 0;
-	      	for (int i = 0; i < boost::num_vertices(g); i++) {
-			boost::graph_traits<Graph>::adjacency_iterator e, e_end;
-			boost::graph_traits<Graph>::vertex_descriptor 
-				s = boost::vertex(i, g);
-			//cout << "the edges incident to v: " << i+1 << "\n";
-			std::set<unsigned int> unique_verts; 
-			for (tie(e, e_end) = boost::adjacent_vertices(s, g); e != e_end; ++e) {
-				unique_verts.insert(get_vertex_index(*e,g)); 
-			}
-			for (std::set<unsigned int>::iterator it = unique_verts.begin(); it != unique_verts.end(); it++) {
-				// Add 1 to the index to make sure we are indexing from 1 in metis
-			//	std::cout << (*it) + 1 << "\n";
-				grouts << (*it) + 1 << " ";
-				num_edges++; 
-			}
-			grouts << "\n";
-		}	
-
-		std::ofstream grout("metis_stencils.graph"); 
-		// We can divide num_edges by 2 to get correct count because edges are symmetric
-		grout << boost::num_vertices(g) << " " << num_edges / 2 << "\n"; 
-		grout << grouts.str();
-		
-		grout.close();
-		std::cout << "Wrote the METIS graph file: metis_stencils.graph" << std::endl;
-	}
+	// Less memory efficient but will get the job done: 
+	// Every proc can: 
+	// 	read whole grid, 
+	// 	read whole stencils, 
+	// 	compute weights for subset of grid
+	// 	write subset of weights to weights_*_...part<rank>_of_<size>
+	// NOTE: no need to determine sets Q,O,R,B, etc. here. 
 
 
+	// Similar to GridReader. Although it should not read in the stencils unless they end in a rank #. 
+
+	Domain* subdomain; 
+	subdomain = new METISDomain(mpi_rank, mpi_size, grid, partition_filename); 
+	subdomain->writeToFile(); 
+	std::cout << "DECOMPOSED\n";
+	
+#if 1
+    if (debug) {
+        subdomain->printVerboseDependencyGraph();
+        subdomain->printNodeList("All Centers Needed by This Process");
+
+        printf("CHECKING STENCILS: ");
+        for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
+            //  printf("Stencil[%d] = ", irbf);
+            StencilType& s = subdomain->getStencil(irbf);
+            if (irbf == s[0]) {
+                //	printf("PASS\n");
+                //    subdomain->printStencil(s, "S");
+            } else {
+                printf("FAIL on stencil %d\n", irbf);
+
+                tm["total"]->stop();
+                tm.printAll();
+                tm.writeAllToFile();
+
+                exit(EXIT_FAILURE);
+            }
+        }
+        printf("OK\n");
+    }
+#endif 
+#if 1
 	delete(grid);
 	std::cout << "Deleted grid\n";
+	delete(subdomain); 
+	std::cout << "Deleted subdomain\n";
+#endif 
 
 	tm["total"]->stop();
 	tm.printAll();
@@ -238,6 +230,7 @@ int main(int argc, char** argv) {
 	std::cout << "----------------  END OF MAIN ------------------\n";
 	tm.writeAllToFile("time_log.stencils");
 	tm.clear();
+	MPI::Finalize();
 
 	return 0;
 }

@@ -32,7 +32,7 @@ namespace b=boost::tuples;
 int main(int argc, char** argv) {
 
     std::vector<std::string> grids; 
-#if 1
+#if 0
     //grids.push_back("~/GRIDS/md/md031.01024"); 
    // grids.push_back("~/GRIDS/md/md050.02601"); 
    // grids.push_back("~/GRIDS/md/md063.04096"); 
@@ -44,13 +44,13 @@ int main(int argc, char** argv) {
     grids.push_back("~/GRIDS/md/md063.04096"); 
     grids.push_back("~/GRIDS/md/md079.06400"); 
     grids.push_back("~/GRIDS/md/md100.10201"); 
-    grids.push_back("~/GRIDS/md/md127.16384"); 
+    //grids.push_back("~/GRIDS/md/md127.16384"); 
     grids.push_back("~/GRIDS/md/md141.20164");
-    grids.push_back("~/GRIDS/md/md159.25600"); 
+    //grids.push_back("~/GRIDS/md/md159.25600"); 
     grids.push_back("~/GRIDS/md/md165.27556"); 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_500k_nodes.ascii"); 
-    grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
+   // grids.push_back("~/GRIDS/geoff/scvtmesh_100k_nodes.ascii"); 
+   // grids.push_back("~/GRIDS/geoff/scvtmesh_500k_nodes.ascii"); 
+   // grids.push_back("~/GRIDS/geoff/scvtmesh_1m_nodes.ascii"); 
 #endif 
 
     std::vector<b::tuple<int, double,double> > stencil_params; 
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
     stencil_params.push_back(b::tuple<int, double,double>(40, 0.020, 0.295)); // Too IC to work. 
     stencil_params.push_back(b::tuple<int, double,double>(40, 0.027, 0.274)); // Nothing to write home about 
 #endif 
-#if 0
+#if 1
     stencil_params.push_back(b::tuple<int, double,double>(31, 0.035, 0.1));   // Works well
     stencil_params.push_back(b::tuple<int, double,double>(20, 0.01, 0.01));  
     stencil_params.push_back(b::tuple<int, double,double>(60, 0.037, 0.262));  

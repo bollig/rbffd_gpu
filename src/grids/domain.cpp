@@ -310,10 +310,16 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     //   printf("Q_NODES: %d\n", Q.size());
     //   printf("NB_STENCILS: %d\n", stencils.size());
 
+#if 1
+// TODO: 
+// This adds all nodes to Q, then gets all nodes associated with stencils in Q
+// the only thing is that rbf_centers[i] => stencils[i]. We need rbf_centers[i] => stencils[l2g(rbf_centers[i])]
+
+
     // Generate sets Q and D
     for (unsigned int i = 0; i < rbf_centers.size(); i++) {
         NodeType& pt = rbf_centers[i];
-        if (this->isInsideSubdomain(pt)) {
+        if (this->isInsideSubdomain(pt, i)) {
             Q.insert(i);
         }
     } 
@@ -329,7 +335,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
             NodeType& pt2 = rbf_centers[indx];
             //            std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2) << std::endl;
             // If any stencil node is outside the domain, then set this to true
-            if (!this->isInsideSubdomain(pt2)) {
+            if (!this->isInsideSubdomain(pt2, j)) {
                 depR = 1;  
             }
         }
@@ -338,6 +344,8 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
             D.insert(*qit);
         }
     }
+#endif 
+
 
     std::cout << "Q size before set operations: " << Q.size() << std::endl;
     std::cout << "D size before set operations: " << D.size() << std::endl;

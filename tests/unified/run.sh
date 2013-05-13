@@ -26,23 +26,29 @@
 # 4096
 
 ./sten_gen.x -g ~/sphere_grids/md063.04096 -c 4 -N 4096 -n 17 -w 0 -l 100
+./compute_weights.x -g ~/sphere_grids/md063.04096 -c 4 -N 4096 -n 17 
 mv stencils_maxsz17_loadedgrid_4096nodes_final.ascii lsh_100_stencils.ascii
 mv metis_stencils.graph lsh_100_stencils.graph
 gpmetis lsh_100_stencils.graph 2
+# Not sure what the params here represent, but this gets a REORDERING + PART file. 
+mpirun -np 4 pometis kdtree_stencils.graph 1 0 1 2 1 0 0 0
 #mpirun -hostfile hostfile.2 -np 2 ./compute_weights.x -g ~/sphere_grids/md063.04096 -s lsh_100_stencils.ascii -p lsh_100_stencils.graph.part.2
 
 
-./sten_gen.x -g ~/sphere_grids/md063.04096 -c 4 -N 4096 -n 17 -w 0 -l 50
-mv stencils_maxsz17_loadedgrid_4096nodes_final.ascii lsh_050_stencils.ascii
-mv metis_stencils.graph lsh_050_stencils.graph
-gpmetis lsh_050_stencils.graph 2
+# ./sten_gen.x -g ~/sphere_grids/md063.04096 -c 4 -N 4096 -n 17 -w 0 -l 50
+# mv stencils_maxsz17_loadedgrid_4096nodes_final.ascii lsh_050_stencils.ascii
+# mv metis_stencils.graph lsh_050_stencils.graph
+# gpmetis lsh_050_stencils.graph 2
+# 
+# 
+# ./sten_gen.x -g ~/sphere_grids/md063.04096 -c 4 -N 4096 -n 17 -w 1 
+# mv stencils_maxsz17_loadedgrid_4096nodes_final.ascii kdtree_stencils.ascii
+# mv metis_stencils.graph kdtree_stencils.graph
+# gpmetis kdtree_stencils.graph 2
 
 
-./sten_gen.x -g ~/sphere_grids/md063.04096 -c 4 -N 4096 -n 17 -w 1 
-mv stencils_maxsz17_loadedgrid_4096nodes_final.ascii kdtree_stencils.ascii
-mv metis_stencils.graph kdtree_stencils.graph
-gpmetis kdtree_stencils.graph 2
 
+# 
 #
 ## 10201
 #

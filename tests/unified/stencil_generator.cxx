@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 		grid->generate();
 		tm["grid"]->stop();
 		tm["writeGrid"]->start();
-		grid->writeToFile();
+		grid->writeToFile("input_grid.ascii");
 		tm["writeGrid"]->stop();
 	}
 	if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
 		}
 		tm["stencils"]->stop();
 		tm["writeStencils"]->start();
-		grid->writeToFile();
+		grid->writeToFile("input_grid.ascii");
 		tm["writeStencils"]->stop();
 	}
 

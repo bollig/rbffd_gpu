@@ -102,8 +102,8 @@ int main(int argc, char** argv) {
 		partition_filename = vm["partition_filename"].as<string>(); 
 		cout << "Loading partition file: " << partition_filename << ".\n";
 	} else {
-		cout << "ERROR: partition_filename not specified\n";
-		exit(-1); 
+		cout << "WARNING: partition_filename not specified, defaulting to 'metis_stencils.graph'\n";
+		partition_filename = "metis_stencils.graph"; 
 	}
 
 	int grid_num_cols; 
@@ -112,6 +112,7 @@ int main(int argc, char** argv) {
 		cout << "Number of expected columns: " << grid_num_cols << ".\n";
 	} else {
 		cout << "grid_num_cols was not set. Defaulting to 3.\n";
+		grid_num_cols = 3;
 	}
 
 	int grid_size; 
@@ -168,7 +169,7 @@ int main(int argc, char** argv) {
 	tm["gridReader"]->stop();
 
 	tm["loadGrid"]->start();
-	Grid::GridLoadErrType err = grid->loadFromFile();
+	Grid::GridLoadErrType err = grid->loadFromFile(grid_filename);
 	tm["loadGrid"]->stop();
 	if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
 		std::cout << "ERROR: unable to read grid. Exiting..." << std::endl;

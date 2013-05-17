@@ -33,6 +33,11 @@ IF (NOT USE_OPENCL)
     set (OPENCL_FOUND false)
 ELSE ()
     FIND_PACKAGE (OPENCL)
+    if (OPENCL_FOUND)
+	    INCLUDE_DIRECTORIES(${OPENCL_INCLUDE_DIR}) 
+    else ()
+	message (FATAL_ERROR "OpenCL NOT Found!")
+    endif()
 ENDIF ()
 
 

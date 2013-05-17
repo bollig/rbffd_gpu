@@ -32,6 +32,7 @@ CLBaseClass::CLBaseClass(int rank) {
         { CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
 
         std::cout << "Creating cl::Context (only selecting GPU devices)" << std::endl;
+        //context = cl::Context(CL_DEVICE_TYPE_GPU, properties);
         context = cl::Context(CL_DEVICE_TYPE_GPU, properties);
         // This prevents the context from being created again
         contextCreated++;

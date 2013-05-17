@@ -342,14 +342,16 @@ class Grid
 
         virtual std::string genericBoundaryFilename() {
             char prefix[256]; 
-            sprintf(prefix, "input_boundary.ascii");
+            //sprintf(prefix, "input_boundary.ascii");
+            sprintf(prefix, "bndry_input_grid.ascii");
             std::string s(prefix);
             return s;
         }
 
         virtual std::string genericNormalsFilename() {
             char prefix[256]; 
-            sprintf(prefix, "input_normals.ascii");
+            //sprintf(prefix, "input_normals.ascii");
+            sprintf(prefix, "nrmls_input_grid.ascii");
             std::string s(prefix);
             return s;
         }

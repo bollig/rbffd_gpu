@@ -97,8 +97,13 @@ class Domain : public Grid, public MPISendable
 
         virtual std::string getFileDetailString() {
             char prefix[256]; 
+#if 0
             sprintf(prefix, "_rank%d_of_%da", this->id, this->comm_size); 
             std::string s = Grid::getFileDetailString(); 
+#else 
+            sprintf(prefix, "rank%d_of_%d", this->id, this->comm_size); 
+	    std::string s = "";
+#endif 
             s.append(prefix); 
             return s;
         }

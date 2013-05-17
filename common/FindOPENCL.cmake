@@ -107,12 +107,15 @@ ELSE (WIN32 OR CYGWIN)
 				"/Developer/GPU Computing/OpenCL/common/inc/" 
 				"/Developer/GPU_Computing/OpenCL/common/inc/" 
 	 	 		~/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/ 
+			    $ENV{OPENCL_ROOT}/include
 				$ENV{ATISTREAMSDKROOT}/include
 				$ENV{CUDA_INSTALL_PATH}/include
 				/usr/include 
 	)
 
 	    FIND_LIBRARY(OPENCL_LIBRARIES OpenCL ENV 
+			    $ENV{OPENCL_ROOT}/lib64
+			    $ENV{OPENCL_ROOT}/lib
 			    LD_LIBRARY_PATH
 			    NO_DEFAULT_PATH
 			)

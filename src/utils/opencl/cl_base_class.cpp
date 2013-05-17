@@ -33,7 +33,7 @@ CLBaseClass::CLBaseClass(int rank) {
 
         std::cout << "Creating cl::Context (only selecting GPU devices)" << std::endl;
         //context = cl::Context(CL_DEVICE_TYPE_GPU, properties);
-        context = cl::Context(CL_DEVICE_TYPE_GPU, properties);
+        context = cl::Context(CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR, properties);
         // This prevents the context from being created again
         contextCreated++;
     }

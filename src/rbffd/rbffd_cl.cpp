@@ -16,7 +16,7 @@ using namespace std;
     deleteCPUNodesBuffer(false),
     deleteCPUStencilsBuffer(false),
     useDouble(true),
-    alignWeights(true), alignMultiple(32)
+    alignWeights(false), alignMultiple(32)
 {
 
 	//GE: added as a means to avoid deleting that which is not allocated
@@ -25,11 +25,8 @@ using namespace std;
 	}
 
     this->setupTimers();
-	std::cout << "GE RBFFD_CL 1\n";
     this->loadKernel();
-	std::cout << "GE RBFFD_CL 2\n";
     this->allocateGPUMem();
-	std::cout << "GE RBFFD_CL 3\n";
     //this->updateStencilsOnGPU(false);
     this->updateStencilsOnGPU(true); //GE
     std::cout << "Done copying stencils\n";
@@ -37,7 +34,6 @@ using namespace std;
     //this->updateNodesOnGPU(false);
     this->updateNodesOnGPU(true);
     std::cout << "Done copying nodes\n";
-
 }
 
 
@@ -77,7 +73,6 @@ void RBFFD_CL::loadKernel() {
 
     std::string my_source;
     if(useDouble) {
-		std::cout << "GE use double precision kernel\n";
 #define FLOAT double
 #include "cl_kernels/derivative_kernels.cl"
         my_source = kernel_source;
@@ -85,7 +80,6 @@ void RBFFD_CL::loadKernel() {
     }else {
 #define FLOAT float
 #include "cl_kernels/derivative_kernels.cl"
-		std::cout << "GE use single precision kernel\n";
         my_source = kernel_source;
 #undef FLOAT
     }
@@ -333,6 +327,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
         // FIXME: copy more than just the 4 types of weights
         int iterator = computedTypes;
 		std::cout << "GE updateWeightsDouble, computedTypes= " << computedTypes << std::endl;
+std::cout << "EVAN PADDED: " << stencil_padded_size << " of " << grid_ref.getStencilSize(0) << std::endl;
         int which = 0;
         int type_i = 0;
         // Iterate until we get all 0s. This allows SOME shortcutting.
@@ -514,7 +509,6 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
         exit(EXIT_FAILURE);
     }
 
-	//GE
     err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(float), function_mem_bytes, &cpu_u[0], NULL, &event);
     //err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &cpu_u[0], NULL, &event);
 
@@ -533,14 +527,12 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
 void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //TODO: FIX case when start_indx != 0
-    std::cout << "enter applyWeightsForDerivDouble\n";
-    std::cout << "1 EVAN HERE, double\n";
+    std::cout << "EVAN HERE\n";
 
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start();
 
     if (isChangedU) {
-    	std::cout << "2 EVAN HERE\n";
         //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
         this->updateFunctionOnGPU(start_indx, nb_stencils, u, true);  //GE
     }
@@ -563,7 +555,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
-        //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
+        kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
         std::cout << "Set " << i << " kernel args\n";
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
@@ -643,7 +635,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
-        //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
+        kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
 
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));

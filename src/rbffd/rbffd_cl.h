@@ -144,6 +144,8 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             return stencil_padded_size;
         }
 
+	void setAlignWeights(bool alignYN) { alignWeights = alignYN; } 
+
     protected: 
         void setupTimers(); 
         void loadKernel(); 

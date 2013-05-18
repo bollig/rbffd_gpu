@@ -331,6 +331,7 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
                 //std::cout << std::endl;
                 // Send to GPU
                 err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_d[which][0]), NULL, &event);
+std::cout << "Wrote weight buffer to gpu: " << which << "," << weights_mem_size << " bytes\n";
                 //            queue.flush();
 
                 type_i+=1;
@@ -511,7 +512,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
     try {
         int i = 0;
         kernel.setArg(i++, gpu_stencils);
-        kernel.setArg(i++, gpu_weights[which]);
+        kernel.setArg(i++, this->getGPUWeights(which));
         kernel.setArg(i++, gpu_function);                 // COPY_IN
         kernel.setArg(i++, gpu_deriv_out);           // COPY_OUT
         //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
@@ -585,7 +586,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
     try {
         int i = 0;
         kernel.setArg(i++, gpu_stencils);
-        kernel.setArg(i++, gpu_weights[which]);
+        kernel.setArg(i++, this->getGPUWeights(which));
         kernel.setArg(i++, gpu_function);                 // COPY_IN
         kernel.setArg(i++, gpu_deriv_out);           // COPY_OUT
         //FIXME: we want to pass a size_t for maximum array lengths, but OpenCL does not allow

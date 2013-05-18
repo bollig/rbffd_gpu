@@ -18,6 +18,7 @@ int main(int argc, char** argv) {
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
+	std::cout << "GE 1\n";
 	
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
 
     Grid* grid = NULL; 
+	std::cout << "GE 2\n";
  
     if (dim == 1) {
 	    grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
@@ -56,22 +58,27 @@ int main(int argc, char** argv) {
     } else {
 	    cout << "ERROR! Dim > 3 Not Supported!" << endl;
     }
+	std::cout << "GE 3\n";
 
     grid->setSortBoundaryNodes(true); 
     grid->generate();
     grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
     grid->writeToFile(); 
 
+	std::cout << "GE 4\n";
+
     // 0: 2D problem; 1: 3D problem
     //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
 
     RBFFD* der;
     if (use_gpu) {
-        der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+        //der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+        der = new RBFFD_CL(RBFFD::X | RBFFD::Y, grid, dim);  // GE
     } else {
         der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     }
 
+	std::cout << "GE 5\n";
 
     double epsilon = settings->GetSettingAs<double>("EPSILON");
     der->setEpsilon(epsilon);
@@ -99,24 +106,31 @@ int main(int argc, char** argv) {
     // NOTE: we pass booleans at the end of the param list to indicate that
     // the function "u" is new (true) or same as previous calls (false). This
     // helps avoid overhead of passing "u" to the GPU.
-	cout << "GE1" << endl;
+	cout << "***** GE1" << endl;
     der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
 	cout << "GE2" << endl;
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, true); // originally false
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false); // originally false
+	#if 0
 	cout << "GE3" << endl;
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, true); // orig false
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false); // orig false
 	cout << "GE4" << endl;
-    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, true); // orig false
+    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false); // orig false
 	cout << "GE5" << endl;
+	#endif
 
 	cout << "GE6" << endl;
     der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
 	cout << "GE7" << endl;
-    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, true); // orig false
+    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false); // orig false
+	#if 0
 	cout << "GE8" << endl;
-    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, true); // orig: false
+    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false); // orig: false
 	cout << "GE9" << endl;
-    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, true); // orig: false
+    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false); // orig: false
+	#endif
+
+	exit(0);
+
 
     for (size_t i = 0; i < rbf_centers.size(); i++) {
 //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;

@@ -445,8 +445,10 @@ void RBFFD_CL::updateFunctionDouble(unsigned int start_indx, unsigned int nb_val
     if (function_mem_bytes != nb_vals*sizeof(double)) {
         std::cout << "function_mem_bytes != nb_nodes*sizeof(double)" << std::endl;
         exit(EXIT_FAILURE);
+    } else {
+	std::cout << "Updating solution: " << function_mem_bytes << " bytes \n";
+	std::cout << start_indx << ", " << nb_vals << "\n";
     }
-
     // TODO: mask off fields not update
     err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &u[start_indx], NULL, &event);
     //    queue.flush();
@@ -493,6 +495,7 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
 void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //TODO: FIX case when start_indx != 0
+    std::cout << "EVAN HERE\n";
 
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start();
@@ -517,7 +520,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
-        kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
+        //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
         std::cout << "Set " << i << " kernel args\n";
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
@@ -591,7 +594,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
-        kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
+        //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
 
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));

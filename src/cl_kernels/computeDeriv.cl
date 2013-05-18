@@ -20,6 +20,7 @@ void computeDeriv(       \n
         for (uint j = 0; j < stencil_size; j++) {        \n
             uint indx = i*stencil_size + j;
 //            der += 1. * weights[indx];    \n
+        //    der += 1. ;    \n
             der += solution[stencils[indx]] * weights[indx];    \n
         }   \n
         derivative[i] = der;    \n

@@ -101,7 +101,9 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             std::cout << "[RBFFD_CL] Warning! Using GPU to apply weights, but NOT advance timestep\n";
             unsigned int nb_stencils = grid_ref.getStencilsSize();
             deriv.resize(nb_stencils); 
-            applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
+            //applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
+            // EB: bugfix started index at 0. 
+            applyWeightsForDeriv(which, 0, nb_stencils, &u[0], &deriv[0], isChangedU);
         }
         virtual void applyWeightsForDeriv(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true) {
             if (useDouble) {

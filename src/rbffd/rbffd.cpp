@@ -26,7 +26,8 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
         weightsModified(false), weightMethod(RBFFD::Direct),
         hv_k(2), hv_gamma(8e-4), useHyperviscosity(0),
         eigenvalues_computed(false), computeCondNums(false),
-        computeSFCoperators(false), asciiWeights(0)
+        computeSFCoperators(false), asciiWeights(0), 
+	override_file_detail(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize();
 
@@ -1563,7 +1564,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //----------------------------------------------------------------------------
     std::string RBFFD::getFileDetailString(DerType which) {
         std::stringstream ss(std::stringstream::out);
-        ss << derTypeStr[getDerTypeIndx(which)] << "_weights_" << weightTypeStr[weightMethod] << "_" << this->getEpsString() << "_" << this->getHVString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();
+	if (override_file_detail) {
+		ss << derTypeStr[getDerTypeIndx(which)] << "_weights_" << grid_ref.getFileDetailString();
+	} else {
+		ss << derTypeStr[getDerTypeIndx(which)] << "_weights_" << weightTypeStr[weightMethod] << "_" << this->getEpsString() << "_" << this->getHVString() << "_" << grid_ref.getStencilDetailString() << "_" << dim_num << "d" << "_" << grid_ref.getFileDetailString();
+	}
         return ss.str();
     }
 

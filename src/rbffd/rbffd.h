@@ -161,6 +161,7 @@ class RBFFD
         bool computeCondNums; 
         bool computeSFCoperators;
         bool asciiWeights;
+	bool override_file_detail; 
 
     protected: 
 #if 0
@@ -534,6 +535,10 @@ class RBFFD
             }
             return i;
         }
+	
+	void overrideFileDetail(bool yn) { 
+		this->override_file_detail = yn; 
+	}
 
 };
 

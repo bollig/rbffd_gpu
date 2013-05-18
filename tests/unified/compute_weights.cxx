@@ -285,6 +285,7 @@ int main(int argc, char** argv) {
     cout << "end computing weights" << endl;
 
     tm["writeWeights"]->start();
+    der->overrideFileDetail(true);
     der->writeAllWeightsToFile();
     cout << "end write weights to file" << endl;
     tm["writeWeights"]->stop();

@@ -18,14 +18,26 @@ using namespace std;
     useDouble(true),
     alignWeights(true), alignMultiple(32)
 {
+
+	//GE: added as a means to avoid deleting that which is not allocated
+	for (int i=0; i < NUM_DERIVATIVE_TYPES; i++) {
+		cpu_weights_d[i] = 0;
+	}
+
     this->setupTimers();
+	std::cout << "GE RBFFD_CL 1\n";
     this->loadKernel();
+	std::cout << "GE RBFFD_CL 2\n";
     this->allocateGPUMem();
-    this->updateStencilsOnGPU(false);
+	std::cout << "GE RBFFD_CL 3\n";
+    //this->updateStencilsOnGPU(false);
+    this->updateStencilsOnGPU(true); //GE
     std::cout << "Done copying stencils\n";
 
-    this->updateNodesOnGPU(false);
+    //this->updateNodesOnGPU(false);
+    this->updateNodesOnGPU(true);
     std::cout << "Done copying nodes\n";
+
 }
 
 
@@ -65,6 +77,7 @@ void RBFFD_CL::loadKernel() {
 
     std::string my_source;
     if(useDouble) {
+		std::cout << "GE use double precision kernel\n";
 #define FLOAT double
 #include "cl_kernels/derivative_kernels.cl"
         my_source = kernel_source;
@@ -72,6 +85,7 @@ void RBFFD_CL::loadKernel() {
     }else {
 #define FLOAT float
 #include "cl_kernels/derivative_kernels.cl"
+		std::cout << "GE use single precision kernel\n";
         my_source = kernel_source;
 #undef FLOAT
     }
@@ -91,6 +105,7 @@ void RBFFD_CL::loadKernel() {
     tm["loadAttach"]->end();
 }
 
+//----------------------------------------------
 void RBFFD_CL::allocateGPUMem() {
 
     std::vector<StencilType>& stencil_map = grid_ref.getStencils();
@@ -106,7 +121,7 @@ void RBFFD_CL::allocateGPUMem() {
     } else {
         stencil_padded_size = max_stencil_size;
 #if 0
-        // No need to assume we're goign to have non-uniform stencil sizes. If we do, we'll pad them all to be
+        // No need to assume we're going to have non-uniform stencil sizes. If we do, we'll pad them all to be
         // the max_stencil_size.
        gpu_stencil_size = 0;
         for (unsigned int i = 0; i < stencil_map.size(); i++) {
@@ -157,6 +172,7 @@ void RBFFD_CL::allocateGPUMem() {
             // HACK: my gpu kernels take ALL weights on gpu as parameters. This allows me to put only one value for "empty" weight types
             // minimal memory consumption. It works but its a band-aid
             gpu_weights[which] = cl::Buffer(context, CL_MEM_READ_ONLY, 1*float_size, NULL, &err);
+            bytesAllocated += 1*float_size; //added by GE
         }
         iterator >>= 1;
         which += 1;
@@ -188,7 +204,11 @@ void RBFFD_CL::updateNodesOnGPU(bool forceFinish) {
     //        queue.flush();
     if (forceFinish) {
         queue.finish();
-        this->clearCPUWeights();
+		// BUG? deleting weights not yet allocated? 
+		// Or add check in clearCPUWeights: should have null pointer if nothing allocated. 
+        //GE this->clearCPUWeights();
+		std::cout << "GE: after clearCPUWeights() 3\n";
+		// GE: what is this variable for? 
         deleteCPUNodesBuffer= false;
     } else {
         deleteCPUNodesBuffer = true;
@@ -257,21 +277,29 @@ void RBFFD_CL::clearCPUWeights() {
     // Clear out buffer. No need to keep it since this should only happen once
     // NOTE: make sure we delete only the single or double precision cpu side buffers;
     int iterator = computedTypes;
+	std::cout << "GE clearCPUWeights, computedTypes= " << computedTypes << std::endl;
     int which = 0;
     int type_i       = 0;
     // Iterate until we get all 0s. This allows SOME shortcutting.
     while (iterator) {
+    std::cout << "GE iterator = " << iterator << std::endl;
         if (computedTypes & getDerType(which)) {
             if (useDouble) {
+    			std::cout << "GE  useDouble, which= " << which << "\n";
                 delete [] cpu_weights_d[which];
+				if (cpu_weights_d[which]) cpu_weights_d[which] = 0; //GE added
             } else {
+    			std::cout << "GE  useSingle\n";
                 delete [] cpu_weights_f[which];
+				if (cpu_weights_f[which]) cpu_weights_f[which] = 0; //GE added
+				//cpu_weights_f[which] = 0; //GE added
             }
             type_i+=1;
         }
         iterator >>= 1;
         which += 1;
     }
+	std::cout << "exit clearCPUWeights\n";
 }
 
 //----------------------------------------------------------------------
@@ -284,6 +312,7 @@ void RBFFD_CL::clearCPUWeights() {
 // 5) get deriv from GPU
 void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
 
+		std::cout << "GE enter updateWeightsDouble\n";
     if (weightsModified) {
 
         tm["sendWeights"]->start();
@@ -303,12 +332,14 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost
         // FIXME: copy more than just the 4 types of weights
         int iterator = computedTypes;
+		std::cout << "GE updateWeightsDouble, computedTypes= " << computedTypes << std::endl;
         int which = 0;
         int type_i = 0;
         // Iterate until we get all 0s. This allows SOME shortcutting.
         while (iterator) {
             if (computedTypes & getDerType(which)) {
                 cpu_weights_d[which] = new double[gpu_stencil_size];
+				std::cout << "GE allocted cpu_weights, which= " << which << std::endl;
                 for (unsigned int i = 0; i < nb_stencils; i++) {
                     unsigned int stencil_size = grid_ref.getStencilSize(i);
                     unsigned int j = 0;
@@ -344,6 +375,7 @@ std::cout << "Wrote weight buffer to gpu: " << which << "," << weights_mem_size 
             queue.finish();
 
             this->clearCPUWeights();
+			std::cout << "GE: after clearCPUWeights() 1\n";
             deleteCPUWeightsBuffer = false;
         } else {
             deleteCPUWeightsBuffer = true;
@@ -360,6 +392,7 @@ std::cout << "Wrote weight buffer to gpu: " << which << "," << weights_mem_size 
 
 void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
+		std::cout << "GE enter updateWeightsSingle\n";
     if (weightsModified) {
 
         tm["sendWeights"]->start();
@@ -380,6 +413,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
         // FIXME: we only pass four weights to the GPU
 
         int iterator = computedTypes;
+		std::cout << "GE updateWeightsSingle, computedTypes= " << computedTypes << std::endl;
         int which   = 0;
         int type_i  = 0;
         // Iterate until we get all 0s. This allows SOME shortcutting.
@@ -419,6 +453,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
             queue.finish();
 
             this->clearCPUWeights();
+			std::cout << "GE: after clearCPUWeights() 2 \n";
             deleteCPUWeightsBuffer = false;
         } else {
             deleteCPUWeightsBuffer = true;
@@ -479,7 +514,9 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
         exit(EXIT_FAILURE);
     }
 
-    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &cpu_u[0], NULL, &event);
+	//GE
+    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(float), function_mem_bytes, &cpu_u[0], NULL, &event);
+    //err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &cpu_u[0], NULL, &event);
 
     //    if (forceFinish) {
     queue.finish();
@@ -496,18 +533,23 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
 void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //TODO: FIX case when start_indx != 0
-    std::cout << "EVAN HERE\n";
+    std::cout << "enter applyWeightsForDerivDouble\n";
+    std::cout << "1 EVAN HERE, double\n";
 
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start();
 
     if (isChangedU) {
-        this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
+    	std::cout << "2 EVAN HERE\n";
+        //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
+        this->updateFunctionOnGPU(start_indx, nb_stencils, u, true);  //GE
     }
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    this->updateWeightsOnGPU(false);
+    std::cout << "3 EVAN HERE\n";
+    //this->updateWeightsOnGPU(false);
+    this->updateWeightsOnGPU(true); //GE
 
     try {
         int i = 0;
@@ -528,6 +570,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
     }
 
 
+    std::cout << "4 EVAN HERE\n";
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
             /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils),
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
@@ -544,6 +587,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         exit(EXIT_FAILURE);
     }
 
+    std::cout << "5 EVAN HERE\n";
     // Pull the computed derivative back to the CPU
     err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
     //    queue.flush();
@@ -561,6 +605,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         //        std::cout << "CL program finished!" << std::endl;
     }
     tm["applyWeights"]->end();
+    std::cout << "6 EVAN HERE\n";
 }
 //----------------------------------------------------------------------
 
@@ -573,15 +618,18 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
 void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
+    std::cout << "1 EVAN HERE, single\n";
     tm["applyWeights"]->start();
 
     if (isChangedU) {
-        this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
+        //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
+        this->updateFunctionOnGPU(start_indx, nb_stencils, u, true); //GE
     }
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    this->updateWeightsOnGPU(false);
+    //this->updateWeightsOnGPU(false);
+    this->updateWeightsOnGPU(true); //GE
 
     try {
         int i = 0;

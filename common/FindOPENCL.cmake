@@ -53,6 +53,7 @@ IF (WIN32 OR CYGWIN)
 			PATHS 
 			${GPU_TOOLKIT}/include    
 			$ENV{CUDA_PATH}/include
+			/usr/local/include
 		 )
 
 	# TODO this is only a hack assuming the 64 bit library will

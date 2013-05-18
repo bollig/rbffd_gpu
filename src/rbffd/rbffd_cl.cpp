@@ -21,10 +21,12 @@ using namespace std;
     this->setupTimers();
     this->loadKernel();
     this->allocateGPUMem();
-    this->updateStencilsOnGPU(false);
+    //this->updateStencilsOnGPU(false);
+    this->updateStencilsOnGPU(true); //GE
     std::cout << "Done copying stencils\n";
 
-    this->updateNodesOnGPU(false);
+    //this->updateNodesOnGPU(false);
+    this->updateNodesOnGPU(true);
     std::cout << "Done copying nodes\n";
 }
 
@@ -91,6 +93,7 @@ void RBFFD_CL::loadKernel() {
     tm["loadAttach"]->end();
 }
 
+//----------------------------------------------
 void RBFFD_CL::allocateGPUMem() {
 
     std::vector<StencilType>& stencil_map = grid_ref.getStencils();
@@ -478,7 +481,9 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
         exit(EXIT_FAILURE);
     }
 
-    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &cpu_u[0], NULL, &event);
+	//GE
+    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(float), function_mem_bytes, &cpu_u[0], NULL, &event);
+    //err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &cpu_u[0], NULL, &event);
 
     //    if (forceFinish) {
     queue.finish();
@@ -495,18 +500,21 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
 void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //TODO: FIX case when start_indx != 0
-    std::cout << "EVAN HERE\n";
+    std::cout << "1 EVAN HERE\n";
 
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start();
 
     if (isChangedU) {
+    	std::cout << "2 EVAN HERE\n";
         this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
     }
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    this->updateWeightsOnGPU(false);
+    std::cout << "3 EVAN HERE\n";
+    //this->updateWeightsOnGPU(false);
+    this->updateWeightsOnGPU(true); //GE
 
     try {
         int i = 0;
@@ -527,6 +535,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
     }
 
 
+    std::cout << "4 EVAN HERE\n";
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
             /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils),
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
@@ -543,6 +552,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         exit(EXIT_FAILURE);
     }
 
+    std::cout << "5 EVAN HERE\n";
     // Pull the computed derivative back to the CPU
     err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
     //    queue.flush();
@@ -560,6 +570,7 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         //        std::cout << "CL program finished!" << std::endl;
     }
     tm["applyWeights"]->end();
+    std::cout << "6 EVAN HERE\n";
 }
 //----------------------------------------------------------------------
 
@@ -580,7 +591,8 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    this->updateWeightsOnGPU(false);
+    //this->updateWeightsOnGPU(false);
+    this->updateWeightsOnGPU(true); //GE
 
     try {
         int i = 0;

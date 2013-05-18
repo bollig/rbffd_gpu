@@ -99,15 +99,24 @@ int main(int argc, char** argv) {
     // NOTE: we pass booleans at the end of the param list to indicate that
     // the function "u" is new (true) or same as previous calls (false). This
     // helps avoid overhead of passing "u" to the GPU.
+	cout << "GE1" << endl;
     der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
+	cout << "GE2" << endl;
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, true); // originally false
+	cout << "GE3" << endl;
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, true); // orig false
+	cout << "GE4" << endl;
+    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, true); // orig false
+	cout << "GE5" << endl;
 
+	cout << "GE6" << endl;
     der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
-    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false);
-    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false);
-    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
+	cout << "GE7" << endl;
+    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, true); // orig false
+	cout << "GE8" << endl;
+    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, true); // orig: false
+	cout << "GE9" << endl;
+    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, true); // orig: false
 
     for (size_t i = 0; i < rbf_centers.size(); i++) {
 //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;

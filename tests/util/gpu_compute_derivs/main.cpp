@@ -18,8 +18,6 @@ int main(int argc, char** argv) {
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
-	std::cout << "GE 1\n";
-	
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
     int ny = 1; 
@@ -47,7 +45,6 @@ int main(int argc, char** argv) {
     int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
 
     Grid* grid = NULL; 
-	std::cout << "GE 2\n";
  
     if (dim == 1) {
 	    grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
@@ -58,14 +55,12 @@ int main(int argc, char** argv) {
     } else {
 	    cout << "ERROR! Dim > 3 Not Supported!" << endl;
     }
-	std::cout << "GE 3\n";
 
     grid->setSortBoundaryNodes(true); 
     grid->generate();
     grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
     grid->writeToFile(); 
 
-	std::cout << "GE 4\n";
 
     // 0: 2D problem; 1: 3D problem
     //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
@@ -73,12 +68,9 @@ int main(int argc, char** argv) {
     RBFFD* der;
     if (use_gpu) {
         der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
-        //der = new RBFFD_CL(RBFFD::X | RBFFD::Y, grid, dim);  // GE
     } else {
         der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     }
-
-	std::cout << "GE 5\n";
 
     double epsilon = settings->GetSettingAs<double>("EPSILON");
     der->setEpsilon(epsilon);
@@ -117,12 +109,23 @@ int main(int argc, char** argv) {
     der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false); // orig: false
 
 
+    double max_diff = 0.; 
     for (size_t i = 0; i < rbf_centers.size(); i++) {
+	double xdiff = fabs(xderiv_gpu[i] - xderiv_cpu[i]); 
+	double ydiff = fabs(yderiv_gpu[i] - yderiv_cpu[i]);
+	double zdiff = fabs(zderiv_gpu[i] - zderiv_cpu[i]);
+	double ldiff = fabs(lderiv_gpu[i] - lderiv_cpu[i]);
+
+	if (xdiff > max_diff) { max_diff = xdiff; }
+	if (ydiff > max_diff) { max_diff = ydiff; }
+	if (zdiff > max_diff) { max_diff = zdiff; }
+	if (ldiff > max_diff) { max_diff = ldiff; }
+
 //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-        if ( (fabs(xderiv_gpu[i] - xderiv_cpu[i]) > 1e-5) 
-        || (fabs(yderiv_gpu[i] - yderiv_cpu[i]) > 1e-5) 
-        || (fabs(zderiv_gpu[i] - zderiv_cpu[i]) > 1e-5) 
-        || (fabs(lderiv_gpu[i] - lderiv_cpu[i]) > 1e-5) )
+        if (( xdiff > 1e-5) 
+        || ( ydiff > 1e-5) 
+        || ( zdiff > 1e-5) 
+        || ( ldiff > 1e-5))
         {
             std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
 	    std::cout << "Test failed on " << i << std::endl;
@@ -136,6 +139,7 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE); 
         }
     }
+    std::cout << "Max difference between weights: " << max_diff << std::endl;
     std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
        // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
 

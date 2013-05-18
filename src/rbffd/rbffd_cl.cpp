@@ -16,6 +16,7 @@ using namespace std;
     deleteCPUNodesBuffer(false),
     deleteCPUStencilsBuffer(false),
     useDouble(true),
+// Gordon: changing alignWeights to true will break gpu_compute_derivs; 
     alignWeights(false), alignMultiple(32)
 {
 
@@ -271,19 +272,17 @@ void RBFFD_CL::clearCPUWeights() {
     // Clear out buffer. No need to keep it since this should only happen once
     // NOTE: make sure we delete only the single or double precision cpu side buffers;
     int iterator = computedTypes;
-	std::cout << "GE clearCPUWeights, computedTypes= " << computedTypes << std::endl;
     int which = 0;
     int type_i       = 0;
     // Iterate until we get all 0s. This allows SOME shortcutting.
     while (iterator) {
-    std::cout << "GE iterator = " << iterator << std::endl;
         if (computedTypes & getDerType(which)) {
             if (useDouble) {
-    			std::cout << "GE  useDouble, which= " << which << "\n";
+    			//std::cout << "GE  useDouble, which= " << which << "\n";
                 delete [] cpu_weights_d[which];
 				if (cpu_weights_d[which]) cpu_weights_d[which] = 0; //GE added
             } else {
-    			std::cout << "GE  useSingle\n";
+    			//std::cout << "GE  useSingle\n";
                 delete [] cpu_weights_f[which];
 				if (cpu_weights_f[which]) cpu_weights_f[which] = 0; //GE added
 				//cpu_weights_f[which] = 0; //GE added
@@ -306,7 +305,7 @@ void RBFFD_CL::clearCPUWeights() {
 // 5) get deriv from GPU
 void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
 
-		std::cout << "GE enter updateWeightsDouble\n";
+	//std::cout << "GE enter updateWeightsDouble\n";
     if (weightsModified) {
 
         tm["sendWeights"]->start();
@@ -326,15 +325,15 @@ void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
         // FIXME: inside grid_interface we could allocate contig mem and avoid this cost
         // FIXME: copy more than just the 4 types of weights
         int iterator = computedTypes;
-		std::cout << "GE updateWeightsDouble, computedTypes= " << computedTypes << std::endl;
-std::cout << "EVAN PADDED: " << stencil_padded_size << " of " << grid_ref.getStencilSize(0) << std::endl;
+		//std::cout << "GE updateWeightsDouble, computedTypes= " << computedTypes << std::endl;
+//std::cout << "EVAN PADDED: " << stencil_padded_size << " of " << grid_ref.getStencilSize(0) << std::endl;
         int which = 0;
         int type_i = 0;
         // Iterate until we get all 0s. This allows SOME shortcutting.
         while (iterator) {
             if (computedTypes & getDerType(which)) {
                 cpu_weights_d[which] = new double[gpu_stencil_size];
-				std::cout << "GE allocted cpu_weights, which= " << which << std::endl;
+				//std::cout << "GE allocted cpu_weights, which= " << which << std::endl;
                 for (unsigned int i = 0; i < nb_stencils; i++) {
                     unsigned int stencil_size = grid_ref.getStencilSize(i);
                     unsigned int j = 0;
@@ -357,7 +356,7 @@ std::cout << "EVAN PADDED: " << stencil_padded_size << " of " << grid_ref.getSte
                 //std::cout << std::endl;
                 // Send to GPU
                 err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_d[which][0]), NULL, &event);
-std::cout << "Wrote weight buffer to gpu: " << which << "," << weights_mem_size << " bytes\n";
+//std::cout << "Wrote weight buffer to gpu: " << which << "," << weights_mem_size << " bytes\n";
                 //            queue.flush();
 
                 type_i+=1;
@@ -387,7 +386,7 @@ std::cout << "Wrote weight buffer to gpu: " << which << "," << weights_mem_size 
 
 void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
 
-		std::cout << "GE enter updateWeightsSingle\n";
+		//std::cout << "GE enter updateWeightsSingle\n";
     if (weightsModified) {
 
         tm["sendWeights"]->start();
@@ -408,7 +407,7 @@ void RBFFD_CL::updateWeightsSingle(bool forceFinish) {
         // FIXME: we only pass four weights to the GPU
 
         int iterator = computedTypes;
-		std::cout << "GE updateWeightsSingle, computedTypes= " << computedTypes << std::endl;
+		//std::cout << "GE updateWeightsSingle, computedTypes= " << computedTypes << std::endl;
         int which   = 0;
         int type_i  = 0;
         // Iterate until we get all 0s. This allows SOME shortcutting.
@@ -527,7 +526,7 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
 void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //TODO: FIX case when start_indx != 0
-    std::cout << "EVAN HERE\n";
+    //std::cout << "EVAN HERE\n";
 
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start();
@@ -539,7 +538,6 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    std::cout << "3 EVAN HERE\n";
     //this->updateWeightsOnGPU(false);
     this->updateWeightsOnGPU(true); //GE
 
@@ -555,14 +553,13 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
-        kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
+        //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
         std::cout << "Set " << i << " kernel args\n";
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 
 
-    std::cout << "4 EVAN HERE\n";
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
             /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils),
             /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
@@ -579,7 +576,6 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         exit(EXIT_FAILURE);
     }
 
-    std::cout << "5 EVAN HERE\n";
     // Pull the computed derivative back to the CPU
     err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
     //    queue.flush();
@@ -597,7 +593,6 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         //        std::cout << "CL program finished!" << std::endl;
     }
     tm["applyWeights"]->end();
-    std::cout << "6 EVAN HERE\n";
 }
 //----------------------------------------------------------------------
 
@@ -610,7 +605,6 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
 void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
-    std::cout << "1 EVAN HERE, single\n";
     tm["applyWeights"]->start();
 
     if (isChangedU) {
@@ -635,7 +629,7 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
         unsigned int stencil_size = grid_ref.getMaxStencilSize();
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
-        kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
+        //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
 
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));

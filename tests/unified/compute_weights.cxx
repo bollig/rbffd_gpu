@@ -25,6 +25,7 @@
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
+#include "rbffd/rbffd.h"
 
 #include <boost/program_options.hpp>
 
@@ -54,6 +55,9 @@ int main(int argc, char** argv) {
 	tm["stencils"] = new Timer("[Main] Stencil generation");
 	tm["writeStencils"] = new Timer("[Main] Write Stencils to Disk");
 	tm["settings"] = new Timer("[Main] Load settings");
+	tm["derSetup"] = new Timer("[Main] Setup RBFFD class");
+	tm["weights"] = new Timer("[Main] Compute Weights");
+	tm["writeWeights"] = new Timer("[Main] Output weights to file");
 
 	tm["total"]->start();
 
@@ -70,8 +74,12 @@ int main(int argc, char** argv) {
 		("grid_size,N", po::value<int>(), "Number of nodes to expect in the grid file") 
 		("stencil_size,n", po::value<int>(), "Number of nodes per stencil (assume all stencils are the same size)")
 		("partition_filename,p", po::value<string>(), "METIS Output Partition Filename (*.part.<P-processors>)")
-		("neighbor_method,w", po::value<int>(), "Set neighbor query method (0:LSH, 1:KDTree, 2:BruteForce)")
-		("lsh_resolution,l", po::value<int>(), "Set the coarse grid resolution for LSH overlay (same for all dimensions)") 
+		("use_hyperviscosity", po::value<int>(), "Enable the computation of Hyperviscosity weights")
+		("hv_k", po::value<int>(), "Power of hyperviscosity")
+		("hv_gamma", po::value<double>(), "Scaling parameter on hyperviscosity")
+		("eps_c1", po::value<double>(), "Choose Epsilon as function of eps_c1 and eps_c2")
+		("eps_c2", po::value<double>(), "Choose Epsilon as function of eps_c1 and eps_c2")
+		("weight_method", po::value<int>(), "Set the method used to compute weights: 0 -> Direct Inversion of Ax=B; 1 -> ContourSVD") 
 		;
 
 	po::variables_map vm;
@@ -133,26 +141,57 @@ int main(int argc, char** argv) {
 		exit(-3); 
 	}
 
-	int neighbor_method = 0; 
-	if (vm.count("neighbor_method")) {
-		neighbor_method = vm["neighbor_method"].as<int>(); 
-		cout << "Weight method is set to: "
-			<< neighbor_method << ".\n";
-	} else {
-		cout << "neighbor_method was not set. Defaulting to 0.\n";
+	int use_hyperviscosity = 0; 
+	int hv_k = -1;
+	double hv_gamma = 0;
+	if (vm.count("use_hyperviscosity")) {
+		use_hyperviscosity = vm["use_hyperviscosity"].as<int>(); 
+		cout << "Use Hyperviscosity: " << use_hyperviscosity<< ".\n";
+		if (vm.count("hv_k")) {
+			hv_k = vm["hv_k"].as<int>(); 
+			cout << "HV_K : " << use_hyperviscosity<< ".\n";
+		} else { 
+			cout << "ERROR: hv_k required for use_hyperviscosity\n";
+			exit(-3); 
+		}	
+		if (vm.count("hv_gamma")) {
+			hv_gamma = vm["hv_gamma"].as<double>(); 
+			cout << "hv_gamma: " << hv_gamma << ".\n";
+		} else { 
+			cout << "ERROR: hv_gamma required for use_hyperviscosity\n";
+			exit(-3); 
+		}
 	}
 
-	int lsh_resolution = 100;
-	// Why is neighbor_method == 0 required?
-	if ((neighbor_method == 0) && (vm.count("lsh_resolution"))) {
-		lsh_resolution = vm["lsh_resolution"].as<int>(); 
-		cout << "Number of coarse grid cells per dimension: " << lsh_resolution << ".\n";
+	
+
+	double eps_c1 = 1.;
+    	double eps_c2 = 0.;
+	bool eps_c1_c2 = false; 
+	if (vm.count("eps_c1")) {
+		eps_c1 = vm["eps_c1"].as<double>(); 
+		cout << "Epsilon c1: " << eps_c1 << ".\n";
+		eps_c1_c2 = true;	
 	} else {
-		cout << "lsh_resolution was not set. Defaulting to 100 per dimension.\n";
+		cout << "ERROR: eps_c1 was not set.\n";
+		exit(-3); 
+	}
+	if (vm.count("eps_c2")) { 
+		if (eps_c1_c2) {
+			eps_c2 = vm["eps_c2"].as<double>(); 
+			cout << "Epsilon c2: " << eps_c2 << ".\n";
+		} else {
+			cout << "ERROR: eps_c2 requires eps_c1\n"; 
+			exit(-3); 
+		}
 	}
 
-	int ns_nx, ns_ny, ns_nz; 
-	ns_nx = ns_ny = ns_nz = lsh_resolution; 
+	int weight_method = 0; 
+	if (vm.count("weight_method")) {
+		weight_method = vm["weight_method"].as<int>(); 
+		cout << "Weight Calculation Method: " << weight_method << ".\n";
+	}
+
 
 #if 1
     MPI::Init(argc, argv);
@@ -217,6 +256,39 @@ int main(int argc, char** argv) {
         printf("OK\n");
     }
 #endif 
+
+    tm["derSetup"]->start();
+    RBFFD* der = new RBFFD(RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, 3, mpi_rank);
+
+    der->setUseHyperviscosity(use_hyperviscosity);
+    // If both are zero assume we havent set anything
+    if (eps_c1 || eps_c2) {
+	    der->setEpsilonByParameters(eps_c1, eps_c2);
+    } else {
+	    der->setEpsilonByStencilSize();
+    }
+    if (hv_k != -1) {
+	    der->setHVScalars(hv_k, hv_gamma);
+    }
+    der->setWeightType((RBFFD::WeightType)weight_method);
+    der->setComputeConditionNumber(true);
+    tm["derSetup"]->stop();
+
+    printf("start computing weights\n");
+    tm["weights"]->start();
+    // NOTE: good test for Direct vs Contour
+    // Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
+    // 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
+    der->computeAllWeightsForAllStencils();
+    tm["weights"]->stop();
+
+    cout << "end computing weights" << endl;
+
+    tm["writeWeights"]->start();
+    der->writeAllWeightsToFile();
+    cout << "end write weights to file" << endl;
+    tm["writeWeights"]->stop();
+
 #if 1
 	delete(grid);
 	std::cout << "Deleted grid\n";

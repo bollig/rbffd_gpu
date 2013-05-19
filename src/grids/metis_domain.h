@@ -19,11 +19,14 @@
 
 class METISDomain : public Domain
 {
+	protected:
+		bool part_domain; 
 
 	public: 
 		std::vector<int> metis_part; 
 
-		METISDomain(int mpi_rank, int mpi_size, Grid* grid_ptr, string metis_part_filename) : Domain()
+		METISDomain(int mpi_rank, int mpi_size, Grid* grid_ptr, string metis_part_filename, bool part_file_loaded = true) : 
+			Domain(), part_domain(part_file_loaded)
 	{
 		std::cout << "INSIDE METISDomain CONSTRUCTOR!\n";
 
@@ -43,9 +46,11 @@ class METISDomain : public Domain
 		// We might need to know how many nodes are in the domain globally for things like Hyperviscosity
 		this->global_num_nodes = grid_ptr->getNodeListSize();
 
-		metis_part.reserve(this->global_num_nodes); 
+		if (part_domain) {
+			metis_part.reserve(this->global_num_nodes); 
 
-		this->read_metis_file(metis_part_filename); 
+			this->read_metis_file(metis_part_filename); 
+		}
 
 		// Forms sets (Q,O,R) and l2g/g2l maps
 		fillLocalData(grid_ptr->getNodeList(), grid_ptr->getStencils(), grid_ptr->getBoundaryIndices(), grid_ptr->getStencilRadii(), grid_ptr->getMaxStencilRadii(), grid_ptr->getMinStencilRadii()); 
@@ -56,9 +61,13 @@ class METISDomain : public Domain
 
 		virtual bool isInsideSubdomain(NodeType& pt, int pt_indx) 
 		{
-			// 0 = Outside
-			// 1 = Inside
-			return (metis_part[pt_indx] == id); 
+			// Only partition if the a part file is provided. 
+			if (part_domain) {
+				// 0 = Outside
+				// 1 = Inside
+				return (metis_part[pt_indx] == id); 
+			} 
+			return 1;
 		}
 
 		int read_metis_file(string filename) {

@@ -106,12 +106,13 @@ int main(int argc, char** argv) {
 	}
 
 	string partition_filename; 
+	bool part_file_loaded = false;
 	if (vm.count("partition_filename")) {
 		partition_filename = vm["partition_filename"].as<string>(); 
 		cout << "Loading partition file: " << partition_filename << ".\n";
+		part_file_loaded = true; 
 	} else {
-		cout << "WARNING: partition_filename not specified, defaulting to 'metis_stencils.graph'\n";
-		partition_filename = "metis_stencils.graph"; 
+		cout << "WARNING: partition_filename not specified, defaulting to all stencils for each processor\n";
 	}
 
 	int grid_num_cols; 
@@ -227,7 +228,7 @@ int main(int argc, char** argv) {
 	// Similar to GridReader. Although it should not read in the stencils unless they end in a rank #. 
 
 	Domain* subdomain; 
-	subdomain = new METISDomain(mpi_rank, mpi_size, grid, partition_filename); 
+	subdomain = new METISDomain(mpi_rank, mpi_size, grid, partition_filename, part_file_loaded); 
 	subdomain->writeToFile(); 
 	std::cout << "DECOMPOSED\n";
 

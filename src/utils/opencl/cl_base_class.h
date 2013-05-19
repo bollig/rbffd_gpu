@@ -4,6 +4,7 @@
 #include <iostream> 
 #include <string>
 #include <sstream>
+
 #include <CL/cl.hpp>
 
 // A bunch of util methods borrowed from Ian's tutorial on opencl

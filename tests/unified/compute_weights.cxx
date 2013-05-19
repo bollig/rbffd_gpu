@@ -163,10 +163,10 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	
+
 
 	double eps_c1 = 1.;
-    	double eps_c2 = 0.;
+	double eps_c2 = 0.;
 	bool eps_c1_c2 = false; 
 	if (vm.count("eps_c1")) {
 		eps_c1 = vm["eps_c1"].as<double>(); 
@@ -194,9 +194,9 @@ int main(int argc, char** argv) {
 
 
 #if 1
-    MPI::Init(argc, argv);
-    int mpi_rank = MPI::COMM_WORLD.Get_rank();
-    int mpi_size = MPI::COMM_WORLD.Get_size();
+	MPI::Init(argc, argv);
+	int mpi_rank = MPI::COMM_WORLD.Get_rank();
+	int mpi_size = MPI::COMM_WORLD.Get_size();
 #else 
 	int mpi_rank = 0; 
 	int mpi_size = 1;
@@ -230,65 +230,65 @@ int main(int argc, char** argv) {
 	subdomain = new METISDomain(mpi_rank, mpi_size, grid, partition_filename); 
 	subdomain->writeToFile(); 
 	std::cout << "DECOMPOSED\n";
-	
+
 #if 1
-    if (debug) {
-        subdomain->printVerboseDependencyGraph();
-        subdomain->printNodeList("All Centers Needed by This Process");
+	if (debug) {
+		subdomain->printVerboseDependencyGraph();
+		subdomain->printNodeList("All Centers Needed by This Process");
 
-        printf("CHECKING STENCILS: ");
-        for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
-            //  printf("Stencil[%d] = ", irbf);
-            StencilType& s = subdomain->getStencil(irbf);
-            if (irbf == s[0]) {
-                //	printf("PASS\n");
-                //    subdomain->printStencil(s, "S");
-            } else {
-                printf("FAIL on stencil %d\n", irbf);
+		printf("CHECKING STENCILS: ");
+		for (int irbf = 0; irbf < (int)subdomain->getStencilsSize(); irbf++) {
+			//  printf("Stencil[%d] = ", irbf);
+			StencilType& s = subdomain->getStencil(irbf);
+			if (irbf == s[0]) {
+				//	printf("PASS\n");
+				//    subdomain->printStencil(s, "S");
+			} else {
+				printf("FAIL on stencil %d\n", irbf);
 
-                tm["total"]->stop();
-                tm.printAll();
-                tm.writeAllToFile();
+				tm["total"]->stop();
+				tm.printAll();
+				tm.writeAllToFile();
 
-                exit(EXIT_FAILURE);
-            }
-        }
-        printf("OK\n");
-    }
+				exit(EXIT_FAILURE);
+			}
+		}
+		printf("OK\n");
+	}
 #endif 
 
-    tm["derSetup"]->start();
-    RBFFD* der = new RBFFD(RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, 3, mpi_rank);
+	tm["derSetup"]->start();
+	RBFFD* der = new RBFFD(RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, 3, mpi_rank);
 
-    der->setUseHyperviscosity(use_hyperviscosity);
-    // If both are zero assume we havent set anything
-    if (eps_c1 || eps_c2) {
-	    der->setEpsilonByParameters(eps_c1, eps_c2);
-    } else {
-	    der->setEpsilonByStencilSize();
-    }
-    if (hv_k != -1) {
-	    der->setHVScalars(hv_k, hv_gamma);
-    }
-    der->setWeightType((RBFFD::WeightType)weight_method);
-    der->setComputeConditionNumber(true);
-    tm["derSetup"]->stop();
+	der->setUseHyperviscosity(use_hyperviscosity);
+	// If both are zero assume we havent set anything
+	if (eps_c1 || eps_c2) {
+		der->setEpsilonByParameters(eps_c1, eps_c2);
+	} else {
+		der->setEpsilonByStencilSize();
+	}
+	if (hv_k != -1) {
+		der->setHVScalars(hv_k, hv_gamma);
+	}
+	der->setWeightType((RBFFD::WeightType)weight_method);
+	der->setComputeConditionNumber(true);
+	tm["derSetup"]->stop();
 
-    printf("start computing weights\n");
-    tm["weights"]->start();
-    // NOTE: good test for Direct vs Contour
-    // Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
-    // 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
-    der->computeAllWeightsForAllStencils();
-    tm["weights"]->stop();
+	printf("start computing weights\n");
+	tm["weights"]->start();
+	// NOTE: good test for Direct vs Contour
+	// Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
+	// 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
+	der->computeAllWeightsForAllStencils();
+	tm["weights"]->stop();
 
-    cout << "end computing weights" << endl;
+	cout << "end computing weights" << endl;
 
-    tm["writeWeights"]->start();
-    der->overrideFileDetail(true);
-    der->writeAllWeightsToFile();
-    cout << "end write weights to file" << endl;
-    tm["writeWeights"]->stop();
+	tm["writeWeights"]->start();
+	der->overrideFileDetail(true);
+	der->writeAllWeightsToFile();
+	cout << "end write weights to file" << endl;
+	tm["writeWeights"]->stop();
 
 #if 1
 	delete(grid);

@@ -1247,6 +1247,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     void RBFFD::writeToFile(DerType which, std::string filename) {
+	std::cout << "WRITING ASCII: " << asciiWeights << "\n";
         if (asciiWeights) {
             this->writeToAsciiFile(which, filename);
         } else {

@@ -70,8 +70,9 @@ int main(int argc, char** argv) {
 		("help,h", "produce help message")
 		("debug,d", "enable verbose debug messages")
 		("grid_filename,g", po::value<string>(), "Grid filename (flat file, tab delimited columns). Required.")
-		("grid_num_cols,c", po::value<int>(), "Number of columns to expect in the grid file (X,Y,Z first)")
+		("grid_num_cols,c", po::value<int>(), "Number of columns to expect in the grid file (X,Y,Z first). Note: columns in grid file, not problem dimensions")
 		("grid_size,N", po::value<int>(), "Number of nodes to expect in the grid file") 
+		("grid_dim,D", po::value<int>(), "Grid dimensions. Note: dimensions may be fewer than columns in grid file.") 
 		("stencil_size,n", po::value<int>(), "Number of nodes per stencil (assume all stencils are the same size)")
 		("partition_filename,p", po::value<string>(), "METIS Output Partition Filename (*.part.<P-processors>)")
 		("use_hyperviscosity", po::value<int>(), "Enable the computation of Hyperviscosity weights")
@@ -80,6 +81,7 @@ int main(int argc, char** argv) {
 		("eps_c1", po::value<double>(), "Choose Epsilon as function of eps_c1 and eps_c2")
 		("eps_c2", po::value<double>(), "Choose Epsilon as function of eps_c1 and eps_c2")
 		("weight_method", po::value<int>(), "Set the method used to compute weights: 0 -> Direct Inversion of Ax=B; 1 -> ContourSVD") 
+		("ascii_weights,a", "Write weights in ASCII Matrix Market format (Default: off)") 
 		;
 
 	po::variables_map vm;
@@ -94,6 +96,11 @@ int main(int argc, char** argv) {
 	int debug = 0;
 	if (vm.count("debug")) {
 		debug = 1; 
+	}
+
+	int ascii_weights = 0;
+	if (vm.count("ascii_weights")) {
+		ascii_weights = 1;
 	}
 
 	string grid_filename; 
@@ -115,13 +122,18 @@ int main(int argc, char** argv) {
 		cout << "WARNING: partition_filename not specified, defaulting to all stencils for each processor\n";
 	}
 
+	int grid_dim = 3;
+	if (vm.count("grid_dim")) {
+		grid_dim = vm["grid_dim"].as<int>(); 
+	}
+
 	int grid_num_cols; 
 	if (vm.count("grid_num_cols")) {
 		grid_num_cols = vm["grid_num_cols"].as<int>(); 
 		cout << "Number of expected columns: " << grid_num_cols << ".\n";
 	} else {
-		cout << "grid_num_cols was not set. Defaulting to 3.\n";
-		grid_num_cols = 3;
+		cout << "grid_num_cols was not set. Defaulting to grid_dim = " << grid_dim << ".\n";
+		grid_num_cols = grid_dim;
 	}
 
 	int grid_size; 
@@ -259,7 +271,7 @@ int main(int argc, char** argv) {
 #endif 
 
 	tm["derSetup"]->start();
-	RBFFD* der = new RBFFD(RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, 3, mpi_rank);
+	RBFFD* der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL | RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC | RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, grid_dim, mpi_rank);
 
 	der->setUseHyperviscosity(use_hyperviscosity);
 	// If both are zero assume we havent set anything
@@ -287,6 +299,7 @@ int main(int argc, char** argv) {
 
 	tm["writeWeights"]->start();
 	der->overrideFileDetail(true);
+	der->setAsciiWeights(ascii_weights);
 	der->writeAllWeightsToFile();
 	cout << "end write weights to file" << endl;
 	tm["writeWeights"]->stop();

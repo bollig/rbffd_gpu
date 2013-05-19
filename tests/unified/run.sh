@@ -27,7 +27,7 @@
 
 ./sten_gen.x -g ~/sphere_grids/md063.04096 -c 4 -N 4096 -n 17 -w 0 -l 100
 gpmetis lsh_100_stencils.graph 2
-./compute_weights.x -g input_grid.ascii -c 4 -N 4096 -n 17 
+mpirun -output-filename runlog -np 2 ./compute_weights.x -g input_grid.ascii -c 4 -N 4096 -n 17 --eps_c1 0.035 --eps_c2 0.1 -p lsh_100_stencils.graph.part.2
 #EB mv stencils_maxsz17_loadedgrid_4096nodes_final.ascii lsh_100_stencils.ascii
 #EB cp metis_stencils.graph lsh_100_stencils.graph
 #EB gpmetis lsh_100_stencils.graph 2

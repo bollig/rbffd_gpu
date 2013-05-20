@@ -25,6 +25,14 @@ class METISDomain : public Domain
 	public: 
 		std::vector<int> metis_part; 
 
+		//METISDomain(int mpi_rank, int mpi_size, 
+	// Need to construct: 
+	// 	Load grid from domain_rank0_of_1.ascii
+	// 	Need to load stencils into domain ? Need to write domain stencils to disk
+	// 		NOTE: if loading we can use grid writer routines; might
+	// 		need to load grid content into the domain class instead
+	// 		of just wrapping it as a proxy
+
 		METISDomain(int mpi_rank, int mpi_size, Grid* grid_ptr, string metis_part_filename, bool part_file_loaded = true) : 
 			Domain(), part_domain(part_file_loaded)
 	{

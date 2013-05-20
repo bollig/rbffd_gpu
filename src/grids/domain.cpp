@@ -925,18 +925,16 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
 //----------------------------------------------------------------------
 
 void Domain::writeStencilsToFile(std::string filename) {
-	std::string fname = "stencils_"; 
-	fname.append(filename);
-	std::cout << "[" << this->className() << "] \treading local to global (l2gmap) file: " << fname << std::endl;    
-
 	if (max_st_size > 0) {
-#if 0
+#if 1
 		std::ostringstream prefix; 
 		prefix << "stencils_maxsz" << this->max_st_size << "_";
 
 		std::string fname = prefix.str(); 
 		fname.append(filename); 
 #endif 
+		std::cout << "[" << this->className() << "] \treading local to global (l2gmap) file: " << fname << std::endl;    
+
 		std::ofstream fout(fname.c_str()); 
 
 		if (fout.is_open()) {

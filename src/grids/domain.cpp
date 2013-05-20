@@ -872,7 +872,7 @@ Grid::GridLoadErrType Domain::loadG2LFromFile(std::string filename) {
 	fin.open(fname.c_str()); 
 
 	if (fin.is_open()) {
-		avg_stencil_radii.clear(); 
+		glob_to_loc.clear(); 
 		while (fin.good()) {
 			unsigned int glob_indx, loc_indx;
 			fin >> glob_indx >> loc_indx; 
@@ -887,7 +887,7 @@ Grid::GridLoadErrType Domain::loadG2LFromFile(std::string filename) {
 
 	fin.close(); 
 
-	std::cout << "[" << this->className() << "] \tLoaded " << glob_to_loc.size() << " global to local mappingsfrom \t" << fname << std::endl;
+	std::cout << "[" << this->className() << "] \tLoaded " << glob_to_loc.size() << " global to local mappings from \t" << fname << std::endl;
 	return GRID_AND_STENCILS_LOADED; 
 }
 
@@ -902,7 +902,7 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
 	fin.open(fname.c_str()); 
 
 	if (fin.is_open()) {
-		avg_stencil_radii.clear(); 
+		loc_to_glob.clear(); 
 		while (fin.good()) {
 			unsigned int glob_indx, loc_indx;
 			fin >> loc_indx >> glob_indx; 
@@ -917,7 +917,7 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
 
 	fin.close(); 
 
-	std::cout << "[" << this->className() << "] \tLoaded " << glob_to_loc.size() << " global to local mappingsfrom \t" << fname << std::endl;
+	std::cout << "[" << this->className() << "] \tLoaded " << loc_to_glob.size() << " global to local mappings from \t" << fname << std::endl;
 	return GRID_AND_STENCILS_LOADED; 
 }
 

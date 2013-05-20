@@ -249,6 +249,12 @@ class RBFFD
 
 
         // Apply weights to an input solution vector and get the corresponding derivatives out
+        virtual void applyWeightsForDeriv(std::vector<double>& u, 
+					std::vector<double>& deriv_x, 
+					std::vector<double>& deriv_y, 
+					std::vector<double>& deriv_z, 
+					std::vector<double>& deriv_l, 
+					bool isChangedU=true) {}
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
             //            std::cout << "CPU: ";
             unsigned int nb_stencils = grid_ref.getStencilsSize(); 

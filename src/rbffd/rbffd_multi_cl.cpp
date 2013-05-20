@@ -41,11 +41,11 @@ using namespace std;
 //----------------------------------------------------------------------
 //
 void RBFFD_MULTI_CL::setupTimers() {
-    tm["loadAttach"] = new Timer("[RBFFD_MULTI_CL] Load and Attach Kernel");
-    tm["construct"] = new Timer("[RBFFD_MULTI_CL] RBFFD_MULTI_CL (constructor)");
-    tm["computeDerivs"] = new Timer("[RBFFD_MULTI_CL] computeRBFFD_MULTI_s (compute derivatives using OpenCL");
-    tm["sendWeights"] = new Timer("[RBFFD_MULTI_CL]   (send stencil weights to GPU)");
-    tm["applyWeights"] = new Timer("[RBFFD_MULTI_CL] Evaluate single derivative by applying weights to function");
+    tm["loadAttach"] = new Timer("m [RBFFD_MULTI_CL] Load and Attach Kernel");
+    tm["construct"] = new Timer("m [RBFFD_MULTI_CL] RBFFD_MULTI_CL (constructor)");
+    tm["computeDerivs"] = new Timer("m [RBFFD_MULTI_CL] computeRBFFD_MULTI_s (compute derivatives using OpenCL");
+    tm["sendWeights"] = new Timer("m [RBFFD_MULTI_CL]   (send stencil weights to GPU)");
+    tm["applyWeights"] = new Timer("m [RBFFD_MULTI_CL] Evaluate single derivative by applying weights to function");
 }
 
 
@@ -75,18 +75,18 @@ void RBFFD_MULTI_CL::loadKernel() {
     std::string my_source;
     if(useDouble) {
 #define FLOAT double
-#include "cl_kernels/derivative_kernels.cl"
+#include "cl_kernels/multi_derivative_kernel.cl"
         my_source = kernel_source;
 #undef FLOAT
     }else {
 #define FLOAT float
-#include "cl_kernels/derivative_kernels.cl"
+#include "cl_kernels/multi_derivative_kernel.cl"
         my_source = kernel_source;
 #undef FLOAT
     }
 
-    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
-    std::cout << "Loading program source: derivative_kernels.cl\n";
+    std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
+    std::cout << "Loading program source: multi_derivative_kernel.cl\n";
     this->loadProgram(my_source, useDouble);
 
     try{
@@ -136,9 +136,9 @@ void RBFFD_MULTI_CL::allocateGPUMem() {
     std::cout << "FLOAT_SIZE=" << float_size << std::endl;;
 
     stencil_mem_bytes = gpu_stencil_size * sizeof(unsigned int);
-    function_mem_bytes = nb_nodes * float_size;
+    function_mem_bytes = nb_nodes * float_size * 4; // u,v,w,p
     weights_mem_bytes = gpu_stencil_size * float_size;
-    deriv_mem_bytes = nb_stencils * float_size;
+    deriv_mem_bytes = nb_stencils * float_size * 4; // four variables per derivative
 
     nodes_mem_bytes = nb_nodes * sizeof(double4);
 
@@ -153,6 +153,8 @@ void RBFFD_MULTI_CL::allocateGPUMem() {
 
     gpu_function = cl::Buffer(context, CL_MEM_READ_ONLY, function_mem_bytes, NULL, &err);
 
+	// GE: Hardcoded for now, testing routine for efficient derivative calculation
+	computedTypes = RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL; 
     int iterator = computedTypes;
     int which = 0;
     int type_i       = 0;
@@ -173,8 +175,11 @@ void RBFFD_MULTI_CL::allocateGPUMem() {
         which += 1;
     }
 
-    gpu_deriv_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
-    bytesAllocated += deriv_mem_bytes;
+    gpu_deriv_x_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
+    gpu_deriv_y_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
+    gpu_deriv_z_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
+    gpu_deriv_l_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
+    bytesAllocated += deriv_mem_bytes*4; // 4 derivatives 
 
     gpu_nodes = cl::Buffer(context, CL_MEM_READ_ONLY, nodes_mem_bytes, NULL, &err);
     bytesAllocated += nodes_mem_bytes;
@@ -334,6 +339,7 @@ void RBFFD_MULTI_CL::updateWeightsDouble(bool forceFinish) {
             if (computedTypes & getDerType(which)) {
                 cpu_weights_d[which] = new double[gpu_stencil_size];
 				//std::cout << "GE allocted cpu_weights, which= " << which << std::endl;
+				printf("updateWeightsDouble, COMPUTED type: which= %d\n", which);
                 for (unsigned int i = 0; i < nb_stencils; i++) {
                     unsigned int stencil_size = grid_ref.getStencilSize(i);
                     unsigned int j = 0;
@@ -384,82 +390,10 @@ void RBFFD_MULTI_CL::updateWeightsDouble(bool forceFinish) {
     }
 }
 
+//-----------------
 void RBFFD_MULTI_CL::updateWeightsSingle(bool forceFinish) {
-
-		//std::cout << "GE enter updateWeightsSingle\n";
-    if (weightsModified) {
-
-        tm["sendWeights"]->start();
-        unsigned int weights_mem_size = gpu_stencil_size * sizeof(float);
-
-        std::cout << "Writing weights to GPU memory\n";
-
-        unsigned int nb_stencils = grid_ref.getStencilsSize();
-
-        if ((nb_stencils * stencil_padded_size) != gpu_stencil_size) {
-            // Critical error between allocate and update
-            std::cout << "nb_stencils*stencil_padded_size != gpu_stencil_size" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        // Copy the std::vector<std::vector<..> > into a contiguous memory space
-        // FIXME: inside grid_interface we could allocate contig mem and avoid this cost
-        // FIXME: we only pass four weights to the GPU
-
-        int iterator = computedTypes;
-		//std::cout << "GE updateWeightsSingle, computedTypes= " << computedTypes << std::endl;
-        int which   = 0;
-        int type_i  = 0;
-        // Iterate until we get all 0s. This allows SOME shortcutting.
-        while (iterator) {
-            if (computedTypes & getDerType(which)) {
-                cpu_weights_f[which] = new float[gpu_stencil_size];
-                for (unsigned int i = 0; i < nb_stencils; i++) {
-                    unsigned int stencil_size = grid_ref.getStencilSize(i);
-                    unsigned int j = 0;
-                    for (j = 0; j < stencil_size; j++) {
-                        unsigned int indx = i*stencil_padded_size + j;
-                        cpu_weights_f[which][indx] = (float)weights[which][i][j];
-                        //  std::cout << cpu_weights[which][indx] << "   ";
-                    }
-                    // Pad end of the stencil with 0's so our linear combination
-                    // excludes whatever function values are found at the end of
-                    // the stencil (i.e., we can include extra terms in summation
-                    // without added effect
-                    for (; j < stencil_padded_size; j++) {
-                        unsigned int indx = i*stencil_padded_size + j;
-                        cpu_weights_f[which][indx] = (float)0.f;
-                        //  std::cout << cpu_weights[which][indx] << "   ";
-                    }
-                    //std::cout << std::endl;
-                }
-                //std::cout << std::endl;
-                // Send to GPU
-                err = queue.enqueueWriteBuffer(gpu_weights[which], CL_TRUE, 0, weights_mem_size, &(cpu_weights_f[which][0]), NULL, &event);
-                //            queue.flush();
-                type_i +=1;
-            }
-            iterator >>= 1;
-            which+= 1;
-        }
-
-        if (forceFinish) {
-            queue.finish();
-
-            this->clearCPUWeights();
-			std::cout << "GE: after clearCPUWeights() 2 \n";
-            deleteCPUWeightsBuffer = false;
-        } else {
-            deleteCPUWeightsBuffer = true;
-        }
-
-        tm["sendWeights"]->end();
-
-        weightsModified = false;
-
-    } else {
-        //        std::cout << "No need to update gpu_weights" << std::endl;
-    }
+	printf("updateWeightsSingle not implemented\n");
+    exit(EXIT_FAILURE);
 }
 
 
@@ -471,8 +405,8 @@ void RBFFD_MULTI_CL::updateFunctionDouble(unsigned int start_indx, unsigned int 
     //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
 
 
-    // There is a bug fi this works
-    if (function_mem_bytes != nb_vals*sizeof(double)) {
+    // There is a bug conditional is true
+    if (function_mem_bytes != 4*nb_vals*sizeof(double)) { // four variables interleaved
         std::cout << "function_mem_bytes != nb_nodes*sizeof(double)" << std::endl;
         exit(EXIT_FAILURE);
     } else {
@@ -491,30 +425,8 @@ void RBFFD_MULTI_CL::updateFunctionDouble(unsigned int start_indx, unsigned int 
 //----------------------------------------------------------------------
 //
 void RBFFD_MULTI_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish) {
-
-    //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
-
-    // TODO: mask off fields not update
-    // update the GPU's view of our solution
-    float* cpu_u = new float[nb_vals];
-    for (unsigned int i = 0; i < nb_vals; i++) {
-        cpu_u[i] = (float)u[start_indx + i];
-        //  std::cout << cpu_u[i] << "  ";
-    }
-
-    // There is a bug fi this works
-    if (function_mem_bytes != nb_vals*sizeof(float)) {
-        std::cout << "function_mem_bytes != nb_vals*sizeof(float)" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(float), function_mem_bytes, &cpu_u[0], NULL, &event);
-    //err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &cpu_u[0], NULL, &event);
-
-    //    if (forceFinish) {
-    queue.finish();
-    //  }
-    delete [] cpu_u;
+	printf("updateFunctionSingle not implemented\n");
+    exit(EXIT_FAILURE);
 }
 
 
@@ -522,18 +434,19 @@ void RBFFD_MULTI_CL::updateFunctionSingle(unsigned int start_indx, unsigned int 
 //
 //	This needs to be offloaded to an OpenCL Kernel
 //
-//
-void RBFFD_MULTI_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
+
+void RBFFD_MULTI_CL::applyWeightsForDerivDouble(unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv_x, double* deriv_y, double* deriv_z, double* deriv_l, bool isChangedU)
 {
     //TODO: FIX case when start_indx != 0
     //std::cout << "EVAN HERE\n";
+	cout << "****** enter of applyWeightsForDerivativeDouble ******\n";
 
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
     tm["applyWeights"]->start();
 
     if (isChangedU) {
         //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
-        this->updateFunctionOnGPU(start_indx, nb_stencils, u, true);  //GE
+        this->updateFunctionOnGPU(start_indx, nb_stencils, u, true);  //GE ("u" should be 4 functions: larger array)
     }
 
     // Will only update if necessary
@@ -544,9 +457,21 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(DerType which, unsigned int star
     try {
         int i = 0;
         kernel.setArg(i++, gpu_stencils);
+        kernel.setArg(i++, this->getGPUWeights(RBFFD::X));
+        kernel.setArg(i++, this->getGPUWeights(RBFFD::Y));
+        kernel.setArg(i++, this->getGPUWeights(RBFFD::Z));
+        kernel.setArg(i++, this->getGPUWeights(RBFFD::LAPL));
+        kernel.setArg(i++, gpu_function);                 // COPY_IN // need double4
+        kernel.setArg(i++, gpu_deriv_x_out);           // COPY_OUT
+        kernel.setArg(i++, gpu_deriv_y_out);           // COPY_OUT
+        kernel.setArg(i++, gpu_deriv_z_out);           // COPY_OUT
+        kernel.setArg(i++, gpu_deriv_l_out);           // COPY_OUT
+		#if 0
+        kernel.setArg(i++, gpu_stencils);
         kernel.setArg(i++, this->getGPUWeights(which));
         kernel.setArg(i++, gpu_function);                 // COPY_IN
         kernel.setArg(i++, gpu_deriv_out);           // COPY_OUT
+		#endif
         //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
         //unsigned int arguments at this time
         unsigned int nb_stencils = grid_ref.getStencilsSize();
@@ -571,13 +496,17 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(DerType which, unsigned int star
         exit(EXIT_FAILURE);
     }
 
-    if (nb_stencils *sizeof(double) != deriv_mem_bytes) {
+    if (4*nb_stencils *sizeof(double) != deriv_mem_bytes) { // four variables
         std::cout << "npts*sizeof(double) [" << nb_stencils*sizeof(double) << "] != deriv_mem_bytes [" << deriv_mem_bytes << "]" << std::endl;
         exit(EXIT_FAILURE);
     }
 
     // Pull the computed derivative back to the CPU
-    err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
+    //err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
+    err = queue.enqueueReadBuffer(gpu_deriv_x_out, CL_TRUE, 0, deriv_mem_bytes, &deriv_x[0], NULL, &event);
+    err = queue.enqueueReadBuffer(gpu_deriv_y_out, CL_TRUE, 0, deriv_mem_bytes, &deriv_y[0], NULL, &event);
+    err = queue.enqueueReadBuffer(gpu_deriv_z_out, CL_TRUE, 0, deriv_mem_bytes, &deriv_z[0], NULL, &event);
+    err = queue.enqueueReadBuffer(gpu_deriv_l_out, CL_TRUE, 0, deriv_mem_bytes, &deriv_l[0], NULL, &event);
     //    queue.flush();
 
     if (err != CL_SUCCESS) {
@@ -593,6 +522,7 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(DerType which, unsigned int star
         //        std::cout << "CL program finished!" << std::endl;
     }
     tm["applyWeights"]->end();
+	cout << "****** enter of applyWeightsForDerivativeDouble ******\n";
 }
 //----------------------------------------------------------------------
 
@@ -602,96 +532,13 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(DerType which, unsigned int star
 //	This needs to be offloaded to an OpenCL Kernel
 //
 //
+#if 0
 void RBFFD_MULTI_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
-    //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
-    tm["applyWeights"]->start();
-
-    if (isChangedU) {
-        //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
-        this->updateFunctionOnGPU(start_indx, nb_stencils, u, true); //GE
-    }
-
-    // Will only update if necessary
-    // false here implies that we should not block on the update to finish
-    //this->updateWeightsOnGPU(false);
-    this->updateWeightsOnGPU(true); //GE
-
-    try {
-        int i = 0;
-        kernel.setArg(i++, gpu_stencils);
-        kernel.setArg(i++, this->getGPUWeights(which));
-        kernel.setArg(i++, gpu_function);                 // COPY_IN
-        kernel.setArg(i++, gpu_deriv_out);           // COPY_OUT
-        //FIXME: we want to pass a size_t for maximum array lengths, but OpenCL does not allow
-        //size_t arguments at this time
-        unsigned int nb_stencils = grid_ref.getStencilsSize();
-        kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
-        unsigned int stencil_size = grid_ref.getMaxStencilSize();
-        kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
-        //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
-
-    } catch (cl::Error er) {
-        printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
-    }
-
-    err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
-            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils),
-            /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
-
-    err = queue.finish();
-    if (err != CL_SUCCESS) {
-        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
-            " failed (" << err << ")\n";
-        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    //  err = queue.finish();
-    float* deriv_temp = new float[nb_stencils];
-
-    if (nb_stencils *sizeof(float) != deriv_mem_bytes) {
-        std::cout << "npts*sizeof(float) [" << nb_stencils*sizeof(float) << "] != deriv_mem_bytes [" << deriv_mem_bytes << "]" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    // Pull the computed derivative back to the CPU
-    err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv_temp[0], NULL, &event);
-    if (err != CL_SUCCESS) {
-        std::cerr << " enequeue ERROR: " << err << std::endl;
-    }
-
-
-    err = queue.finish();
-
-    //    std::cout << "WARNING! derivatives are only computed in single precision.\n";
-
-    for (unsigned int i = 0; i < nb_stencils; i++) {
-
-#if 0
-        std::cout << "deriv[" << i << "] = " << deriv_temp[i] << std::endl;
-
-        std::vector<StencilType>& stencil_map = grid_ref.getStencils();
-        double sum = 0.f;
-        for (int j = 0; j < grid_ref.getMaxStencilSize(); j++) {
-            sum += weights[which][i][j] * u[stencil_map[i][j]];
-        }
-        std::cout << "sum should be: " << sum << "\tDifference: " << deriv_temp[i] - sum << std::endl;
-#endif
-        deriv[i] = (double)deriv_temp[i];
-    }
-
-    if (err != CL_SUCCESS) {
-        std::cerr << "Event::wait() failed (" << err << ")\n";
-        std::cout << "Failed to finish queue" << std::endl;
-    } else {
-        //        std::cout << "CL program finished!" << std::endl;
-    }
-
-    delete [] deriv_temp;
-
-    tm["applyWeights"]->end();
+	printf("applyWeightsForDerivSingle not implemented\n");
+    exit(EXIT_FAILURE);
 }
+#endif
 //----------------------------------------------------------------------
 
 

@@ -64,6 +64,7 @@ void RBFFD_CL::loadKernel() {
     // std::vector<std::string> separated_kernels = this->split(kernel_source, "__kernel", true);
 
     std::string kernel_name = "computeDerivKernel";
+	cout << "kernel_name= " << kernel_name << endl;
 
     if (!this->getDeviceFP64Extension().compare("")){
         useDouble = false;
@@ -85,7 +86,7 @@ void RBFFD_CL::loadKernel() {
 #undef FLOAT
     }
 
-    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
+    std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
     std::cout << "Loading program source: derivative_kernels.cl\n";
     this->loadProgram(my_source, useDouble);
 

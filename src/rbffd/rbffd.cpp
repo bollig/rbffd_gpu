@@ -71,6 +71,7 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
 //--------------------------------------------------------------------
 
 RBFFD::~RBFFD() {
+	printf("Inside RBFFD destructor\n");
     for (int j = 0; j < NUM_DERIVATIVE_TYPES; j++) {
         //if (weights[j] != NULL) {
         for (size_t i = 0; i < weights[j].size(); i++) {
@@ -80,6 +81,7 @@ RBFFD::~RBFFD() {
         }
         //}
     }
+	printf("print all timer data\n");
     tm.printAll();
 }
 
@@ -874,12 +876,12 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     void RBFFD::setupTimers() {
-        tm["computeAllWeightsAll"] = new EB::Timer("[RBFFD] Compute All Weights For ALL Stencils (CPU)");
-        tm["computeAllWeightsOne"] = new EB::Timer("[RBFFD] Compute All Weights For One Stencil (CPU)");
-        tm["computeOneWeights"] = new EB::Timer("[RBFFD] Compute One Weights For One Stencil (CPU)");
-        tm["fillDMat"] = new EB::Timer("[RBFFD] Fill Distance Matrix");
-        tm["apply"] = new EB::Timer("[RBFFD] Apply Weights for a single derivative type of u");
-        tm["applyAll"] = new EB::Timer("[RBFFD] Apply Weights for all derivative types of u");
+        tm["computeAllWeightsAll"] = new EB::Timer("r [RBFFD] Compute All Weights For ALL Stencils (CPU)");
+        tm["computeAllWeightsOne"] = new EB::Timer("r [RBFFD] Compute All Weights For One Stencil (CPU)");
+        tm["computeOneWeights"] = new EB::Timer("r [RBFFD] Compute One Weights For One Stencil (CPU)");
+        tm["fillDMat"] = new EB::Timer("r [RBFFD] Fill Distance Matrix");
+        tm["apply"] = new EB::Timer("r [RBFFD] Apply Weights for a single derivative type of u");
+        tm["applyAll"] = new EB::Timer("r [RBFFD] Apply Weights for all derivative types of u");
     }
 
     //--------------------------------------------------------------------

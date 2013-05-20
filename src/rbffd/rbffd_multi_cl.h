@@ -23,7 +23,11 @@ class RBFFD_MULTI_CL : public RBFFD, public CLBaseClass
         cl::Buffer gpu_stencils; 
         unsigned int*    cpu_stencils;
 
-        cl::Buffer gpu_deriv_out; 
+        //cl::Buffer gpu_deriv_out;  // no longer needed?
+        cl::Buffer gpu_deriv_x_out; 
+        cl::Buffer gpu_deriv_y_out; 
+        cl::Buffer gpu_deriv_z_out; 
+        cl::Buffer gpu_deriv_l_out; 
 
         cl::Buffer gpu_function; 
 
@@ -97,27 +101,39 @@ class RBFFD_MULTI_CL : public RBFFD, public CLBaseClass
         // FIXME: HACK--> this routine is called in a situation where we want to access a superclass routine inside. 
         //                This override is how we hack this together.
         // Apply weights to an input solution vector and get the corresponding derivatives out
-        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
+        virtual void applyWeightsForDeriv(std::vector<double>& u, 
+				std::vector<double>& deriv_x, 
+				std::vector<double>& deriv_y, 
+				std::vector<double>& deriv_z, 
+				std::vector<double>& deriv_l, 
+				bool isChangedU=true)
+		{
             std::cout << "[RBFFD_MULTI_CL] Warning! Using GPU to apply weights, but NOT advance timestep\n";
             unsigned int nb_stencils = grid_ref.getStencilsSize();
-            deriv.resize(nb_stencils); 
+            deriv_x.resize(4*nb_stencils); 
+            deriv_y.resize(4*nb_stencils); 
+            deriv_z.resize(4*nb_stencils); 
+            deriv_l.resize(4*nb_stencils); 
             //applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
             // EB: bugfix started index at 0. 
-            applyWeightsForDeriv(which, 0, nb_stencils, &u[0], &deriv[0], isChangedU);
+            applyWeightsForDeriv(0, nb_stencils, &u[0], &deriv_x[0], &deriv_y[0], &deriv_z[0], &deriv_l[0], isChangedU);
         }
 		//------------------
-        virtual void applyWeightsForDeriv(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true) {
+        virtual void applyWeightsForDeriv(unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv_x, double* deriv_y, double* deriv_z, double* deriv_l, bool isChangedU=true) {
             if (useDouble) {
-                this->applyWeightsForDerivDouble(which, start_indx, nb_stencils, u, deriv, isChangedU);
+                this->applyWeightsForDerivDouble(start_indx, nb_stencils, u, deriv_x, deriv_y, deriv_z, deriv_l, isChangedU);
             } else {
-                this->applyWeightsForDerivSingle(which, start_indx, nb_stencils, u, deriv, isChangedU);
+				printf("SINGLE DISABLED\n");
+				exit(0);
+				;
+                //this->applyWeightsForDerivSingle(which, start_indx, nb_stencils, u, deriv, isChangedU);
             }
         }
 
 		//------------------
-        virtual void applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        virtual void applyWeightsForDerivDouble(unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv_x, double* deriv_y, double* deriv_z, double* deriv_l, bool isChangedU=true);
 
-        virtual void applyWeightsForDerivSingle(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
+        //virtual void applyWeightsForDerivSingle(unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
         // forceFinish ==> should we fire a queue.finish() and make sure all
         // tasks are completed (synchronously) before returning

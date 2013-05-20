@@ -11,11 +11,13 @@
 #include <sstream>
 #include <map>
 #include <iostream> 
+#include <cmath>
 
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
 #include "rbffd/rbffd.h"
+#include "rbffd/rbffd_cl.h"
 #include "rbffd/derivative_tests.h"
 
 #include <boost/program_options.hpp>
@@ -137,7 +139,7 @@ int main(int argc, char** argv) {
 		cout << "ERROR: grid_size was not set.\n";
 		exit(-2); 
 	}
-	
+
 	// Select all derivative types (just in case)
 	// Equivalent to: RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL | [...] | RBFFD::INTERP
 	unsigned int weight_choices = (0x1 << RBFFD::NUM_DERIVATIVE_TYPES) - 1;
@@ -283,7 +285,7 @@ int main(int argc, char** argv) {
 #endif 
 
 	tm["derSetup"]->start();
-	RBFFD* der = new RBFFD(weight_choices, subdomain, grid_dim, mpi_rank);
+	RBFFD* der = new RBFFD_CL(weight_choices, subdomain, grid_dim, mpi_rank);
 
 	der->setUseHyperviscosity(use_hyperviscosity);
 	// If both are zero assume we havent set anything
@@ -307,45 +309,56 @@ int main(int argc, char** argv) {
 	int load_err = der->loadAllWeightsFromFile();
 	tm["loadWeights"]->stop();
 
-#if 0
-	//if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS", ProjectSettings::optional, "1")) {
-		bool weightsPreComputed = false; // X,Y,Z and LAPL are required for tests and were not selected
-		bool exitIfTestFailed = 1; //settings->GetSettingAs<int>("BREAK_ON_DERIVATIVE_TESTS", ProjectSettings::optional, "1");
-		bool exitIfEigTestFailed = 1; //settings->GetSettingAs<int>("BREAK_ON_EIG_TESTS", ProjectSettings::optional, "1");
-		bool compute_eigenvalues = false; 
-		tm["tests"]->start(); 
-		// The test class only computes weights if they havent been done already
-		DerivativeTests* der_test = new DerivativeTests(grid_dim, der, subdomain, weightsPreComputed);
-		#if 0
-		if (use_gpu) {
-			// Applies weights on both GPU and CPU and compares results for the first 10 stencils
-			der_test->compareGPUandCPUDerivs(10);
-		}
-		#endif
-		// Test approximations to derivatives of functions f(x,y,z) = 0, x, y, xy, etc. etc.
-		der_test->testAllFunctions(exitIfTestFailed);
-		// For now we can only test eigenvalues on an MPI size of 1 (we could distribute with Par-Eiegen solver)
-		if (mpi_size == 1) {
-			if (compute_eigenvalues) 
-			{
-				// FIXME: why does this happen? Perhaps because X Y and Z are unidirectional? 
-				// Test X and 4 eigenvalues are > 0
-				// Test Y and 30 are > 0
-				// Test Z and 36 are > 0
-				// NOTE: the 0 here implies we compute the eigenvalues but do not run the iterations of the random perturbation test
-				//                der_test->testEigen(RBFFD::LAPL, exitIfEigTestFailed, 0);                
-				// NOTE: testHyperviscosity boolean allow us to write the
-				// effect of hyperviscosity on the eigenvalues
-				der_test->testEigen(RBFFD::LAMBDA, exitIfEigTestFailed, 0);
-			}
-		}
-		tm["tests"]->stop();
-	//}
 
 
-		MPI_Finalize();
-		exit(0);
-#endif 
+	// By now our weights are loaded as Differentiation Matrices
+	// 
+	// Lets go ahead and use them to compute derivatives
+	unsigned int N_part = subdomain->getNodeListSize();
+
+	vector<double> u(N_part,1.);
+
+	for (unsigned int i = 0; i < N_part; i++) {
+		NodeType& node = subdomain->getNode(i); 
+		u[i] = sin((double)node[0]) + 2.*sin((double)node[1]) + cos((double)node[2]);
+	} 
+	
+
+	cout << "start computing derivative (on CPU)" << endl;
+
+	vector<double> xderiv_cpu(N_part);	
+	vector<double> xderiv_gpu(N_part);	
+	vector<double> yderiv_cpu(N_part);	
+	vector<double> yderiv_gpu(N_part);	
+	vector<double> zderiv_cpu(N_part);	
+	vector<double> zderiv_gpu(N_part);	
+	vector<double> lderiv_cpu(N_part);	
+	vector<double> lderiv_gpu(N_part);	
+
+
+//TODO: need to make apply work with synchronization
+
+
+	// Verify that the CPU works
+	// NOTE: we pass booleans at the end of the param list to indicate that
+	// the function "u" is new (true) or same as previous calls (false). This
+	// helps avoid overhead of passing "u" to the GPU.
+	der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
+	der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
+	der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
+	der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
+
+	der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
+	der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false);
+	der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false);
+	der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
+
+
+
+
+
+
+
 #if 1
 	if (!mpi_rank) { 
 		delete(grid);

@@ -25,7 +25,7 @@ require_file(run.sh)
 
 add_serial_framework_test( "sten_gen.x" "stencil_generator.cxx" "${ARGV}" )
 add_serial_framework_test( "compute_weights.x" "compute_weights.cxx" "${ARGV}" )
-add_serial_framework_test( "evaluate_derivatives.x" "evaluate_derivatives.cxx" "${ARGV}" )
+add_serial_opencl_framework_test( "evaluate_derivatives.x" "evaluate_derivatives.cxx" "${ARGV}" )
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 

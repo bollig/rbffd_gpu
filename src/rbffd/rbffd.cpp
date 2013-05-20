@@ -971,7 +971,6 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     int RBFFD::loadFromFile(DerType which, std::string filename) {
-std::cout << "ASCII WEIGHTS: " << asciiWeights << "\n";
         if (asciiWeights) {
             return this->loadFromAsciiFile(which, filename);
         } else {

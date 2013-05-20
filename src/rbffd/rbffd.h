@@ -161,6 +161,7 @@ class RBFFD
         bool computeCondNums; 
         bool computeSFCoperators;
         bool asciiWeights;
+	bool override_file_detail; 
 
     protected: 
 #if 0
@@ -211,8 +212,12 @@ class RBFFD
 
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;
-            useHyperviscosity = tf; 
-            this->appendDerTypes(HV); 
+	    useHyperviscosity = tf; 
+	    if (tf) {
+		    this->appendDerTypes(HV); 
+	    } else { 
+		    this->removeDerType(HV);
+	    }
         }
 
         int getUseHyperviscosity() {
@@ -534,6 +539,10 @@ class RBFFD
             }
             return i;
         }
+	
+	void overrideFileDetail(bool yn) { 
+		this->override_file_detail = yn; 
+	}
 
 };
 

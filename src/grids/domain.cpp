@@ -861,6 +861,99 @@ void Domain::writeL2GToFile(std::string filename) {
 
 }
 
+//----------------------------------------------------------------------
 
+Grid::GridLoadErrType Domain::loadG2LFromFile(std::string filename) {
+	std::string fname = "g2lmap_"; 
+	fname.append(filename);
+	std::cout << "[" << this->className() << "] \treading global to local (g2lmap) file: " << fname << std::endl;    
+
+	std::ifstream fin; 
+	fin.open(fname.c_str()); 
+
+	if (fin.is_open()) {
+		glob_to_loc.clear(); 
+		while (fin.good()) {
+			unsigned int glob_indx, loc_indx;
+			fin >> glob_indx >> loc_indx; 
+			if (!fin.eof()) {
+				glob_to_loc[glob_indx] = loc_indx; 
+			}
+		}
+	} else {
+		printf("Error opening g2lmap file to read\n"); 
+		return NO_EXTRA_FILES;
+	}
+
+	fin.close(); 
+
+	std::cout << "[" << this->className() << "] \tLoaded " << glob_to_loc.size() << " global to local mappings from \t" << fname << std::endl;
+	return GRID_AND_STENCILS_LOADED; 
+}
+
+//----------------------------------------------------------------------
+
+Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
+	std::string fname = "l2gmap_"; 
+	fname.append(filename);
+	std::cout << "[" << this->className() << "] \treading local to global (l2gmap) file: " << fname << std::endl;    
+
+	std::ifstream fin; 
+	fin.open(fname.c_str()); 
+
+	if (fin.is_open()) {
+		loc_to_glob.clear(); 
+		while (fin.good()) {
+			unsigned int glob_indx, loc_indx;
+			fin >> loc_indx >> glob_indx; 
+			if (!fin.eof()) {
+				loc_to_glob.push_back(glob_indx);
+			}
+		}
+	} else {
+		printf("Error opening l2gmap file to read\n"); 
+		return NO_EXTRA_FILES;
+	}
+
+	fin.close(); 
+
+	std::cout << "[" << this->className() << "] \tLoaded " << loc_to_glob.size() << " global to local mappings from \t" << fname << std::endl;
+	return GRID_AND_STENCILS_LOADED; 
+}
+
+
+//----------------------------------------------------------------------
+
+void Domain::writeStencilsToFile(std::string filename) {
+	if (max_st_size > 0) {
+#if 1
+		std::ostringstream prefix; 
+		prefix << "stencils_maxsz" << this->max_st_size << "_";
+
+		std::string fname = prefix.str(); 
+		fname.append(filename); 
+#endif 
+		std::cout << "[" << this->className() << "] \t writing stencils to file: " << fname << std::endl;    
+
+		std::ofstream fout(fname.c_str()); 
+
+		if (fout.is_open()) {
+			for (unsigned int i = 0; i < stencil_map.size(); i++) {
+				fout << stencil_map[i].size(); 
+				for (unsigned int j=0; j < stencil_map[i].size(); j++) {
+					fout << " " << stencil_map[i][j];
+				}
+				fout << std::endl;
+			}
+		} else {
+			printf("Error opening file to write\n"); 
+			exit(EXIT_FAILURE); 
+		}
+		fout.close();
+		std::cout << "[" << this->className() << "] \tWrote " << stencil_map.size() << " stencils to \t" << fname << std::endl;
+	} else {
+		std::cout << "[" << this->className() << "] \tMax stencil size not set. No stencils to write to disk" << std::endl;
+	}
+}
 
 //----------------------------------------------------------------------

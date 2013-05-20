@@ -18,7 +18,6 @@ int main(int argc, char** argv) {
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
-	
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
     int ny = 1; 
@@ -62,6 +61,7 @@ int main(int argc, char** argv) {
     grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
     grid->writeToFile(); 
 
+
     // 0: 2D problem; 1: 3D problem
     //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
 
@@ -71,7 +71,6 @@ int main(int argc, char** argv) {
     } else {
         der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     }
-
 
     double epsilon = settings->GetSettingAs<double>("EPSILON");
     der->setEpsilon(epsilon);
@@ -100,31 +99,47 @@ int main(int argc, char** argv) {
     // the function "u" is new (true) or same as previous calls (false). This
     // helps avoid overhead of passing "u" to the GPU.
     der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false); // originally false
+    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false); // orig false
+    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false); // orig false
 
     der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
-    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false);
-    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false);
-    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
+    der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false); // orig false
+    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false); // orig: false
+    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false); // orig: false
 
+
+    double max_diff = 0.; 
     for (size_t i = 0; i < rbf_centers.size(); i++) {
+	double xdiff = fabs(xderiv_gpu[i] - xderiv_cpu[i]); 
+	double ydiff = fabs(yderiv_gpu[i] - yderiv_cpu[i]);
+	double zdiff = fabs(zderiv_gpu[i] - zderiv_cpu[i]);
+	double ldiff = fabs(lderiv_gpu[i] - lderiv_cpu[i]);
+
+	if (xdiff > max_diff) { max_diff = xdiff; }
+	if (ydiff > max_diff) { max_diff = ydiff; }
+	if (zdiff > max_diff) { max_diff = zdiff; }
+	if (ldiff > max_diff) { max_diff = ldiff; }
+
 //        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-        if ( (xderiv_gpu[i] - xderiv_cpu[i] > 1e-5) 
-        || (yderiv_gpu[i] - yderiv_cpu[i] > 1e-5) 
-        || (zderiv_gpu[i] - zderiv_cpu[i] > 1e-5) 
-        || (lderiv_gpu[i] - lderiv_cpu[i] > 1e-5) )
+        if (( xdiff > 1e-5) 
+        || ( ydiff > 1e-5) 
+        || ( zdiff > 1e-5) 
+        || ( ldiff > 1e-5))
         {
             std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
 	    std::cout << "Test failed on " << i << std::endl;
 	    std::cout << "X: " << xderiv_gpu[i] - xderiv_cpu[i] << std:: endl; 
+	    std::cout << "X: " << xderiv_gpu[i] << ", " <<  xderiv_cpu[i] << std:: endl; 
 	    std::cout << "Y: " << yderiv_gpu[i] - yderiv_cpu[i] << std:: endl; 
+	    std::cout << "Y: " << yderiv_gpu[i] << ", " <<  yderiv_cpu[i] << std:: endl; 
 	    std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
+	    std::cout << "Z: " << zderiv_gpu[i] << ", " <<  zderiv_cpu[i] << std:: endl; 
 	    std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
             exit(EXIT_FAILURE); 
         }
     }
+    std::cout << "Max difference between weights: " << max_diff << std::endl;
     std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
        // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
 

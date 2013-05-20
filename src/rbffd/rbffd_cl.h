@@ -101,8 +101,11 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             std::cout << "[RBFFD_CL] Warning! Using GPU to apply weights, but NOT advance timestep\n";
             unsigned int nb_stencils = grid_ref.getStencilsSize();
             deriv.resize(nb_stencils); 
-            applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
+            //applyWeightsForDeriv(which, grid_ref.getNodeListSize(), nb_stencils, &u[0], &deriv[0], isChangedU);
+            // EB: bugfix started index at 0. 
+            applyWeightsForDeriv(which, 0, nb_stencils, &u[0], &deriv[0], isChangedU);
         }
+		//------------------
         virtual void applyWeightsForDeriv(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true) {
             if (useDouble) {
                 this->applyWeightsForDerivDouble(which, start_indx, nb_stencils, u, deriv, isChangedU);
@@ -111,6 +114,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             }
         }
 
+		//------------------
         virtual void applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
 
         virtual void applyWeightsForDerivSingle(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU=true);
@@ -124,6 +128,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             if (useDouble) { updateWeightsDouble(forceFinish); 
             } else { updateWeightsSingle(forceFinish); }
         }
+		//-----------------
         void updateFunctionOnGPU(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish)
         { 
             if (useDouble) { updateFunctionDouble(start_indx, nb_vals, u, forceFinish); 
@@ -132,11 +137,14 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         void updateNodesOnGPU(bool forceFinish);
 
+		//-----------------
         bool areGPUKernelsDouble() { return useDouble; }
         
         unsigned int getStencilPaddedSize() {
             return stencil_padded_size;
         }
+
+	void setAlignWeights(bool alignYN) { alignWeights = alignYN; } 
 
     protected: 
         void setupTimers(); 

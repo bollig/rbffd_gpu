@@ -163,9 +163,10 @@ int main(int argc, char** argv) {
 		// Assemble a DIRECTED graph that is the spadjacency_list our stencils
 //		typedef adjacency_list <boost::vecS, boost::setS, boost::bidirectionalS> Graph;
 
-#if 0
+#if BOOST_VERSION > 104900
 		typedef boost::undirected_graph<> Graph;
 #else
+	// For Older versions of boost.
         typedef boost::adjacency_list < boost::vecS, boost::vecS, boost::undirectedS> Graph;
 #endif
 		Graph g;

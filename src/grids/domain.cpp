@@ -933,7 +933,7 @@ void Domain::writeStencilsToFile(std::string filename) {
 		std::string fname = prefix.str(); 
 		fname.append(filename); 
 #endif 
-		std::cout << "[" << this->className() << "] \treading local to global (l2gmap) file: " << fname << std::endl;    
+		std::cout << "[" << this->className() << "] \t writing stencils to file: " << fname << std::endl;    
 
 		std::ofstream fout(fname.c_str()); 
 

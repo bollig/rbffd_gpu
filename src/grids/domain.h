@@ -101,7 +101,7 @@ class Domain : public Grid, public MPISendable
             sprintf(prefix, "_rank%d_of_%da", this->id, this->comm_size); 
             std::string s = Grid::getFileDetailString(); 
 #else 
-            sprintf(prefix, "rank_%d_of_%d", this->id, this->comm_size); 
+            sprintf(prefix, "%s_rank_%d_of_%d", this->className().c_str(), this->id, this->comm_size); 
 	    std::string s = "";
 #endif 
             s.append(prefix); 

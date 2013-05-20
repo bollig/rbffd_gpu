@@ -971,6 +971,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     //--------------------------------------------------------------------
 
     int RBFFD::loadFromFile(DerType which, std::string filename) {
+std::cout << "ASCII WEIGHTS: " << asciiWeights << "\n";
         if (asciiWeights) {
             return this->loadFromAsciiFile(which, filename);
         } else {
@@ -1055,8 +1056,10 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
         // Convert to our weights (CSR FORMAT):
         for (int irbf = 0; irbf < N; irbf++) {
-            req_nz += stencil[irbf].size();
-            this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()];
+            //req_nz += stencil[irbf].size();
+            //this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()];
+	    req_nz += grid_ref.getMaxStencilSize();
+            this->weights[getDerTypeIndx(which)][irbf] = new double[grid_ref.getMaxStencilSize()];
         }
 
         if (req_nz < nz) {

@@ -538,11 +538,11 @@ void Grid::generateStencils(st_generator_t generator_choice)
 //----------------------------------------------------------------------------
 void Grid::computeStencilRadii() {
     // NOTE: this currently assumes that nodes are sorted [boundary; interior]
-    this->avg_stencil_radii.resize(node_list.size()); 
-    this->min_stencil_radii.resize(node_list.size()); 
-    this->max_stencil_radii.resize(node_list.size()); 
+    this->avg_stencil_radii.resize(stencil_map.size()); 
+    this->min_stencil_radii.resize(stencil_map.size()); 
+    this->max_stencil_radii.resize(stencil_map.size()); 
 
-    int nb_rbf = node_list.size();
+    int nb_rbf = stencil_map.size();
     int nb_bnd = boundary_indices.size();
     std::vector<NodeType>& rbf_centers = node_list;
 

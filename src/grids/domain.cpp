@@ -923,3 +923,39 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
 
 
 //----------------------------------------------------------------------
+
+void Domain::writeStencilsToFile(std::string filename) {
+	std::string fname = "stencils_"; 
+	fname.append(filename);
+	std::cout << "[" << this->className() << "] \treading local to global (l2gmap) file: " << fname << std::endl;    
+
+	if (max_st_size > 0) {
+#if 0
+		std::ostringstream prefix; 
+		prefix << "stencils_maxsz" << this->max_st_size << "_";
+
+		std::string fname = prefix.str(); 
+		fname.append(filename); 
+#endif 
+		std::ofstream fout(fname.c_str()); 
+
+		if (fout.is_open()) {
+			for (unsigned int i = 0; i < stencil_map.size(); i++) {
+				fout << stencil_map[i].size(); 
+				for (unsigned int j=0; j < stencil_map[i].size(); j++) {
+					fout << " " << stencil_map[i][j];
+				}
+				fout << std::endl;
+			}
+		} else {
+			printf("Error opening file to write\n"); 
+			exit(EXIT_FAILURE); 
+		}
+		fout.close();
+		std::cout << "[" << this->className() << "] \tWrote " << stencil_map.size() << " stencils to \t" << fname << std::endl;
+	} else {
+		std::cout << "[" << this->className() << "] \tMax stencil size not set. No stencils to write to disk" << std::endl;
+	}
+}
+
+//----------------------------------------------------------------------

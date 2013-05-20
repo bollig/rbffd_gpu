@@ -138,10 +138,13 @@ class Domain : public Grid, public MPISendable
             // More verbose print:
             printVector(this->boundary_indices, label); 
         }
+	
+	virtual void writeStencilsToFile(std::string filename);
         
         virtual void writeExtraToFile(std::string filename) {
             this->writeG2LToFile(filename);
             this->writeL2GToFile(filename);
+  	    this->writeStencilsToFile(filename);
            // this->writeLocalSolutionToFile(filename);
         }
 
@@ -152,6 +155,8 @@ class Domain : public Grid, public MPISendable
 		Grid::GridLoadErrType status = this->loadG2LFromFile(filename);
 		if (status) { return status; }
 		status = this->loadL2GFromFile(filename);
+		if (status) { return status; }
+		status = this->loadStencilsFromFile(filename);
 		if (status) { return status; }
 		// this->loadLocalSolutionFromFile(filename);
         }

@@ -25,9 +25,10 @@ class METISDomain : public Domain
 	public: 
 		std::vector<int> metis_part; 
 
-		METISDomain(int mpi_rank, int mpi_size, int dim) : Domain(), part_domain(false) { 
+		METISDomain(int mpi_rank, int mpi_size, int dim, int max_stencil_size) : Domain(), part_domain(false) { 
 			std::cout << "INSIDE METISDomain CONSTRUCTOR!" << mpi_size << "\n";
 
+			max_st_size = max_stencil_size;	
 			dim_num = dim;
 
 			// Mimic setup for Domain

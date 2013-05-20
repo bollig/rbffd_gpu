@@ -19,7 +19,6 @@
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
 #include "rbffd/rbffd.h"
-#include "rbffd/rbffd_cl.h"
 #include "rbffd/derivative_tests.h"
 
 #include <boost/program_options.hpp>
@@ -287,7 +286,6 @@ int main(int argc, char** argv) {
 #endif 
 
 	tm["derSetup"]->start();
-	//RBFFD* der = new RBFFD_CL(weight_choices, subdomain, grid_dim, mpi_rank);
 	RBFFD* der = new RBFFD(weight_choices, subdomain, grid_dim, mpi_rank);
 
 	der->setUseHyperviscosity(use_hyperviscosity);
@@ -327,25 +325,23 @@ int main(int argc, char** argv) {
 
 	for (int i = 0; i < N_part; i++) {
 		NodeType& node = subdomain->getNode(i); 
-		u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
-		u[i] = 1;
+		//u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
+		u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
 		u_x[i] = cos(node[0]); 
 		u_y[i] = -2*sin(node[1]); 
-		u_z[i] = 5.*exp(5.*node[2]); 
-		u_l[i] = -sin(node[0]) - 2. * cos(node[1]) + 25. * exp(5.*node[2]); 
+		//u_z[i] = 5.*exp(5.*node[2]); 
+		u_z[i] = 0.; 
+		//u_l[i] = -sin(node[0]) - 2. * cos(node[1]) + 25. * exp(5.*node[2]); 
+		u_l[i] = -sin(node[0]) - 2. * cos(node[1]) ;
 	} 
 	
 
 	cout << "start computing derivative (on CPU)" << endl;
 
 	std::vector<double> xderiv_cpu(N_part);	
-	std::vector<double> xderiv_gpu(N_part);	
 	std::vector<double> yderiv_cpu(N_part);	
-	std::vector<double> yderiv_gpu(N_part);	
 	std::vector<double> zderiv_cpu(N_part);	
-	std::vector<double> zderiv_gpu(N_part);	
 	std::vector<double> lderiv_cpu(N_part);	
-	std::vector<double> lderiv_gpu(N_part);	
 
 
 //TODO: need to make apply work with synchronization
@@ -362,7 +358,7 @@ int main(int argc, char** argv) {
 	double x_linf = linfnorm( u_x, xderiv_cpu );
 	double deriv_l2 = l2norm( xderiv_cpu );
 
-	std::cout << "X (L1, L2, Linf): " << x_l1 << ", " << x_l2 << ", " << x_linf << ", " << deriv_l2 << "\n"; 
+	std::cout << "X (L1, L2, Linf): " << x_l1 << ", " << x_l2 << ", " << x_linf << "\n"; 
 
 	der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
 
@@ -387,11 +383,6 @@ int main(int argc, char** argv) {
 	double l_linf = linfnorm( u_l, lderiv_cpu );
 
 	std::cout << "Lapl (L1, L2, Linf): " << l_l1 << ", " << l_l2 << ", " << l_linf << "\n";
-
-	der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
-	der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false);
-	der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false);
-	der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false);
 
 	std::cout << "Done checking apply on CPU and GPU\n";
 

@@ -251,7 +251,7 @@ int main(int argc, char** argv) {
 	// Similar to GridReader. Although it should not read in the stencils unless they end in a rank #. 
 
 	Domain* subdomain; 
-	subdomain = new METISDomain(mpi_rank, mpi_size, grid, partition_filename, part_file_loaded); 
+	subdomain = new METISDomain(mpi_rank, mpi_size, grid, grid_dim, partition_filename, part_file_loaded); 
 	subdomain->writeToFile(); 
 	std::cout << "DECOMPOSED\n";
 

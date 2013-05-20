@@ -861,6 +861,65 @@ void Domain::writeL2GToFile(std::string filename) {
 
 }
 
+//----------------------------------------------------------------------
+
+Grid::GridLoadErrType Domain::loadG2LFromFile(std::string filename) {
+	std::string fname = "g2lmap_"; 
+	fname.append(filename);
+	std::cout << "[" << this->className() << "] \treading global to local (g2lmap) file: " << fname << std::endl;    
+
+	std::ifstream fin; 
+	fin.open(fname.c_str()); 
+
+	if (fin.is_open()) {
+		avg_stencil_radii.clear(); 
+		while (fin.good()) {
+			unsigned int glob_indx, loc_indx;
+			fin >> glob_indx >> loc_indx; 
+			if (!fin.eof()) {
+				glob_to_loc[glob_indx] = loc_indx; 
+			}
+		}
+	} else {
+		printf("Error opening g2lmap file to read\n"); 
+		return NO_EXTRA_FILES;
+	}
+
+	fin.close(); 
+
+	std::cout << "[" << this->className() << "] \tLoaded " << glob_to_loc.size() << " global to local mappingsfrom \t" << fname << std::endl;
+	return GRID_AND_STENCILS_LOADED; 
+}
+
+//----------------------------------------------------------------------
+
+Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
+	std::string fname = "l2gmap_"; 
+	fname.append(filename);
+	std::cout << "[" << this->className() << "] \treading local to global (l2gmap) file: " << fname << std::endl;    
+
+	std::ifstream fin; 
+	fin.open(fname.c_str()); 
+
+	if (fin.is_open()) {
+		avg_stencil_radii.clear(); 
+		while (fin.good()) {
+			unsigned int glob_indx, loc_indx;
+			fin >> loc_indx >> glob_indx; 
+			if (!fin.eof()) {
+				loc_to_glob.push_back(glob_indx);
+			}
+		}
+	} else {
+		printf("Error opening l2gmap file to read\n"); 
+		return NO_EXTRA_FILES;
+	}
+
+	fin.close(); 
+
+	std::cout << "[" << this->className() << "] \tLoaded " << glob_to_loc.size() << " global to local mappingsfrom \t" << fname << std::endl;
+	return GRID_AND_STENCILS_LOADED; 
+}
 
 
 //----------------------------------------------------------------------

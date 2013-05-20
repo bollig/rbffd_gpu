@@ -148,17 +148,22 @@ class Domain : public Grid, public MPISendable
         // TODO: allow subdomains to load from disk rather than always
         // initializing on master and then distributing. This would provide
         // restart capabiility!
-        //virtual int loadExtraFromFile(std::string filename) {
-           // this->loadG2LFromFile(filename);
-           // this->loadL2GFromFile(filename);
-           // this->loadLocalSolutionFromFile(filename);
-        //}
+        virtual Grid::GridLoadErrType loadExtraFromFile(std::string filename) {
+		Grid::GridLoadErrType status = this->loadG2LFromFile(filename);
+		if (status) { return status; }
+		status = this->loadL2GFromFile(filename);
+		if (status) { return status; }
+		// this->loadLocalSolutionFromFile(filename);
+        }
 
         //--------------------------------------------------
         // Domain specific routines: 
         //--------------------------------------------------
         void writeG2LToFile(std::string filename); 
         void writeL2GToFile(std::string filename); 
+
+        Grid::GridLoadErrType loadG2LFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadL2GFromFile(std::string grid_filename); 
 
         // Decompose the current domain into x_divisions by y_divisions by z_divisions. 	
         void generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions = 1, int z_divisions = 1); 

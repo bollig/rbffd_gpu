@@ -14,6 +14,21 @@ using namespace std;
 : RBFFD(typesToCompute, grid, dim_num, rank),
     useDouble(true), alignWeights(true), alignMultiple(32)
 {
+    std::cout << "SETING UP OPENCL CONTEXT\n";
+    // Choose the Phi (WORKS)
+    viennacl::ocl::set_context_device_type(0, CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR);
+
+    std::cout << "GETTING DEVICE (TYPE: GPU and ACCELERATOR): \n";
+    std::vector< viennacl::ocl::device > devices = viennacl::ocl::platform().devices();
+
+    std::cout << "LIST OF DEVICES: \n";
+    for (int i = 0; i < devices.size(); i++) {
+        std::cout << devices[i].info() << "\n";
+    }
+    std::cout << "SELECTED DEVICE: \n";
+    std::cout << viennacl::ocl::current_context().current_device().info() << "\n";
+
+
     this->setupTimers();
     this->loadKernel();
     this->allocateGPUMem();

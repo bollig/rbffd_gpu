@@ -72,6 +72,7 @@ SET( REQUIRED_CL_SOURCE_FILES
     pdes/time_dependent_pde_cl.cpp
     pdes/time_dependent_pde_vcl.cpp
     rbffd/rbffd_cl.cpp
+    rbffd/rbffd_multi_cl.cpp
     rbffd/rbffd_vcl.cpp
     ../external/opencl_libraries/include/pugixml/src/pugixml.cpp
 )

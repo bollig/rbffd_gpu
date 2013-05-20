@@ -34,7 +34,11 @@ mpirun -np ${NPROC} ./compute_weights.x -w 15 -g input_grid.ascii -a -N 4096 -n 
 mpirun -output-filename evallog -np ${NPROC} ./evaluate_derivatives.x -g input_grid.ascii -a -N 4096 -n 17 --eps_c1=0.035 --eps_c2=0.1 -w 15
 
 
+echo "demonstrating 2D regular grid: " 
 
+./sten_gen.x -g regulargrid_10x_10y_1z_final.ascii -N 100 -n 20 -c 3
+./compute_weights.x -g input_grid.ascii -N 100 -n 20 --eps_c1 0 --eps_c2 0.3 -a -D 2
+./evaluate_derivatives.x -g input_grid.ascii -N 10 -n 20 --eps_c1=0.035 --eps_c2=0.1 -w 15 -a -D 2
 
 
 #mpirun -output-filename runlog -np 2 ./compute_weights.x -g input_grid.ascii -c 4 -N 4096 -n 17 --eps_c1 0.035 --eps_c2 0.1 -p lsh_100_stencils.graph.part.2

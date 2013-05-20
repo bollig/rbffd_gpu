@@ -28,8 +28,10 @@ void computeDerivMulti(       \n
 }
 
 
+//------------------------------
 // GPU Only routine
-FLOAT applyWeights1PerThread(       \n
+// already defined elsewhere as applyWeights1PerThread
+FLOAT applyWeights2PerThread(       \n
      __global uint* stencil,    \n
      __global FLOAT* st_weights,   \n
      __global FLOAT* solution,  \n

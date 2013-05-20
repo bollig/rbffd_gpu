@@ -63,7 +63,7 @@ void RBFFD_MULTI_CL::loadKernel() {
     // support)
     // std::vector<std::string> separated_kernels = this->split(kernel_source, "__kernel", true);
 
-    std::string kernel_name = "computeDerivKernel";
+    std::string kernel_name = "computeDerivMultiKernel";
 
     if (!this->getDeviceFP64Extension().compare("")){
         useDouble = false;

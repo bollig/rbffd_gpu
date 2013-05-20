@@ -13,11 +13,9 @@ void computeDeriv(       \n
    uint stencil_size)  \n
 {   \n
    uint i = get_global_id(0);    \n
-    
    if(i < nb_stencils) {    \n
-
         FLOAT der = 0.0f;       \n
-        for (uint j = 0; j < stencil_size; j++) {        \n
+        for (uint j = 0; j < stencil_size; j++) {       \n
             uint indx = i*stencil_size + j;
 //            der += 1. * weights[indx];    \n
         //    der += 1. ;    \n
@@ -36,7 +34,7 @@ FLOAT applyWeights1PerThread(       \n
      uint stencil_size)  \n
 {   \n
         FLOAT der = 0.0f;       \n
-        for (uint j = 0; j < stencil_size; j++) {        \n
+        for (uint j = 0; j < stencil_size; j++) { 
             der += solution[stencil[j]] * st_weights[j];    \n
         }   \n
         return der; 

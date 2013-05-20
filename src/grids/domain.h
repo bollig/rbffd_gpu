@@ -156,9 +156,8 @@ class Domain : public Grid, public MPISendable
 		if (status) { return status; }
 		status = this->loadL2GFromFile(filename);
 		if (status) { return status; }
-		status = this->loadStencilsFromFile(filename);
-		if (status) { return status; }
-		// this->loadLocalSolutionFromFile(filename);
+
+		return GRID_AND_STENCILS_LOADED;
         }
 
         //--------------------------------------------------

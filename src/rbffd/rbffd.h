@@ -212,8 +212,12 @@ class RBFFD
 
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;
-            useHyperviscosity = tf; 
-            this->appendDerTypes(HV); 
+	    useHyperviscosity = tf; 
+	    if (tf) {
+		    this->appendDerTypes(HV); 
+	    } else { 
+		    this->removeDerType(HV);
+	    }
         }
 
         int getUseHyperviscosity() {

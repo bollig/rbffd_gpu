@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
 		("eps_c2", po::value<double>(), "Choose Epsilon as function of eps_c1 and eps_c2")
 		("weight_method", po::value<int>(), "Set the method used to compute weights: 0 -> Direct Inversion of Ax=B; 1 -> ContourSVD") 
 		("ascii_weights,a", "Write weights in ASCII Matrix Market format (Default: off)") 
+		("weights,w", po::value<unsigned int>(), "Select the weights to compute. Argument should be an unsigned integer similar to the chmod comand. For example, the combination of weights X, Y, Z are 0x1 | 0x2 | 0x4 -> 0x7 == 7. Current choices are: X=0x1, Y=0x2, Z=0x4, LAPL=0x8, R=0x10, HV=0x20, LAMBDA=0x40, THETA=0x80, LSFC=0x100, XSFC=0x200, YSFC=0x400, ZSFC=0x800, ALT_XSFC=0x1000, ALT_YSFC=0x2000, ALT_ZSFC=0x4000, INTERP=0x8000")
 		;
 
 	po::variables_map vm;
@@ -143,6 +144,16 @@ int main(int argc, char** argv) {
 	} else {
 		cout << "ERROR: grid_size was not set.\n";
 		exit(-2); 
+	}
+
+	// Select all derivative types (just in case)
+	// Equivalent to: RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL | [...] | RBFFD::INTERP
+	unsigned int weight_choices = (0x1 << RBFFD::NUM_DERIVATIVE_TYPES) - 1;
+	if (vm.count("weights")) {
+		weight_choices = vm["weights"].as<unsigned int>(); 
+		cout << "Weight choices overridden to compute: " << weight_choices << ".\n";
+	} else {
+		cout << "Computing all weights: " << weight_choices << ", " << RBFFD::NUM_DERIVATIVE_TYPES <<  std::endl;
 	}
 
 	int stencil_size; 
@@ -271,7 +282,7 @@ int main(int argc, char** argv) {
 #endif 
 
 	tm["derSetup"]->start();
-	RBFFD* der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL | RBFFD::LSFC | RBFFD::XSFC | RBFFD::YSFC | RBFFD::ZSFC | RBFFD::LAMBDA | RBFFD::THETA | RBFFD::HV, subdomain, grid_dim, mpi_rank);
+	RBFFD* der = new RBFFD(weight_choices, subdomain, grid_dim, mpi_rank);
 
 	der->setUseHyperviscosity(use_hyperviscosity);
 	// If both are zero assume we havent set anything

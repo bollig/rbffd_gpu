@@ -13,7 +13,9 @@ __kernel void computeDerivKernel(       \n
    uint nb_stencils, \n
    uint stencil_size)  \n
 {   \n
-    computeDeriv(stencils, weights, solution, derivative, nb_stencils, stencil_size);
+	for (int i=0; i < 10; i++) { \n
+    computeDeriv(stencils, weights, solution, derivative, nb_stencils, stencil_size); \n
+	} \n
 }
 //----------------------------------------------------------
 

@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
     EB::TimerList tm; 
     tm["main_total"] = new EB::Timer("[main] Total Time");
     tm["total"] = new EB::Timer("[main] Remaining time");
+    tm["rbffd"] = new EB::Timer("[main] RBFFD constructor");
     tm["destructor"] = new EB::Timer("[main] Destructors");
     tm["stencils"] = new EB::Timer("[main] Stencil computation");
     tm["cpu_tests"] = new EB::Timer("[main] CPU tests");
@@ -30,8 +31,8 @@ int main(int argc, char** argv) {
 
     tm["main_total"]->start();
 	tm["total"]->start();
-    Communicator* comm_unit = new Communicator(argc, argv);
 
+    Communicator* comm_unit = new Communicator(argc, argv);
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
@@ -81,7 +82,8 @@ int main(int argc, char** argv) {
 
     tm["stencils"]->start();
     //grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
-    grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
+    //grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
+    grid->generateStencils(stencil_size, Grid::ST_KDTREE);   // nearest nb_points
     tm["stencils"]->end();
     //grid->writeToFile(); 
 
@@ -89,12 +91,14 @@ int main(int argc, char** argv) {
     // 0: 2D problem; 1: 3D problem
     //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
 
+	tm["rbffd"]->start();
     RBFFD* der;
     if (use_gpu) {
         der = new RBFFD_MULTI_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     } else {
         der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     }
+	tm["rbffd"]->end();
 
 	// weights are all in one large array (for all derivatives)
 
@@ -200,7 +204,6 @@ int main(int argc, char** argv) {
     }
 #endif 
 
-    tm["main_total"]->end();
 
 
 //    delete(subdomain);
@@ -211,6 +214,8 @@ int main(int argc, char** argv) {
     delete(settings);
     cout.flush();
     tm["destructor"]->end();
+
+    tm["main_total"]->end();
 	tm.printAll(stdout, 60);
 
     exit(EXIT_SUCCESS);

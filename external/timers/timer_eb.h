@@ -121,11 +121,11 @@ namespace EB {
             { this->printAll(fd, label_width); }
             void printAll(FILE* fd=stdout, int label_width=40)
             {
-                if (fd != stdout ) {
+                //if (fd != stdout ) {
                     fprintf(fd, "====================================\n"); 
                     fprintf(fd, "Timers [All times in ms (1/1000 s)]: \n"); 		
                     fprintf(fd, "====================================\n\n");     
-                }
+                //}
                 for (TimerList::iterator i=this->begin(); i != this->end(); i++) {
                     Timer& tim = *(i->second); 
                     tim.print(fd, label_width);

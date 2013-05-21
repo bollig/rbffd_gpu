@@ -45,7 +45,7 @@ void RBFFD_MULTI_CL::setupTimers() {
     tm["construct"] = new Timer("m [RBFFD_MULTI_CL] RBFFD_MULTI_CL (constructor)");
     tm["computeDerivs"] = new Timer("m [RBFFD_MULTI_CL] computeRBFFD_MULTI_s (compute derivatives using OpenCL");
     tm["sendWeights"] = new Timer("m [RBFFD_MULTI_CL]   (send stencil weights to GPU)");
-    tm["applyWeights"] = new Timer("m [RBFFD_MULTI_CL] Evaluate single derivative by applying weights to function");
+    tm["applyWeights"] = new Timer("m [RBFFD_MULTI_CL] Evaluate single derivative by applying weights to function", 1);
 }
 
 
@@ -402,7 +402,7 @@ void RBFFD_MULTI_CL::updateWeightsSingle(bool forceFinish) {
 //
 void RBFFD_MULTI_CL::updateFunctionDouble(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish) {
 
-    //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
+    cout << "Sending " << nb_vals << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
 
 
     // There is a bug conditional is true
@@ -442,17 +442,16 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(unsigned int start_indx, unsigne
 	cout << "****** enter of applyWeightsForDerivativeDouble ******\n";
 
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
-    tm["applyWeights"]->start();
 
     if (isChangedU) {
-        //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
-        this->updateFunctionOnGPU(start_indx, nb_stencils, u, true);  //GE ("u" should be 4 functions: larger array)
+        this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
     }
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    //this->updateWeightsOnGPU(false);
-    this->updateWeightsOnGPU(true); //GE
+    this->updateWeightsOnGPU(false);
+
+    tm["applyWeights"]->start();
 
     try {
         int i = 0;
@@ -501,6 +500,10 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(unsigned int start_indx, unsigne
         exit(EXIT_FAILURE);
     }
 
+    err = queue.finish(); // added by GE (for more accurate timings, although in real code, one would only use finish()
+	                      // GE   as far back into the code as possible. 
+    tm["applyWeights"]->end();
+
     // Pull the computed derivative back to the CPU
     //err = queue.enqueueReadBuffer(gpu_deriv_out, CL_TRUE, 0, deriv_mem_bytes, &deriv[0], NULL, &event);
     err = queue.enqueueReadBuffer(gpu_deriv_x_out, CL_TRUE, 0, deriv_mem_bytes, &deriv_x[0], NULL, &event);
@@ -521,7 +524,7 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(unsigned int start_indx, unsigne
     } else {
         //        std::cout << "CL program finished!" << std::endl;
     }
-    tm["applyWeights"]->end();
+    //tm["applyWeights"]->end(); // original location set by Evan
 	cout << "****** enter of applyWeightsForDerivativeDouble ******\n";
 }
 //----------------------------------------------------------------------

@@ -79,6 +79,7 @@ class RBFFD
             INTERP_i, 
             //
             // Leave this at the end
+			// GE: can't assume values increase by 1!!
             NUM_DERIVATIVE_TYPES
         };
 
@@ -196,6 +197,9 @@ class RBFFD
         // because we can do this for (nearly) free. Its a multiple RHS
         // solve---hard to justify NOT doing this! 
         //
+		// Create either zero weights or weights with random numbers
+        void computeAllWeightsForAllStencilsEmpty();
+
         void computeAllWeightsForAllStencils();
         void computeAllWeightsForStencil(int st_indx);
         void computeWeightsForStencil(DerType deriv_type, int st_indx);
@@ -463,6 +467,7 @@ class RBFFD
         // ================= These control derivative type bits ================
     public: 
         void printComputedTypes() {
+			std::cout << "****************** printComputedTypes() *********************" << std::endl;
             // Iterate through flags and prints which ones we are going to calculate
             for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
                 DerType dt = getDerType((DerTypeIndx)i); 
@@ -541,6 +546,9 @@ class RBFFD
             return i;
         }
 
+		void printAllTimings() {
+			tm.printAll(stdout, 80);
+		}
 };
 
 #endif 

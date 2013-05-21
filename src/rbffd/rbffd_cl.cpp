@@ -45,7 +45,7 @@ void RBFFD_CL::setupTimers() {
     tm["construct"] = new Timer("[RBFFD_CL] RBFFD_CL (constructor)");
     tm["computeDerivs"] = new Timer("[RBFFD_CL] computeRBFFD_s (compute derivatives using OpenCL");
     tm["sendWeights"] = new Timer("[RBFFD_CL]   (send stencil weights to GPU)");
-    tm["applyWeights"] = new Timer("[RBFFD_CL] Evaluate single derivative by applying weights to function");
+    tm["applyWeights"] = new Timer("[RBFFD_CL] Evaluate single derivative by applying weights to function", 1);
 }
 
 
@@ -530,8 +530,6 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
     //std::cout << "EVAN HERE\n";
 
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
-    tm["applyWeights"]->start();
-
     if (isChangedU) {
         //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
         this->updateFunctionOnGPU(start_indx, nb_stencils, u, true);  //GE
@@ -540,7 +538,16 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
     //this->updateWeightsOnGPU(false);
+
     this->updateWeightsOnGPU(true); //GE
+
+
+    err = queue.finish(); // added by GE
+
+	// strictly speaking, I should not include settings the kernel arguments, but that time should be insignificant. 
+	// One should not take into account the time for read/write of data to the GPU, since in a good code, 
+	// one would minimize read/writing to the GPU. 
+    tm["applyWeights"]->start();
 
     try {
         int i = 0;
@@ -572,6 +579,10 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
         exit(EXIT_FAILURE);
     }
 
+    err = queue.finish(); // added by GE (for more accurate timings, although in real code, one would only use finish()
+	                      // GE   as far back into the code as possible. 
+    tm["applyWeights"]->end();
+
     if (nb_stencils *sizeof(double) != deriv_mem_bytes) {
         std::cout << "npts*sizeof(double) [" << nb_stencils*sizeof(double) << "] != deriv_mem_bytes [" << deriv_mem_bytes << "]" << std::endl;
         exit(EXIT_FAILURE);
@@ -593,7 +604,6 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
     } else {
         //        std::cout << "CL program finished!" << std::endl;
     }
-    tm["applyWeights"]->end();
 }
 //----------------------------------------------------------------------
 
@@ -606,17 +616,18 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
 void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
-    tm["applyWeights"]->start();
 
     if (isChangedU) {
-        //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
-        this->updateFunctionOnGPU(start_indx, nb_stencils, u, true); //GE
+        this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
+        //this->updateFunctionOnGPU(start_indx, nb_stencils, u, true); //GE
     }
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-    //this->updateWeightsOnGPU(false);
-    this->updateWeightsOnGPU(true); //GE
+    this->updateWeightsOnGPU(false);
+    //this->updateWeightsOnGPU(true); //GE
+
+    tm["applyWeights"]->start();
 
     try {
         int i = 0;
@@ -648,7 +659,9 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
         exit(EXIT_FAILURE);
     }
 
-    //  err = queue.finish();
+    err = queue.finish();
+    tm["applyWeights"]->end();
+
     float* deriv_temp = new float[nb_stencils];
 
     if (nb_stencils *sizeof(float) != deriv_mem_bytes) {
@@ -661,7 +674,6 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
     if (err != CL_SUCCESS) {
         std::cerr << " enequeue ERROR: " << err << std::endl;
     }
-
 
     err = queue.finish();
 
@@ -691,7 +703,6 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
 
     delete [] deriv_temp;
 
-    tm["applyWeights"]->end();
 }
 //----------------------------------------------------------------------
 

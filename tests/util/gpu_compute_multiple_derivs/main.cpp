@@ -10,11 +10,26 @@
 #include "exact_solutions/exact_regulargrid.h"
 
 #include "utils/comm/communicator.h"
+#include "timer_eb.h"
+
 
 using namespace std;
 
 int main(int argc, char** argv) {
 
+    EB::TimerList tm; 
+    tm["main_total"] = new EB::Timer("[main] Total Time");
+    tm["total"] = new EB::Timer("[main] Remaining time");
+    tm["destructor"] = new EB::Timer("[main] Destructors");
+    tm["stencils"] = new EB::Timer("[main] Stencil computation");
+    tm["cpu_tests"] = new EB::Timer("[main] CPU tests");
+    tm["gpu_tests"] = new EB::Timer("[main] GPU tests");
+    tm["compute_weights"] = new EB::Timer("[main] Stencil weights");
+    tm["sort+grid"] = new EB::Timer("[main] Sort + Grid generation");
+	tm["solution_check"] = new EB::Timer("[main] Solution check");
+
+    tm["main_total"]->start();
+	tm["total"]->start();
     Communicator* comm_unit = new Communicator(argc, argv);
 
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
@@ -56,11 +71,19 @@ int main(int argc, char** argv) {
     } else {
 	    cout << "ERROR! Dim > 3 Not Supported!" << endl;
     }
+	tm["total"]->end();
 
+    tm["sort+grid"]->start();
     grid->setSortBoundaryNodes(true); 
     grid->generate();
-    grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
-    grid->writeToFile(); 
+    tm["sort+grid"]->end();
+
+
+    tm["stencils"]->start();
+    //grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
+    grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
+    tm["stencils"]->end();
+    //grid->writeToFile(); 
 
 
     // 0: 2D problem; 1: 3D problem
@@ -80,11 +103,18 @@ int main(int argc, char** argv) {
 
     printf("start computing weights\n");
     //vector<StencilType>& stencil = grid->getStencils();
+	tm["total"]->start();
     vector<NodeType>& rbf_centers = grid->getNodeList();
-    der->computeAllWeightsForAllStencils();
+	tm["total"]->end();
+    //der->computeAllWeightsForAllStencils();
+
+    tm["compute_weights"]->start();
+    der->computeAllWeightsForAllStencilsEmpty();
+    tm["compute_weights"]->end();
     cout << "end computing weights" << endl;
 
-    vector<double> u(rbf_centers.size(),1.);
+	// I will be trying to handle 4 solution vectors stored in u
+    vector<double> u(4*rbf_centers.size(),1.);
     cout << "start computing derivative (on CPU)" << endl;
 	    
 
@@ -105,17 +135,23 @@ int main(int argc, char** argv) {
     // NOTE: we pass booleans at the end of the param list to indicate that
     // the function "u" is new (true) or same as previous calls (false). This
     // helps avoid overhead of passing "u" to the GPU.
+    tm["cpu_tests"]->start();
     der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
     der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false); // originally false
     der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false); // orig false
     der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false); // orig false
+    tm["cpu_tests"]->end();
 
+    der->applyWeightsForDeriv(u, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); // do not time
+    tm["gpu_tests"]->start();
     der->applyWeightsForDeriv(u, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true);
+    tm["gpu_tests"]->end();
     //der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false); // orig false
     //der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false); // orig: false
     //der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false); // orig: false
+//
 
-
+	tm["solution_check"]->start();
     double max_diff = 0.; 
     for (size_t i = 0; i < rbf_centers.size(); i++) {
 	double xdiff = fabs(xderiv_gpu[i] - xderiv_cpu[i]); 
@@ -143,11 +179,14 @@ int main(int argc, char** argv) {
 	    	std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
 	    	std::cout << "Z: " << zderiv_gpu[i] << ", " <<  zderiv_cpu[i] << std:: endl; 
 	    	std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
+			//der->printAllTimings();
+			tm.printAll(stdout, 80);
             exit(EXIT_FAILURE); 
         }
     }
     std::cout << "Max difference between weights: " << max_diff << std::endl;
     std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
+	tm["solution_check"]->end();
        // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
 
    // der->applyWeightsForDeriv(RBFFD::Y, u, yderiv);
@@ -161,15 +200,18 @@ int main(int argc, char** argv) {
     }
 #endif 
 
+    tm["main_total"]->end();
+
 
 //    delete(subdomain);
-	delete(der);
-	printf("delete grid\n");
-    delete(grid);
-	printf("delete settings\n");
-    delete(settings);
 
+    tm["destructor"]->start();
+	delete(der);
+    delete(grid);
+    delete(settings);
     cout.flush();
+    tm["destructor"]->end();
+	tm.printAll(stdout, 60);
 
     exit(EXIT_SUCCESS);
 }

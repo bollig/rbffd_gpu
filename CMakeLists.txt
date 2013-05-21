@@ -127,8 +127,8 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 #ICC:  add_definitions( -DUSE_DOUBLE_VEC3 -DUSE_KDTREE -O2 -opt-report -vec-report -par-report)
 add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall 
   #-std=c++0x 
-    -O3 
-    # -g 
+    -O2 
+    -g 
     -DNDEBUG 
     #-DTHRUST_DEBUG )  
     ) 

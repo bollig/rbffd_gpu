@@ -33,7 +33,7 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
     for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
         // Set all weights to point to NULL
         // If they do NOT point to NULL then they have been computed
-        this->weights[i].resize(nb_rbfs, NULL);
+        this->weights[i].resize(nb_rbfs, NULL); // GE: lots of wasted storage
     }
 
     derTypeStr[X_i] = "x";
@@ -82,10 +82,33 @@ RBFFD::~RBFFD() {
         //}
     }
 	printf("print all timer data\n");
-    tm.printAll();
+    tm.printAll(stdout, 80);
 }
 
 //--------------------------------------------------------------------
+void RBFFD::computeAllWeightsForAllStencilsEmpty()
+{
+	std::cout << "********** computeAllWeightsForAllStencilsEmpty() *************" << std::endl;
+    int nb_rbfs = grid_ref.getNodeListSize();
+	std::cout << "nb rbs: " << nb_rbfs << std::endl;
+	// Iterate through flags and prints which ones we are going to calculate
+	// GE: INEFFICIENT. Weights should have been 3D array, contiguous. 
+	for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
+		DerType dt = getDerType((DerTypeIndx)i); 
+		if (isSelected(dt)) {
+			std::cout << "Will compute DerType: 0x" << hex << dt << " (" << derTypeStr[i] << ")" << endl;
+			std::cout << dec; 
+			for (int j=0; j < nb_rbfs; j++) {
+            	StencilType& stencil = grid_ref.getStencil(i);
+				weights[i][j] = new double [stencil.size()];
+				for (int k=0; k < stencil.size(); k++) {
+					weights[i][j][k] = 0;
+				}
+			}
+        }
+	}        
+}
+//----------------
 
 // Compute the full set of derivative weights for all stencils
 void RBFFD::computeAllWeightsForAllStencils() {

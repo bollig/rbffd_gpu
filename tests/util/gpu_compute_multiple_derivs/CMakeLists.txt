@@ -16,6 +16,8 @@ SET ( EXEC_SOURCE_FILES
 	main.cpp
 )
 
+ADD_DEFINITIONS(-g)
+
 # 4) Runtime arguments for executable (argv[0] .. argv[N]; individual arguments in quotes ("")) 
 SET (ARGV
 #	"--verbose"

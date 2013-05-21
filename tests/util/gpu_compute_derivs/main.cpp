@@ -58,8 +58,9 @@ int main(int argc, char** argv) {
 
     grid->setSortBoundaryNodes(true); 
     grid->generate();
-    grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
-    grid->writeToFile(); 
+    //grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
+    grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
+    //grid->writeToFile(); 
 
 
     // 0: 2D problem; 1: 3D problem
@@ -78,7 +79,8 @@ int main(int argc, char** argv) {
     printf("start computing weights\n");
     //vector<StencilType>& stencil = grid->getStencils();
     vector<NodeType>& rbf_centers = grid->getNodeList();
-    der->computeAllWeightsForAllStencils();
+	//Just let all weights be zero. I may have to assign memory
+    der->computeAllWeightsForAllStencilsEmpty();
     cout << "end computing weights" << endl;
 
     vector<double> u(rbf_centers.size(),1.);
@@ -103,10 +105,10 @@ int main(int argc, char** argv) {
     der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false); // orig false
     der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false); // orig false
 
-    der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
+    der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);  // do not time (timer offset=1)
     der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false); // orig false
-    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false); // orig: false
-    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false); // orig: false
+    //der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false); // orig: false
+    //der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false); // orig: false
 
 
     double max_diff = 0.; 
@@ -136,7 +138,9 @@ int main(int argc, char** argv) {
 	    std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
 	    std::cout << "Z: " << zderiv_gpu[i] << ", " <<  zderiv_cpu[i] << std:: endl; 
 	    std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
-            exit(EXIT_FAILURE); 
+		printf("printAllTimings()\n");
+        der->printAllTimings();
+		exit(EXIT_FAILURE); 
         }
     }
     std::cout << "Max difference between weights: " << max_diff << std::endl;
@@ -156,6 +160,7 @@ int main(int argc, char** argv) {
 
 
 //    delete(subdomain);
+    delete(der);
     delete(grid);
     delete(settings);
 

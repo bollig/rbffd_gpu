@@ -35,10 +35,17 @@ void computeDerivMulti(
         //    der += 1. * weights[indx];    
         //    der += 1. ;    
 			FLOAT sol = solution[stencils[indx]];
+			#if 0
             dx += sol * wx[indx];    
             dy += sol * wy[indx];    
             dz += sol * wz[indx];    
             dl += sol * wl[indx];    
+			#else
+            dx += sol;
+            dy += sol;
+            dz += sol;
+            dl += sol;
+			#endif
         }   
         derx[i] = dx;    
         dery[i] = dy;    

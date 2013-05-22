@@ -33,7 +33,6 @@ __kernel void computeDerivMultiKernel(
    uint nb_stencils, 
    uint stencil_size)  
 {   
-#if 0
 	for (int i=0; i < 10; i++) { 
     	computeDerivMulti(stencils, 
 			wx, wy, wz, wl,
@@ -42,6 +41,5 @@ __kernel void computeDerivMultiKernel(
 			nb_stencils,
 			stencil_size);
 	} 
-#endif
 }
 

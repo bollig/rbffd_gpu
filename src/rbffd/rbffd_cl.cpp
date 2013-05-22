@@ -495,13 +495,15 @@ void RBFFD_CL::updateFunctionDouble(unsigned int start_indx, unsigned int nb_val
     //    cout << "Sending " << nb_nodes << " solution updates to GPU: (bytes)" << function_mem_bytes << endl;
 
 
-    // There is a bug fi this works
     if (function_mem_bytes != nb_vals*sizeof(double)) {
         std::cout << "function_mem_bytes != nb_nodes*sizeof(double)" << std::endl;
+		std::cout << "nb_vals= " << nb_vals << "\n";
+		std::cout << "function_mem_bytes= " << function_mem_bytes << "\n";
+		std::cout << "nb_vals= " << nb_vals << "\n";
         exit(EXIT_FAILURE);
     } else {
-	std::cout << "Updating solution: " << function_mem_bytes << " bytes \n";
-	std::cout << start_indx << ", " << nb_vals << "\n";
+		std::cout << "Updating solution: " << function_mem_bytes << " bytes \n";
+		std::cout << start_indx << ", " << nb_vals << "\n";
     }
     // TODO: mask off fields not update
     err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &u[start_indx], NULL, &event);

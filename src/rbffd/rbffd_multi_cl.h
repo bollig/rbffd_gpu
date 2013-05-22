@@ -58,7 +58,6 @@ class RBFFD_MULTI_CL : public RBFFD_CL
 				printf("SINGLE DISABLED\n");
 				exit(0);
 				;
-                //this->applyWeightsForDerivSingle(which, start_indx, nb_stencils, u, deriv, isChangedU);
             }
         }
 

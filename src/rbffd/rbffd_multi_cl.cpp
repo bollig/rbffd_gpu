@@ -61,6 +61,7 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(unsigned int start_indx, unsigne
     // false here implies that we should not block on the update to finish
     this->updateWeightsOnGPU(false);
 
+    err = queue.finish(); // added by GE
     tm["applyWeights"]->start();
 
     try {

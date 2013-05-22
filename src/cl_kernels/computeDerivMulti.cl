@@ -65,6 +65,7 @@ void computeDerivMulti4(
    uint nb_stencils, 
    uint stencil_size)  
 {   
+#if 1
    uint i = get_global_id(0);    
 
 
@@ -84,15 +85,24 @@ void computeDerivMulti4(
         //    der += 1. * weights[indx];    
         //    der += 1. ;    
 			FLOAT sol = solution[stencils[indx]];
+			#if 0
             dx += sol * wx[indx];    
             dy += sol * wy[indx];    
             dz += sol * wz[indx];    
             dl += sol * wl[indx];    
+			#endif
+			#if 0
+            dx += sol;
+            dy += sol;
+            dz += sol;
+            dl += sol;
+			#endif
         }   
         derx[i] = dx;    
         dery[i] = dy;    
         derz[i] = dz;    
         derl[i] = dl;    
    }    
+#endif
 }
 //----------------------------------------------------------------------

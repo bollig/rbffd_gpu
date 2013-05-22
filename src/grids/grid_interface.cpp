@@ -4,6 +4,8 @@
 #include <string>
 #include <set>
 #include <limits> // for ST_HASH
+#include <algorithm>
+#include <vector>
 
 #include "grid_interface.h"
 #include "utils/random.h"
@@ -527,6 +529,14 @@ void Grid::generateStencils(st_generator_t generator_choice)
             std::cout << "Stencil Generator: LSH Raster \n"; 
             this->generateStencilsHash(); 
             break; 
+		case ST_RANDOM:
+            std::cout << "Stencil Generator: Random\n"; 
+            this->generateStencilsRandom(); 
+            break; 
+		case ST_COMPACT:
+            std::cout << "Stencil Generator: Compact\n"; 
+            this->generateStencilsCompact(); 
+            break; 
         default: 
             std::cout << "ERROR! Invalid choice of stencil generator\n"; 
             exit(EXIT_FAILURE); 
@@ -552,9 +562,10 @@ void Grid::computeStencilRadii() {
     avg_bnd.resize(nb_bnd);
     avg_int.resize(nb_rbf - nb_bnd);
 
-    // O(n^2) algorithm, whose cost is independent of the number of nearest
+    // O(N*n) algorithm, whose cost is independent of the number of nearest
     // sought
     for (int i = 0; i < nb_rbf; i++) {
+		//std::cout << "i= " <<  i << std::endl;
         StencilType& st = stencil_map[i];
 
         //        std::cout << "st.size() = " << st.size() << std::endl;
@@ -562,6 +573,11 @@ void Grid::computeStencilRadii() {
         double dmin = (rbf_centers[st[1]] - rbf_centers[st[0]]).magnitude(); 
         min_stencil_radii[i] = dmin; 
 
+
+		//std::cout << "st_sz= " << st.size() << std::endl;
+		//std::cout << "st[st_sz-1]= " << st[st.size()-1] << std::endl;
+		//std::cout << "rbf_center = " << rbf_centers[st[st.size()-1]];
+		//exit(0);
         double dmax = (rbf_centers[st[st.size()-1]] - rbf_centers[st[0]]).magnitude(); 
         max_stencil_radii[i] = dmax; 
 
@@ -576,6 +592,7 @@ void Grid::computeStencilRadii() {
 
         // Now iterate over the ith stencil and query distance to neighbors
         for (unsigned int k = 1; k < st.size(); k++) {
+			//std::cout << "k= " <<  k << std::endl;
             double ss = (rbf_centers[st[k]] - rbf_centers[st[0]]).magnitude();
 
             avg_stencil_radii[i] += ss;
@@ -632,8 +649,75 @@ void Grid::computeStencilRadii() {
     printf("[Grid] mean of mean boundary distances: %f (size: %d)\n", avgbnd, (int) avg_bnd.size());
 }
 //----------------------------------------------------------------------------
+void Grid::generateStencilsCompact() 
+{
+    this->checkStencilSize(); 
+
+	int nb_rbf = node_list.size();
+	int stencil_size = stencil_map[0].size();
 
 
+	// fill stencils
+	// first index is itself
+	//
+	int sz2 = stencil_size >> 1;
+
+	for (int i=stencil_size; i < nb_rbf; i++) {
+        int left;
+        int right;
+        if (i < stencil_size) {
+            left = 0;
+            right = left + stencil_size;
+        }
+        else if (i > nb_rbf-stencil_size) {
+            right = nb_rbf;
+            left  = nb_rbf-stencil_size;
+        }
+        else {
+            left  = i-sz2;
+            right = left + stencil_size;
+        }
+		for (int j=left; j < right; j++) {
+			stencil_map[i][j-left] = j;
+		}
+	}
+
+	this->computeStencilRadii();
+}
+//----------------------------------------------------------------------------
+void Grid::generateStencilsRandom() 
+{
+    this->checkStencilSize(); 
+
+	int nb_rbf = node_list.size();
+	int stencil_size = stencil_map[0].size();
+	std::vector<int> indices;
+	indices.resize(nb_rbf);
+	//std::cout << "stencil size: " << stencil_size;
+	//std::cout << "indices size: " << indices.size();
+
+	for (int i=0; i < indices.size(); i++) {
+		indices[i] = i;
+	}
+
+	// fill stencils
+	// first index is itself
+	for (int i=0; i < nb_rbf; i++) {
+		stencil_map[i][0] = i;
+	}
+
+	for (int j=1; j < stencil_size; j++) {
+		int count = 0;
+		std::random_shuffle(indices.begin(), indices.end());
+		for (int i=0; i < nb_rbf; i++) {
+			stencil_map[i][j] = indices[i];
+		}
+	}
+
+	this->computeStencilRadii();
+}
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 void Grid::generateStencilsBruteForce() {
     this->checkStencilSize(); 
 
@@ -995,10 +1079,13 @@ void Grid::checkStencilSize() {
         stencil_map.reserve(nb_rbf);
         stencil_map.resize(nb_rbf);
         for (unsigned int i =0 ; i < nb_rbf; i++) {
-            stencil_map[i].reserve(max_st_size); 
+            //stencil_map[i].reserve(max_st_size); 
             stencil_map[i].resize(max_st_size); 
         }
     }
+	std::cout << "max_st_size= " << max_st_size << std::endl;
+	std::cout << "map size= " << stencil_map.size() << std::endl;
+	std::cout << "st_size= " << stencil_map[0].size() << std::endl;
 }
 
 

@@ -34,7 +34,7 @@ class Grid
 
     public: 
         // We allow multiple types of stencil generators (for backwards compat)
-        enum st_generator_t {ST_BRUTE_FORCE=0, ST_KDTREE, ST_HASH};
+        enum st_generator_t {ST_BRUTE_FORCE=0, ST_KDTREE, ST_HASH, ST_RANDOM, ST_COMPACT};
         enum GridLoadErrType {GRID_AND_STENCILS_LOADED=0, NO_GRID_FILES, NO_BOUNDARY_FILES, NO_NORMAL_FILES, NO_STENCIL_FILES, NO_RADII_FILES, NO_EXTRA_FILES, NOT_ENOUGH_NODES_IN_FILE};
 
     protected: 
@@ -169,6 +169,8 @@ class Grid
         void generateStencilsBruteForce(); 
         void generateStencilsKDTree(); 
         void generateStencilsHash();
+		void generateStencilsCompact();
+		void generateStencilsRandom();
 
         void computeStencilRadii();
 

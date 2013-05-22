@@ -84,7 +84,9 @@ int main(int argc, char** argv) {
     tm["stencils"]->start();
     //grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
     //grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
-    grid->generateStencils(stencil_size, Grid::ST_KDTREE);   // nearest nb_points
+    //grid->generateStencils(stencil_size, Grid::ST_KDTREE);   // nearest nb_points
+    //grid->generateStencils(stencil_size, Grid::ST_COMPACT);   // nearest nb_points
+    grid->generateStencils(stencil_size, Grid::ST_RANDOM);   // nearest nb_points
     tm["stencils"]->end();
     //grid->writeToFile(); 
 
@@ -101,6 +103,7 @@ int main(int argc, char** argv) {
         der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     }
 	tm["rbffd"]->end();
+
 
 	// weights are all in one large array (for all derivatives)
 

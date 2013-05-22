@@ -26,7 +26,8 @@ using namespace std;
 	}
 
     this->setupTimers();
-    this->loadKernel();
+    //this->loadKernel();
+    this->loadKernel("computeDerivMultiKernel", "derivative_kernels.cl");
     this->allocateGPUMem();
     //this->updateStencilsOnGPU(false);
     this->updateStencilsOnGPU(true); //GE
@@ -50,12 +51,43 @@ void RBFFD_CL::setupTimers() {
 
 
 //----------------------------------------------------------------------
+void RBFFD_CL::loadKernel(const std::string& kernel_name, const std::string& kernel_source_file)
+{
+    tm["loadAttach"]->start();
+
+    if (!this->getDeviceFP64Extension().compare("")){
+        useDouble = false;
+    }
+    if ((sizeof(FLOAT) == sizeof(float)) || !useDouble) {
+        useDouble = false;
+    }
+
+	cout << "kernel_name= " << kernel_name << endl;
+
+    // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
+    std::string my_source = this->loadFileContents(kernel_source_file.c_str(), true);
+
+    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
+	std::cout  << my_source  << std::endl;
+    this->loadProgram(my_source, useDouble);
+	std::cout << "after load Program \n";
+
+    try{
+        std::cout << "Loading kernel \""<< kernel_name << "\" with double precision = " << useDouble << "\n";
+        kernel = cl::Kernel(program, kernel_name.c_str(), &err);
+        std::cout << "Done attaching kernels!" << std::endl;
+    }
+    catch (cl::Error er) {
+        printf("[AttachKernel] ERROR: %s(%d)\n", er.what(), er.err());
+    }
+
+    tm["loadAttach"]->end();
+}
+//----------------------------------------------------------------------
 //
-void RBFFD_CL::loadKernel() {
-    tm["construct"]->start();
-
-    cout << "Inside RBFFD_CL constructor" << endl;
-
+#if 0
+void RBFFD_CL::loadKernel()
+{
     tm["loadAttach"]->start();
 
     // Split the kernels by __kernel keyword and do not discards the keyword.
@@ -100,6 +132,7 @@ void RBFFD_CL::loadKernel() {
     }
     tm["loadAttach"]->end();
 }
+#endif
 
 //----------------------------------------------
 void RBFFD_CL::allocateGPUMem() {

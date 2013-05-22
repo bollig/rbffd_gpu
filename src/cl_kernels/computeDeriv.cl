@@ -1,43 +1,45 @@
-#define STRINGIFY_WITH_SUBS(s) STRINGIFY(s)
-#define STRINGIFY(s) #s
+//#define STRINGIFY_WITH_SUBS(s) STRINGIFY(s)
+//#define STRINGIFY(s) #s
 
-std::string computeDeriv_source = STRINGIFY_WITH_SUBS(
+#include "useDouble.cl"
+
+//std::string computeDeriv_source = STRINGIFY_WITH_SUBS(
 
 // GPU Only routine
-void computeDeriv(       \n
-         __global uint* stencils,    \n
-         __global FLOAT* weights,   \n
-         __global FLOAT* solution,  \n
-         __global FLOAT* derivative,    \n
-   uint nb_stencils, \n
-   uint stencil_size)  \n
-{   \n
-   uint i = get_global_id(0);    \n
-   if(i < nb_stencils) {    \n
-        FLOAT der = 0.0f;       \n
-        for (uint j = 0; j < stencil_size; j++) {       \n
+void computeDeriv(       
+         __global uint* stencils,    
+         __global FLOAT* weights,   
+         __global FLOAT* solution,  
+         __global FLOAT* derivative,    
+   uint nb_stencils, 
+   uint stencil_size)  
+{   
+   uint i = get_global_id(0);    
+   if(i < nb_stencils) {    
+        FLOAT der = 0.0f;       
+        for (uint j = 0; j < stencil_size; j++) {       
             uint indx = i*stencil_size + j;
-//            der += 1. * weights[indx];    \n
-        //    der += 1. ;    \n
-            der += solution[stencils[indx]] * weights[indx];    \n
-        }   \n
-        derivative[i] = der;    \n
-   }    \n
+//            der += 1. * weights[indx];    
+        //    der += 1. ;    
+            der += solution[stencils[indx]] * weights[indx];    
+        }   
+        derivative[i] = der;    
+   }    
 }
 
 
 // GPU Only routine
-FLOAT applyWeights1PerThread(       \n
-     __global uint* stencil,    \n
-     __global FLOAT* st_weights,   \n
-     __global FLOAT* solution,  \n
-     uint stencil_size)  \n
-{   \n
-        FLOAT der = 0.0f;       \n
+FLOAT applyWeights1PerThread(       
+     __global uint* stencil,    
+     __global FLOAT* st_weights,   
+     __global FLOAT* solution,  
+     uint stencil_size)  
+{   
+        FLOAT der = 0.0f;       
         for (uint j = 0; j < stencil_size; j++) { 
-            der += solution[stencil[j]] * st_weights[j];    \n
-        }   \n
+            der += solution[stencil[j]] * st_weights[j];    
+        }   
         return der; 
 }
 
-);
+//);

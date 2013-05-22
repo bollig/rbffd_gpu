@@ -6,6 +6,7 @@
 
 //#include "rbffd/rbffd_cl.h"
 #include "rbffd/rbffd_multi_cl.h"
+#include "rbffd/rbffd_cl.h"
 
 #include "exact_solutions/exact_regulargrid.h"
 
@@ -95,6 +96,7 @@ int main(int argc, char** argv) {
     RBFFD* der;
     if (use_gpu) {
         der = new RBFFD_MULTI_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+        //der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     } else {
         der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     }

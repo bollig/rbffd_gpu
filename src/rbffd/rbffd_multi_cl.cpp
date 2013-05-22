@@ -10,14 +10,14 @@ using namespace std;
 
 //----------------------------------------------------------------------
 //
-    RBFFD_MULTI_CL::RBFFD_MULTI_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
-: RBFFD(typesToCompute, grid, dim_num, rank), CLBaseClass(rank),
-    deleteCPUWeightsBuffer(false),
-    deleteCPUNodesBuffer(false),
-    deleteCPUStencilsBuffer(false),
-    useDouble(true),
+RBFFD_MULTI_CL::RBFFD_MULTI_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
+   : RBFFD_CL(typesToCompute, grid, dim_num, rank)
+    //deleteCPUWeightsBuffer(false)
+    //deleteCPUNodesBuffer(false),
+    //deleteCPUStencilsBuffer(false),
+    //useDouble(true),
 // Gordon: changing alignWeights to true will break gpu_compute_derivs; 
-    alignWeights(false), alignMultiple(32)
+    //alignWeights(false), alignMultiple(32)
 {
 
 	//GE: added as a means to avoid deleting that which is not allocated
@@ -26,7 +26,8 @@ using namespace std;
 	}
 
     this->setupTimers();
-    this->loadKernel();
+    //this->loadKernel();
+    this->loadKernel("computeDerivMultiKernel", "cl_kernels/derivative_kernels.cl");
     this->allocateGPUMem();
     //this->updateStencilsOnGPU(false);
     this->updateStencilsOnGPU(true); //GE
@@ -51,6 +52,7 @@ void RBFFD_MULTI_CL::setupTimers() {
 
 //----------------------------------------------------------------------
 //
+#if 0
 void RBFFD_MULTI_CL::loadKernel() {
     tm["construct"]->start();
 
@@ -99,6 +101,7 @@ void RBFFD_MULTI_CL::loadKernel() {
     }
     tm["loadAttach"]->end();
 }
+#endif
 
 //----------------------------------------------
 void RBFFD_MULTI_CL::allocateGPUMem() {

@@ -690,6 +690,9 @@ void HeatPDE_CL::loadBCKernel(std::string& local_sources) {
         useDouble = false;
     } 
 
+    std::string my_source = this->loadFileContents(local_sources.c_str(), true);
+
+	#if 0
     std::string my_source = local_sources; 
     if(useDouble) {
 #define FLOAT double 
@@ -702,6 +705,7 @@ void HeatPDE_CL::loadBCKernel(std::string& local_sources) {
         my_source.append(kernel_source);
 #undef FLOAT
     }
+	#endif
 
     //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
     
@@ -730,6 +734,9 @@ void HeatPDE_CL::loadStepKernel(std::string& local_sources) {
         useDouble = false;
     } 
 
+    std::string my_source = this->loadFileContents(local_sources.c_str(), true);
+
+#if 0
     std::string my_source = local_sources; 
     if(useDouble) {
 #define FLOAT double 
@@ -742,6 +749,7 @@ void HeatPDE_CL::loadStepKernel(std::string& local_sources) {
         my_source.append(kernel_source);
 #undef FLOAT
     }
+#endif
 
     //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n"; 
     this->loadProgram(my_source, useDouble); 

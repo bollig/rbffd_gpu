@@ -3,10 +3,11 @@
 
 //#include <CL/cl.hpp> 
 #include "utils/opencl/cl_base_class.h"
-#include "rbffd.h"
+//#include "rbffd.h"
+#include "rbffd_cl.h"
 #include "utils/opencl/structs.h"
 
-class RBFFD_MULTI_CL : public RBFFD, public CLBaseClass
+class RBFFD_MULTI_CL : public RBFFD_CL
 {
     protected: 
         // Weight buffers matching number of weights we have in super class
@@ -16,9 +17,9 @@ class RBFFD_MULTI_CL : public RBFFD, public CLBaseClass
         double* cpu_weights_d[NUM_DERIVATIVE_TYPES];
         float* cpu_weights_f[NUM_DERIVATIVE_TYPES];
         double4* cpu_nodes;
-        bool deleteCPUWeightsBuffer;
-        bool deleteCPUNodesBuffer;
-        bool deleteCPUStencilsBuffer;
+        //bool deleteCPUWeightsBuffer;
+        //bool deleteCPUNodesBuffer;
+        //bool deleteCPUStencilsBuffer;
 
         cl::Buffer gpu_stencils; 
         unsigned int*    cpu_stencils;
@@ -47,18 +48,18 @@ class RBFFD_MULTI_CL : public RBFFD, public CLBaseClass
         unsigned int nodes_mem_bytes;
 
         // Is a double precision extension available on the unit? 
-        bool useDouble; 
+        //bool useDouble; 
 
         // Set this to control the weight padding/alignment 
-        bool alignWeights; 
-        unsigned int alignMultiple;
+        //bool alignWeights; 
+        //unsigned int alignMultiple;
 
         // This will be either the MAX_STENCIL_SIZE (computed by
         // GridInterface), or the stencil size rounded to nearest
         // multiple of 16 or 32. Any stencils that do not meet the
         // stencil_padded_size are padded with 0s for weights and 
         // the stencil center index for the padded indices. 
-        unsigned int stencil_padded_size; 
+        //unsigned int stencil_padded_size; 
 
     public: 
         // Note: dim_num here is the desired dimensions for which we calculate derivatives        
@@ -164,7 +165,7 @@ class RBFFD_MULTI_CL : public RBFFD, public CLBaseClass
 
     protected: 
         void setupTimers(); 
-        void loadKernel(); 
+        //void loadKernel(); 
         void allocateGPUMem(); 
 
         void clearCPUWeights();

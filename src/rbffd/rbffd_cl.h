@@ -2,6 +2,7 @@
 #define __RBFFD_CL_H__
 
 //#include <CL/cl.hpp> 
+#include <string>
 #include "utils/opencl/cl_base_class.h"
 #include "rbffd.h"
 #include "utils/opencl/structs.h"
@@ -148,8 +149,9 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
     protected: 
         void setupTimers(); 
-        void loadKernel(); 
-        void allocateGPUMem(); 
+        //virtual void loadKernel(); 
+        virtual void loadKernel(const std::string& kernel, const std::string& filename); 
+        virtual void allocateGPUMem(); 
 
         void clearCPUWeights();
         void clearCPUStencils();

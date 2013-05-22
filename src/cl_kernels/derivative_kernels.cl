@@ -1,5 +1,3 @@
-//#define STRINGIFY_WITH_SUBS(s) STRINGIFY(s)
-//#define STRINGIFY(s) #s
 
 #include "useDouble.cl"
 #include "computeDeriv.cl"
@@ -45,4 +43,3 @@ __kernel void computeDerivMultiKernel(
 	} 
 }
 
-//);

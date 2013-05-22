@@ -26,18 +26,8 @@ using namespace std;
 	}
 
     this->setupTimers();
-    //this->loadKernel();
-    this->loadKernel("computeDerivMultiKernel", "derivative_kernels.cl");
-    this->allocateGPUMem();
-    //this->updateStencilsOnGPU(false);
-    this->updateStencilsOnGPU(true); //GE
-    std::cout << "Done copying stencils\n";
-
-    //this->updateNodesOnGPU(false);
-    this->updateNodesOnGPU(true);
-    std::cout << "Done copying nodes\n";
+    //this->allocateGPUMem();
 }
-
 
 //----------------------------------------------------------------------
 //
@@ -63,11 +53,12 @@ void RBFFD_CL::loadKernel(const std::string& kernel_name, const std::string& ker
     }
 
 	cout << "kernel_name= " << kernel_name << endl;
+	cout << "kernel_source_file = " << kernel_source_file << endl;
 
     // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
     std::string my_source = this->loadFileContents(kernel_source_file.c_str(), true);
 
-    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
+    std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
 	std::cout  << my_source  << std::endl;
     this->loadProgram(my_source, useDouble);
 	std::cout << "after load Program \n";
@@ -170,22 +161,19 @@ void RBFFD_CL::allocateGPUMem() {
     std::cout << "FLOAT_SIZE=" << float_size << std::endl;;
 
     stencil_mem_bytes = gpu_stencil_size * sizeof(unsigned int);
-    function_mem_bytes = nb_nodes * float_size;
     weights_mem_bytes = gpu_stencil_size * float_size;
-    deriv_mem_bytes = nb_stencils * float_size;
 
     nodes_mem_bytes = nb_nodes * sizeof(double4);
 
     std::cout << "Allocating GPU memory\n";
 
-    unsigned int bytesAllocated = 0;
+    bytesAllocated = 0;
 
     // Two input arrays:
     // 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
     gpu_stencils = cl::Buffer(context, CL_MEM_READ_WRITE, stencil_mem_bytes, NULL, &err);
     bytesAllocated += stencil_mem_bytes;
 
-    gpu_function = cl::Buffer(context, CL_MEM_READ_ONLY, function_mem_bytes, NULL, &err);
 
     int iterator = computedTypes;
     int which = 0;
@@ -207,13 +195,15 @@ void RBFFD_CL::allocateGPUMem() {
         which += 1;
     }
 
+	#if 0
     gpu_deriv_out = cl::Buffer(context, CL_MEM_READ_WRITE, deriv_mem_bytes, NULL, &err);
     bytesAllocated += deriv_mem_bytes;
 
     gpu_nodes = cl::Buffer(context, CL_MEM_READ_ONLY, nodes_mem_bytes, NULL, &err);
     bytesAllocated += nodes_mem_bytes;
+	#endif
 
-    std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
+    //std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
 }
 
 //----------------------------------------------------------------------
@@ -559,6 +549,7 @@ void RBFFD_CL::updateFunctionSingle(unsigned int start_indx, unsigned int nb_val
 //
 void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU)
 {
+	std::cout << "**** RBFFD_CL::applyWeightsForDerivDouble\n";
     //TODO: FIX case when start_indx != 0
     //std::cout << "EVAN HERE\n";
 
@@ -680,19 +671,9 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 
-    err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
-            /* GLOBAL (work-groups in the grid)  */   cl::NDRange(nb_stencils),
-            /* LOCAL (work-items per work-group) */    cl::NullRange, NULL, &event);
+	enqueueKernel(kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
 
-    err = queue.finish();
-    if (err != CL_SUCCESS) {
-        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
-            " failed (" << err << ")\n";
-        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
-        exit(EXIT_FAILURE);
-    }
 
-    err = queue.finish();
     tm["applyWeights"]->end();
 
     float* deriv_temp = new float[nb_stencils];
@@ -738,7 +719,24 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
 
 }
 //----------------------------------------------------------------------
+void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_work_items, const cl::NDRange& items_per_workgroup, bool is_finish)
+{
+    err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
+            tot_work_items, items_per_workgroup, NULL, &event);
 
+    if (err != CL_SUCCESS) {
+        std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
+            " failed (" << err << ")\n";
+        std::cout << "FAILED TO ENQUEUE KERNEL" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+	if (is_finish) {
+    	err = queue.finish();
+        //queue.flush();
+	}
+}
+//----------------------------------------------------------------------
 
 
 

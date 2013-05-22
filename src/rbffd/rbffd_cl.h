@@ -7,6 +7,7 @@
 #include "rbffd.h"
 #include "utils/opencl/structs.h"
 
+
 class RBFFD_CL : public RBFFD, public CLBaseClass
 {
     protected: 
@@ -24,7 +25,12 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         cl::Buffer gpu_stencils; 
         unsigned int*    cpu_stencils;
 
+		// for use by various subclasses. 
         cl::Buffer gpu_deriv_out; 
+        cl::Buffer gpu_deriv_x_out; 
+        cl::Buffer gpu_deriv_y_out; 
+        cl::Buffer gpu_deriv_z_out; 
+        cl::Buffer gpu_deriv_l_out; 
 
         cl::Buffer gpu_function; 
 
@@ -42,6 +48,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         unsigned int weights_mem_bytes;
         unsigned int function_mem_bytes;
         unsigned int nodes_mem_bytes;
+    	unsigned int bytesAllocated;
 
         // Is a double precision extension available on the unit? 
         bool useDouble; 
@@ -122,9 +129,9 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
         // forceFinish ==> should we fire a queue.finish() and make sure all
         // tasks are completed (synchronously) before returning
-        void updateStencilsOnGPU(bool forceFinish);
+        virtual void updateStencilsOnGPU(bool forceFinish);
         
-        void updateWeightsOnGPU(bool forceFinish)
+        virtual void updateWeightsOnGPU(bool forceFinish)
         { 
             if (useDouble) { updateWeightsDouble(forceFinish); 
             } else { updateWeightsSingle(forceFinish); }
@@ -136,7 +143,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             } else { updateFunctionSingle(start_indx, nb_vals, u, forceFinish); }
         }
 
-        void updateNodesOnGPU(bool forceFinish);
+        virtual void updateNodesOnGPU(bool forceFinish);
 
 		//-----------------
         bool areGPUKernelsDouble() { return useDouble; }
@@ -145,7 +152,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
             return stencil_padded_size;
         }
 
-	void setAlignWeights(bool alignYN) { alignWeights = alignYN; } 
+	virtual void setAlignWeights(bool alignYN) { alignWeights = alignYN; } 
 
     protected: 
         void setupTimers(); 
@@ -153,14 +160,17 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         virtual void loadKernel(const std::string& kernel, const std::string& filename); 
         virtual void allocateGPUMem(); 
 
-        void clearCPUWeights();
-        void clearCPUStencils();
-        void clearCPUNodes();
+        virtual void clearCPUWeights();
+        virtual void clearCPUStencils();
+        virtual void clearCPUNodes();
 
-        void updateWeightsDouble(bool forceFinish);
-        void updateWeightsSingle(bool forceFinish);
-        void updateFunctionDouble(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish);
-        void updateFunctionSingle(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish);
+        virtual void updateWeightsDouble(bool forceFinish);
+        virtual void updateWeightsSingle(bool forceFinish);
+        virtual void updateFunctionDouble(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish);
+        virtual void updateFunctionSingle(unsigned int start_indx, unsigned int nb_vals, double* u, bool forceFinish);
+
+		virtual void enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_work_items, 
+				const cl::NDRange& items_per_workgroup, bool is_finish);
 
 
     protected: 

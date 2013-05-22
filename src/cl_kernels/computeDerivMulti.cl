@@ -1,8 +1,4 @@
 #include "useDouble.cl"
-//#define STRINGIFY_WITH_SUBS(s) STRINGIFY(s)
-//#define STRINGIFY(s) #s
-
-//std::string computeDerivMulti_source = STRINGIFY_WITH_SUBS(
 
 // GPU Only routine
 void computeDerivMulti(       
@@ -100,5 +96,3 @@ void computeDerivMulti4(
    }    
 }
 //----------------------------------------------------------------------
-
-//);

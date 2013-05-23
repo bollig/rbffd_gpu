@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
 	    	std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
 	    	std::cout << "Z: " << zderiv_gpu[i] << ", " <<  zderiv_cpu[i] << std:: endl; 
 	    	std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
-			der->printAllTimings();
+			//der->printAllTimings();
 			tm.printAll(stdout, 80);
             exit(EXIT_FAILURE); 
         }

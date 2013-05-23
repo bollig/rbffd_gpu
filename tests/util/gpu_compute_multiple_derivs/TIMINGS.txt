@@ -1,0 +1,91 @@
+gpu_compute_multiple_derivs
+
+20^3, 3D
+[Timer] m [RBFFD_MULTI_CL] Evaluate single de...  |  avg:     1.1380  |  tot:     1.1380  |  count=     1
+Times fluctuate up to 2.5 (instead of of 1.13). 
+----------------------------------------------------------------------
+30x30x30
+[Timer] m [RBFFD_MULTI_CL] Evaluate single de...  |  avg:     1.2670  |  tot:     2.5670  |  count=     1
+[Timer] [main] CPU tests                          |  avg:     2.6100  |  tot:     2.6100  |  count=     1
+[Timer] [main] GPU tests                          |  avg:     5.1860  |  tot:     5.1860  |  count=     1
+[Timer] [main] Stencil computation                |  avg:  3664.5061  |  tot:  3664.5061  |  count=     1
+Total runtime: 7724
+----------------------------------------------------------------------
+50x50x50
+[Timer] m [RBFFD_MULTI_CL] Evaluate single de...  |  avg:     2.3920  |  tot:     2.3920  |  count=     1
+Total runtime: 92000
+----------------------------------------------------------------------
+30x30x30
+[Timer] [main] Stencil weights                                        |  avg:    13.8620  |  tot:    13.8620  |  count=     1
+[Timer] [main] CPU tests                                              |  avg:     2.6170  |  tot:     2.6170  |  count=     1
+[Timer] [main] Destructors                                            |  avg:    37.6440  |  tot:    37.6440  |  count=     1
+[Timer] [main] GPU tests                                              |  avg:     4.7980  |  tot:     4.7980  |  count=     1
+[Timer] [main] Total Time                                             |  avg:  6222.5898  |  tot:  6222.5898  |  count=     1
+[Timer] [main] RBFFD constructor                                      |  avg:  2251.5000  |  tot:  2251.5000  |  count=     1
+[Timer] [main] Solution check                                         |  avg:     0.2660  |  tot:     0.2660  |  count=     1
+[Timer] [main] Sort + Grid generation                                 |  avg:     1.4350  |  tot:     1.4350  |  count=     1
+[Timer] [main] Stencil computation                                    |  avg:  3643.4260  |  tot:  3643.4260  |  count=     1
+[Timer] [main] Remaining time                                         |  avg:   127.4215  |  tot:   254.8430  |  count=     2
+----------------------------------------------------------------------
+60x60x30 (grid is 4x larger than 30x30x30)
+[Timer] [main] Stencil weights                                        |  avg:    54.5230  |  tot:    54.5230  |  count=     1
+[Timer] [main] CPU tests                                              |  avg:    11.4780  |  tot:    11.4780  |  count=     1
+[Timer] [main] Destructors                                            |  avg:    48.5900  |  tot:    48.5900  |  count=     1
+[Timer] [main] GPU tests                                              |  avg:    20.3330  |  tot:    20.3330  |  count=     1
+[Timer] [main] Total Time                                             |  avg: 66737.3594  |  tot: 66737.3594  |  count=     1
+[Timer] [main] RBFFD constructor                                      |  avg:  2205.9641  |  tot:  2205.9641  |  count=     1
+[Timer] [main] Solution check                                         |  avg:     1.3170  |  tot:     1.3170  |  count=     1
+[Timer] [main] Sort + Grid generation                                 |  avg:     5.2830  |  tot:     5.2830  |  count=     1
+[Timer] [main] Stencil computation  3.6->64 = 17 = 4^2 (HASH)         |  avg: 64088.0117  |  tot: 64088.0117  |  count=     1
+[Timer] [main] Remaining time                                         |  avg:   129.0375  |  tot:   258.0750  |  count=     2
+
+[Timer] [main] Stencil computation  (60x60x30 + KDTREE)               |  avg: 14204.4189  |  tot: 14204.4189  |  count=     1
+----------------------------------------------------------------------
+60x60x60
+[Timer] [main] Stencil weights                                        |  avg:   109.7710  |  tot:   109.7710  |  count=     1
+[Timer] [main] CPU tests                                              |  avg:    25.3400  |  tot:    25.3400  |  count=     1
+[Timer] [main] Destructors                                            |  avg:    96.7840  |  tot:    96.7840  |  count=     1
+[Timer] [main] GPU tests                                              |  avg:    48.4980  |  tot:    48.4980  |  count=     1
+[Timer] [main] Total Time                                             |  avg: 57829.5703  |  tot: 57829.5703  |  count=     1
+[Timer] [main] RBFFD constructor                                      |  avg:  2572.5510  |  tot:  2572.5510  |  count=     1
+[Timer] [main] Solution check                                         |  avg:     2.2260  |  tot:     2.2260  |  count=     1
+[Timer] [main] Sort + Grid generation                                 |  avg:     9.0260  |  tot:     9.0260  |  count=     1
+[Timer] [main] Stencil computation                                    |  avg: 54625.8281  |  tot: 54625.8281  |  count=     1
+[Timer] [main] Remaining time                                         |  avg:   127.0415  |  tot:   254.0830  |  count=     2
+----------------------------------------------------------------------
+40x40x40 (executed 10 times)
+[Timer] m [RBFFD_MULTI_CL] Evaluate single de...  |  avg:     5.2160  |  tot: 5.2160  |  count=     1
+(single derivative cost 7.428*4 = 27.7 (speedup: 27.7/5.22=5.7)
+
+8.4480 (multiple)
+6.6 (wide variance)
+----------------------------------------------------------------------
+100x100x100
+Stencil Random, 10 points per stencil.
+GPU execution time = 82.23 ms (using Events) |  avg:    82.9210  |  tot:    82.9210
+GPU execution time = 95.22 ms (using Events) |  avg:    95.9700  |  tot:    95.9700  |  count=     1
+GPU execution time = 82.50 ms (using Events) |  avg:    83.2020  |  tot:    83.2020  |  count=     1
+Stencil Compact
+GPU execution time = 71.18 ms, GPU(host) 71.8980
+73/73.7
+76.11/71.77
+
+So Random to compact: gain from 82 to 77 (5 percent gain.) Not much. Implies that approach is wrong and 
+there are other optimizations to be had. 
+
+----------------------------------------------------------------------
+100x100x100
+
+Stencil Random
+GPU tot: 335 ms
+GPU tot: 343 ms
+
+Stencil Compact
+32 points per stencil. 
+GPU tot:   151.07/151.85 ms
+GPU tot:   149.11/149.93 ms
+----------------------------------------------------------------------
+with restrict keyworword in kernel argument in cl code. 
+100^3, Random
+324, 331 ms, 340 ms (no speedup using restrict keyword)
+----------------------------------------------------------------------

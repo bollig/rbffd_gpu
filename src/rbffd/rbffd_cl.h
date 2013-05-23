@@ -13,6 +13,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
     protected: 
         // Weight buffers matching number of weights we have in super class
         cl::Buffer gpu_weights[NUM_DERIVATIVE_TYPES]; 
+        cl::Buffer gpu_all_weights; // concatenate the weights
         cl::Buffer gpu_nodes;
 
         double* cpu_weights_d[NUM_DERIVATIVE_TYPES];
@@ -48,6 +49,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         unsigned int weights_mem_bytes;
         unsigned int function_mem_bytes;
         unsigned int nodes_mem_bytes;
+    	unsigned int all_weights_bytes;
     	unsigned int bytesAllocated;
 
         // Is a double precision extension available on the unit? 

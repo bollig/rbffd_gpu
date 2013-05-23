@@ -52,6 +52,7 @@
 		util/test_template_macros
 		util/gpu_compute_derivs
 		util/gpu_compute_multiple_derivs
+		util/gpu_compute_multiple_derivs_weight
 		util/matrix_market_io
 
 

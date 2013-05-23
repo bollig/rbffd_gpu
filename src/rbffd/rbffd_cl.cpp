@@ -327,8 +327,9 @@ void RBFFD_CL::clearCPUWeights() {
 // 3) send new u to GPU
 // 4) call kernel to inner prod weights and u writing to deriv
 // 5) get deriv from GPU
-void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
-
+void RBFFD_CL::updateWeightsDouble(bool forceFinish)
+{
+// simply create one large array of zeros. Don't worry about correct weights
 	//std::cout << "GE enter updateWeightsDouble\n";
     if (weightsModified) {
 
@@ -726,6 +727,15 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
             tot_work_items, items_per_workgroup, NULL, &event);
 
+ 
+//END-START gives you hints on kind of “pure HW execution time”
+//10
+////the resolution of the events is 1e-09 sec
+//11
+//g_NDRangePureExecTimeMs = (cl_double)(end - start)*(cl_double)(1e-06); 
+//
+	std::vector<cl::Event> ve(1);
+
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
             " failed (" << err << ")\n";
@@ -737,6 +747,13 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
     	err = queue.finish();
         //queue.flush();
 	}
+
+	ve[0] = event;
+	cl::Event::waitForEvents(ve);
+	cl_ulong start = 0, end = 0;
+	event.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
+	event.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
+	printf("GPU execution time = %.2f ms\n", (float) (end-start)*1.e-6);
 }
 //----------------------------------------------------------------------
 

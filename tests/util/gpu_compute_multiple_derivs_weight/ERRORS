@@ -1,0 +1,3 @@
+errors in GPU code. 
+Must also make sure solution vector is reasonable. 
+And I must fix code in gpu_compute_multiple_derivatives. 

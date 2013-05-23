@@ -1,0 +1,51 @@
+70x70x1, dim=2
+[Timer] r [RBFFD] Apply Weights for all deriv...  |  avg:     0.1200  |  tot:     0.4800  |  count=     4
+[Timer] [RBFFD_CL] Evaluate single derivative...  |  avg:     3.8530  |  tot:     3.8530  |  count=     1
+[Timer] r [RBFFD] Compute All Weights For One...  |  avg:     0.0268  |  tot:   131.2585  |  count=  4900
+[Timer] [RBFFD_CL] RBFFD_CL (constructor)         |  avg:     0.0000  |  tot:     0.0000  |  count=     1
+[Timer] [RBFFD_CL] Load and Attach Kernel         |  avg:   345.5820  |  tot:   345.5820  |  count=     1
+[Timer] [RBFFD_CL]   (send stencil weights to...  |  avg:    12.9340  |  tot:    12.9340  |  count=     1
+[Timer] r [RBFFD] Apply Weights for all deriv...  |  avg:     0.1200  |  tot:     0.4800  |  count=     4
+[Timer] [RBFFD_CL] Evaluate single derivative...  |  avg:     3.8530  |  tot:     3.8530  |  count=     1
+[Timer] r [RBFFD] Compute All Weights For One...  |  avg:     0.0268  |  tot:   131.2585  |  count=  4900
+[Timer] [RBFFD_CL] RBFFD_CL (constructor)         |  avg:     0.0000  |  tot:     0.0000  |  count=     1
+[Timer] [RBFFD_CL] Load and Attach Kernel         |  avg:   345.5820  |  tot:   345.5820  |  count=     1
+[Timer] [RBFFD_CL]   (send stencil weights to...  |  avg:    12.9340  |  tot:    12.9340  |  count=     1
+----------------------------------------------------------------------
+Compute stencils using hash for faster results
+30x30x30, dim=3
+[Timer] r [RBFFD] Apply Weights for all deriv...  |  avg:     0.6585  |  tot:     2.6340  |  count=     4
+[Timer] [RBFFD_CL] Evaluate single derivative...  |  avg:     2.1010  |  tot:     2.1010  |  count=     1
+[Timer] [RBFFD_CL] RBFFD_CL (constructor)         |  avg:     0.0000  |  tot:     0.0000  |  count=     1
+[Timer] [RBFFD_CL] Load and Attach Kernel         |  avg:   353.3130  |  tot:   353.3130  |  count=     1
+----------------------------------------------------------------------
+20x20x20, dim=3
+[Timer] [RBFFD_CL] Evaluate single derivative...  |  avg:     6.5880  |  tot:     6.5880  |  count=     1
+[Timer] [RBFFD_CL] Evaluate single derivative...  |  avg:     7.2770  |  tot:     7.2770  |  count=     1
+4 derivatives will cost 28
+[Timer] m [RBFFD_MULTI_CL] Evaluate single de...  |  avg:     1.1380  |  tot:     1.1380  |  count=     1
+Factor 2.5 speedup. But I am not measuring GPU time, but only CPU time including GPU. 
+- ---------------------------------------------------------------------
+60x60x60
+[Timer] r [RBFFD] Apply Weights for all deriv...  |  avg:     6.3787  |  tot:    25.5150  |  count=     4
+[Timer] [RBFFD_CL] Evaluate single derivative...  |  avg:     5.9600  |  tot:     5.9600  |  count=     1
+[Timer] [RBFFD_CL] RBFFD_CL (constructor)         |  avg:     0.0000  |  tot:     0.0000  |  count=     1
+[Timer] [RBFFD_CL] Load and Attach Kernel         |  avg:   356.9220  |  tot:   356.9220  |  count=     1
+So to compute 4 derivatives, costs 24ms
+Multiple derivatives: 3.2ms  (time ratio: x8)
+----------------------------------------------------------------------
+40x40x40 (GPU executed 10 times)
+[Timer] [RBFFD_CL] Evaluate single derivative...  |  avg:     7.4280  |  tot: 7.4280  |  count=     1
+----------------------------------------------------------------------
+100x100x100, stencil size: 32
+stencil_RANDOM: 150ms for single derivative (4x slower then multi), 600 ms for 4 derivatives
+stencil_COMPACT: 50ms (event) and 80ms (gpu via host timing) for single derivative (4x slower then multi)
+    200 ms total for 4 derivatives
+
+Using Multi: random: 331ms, using compact: 150ms
+Speedup with multi: random (x2), compact(200/150=4/3). 
+With only 10 points per stencil, I get speedup of 4. 
+
+Effect of compact is much more pronounced on larger 32 point stencil (expected since getting 32 threads at a time
+for derivative calculation has no wasted threads. 
+----------------------------------------------------------------------

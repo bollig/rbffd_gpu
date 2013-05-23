@@ -61,7 +61,9 @@ int main(int argc, char** argv) {
     grid->generate();
     //grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
     //grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
-    grid->generateStencils(stencil_size, Grid::ST_KDTREE);   // nearest nb_points
+    //grid->generateStencils(stencil_size, Grid::ST_KDTREE);   // nearest nb_points
+    grid->generateStencils(stencil_size, Grid::ST_COMPACT);   // nearest nb_points
+    //grid->generateStencils(stencil_size, Grid::ST_RANDOM);   // nearest nb_points
     //grid->writeToFile(); 
 
 

@@ -43,7 +43,7 @@ CLBaseClass::CLBaseClass(int rank) {
     //create the command queue we will use to execute OpenCL commands
     try{
         deviceUsed = rank % devices.size();
-        queue = cl::CommandQueue(context, devices[deviceUsed], 0, &err);
+        queue = cl::CommandQueue(context, devices[deviceUsed], CL_QUEUE_PROFILING_ENABLE, &err);
         printf("[initialize] Using CL device: %d\n", deviceUsed);
         std::cout << "\tDevice Name: " <<
             devices[deviceUsed].getInfo<CL_DEVICE_NAME>().c_str() << std::endl;

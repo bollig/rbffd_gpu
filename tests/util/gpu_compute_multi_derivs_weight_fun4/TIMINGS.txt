@@ -1,0 +1,5 @@
+100x100x100, stencil:32, Random
+time: 474 (all four functions, all 4 derivatives). 
+Using double4 increased timing from 384 to 474. WHY? 
+
+100x50x50, stencil:64, ST_RANDOM, 109ms

@@ -53,6 +53,8 @@
 		util/gpu_compute_derivs
 		util/gpu_compute_multiple_derivs
 		util/gpu_compute_multiple_derivs_weight
+		util/gpu_compute_multi_derivs_weight_fun
+		util/gpu_compute_multi_derivs_weight_fun4
 		util/matrix_market_io
 
 

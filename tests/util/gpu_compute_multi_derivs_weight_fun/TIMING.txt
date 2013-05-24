@@ -1,0 +1,29 @@
+100x100x100, stencil:32, Random
+
+I just realized: as I increase number of derivatives I am computing, cache
+becomes scarcer.
+
+4 derivatives of 1 function :   avg:   344.3620  |  tot:   200
+4 derivatives of 2 functions:   avg:   344.3620  |  tot:   250
+4 derivatives of 3 functions:   avg:   344.3620  |  tot:   344.3620 (speedup: 2)
+4 derivatives of 4 functions:   avg:   391.3620   (factor 2 speedup over 4 derivatives of 1 function)
+----------------------------------------------------------------------
+I believe I can get additional speedup using double4. The key is returning data to regular memory. 
+
+Another issue: what is the effect of compacting the data on the subsequent solution update. 
+One must consider the cost of converting from one format to another. 
+
+Using temporaries for weights did not change timings. 
+----------------------------------------------------------------------
+Using stencil:64, Random: program crashed. WHY? 
+  Guess: allocating too much memory at once. 
+  stencil: 64*10^6 = 64 million, perhaps *4 = 256 millon bytes (senticl indices
+Using stencil:32, Random: 375ms
+Using stencil:32, Compact: 240ms
+----------------------------------------------------------------------
+Using stencil:64, ST_RANDOM, 132ms (4 functions, 4 derivatives)
+Using stencil:32, ST_RANDOM, 67ms (4 functions, 4 derivatives) (2x slower as expected)
+Using stencil:16, ST_RANDOM, 35ms (4 functions, 4 derivatives) (2x slower as expected)
+Using stencil: 8, ST_RANDOM, 20ms (4 functions, 4 derivatives) (2x slower as expected)
+(linear scaling, when computing x,y,z,l derivatives of u,v,w,p
+----------------------------------------------------------------------

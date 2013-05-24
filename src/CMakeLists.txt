@@ -75,6 +75,8 @@ SET( REQUIRED_CL_SOURCE_FILES
     rbffd/rbffd_single_cl.cpp
     rbffd/rbffd_multi_cl.cpp
 	rbffd/rbffd_multi_weight_cl.cpp
+	rbffd/rbffd_multi_weight_fun_cl.cpp
+	rbffd/rbffd_multi_weight_fun4_cl.cpp
     rbffd/rbffd_vcl.cpp
     ../external/opencl_libraries/include/pugixml/src/pugixml.cpp
 )

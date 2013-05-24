@@ -58,8 +58,8 @@ void RBFFD_CL::loadKernel(const std::string& kernel_name, const std::string& ker
     // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
     std::string my_source = this->loadFileContents(kernel_source_file.c_str(), true);
 
-    std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
-	std::cout  << my_source  << std::endl;
+    //std::cout << "This is my kernel source: ...\n" << my_source << "\n...END\n";
+	//std::cout  << my_source  << std::endl;
     this->loadProgram(my_source, useDouble);
 	std::cout << "after load Program \n";
 
@@ -171,6 +171,7 @@ void RBFFD_CL::allocateGPUMem() {
 
     // Two input arrays:
     // 	This one is allocated once on GPU and reused until our nodes move or we change the stencil size
+	std::cout << "Allocating " << stencil_mem_bytes << " bytes for stencil indices\n";
     gpu_stencils = cl::Buffer(context, CL_MEM_READ_WRITE, stencil_mem_bytes, NULL, &err);
     bytesAllocated += stencil_mem_bytes;
 

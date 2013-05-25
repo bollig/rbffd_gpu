@@ -205,6 +205,8 @@ void RBFFD_CL::allocateGPUMem() {
 	#endif
 
     //std::cout << "Allocated: " << bytesAllocated << " bytes (" << ((bytesAllocated / 1024.)/1024.) << "MB)" << std::endl;
+	//
+	printf("exiting allocateGPU in rbffd_cl.cpp\n");
 }
 
 //----------------------------------------------------------------------
@@ -508,6 +510,8 @@ void RBFFD_CL::updateFunctionDouble(unsigned int start_indx, unsigned int nb_val
 		std::cout << start_indx << ", " << nb_vals << "\n";
     }
     // TODO: mask off fields not update
+	printf("rbffd_cl::updateFunDouble, mem_bytes= %d\n", function_mem_bytes);
+	printf("rbffd_cl::updateFunDouble, start_indx= %d\n", start_indx);
     err = queue.enqueueWriteBuffer(gpu_function, CL_TRUE, start_indx*sizeof(double), function_mem_bytes, &u[start_indx], NULL, &event);
     //    queue.flush();
 

@@ -3,9 +3,88 @@
 
 //#include <CL/cl.hpp> 
 #include <string>
+#include <vector>
 #include "utils/opencl/cl_base_class.h"
 #include "rbffd.h"
 #include "utils/opencl/structs.h"
+
+template <typename T> 
+class SuperBuffer : public CLBaseClass {
+public:
+	cl::Buffer dev;
+	std::vector<T>* host;
+	int error;
+
+	// I cannot change pointer to host (cpu) data after creation
+	SuperBuffer() {
+		host = 0;
+	}
+	SuperBuffer(std::vector<T>* host_, int rank=0) : CLBaseClass(rank), host(host_) {
+		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+	}
+	SuperBuffer(std::vector<T>& host_, int rank=0) : CLBaseClass(rank), host(&host_) {
+		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+	}
+	// SuperBuffer allocates the space
+	SuperBuffer(int size, int rank=0) : CLBaseClass(rank) {
+		host = new std::vector<T>(size, 0.);
+		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+	}
+	inline T operator[](int i) {
+		return (*host)[i];  // efficiency is iffy
+	}
+	int devSizeBytes() {
+		int mem_size;
+		try {
+			mem_size = dev.getInfo<CL_MEM_SIZE>();
+	 	} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+	 		mem_size = -1; // invalid object
+		}
+		return(mem_size);
+	}
+	int hostSize() {
+		return(host->size());
+	}
+	int typeSize() {
+		return(sizeof(T));
+	}
+
+	int devSize()  { return( devSize()/typeSize()); }
+	int hostSizeBytes() { return(host.getSize()*typeSize()); }
+
+	void copyToHost(int nb_elements=-1, int start_index=0) {
+		int nb_elements_bytes = nb_elements*sizeof(T);
+		int offset_bytes = start_index * sizeof(T);
+		int mem_size_bytes = dev.getSize(); 
+		int transfer_bytes = mem_size_bytes - offset_bytes;
+		if (mem_size_bytes < 1) return;
+		if (nb_elements > -1 && transfer_bytes > nb_elements_bytes) {
+			transfer_bytes = nb_elements_bytes;
+		}
+		// do not use monitoring events
+    	err = queue.enqueueReadBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
+		if (err != CL_SUCCESS) {
+			std::cerr << " enqueueRead ERROR: " << err << std::endl;
+		}
+	}
+	// nb_bytes and start_index not yet used
+	void copyToDevice(int nb_elements=-1, int start_index=0) {
+		int nb_elements_bytes = nb_elements*sizeof(T);
+		int offset_bytes = start_index * sizeof(T);
+		int mem_size_bytes = devSizeBytes(); 
+		int transfer_bytes = mem_size_bytes - offset_bytes;
+		if (mem_size_bytes < 1) return;
+		if (nb_elements > -1 && transfer_bytes > nb_elements_bytes) {
+			transfer_bytes = nb_elements_bytes;
+		}
+		// do not use monitoring events
+    	err = queue.enqueueWriteBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
+		if (err != CL_SUCCESS) {
+			std::cerr << " enqueueWrite ERROR: " << err << std::endl;
+		}
+	}
+};
 
 
 class RBFFD_CL : public RBFFD, public CLBaseClass
@@ -32,8 +111,17 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         cl::Buffer gpu_deriv_y_out; 
         cl::Buffer gpu_deriv_z_out; 
         cl::Buffer gpu_deriv_l_out; 
-
         cl::Buffer gpu_function; 
+
+		SuperBuffer<double> sup_deriv;
+		SuperBuffer<double> sup_deriv_x;
+		SuperBuffer<double> sup_deriv_y;
+		SuperBuffer<double> sup_deriv_z;
+		SuperBuffer<double> sup_deriv_l;
+		SuperBuffer<double> sup_function;
+		SuperBuffer<double> sup_weights[NUM_DERIVATIVE_TYPES];
+		SuperBuffer<double> sup_all_weights;
+		SuperBuffer<int>    sup_stencils;
 
         // Total size of the gpu-stencils buffer. This should also be the size
         // of a single element of gpu_weights array. 
@@ -192,12 +280,44 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 		int getSize(cl::Buffer& buf) {
 			int mem_size;
 			try {
-				mem_size = gpu_all_weights.getInfo<CL_MEM_SIZE>();
+				mem_size = buf.getInfo<CL_MEM_SIZE>();
 	 		} catch (cl::Error er) {
 	    		printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
 	 			mem_size = -1; // invalid object
 			}
 			return(mem_size);
+		}
+		// copy from GPU to CPU (device to host)
+		// only copy if gpu buffer has nonzero size
+		// should check size of host array to ensure it that there is  sufficienty space
+		template <typename T>
+		void copyArrayToHost(cl::Buffer& buf, T* host_address) {
+			int mem_size = getSize(buf);
+			if (mem_size < 1) return;
+			// do not use monitoring events
+    		err = queue.enqueueReadBuffer(buf, CL_TRUE, 0, mem_size, host_address, NULL, NULL);
+			if (err != CL_SUCCESS) {
+				std::cerr << " enqueueRead ERROR: " << err << std::endl;
+			}
+		}
+		
+		// copy from CPU to GPU (host to device)
+		// only copy if gpu buffer has nonzero size
+		// should check size of host array to ensure it that there is  sufficienty space
+		// Assumes GPU and cpu buffers have the same size
+		// It would be best to have a wrapper around buffers to be used both on GPU and CPU
+		// If type of GPU array is different from type of array on CPU, e.g., double on CPU and float on GPU, 
+		//    copy to a temporary array first (NOT DONE)
+		template <typename T>
+		void copyArrayToGPU(T* host_address, cl::Buffer& buf) {
+			int mem_size = getSize(buf);
+			printf("mem_size= %d\n", mem_size);
+			if (mem_size < 1) return;
+			// do not use monitoring events
+    		err = queue.enqueueWriteBuffer(buf, CL_TRUE, 0, mem_size, host_address, NULL, NULL);
+			if (err != CL_SUCCESS) {
+				std::cerr << " enqueueRead ERROR: " << err << std::endl;
+			}
 		}
 };
 

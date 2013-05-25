@@ -97,9 +97,13 @@ void RBFFD_MULTI_CL::applyWeightsForDerivDouble(unsigned int start_indx, unsigne
         exit(EXIT_FAILURE);
     }
 
-	copyResultsToHost(deriv_x, deriv_y, deriv_z, deriv_l);
+	copyArrayToHost<double>(gpu_deriv_x_out, &deriv_x[0]); // did not work
+	copyArrayToHost(gpu_deriv_y_out, &deriv_y[0]);
+	copyArrayToHost(gpu_deriv_z_out, &deriv_z[0]);
+	copyArrayToHost(gpu_deriv_l_out, &deriv_l[0]);
 }
 //----------------------------------------------------------------------
+#if 0
 void RBFFD_MULTI_CL::copyResultsToHost(double* deriv_x, double* deriv_y, double* deriv_z, double* deriv_l)
 {
 // deriv_mem_bytes is sets by various subclass, and could change. But this function will always work, 
@@ -125,4 +129,5 @@ void RBFFD_MULTI_CL::copyResultsToHost(double* deriv_x, double* deriv_y, double*
         //        std::cout << "CL program finished!" << std::endl;
     }
 }
+#endif
 //----------------------------------------------------------------------

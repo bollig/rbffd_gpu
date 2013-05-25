@@ -238,7 +238,6 @@ void RBFFD_CL::updateNodesOnGPU(bool forceFinish) {
 }
 
 //----------------------------------------------------------------------
-//
 void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
     std::cout << "UPDATING STENCILS\n";
     std::vector<StencilType>& stencil_map = grid_ref.getStencils();
@@ -282,7 +281,7 @@ void RBFFD_CL::updateStencilsOnGPU(bool forceFinish) {
     }
 
 }
-
+//----------------------------------------------------------------------
 void RBFFD_CL::clearCPUNodes() {
     delete [] cpu_nodes;
 }

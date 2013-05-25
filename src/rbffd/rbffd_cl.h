@@ -14,19 +14,32 @@ public:
 	cl::Buffer dev;
 	std::vector<T>* host;
 	int error;
+	bool host_changed;
+	bool dev_changed;
+	std::string name;
 
 	// I cannot change pointer to host (cpu) data after creation
-	SuperBuffer() {
+	SuperBuffer(std::string name="") {
+		this->name = name;
 		host = 0;
 	}
-	SuperBuffer(std::vector<T>* host_, int rank=0) : CLBaseClass(rank), host(host_) {
+	SuperBuffer(std::vector<T>& host_, std::string name="", int rank=0) : CLBaseClass(rank), host(&host_) {
+		this->name = name;
+		dev_changed = false;
+		host_changed = true;
 		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
 	}
-	SuperBuffer(std::vector<T>& host_, int rank=0) : CLBaseClass(rank), host(&host_) {
+	SuperBuffer(std::vector<T>* host_, std::string name="", int rank=0) : CLBaseClass(rank), host(host_) {
+		this->name = name;
+		dev_changed = false;
+		host_changed = true;
 		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
 	}
 	// SuperBuffer allocates the space
-	SuperBuffer(int size, int rank=0) : CLBaseClass(rank) {
+	SuperBuffer(int size, std::string name="", int rank=0) : CLBaseClass(rank) {
+		this->name = name;
+		dev_changed = false;
+		host_changed = true;
 		host = new std::vector<T>(size, 0.);
 		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
 	}
@@ -54,6 +67,8 @@ public:
 	int hostSizeBytes() { return(host.getSize()*typeSize()); }
 
 	void copyToHost(int nb_elements=-1, int start_index=0) {
+		//if (gpu_changed == false) return;
+		//gpu_changed = false;
 		int nb_elements_bytes = nb_elements*sizeof(T);
 		int offset_bytes = start_index * sizeof(T);
 		int mem_size_bytes = dev.getSize(); 
@@ -70,6 +85,8 @@ public:
 	}
 	// nb_bytes and start_index not yet used
 	void copyToDevice(int nb_elements=-1, int start_index=0) {
+		//if (host_changed == false) return;
+		//host_changed = false;
 		int nb_elements_bytes = nb_elements*sizeof(T);
 		int offset_bytes = start_index * sizeof(T);
 		int mem_size_bytes = devSizeBytes(); 

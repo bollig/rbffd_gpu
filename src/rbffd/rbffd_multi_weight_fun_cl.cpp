@@ -37,7 +37,11 @@ void RBFFD_MULTI_WEIGHT_FUN_CL::allocateGPUMem()
 
 	all_weights_bytes = nb_nodes * stencil_map[0].size() * float_size * 4;
 	std::cout << "allocateGPU, stencil size: " << stencil_map[0].size() << std::endl;
+	printf("*** bef mem_size = %d\n", getSize(gpu_all_weights));
 	gpu_all_weights = cl::Buffer(context, CL_MEM_READ_WRITE, all_weights_bytes, NULL, &err);
+	printf("*** mem_size = %d\n", getSize(gpu_all_weights));
+	printf("*** all_weights_bytes= %d\n", all_weights_bytes);
+exit(0);
 	bytesAllocated += all_weights_bytes;
 
     function_mem_bytes = nb_nodes * float_size * 4;
@@ -96,7 +100,17 @@ void RBFFD_MULTI_WEIGHT_FUN_CL::applyWeightsForDerivDouble(unsigned int start_in
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 
-	enqueueKernel(kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
+	int items_per_group = 8;
+	int nn = nb_stencils % items_per_group;
+	int nd = nb_stencils / items_per_group;
+	int tot_items = (nn != 0) ? (nd+1)*items_per_group : nb_stencils; 
+	//enqueueKernel(kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
+	std::cout << "** nb_stencils: " << nb_stencils << std::endl;
+	std::cout << "** nb_stencils % items_per_group: " << nn << std::endl;
+	std::cout << "** nb_stencils / items_per_group: " << nd << std::endl;
+	std::cout << "** total number items: " << tot_items << std::endl;
+	std::cout << "** items per group: " << items_per_group << std::endl;
+	enqueueKernel(kernel, cl::NDRange(tot_items), cl::NDRange(items_per_group), true);
     tm["applyWeights"]->end();
 
 

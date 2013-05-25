@@ -21,9 +21,33 @@ Using stencil:64, Random: program crashed. WHY?
 Using stencil:32, Random: 375ms
 Using stencil:32, Compact: 240ms
 ----------------------------------------------------------------------
+100x50x50, 
 Using stencil:64, ST_RANDOM, 132ms (4 functions, 4 derivatives)
 Using stencil:32, ST_RANDOM, 67ms (4 functions, 4 derivatives) (2x slower as expected)
 Using stencil:16, ST_RANDOM, 35ms (4 functions, 4 derivatives) (2x slower as expected)
 Using stencil: 8, ST_RANDOM, 20ms (4 functions, 4 derivatives) (2x slower as expected)
 (linear scaling, when computing x,y,z,l derivatives of u,v,w,p
+----------------------------------------------------------------------
+Using floats instead of doubles: 
+Using stencil: 8, ST_RANDOM, 20ms (4 functions, 4 derivatives) (2x slower as expected)
+Using stencil: 64, ST_RANDOM, 125ms (4 functions, 4 derivatives) (2x slower as expected)
+(stick with floats; more predictable and flexible.)
+----------------------------------------------------------------------
+No effect of worksize. One thread per stencil. 
+Using stencil:64  tot:   127.1530ms, 32 items per workgroup. 
+Using stencil:64  tot:   130.1530ms, 64 items per workgroup. 
+Using stencil:64  tot:   134.1530ms, 128 items per workgroup. 
+
+Using stencil:16  tot:   36.0ms, 8 items per workgroup. 
+Using stencil:16  tot:   32.5ms, 32 items per workgroup. 
+Using stencil:16  tot:   33ms, 64 items per workgroup. 
+Using stencil:16  tot:   34.0ms, 128 items per workgroup. 
+
+Nb items per workgroup is not affecting much. 8 items per workgroup is bad,
+but the code is so inefficient, that this is not seen. 
+----------------------------------------------------------------------
+stencil: 32, RANDOM, 250,000 pts
+GPU: 53.4420ms (no weights in derivative calculations) 
+GPU: 80.4420ms (include weights in derv calculation)
+(not much difference. Not enough to justify 2 kernels)
 ----------------------------------------------------------------------

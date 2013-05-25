@@ -189,6 +189,16 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
                 nearest += 32; 
             return nearest;
         }
+		int getSize(cl::Buffer& buf) {
+			int mem_size;
+			try {
+				mem_size = gpu_all_weights.getInfo<CL_MEM_SIZE>();
+	 		} catch (cl::Error er) {
+	    		printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+	 			mem_size = -1; // invalid object
+			}
+			return(mem_size);
+		}
 };
 
 #endif 

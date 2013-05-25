@@ -20,7 +20,7 @@ void computeDerivMultiWeightFun(
    if(i < nb_stencils) {    
 
 // USE_DOUBLES
-#if 0
+#if 1
         FLOAT dx1 = 0.0;       
         FLOAT dy1 = 0.0;       
         FLOAT dz1 = 0.0;       
@@ -55,10 +55,11 @@ void computeDerivMultiWeightFun(
 			int sten = stencils[indx];
 			FLOAT s1 = solution[4*sten];
 			FLOAT s2 = solution[4*sten+1];
-			// REMOVE_WEIGHTS
-			#if 1
 			FLOAT s3 = solution[4*sten+2];
 			FLOAT s4 = solution[4*sten+3];
+
+			// REMOVE_WEIGHTS
+			#if 1
 			FLOAT w0 = ww[ind];
 			FLOAT w1 = ww[ind+1];
 			FLOAT w2 = ww[ind+2];
@@ -79,16 +80,31 @@ void computeDerivMultiWeightFun(
             dz3 += s3 * w2;
             dl3 += s3 * w3;
 
-            dx3 += s4 * w0;
-            dy3 += s4 * w1;
-            dz3 += s4 * w2;
-            dl3 += s4 * w3;
+            dx4 += s4 * w0;
+            dy4 += s4 * w1;
+            dz4 += s4 * w2;
+            dl4 += s4 * w3;
 			// REMOVE_WEIGHTS
 			#else
-            dx += sol;
-            dy += sol;
-            dz += sol;
-            dl += sol;
+            dx1 += s1;
+            dy1 += s1;
+            dz1 += s1;
+            dl1 += s1;
+
+            dx2 += s2;
+            dy2 += s2;
+            dz2 += s2;
+            dl2 += s2;
+
+            dx3 += s3;
+            dy3 += s3;
+            dz3 += s3;
+            dl3 += s3;
+
+            dx4 += s4;
+            dy4 += s4;
+            dz4 += s4;
+            dl4 += s4;
 			// REMOVE_WEIGHTS
 			#endif
         }   
@@ -140,7 +156,7 @@ void computeDerivMultiWeightFun(
 			dl += s*w3;
 		}
 		uint i4 = i << 2;
-		derx[i4] = dx.x;
+		derx[i4] = dx.x; // how can this be efficient? 
 		derx[i4+1] = dx.y;
 		derx[i4+2] = dx.z;
 		derx[i4+3] = dx.w;

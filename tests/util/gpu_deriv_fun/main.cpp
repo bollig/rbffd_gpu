@@ -26,8 +26,9 @@ FUN_CL* der;
 using namespace std;
 
 //----------------------------------------------------------------------
-void initializeArrays(int size)
+void initializeArrays()
 {
+	int size = grid->getNodeList().size();
     u_cpu.resize(4*size);
     xderiv_cpu.resize(size);
     yderiv_cpu.resize(size);
@@ -35,8 +36,7 @@ void initializeArrays(int size)
     lderiv_cpu.resize(size);
 }
 //----------------------------------------------------------------------
-//void check_cpu(u, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu);
-void check_cpu()
+void computeOnCPU()
 {
     // Verify that the CPU works
     // NOTE: we pass booleans at the end of the param list to indicate that
@@ -51,6 +51,56 @@ void check_cpu()
     tm["cpu_tests"]->end();
 	#endif
 
+}
+//----------------------------------------------------------------------
+void checkDerivativeAccuracy() {
+#if 0
+	tm["solution_check"]->start();
+    double max_diff = 0.; 
+    for (size_t i = 0; i < rbf_centers.size(); i++) {
+	double xdiff = fabs(xd[i] - xderiv_cpu[i]); 
+	double ydiff = fabs(yd[i] - yderiv_cpu[i]);
+	double zdiff = fabs(zd[i] - zderiv_cpu[i]);
+	double ldiff = fabs(ld[i] - lderiv_cpu[i]);
+
+	if (xdiff > max_diff) { max_diff = xdiff; }
+	if (ydiff > max_diff) { max_diff = ydiff; }
+	if (zdiff > max_diff) { max_diff = zdiff; }
+	if (ldiff > max_diff) { max_diff = ldiff; }
+
+//        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
+        if (( xdiff > 1e-5) 
+        || ( ydiff > 1e-5) 
+        || ( zdiff > 1e-5) 
+        || ( ldiff > 1e-5))
+        {
+            std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
+	    	std::cout << "Test failed on " << i << std::endl;
+	    	std::cout << "X: " << xderiv_gpu[i] - xderiv_cpu[i] << std:: endl; 
+	    	std::cout << "X: " << xderiv_gpu[i] << ", " <<  xderiv_cpu[i] << std:: endl; 
+	    	std::cout << "Y: " << yderiv_gpu[i] - yderiv_cpu[i] << std:: endl; 
+	    	std::cout << "Y: " << yderiv_gpu[i] << ", " <<  yderiv_cpu[i] << std:: endl; 
+	    	std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
+	    	std::cout << "Z: " << zderiv_gpu[i] << ", " <<  zderiv_cpu[i] << std:: endl; 
+	    	std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
+			der->printAllTimings();
+			tm.printAll(stdout, 80);
+            exit(EXIT_FAILURE); 
+        }
+    }
+    std::cout << "Max difference between weights: " << max_diff << std::endl;
+    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
+	tm["solution_check"]->end();
+       // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
+
+#endif
+
+#if 0
+    if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
+        RBFFDTests* der_test = new DerivativeTests();
+        der_test->testAllFunctions(*der, *grid);
+    }
+#endif 
 }
 //----------------------------------------------------------------------
 void setupTimers(EB::TimerList& tm) {
@@ -108,6 +158,7 @@ void createGrid()
 //----------------------------------------------------------------------
 void setupDerivativeWeights()
 {
+	tm["rbffd"]->start();
     if (use_gpu) {
         der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
         //der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
@@ -116,68 +167,17 @@ void setupDerivativeWeights()
     }
 	tm["rbffd"]->end();
 
+    tm["compute_weights"]->start();
     double epsilon = settings->GetSettingAs<double>("EPSILON");
     der->setEpsilon(epsilon);
 
 	// weights are all in one large array (for all derivatives)
-    tm["compute_weights"]->start();
     der->computeAllWeightsForAllStencilsEmpty();
     tm["compute_weights"]->end();
     cout << "end computing weights" << endl;
+
 }
 //----------------------------------------------------------------------
-void checkDerivatives() {
-	#if 0
-	tm["solution_check"]->start();
-    double max_diff = 0.; 
-    for (size_t i = 0; i < rbf_centers.size(); i++) {
-	double xdiff = fabs(xd[i] - xderiv_cpu[i]); 
-	double ydiff = fabs(yd[i] - yderiv_cpu[i]);
-	double zdiff = fabs(zd[i] - zderiv_cpu[i]);
-	double ldiff = fabs(ld[i] - lderiv_cpu[i]);
-
-	if (xdiff > max_diff) { max_diff = xdiff; }
-	if (ydiff > max_diff) { max_diff = ydiff; }
-	if (zdiff > max_diff) { max_diff = zdiff; }
-	if (ldiff > max_diff) { max_diff = ldiff; }
-
-//        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-        if (( xdiff > 1e-5) 
-        || ( ydiff > 1e-5) 
-        || ( zdiff > 1e-5) 
-        || ( ldiff > 1e-5))
-        {
-            std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
-	    	std::cout << "Test failed on " << i << std::endl;
-	    	std::cout << "X: " << xderiv_gpu[i] - xderiv_cpu[i] << std:: endl; 
-	    	std::cout << "X: " << xderiv_gpu[i] << ", " <<  xderiv_cpu[i] << std:: endl; 
-	    	std::cout << "Y: " << yderiv_gpu[i] - yderiv_cpu[i] << std:: endl; 
-	    	std::cout << "Y: " << yderiv_gpu[i] << ", " <<  yderiv_cpu[i] << std:: endl; 
-	    	std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
-	    	std::cout << "Z: " << zderiv_gpu[i] << ", " <<  zderiv_cpu[i] << std:: endl; 
-	    	std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
-			der->printAllTimings();
-			tm.printAll(stdout, 80);
-            exit(EXIT_FAILURE); 
-        }
-    }
-    std::cout << "Max difference between weights: " << max_diff << std::endl;
-    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
-	tm["solution_check"]->end();
-       // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
-
-   // der->applyWeightsForDeriv(RBFFD::Y, u, yderiv);
-   // der->applyWeightsForDeriv(RBFFD::LAPL, u, lapl_deriv);
-   #endif
-
-#if 0
-    if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
-        RBFFDTests* der_test = new DerivativeTests();
-        der_test->testAllFunctions(*der, *grid);
-    }
-#endif 
-
-}
 //----------------------------------------------------------------------
 void cleanup()
 {
@@ -201,15 +201,8 @@ int main(int argc, char** argv)
     settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
 	createGrid();
-	initializeArrays(grid->getNodeList().size());
-
-    // 0: 2D problem; 1: 3D problem
-    //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
-
-	tm["rbffd"]->start();
-
+	initializeArrays();
 	setupDerivativeWeights();
-
 
 	// **** NEED A COPY CONSTRUCTOR or an operator=
 	// Ideally, I should be able to work with RBFFD only, with no knowledge of OpenCL. 
@@ -221,35 +214,21 @@ int main(int argc, char** argv)
 	SuperBuffer<double> lderiv_gpu(lderiv_cpu);
 
 	 u_gpu.copyToDevice();
-	 xderiv_gpu.copyToDevice();
-	 yderiv_gpu.copyToDevice();
-	 zderiv_gpu.copyToDevice();
-	 lderiv_gpu.copyToDevice();
 
-	// weights should be one large array
-
-	vector<double>& uu = *u_gpu.host;
-	vector<double>& xd = *xderiv_gpu.host;
-	vector<double>& yd = *yderiv_gpu.host;
-	vector<double>& zd = *zderiv_gpu.host;
-	vector<double>& ld = *lderiv_gpu.host;
-
-	//check_cpu(u, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu);
-	check_cpu();
-
-	printf("xd = %f\n", xd[10]);
-    //der->applyWeightsForDeriv(u, xd, yd, zd, ld, true); // do not time
 	// Not in in RBBF (knows nothing about SuperBuffer). Must redesign
-    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); // do not time
-    tm["gpu_tests"]->start();
-    //der->applyWeightsForDeriv(u, xd, yd, zd, ld, true); // do not time
-    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); // do not time
+    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
+
+    tm["gpu_tests"]->start();  // skip first call
+    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
     tm["gpu_tests"]->end();
 
 	xderiv_gpu.copyToHost();
 	yderiv_gpu.copyToHost();
 	zderiv_gpu.copyToHost();
 	lderiv_gpu.copyToHost();
+
+	computeOnCPU();
+	checkDerivativeAccuracy();
 
 	cleanup();
     tm["main_total"]->end();

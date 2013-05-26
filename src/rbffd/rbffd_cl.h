@@ -43,6 +43,7 @@ public:
 		host = new std::vector<T>(size, 0.);
 		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
 	}
+	
 	inline T operator[](int i) {
 		return (*host)[i];  // efficiency is iffy
 	}
@@ -63,15 +64,15 @@ public:
 		return(sizeof(T));
 	}
 
-	int devSize()  { return( devSize()/typeSize()); }
-	int hostSizeBytes() { return(host.getSize()*typeSize()); }
+	int devSize()  { return( devSizeBytes()/typeSize() ); }
+	int hostSizeBytes() { return(hostSize()*typeSize()); }
 
 	void copyToHost(int nb_elements=-1, int start_index=0) {
 		//if (gpu_changed == false) return;
 		//gpu_changed = false;
 		int nb_elements_bytes = nb_elements*sizeof(T);
 		int offset_bytes = start_index * sizeof(T);
-		int mem_size_bytes = dev.getSize(); 
+		int mem_size_bytes = devSizeBytes(); 
 		int transfer_bytes = mem_size_bytes - offset_bytes;
 		if (mem_size_bytes < 1) return;
 		if (nb_elements > -1 && transfer_bytes > nb_elements_bytes) {

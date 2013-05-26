@@ -190,10 +190,13 @@ int main(int argc, char** argv) {
 			}
 		}
 
+#if 0
+	// perhaps we can visualize with graphviz?
 		std::ofstream gvout("undirected_graph.graphviz"); 
 		write_graphviz(gvout, g);
 		gvout.close();
 		std::cout << "Wrote the graphviz file: undirected_graph.graphviz" << std::endl;
+#endif 
 
 		// Dump the graph file for METIS
 

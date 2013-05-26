@@ -22,6 +22,10 @@
 
 export NPROC=4
 
+# Generate a regular grid of size 100^3 
+./gen_regular_grid.x -x 100 -y 100 -z 100
+
+
 # Read grid, generate stencils (Note: -c 4 is required because MD nodes have 4 cols)
 ./sten_gen.x -g ~/sphere_grids/md063.04096 -c 4 -N 4096 -n 17 -w 0 -l 100
 

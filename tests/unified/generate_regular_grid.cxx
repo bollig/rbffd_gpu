@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
-		("output_filename,o", po::value<string>(), "Grid filename (flat file, tab delimited columns). If none specified will default to \"input_grid.ascii\".")
+		("output_filename,o", po::value<string>(), "Grid filename (flat file, tab delimited columns). If none specified will default to \"regulargrid_{nx}x_{ny}y_{nz}z.ascii\".")
 		("nx,x", po::value<int>(), "Grid resolution in the X direction")
 		("ny,y", po::value<int>(), "Grid resolution in the Y direction")
 		("nz,z", po::value<int>(), "Grid resolution in the Z direction")
@@ -51,13 +51,11 @@ int main(int argc, char** argv) {
 	}
 
 	string output_filename; 
+	bool output_filename_specified = false; 
 	if (vm.count("output_filename")) {
 		output_filename = vm["output_filename"].as<string>(); 
-	} else {
-		output_filename = "input_grid.ascii";
+		output_filename_specified = true; 
 	}
-	cout << "Output grid: " << output_filename << ".\n";
-
 
 	int nx = 1; 
 	int ny = 1; 
@@ -91,7 +89,11 @@ int main(int argc, char** argv) {
 	grid->generate();
 	int grid_size = grid->getNodeListSize();
 	grid->generateStencils(stencil_size, Grid::ST_KDTREE);   // nearest nb_points
-	grid->writeToFile(output_filename); 
+	if (output_filename_specified) { 
+		grid->writeToFile(output_filename); 
+	} else { 
+		grid->writeToFile(); 
+	}
 
 	{
 		// Assemble a DIRECTED graph that is the spadjacency_list our stencils

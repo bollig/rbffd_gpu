@@ -12,147 +12,31 @@
 #include "utils/comm/communicator.h"
 #include "timer_eb.h"
 
+vector<double> u_cpu, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu; 
+
+Grid* grid;
+int dim;
+int stencil_size;
+int use_gpu;
+EB::TimerList tm; 
+ProjectSettings* settings;
+FUN_CL* der;
 
 using namespace std;
 
-int main(int argc, char** argv) {
-
-    EB::TimerList tm; 
-    tm["main_total"] = new EB::Timer("[main] Total Time");
-    tm["total"] = new EB::Timer("[main] Remaining time");
-    tm["rbffd"] = new EB::Timer("[main] RBFFD constructor");
-    tm["destructor"] = new EB::Timer("[main] Destructors");
-    tm["stencils"] = new EB::Timer("[main] Stencil computation");
-    tm["cpu_tests"] = new EB::Timer("[main] CPU tests");
-    tm["gpu_tests"] = new EB::Timer("[main] GPU tests");
-    tm["compute_weights"] = new EB::Timer("[main] Stencil weights");
-    tm["sort+grid"] = new EB::Timer("[main] Sort + Grid generation");
-	tm["solution_check"] = new EB::Timer("[main] Solution check");
-
-    tm["main_total"]->start();
-	tm["total"]->start();
-
-    Communicator* comm_unit = new Communicator(argc, argv);
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
-
-    int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
-    int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
-    int ny = 1; 
-    int nz = 1; 
-    if (dim > 1) {
-    	ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
-    }
-    if (dim > 2) {
-	nz = settings->GetSettingAs<int> ("NB_Z", ProjectSettings::required); 
-    } 
-    if (dim > 3) {
-	cout << "ERROR! Dim > 3 Not supported!" << endl;
-	exit(EXIT_FAILURE); 
-    }
-
-	// FIX: PROGRAM TO DEAL WITH SINGLE WEIGHT 
-	//
-
-    double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
-    double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
-    double minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
-    double maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
-    double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
-    double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
-
-    double stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
-
-    int use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
-
-    Grid* grid = NULL; 
- 
-    if (dim == 1) {
-	    grid = new RegularGrid(nx, 1, minX, maxX, 0., 0.); 
-    } else if (dim == 2) {
-	    grid = new RegularGrid(nx, ny, minX, maxX, minY, maxY); 
-    } else if (dim == 3) {
-	    grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
-    } else {
-	    cout << "ERROR! Dim > 3 Not Supported!" << endl;
-    }
-	tm["total"]->end();
-
-    tm["sort+grid"]->start();
-    grid->setSortBoundaryNodes(true); 
-    grid->generate();
-    tm["sort+grid"]->end();
-
-
-    tm["stencils"]->start();
-    //grid->generateStencils(stencil_size, Grid::ST_BRUTE_FORCE);   // nearest nb_points
-    //grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
-    //grid->generateStencils(stencil_size, Grid::ST_KDTREE);   // nearest nb_points
-    grid->generateStencils(stencil_size, Grid::ST_COMPACT);   // nearest nb_points
-    //grid->generateStencils(stencil_size, Grid::ST_RANDOM);   // nearest nb_points
-    tm["stencils"]->end();
-    //grid->writeToFile(); 
-
-
-    // 0: 2D problem; 1: 3D problem
-    //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
-
-	tm["rbffd"]->start();
-    //RBFFD* der;
-    FUN_CL* der;
-
-    if (use_gpu) {
-        der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
-        //der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
-    } else {
-        //der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
-    }
-	tm["rbffd"]->end();
-
-	// weights are all in one large array (for all derivatives)
-
-    double epsilon = settings->GetSettingAs<double>("EPSILON");
-    der->setEpsilon(epsilon);
-
-    printf("start computing weights\n");
-    //vector<StencilType>& stencil = grid->getStencils();
-	tm["total"]->start();
-    vector<NodeType>& rbf_centers = grid->getNodeList();
-	tm["total"]->end();
-    //der->computeAllWeightsForAllStencils();
-
-    tm["compute_weights"]->start();
-    der->computeAllWeightsForAllStencilsEmpty();
-    tm["compute_weights"]->end();
-    cout << "end computing weights" << endl;
-
-	// I will be trying to handle 4 solution vectors stored in u
-    vector<double> u(4*rbf_centers.size(),1.);
-    cout << "start computing derivative (on CPU)" << endl;
-	    
-
-    vector<double> xderiv_cpu(rbf_centers.size());	
-    //vector<double> xderiv_gpu(rbf_centers.size());	
-    vector<double> yderiv_cpu(rbf_centers.size());	
-    //vector<double> yderiv_gpu(rbf_centers.size());	
-    vector<double> zderiv_cpu(rbf_centers.size());	
-    //vector<double> zderiv_gpu(rbf_centers.size());	
-    vector<double> lderiv_cpu(rbf_centers.size());	
-    //vector<double> lderiv_gpu(rbf_centers.size());	
-
-	SuperBuffer<double> u_gpu(u); // not used yet
-	SuperBuffer<double> xderiv_gpu(xderiv_cpu); // not used yet
-	SuperBuffer<double> yderiv_gpu(yderiv_cpu);
-	SuperBuffer<double> zderiv_gpu(zderiv_cpu);
-	SuperBuffer<double> lderiv_gpu(lderiv_cpu);
-
-	// weights should be one large array
-
-	vector<double>& uu = *u_gpu.host;
-	vector<double>& xd = *xderiv_gpu.host;
-	vector<double>& yd = *yderiv_gpu.host;
-	vector<double>& zd = *zderiv_gpu.host;
-	vector<double>& ld = *lderiv_gpu.host;
-
+//----------------------------------------------------------------------
+void initializeArrays(int size)
+{
+    u_cpu.resize(4*size);
+    xderiv_cpu.resize(size);
+    yderiv_cpu.resize(size);
+    zderiv_cpu.resize(size);
+    lderiv_cpu.resize(size);
+}
+//----------------------------------------------------------------------
+//void check_cpu(u, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu);
+void check_cpu()
+{
     // Verify that the CPU works
     // NOTE: we pass booleans at the end of the param list to indicate that
     // the function "u" is new (true) or same as previous calls (false). This
@@ -166,11 +50,134 @@ int main(int argc, char** argv) {
     tm["cpu_tests"]->end();
 	#endif
 
+}
+//----------------------------------------------------------------------
+void setupTimers(EB::TimerList& tm) {
+    tm["main_total"] 		= new EB::Timer("[main] Total Time");
+    tm["total"] 			= new EB::Timer("[main] Remaining time");
+    tm["rbffd"] 			= new EB::Timer("[main] RBFFD constructor");
+    tm["destructor"] 		= new EB::Timer("[main] Destructors");
+    tm["stencils"] 			= new EB::Timer("[main] Stencil computation");
+    tm["cpu_tests"] 		= new EB::Timer("[main] CPU tests");
+    tm["gpu_tests"] 		= new EB::Timer("[main] GPU tests");
+    tm["compute_weights"] 	= new EB::Timer("[main] Stencil weights");
+    tm["sort+grid"] 		= new EB::Timer("[main] Sort + Grid generation");
+	tm["solution_check"] 	= new EB::Timer("[main] Solution check");
+	tm.printAll(stdout, 60);
+}
+//----------------------------------------------------------------------
+void createGrid()
+{
+	tm["total"]->start();
+
+    int dim = 3;
+    int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
+    int ny = settings->GetSettingAs<int>("NB_Y", ProjectSettings::required); 
+	int nz = settings->GetSettingAs<int>("NB_Z", ProjectSettings::required); 
+
+	// FIX: PROGRAM TO DEAL WITH SINGLE WEIGHT 
+
+    double minX = settings->GetSettingAs<double>("MIN_X", ProjectSettings::optional, "-1."); 	
+    double maxX = settings->GetSettingAs<double>("MAX_X", ProjectSettings::optional, "1."); 	
+    double minY = settings->GetSettingAs<double>("MIN_Y", ProjectSettings::optional, "-1."); 	
+    double maxY = settings->GetSettingAs<double>("MAX_Y", ProjectSettings::optional, "1."); 	
+    double minZ = settings->GetSettingAs<double>("MIN_Z", ProjectSettings::optional, "-1."); 	
+    double maxZ = settings->GetSettingAs<double>("MAX_Z", ProjectSettings::optional, "1."); 
+
+    stencil_size = settings->GetSettingAs<int>("STENCIL_SIZE", ProjectSettings::required); 
+    use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
+
+	grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
+	printf("ny,ny,nz= %d, %d, %d\n", nx, ny, nz);
+	printf("min/max= %f, %f, ,%f %f, %f, %f\n", minX, maxX, minY, maxY, minZ, maxZ);
+	tm["total"]->end();
+
+    tm["sort+grid"]->start();
+    grid->setSortBoundaryNodes(true); 
+    grid->generate();
+    tm["sort+grid"]->end();
+
+    tm["stencils"]->start();
+	Grid::st_generator_t stencil_type = Grid::ST_COMPACT;
+	//Grid::st_generator_t stencil_type = Grid::ST_RANDOM;
+    grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
+    tm["stencils"]->end();
+
+}
+//----------------------------------------------------------------------
+
+int main(int argc, char** argv)
+{
+	setupTimers(tm);
+	tm.printAll(stdout, 60);
+
+    tm["main_total"]->start();
+
+    Communicator* comm_unit = new Communicator(argc, argv);
+    settings = new ProjectSettings(argc, argv, comm_unit->getRank());
+
+	createGrid();
+	initializeArrays(grid->getNodeList().size());
+
+
+    // 0: 2D problem; 1: 3D problem
+    //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
+
+	tm["rbffd"]->start();
+    //RBFFD* der;
+
+    if (use_gpu) {
+        der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+        //der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+    } else {
+        //der = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+    }
+	tm["rbffd"]->end();
+
+    tm["compute_weights"]->start();
+    der->computeAllWeightsForAllStencilsEmpty();
+    tm["compute_weights"]->end();
+    cout << "end computing weights" << endl;
+
+	// weights are all in one large array (for all derivatives)
+
+    double epsilon = settings->GetSettingAs<double>("EPSILON");
+    der->setEpsilon(epsilon);
+
+    //printf("start computing weights\n");
+    //vector<StencilType>& stencil = grid->getStencils();
+	//tm["total"]->start();
+    //vector<NodeType>& rbf_centers = grid->getNodeList();
+	//tm["total"]->end();
+    //der->computeAllWeightsForAllStencils();
+
+
+	// I will be trying to handle 4 solution vectors stored in u
+    cout << "start computing derivative (on CPU)" << endl;
+	    
+
+	SuperBuffer<double> u_gpu(u_cpu); // not used yet
+	SuperBuffer<double> xderiv_gpu(xderiv_cpu); // not used yet
+	SuperBuffer<double> yderiv_gpu(yderiv_cpu);
+	SuperBuffer<double> zderiv_gpu(zderiv_cpu);
+	SuperBuffer<double> lderiv_gpu(lderiv_cpu);
+
 	 u_gpu.copyToDevice();
 	 xderiv_gpu.copyToDevice();
 	 yderiv_gpu.copyToDevice();
 	 zderiv_gpu.copyToDevice();
 	 lderiv_gpu.copyToDevice();
+
+	// weights should be one large array
+
+	vector<double>& uu = *u_gpu.host;
+	vector<double>& xd = *xderiv_gpu.host;
+	vector<double>& yd = *yderiv_gpu.host;
+	vector<double>& zd = *zderiv_gpu.host;
+	vector<double>& ld = *lderiv_gpu.host;
+
+	//check_cpu(u, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu);
+	check_cpu();
 
 	// compute on and retrieve weights from GPU
     //der->applyWeightsForDeriv(u, *xderiv_gpu.host, *yderiv_gpu.host, *zderiv_gpu.host, *lderiv_gpu.host, true); // do not time

@@ -20,6 +20,7 @@ int stencil_size;
 int use_gpu;
 EB::TimerList tm; 
 ProjectSettings* settings;
+//RBFFD* der;
 FUN_CL* der;
 
 using namespace std;
@@ -105,27 +106,8 @@ void createGrid()
 
 }
 //----------------------------------------------------------------------
-
-int main(int argc, char** argv)
+void setupDerivativeWeights()
 {
-	setupTimers(tm);
-	tm.printAll(stdout, 60);
-
-    tm["main_total"]->start();
-
-    Communicator* comm_unit = new Communicator(argc, argv);
-    settings = new ProjectSettings(argc, argv, comm_unit->getRank());
-
-	createGrid();
-	initializeArrays(grid->getNodeList().size());
-
-
-    // 0: 2D problem; 1: 3D problem
-    //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
-
-	tm["rbffd"]->start();
-    //RBFFD* der;
-
     if (use_gpu) {
         der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
         //der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
@@ -134,65 +116,17 @@ int main(int argc, char** argv)
     }
 	tm["rbffd"]->end();
 
+    double epsilon = settings->GetSettingAs<double>("EPSILON");
+    der->setEpsilon(epsilon);
+
+	// weights are all in one large array (for all derivatives)
     tm["compute_weights"]->start();
     der->computeAllWeightsForAllStencilsEmpty();
     tm["compute_weights"]->end();
     cout << "end computing weights" << endl;
-
-	// weights are all in one large array (for all derivatives)
-
-    double epsilon = settings->GetSettingAs<double>("EPSILON");
-    der->setEpsilon(epsilon);
-
-    //printf("start computing weights\n");
-    //vector<StencilType>& stencil = grid->getStencils();
-	//tm["total"]->start();
-    //vector<NodeType>& rbf_centers = grid->getNodeList();
-	//tm["total"]->end();
-    //der->computeAllWeightsForAllStencils();
-
-
-	// I will be trying to handle 4 solution vectors stored in u
-    cout << "start computing derivative (on CPU)" << endl;
-	    
-
-	SuperBuffer<double> u_gpu(u_cpu); // not used yet
-	SuperBuffer<double> xderiv_gpu(xderiv_cpu); // not used yet
-	SuperBuffer<double> yderiv_gpu(yderiv_cpu);
-	SuperBuffer<double> zderiv_gpu(zderiv_cpu);
-	SuperBuffer<double> lderiv_gpu(lderiv_cpu);
-
-	 u_gpu.copyToDevice();
-	 xderiv_gpu.copyToDevice();
-	 yderiv_gpu.copyToDevice();
-	 zderiv_gpu.copyToDevice();
-	 lderiv_gpu.copyToDevice();
-
-	// weights should be one large array
-
-	vector<double>& uu = *u_gpu.host;
-	vector<double>& xd = *xderiv_gpu.host;
-	vector<double>& yd = *yderiv_gpu.host;
-	vector<double>& zd = *zderiv_gpu.host;
-	vector<double>& ld = *lderiv_gpu.host;
-
-	//check_cpu(u, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu);
-	check_cpu();
-
-	// compute on and retrieve weights from GPU
-    //der->applyWeightsForDeriv(u, *xderiv_gpu.host, *yderiv_gpu.host, *zderiv_gpu.host, *lderiv_gpu.host, true); // do not time
-    //der->applyWeightsForDeriv(u, &(*xderiv_gpu.host)[0], &(*yderiv_gpu.host)[0], &(*zderiv_gpu.host)[0], &(*lderiv_gpu.host)[0], true); // do not time
-
-
-	printf("xd = %f\n", xd[10]);
-    //der->applyWeightsForDeriv(u, xd, yd, zd, ld, true); // do not time
-	// Not in in RBBF (knows nothing about SuperBuffer). Must redesign
-    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); // do not time
-    tm["gpu_tests"]->start();
-    //der->applyWeightsForDeriv(u, xd, yd, zd, ld, true); // do not time
-    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); // do not time
-    tm["gpu_tests"]->end();
-
+}
+//----------------------------------------------------------------------
+void checkDerivatives() {
 	#if 0
 	tm["solution_check"]->start();
     double max_diff = 0.; 
@@ -236,7 +170,6 @@ int main(int argc, char** argv)
    // der->applyWeightsForDeriv(RBFFD::LAPL, u, lapl_deriv);
    #endif
 
-
 #if 0
     if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
         RBFFDTests* der_test = new DerivativeTests();
@@ -244,17 +177,81 @@ int main(int argc, char** argv)
     }
 #endif 
 
-
-
-//    delete(subdomain);
-
+}
+//----------------------------------------------------------------------
+void cleanup()
+{
     tm["destructor"]->start();
 	delete(der);
     delete(grid);
     delete(settings);
     cout.flush();
     tm["destructor"]->end();
+}
+//----------------------------------------------------------------------
 
+int main(int argc, char** argv)
+{
+	setupTimers(tm);
+	tm.printAll(stdout, 60);
+
+    tm["main_total"]->start();
+
+    Communicator* comm_unit = new Communicator(argc, argv);
+    settings = new ProjectSettings(argc, argv, comm_unit->getRank());
+
+	createGrid();
+	initializeArrays(grid->getNodeList().size());
+
+    // 0: 2D problem; 1: 3D problem
+    //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
+
+	tm["rbffd"]->start();
+
+	setupDerivativeWeights();
+
+
+	// **** NEED A COPY CONSTRUCTOR or an operator=
+	// Ideally, I should be able to work with RBFFD only, with no knowledge of OpenCL. 
+	// The Superbuffer makes this difficulat
+	SuperBuffer<double> u_gpu(u_cpu); // not used yet
+	SuperBuffer<double> xderiv_gpu(xderiv_cpu); // not used yet
+	SuperBuffer<double> yderiv_gpu(yderiv_cpu);
+	SuperBuffer<double> zderiv_gpu(zderiv_cpu);
+	SuperBuffer<double> lderiv_gpu(lderiv_cpu);
+
+	 u_gpu.copyToDevice();
+	 xderiv_gpu.copyToDevice();
+	 yderiv_gpu.copyToDevice();
+	 zderiv_gpu.copyToDevice();
+	 lderiv_gpu.copyToDevice();
+
+	// weights should be one large array
+
+	vector<double>& uu = *u_gpu.host;
+	vector<double>& xd = *xderiv_gpu.host;
+	vector<double>& yd = *yderiv_gpu.host;
+	vector<double>& zd = *zderiv_gpu.host;
+	vector<double>& ld = *lderiv_gpu.host;
+
+	//check_cpu(u, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu);
+	check_cpu();
+
+	printf("xd = %f\n", xd[10]);
+    //der->applyWeightsForDeriv(u, xd, yd, zd, ld, true); // do not time
+	// Not in in RBBF (knows nothing about SuperBuffer). Must redesign
+    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); // do not time
+    tm["gpu_tests"]->start();
+    //der->applyWeightsForDeriv(u, xd, yd, zd, ld, true); // do not time
+    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); // do not time
+    tm["gpu_tests"]->end();
+
+	xderiv_gpu.copyToHost();
+	yderiv_gpu.copyToHost();
+	zderiv_gpu.copyToHost();
+	lderiv_gpu.copyToHost();
+
+	cleanup();
     tm["main_total"]->end();
 	tm.printAll(stdout, 60);
 

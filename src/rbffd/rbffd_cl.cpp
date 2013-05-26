@@ -39,7 +39,6 @@ void RBFFD_CL::setupTimers() {
     tm["applyWeights"] = new Timer("[RBFFD_CL] Evaluate single derivative by applying weights to function", 1);
 }
 
-
 //----------------------------------------------------------------------
 void RBFFD_CL::loadKernel(const std::string& kernel_name, const std::string& kernel_source_file)
 {
@@ -738,7 +737,8 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
 //11
 //g_NDRangePureExecTimeMs = (cl_double)(end - start)*(cl_double)(1e-06); 
 //
-	std::vector<cl::Event> ve(1);
+	std::vector<cl::Event> ve;
+	ve.push_back(event);
 
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
@@ -752,7 +752,7 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
         //queue.flush();
 	}
 
-	ve[0] = event;
+	return; // TEMPORARY
 	cl::Event::waitForEvents(ve);
 	cl_ulong start = 0, end = 0;
 	event.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);

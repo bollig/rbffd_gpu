@@ -5,21 +5,25 @@
 #include <string>
 #include <sstream>
 #include <CL/cl.hpp>
+#include <stdio.h>
+#include <vector>
 
 // A bunch of util methods borrowed from Ian's tutorial on opencl
 class CLBaseClass 
 {
+public:
+        // We use static so all of our inheriting classes can share buffers
+        // across the context
+        static cl::Context context;
+        static cl::CommandQueue queue;
+
     protected:
         unsigned int deviceUsed;
         std::vector<cl::Device> devices;
 
-        // We use static so all of our inheriting classes can share buffers
-        // across the context
-        static cl::Context context;
         // Track if context was created so we dont accidentally make a new one
         static int contextCreated; 
 
-        cl::CommandQueue queue;
         cl::Program program;
         cl::Kernel kernel;
 
@@ -50,7 +54,7 @@ class CLBaseClass
         //----------------------------------------------------------------------
         // Helper function to get error string
         // *********************************************************************
-        const char* oclErrorString(cl_int error)
+        static const char* oclErrorString(cl_int error)
         {
             static const char* errorString[] = {
                 "CL_SUCCESS",
@@ -136,6 +140,133 @@ class CLBaseClass
                 std::string delim, std::vector<std::string> &elems, bool
                 keep_substr=false);
         std::vector<std::string> split(const std::string &s, const std::string delim, bool keep_substr=false); 
+
+public:
+	
+
+template <typename T> 
+class SuperBuffer {
+public:
+	cl::Buffer dev;
+	std::vector<T>* host;
+	int error;
+	bool host_changed;
+	bool dev_changed;
+	std::string name;
+
+	// I cannot change pointer to host (cpu) data after creation
+	// // cost of CLBaseClass is high. Should only be called once. 
+	SuperBuffer(std::string name="") {
+		this->name = name;
+		host = 0;
+		printf("++++ Created empty SuperBuffer ++++ \n\n");
+	}
+	SuperBuffer(std::vector<T>& host_, std::string name="") : host(&host_) {
+		printf("SuperBuffer(std::vector<T>& host_, std::string name=\n");
+		this->name = name;
+		dev_changed = false;
+		host_changed = true;
+		try {
+			printf("sizof(T)e: %d\n", sizeof(T));
+			printf("size: %d\n", sizeof(T)*host->size());
+			printf("host size: %d\n", host->size());
+			dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+			printf("Created SuperBuffer *** %s (size: %d bytes) ***\n\n", name.c_str(), host->size()*sizeof(T));
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+			exit(0);
+		}
+	}
+	SuperBuffer(std::vector<T>* host_, std::string name="") : host(host_) {
+		printf("SuperBuffer(std::vector<T>* host_, std::string name=\n");
+		this->name = name;
+		dev_changed = false;
+		host_changed = true;
+		try {
+			dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+			printf("Created SuperBuffer *** %s (size: %d bytes) ***\n\n", name.c_str(), host->size()*sizeof(T));
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+			exit(0);
+		}
+	}
+	// SuperBuffer allocates the space
+	SuperBuffer(int size, std::string name="") {
+		printf("SuperBuffer(int size, std::string name=\n");
+		this->name = name;
+		dev_changed = false;
+		host_changed = true;
+		host = new std::vector<T>(size, 0); // implicitly convert from int to double if necesary
+		try {
+			dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+			printf("Created SuperBuffer *** %s (size: %d bytes) ***\n\n", name.c_str(), size*sizeof(T));
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+			exit(0);
+		}
+	}
+	
+	inline T operator[](int i) {
+		return (*host)[i];  // efficiency is iffy
+	}
+	int devSizeBytes() {
+		int mem_size;
+		try {
+			mem_size = dev.getInfo<CL_MEM_SIZE>();
+	 	} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), CLBaseClass::oclErrorString(er.err()));
+	 		mem_size = -1; // invalid object
+		}
+		return(mem_size);
+	}
+	int hostSize() {
+		return(host->size());
+	}
+	int typeSize() {
+		return(sizeof(T));
+	}
+
+	int devSize()  { return( devSizeBytes()/typeSize() ); }
+	int hostSizeBytes() { return(hostSize()*typeSize()); }
+
+	void copyToHost(int nb_elements=-1, int start_index=0) {
+		//if (gpu_changed == false) return;
+		//gpu_changed = false;
+		int nb_elements_bytes = nb_elements*sizeof(T);
+		int offset_bytes = start_index * sizeof(T);
+		int mem_size_bytes = devSizeBytes(); 
+		int transfer_bytes = mem_size_bytes - offset_bytes;
+		if (mem_size_bytes < 1) return;
+		if (nb_elements > -1 && transfer_bytes > nb_elements_bytes) {
+			transfer_bytes = nb_elements_bytes;
+		}
+		// do not use monitoring events
+    	error = queue.enqueueReadBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
+		if (error != CL_SUCCESS) {
+			std::cerr << " enqueueRead ERROR: " << error << std::endl;
+		}
+	}
+	// nb_bytes and start_index not yet used
+	void copyToDevice(int nb_elements=-1, int start_index=0) {
+		//if (host_changed == false) return;
+		//host_changed = false;
+		int nb_elements_bytes = nb_elements*sizeof(T);
+		int offset_bytes = start_index * sizeof(T);
+		int mem_size_bytes = devSizeBytes(); 
+		int transfer_bytes = mem_size_bytes - offset_bytes;
+		if (mem_size_bytes < 1) return;
+		if (nb_elements > -1 && transfer_bytes > nb_elements_bytes) {
+			transfer_bytes = nb_elements_bytes;
+		}
+		// do not use monitoring events
+    	error = queue.enqueueWriteBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
+		if (error != CL_SUCCESS) {
+			std::cerr << " enqueueWrite ERROR: " << error << std::endl;
+		}
+	}
+}; // end SuperBuffer subclass
+
+
 
 };
 

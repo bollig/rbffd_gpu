@@ -10,6 +10,7 @@
 
 // Static definition.
 cl::Context CLBaseClass::context;
+cl::CommandQueue CLBaseClass::queue;
 int CLBaseClass::contextCreated = 0;
 
 //----------------------------------------------------------------------

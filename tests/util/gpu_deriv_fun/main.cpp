@@ -21,7 +21,8 @@ int use_gpu;
 EB::TimerList tm; 
 ProjectSettings* settings;
 //RBFFD* der;
-FUN_CL* der;
+//FUN_CL* der;
+RBFFD_CL* der;
 
 using namespace std;
 
@@ -29,7 +30,9 @@ using namespace std;
 void initializeArrays()
 {
 	int size = grid->getNodeList().size();
+	printf("initializeArrays: size: %d\n", size);
     u_cpu.resize(4*size);
+	printf("size of u: %d\n", u_cpu.size());
     xderiv_cpu.resize(size);
     yderiv_cpu.resize(size);
     zderiv_cpu.resize(size);
@@ -206,17 +209,25 @@ int main(int argc, char** argv)
 
 	// **** NEED A COPY CONSTRUCTOR or an operator=
 	// Ideally, I should be able to work with RBFFD only, with no knowledge of OpenCL. 
-	// The Superbuffer makes this difficulat
-	SuperBuffer<double> u_gpu(u_cpu); // not used yet
-	SuperBuffer<double> xderiv_gpu(xderiv_cpu); // not used yet
-	SuperBuffer<double> yderiv_gpu(yderiv_cpu);
-	SuperBuffer<double> zderiv_gpu(zderiv_cpu);
-	SuperBuffer<double> lderiv_gpu(lderiv_cpu);
+	// The Superbuffer makes this difficult
+	printf("** u size: %d\n", u_cpu.size());
+	RBFFD_CL::SuperBuffer<double> u_gpu(u_cpu, "u_cpu"); // not used yet
+	RBFFD_CL::SuperBuffer<double> xderiv_gpu(xderiv_cpu, "xderiv_cpu"); // not used yet
+	RBFFD_CL::SuperBuffer<double> yderiv_gpu(yderiv_cpu, "yderiv_cpu");
+	RBFFD_CL::SuperBuffer<double> zderiv_gpu(zderiv_cpu, "zderiv_cpu");
+	printf("after created superbuffer zderiv_cpu\n");
+	RBFFD_CL::SuperBuffer<double> lderiv_gpu(lderiv_cpu, "lderiv_cpu");
+	printf("after created superbuffer lderiv_cpu\n");
 
 	 u_gpu.copyToDevice();
+	 xderiv_gpu.copyToDevice();
+	 yderiv_gpu.copyToDevice();
+	 zderiv_gpu.copyToDevice();
+	 lderiv_gpu.copyToDevice();
 
 	// Not in in RBBF (knows nothing about SuperBuffer). Must redesign
     der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
+	exit(0); // there is exit in rbffd_cl.cpp as well, in enqueueKernel
 
     tm["gpu_tests"]->start();  // skip first call
     der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 

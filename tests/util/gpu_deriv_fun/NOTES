@@ -1,0 +1,8 @@
+Why is constructor 7 sec? Way too long!  Must figure this out. Related to SuperBuffers? 
+
+Getting HW errors. Do not know why. Something to do with Superbuffers? 
+
+*** OPENCL MIC DEVICE HW EXCEPTION ***: Segmentation fault (Address not mapped to object [0x7feee4c37c18])
+*** OPENCL MIC DEVICE HW EXCEPTION ***: Segmentation fault (Address not mapped to object [0x7feee4c37e18])
+*** OPENCL MIC DEVICE HW EXCEPTION ***: Segmentation fault (Invalid permissions for mapped object [0x7fedbe277818])
+*** OPENCL MIC DEVICE HW EXCEPTION ***: Segmentation fault (Address not mapped to object [0x7ff045b01018])

@@ -8,8 +8,10 @@
 #include "rbffd.h"
 #include "utils/opencl/structs.h"
 
+
+#if 0
 template <typename T> 
-class SuperBuffer : public CLBaseClass {
+class SuperBuffer {
 public:
 	cl::Buffer dev;
 	std::vector<T>* host;
@@ -17,31 +19,52 @@ public:
 	bool host_changed;
 	bool dev_changed;
 	std::string name;
+	CLBaseClass* cl_base;
 
 	// I cannot change pointer to host (cpu) data after creation
+	// // cost of CLBaseClass is high. Should only be called once. 
 	SuperBuffer(std::string name="") {
 		this->name = name;
 		host = 0;
+		printf("++++ Created empty SuperBuffer ++++ \n\n");
 	}
-	SuperBuffer(std::vector<T>& host_, std::string name="", int rank=0) : CLBaseClass(rank), host(&host_) {
+	SuperBuffer(std::vector<T>& host_, std::string name="", CLBaseClass* cl_base=&clbase) { //int rank=0) {
 		this->name = name;
 		dev_changed = false;
 		host_changed = true;
-		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+		try {
+			dev = cl::Buffer(cl_base->context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+			printf("Created SuperBuffer *** %s (%d) ***\n\n", name.c_str(), error);
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), cl_base->oclErrorString(er.err()));
+			exit(0);
+		}
 	}
-	SuperBuffer(std::vector<T>* host_, std::string name="", int rank=0) : CLBaseClass(rank), host(host_) {
+	SuperBuffer(std::vector<T>* host_, std::string name="", CLBaseClass* cl_base=&clbase) { //int rank=0) {
 		this->name = name;
 		dev_changed = false;
 		host_changed = true;
-		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+		try {
+			dev = cl::Buffer(cl_base->context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+			printf("Created SuperBuffer *** %s (%d) ***\n\n", name.c_str(), error);
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), cl_base->oclErrorString(er.err()));
+			exit(0);
+		}
 	}
 	// SuperBuffer allocates the space
-	SuperBuffer(int size, std::string name="", int rank=0) : CLBaseClass(rank) {
+	SuperBuffer(int size, std::string name="", CLBaseClass* cl_base=&clbase) { //int rank=0) {
 		this->name = name;
 		dev_changed = false;
 		host_changed = true;
-		host = new std::vector<T>(size, 0.);
-		dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+		host = new std::vector<T>(size, 0); // implicitly convert from int to double if necesary
+		try {
+			dev = cl::Buffer(cl_base->context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+			printf("Created SuperBuffer *** %s (%d) ***\n\n", name.c_str(), error);
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), cl_base->oclErrorString(er.err()));
+			exit(0);
+		}
 	}
 	
 	inline T operator[](int i) {
@@ -52,7 +75,7 @@ public:
 		try {
 			mem_size = dev.getInfo<CL_MEM_SIZE>();
 	 	} catch (cl::Error er) {
-	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), cl_base->oclErrorString(er.err()));
 	 		mem_size = -1; // invalid object
 		}
 		return(mem_size);
@@ -79,9 +102,9 @@ public:
 			transfer_bytes = nb_elements_bytes;
 		}
 		// do not use monitoring events
-    	err = queue.enqueueReadBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
-		if (err != CL_SUCCESS) {
-			std::cerr << " enqueueRead ERROR: " << err << std::endl;
+    	error = cl_base->queue.enqueueReadBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
+		if (error != CL_SUCCESS) {
+			std::cerr << " enqueueRead ERROR: " << error << std::endl;
 		}
 	}
 	// nb_bytes and start_index not yet used
@@ -97,12 +120,13 @@ public:
 			transfer_bytes = nb_elements_bytes;
 		}
 		// do not use monitoring events
-    	err = queue.enqueueWriteBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
-		if (err != CL_SUCCESS) {
-			std::cerr << " enqueueWrite ERROR: " << err << std::endl;
+    	error = cl_base->queue.enqueueWriteBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
+		if (error != CL_SUCCESS) {
+			std::cerr << " enqueueWrite ERROR: " << error << std::endl;
 		}
 	}
 };
+#endif
 
 
 class RBFFD_CL : public RBFFD, public CLBaseClass
@@ -261,6 +285,11 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         }
 
 	virtual void setAlignWeights(bool alignYN) { alignWeights = alignYN; } 
+
+public:
+
+	virtual void calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
+			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU) {};
 
     protected: 
         void setupTimers(); 

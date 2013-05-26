@@ -11,6 +11,7 @@
 #include "rbfs/rbf_gaussian.h"
 // For writing weights in (sparse) matrix market format
 #include "mmio.h"
+#include "utils/random.h"
 
 
 
@@ -581,12 +582,16 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             case RBFFD::ContourSVD:
                 this->computeWeightsForStencil_ContourSVD(which, st_indx);
                 break;
+			case RBFFD::Random: // random weights for testing GPU against CPU [0-1]
+				this->computeWeightsForStencil_Random(which, st_indx);
+				break;
             default:
                 std::cout << "Unknown method to compute weights for single stencil" << std::endl;
                 exit(EXIT_FAILURE);
         }
     }
 
+	//---------------------
     void RBFFD::computeWeightsForStencil_Direct(DerType which, int st_indx) {
         // Same as computeAllWeightsForStencil, but we dont leverage multiple RHS solve
         tm["computeOneWeights"]->start();
@@ -1437,6 +1442,25 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
 
 
+	//--------------------
+	void RBFFD::computeWeightsForStencil_Random(DerType which, int st_indx)
+	{
+		unsigned int irbf = st_indx;
+		StencilType& stencil = grid_ref.getStencil(st_indx);
+		unsigned int sz = stencil.size();
+		int st_center = -1;
+
+		// in other routines, Evan uses "n+np" for the stencil size. I do not know what this eans. 
+
+		int type_index = getDerTypeIndx(which); 
+		if (this->weights[type_index][irbf] == NULL) {
+			this->weights[type_index][irbf] = new double[sz];
+		}
+		for (unsigned int j = 0; j < sz; j++) {
+			this->weights[type_index][irbf][j] = randf(-1.,1.);
+		}
+	}
+	//-------------------------
     void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         //----------------------------------------------------------------------
         //void Derivative::computeWeightsSVD(vector<Vec3>& rbf_centers, StencilType& stencil, int irbf, const char* choice)

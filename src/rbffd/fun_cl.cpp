@@ -33,20 +33,27 @@ void FUN_CL::allocateGPUMem()
 	printf("nb_nodes= %d\n", nb_nodes);
 	printf("nodes_per_stencil= %d\n", nodes_per_stencil);
 
+	printf("**** nb_nodes= %d\n", nb_nodes);
+	printf("nodes_per_stencil= %d\n", nodes_per_stencil);
 	sup_stencils = SuperBuffer<int>(nb_nodes);
-	sup_all_weights = SuperBuffer<double>(nb_nodes*nb_stencils*4);
+	sup_all_weights = SuperBuffer<double>(nb_nodes*nodes_per_stencil*4);
 }
 //----------------------------------------------------------------------
 void FUN_CL::calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
 			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU)
 {
 	printf("applyWeightsFoDerivDouble using SuperBuffer arguments\n");
-	if (isChangedU) u.copyToDevice();
+	//if (isChangedU) u.copyToDevice();
+	sup_stencils.copyToDevice();
 	sup_all_weights.copyToDevice();
 
     err = queue.finish(); // added by GE
     tm["applyWeights"]->start();
     unsigned int nb_stencils = nb_nodes;
+   unsigned int stencil_size = grid_ref.getMaxStencilSize();
+
+	printf("*** nb_stencils= %d\n", nb_stencils);
+	printf("*** stencil_size= %d\n", stencil_size);
 
     try {
         int i = 0;
@@ -60,7 +67,6 @@ void FUN_CL::calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
         //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
         //unsigned int arguments at this time
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
-        unsigned int stencil_size = grid_ref.getMaxStencilSize();
         kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
         //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
         std::cout << "Set " << i << " kernel args\n";
@@ -68,7 +74,9 @@ void FUN_CL::calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 
+	printf("nb_stencils= %d\n", nb_stencils);
 	enqueueKernel(kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
+	exit(0);
     tm["applyWeights"]->end();
 }
 //----------------------------------------------------------------------

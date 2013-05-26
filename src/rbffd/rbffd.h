@@ -87,7 +87,7 @@ class RBFFD
 
         std::string derTypeStr[NUM_DERIVATIVE_TYPES]; 
 
-        enum WeightType {Direct, ContourSVD};
+        enum WeightType {Direct, ContourSVD, Random};
         std::string weightTypeStr[2]; 
 
         typedef struct e_val_output {
@@ -212,6 +212,9 @@ class RBFFD
 
         // Single RHS ContourSVD
         void computeWeightsForStencil_ContourSVD(DerType dt, int st_indx);
+
+		// Random weights in range [0-1] for testing and efficiency
+		void computeWeightsForStencil_Random(DerType dt, int st_indx);
 
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;

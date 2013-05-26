@@ -11,7 +11,7 @@ class FUN_CL : public RBFFD_CL
 	private:
 		int nb_nodes;
 		int nodes_per_stencil;
-    	unsigned int nb_stencils = stencil_map.size();
+    	unsigned int nb_stencils;
 
     public: 
         FUN_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank=0);

@@ -16,7 +16,6 @@ FUN_CL::FUN_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
 	nb_nodes = grid_ref.getNodeListSize();
 	std::vector<StencilType>& stencil_map = grid_ref.getStencils();
 	nodes_per_stencil = stencil_map[0].size(); // assumed constant
-    std::vector<StencilType>& stencil_map = grid_ref.getStencils();
     nb_stencils = stencil_map.size();
 
     this->loadKernel("computeDerivMultiWeightFunKernel", "derivative_kernels.cl");

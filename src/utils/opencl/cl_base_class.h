@@ -161,6 +161,17 @@ public:
 		host = 0;
 		printf("++++ Created empty SuperBuffer ++++ \n\n");
 	}
+	void create(std::vector<T>& host_) { // std::string name="") : host(&host_) {
+		dev_changed = false;
+		host_changed = true;
+		try {
+			host = &host_;
+			dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+			exit(0);
+		}
+	}
 	SuperBuffer(std::vector<T>& host_, std::string name="") : host(&host_) {
 		printf("SuperBuffer(std::vector<T>& host_, std::string name=\n");
 		this->name = name;
@@ -177,6 +188,17 @@ public:
 			exit(0);
 		}
 	}
+	void create(std::vector<T>* host_) { // std::string name="") : host(&host_) {
+		dev_changed = false;
+		host_changed = true;
+		try {
+			host = host_;
+			dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+			exit(0);
+		}
+	}
 	SuperBuffer(std::vector<T>* host_, std::string name="") : host(host_) {
 		printf("SuperBuffer(std::vector<T>* host_, std::string name=\n");
 		this->name = name;
@@ -185,6 +207,17 @@ public:
 		try {
 			dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
 			printf("Created SuperBuffer *** %s (size: %d bytes) ***\n\n", name.c_str(), host->size()*sizeof(T));
+		} catch (cl::Error er) {
+	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+			exit(0);
+		}
+	}
+	void create(int size) { // std::string name="") : host(&host_) {
+		dev_changed = false;
+		host_changed = true;
+		host = new std::vector<T>(size, 0); 
+		try {
+			dev = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
 		} catch (cl::Error er) {
 	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
 			exit(0);

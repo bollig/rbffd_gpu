@@ -35,8 +35,17 @@ void FUN_CL::allocateGPUMem()
 
 	printf("**** nb_nodes= %d\n", nb_nodes);
 	printf("nodes_per_stencil= %d\n", nodes_per_stencil);
-	sup_stencils = SuperBuffer<int>(nb_nodes);
-	sup_all_weights = SuperBuffer<double>(nb_nodes*nodes_per_stencil*4);
+	//sup_stencils = SuperBuffer<int>(nb_nodes*nodes_per_stencil);
+	//sup_all_weights = SuperBuffer<double>(nb_nodes*nodes_per_stencil*4);
+	// Must replace with actual values at some point
+	sup_stencils.create(nb_nodes*nodes_per_stencil);
+	sup_all_weights.create(nb_nodes*nodes_per_stencil*4);
+	printf("====================================================\n");
+	printf("**** INFO on SUP_STENCILS and SUP_ALL_WEIGHT ***S\n");
+	printf("sup_stencils, host = %d pts\n", sup_stencils.hostSize());
+	printf("sup_stencils,  dev = %d pts\n", sup_stencils.devSize());
+	printf("sup_all_weights, host = %d pts\n", sup_all_weights.hostSize());
+	printf("sup_all_weights,  dev = %d pts\n", sup_all_weights.devSize());
 }
 //----------------------------------------------------------------------
 void FUN_CL::calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
@@ -50,7 +59,7 @@ void FUN_CL::calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
     err = queue.finish(); // added by GE
     tm["applyWeights"]->start();
     unsigned int nb_stencils = nb_nodes;
-   unsigned int stencil_size = grid_ref.getMaxStencilSize();
+    unsigned int stencil_size = grid_ref.getMaxStencilSize();
 
 	printf("*** nb_stencils= %d\n", nb_stencils);
 	printf("*** stencil_size= %d\n", stencil_size);
@@ -72,11 +81,26 @@ void FUN_CL::calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
         std::cout << "Set " << i << " kernel args\n";
     } catch (cl::Error er) {
         printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+		exit(0);
     }
 
+#if 1
+    // User specifies work group size
+    int items_per_group = 16;
+    int nn = nb_stencils % items_per_group;
+    int nd = nb_stencils / items_per_group;
+    int tot_items = (nn != 0) ? (nd+1)*items_per_group : nb_stencils; 
+    std::cout << "** nb_stencils: " << nb_stencils << std::endl;
+    std::cout << "** nb_stencils % items_per_group: " << nn << std::endl;
+    std::cout << "** nb_stencils / items_per_group: " << nd << std::endl;
+    std::cout << "** total number items: " << tot_items << std::endl;
+    std::cout << "** items per group: " << items_per_group << std::endl;
+    enqueueKernel(kernel, cl::NDRange(tot_items), cl::NDRange(items_per_group), true);
+#else
 	printf("nb_stencils= %d\n", nb_stencils);
-	enqueueKernel(kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
-	exit(0);
+	enqueueKernel:kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
+#endif
+
     tm["applyWeights"]->end();
 }
 //----------------------------------------------------------------------

@@ -138,6 +138,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   add_definitions(
       -DUSE_CLANG
       -DDEBUG_ALL
+	  -g 
       -stdlib=libc++
   )
 endif()

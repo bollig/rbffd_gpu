@@ -31,12 +31,12 @@ void initializeArrays()
 {
 	int size = grid->getNodeList().size();
 	printf("initializeArrays: size: %d\n", size);
-    u_cpu.resize(4*size);
+    u_cpu.resize(4*size); 
 	printf("size of u: %d\n", u_cpu.size());
-    xderiv_cpu.resize(size);
-    yderiv_cpu.resize(size);
-    zderiv_cpu.resize(size);
-    lderiv_cpu.resize(size);
+    xderiv_cpu.resize(4*size);
+    yderiv_cpu.resize(4*size);
+    zderiv_cpu.resize(4*size);
+    lderiv_cpu.resize(4*size);
 }
 //----------------------------------------------------------------------
 void computeOnCPU()
@@ -210,7 +210,8 @@ int main(int argc, char** argv)
 	// **** NEED A COPY CONSTRUCTOR or an operator=
 	// Ideally, I should be able to work with RBFFD only, with no knowledge of OpenCL. 
 	// The Superbuffer makes this difficult
-	printf("** u size: %d\n", u_cpu.size());
+	printf("-------------------\n");
+	printf("** u size: %d\n", u_cpu.size()); // 4 solutions at once
 	RBFFD_CL::SuperBuffer<double> u_gpu(u_cpu, "u_cpu"); // not used yet
 	RBFFD_CL::SuperBuffer<double> xderiv_gpu(xderiv_cpu, "xderiv_cpu"); // not used yet
 	RBFFD_CL::SuperBuffer<double> yderiv_gpu(yderiv_cpu, "yderiv_cpu");
@@ -220,14 +221,15 @@ int main(int argc, char** argv)
 	printf("after created superbuffer lderiv_cpu\n");
 
 	 u_gpu.copyToDevice();
+	 #if 0
 	 xderiv_gpu.copyToDevice();
 	 yderiv_gpu.copyToDevice();
 	 zderiv_gpu.copyToDevice();
 	 lderiv_gpu.copyToDevice();
+	 #endif
 
 	// Not in in RBBF (knows nothing about SuperBuffer). Must redesign
     der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
-	exit(0); // there is exit in rbffd_cl.cpp as well, in enqueueKernel
 
     tm["gpu_tests"]->start();  // skip first call
     der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 

@@ -16,11 +16,12 @@ void computeDerivMultiWeightFun(
    //double4 xxx = (0.,0.,0.,0.); // VALID EXPRESSION
    // put solution into double4; have single thread work with double4
    // Best to have one thread per stencil value and have them access individual elements of stencil
+
     
    if(i < nb_stencils) {    
 
 // USE_DOUBLES
-#if 1
+#if 0
         FLOAT dx1 = 0.0;       
         FLOAT dy1 = 0.0;       
         FLOAT dz1 = 0.0;       
@@ -166,7 +167,7 @@ void computeDerivMultiWeightFun(
 		dery[i4+2] = dy.z;
 		dery[i4+3] = dy.w;
 
-		derz[i4] = dz.x;
+		derz[i4] = dz.x; 
 		derz[i4+1] = dz.y;
 		derz[i4+2] = dz.z;
 		derz[i4+3] = dz.w;
@@ -175,6 +176,7 @@ void computeDerivMultiWeightFun(
 		derl[i4+1] = dl.y;
 		derl[i4+2] = dl.z;
 		derl[i4+3] = dl.w; // same speed as not using double4s
+// USE_DOUBLES
 #endif
    }    
 }

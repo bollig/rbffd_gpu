@@ -155,6 +155,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         cl::Buffer gpu_deriv_l_out; 
         cl::Buffer gpu_function; 
 
+		#if 0
 		SuperBuffer<double> sup_deriv;
 		SuperBuffer<double> sup_deriv_x;
 		SuperBuffer<double> sup_deriv_y;
@@ -162,6 +163,7 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 		SuperBuffer<double> sup_deriv_l;
 		SuperBuffer<double> sup_function;
 		SuperBuffer<double> sup_weights[NUM_DERIVATIVE_TYPES];
+		#endif
 		SuperBuffer<double> sup_all_weights;
 		SuperBuffer<int>    sup_stencils;
 

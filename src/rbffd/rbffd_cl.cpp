@@ -727,9 +727,12 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
 //----------------------------------------------------------------------
 void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_work_items, const cl::NDRange& items_per_workgroup, bool is_finish)
 {
+	cl_int err; // already defined in base opencl class
+	printf("before queue.enqueueNDRangeKernal\n");
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
             tot_work_items, items_per_workgroup, NULL, &event);
 
+	printf("after queue.enqueueNDRangeKernal\n");
  
 //END-START gives you hints on kind of “pure HW execution time”
 //10
@@ -740,6 +743,7 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
 	std::vector<cl::Event> ve;
 	ve.push_back(event);
 
+	printf("after push_back\n");
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
             " failed (" << err << ")\n";
@@ -748,16 +752,32 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
     }
 
 	if (is_finish) {
-    	err = queue.finish();
-        //queue.flush();
+		printf("wait for queue to finish\n");
+		try {
+    		err = queue.finish();
+			printf("finish, err= %d\n", err);
+        	//queue.flush(); // needed? (done by clwaitForEvents);
+    	} catch (cl::Error er) {
+        	printf("[enqueueKernel] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+			exit(0);
+    	}
+		printf("err= %d\n", err);
 	}
+	printf("after queue finish\n");
 
-	return; // TEMPORARY
-	cl::Event::waitForEvents(ve);
+	try {
+		printf("before waitForEvents\n");
+		cl::Event::waitForEvents(ve);
+		printf("after waitForEvents\n");
+    } catch (cl::Error er) {
+        printf("[enqueueKernel] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+		exit(0);
+    }
 	cl_ulong start = 0, end = 0;
 	event.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
 	event.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
 	printf("GPU execution time = %.2f ms\n", (float) (end-start)*1.e-6);
+	return; // TEMPORARY
 }
 //----------------------------------------------------------------------
 

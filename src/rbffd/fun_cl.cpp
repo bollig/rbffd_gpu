@@ -90,9 +90,10 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 	
 	// transform to 1D arrays
 	bool is_padded = false;
-	printf("before convert\n");
-	convertWeightToContiguous(*sup_all_weights.host, *sup_stencils.host, nodes_per_stencil, is_padded);
-	printf("after convert\n");
+	// nbnode_nbsten_type == true : weights[rbf_nodes][stencil_nodes][der_type]
+	// nbnode_nbsten_type == false: weights[stencil_nodes][rbf_nodes][der_type]
+	bool nbnode_nbsten_type = true;
+	convertWeightToContiguous(*sup_all_weights.host, *sup_stencils.host, nodes_per_stencil, is_padded, nbnode_nbsten_type);
 
 	sup_stencils.copyToDevice();
 	sup_all_weights.copyToDevice();
@@ -106,8 +107,11 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 	}
 
 	for (int i=0; i < 20; i++) {
+		printf("[beforeCopyToHost] u.dev[%d] = %f\n", i, (*u.host)[i]);
+	}
 	u.copyToHost();
-		printf("u.dev[%d] = %f\n", i, (*u.host)[i]);
+	for (int i=0; i < 20; i++) {
+		printf("[copyToHost] u.dev[%d] = %f\n", i, (*u.host)[i]);
 	}
 
 	//printf("fun_cl::computeDerivs\n"); exit(0);

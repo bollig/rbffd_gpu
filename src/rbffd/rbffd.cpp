@@ -14,7 +14,6 @@
 #include "utils/random.h"
 
 
-
 typedef RBF_Gaussian IRBF;
 
 
@@ -732,7 +731,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         // TODO: this if we took advantage of a sparse matrix container, we might be able to
         // improve this Mat-Vec multiply. We could also do it on the GPU.
 
-	 	printf(".. ----------- [RBFFD] appyWeightsForDeriv -----------------------\n");
+	 	//printf(".. ----------- [RBFFD] appyWeightsForDeriv -----------------------\n");
 
         for (unsigned int i=start_indx; i < start_indx+nb_stencils; i++) {
 			//if (i < 20) printf("\n node= %d\n", i);
@@ -1708,79 +1707,71 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         return this->getFilename(which, ss.str());
     }
 //----------------------------------------------------------------------
-void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, bool is_padded)
+void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, 
+    bool is_padded, bool nbnode_nbsten_dertype)
 {
 	// transform weights into single vector to use on GPU
 	// Assume all stencils have the same size
+	// nbnode_nbsten_type == true : weights[rbf_nodes][stencil_nodes][der_type]
+	// nbnode_nbsten_type == false: weights[stencil_nodes][rbf_nodes][der_type]
 
 	int iterator = computedTypes;
-	int count = 0;
 	int which = 0;
+
+	std::vector<int> indices = derTypeToIndex();
 
 	int stencil_padded_size; // pad to next multiple of 32. This can be changed. 
 	stencil_padded_size = is_padded ? getNextMultipleOf32(stencil_size) : stencil_size;
+	int how_many = indices.size();
+
+
+    int nb_stencils = grid_ref.getNodeListSize();
+	weights_d.resize(how_many*nb_stencils*stencil_padded_size);
+	stencils_d.resize(nb_stencils*stencil_padded_size);
+	std::vector<StencilType> stencils = grid_ref.getStencils();
+
+	iterator = computedTypes;
+
+	for (int itype=0; itype < how_many; itype++) {
+		which = indices[itype];
+		for (int i = 0; i < nb_stencils; i++) {
+			int j;
+			for (j = 0; j < stencil_size; j++) {
+				unsigned int indx = nbnode_nbsten_dertype ? 
+					which + how_many*(j + stencil_size*i) :
+					which + how_many*(i + nb_stencils*j);
+				weights_d[indx] = (double) weights[which][i][j];
+				if (which == 0) stencils_d[j+stencil_size*i] = (double) stencils[i][j];
+			}
+
+			for (; j < stencil_padded_size; j++) {
+				unsigned int indx = nbnode_nbsten_dertype ?
+							which + how_many*(j + stencil_size*i) :
+							which + how_many*(i + nb_stencils*j);
+				weights_d[indx] = 0.;
+				if (which == 0) stencils_d[j+stencil_size+i] = (double) stencils[i][0]; // center
+			}
+		}
+	}
+	printf("before leaving convert\n");
+}
+//----------------------------------------------------------------------
+std::vector<int> RBFFD::derTypeToIndex()
+{
+	int count = 0;
+	int iterator = computedTypes;
+	int which = 0;
+
+	std::vector<int> indices;
 
 	while (iterator) {
 		if (computedTypes & getDerType(which)) {
+			indices.push_back(count);
 			count++;
 		}
 		iterator >>= 1;
 		which++;
 	}
-	int how_many = count;
-
-	printf("inside convert, count= %d\n", count);
-
-    int nb_stencils = grid_ref.getNodeListSize();
-	weights_d.resize(count*nb_stencils*stencil_padded_size);
-	stencils_d.resize(nb_stencils*stencil_padded_size);
-	std::vector<StencilType> stencils = grid_ref.getStencils();
-
-	//printf("nb_stencils= %d\n", nb_stencils);
-	//printf("stencil_size= %d\n", stencil_size);
-
-	iterator = computedTypes;
-	//printf("padded size: %d\n", stencil_padded_size);
-
-	count = 0;
-	which = 0;
-    // Iterate until we get all 0s. This allows SOME shortcutting.
-	while (iterator) {
-			//printf("+**** iterator= %d *****\n", iterator);
-			//printf("which= %d\n", which);
-			//printf("computedTypes= %d\n", computedTypes);
-			//printf("getDerType(which)= %d\n", getDerType(which));
-		if (computedTypes & getDerType(which)) {
-			for (int i = 0; i < nb_stencils; i++) {
-				int j;
-				for (j = 0; j < stencil_size; j++) {
-					//unsigned int indx = j + stencil_size*(i+ nb_stencils*count);
-					//printf("count= %d, which,i,j= %d, %d, %d\n", count, which, i, j);
-					//unsigned int indx = j + stencil_size*(i+ nb_stencils*count);
-					unsigned int indx = which + how_many*(j + stencil_size*i);
-					weights_d[indx] = (double) weights[which][i][j];
-					if (which == 0) stencils_d[j+stencil_size*i] = (double) stencils[i][j];
-					count++;
-					//if (i < 5)  std::cout << "weights: " << weights[which][i][j] << "\n";
-					//if (i < 5)  std::cout << "stencil: " << stencils[i][j] << "\n";
-				}
-				//printf("count: %d, weights: %f, i= %d, which= %d, w-s sizes=%d, %d \n", count, weights[which][i][0], i, which, weights_d.size(), stencils_d.size());
-
-				for (; j < stencil_padded_size; j++) {
-					//unsigned int indx = j + stencil_size*(i+ nb_stencils*count);
-					unsigned int indx = which + how_many*(j + stencil_size*i);
-					weights_d[indx] = 0.;
-					//weights_d[count] = (double) 0.;
-					if (which == 0) stencils_d[j+stencil_size+i] = (double) stencils[i][0]; // center
-				count++;
-				}
-			}
-		}
-		iterator >>= 1;
-		which++;
-	}
-	printf("before leaving convert\n");
-	//exit(0);
+	return(indices);
 }
 //----------------------------------------------------------------------
-

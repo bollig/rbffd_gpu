@@ -274,6 +274,12 @@ class RBFFD
         	applyWeightsForDeriv(which, u, deriv, isChangedU=true);
 		}
 
+		// input arrays are linear, of dimension equal to the number of nodes in the physical domain
+        virtual void computeDeriv(DerType which, double* u, double* deriv, bool isChangedU=true) { 
+            unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+        	applyWeightsForDeriv(which, 0, nb_stencils, u, deriv, isChangedU=true);
+		}
+
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) {
             //            std::cout << "CPU: ";
 			printf("[RBFFD] INSIDE applyWeightsForDeriv [RBFFD]\n");
@@ -586,7 +592,12 @@ class RBFFD
 			tm.printAll(stdout, 80);
 		}
 
-		void convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, bool is_padded);
+		// nbnode_nbsten_type == true : weights[rbf_nodes][stencil_nodes][der_type]
+		// nbnode_nbsten_type == false: weights[stencil_nodes][rbf_nodes][der_type]
+		void convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, 
+    		bool is_padded, bool nbnode_nbsten_dertype);
+
+		std::vector<int> derTypeToIndex();
 };
 
 #endif 

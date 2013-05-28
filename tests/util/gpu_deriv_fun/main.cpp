@@ -6,6 +6,7 @@
 
 #include "rbffd/rbffd_cl.h"
 #include "rbffd/fun_cl.h"
+#include "utils/random.h"
 
 #include "exact_solutions/exact_regulargrid.h"
 
@@ -20,9 +21,9 @@ int stencil_size;
 int use_gpu;
 EB::TimerList tm; 
 ProjectSettings* settings;
-//RBFFD* der;
-//FUN_CL* der;
-RBFFD_CL* der;
+RBFFD* der_cpu;
+FUN_CL* der;
+//RBFFD_CL* der;
 
 using namespace std;
 
@@ -30,28 +31,42 @@ using namespace std;
 void initializeArrays()
 {
 	int size = grid->getNodeList().size();
-	printf("initializeArrays: size: %d\n", size);
     u_cpu.resize(4*size); 
-	printf("size of u: %d\n", u_cpu.size());
     xderiv_cpu.resize(4*size);
     yderiv_cpu.resize(4*size);
     zderiv_cpu.resize(4*size);
     lderiv_cpu.resize(4*size);
+
+	for (int i=0; i < u_cpu.size(); i++) {
+		u_cpu[i] = randf(-1.,1.);
+	}
 }
+
 //----------------------------------------------------------------------
 void computeOnCPU()
 {
+    der_cpu = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+    der_cpu->computeAllWeightsForAllStencilsEmpty();
+
     // Verify that the CPU works
     // NOTE: we pass booleans at the end of the param list to indicate that
     // the function "u" is new (true) or same as previous calls (false). This
     // helps avoid overhead of passing "u" to the GPU.
-	#if 0
+	#if 1
     tm["cpu_tests"]->start();
-    der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false); // originally false
-    der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false); // orig false
-    der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false); // orig false
-    tm["cpu_tests"]->end();
+	// u_cpu stores 4 functions. 
+	// each derivative array stores 4 x-derivatives, one per function
+	printf("size of u_cpu: %d\n", u_cpu.size());
+	printf("size of xderiv_cpu: %d\n", xderiv_cpu.size());
+    der_cpu->computeDeriv(RBFFD::X, u_cpu, xderiv_cpu, true);
+    der_cpu->computeDeriv(RBFFD::Y, u_cpu, yderiv_cpu, false); // originally false
+    der_cpu->computeDeriv(RBFFD::Z, u_cpu, zderiv_cpu, false); // orig false
+    der_cpu->computeDeriv(RBFFD::LAPL, u_cpu, lderiv_cpu, false); // orig false
+
+	for (int i=0; i < 10; i++) {
+		printf("(CPU) u(%d)= %f, derx(%d)= %f\n", i, u_cpu[i], i, xderiv_cpu[i]);
+	}
+	tm["cpu_tests"]->end();
 	#endif
 
 }
@@ -142,8 +157,6 @@ void createGrid()
     use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
 
 	grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
-	printf("ny,ny,nz= %d, %d, %d\n", nx, ny, nz);
-	printf("min/max= %f, %f, ,%f %f, %f, %f\n", minX, maxX, minY, maxY, minZ, maxZ);
 	tm["total"]->end();
 
     tm["sort+grid"]->start();
@@ -173,6 +186,7 @@ void setupDerivativeWeights()
     tm["compute_weights"]->start();
     double epsilon = settings->GetSettingAs<double>("EPSILON");
     der->setEpsilon(epsilon);
+	printf("*** epsilon= %f\n", epsilon);
 
 	// weights are all in one large array (for all derivatives)
     der->computeAllWeightsForAllStencilsEmpty();
@@ -186,8 +200,13 @@ void cleanup()
 {
     tm["destructor"]->start();
 	delete(der);
-    delete(grid);
+	printf("after delete der\n");
+	delete(der_cpu);
+	printf("after delete der_cpu\n");
+    delete(grid);  // **** ERROR I BELIEVE (WHY?)
+	printf("after delete grid\n");
     delete(settings);
+	printf("after delete settings\n");
     cout.flush();
     tm["destructor"]->end();
 }
@@ -207,46 +226,63 @@ int main(int argc, char** argv)
 	initializeArrays();
 	setupDerivativeWeights();
 
+	printf("dim = %d, before new RBFFD\n");
+
+
 	// **** NEED A COPY CONSTRUCTOR or an operator=
 	// Ideally, I should be able to work with RBFFD only, with no knowledge of OpenCL. 
-	// The Superbuffer makes this difficult
-	printf("-------------------\n");
-	printf("** u size: %d\n", u_cpu.size()); // 4 solutions at once
-	RBFFD_CL::SuperBuffer<double> u_gpu(u_cpu, "u_cpu"); // not used yet
-	RBFFD_CL::SuperBuffer<double> xderiv_gpu(xderiv_cpu, "xderiv_cpu"); // not used yet
-	RBFFD_CL::SuperBuffer<double> yderiv_gpu(yderiv_cpu, "yderiv_cpu");
-	RBFFD_CL::SuperBuffer<double> zderiv_gpu(zderiv_cpu, "zderiv_cpu");
-	printf("after created superbuffer zderiv_cpu\n");
-	RBFFD_CL::SuperBuffer<double> lderiv_gpu(lderiv_cpu, "lderiv_cpu");
-	printf("after created superbuffer lderiv_cpu\n");
 
-	 u_gpu.copyToDevice();
-	 #if 0
-	 xderiv_gpu.copyToDevice();
-	 yderiv_gpu.copyToDevice();
-	 zderiv_gpu.copyToDevice();
-	 lderiv_gpu.copyToDevice();
-	 #endif
+	// The Superbuffer makes this difficult
+	RBFFD_CL::SuperBuffer<double> u_gpu(u_cpu, "u_cpu"); // not used yet
+
+	// Do not overwrite xderiv_cpu, so allocate new space on host (to compare against CPU results)
+	RBFFD_CL::SuperBuffer<double> xderiv_gpu(xderiv_cpu.size(), "xderiv_cpu"); // not used yet
+	RBFFD_CL::SuperBuffer<double> yderiv_gpu(yderiv_cpu.size(), "yderiv_cpu");
+	RBFFD_CL::SuperBuffer<double> zderiv_gpu(zderiv_cpu.size(), "zderiv_cpu");
+	RBFFD_CL::SuperBuffer<double> lderiv_gpu(lderiv_cpu.size(), "lderiv_cpu");
+
+	u_gpu.copyToDevice();
 
 	// Not in in RBBF (knows nothing about SuperBuffer). Must redesign
-    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
+    der->computeDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
 
     tm["gpu_tests"]->start();  // skip first call
-    der->calcDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
+    der->computeDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
     tm["gpu_tests"]->end();
+
+	for (int i=0; i < 10; i++) {
+		printf("GPU bef) xder(i) = %f\n", xderiv_gpu[i]);
+	}
 
 	xderiv_gpu.copyToHost();
 	yderiv_gpu.copyToHost();
 	zderiv_gpu.copyToHost();
 	lderiv_gpu.copyToHost();
 
+	u_gpu.copyToHost();
+
+	for (int i=0; i < 10; i++) {
+		printf("u_gpu[%d] = %f\n", i, u_gpu[i]);
+	}
+
+	for (int i=0; i < 10; i++) {
+		printf("(GPU aft) xder(i) = %f\n", xderiv_gpu[i]);
+	}
+
+
+	printf("\n***** ComputeOnCPU *****\n");
 	computeOnCPU();
+	printf("***** exit ComputeOnCPU *****\n\n");
 	checkDerivativeAccuracy();
 
+	printf("before cleanup\n");
 	cleanup();
+	printf("after cleanup\n");
     tm["main_total"]->end();
 	tm.printAll(stdout, 60);
 
     exit(EXIT_SUCCESS);
 }
 //----------------------------------------------------------------------
+//
+//stencils on GPU are zero. WHY? 

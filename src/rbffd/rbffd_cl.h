@@ -9,126 +9,6 @@
 #include "utils/opencl/structs.h"
 
 
-#if 0
-template <typename T> 
-class SuperBuffer {
-public:
-	cl::Buffer dev;
-	std::vector<T>* host;
-	int error;
-	bool host_changed;
-	bool dev_changed;
-	std::string name;
-	CLBaseClass* cl_base;
-
-	// I cannot change pointer to host (cpu) data after creation
-	// // cost of CLBaseClass is high. Should only be called once. 
-	SuperBuffer(std::string name="") {
-		this->name = name;
-		host = 0;
-		printf("++++ Created empty SuperBuffer ++++ \n\n");
-	}
-	SuperBuffer(std::vector<T>& host_, std::string name="", CLBaseClass* cl_base=&clbase) { //int rank=0) {
-		this->name = name;
-		dev_changed = false;
-		host_changed = true;
-		try {
-			dev = cl::Buffer(cl_base->context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
-			printf("Created SuperBuffer *** %s (%d) ***\n\n", name.c_str(), error);
-		} catch (cl::Error er) {
-	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), cl_base->oclErrorString(er.err()));
-			exit(0);
-		}
-	}
-	SuperBuffer(std::vector<T>* host_, std::string name="", CLBaseClass* cl_base=&clbase) { //int rank=0) {
-		this->name = name;
-		dev_changed = false;
-		host_changed = true;
-		try {
-			dev = cl::Buffer(cl_base->context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
-			printf("Created SuperBuffer *** %s (%d) ***\n\n", name.c_str(), error);
-		} catch (cl::Error er) {
-	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), cl_base->oclErrorString(er.err()));
-			exit(0);
-		}
-	}
-	// SuperBuffer allocates the space
-	SuperBuffer(int size, std::string name="", CLBaseClass* cl_base=&clbase) { //int rank=0) {
-		this->name = name;
-		dev_changed = false;
-		host_changed = true;
-		host = new std::vector<T>(size, 0); // implicitly convert from int to double if necesary
-		try {
-			dev = cl::Buffer(cl_base->context, CL_MEM_READ_WRITE, sizeof(T)*host->size(), NULL, &error);
-			printf("Created SuperBuffer *** %s (%d) ***\n\n", name.c_str(), error);
-		} catch (cl::Error er) {
-	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), cl_base->oclErrorString(er.err()));
-			exit(0);
-		}
-	}
-	
-	inline T operator[](int i) {
-		return (*host)[i];  // efficiency is iffy
-	}
-	int devSizeBytes() {
-		int mem_size;
-		try {
-			mem_size = dev.getInfo<CL_MEM_SIZE>();
-	 	} catch (cl::Error er) {
-	    	printf("[cl::Buffer] ERROR: %s(%s)\n", er.what(), cl_base->oclErrorString(er.err()));
-	 		mem_size = -1; // invalid object
-		}
-		return(mem_size);
-	}
-	int hostSize() {
-		return(host->size());
-	}
-	int typeSize() {
-		return(sizeof(T));
-	}
-
-	int devSize()  { return( devSizeBytes()/typeSize() ); }
-	int hostSizeBytes() { return(hostSize()*typeSize()); }
-
-	void copyToHost(int nb_elements=-1, int start_index=0) {
-		//if (gpu_changed == false) return;
-		//gpu_changed = false;
-		int nb_elements_bytes = nb_elements*sizeof(T);
-		int offset_bytes = start_index * sizeof(T);
-		int mem_size_bytes = devSizeBytes(); 
-		int transfer_bytes = mem_size_bytes - offset_bytes;
-		if (mem_size_bytes < 1) return;
-		if (nb_elements > -1 && transfer_bytes > nb_elements_bytes) {
-			transfer_bytes = nb_elements_bytes;
-		}
-		// do not use monitoring events
-    	error = cl_base->queue.enqueueReadBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
-		if (error != CL_SUCCESS) {
-			std::cerr << " enqueueRead ERROR: " << error << std::endl;
-		}
-	}
-	// nb_bytes and start_index not yet used
-	void copyToDevice(int nb_elements=-1, int start_index=0) {
-		//if (host_changed == false) return;
-		//host_changed = false;
-		int nb_elements_bytes = nb_elements*sizeof(T);
-		int offset_bytes = start_index * sizeof(T);
-		int mem_size_bytes = devSizeBytes(); 
-		int transfer_bytes = mem_size_bytes - offset_bytes;
-		if (mem_size_bytes < 1) return;
-		if (nb_elements > -1 && transfer_bytes > nb_elements_bytes) {
-			transfer_bytes = nb_elements_bytes;
-		}
-		// do not use monitoring events
-    	error = cl_base->queue.enqueueWriteBuffer(dev, CL_TRUE, offset_bytes, transfer_bytes, &(*host)[0], NULL, NULL);
-		if (error != CL_SUCCESS) {
-			std::cerr << " enqueueWrite ERROR: " << error << std::endl;
-		}
-	}
-};
-#endif
-
-
 class RBFFD_CL : public RBFFD, public CLBaseClass
 {
     protected: 
@@ -187,9 +67,6 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // Is a double precision extension available on the unit? 
         bool useDouble; 
 
-        // Set this to control the weight padding/alignment 
-        bool alignWeights; 
-        unsigned int alignMultiple;
 
         // This will be either the MAX_STENCIL_SIZE (computed by
         // GridInterface), or the stencil size rounded to nearest
@@ -239,7 +116,9 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         // FIXME: HACK--> this routine is called in a situation where we want to access a superclass routine inside. 
         //                This override is how we hack this together.
         // Apply weights to an input solution vector and get the corresponding derivatives out
+
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
+			printf("[RBFFD_CL] INSIDE applyWeightsForDeriv\n");
             std::cout << "[RBFFD_CL] Warning! Using GPU to apply weights, but NOT advance timestep\n";
             unsigned int nb_stencils = grid_ref.getStencilsSize();
             deriv.resize(nb_stencils); 
@@ -290,8 +169,11 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
 
 public:
 
-	virtual void calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
-			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU) {};
+	virtual void computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
+			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU)
+		    { 
+				printf("[RBFFD] enter computeDeriv, SuperBuffer args\n");
+			}
 
     protected: 
         void setupTimers(); 
@@ -313,19 +195,6 @@ public:
 
 
     protected: 
-        unsigned int getNextMultiple(unsigned int stencil_size) {
-            unsigned int nearest = alignMultiple; 
-            while (stencil_size > nearest) 
-                nearest += alignMultiple; 
-            return nearest;
-        }
-        
-        unsigned int getNextMultipleOf32(unsigned int stencil_size) {
-            unsigned int nearest = 32; 
-            while (stencil_size > nearest) 
-                nearest += 32; 
-            return nearest;
-        }
 		int getSize(cl::Buffer& buf) {
 			int mem_size;
 			try {
@@ -368,6 +237,8 @@ public:
 				std::cerr << " enqueueRead ERROR: " << err << std::endl;
 			}
 		}
+
+
 };
 
 #endif 

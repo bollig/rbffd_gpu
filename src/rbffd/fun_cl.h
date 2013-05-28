@@ -26,7 +26,7 @@ class FUN_CL : public RBFFD_CL
 
 		//------------------
 		// Should be changed so I call GPU and CPU functions with rbffd, and run on GPU and CPU
-		virtual void calcDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
+		virtual void computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
 			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU);
 		//------------------
 

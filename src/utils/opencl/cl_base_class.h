@@ -242,6 +242,9 @@ public:
 	inline T operator[](int i) {
 		return (*host)[i];  // efficiency is iffy
 	}
+	inline T& operator[](int i) const {
+		return (*host)[i];  // efficiency is iffy
+	}
 	int devSizeBytes() {
 		int mem_size;
 		try {

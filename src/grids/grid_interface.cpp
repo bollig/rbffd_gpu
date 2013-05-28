@@ -662,7 +662,7 @@ void Grid::generateStencilsCompact()
 	//
 	int sz2 = stencil_size >> 1;
 
-	for (int i=stencil_size; i < nb_rbf; i++) {
+	for (int i=0; i < nb_rbf; i++) {
         int left;
         int right;
         if (i < stencil_size) {
@@ -680,6 +680,8 @@ void Grid::generateStencilsCompact()
 		for (int j=left; j < right; j++) {
 			stencil_map[i][j-left] = j;
 		}
+		stencil_map[i][0] = i;
+		stencil_map[i][i] = left;
 	}
 
 	this->computeStencilRadii();

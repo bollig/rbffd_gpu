@@ -6,3 +6,13 @@ Getting HW errors. Do not know why. Something to do with Superbuffers?
 *** OPENCL MIC DEVICE HW EXCEPTION ***: Segmentation fault (Address not mapped to object [0x7feee4c37e18])
 *** OPENCL MIC DEVICE HW EXCEPTION ***: Segmentation fault (Invalid permissions for mapped object [0x7fedbe277818])
 *** OPENCL MIC DEVICE HW EXCEPTION ***: Segmentation fault (Address not mapped to object [0x7ff045b01018])
+
+ERROR Fixed. I did not allocate enough memory to derivative arrays.  Was off by a factor of 4. 
+
+Next step: check results against CPU. 
+----------------------------------------------------------------------
+1) use Empty stencils. Derivative should be function itself. Check GPU against CPU.
+2) use non-Empty stencils. Derivative should be function itself. Check GPU against CPU.
+  Make sure random numbers are identical between CPU and GPU. For that get the stencils from der_pcu and 
+  put to der_pgpu, or vide versa. 
+----------------------------------------------------------------------

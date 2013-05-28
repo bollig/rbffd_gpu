@@ -15,9 +15,7 @@ using namespace std;
     deleteCPUWeightsBuffer(false),
     deleteCPUNodesBuffer(false),
     deleteCPUStencilsBuffer(false),
-    useDouble(true),
-// Gordon: changing alignWeights to true will break gpu_compute_derivs; 
-    alignWeights(false), alignMultiple(32)
+    useDouble(true)
 {
 
 	//GE: added as a means to avoid deleting that which is not allocated

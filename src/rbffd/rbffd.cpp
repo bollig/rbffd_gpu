@@ -27,7 +27,10 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
         weightsModified(false), weightMethod(RBFFD::Direct),
         hv_k(2), hv_gamma(8e-4), useHyperviscosity(0),
         eigenvalues_computed(false), computeCondNums(false),
-        computeSFCoperators(false), asciiWeights(0)
+        computeSFCoperators(false), asciiWeights(0),
+// Gordon: changing alignWeights to true will break gpu_compute_derivs; 
+// I put this on the CPU to allow for CPU optimization if required
+    	alignWeights(false), alignMultiple(32)
 {
     int nb_rbfs = grid_ref.getNodeListSize();
 
@@ -90,6 +93,7 @@ RBFFD::~RBFFD() {
 void RBFFD::computeAllWeightsForAllStencilsEmpty()
 {
 	std::cout << "********** computeAllWeightsForAllStencilsEmpty() *************" << std::endl;
+	// Diagonal element of weight matrix is 1 (1st element of each weight array)
     int nb_rbfs = grid_ref.getNodeListSize();
 	std::cout << "nb rbs: " << nb_rbfs << std::endl;
 	// Iterate through flags and prints which ones we are going to calculate
@@ -99,15 +103,25 @@ void RBFFD::computeAllWeightsForAllStencilsEmpty()
 		if (isSelected(dt)) {
 			std::cout << "Will compute DerType: 0x" << hex << dt << " (" << derTypeStr[i] << ")" << endl;
 			std::cout << dec; 
+			printf("   \n");
 			for (int j=0; j < nb_rbfs; j++) {
-            	StencilType& stencil = grid_ref.getStencil(i);
-				weights[i][j] = new double [stencil.size()];
-				for (int k=0; k < stencil.size(); k++) {
-					weights[i][j][k] = 0;
+				computeWeightsForStencil_Empty(getDerType(i), j);
+				//weights[i][j] = new double [stencil.size()];
+				//weights[i][j][0] = 0;
+				//for (int k=1; k < stencil.size(); k++) {
+					//weights[i][j][k] = 0;
+				//}
+				#if 0
+            	StencilType& stencil = grid_ref.getStencil(j);
+				for (int k=0; k < 5; k++) { // 5 first points of stencil
+					//printf("weights[i][j] = %ld\n", weights[i][j]);
+					printf("(%d), sten %d= (%d, %f)\n", j, k, stencil[k], weights[i][j][k]);
 				}
+				#endif
 			}
         }
-	}        
+	}
+	//printf("computeAllWeightsForAllStencilsEmpty\n"); exit(0);
 }
 //----------------
 
@@ -220,27 +234,38 @@ void RBFFD::getStencilLHS(std::vector<NodeType>& rbf_centers, StencilType& stenc
 // Compute the full set of weights for a derivative type
 void RBFFD::computeAllWeightsForStencil(int st_indx) {
 
+	int iterator;
+	int i;
+
     switch (weightMethod)
     {
         case RBFFD::Direct:
             this->computeAllWeightsForStencil_Direct(st_indx);
             break;
         case RBFFD::ContourSVD:
-            {
-                int iterator = computedTypes;
-                int i = 0;     // Counts the number of checks for derivative type flags
-                int j = 0;      // Counts the number of types we will compute
+                iterator = computedTypes;
+                i = 0;     // Counts the number of checks for derivative type flags
                 // Iterate until we get all 0s. This allows SOME shortcutting.
                 while (iterator) {
                     if (computedTypes & getDerType(i)) {
                         this->computeWeightsForStencil_ContourSVD(getDerType(i), st_indx);
-                        j+= 1;
                     }
                     iterator >>= 1;
                     i+= 1;
                 }
-            }
             break;
+		case RBFFD::Empty:
+                iterator = computedTypes;
+                i = 0;     // Counts the number of checks for derivative type flags
+                // Iterate until we get all 0s. This allows SOME shortcutting.
+                while (iterator) {
+                    if (computedTypes & getDerType(i)) {
+                        this->computeWeightsForStencil_Empty(getDerType(i), st_indx);
+                    }
+                    iterator >>= 1;
+                    i+= 1;
+                }
+			break;
         default:
             std::cout << "Unknown method for computing weights" << std::endl;
             exit(EXIT_FAILURE);
@@ -585,6 +610,9 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 			case RBFFD::Random: // random weights for testing GPU against CPU [0-1]
 				this->computeWeightsForStencil_Random(which, st_indx);
 				break;
+			case RBFFD::Empty: // random weights for testing GPU against CPU [0-1]
+				this->computeWeightsForStencil_Empty(which, st_indx);
+				break;
             default:
                 std::cout << "Unknown method to compute weights for single stencil" << std::endl;
                 exit(EXIT_FAILURE);
@@ -703,18 +731,33 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
         // TODO: this if we took advantage of a sparse matrix container, we might be able to
         // improve this Mat-Vec multiply. We could also do it on the GPU.
+
+	 	printf(".. ----------- [RBFFD] appyWeightsForDeriv -----------------------\n");
+
         for (unsigned int i=start_indx; i < start_indx+nb_stencils; i++) {
+			//if (i < 20) printf("\n node= %d\n", i);
             double* w = this->weights[getDerTypeIndx(which)][i];
+			//printf("which= %d\n", which);
             StencilType& st = grid_ref.getStencil(i);
             der = 0.0;
             unsigned int n = st.size();
             for (unsigned int s=0; s < n; s++) {
+				//printf("s= %d\n", s);
+				//if (i < 20) {
+					//printf("st[%d]= %d, w= %f, u= %f\n", s, st[s], w[s], u[st[s]]);
+				//}
+				//printf("w[%d]= %f\n", w[s]);
                 der += w[s] * u[st[s]];
             }
             deriv[i] = der;
         }
         tm["applyAll"]->stop();
+		//printf("..[RBFFD] end applyWeightsForDeriv\n");
     }
+
+    //void RBFFD::computeDeriv(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU) {
+    	//applyWeightsForDeriv(DerType which, unsigned int start_indx, unsigned int nb_stencils, double* u, double* deriv, bool isChangedU);
+	//}
 
     //----------------------------------------------------------------------
     //
@@ -1460,6 +1503,36 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 			this->weights[type_index][irbf][j] = randf(-1.,1.);
 		}
 	}
+	//----------------------------------------------------------------------
+	void RBFFD::computeWeightsForStencil_Empty(DerType which, int irbf)
+	{
+		// First index is the center node. Set to 1. Set all others to zero. 
+
+		StencilType& stencil = grid_ref.getStencil(irbf);
+		unsigned int sz = stencil.size();
+		int type_index = getDerTypeIndx(which); 
+		// does not work without the reference. 
+		double*& w = this->weights[type_index][irbf];
+
+		// in other routines, Evan uses "n+np" for the stencil size. I do not know what this eans. 
+		if (w == NULL) {
+			w = new double[sz];
+		}
+		w[0] = 1.0;
+		for (unsigned int j = 1; j < sz; j++) {
+			w[j] = 0.0;
+		}
+		
+		#if 0
+		if (this->weights[type_index][irbf] == NULL) {
+			this->weights[type_index][irbf] = new double[sz];
+		}
+		this->weights[type_index][irbf][0] = 1.0;
+		for (unsigned int j = 1; j < sz; j++) {
+			this->weights[type_index][irbf][j] = 0.0;
+		}
+		#endif
+	}
 	//-------------------------
     void RBFFD::computeWeightsForStencil_ContourSVD(DerType which, int st_indx) {
         //----------------------------------------------------------------------
@@ -1634,4 +1707,55 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         ss << "weights_" << this->className();
         return this->getFilename(which, ss.str());
     }
+//----------------------------------------------------------------------
+void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, bool is_padded)
+{
+	// transform weights into single vector to use on GPU
+	// Assume all stencils have the same size
+
+	int iterator = computedTypes;
+	int which = 0;
+	int count = 0;
+
+	int stencil_padded_size; // pad to next multiple of 32. This can be changed. 
+	stencil_padded_size = is_padded ? getNextMultipleOf32(stencil_size) : stencil_size;
+
+	while (iterator) {
+		if (computedTypes & getDerType(which)) {
+			count++;
+		}
+		iterator >>= 1;
+		which++;
+	}
+
+    int nb_stencils = grid_ref.getNodeListSize();
+	weights_d.resize(count*nb_stencils*stencil_padded_size);
+	stencils_d.resize(nb_stencils*stencil_padded_size);
+	std::vector<StencilType> stencils = grid_ref.getStencils();
+
+
+    // Iterate until we get all 0s. This allows SOME shortcutting.
+	while (iterator) {
+		if (computedTypes & getDerType(which)) {
+			for (unsigned int i = 0; i < nb_stencils; i++) {
+				unsigned int j = 0;
+				for (j = 0; j < stencil_size; j++) {
+					//unsigned int indx = j + stencil_size*(i+ nb_stencils*count);
+					weights_d[count++] = (double) weights[which][i][j];
+					stencils_d[count++] = (double) stencils[i][j];
+					//  std::cout << cpu_weights[which][indx] << "   ";
+				}
+
+				for (; j < stencil_padded_size; j++) {
+					//unsigned int indx = j + stencil_size*(i+ nb_stencils*count);
+					weights_d[count++] = (double) 0.;
+					stencils_d[count++] = (double) stencils[i][0]; // center
+				}
+			}
+		}
+		iterator >>= 1;
+		which++;
+	}
+}
+//----------------------------------------------------------------------
 

@@ -87,7 +87,7 @@ class RBFFD
 
         std::string derTypeStr[NUM_DERIVATIVE_TYPES]; 
 
-        enum WeightType {Direct, ContourSVD, Random};
+        enum WeightType {Direct, ContourSVD, Random, Empty};
         std::string weightTypeStr[2]; 
 
         typedef struct e_val_output {
@@ -215,6 +215,9 @@ class RBFFD
 
 		// Random weights in range [0-1] for testing and efficiency
 		void computeWeightsForStencil_Random(DerType dt, int st_indx);
+		//
+		// Zero weights for testing. Central weight is 1. Diagonal matrix. 
+		void computeWeightsForStencil_Empty(DerType dt, int st_indx);
 
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;
@@ -261,16 +264,28 @@ class RBFFD
 					std::vector<double>& deriv_y, 
 					std::vector<double>& deriv_z, 
 					std::vector<double>& deriv_l, 
-					bool isChangedU=true) {}
-        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
+					bool isChangedU=true) 
+			{ printf("RBBF::applyWeightsDeriv(std::vector<double>, vector<double>, ..., vector<double>) not implemented\n"); }
+
+
+		// Synonuymous
+        virtual void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
+		    printf("[RBFFD] enter computeDeriv\n");
+        	applyWeightsForDeriv(which, u, deriv, isChangedU=true);
+		}
+
+        virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) {
             //            std::cout << "CPU: ";
+			printf("[RBFFD] INSIDE applyWeightsForDeriv [RBFFD]\n");
             unsigned int nb_stencils = grid_ref.getStencilsSize(); 
+			printf("deriv.size: %d\n", deriv.size());
+			printf("nb_stencils: %d\n", nb_stencils);
             if (deriv.size() < nb_stencils) { 
                 std::cout << "[RBFFD] Resizing deriv to nb_stencils=" << nb_stencils << " (was: " << deriv.size() << ")\n";
                 deriv.resize(nb_stencils); 
             }
             // Start at index 0 and apply weights to nb_stencils associated with solution values u[0]->u[nb_stencils]
-            RBFFD::applyWeightsForDeriv(which, 0, nb_stencils, &u[0], &deriv[0], isChangedU);
+            applyWeightsForDeriv(which, 0, nb_stencils, &u[0], &deriv[0], isChangedU);
         }
 
         // Can be CPU or GPU depending on Subclasses
@@ -464,6 +479,24 @@ class RBFFD
             return ss.str(); 
         }
 
+        // Set this to control the weight padding/alignment 
+        bool alignWeights; 
+        unsigned int alignMultiple;
+
+        virtual unsigned int getNextMultiple(unsigned int stencil_size) {
+            unsigned int nearest = alignMultiple; 
+            while (stencil_size > nearest) 
+                nearest += alignMultiple; 
+            return nearest;
+        }
+        
+        virtual unsigned int getNextMultipleOf32(unsigned int stencil_size) {
+            unsigned int nearest = 32; 
+            while (stencil_size > nearest) 
+                nearest += 32; 
+            return nearest;
+        }
+
         virtual std::string className() { return "rbffd"; }
         // =====================================================================
 
@@ -552,6 +585,8 @@ class RBFFD
 		void printAllTimings() {
 			tm.printAll(stdout, 80);
 		}
+
+		void convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, bool is_padded);
 };
 
 #endif 

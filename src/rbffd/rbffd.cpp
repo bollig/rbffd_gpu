@@ -1714,8 +1714,8 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 	// Assume all stencils have the same size
 
 	int iterator = computedTypes;
-	int which = 0;
 	int count = 0;
+	int which = 0;
 
 	int stencil_padded_size; // pad to next multiple of 32. This can be changed. 
 	stencil_padded_size = is_padded ? getNextMultipleOf32(stencil_size) : stencil_size;
@@ -1727,35 +1727,60 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 		iterator >>= 1;
 		which++;
 	}
+	int how_many = count;
+
+	printf("inside convert, count= %d\n", count);
 
     int nb_stencils = grid_ref.getNodeListSize();
 	weights_d.resize(count*nb_stencils*stencil_padded_size);
 	stencils_d.resize(nb_stencils*stencil_padded_size);
 	std::vector<StencilType> stencils = grid_ref.getStencils();
 
+	//printf("nb_stencils= %d\n", nb_stencils);
+	//printf("stencil_size= %d\n", stencil_size);
 
+	iterator = computedTypes;
+	//printf("padded size: %d\n", stencil_padded_size);
+
+	count = 0;
+	which = 0;
     // Iterate until we get all 0s. This allows SOME shortcutting.
 	while (iterator) {
+			//printf("+**** iterator= %d *****\n", iterator);
+			//printf("which= %d\n", which);
+			//printf("computedTypes= %d\n", computedTypes);
+			//printf("getDerType(which)= %d\n", getDerType(which));
 		if (computedTypes & getDerType(which)) {
-			for (unsigned int i = 0; i < nb_stencils; i++) {
-				unsigned int j = 0;
+			for (int i = 0; i < nb_stencils; i++) {
+				int j;
 				for (j = 0; j < stencil_size; j++) {
 					//unsigned int indx = j + stencil_size*(i+ nb_stencils*count);
-					weights_d[count++] = (double) weights[which][i][j];
-					stencils_d[count++] = (double) stencils[i][j];
-					//  std::cout << cpu_weights[which][indx] << "   ";
+					//printf("count= %d, which,i,j= %d, %d, %d\n", count, which, i, j);
+					//unsigned int indx = j + stencil_size*(i+ nb_stencils*count);
+					unsigned int indx = which + how_many*(j + stencil_size*i);
+					weights_d[indx] = (double) weights[which][i][j];
+					if (which == 0) stencils_d[j+stencil_size*i] = (double) stencils[i][j];
+					count++;
+					//if (i < 5)  std::cout << "weights: " << weights[which][i][j] << "\n";
+					//if (i < 5)  std::cout << "stencil: " << stencils[i][j] << "\n";
 				}
+				//printf("count: %d, weights: %f, i= %d, which= %d, w-s sizes=%d, %d \n", count, weights[which][i][0], i, which, weights_d.size(), stencils_d.size());
 
 				for (; j < stencil_padded_size; j++) {
 					//unsigned int indx = j + stencil_size*(i+ nb_stencils*count);
-					weights_d[count++] = (double) 0.;
-					stencils_d[count++] = (double) stencils[i][0]; // center
+					unsigned int indx = which + how_many*(j + stencil_size*i);
+					weights_d[indx] = 0.;
+					//weights_d[count] = (double) 0.;
+					if (which == 0) stencils_d[j+stencil_size+i] = (double) stencils[i][0]; // center
+				count++;
 				}
 			}
 		}
 		iterator >>= 1;
 		which++;
 	}
+	printf("before leaving convert\n");
+	//exit(0);
 }
 //----------------------------------------------------------------------
 

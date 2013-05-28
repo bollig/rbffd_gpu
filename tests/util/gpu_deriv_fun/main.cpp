@@ -7,6 +7,7 @@
 #include "rbffd/rbffd_cl.h"
 #include "rbffd/fun_cl.h"
 #include "utils/random.h"
+#include "utils/norms.h"
 
 #include "exact_solutions/exact_regulargrid.h"
 
@@ -14,6 +15,7 @@
 #include "timer_eb.h"
 
 vector<double> u_cpu, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu; 
+RBFFD_CL::SuperBuffer<double> xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu;
 
 Grid* grid;
 int dim;
@@ -37,14 +39,22 @@ void initializeArrays()
     zderiv_cpu.resize(4*size);
     lderiv_cpu.resize(4*size);
 
-	for (int i=0; i < u_cpu.size(); i++) {
-		u_cpu[i] = randf(-1.,1.);
+	// d/dx(u) = u (given my weight definitions)
+	// Output: dudx, dudy, dudz, dudl
+	// All derivatives are equal if weight matrix is identity. 
+	for (int i=0; i < u_cpu.size(); i+=4) {
+		double rnd = randf(-1.,1.);
+		u_cpu[i] =      rnd;
+		u_cpu[i+1] = 2.*rnd;
+		u_cpu[i+2] = 3.*rnd;
+		u_cpu[i+3] = 4.*rnd;
 	}
 }
 
 //----------------------------------------------------------------------
 void computeOnCPU()
 {
+	printf("\n***** ComputeOnCPU *****\n");
     der_cpu = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     der_cpu->computeAllWeightsForAllStencilsEmpty();
 
@@ -68,57 +78,22 @@ void computeOnCPU()
 	}
 	tm["cpu_tests"]->end();
 	#endif
+	printf("***** exit ComputeOnCPU *****\n\n");
 
 }
 //----------------------------------------------------------------------
-void checkDerivativeAccuracy() {
-#if 0
-	tm["solution_check"]->start();
-    double max_diff = 0.; 
-    for (size_t i = 0; i < rbf_centers.size(); i++) {
-	double xdiff = fabs(xd[i] - xderiv_cpu[i]); 
-	double ydiff = fabs(yd[i] - yderiv_cpu[i]);
-	double zdiff = fabs(zd[i] - zderiv_cpu[i]);
-	double ldiff = fabs(ld[i] - lderiv_cpu[i]);
-
-	if (xdiff > max_diff) { max_diff = xdiff; }
-	if (ydiff > max_diff) { max_diff = ydiff; }
-	if (zdiff > max_diff) { max_diff = zdiff; }
-	if (ldiff > max_diff) { max_diff = ldiff; }
-
-//        std::cout << "cpu_x_deriv[" << i << "] - gpu_x_deriv[" << i << "] = " << xderiv_cpu[i] - xderiv_gpu[i] << std::endl;
-        if (( xdiff > 1e-5) 
-        || ( ydiff > 1e-5) 
-        || ( zdiff > 1e-5) 
-        || ( ldiff > 1e-5))
-        {
-            std::cout << "WARNING! SINGLE PRECISION GPU COULD NOT CALCULATE DERIVATIVE WELL ENOUGH!\n";
-	    	std::cout << "Test failed on " << i << std::endl;
-	    	std::cout << "X: " << xderiv_gpu[i] - xderiv_cpu[i] << std:: endl; 
-	    	std::cout << "X: " << xderiv_gpu[i] << ", " <<  xderiv_cpu[i] << std:: endl; 
-	    	std::cout << "Y: " << yderiv_gpu[i] - yderiv_cpu[i] << std:: endl; 
-	    	std::cout << "Y: " << yderiv_gpu[i] << ", " <<  yderiv_cpu[i] << std:: endl; 
-	    	std::cout << "Z: " << zderiv_gpu[i] - zderiv_cpu[i] << std:: endl; 
-	    	std::cout << "Z: " << zderiv_gpu[i] << ", " <<  zderiv_cpu[i] << std:: endl; 
-	    	std::cout << "LAPL: " << lderiv_gpu[i] - lderiv_cpu[i] << std:: endl; 
-			der->printAllTimings();
-			tm.printAll(stdout, 80);
-            exit(EXIT_FAILURE); 
-        }
-    }
-    std::cout << "Max difference between weights: " << max_diff << std::endl;
-    std::cout << "CONGRATS! ALL DERIVATIVES WERE CALCULATED THE SAME IN OPENCL AND ON THE CPU\n";
-	tm["solution_check"]->end();
-       // (WITH AN AVERAGE ERROR OF:" << avg_error << std::endl;
-
-#endif
-
-#if 0
-    if (settings->GetSettingAs<int>("RUN_DERIVATIVE_TESTS")) {
-        RBFFDTests* der_test = new DerivativeTests();
-        der_test->testAllFunctions(*der, *grid);
-    }
-#endif 
+void checkDerivativeAccuracy()
+{
+	double xnorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
+	double ynorm = linfnorm(*yderiv_gpu.host, yderiv_cpu);
+	double znorm = linfnorm(*zderiv_gpu.host, zderiv_cpu);
+	double lnorm = linfnorm(*lderiv_gpu.host, lderiv_cpu);
+	printf("x/y/z/l derivative error norms: %f, %f, %f, %f\n", 
+	         xnorm, ynorm, znorm, lnorm);
+	double eps = 1.e-5;
+	if (xnorm > eps || ynorm > eps || znorm > eps || lnorm > eps) {
+		printf("CPU and GPU derivative do not match to within %f\n", eps);
+	}
 }
 //----------------------------------------------------------------------
 void setupTimers(EB::TimerList& tm) {
@@ -236,10 +211,10 @@ int main(int argc, char** argv)
 	RBFFD_CL::SuperBuffer<double> u_gpu(u_cpu, "u_cpu"); // not used yet
 
 	// Do not overwrite xderiv_cpu, so allocate new space on host (to compare against CPU results)
-	RBFFD_CL::SuperBuffer<double> xderiv_gpu(xderiv_cpu.size(), "xderiv_cpu"); // not used yet
-	RBFFD_CL::SuperBuffer<double> yderiv_gpu(yderiv_cpu.size(), "yderiv_cpu");
-	RBFFD_CL::SuperBuffer<double> zderiv_gpu(zderiv_cpu.size(), "zderiv_cpu");
-	RBFFD_CL::SuperBuffer<double> lderiv_gpu(lderiv_cpu.size(), "lderiv_cpu");
+	xderiv_gpu = RBFFD_CL::SuperBuffer<double>(xderiv_cpu.size(), "xderiv_cpu"); // not used yet
+	yderiv_gpu = RBFFD_CL::SuperBuffer<double>(yderiv_cpu.size(), "yderiv_cpu");
+	zderiv_gpu = RBFFD_CL::SuperBuffer<double>(zderiv_cpu.size(), "zderiv_cpu");
+	lderiv_gpu = RBFFD_CL::SuperBuffer<double>(lderiv_cpu.size(), "lderiv_cpu");
 
 	u_gpu.copyToDevice();
 
@@ -265,15 +240,20 @@ int main(int argc, char** argv)
 		printf("u_gpu[%d] = %f\n", i, u_gpu[i]);
 	}
 
-	for (int i=0; i < 10; i++) {
-		printf("(GPU aft) xder(i) = %f\n", xderiv_gpu[i]);
+	computeOnCPU();
+	checkDerivativeAccuracy();
+
+	for (int i=0; i < xderiv_gpu.hostSize(); i++) {
+		if (abs(xderiv_gpu[i] - xderiv_cpu[i]) > 1.e-5) {
+			printf("(GPU aft) xder[%d]=%f, yder[%d]=%f, zder[%d]=%f, lder[%d]=%f\n", 
+			   i, xderiv_gpu[i], i, yderiv_gpu[i], 
+			   i, zderiv_gpu[i], i, lderiv_gpu[i]); 
+			printf("(CPU aft) xder[%d]=%f, yder[%d]=%f, zder[%d]=%f, lder[%d]=%f\n", 
+			   i, xderiv_cpu[i], i, yderiv_cpu[i], 
+			   i, zderiv_cpu[i], i, lderiv_cpu[i]); 
+		}
 	}
 
-
-	printf("\n***** ComputeOnCPU *****\n");
-	computeOnCPU();
-	printf("***** exit ComputeOnCPU *****\n\n");
-	checkDerivativeAccuracy();
 
 	printf("before cleanup\n");
 	cleanup();

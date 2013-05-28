@@ -16,3 +16,10 @@ Next step: check results against CPU.
   Make sure random numbers are identical between CPU and GPU. For that get the stencils from der_pcu and 
   put to der_pgpu, or vide versa. 
 ----------------------------------------------------------------------
+May 28, 2013
+Derivatives incorrect, buy derivatives of four functions are identical.  Good sign. 
+
+Derivatives should be in the order (u_x,v_x,w_z,p_z)_1,   (u_x,v_x,w_z,p_z)_2, ...
+
+I did not calculate CPU derivatives of all four functions in this test case. MY ERROR. DO THIS. 
+----------------------------------------------------------------------

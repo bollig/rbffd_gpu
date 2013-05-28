@@ -21,7 +21,7 @@ void computeDerivMultiWeightFun(
    if(i < nb_stencils) {    
 
 // USE_DOUBLES
-#if 0
+#if 1
         FLOAT dx1 = 0.0;       
         FLOAT dy1 = 0.0;       
         FLOAT dz1 = 0.0;       
@@ -109,13 +109,16 @@ void computeDerivMultiWeightFun(
 			// REMOVE_WEIGHTS
 			#endif
         }   
-		uint i4 = i*4;
-        derx[i4] = dx1;    
-        dery[i4] = dy1;    
-        derz[i4] = dz1;    
-        derl[i4] = dl1;    
+		// derx = (dx1, dx2, dx3, dx4)
+		// They should be all equal if weights are (1,0,0,0...)
 
-        derx[i4+1] = dx2;    
+		uint i4 = i << 2;  // multiply by 4
+        derx[i4+0] = 1.*dx1;    
+        dery[i4+0] = 1.*dx1;    
+        derz[i4+0] = 1.*dz1;    
+        derl[i4+0] = 1.*dl1;    
+
+        derx[i4+1] = 1.*dx2;    
         dery[i4+1] = dy2;    
         derz[i4+1] = dz2;    
         derl[i4+1] = dl2;    
@@ -132,10 +135,10 @@ void computeDerivMultiWeightFun(
 // USE_DOUBLES
 #else
 // USE_DOUBLES
-        double4 dx = (0.0,0.,0.,0.);       
-        double4 dy = (0.0,0.,0.,0.);       
-        double4 dz = (0.0,0.,0.,0.);       
-        double4 dl = (0.0,0.,0.,0.);       
+        double4 dx = (0.,0.,0.,0.);       
+        double4 dy = (0.,0.,0.,0.);       
+        double4 dz = (0.,0.,0.,0.);       
+        double4 dl = (0.,0.,0.,0.);       
 
         for (uint j = 0; j < stencil_size; j++) {        
             uint indx = i*stencil_size + j;

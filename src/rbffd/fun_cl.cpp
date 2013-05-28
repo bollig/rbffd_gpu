@@ -93,17 +93,24 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 	printf("before convert\n");
 	convertWeightToContiguous(*sup_all_weights.host, *sup_stencils.host, nodes_per_stencil, is_padded);
 	printf("after convert\n");
-	
+
 	sup_stencils.copyToDevice();
 	sup_all_weights.copyToDevice();
 
-	for (int i=0; i < 200; i++) {
+	for (int i=0; i < 20; i++) {
 		printf("sup_stencils[%d] = %d\n", i, sup_stencils[i]);
 	}
 
 	for (int i=0; i < 20; i++) {
 		printf("sup_all_weights[%d] = %f\n", i, sup_all_weights[i]);
 	}
+
+	for (int i=0; i < 20; i++) {
+	u.copyToHost();
+		printf("u.dev[%d] = %f\n", i, (*u.host)[i]);
+	}
+
+	//printf("fun_cl::computeDerivs\n"); exit(0);
 
     err = queue.finish(); // added by GE
     tm["applyWeights"]->start();

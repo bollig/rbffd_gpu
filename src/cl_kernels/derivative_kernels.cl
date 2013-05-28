@@ -84,7 +84,7 @@ __kernel void computeDerivMultiWeightFunKernel(
    uint nb_stencils, 
    uint stencil_size)  
 {   
-	for (int i=0; i < 10; i++) {  // number of iterations affecting # HW errors . WHY?
+	for (int i=0; i < 1; i++) {  // number of iterations affecting # HW errors . WHY?
     	computeDerivMultiWeightFun(stencils, 
 			ww4, 
 			solution, 

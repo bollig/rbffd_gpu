@@ -46,7 +46,7 @@ RegularGrid::RegularGrid(int n_x, double minX, double maxX)
 
 /*----------------------------------------------------------------------*/
 RegularGrid::~RegularGrid() {
-
+	printf("Inside empty RegularGrid destructor\n");
 }
 
 /*----------------------------------------------------------------------*/

@@ -4,6 +4,7 @@
 #include "computeDerivMulti.cl"
 #include "computeDerivMultiWeight.cl"
 #include "computeDerivMultiWeightFun.cl"
+#include "computeDerivMultiWeightFunInv.cl"
 #include "computeDerivMultiWeightFun4.cl"
 
 //std::string kernel_source = computeDeriv_source + STRINGIFY_WITH_SUBS(
@@ -73,6 +74,8 @@ __kernel void computeDerivMultiWeightKernel(
 }
 //----------------------------------------------------------------------
 // GPU Only routine, consolidate weights
+// Weights: [rbf_node][stencil_point][which_deriv]
+// works properly
 __kernel void computeDerivMultiWeightFunKernel(       
          __global uint* stencils,     // double4
          __global FLOAT* restrict ww4,    // multiple weights
@@ -84,8 +87,31 @@ __kernel void computeDerivMultiWeightFunKernel(
    uint nb_stencils, 
    uint stencil_size)  
 {   
-	for (int i=0; i < 1; i++) {  // number of iterations affecting # HW errors . WHY?
+	for (int i=0; i < 10; i++) {  // number of iterations affecting # HW errors . WHY?
     	computeDerivMultiWeightFun(stencils, 
+			ww4, 
+			solution, 
+			derx, dery, derz, derl, 
+			nb_stencils,
+			stencil_size);
+	} 
+}
+//----------------------------------------------------------------------
+// GPU Only routine, consolidate weights
+// Weights: [stencil_point][rbf_node][which_deriv]
+__kernel void computeDerivMultiWeightFunInvKernel(       
+         __global uint* stencils,     // double4
+         __global FLOAT* restrict ww4,    // multiple weights
+         __global FLOAT* restrict solution,   // multiple functions
+         __global FLOAT* restrict derx,     // double4
+         __global FLOAT* restrict dery,     // double4
+         __global FLOAT* restrict derz,     // double4
+         __global FLOAT* restrict derl,     // double4
+   uint nb_stencils, 
+   uint stencil_size)  
+{   
+	for (int i=0; i < 10; i++) {  // number of iterations affecting # HW errors . WHY?
+    	computeDerivMultiWeightFunInv(stencils, 
 			ww4, 
 			solution, 
 			derx, dery, derz, derl, 

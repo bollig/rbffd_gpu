@@ -74,7 +74,7 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
 //--------------------------------------------------------------------
 
 RBFFD::~RBFFD() {
-	printf("Inside RBFFD destructor\n");
+	printf("Enter RBFFD destructor\n");
     for (int j = 0; j < NUM_DERIVATIVE_TYPES; j++) {
         //if (weights[j] != NULL) {
         for (size_t i = 0; i < weights[j].size(); i++) {
@@ -86,6 +86,7 @@ RBFFD::~RBFFD() {
     }
 	printf("print all timer data\n");
     tm.printAll(stdout, 80);
+	printf("Exit RBFFD destructor\n");
 }
 
 //--------------------------------------------------------------------
@@ -1724,6 +1725,8 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 	stencil_padded_size = is_padded ? getNextMultipleOf32(stencil_size) : stencil_size;
 	int how_many = indices.size();
 
+	printf("how many= %d\n", how_many);
+
 
     int nb_stencils = grid_ref.getNodeListSize();
 	weights_d.resize(how_many*nb_stencils*stencil_padded_size);
@@ -1733,14 +1736,23 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 	iterator = computedTypes;
 
 	for (int itype=0; itype < how_many; itype++) {
+		printf("itype= %d\n", itype);
 		which = indices[itype];
+		printf("which= %d\n", which);
 		for (int i = 0; i < nb_stencils; i++) {
+			//printf("i= %d\n", i);
 			int j;
 			for (j = 0; j < stencil_size; j++) {
+			//printf("j= %d\n", j);
 				unsigned int indx = nbnode_nbsten_dertype ? 
 					which + how_many*(j + stencil_size*i) :
 					which + how_many*(i + nb_stencils*j);
-				weights_d[indx] = (double) weights[which][i][j];
+				//printf("weights[0].size= %d\n", weights[0].size());
+				//printf("indx= %d\n", indx);
+				//printf("weights[0][0] = %d\n", (long) weights[0][0]);
+				// error in RHS? 
+				weights_d[indx] = (double) weights[which][i][j]; // >>>> ERROR
+				//printf("weights= %f\n", weights_d[indx]);
 				if (which == 0) stencils_d[j+stencil_size*i] = (double) stencils[i][j];
 			}
 

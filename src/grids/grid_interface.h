@@ -154,9 +154,11 @@ class Grid
     {} 
 
         virtual ~Grid(){
+			printf("Enter Grid destructor\n");
             if (node_list_kdtree != NULL) {
                 delete(node_list_kdtree);
             }
+			printf("Exit Grid destructor\n");
         }
 
         // PROBABLY THE MOST IMPORTANT ROUTINE: generates the nodes in node_list

@@ -85,11 +85,12 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         RBFFD_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank=0);
 
         virtual ~RBFFD_CL() { 
+			printf("Enter RBFFD_CL destructor\n");
             if (deleteCPUWeightsBuffer) { this->clearCPUWeights();} 
             if (deleteCPUNodesBuffer) { this->clearCPUNodes();}
             if (deleteCPUStencilsBuffer) { this->clearCPUStencils();}
-            std::cout << "RBFFD_CL Destroyed\n";
-        }; 
+			printf("Exit RBFFD_CL destructor\n");
+        } 
 
 
         cl::Buffer& getGPUStencils() { return gpu_stencils; }

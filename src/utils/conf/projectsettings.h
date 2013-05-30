@@ -48,7 +48,9 @@ public:
     ProjectSettings(int argc, char** argv);
     ProjectSettings(int argc, char** argv, int mpi_rank);
     ProjectSettings(const std::string filename);
-    virtual ~ProjectSettings() {}
+    virtual ~ProjectSettings() {
+		printf("Inside empty ProjectSettings destructor\n");
+	}
 
     // Read the file and add/update settings in the settings map
     // WARNING: will override the settings if their key already exists in map

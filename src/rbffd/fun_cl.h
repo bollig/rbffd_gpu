@@ -14,6 +14,10 @@ class FUN_CL : public RBFFD_CL
     	unsigned int nb_stencils;
 
     public: 
+		enum KernelType {FUN_KERNEL, FUN_INV_KERNEL};
+		KernelType kernel_type; // poor name
+
+	public:
         FUN_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank=0);
 
 		// Could use Boost shared poitners
@@ -23,6 +27,8 @@ class FUN_CL : public RBFFD_CL
             if (deleteCPUStencilsBuffer) { this->clearCPUStencils();}
             std::cout << "FUN_CL Destroyed\n";
         } 
+
+		void setKernelType(KernelType kernel_type_);
 
 		//------------------
 		// Should be changed so I call GPU and CPU functions with rbffd, and run on GPU and CPU

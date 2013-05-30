@@ -17,8 +17,22 @@ FUN_CL::FUN_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
 	std::vector<StencilType>& stencil_map = grid_ref.getStencils();
 	nodes_per_stencil = stencil_map[0].size(); // assumed constant
     nb_stencils = stencil_map.size();
+}
+//----------------------------------------------------------------------
+void FUN_CL::setKernelType(KernelType kernel_type_)
+{
+	kernel_type = kernel_type_;
 
-    this->loadKernel("computeDerivMultiWeightFunKernel", "derivative_kernels.cl");
+	switch (kernel_type) {
+	case FUN_KERNEL:
+    	loadKernel("computeDerivMultiWeightFunKernel", "derivative_kernels.cl");
+		break;
+	case FUN_INV_KERNEL:
+    	loadKernel("computeDerivMultiWeightFunInvKernel", "derivative_kernels.cl");
+		break;
+	}
+
+	// Derivative weights must have been computed by now. 
     this->allocateGPUMem();
 }
 //----------------------------------------------------------------------
@@ -42,37 +56,23 @@ void FUN_CL::allocateGPUMem()
 	sup_stencils.create(nb_nodes*nodes_per_stencil);
 	sup_all_weights.create(nb_nodes*nodes_per_stencil*4);
 
-	#if 0
-	// assumes stencils of constant size, no padding
-	int count = 0;
-	printf("count= %d\n", count);
-	std::vector<double>& h = *sup_all_weights.host;
-	printf("h size: %d\n", h.size());
-	for (int k=0; k < NUM_DERIVATIVE_TYPES; k++) {
-		DerType dt = getDerType((DerTypeIndx)k); 
-//        std::vector<double*> weights[NUM_DERIVATIVE_TYPES]; 
-		printf("weights[%d] size = %d\n", k, weights[k].size());
-		printf("weights[1] size = %d\n", weights[1].size());
-		printf("weights[2] size = %d\n", weights[2].size());
-		printf("weights[3] size = %d\n", weights[3].size());
-		printf("weights[4] size = %d\n", weights[4].size());
-		printf("weights[5] size = %d\n", weights[5].size());
-		printf("weights[6] size = %d\n", weights[6].size());
-//		printf("weights[0][0] size = %d\n", weights[0][0].size());
-		if (!isSelected(dt)) continue;
-		int which = getDerType(k);
-		for (int i=0; i < nb_nodes; i++) {
-			for (int j=0; j < nodes_per_stencil; j++) {
-				printf("count= %d\n", count);
-				printf("which= %d, i,j= %d, %d\n", which, i, j);
-				printf("k= %d\n", k);
-				printf("weights= %f\n", weights[k][i][j]);
-				h[count++] = weights[k][i][j];
-			}
-		}
-	}
-	#endif
+	bool is_padded = false;
+	bool nbnode_nbsten_type;
 
+	switch (kernel_type) {
+	case FUN_KERNEL:
+		printf("FUN_KERNEL\n");
+		nbnode_nbsten_type = true;
+		convertWeightToContiguous(*sup_all_weights.host, *sup_stencils.host, nodes_per_stencil, is_padded, nbnode_nbsten_type);
+		printf("after convertWeight\n");
+		break;
+	case FUN_INV_KERNEL:
+		printf("FUN_INV_KERNEL\n");
+		nbnode_nbsten_type = false;
+		convertWeightToContiguous(*sup_all_weights.host, *sup_stencils.host, nodes_per_stencil, is_padded, nbnode_nbsten_type);
+		printf("after convertWeight\n");
+		break;
+	}
 
 	printf("====================================================\n");
 	printf("**** INFO on SUP_STENCILS and SUP_ALL_WEIGHT ***S\n");
@@ -85,15 +85,17 @@ void FUN_CL::allocateGPUMem()
 void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
 			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU)
 {
+	if (kernel_type  == -1) {
+		printf("Kernel not defined\n");
+		exit(0);
+	}
+
 	printf("computeDerivs/applyWeightsFoDerivDouble using SuperBuffer arguments\n");
 	//if (isChangedU) u.copyToDevice();
 	
 	// transform to 1D arrays
-	bool is_padded = false;
 	// nbnode_nbsten_type == true : weights[rbf_nodes][stencil_nodes][der_type]
 	// nbnode_nbsten_type == false: weights[stencil_nodes][rbf_nodes][der_type]
-	bool nbnode_nbsten_type = true;
-	convertWeightToContiguous(*sup_all_weights.host, *sup_stencils.host, nodes_per_stencil, is_padded, nbnode_nbsten_type);
 
 	sup_stencils.copyToDevice();
 	sup_all_weights.copyToDevice();

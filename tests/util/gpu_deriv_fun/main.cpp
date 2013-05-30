@@ -214,6 +214,12 @@ void setupDerivativeWeights()
     tm["compute_weights"]->start();
     if (use_gpu) {
         der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+		// Must be called before setKernelType
+    	der->computeAllWeightsForAllStencilsEmpty(); 
+		printf("before setKernelType\n");
+		der->setKernelType(FUN_CL::FUN_KERNEL); // necessary
+		printf("after setKernelType\n");
+		//der->setKernelType(FUN_CL::FUN_INV_KERNEL);
         //der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     } else {
 		printf("Routine meant to test GPU only\n");
@@ -225,7 +231,6 @@ void setupDerivativeWeights()
 	printf("*** epsilon= %f\n", epsilon);
 
 	// weights are all in one large array (for all derivatives)
-    der->computeAllWeightsForAllStencilsEmpty();
     tm["compute_weights"]->end();
 
 }

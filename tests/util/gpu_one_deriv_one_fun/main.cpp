@@ -124,9 +124,11 @@ void checkDerivativeAccuracy()
 
 	printf("***\n***Derivatives with errors larger than 1.e-5 ***\n");
 
+	#if 0
 	for (int i=0; i < 50; i++) {
 		printf("(CPU/GPU der) %f, %f\n", i, xderiv_cpu[i], xderiv_gpu[i]); 
 	}
+	#endif
 
 	for (int i=0; i < xderiv_gpu.hostSize(); i++) {
 		if (i > 20) {
@@ -171,8 +173,8 @@ void createGrid()
     tm["sort+grid"]->end();
 
     tm["stencils"]->start();
-	Grid::st_generator_t stencil_type = Grid::ST_COMPACT;
-	//Grid::st_generator_t stencil_type = Grid::ST_RANDOM;
+	//Grid::st_generator_t stencil_type = Grid::ST_COMPACT;
+	Grid::st_generator_t stencil_type = Grid::ST_RANDOM;
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
     tm["stencils"]->end();
 
@@ -187,9 +189,7 @@ void setupDerivativeWeights()
         der = new FUN_CL(RBFFD::X, grid, dim); 
 		// Must be called before setKernelType
     	der->computeAllWeightsForAllStencilsEmpty(); 
-		//printf("before setKernelType\n");
 		//der->setKernelType(FUN_CL::FUN_KERNEL); // necessary
-		//printf("after setKernelType\n");
 		der->setKernelType(FUN_CL::FUN_INV_KERNEL);
     } else {
 		printf("Routine meant to test GPU only\n");

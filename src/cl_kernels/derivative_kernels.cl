@@ -119,6 +119,27 @@ __kernel void computeDerivWeight1Fun1InvKernel(
 }
 //----------------------------------------------------------------------
 // GPU Only routine, consolidate weights
+// Weights: [stencil_point][rbf_node]
+// Single weight, single function
+__kernel void computeDerivWeight1Fun1Kernel(       
+         __global uint* stencils,   
+         __global FLOAT* restrict ww4,    
+         __global FLOAT* restrict solution,  
+         __global FLOAT* restrict derx,  
+   uint nb_stencils, 
+   uint stencil_size)  
+{   
+	for (int i=0; i < 10; i++) {  // number of iterations affecting # HW errors . WHY?
+    	computeDerivWeight1Fun1(stencils, 
+			ww4, 
+			solution, 
+			derx, 
+			nb_stencils,
+			stencil_size);
+	} 
+}
+//----------------------------------------------------------------------
+// GPU Only routine, consolidate weights
 __kernel void computeDerivMultiWeightFun4Kernel(       
          __global uint* stencils,     // double4
          __global FLOAT* restrict ww4,    // multiple weights

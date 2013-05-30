@@ -51,3 +51,28 @@ GPU: 53.4420ms (no weights in derivative calculations)
 GPU: 80.4420ms (include weights in derv calculation)
 (not much difference. Not enough to justify 2 kernels)
 ----------------------------------------------------------------------
+Timings are for 10 derivative evaluations. 
+10 points per stencil. COMPACT STENCILS
+50^3, INV, 1 func, 1 deriv:  2.4ms on GPU. 
+50^3, DiRect (inefficient?), 1 deriv, 2.6ms on GPU
+
+32 points per stencil
+50^3, INV, 1 func, 1 deriv:  8.0ms on GPU (twice), 12ms (once). 
+50^3, DIRect (inefficient?), 8.5 to 8.7ms on GPU. 
+INV should be faster. Not much faster. 
+
+// DOMINATED BY MEMORY, not enough computation? This is the compact case, 
+so it is the most efficient. Must repeat with the randomized stencil
+distribution. Using 32 points per stencil. 
+
+RANDOMIZED STENCILS
+50^3, DIRECT/RANDOM: 16ms
+50^3, INVERSE/RANDOM: 17ms (no difference)
+----------------------------------------------------------------------
+Now run COMPACT/DIRECT, 100^3 grid
+DIRECT, GPU: 113ms  (6.6x slower than 50^3, but should only be 8x slower). 
+INVERSE, GPU: 130ms  (7.6x slower than 50^3, but should only be 8x slower). 
+   Why is INVERSE slower than DIRECT? 
+So Direct is gaining efficiency with larger grids. DO NOT KNOW WHY. 
+----------------------------------------------------------------------
+----------------------------------------------------------------------

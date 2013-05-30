@@ -25,7 +25,8 @@ void FUN_CL::setKernelType(KernelType kernel_type_)
 
 	switch (kernel_type) {
 	case FUN_KERNEL:
-    	loadKernel("computeDerivMultiWeightFunKernel", "derivative_kernels.cl");
+    	//loadKernel("computeDerivMultiWeightFunKernel", "derivative_kernels.cl");
+    	loadKernel("computeDerivWeight1Fun1Kernel", "derivative_kernels.cl");
 		break;
 	case FUN_INV_KERNEL:
     	loadKernel("computeDerivWeight1Fun1InvKernel", "derivative_kernels.cl");
@@ -100,6 +101,7 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 	sup_stencils.copyToDevice();
 	sup_all_weights.copyToDevice();
 
+	#if 0
 	for (int i=0; i < 20; i++) {
 		printf("sup_stencils[%d] = %d\n", i, sup_stencils[i]);
 	}
@@ -115,6 +117,7 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 	for (int i=0; i < 20; i++) {
 		printf("[copyToHost] u.dev[%d] = %f\n", i, (*u.host)[i]);
 	}
+	#endif
 
 	//printf("fun_cl::computeDerivs\n"); exit(0);
 
@@ -184,7 +187,7 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 	sup_all_weights.copyToDevice();
 
 
-	#if 1
+	#if 0
 	for (int i=0; i < sup_stencils.hostSize(); i++) {
 		printf("sup_stencils[%d] = %d\n", i, sup_stencils[i]);
 	}

@@ -185,11 +185,11 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 
 
 	#if 1
-	for (int i=0; i < 20; i++) {
+	for (int i=0; i < sup_stencils.hostSize(); i++) {
 		printf("sup_stencils[%d] = %d\n", i, sup_stencils[i]);
 	}
 
-	for (int i=0; i < 20; i++) {
+	for (int i=0; i < sup_all_weights.hostSize(); i++) {
 		printf("sup_all_weights[%d] = %f\n", i, sup_all_weights[i]);
 	}
 	#endif

@@ -1744,7 +1744,7 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 				// error in RHS? 
 				weights_d[indx] = (double) weights[which][i][j]; // >>>> ERROR
 				//printf("weights= %f\n", weights_d[indx]);
-				if (which == 0) stencils_d[j+stencil_size*i] = (double) stencils[i][j];
+				if (which == 0) stencils_d[indx] = (double) stencils[i][j];
 			}
 
 			for (; j < stencil_padded_size; j++) {

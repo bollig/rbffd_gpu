@@ -106,18 +106,6 @@ void RBFFD::computeAllWeightsForAllStencilsEmpty()
 			printf("   \n");
 			for (int j=0; j < nb_rbfs; j++) {
 				computeWeightsForStencil_Empty(getDerType(i), j);
-				//weights[i][j] = new double [stencil.size()];
-				//weights[i][j][0] = 0;
-				//for (int k=1; k < stencil.size(); k++) {
-					//weights[i][j][k] = 0;
-				//}
-				#if 0
-            	StencilType& stencil = grid_ref.getStencil(j);
-				for (int k=0; k < 5; k++) { // 5 first points of stencil
-					//printf("weights[i][j] = %ld\n", weights[i][j]);
-					printf("(%d), sten %d= (%d, %f)\n", j, k, stencil[k], weights[i][j][k]);
-				}
-				#endif
 			}
         }
 	}
@@ -1715,6 +1703,8 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 	// Assume all stencils have the same size
 	// nbnode_nbsten_type == true : weights[rbf_nodes][stencil_nodes][der_type]
 	// nbnode_nbsten_type == false: weights[stencil_nodes][rbf_nodes][der_type]
+	//
+	printf("<<<< >>>> nbnode_nbsten_dertype= %d\n", nbnode_nbsten_dertype);
 
 	int iterator = computedTypes;
 	int which = 0;
@@ -1732,6 +1722,7 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 	weights_d.resize(how_many*nb_stencils*stencil_padded_size);
 	stencils_d.resize(nb_stencils*stencil_padded_size);
 	std::vector<StencilType> stencils = grid_ref.getStencils();
+	printf("how_many= %d\n", how_many);
 
 	iterator = computedTypes;
 
@@ -1745,7 +1736,7 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 			for (j = 0; j < stencil_size; j++) {
 			//printf("j= %d\n", j);
 				unsigned int indx = nbnode_nbsten_dertype ? 
-					which + how_many*(j + stencil_size*i) :
+					which + how_many*(j + stencil_padded_size*i) :
 					which + how_many*(i + nb_stencils*j);
 				//printf("weights[0].size= %d\n", weights[0].size());
 				//printf("indx= %d\n", indx);

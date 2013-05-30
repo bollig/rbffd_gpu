@@ -28,7 +28,7 @@ void FUN_CL::setKernelType(KernelType kernel_type_)
     	loadKernel("computeDerivMultiWeightFunKernel", "derivative_kernels.cl");
 		break;
 	case FUN_INV_KERNEL:
-    	loadKernel("computeDerivMultiWeightFunInvKernel", "derivative_kernels.cl");
+    	loadKernel("computeDerivWeight1Fun1InvKernel", "derivative_kernels.cl");
 		break;
 	}
 
@@ -161,6 +161,99 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 #else
 	printf("nb_stencils= %d\n", nb_stencils);
 	enqueueKernel:kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
+#endif
+
+    tm["applyWeights"]->end();
+}
+//----------------------------------------------------------------------
+void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, bool isChangedU)
+{
+	if (kernel_type  == -1) {
+		printf("Kernel not defined\n");
+		exit(0);
+	}
+
+	printf("1D: computeDerivs/applyWeightsFoDerivDouble using SuperBuffer arguments\n");
+	//if (isChangedU) u.copyToDevice();
+	
+	// transform to 1D arrays
+	// nbnode_nbsten_type == true : weights[rbf_nodes][stencil_nodes][der_type]
+	// nbnode_nbsten_type == false: weights[stencil_nodes][rbf_nodes][der_type]
+
+	sup_stencils.copyToDevice();
+	sup_all_weights.copyToDevice();
+
+
+	#if 1
+	for (int i=0; i < 20; i++) {
+		printf("sup_stencils[%d] = %d\n", i, sup_stencils[i]);
+	}
+
+	for (int i=0; i < 20; i++) {
+		printf("sup_all_weights[%d] = %f\n", i, sup_all_weights[i]);
+	}
+	#endif
+
+	#if 0
+	for (int i=0; i < 20; i++) {
+		printf("[beforeCopyToHost] u.dev[%d] = %f\n", i, (*u.host)[i]);
+	}
+	u.copyToHost();
+	for (int i=0; i < 20; i++) {
+		printf("[copyToHost] u.dev[%d] = %f\n", i, (*u.host)[i]);
+	}
+	#endif
+
+    err = queue.finish(); // added by GE
+    tm["applyWeights"]->start();
+    unsigned int nb_stencils = nb_nodes;
+    unsigned int stencil_size = grid_ref.getMaxStencilSize();
+
+	printf("*** nb_stencils= %d\n", nb_stencils);
+	printf("*** stencil_size= %d\n", stencil_size);
+
+    try {
+        int i = 0;
+        kernel.setArg(i++, sup_stencils.dev); //gpu_stencils);
+        kernel.setArg(i++, sup_all_weights.dev); //gpu_all_weights);
+        kernel.setArg(i++, u.dev);              // 4 functions
+        kernel.setArg(i++, deriv_x.dev);        
+        //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
+        //unsigned int arguments at this time
+        kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const
+        kernel.setArg(i++, sizeof(unsigned int), &stencil_size);            // const
+        //kernel.setArg(i++, sizeof(unsigned int), &stencil_padded_size);            // const
+        std::cout << "Set " << i << " kernel args\n";
+    } catch (cl::Error er) {
+        printf("[setKernelArg] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
+		exit(0);
+    }
+
+#if 0
+    // User specifies work group size
+    int items_per_group = 32;
+    int nn = nb_stencils % items_per_group;
+    int nd = nb_stencils / items_per_group;
+    int tot_items = (nn != 0) ? (nd+1)*items_per_group : nb_stencils; 
+    std::cout << "** nb_stencils: " << nb_stencils << std::endl;
+    std::cout << "** nb_stencils % items_per_group: " << nn << std::endl;
+    std::cout << "** nb_stencils / items_per_group: " << nd << std::endl;
+    std::cout << "** total number items: " << tot_items << std::endl;
+    std::cout << "** items per group: " << items_per_group << std::endl;
+    enqueueKernel(kernel, cl::NDRange(tot_items), cl::NDRange(items_per_group), true);
+#else
+	// 16 RBF nodes are allocated per work-item, but the size of the workgroup is 
+	// determined by the computer. Therefore, there are a total nb_stencils/16 
+	// work-items per work-group. 
+
+	//int tot_items = getNextMultipleOf(nb_stencils, 64);
+	int tot_items = nb_stencils;
+    //int items_per_group = 16;
+    //int nn = nb_stencils % items_per_group;
+    //int nd = nb_stencils / items_per_group;
+    //int tot_items = (nn != 0) ? (nd+1)*items_per_group : nb_stencils; 
+	printf("nb_stencils= %d\n", nb_stencils);
+	enqueueKernel(kernel, cl::NDRange(tot_items), cl::NullRange, true);
 #endif
 
     tm["applyWeights"]->end();

@@ -1,0 +1,3 @@
+test case where one is computing a single derivative of a single function, 
+with ordering or weights: [nb_nodes_per_stencil][nb_rbf_nodes]  (not done) 
+                     and  [nb_rbf_nodes][nb_nodes_per_stencil]  done)

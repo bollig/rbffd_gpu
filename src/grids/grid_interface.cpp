@@ -681,7 +681,10 @@ void Grid::generateStencilsCompact()
 			stencil_map[i][j-left] = j;
 		}
 		stencil_map[i][0] = i;
-		stencil_map[i][i] = left;
+		//if (i > 35000) {
+			//printf("left= %d, i= %d, nb_rbf= %d\n", left, i, nb_rbf);
+		//}
+		stencil_map[i][i-left] = left;
 	}
 
 	this->computeStencilRadii();

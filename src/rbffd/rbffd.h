@@ -503,6 +503,14 @@ class RBFFD
             return nearest;
         }
 
+        virtual unsigned int getNextMultipleOf(unsigned int stencil_size, int multiple) {
+            unsigned int nearest = multiple; 
+            while (stencil_size > nearest) 
+                nearest += multiple; 
+            return nearest;
+        }
+
+
         virtual std::string className() { return "rbffd"; }
         // =====================================================================
 

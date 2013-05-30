@@ -173,7 +173,12 @@ public:
 	virtual void computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
 			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU)
 		    { 
-				printf("[RBFFD] enter computeDeriv, SuperBuffer args\n");
+				printf("[RBFFD] enter computeDeriv, 5 SuperBuffer args\n");
+			}
+
+	virtual void computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, bool isChangedU)
+		    { 
+				printf("[RBFFD] enter computeDeriv, 2 SuperBuffer args\n");
 			}
 
     protected: 

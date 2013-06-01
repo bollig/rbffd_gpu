@@ -268,7 +268,7 @@ class RBFFD
 			{ printf("RBBF::applyWeightsDeriv(std::vector<double>, vector<double>, ..., vector<double>) not implemented\n"); }
 
 
-		// Synonuymous
+		// Synonymous
         virtual void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
 		    printf("[RBFFD] enter computeDeriv\n");
         	applyWeightsForDeriv(which, u, deriv, isChangedU=true);

@@ -7,18 +7,18 @@
 
 // GPU Only routine
 void computeDeriv(       
-         __global uint* stencils,    
+         __global int* stencils,    
          __global FLOAT* weights,   
          __global FLOAT* solution,  
          __global FLOAT* derivative,    
-   uint nb_stencils, 
-   uint stencil_size)  
+   int nb_stencils, 
+   int stencil_size)  
 {   
-   uint i = get_global_id(0);    
+   int i = get_global_id(0);    
    if(i < nb_stencils) {    
         FLOAT der = 0.0f;       
-        for (uint j = 0; j < stencil_size; j++) {       
-            uint indx = i*stencil_size + j;
+        for (int j = 0; j < stencil_size; j++) {       
+            int indx = i*stencil_size + j;
 //            der += 1. * weights[indx];    
         //    der += 1. ;    
             der += solution[stencils[indx]] * weights[indx];    
@@ -30,13 +30,13 @@ void computeDeriv(
 
 // GPU Only routine
 FLOAT applyWeights1PerThread(       
-     __global uint* stencil,    
+     __global int* stencil,    
      __global FLOAT* st_weights,   
      __global FLOAT* solution,  
-     uint stencil_size)  
+     int stencil_size)  
 {   
         FLOAT der = 0.0f;       
-        for (uint j = 0; j < stencil_size; j++) { 
+        for (int j = 0; j < stencil_size; j++) { 
             der += solution[stencil[j]] * st_weights[j];    
         }   
         return der; 

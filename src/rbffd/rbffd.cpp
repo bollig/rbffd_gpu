@@ -1699,6 +1699,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, 
     bool is_padded, bool nbnode_nbsten_dertype)
 {
+	// Weights must have been computed before calling this routine
 	// transform weights into single vector to use on GPU
 	// Assume all stencils have the same size
 	// nbnode_nbsten_type == true : weights[rbf_nodes][stencil_nodes][der_type]
@@ -1717,45 +1718,58 @@ void RBFFD::convertWeightToContiguous(std::vector<double>& weights_d, std::vecto
 
 	printf("how many= %d\n", how_many);
 
+	// skip is the same as weights if weights are doubles
+	// skip is is less than that of weights if weights are packed into double4, etc.
+	int how_many_sten = 1; // TEMPORARY FIX
+
 
     int nb_stencils = grid_ref.getNodeListSize();
 	weights_d.resize(how_many*nb_stencils*stencil_padded_size);
 	stencils_d.resize(nb_stencils*stencil_padded_size);
 	std::vector<StencilType> stencils = grid_ref.getStencils();
-	printf("how_many= %d\n", how_many);
+	printf("how_many=      %d\n", how_many);
+	printf("how_many_sten= %d\n", how_many_sten);
 
 	iterator = computedTypes;
 
+	// Assume the stencil is identical for all operations (derivatives, interpolation, etc.)
+
 	for (int itype=0; itype < how_many; itype++) {
-		printf("itype= %d\n", itype);
 		which = indices[itype];
-		printf("which= %d\n", which);
 		for (int i = 0; i < nb_stencils; i++) {
-			//printf("i= %d\n", i);
 			int j;
 			for (j = 0; j < stencil_size; j++) {
-			//printf("j= %d\n", j);
 				unsigned int indx = nbnode_nbsten_dertype ? 
-					which + how_many*(j + stencil_padded_size*i) :
-					which + how_many*(i + nb_stencils*j);
-				//printf("weights[0].size= %d\n", weights[0].size());
-				//printf("indx= %d\n", indx);
-				//printf("weights[0][0] = %d\n", (long) weights[0][0]);
-				// error in RHS? 
+					itype + how_many*(j + stencil_padded_size*i) : 	// true
+					itype + how_many*(i + nb_stencils*j);			// false
 				weights_d[indx] = (double) weights[which][i][j]; // >>>> ERROR
-				//printf("weights= %f\n", weights_d[indx]);
-				if (which == 0) stencils_d[indx] = (double) stencils[i][j];
 			}
 
 			for (; j < stencil_padded_size; j++) {
 				unsigned int indx = nbnode_nbsten_dertype ?
-							which + how_many*(j + stencil_size*i) :
-							which + how_many*(i + nb_stencils*j);
+							itype + how_many*(j + stencil_size*i) :
+							itype + how_many*(i + nb_stencils*j);
 				weights_d[indx] = 0.;
-				if (which == 0) stencils_d[j+stencil_size+i] = (double) stencils[i][0]; // center
 			}
 		}
 	}
+
+		for (int i = 0; i < nb_stencils; i++) {
+			int j;
+			for (j = 0; j < stencil_size; j++) {
+				unsigned int indx = nbnode_nbsten_dertype ? 
+					 how_many_sten*(j + stencil_padded_size*i) : 	// true
+					 how_many_sten*(i + nb_stencils*j);			// false
+				stencils_d[indx] = (double) stencils[i][j];
+			}
+
+			for (; j < stencil_padded_size; j++) {
+				unsigned int indx = nbnode_nbsten_dertype ?
+							how_many_sten*(j + stencil_size*i) :
+							how_many_sten*(i + nb_stencils*j);
+				stencils_d[indx] = (double) stencils[i][0]; // center
+			}
+		}
 	printf("before leaving convert\n");
 }
 //----------------------------------------------------------------------

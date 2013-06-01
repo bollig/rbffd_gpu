@@ -1,3 +1,36 @@
 test case where one is computing a single derivative of a single function, 
 with ordering or weights: [nb_nodes_per_stencil][nb_rbf_nodes]  (not done) 
                      and  [nb_rbf_nodes][nb_nodes_per_stencil]  done)
+
+gpu deriv: only every 4th gpu derivative appears to be correct (i.e., the same as gpu derivative)
+BUG: stencil conversion into contingous array was not done correctly. I had to change the indexing 
+scheme in r/rbffd.cl
+----------------------------------------------------------------------
+Last kernel required: 
+  four derivatives, four functions. Should use double4, in order to simplify code. 
+  Not clear if there will be a gain with respect to one functino, four derivatives. 
+
+  Two choices:   double4 der4, double4 sol4, double4 wgt4
+        double4 der_funs 
+		double 4ders_fun
+
+  ind = stencil(...)
+
+  -------------
+  wgt4 * sol4  ==> ux, vy,wz,pl
+
+  -------------
+  wgt.x * sol4 ==> (d/dx) sol4 = (ux,vx,wx,px)
+  wgt.y * sol4 ==> (d/dy) sol4 = (uy,vy,wy,py)
+  wgt.z * sol4 ==> (d/dz) sol4 = (uz,vz,wz,pz)
+  wgt.w * sol4 ==> (d/dl) sol4 = (ul,vl,wl,pl)
+
+  -------------
+  wgt * sol4.x ==> (ux,uy,uz,ul)
+  wgt * sol4.y ==> (vx,vy,vz,vl)
+  wgt * sol4.z ==> (wx,wy,wz,wl)
+  wgt * sol4.w ==> (px,py,pz,pl)
+
+  -------------
+
+----------------------------------------------------------------------

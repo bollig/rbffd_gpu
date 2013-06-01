@@ -1,17 +1,17 @@
 #include "useDouble.cl"
 
 void computeDerivMultiWeightFun4(     
-         __global uint* stencils,  // double4
+         __global int* stencils,  // double4
          __global FLOAT* ww,       // multiple weights
          __global double4* solution, // multiple functions
          __global double4* derx,     //   "
          __global double4* dery,     //   "
          __global double4* derz,     //   "
          __global double4* derl,     //   "
-   uint nb_stencils, 
-   uint stencil_size)  
+   int nb_stencils, 
+   int stencil_size)  
 {   
-   uint i = get_global_id(0);    
+   int i = get_global_id(0);    
 
    //double4 xxx = (0.,0.,0.,0.); // VALID EXPRESSION
    // put solution into double4; have single thread work with double4
@@ -30,9 +30,9 @@ void computeDerivMultiWeightFun4(
         double4 dz = (0.0,0.,0.,0.);       
         double4 dl = (0.0,0.,0.,0.);       
 
-        for (uint j = 0; j < stencil_size; j++) {        
-            uint indx = i*stencil_size + j;
-			uint ind  = indx << 2;
+        for (int j = 0; j < stencil_size; j++) {        
+            int indx = i*stencil_size + j;
+			int ind  = indx << 2;
 		// 4 weights ==> 32 bytes (wx,wy,wz,wl) at a point
 		// 4 functions ==> 32 bytes
 		// 4 derivatives ==> 32 bytes

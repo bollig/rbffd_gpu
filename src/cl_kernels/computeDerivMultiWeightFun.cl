@@ -1,17 +1,17 @@
 #include "useDouble.cl"
 
 void computeDerivMultiWeightFun(     
-         __global uint* stencils,  // double4
+         __global int* stencils,  // double4
          __global FLOAT* ww,       // multiple weights
          __global FLOAT* solution, // multiple functions
          __global FLOAT* derx,     //   "
          __global FLOAT* dery,     //   "
          __global FLOAT* derz,     //   "
          __global FLOAT* derl,     //   "
-   uint nb_stencils, 
-   uint stencil_size)  
+   int nb_stencils, 
+   int stencil_size)  
 {   
-   uint i = get_global_id(0);    
+   int i = get_global_id(0);    
 
    //double4 xxx = (0.,0.,0.,0.); // VALID EXPRESSION
    // put solution into double4; have single thread work with double4
@@ -45,9 +45,9 @@ void computeDerivMultiWeightFun(
 		// point "i" handled by a single thread
 		// solution is "reused", but is there a guarantee it will remain in cache? 
 		// would it be possible to assign a different thread to each derivative? 
-        for (uint j = 0; j < stencil_size; j++) {        
-            uint indx = i*stencil_size + j;
-			uint ind  = indx << 2;
+        for (int j = 0; j < stencil_size; j++) {        
+            int indx = i*stencil_size + j;
+			int ind  = indx << 2;
         //    der += 1. * weights[indx];    
         //    der += 1. ;    
 		// 4 weights ==> 32 bytes (wx,wy,wz,wl) at a point
@@ -112,7 +112,7 @@ void computeDerivMultiWeightFun(
 		// derx = (dx1, dx2, dx3, dx4)
 		// They should be all equal if weights are (1,0,0,0...)
 
-		uint i4 = i << 2;  // multiply by 4
+		int i4 = i << 2;  // multiply by 4
         derx[i4+0] = 1.*dx1;    
         dery[i4+0] = 1.*dx1;    
         derz[i4+0] = 1.*dz1;    
@@ -140,9 +140,9 @@ void computeDerivMultiWeightFun(
         double4 dz = (0.,0.,0.,0.);       
         double4 dl = (0.,0.,0.,0.);       
 
-        for (uint j = 0; j < stencil_size; j++) {        
-            uint indx = i*stencil_size + j;
-			uint ind  = indx << 2;
+        for (int j = 0; j < stencil_size; j++) {        
+            int indx = i*stencil_size + j;
+			int ind  = indx << 2;
 		// 4 weights ==> 32 bytes (wx,wy,wz,wl) at a point
 		// 4 functions ==> 32 bytes
 		// 4 derivatives ==> 32 bytes
@@ -159,7 +159,7 @@ void computeDerivMultiWeightFun(
 			dz += s*w2;
 			dl += s*w3;
 		}
-		uint i4 = i << 2;
+		int i4 = i << 2;
 		derx[i4] = dx.x; // how can this be efficient? 
 		derx[i4+1] = dx.y;
 		derx[i4+2] = dx.z;

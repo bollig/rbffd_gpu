@@ -71,8 +71,150 @@ RANDOMIZED STENCILS
 ----------------------------------------------------------------------
 Now run COMPACT/DIRECT, 100^3 grid
 DIRECT, GPU: 113ms  (6.6x slower than 50^3, but should only be 8x slower). 
+   110ms without optimization
 INVERSE, GPU: 130ms  (7.6x slower than 50^3, but should only be 8x slower). 
    Why is INVERSE slower than DIRECT? 
+   553 ms without optimization
 So Direct is gaining efficiency with larger grids. DO NOT KNOW WHY. 
 ----------------------------------------------------------------------
+INVERSE should be faster in non-optimized for. It isn't. WHY NOT? 
 ----------------------------------------------------------------------
+I tried to speed function up using double4 arguments. This will not work. 
+For that, I must return to computing a four derivatives of a single functino. 
+----------------------------------------------------------------------
+Stencil=32
+50^3 grid, 16.9ms (with attribute double4). 16.59 without. Single derivative. 
+50^3 grid, 16.9ms (with attribute double4). 16.59 without. Single derivative. 
+50^3 grid, 29.4ms (with attribute double4). 28.9 without. Four derivatives.  (double4)
+100^3: 140.72 (with attribute vec_hint=double4). Four derivatives. 
+100^3: 144.72 (with attribute vec_hint=double3). (not much difference)
+CONCLUSION: Since arguments are already double4, there is not much room for improvement. 
+100^3: 104.59 (with attribute vec_hint=double4). Single derivative
+100^3: 102.00 (with attribute vec_hint=double3). Single derivative.  FUN_KERNEL. 
+100^3: 114.09 (with attribute vec_hint=double). Single derivative
+100^3: 114.09 (with no attribute vec_hint). Single derivative
+100^3: 136.ms (with no attribute vec_hint). Four derivatives, using doubles instead of double4
+   (similar to using double4, except that the four derivatives are returned in
+   individual arrays.)
+   (exact same cost as single derivative, when using doubles. Using double4 is slower.)
+CONCLUSION: put an suggestion of double4 being ideal, even if I am using doubles. 10% speed increase on Phi. 
+
+Speed up of 4 derivatives at the same time versus 1 derivative four times:
+(102*4) / 142 = 408/142 = 2.8
+
+I have still not experimented with prefetch. 
+
+FINALLY: I should experiment using only doubles, and no double4 arguments.
+Will this be more or less efficient? 
+
+printf() works in OpenCL on the MIC. Need a clFinish() to flush the output
+buffer. 
+----------------------------------------------------------------------
+100^3, 110ms, 4 derivatives. 
+Removed stencil loop, and computer time went to 2ms. Code was obviously
+eliminated. Now remove OpenCL optimization, and run code with and without
+stencil loop to establish cost of sending data back to memory. 
+
+Cost without stencil loop: 7.22ms
+        derx[i] = dx;    
+        dery[i] = dy;    
+        derz[i] = dz;    
+        derl[i] = dl;    
+
+Cost with stencil loop (non-optimized): 125ms (110ms with optimization)
+The difference between optimized and non-optimized code is lessed as we compute more 
+derivative since we are improving our use of cache. 
+
+Cost of next 4 lines: 15 ms
+        for (int j = 0; j < stencil_size; j++) { 
+            int indx = i*stencil_size + j;
+            int ind  = indx << 2;
+            double sol = solution[stencils[indx]];
+		}
+
+Now combine update to memory and solution retrieval: 17ms (should have been 22ms). 
+The additional work allowed some of the HW threads to keep busy. 
+
+Now consider only the four weights: 15ms (removing "sol=1" outside the loop
+does not change the timing.
+
+       for (int j = 0; j < stencil_size; j++) { 
+            int indx = i*stencil_size + j;
+            int ind  = indx << 2;
+			sol = 1.;
+            dx += sol * ww[ind];    
+            dy += sol * ww[ind+1];    
+            dz += sol * ww[ind+2];    
+            dl += sol * ww[ind+3];    
+		}
+
+The entire loop without writing derivatives back to memory: 15ms. 
+
+Entire code:  125 ms. 
+
+Entire code, but remove ww[ind], etc...,, but and replacing them by "1.": 88ms. 
+
+HARD TO UNDERSTAND
+1 item per group: 130ms
+16 items per group (all above results with multi-derivs): 125 ms
+64 items per group: 125ms
+
+----------------------------------------------------------------------
+void computeDeriv1Weight4Fun1(
+         __global int* stencils,
+         __global double* ww,
+         __global double* solution,
+         __global double* derx,
+         __global double* dery,
+         __global double* derz,
+         __global double* derl,
+        int nb_stencils,
+        int stencil_size)
+{
+   int i = get_global_id(0);    
+
+   if(i >= nb_stencils) return;
+
+   { 
+        double dx = 0.;
+        double dy = 0.;
+        double dz = 0.;
+        double dl = 0.;
+        double sol = 1.;
+
+        #if 1
+        for (int j = 0; j < stencil_size; j++) { 
+            int indx = i*stencil_size + j;
+            int ind  = indx << 2;
+            #if 1
+            double sol = solution[stencils[indx]];
+            #else
+            #endif
+
+
+            #if 1
+            #if 1
+            dx += sol * ww[ind];    
+            dy += sol * ww[ind+1];    
+            dz += sol * ww[ind+2];    
+            dl += sol * ww[ind+3];    
+            #else
+            dx += sol;
+            dy += sol;
+            dz += sol;
+            dl += sol;
+            #endif
+            #endif
+        }
+        #endif
+
+        #if 1
+        derx[i] = dx;    
+        dery[i] = dy;    
+        derz[i] = dz;    
+        derl[i] = dl;    
+        #endif
+   }
+   //if (i == 0) printf("exit computeDeriv1Weight4Fun1 CL function\n");
+}
+

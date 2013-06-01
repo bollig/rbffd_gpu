@@ -2,7 +2,7 @@
 
 // GPU Only routine
 void computeDerivMulti(       
-         __global uint* stencils,     // double4
+         __global int* stencils,     // double4
          __global FLOAT* wx,    // double4
          __global FLOAT* wy,    // double4
          __global FLOAT* wz,    // double4
@@ -12,10 +12,10 @@ void computeDerivMulti(
          __global FLOAT* dery,     // double4
          __global FLOAT* derz,     // double4
          __global FLOAT* derl,     // double4
-   uint nb_stencils, 
-   uint stencil_size)  
+   int nb_stencils, 
+   int stencil_size)  
 {   
-   uint i = get_global_id(0);    
+   int i = get_global_id(0);    
 
    //double4 xxx = (0.,0.,0.,0.); // VALID EXPRESSION
    // put solution into double4; have single thread work with double4
@@ -30,8 +30,8 @@ void computeDerivMulti(
 		// point "i" handled by a single thread
 		// solution is "reused", but is there a guarantee it will remain in cache? 
 		// would it be possible to assign a different thread to each derivative? 
-        for (uint j = 0; j < stencil_size; j++) {        
-            uint indx = i*stencil_size + j;
+        for (int j = 0; j < stencil_size; j++) {        
+            int indx = i*stencil_size + j;
         //    der += 1. * weights[indx];    
         //    der += 1. ;    
 			FLOAT sol = solution[stencils[indx]];

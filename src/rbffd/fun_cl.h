@@ -11,10 +11,13 @@ class FUN_CL : public RBFFD_CL
 	private:
 		int nb_nodes;
 		int nodes_per_stencil;
-    	unsigned int nb_stencils;
+    	int nb_stencils;
 
     public: 
-		enum KernelType {FUN_KERNEL, FUN_INV_KERNEL};
+	// FUN1_DERIV4_WEIGHT4: 1 function, 4 derivatives, use double4
+	// FUN1_DERIV1_WEIGHT4: 1 function, 4 derivatives, use double
+		enum KernelType {FUN_KERNEL, FUN_INV_KERNEL, FUN_DERIV4_KERNEL, 
+		  FUN1_DERIV4_WEIGHT4, FUN1_DERIV1_WEIGHT4};
 		KernelType kernel_type; // poor name
 
 	public:
@@ -36,6 +39,7 @@ class FUN_CL : public RBFFD_CL
 			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU);
 
 		virtual void computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, bool isChangedU);
+		virtual void convertWeights();
 		//------------------
 
     protected: 

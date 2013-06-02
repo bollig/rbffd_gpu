@@ -34,7 +34,8 @@ RBFFD_CL::SuperBuffer<double> deriv4_gpu;
 // Sames types as in rbffd/fun_cl.h
 enum KernelType {FUN_KERNEL, FUN_INV_KERNEL, FUN_DERIV4_KERNEL,
 	FUN1_DERIV4_WEIGHT4,
-	FUN1_DERIV1_WEIGHT4};
+	FUN1_DERIV1_WEIGHT4,
+	FUN4_DERIV4_WEIGHT4};
 KernelType kernel_type;
 
 Grid* grid;
@@ -69,7 +70,19 @@ void initializeArrays()
 {
 	// Redundant initializations since we have tons of memory
 	int size = grid->getNodeList().size();
+
+	// We will work with four functions. 
+
+	printf("size= %d\n", size);
+
+	switch (kernel_type) {
+	case FUN4_DERIV4_WEIGHT4:
+		size = 4*size;
+		break;
+	}
+
     u_cpu.resize(size); 
+
     xderiv_cpu.resize(size);
     yderiv_cpu.resize(size);
     zderiv_cpu.resize(size);
@@ -81,7 +94,7 @@ void initializeArrays()
 	for (int i=0; i < u_cpu.size(); i++) {
 		double rnd = randf(-1.,1.);
 		if (i < 20) printf("rnd= %f\n", rnd);
-		u_cpu[i] =      rnd;
+		u_cpu[i] = rnd;
 	}
 }
 //----------------------------------------------------------------------
@@ -108,6 +121,7 @@ void computeOnGPU4()
 		deriv4_gpu.copyToHost();
 		break;
 	case FUN1_DERIV1_WEIGHT4:
+	case FUN4_DERIV4_WEIGHT4:
 		xderiv_gpu = RBFFD_CL::SuperBuffer<double>(xderiv_cpu.size(), "xderiv_gpu"); 
 		yderiv_gpu = RBFFD_CL::SuperBuffer<double>(yderiv_cpu.size(), "yderiv_gpu"); 
 		zderiv_gpu = RBFFD_CL::SuperBuffer<double>(zderiv_cpu.size(), "zderiv_gpu"); 
@@ -163,15 +177,29 @@ void computeOnCPU4()
     der_cpu->computeAllWeightsForAllStencilsEmpty();
 	// Weights must already be computed
 
-    der_cpu->computeDeriv(RBFFD::X,    u_cpu, xderiv_cpu, true);
-    der_cpu->computeDeriv(RBFFD::Y,    u_cpu, yderiv_cpu, true);
-    der_cpu->computeDeriv(RBFFD::Z,    u_cpu, zderiv_cpu, true);
-    der_cpu->computeDeriv(RBFFD::LAPL, u_cpu, lderiv_cpu, true);
+	switch (kernel_type) {
+	case FUN1_DERIV1_WEIGHT4:
+    	der_cpu->computeDeriv(RBFFD::X,    u_cpu, xderiv_cpu, true);
+    	der_cpu->computeDeriv(RBFFD::Y,    u_cpu, yderiv_cpu, true);
+    	der_cpu->computeDeriv(RBFFD::Z,    u_cpu, zderiv_cpu, true);
+    	der_cpu->computeDeriv(RBFFD::LAPL, u_cpu, lderiv_cpu, true);
+		break;
+	case FUN4_DERIV4_WEIGHT4:
+		vector<double> u,v,w,p;
+		vector<double> ux,uy,uz,ul;
+		vector<double> vx,vy,vz,vl;
+		vector<double> wx,wy,wz,wl;
+		vector<double> px,py,pz,pl;
+		int sz = u_cpu.size() >> 2;
+		u.assign(&u_cpu[0], &u_cpu[sz]);
+		break;
+	}
+
 	tm["cpu_tests"]->end();
 
-	for (int i=0; i < 20; i++) {
-		printf("(%d), CPU4: u,dudx= %f, %f, %f, %f\n", i, u_cpu[i], xderiv_cpu[i], yderiv_cpu[i], zderiv_cpu[i], lderiv_cpu[i]);
-	}
+	//for (int i=0; i < 20; i++) {
+		//printf("(%d), CPU4: u,dudx= %f, %f, %f, %f\n", i, u_cpu[i], xderiv_cpu[i], yderiv_cpu[i], zderiv_cpu[i], lderiv_cpu[i]);
+	//}
 }
 //----------------------------------------------------------------------
 void computeOnCPU()
@@ -255,7 +283,7 @@ void checkDerivativeAccuracy4()
 	// deriv_gpu: (ux,uy,uz,ul)_1, (ux,uy,uz,ul)_2
 	// Array of Structures to Structure of Arrays
 	vector<double> deriv4_cpu;
-	double xnorm;
+	double xnorm, ynorm, znorm, lnorm;
 
 	switch (kernel_type) {
 	case FUN1_DERIV4_WEIGHT4:
@@ -263,15 +291,21 @@ void checkDerivativeAccuracy4()
 		xnorm = linfnorm(*deriv4_gpu.host, deriv4_cpu);
 		break;
 	case FUN1_DERIV1_WEIGHT4:
+	case FUN4_DERIV4_WEIGHT4:
 		xnorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
-		double ynorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
-		double znorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
-		double lnorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
+		ynorm = linfnorm(*yderiv_gpu.host, yderiv_cpu);
+		znorm = linfnorm(*zderiv_gpu.host, zderiv_cpu);
+		lnorm = linfnorm(*lderiv_gpu.host, lderiv_cpu);
 		printf("x,y,z,l norms: %f, %f, %f, %f\n", xnorm, ynorm, znorm, lnorm);
 		xnorm = (xnorm > ynorm) ? xnorm : ynorm;
 		xnorm = (xnorm > znorm) ? xnorm : znorm;
 		xnorm = (xnorm > lnorm) ? xnorm : lnorm;
 		break;
+	//case FUN4_DERIV4_WEIGHT4:
+		//xnorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
+		//ynorm = linfnorm(*yderiv_gpu.host, yderiv_cpu);
+		//znorm = linfnorm(*zderiv_gpu.host, lderiv_cpu);
+		//lnorm = linfnorm(*lderiv_gpu.host, lderiv_cpu);
 	}
 
 	printf("*********************************************\n");
@@ -282,7 +316,37 @@ void checkDerivativeAccuracy4()
 		printf("CPU and GPU derivative do not match to within %f\n", eps);
 	}
 
+	switch (kernel_type) {
+	case FUN4_DERIV4_WEIGHT4:
+		int sz = xderiv_cpu.size() / 4;
+		for (int i=0; i < 20; i++) {
+			printf("----- i = %d -------\n", i);
+			printf("SOL 0\n");
+			printf("x cpu/gpu der: %f, %f\n", xderiv_cpu[i], xderiv_gpu[i]);
+			printf("y cpu/gpu der: %f, %f\n", yderiv_cpu[i], yderiv_gpu[i]);
+			printf("z cpu/gpu der: %f, %f\n", zderiv_cpu[i], zderiv_gpu[i]);
+			printf("l cpu/gpu der: %f, %f\n", lderiv_cpu[i], lderiv_gpu[i]);
+			printf("SOL 1\n");
+			printf("x cpu/gpu der: %f, %f\n", xderiv_cpu[i+sz], xderiv_gpu[i+sz]);
+			printf("y cpu/gpu der: %f, %f\n", yderiv_cpu[i+sz], yderiv_gpu[i+sz]);
+			printf("z cpu/gpu der: %f, %f\n", zderiv_cpu[i+sz], zderiv_gpu[i+sz]);
+			printf("l cpu/gpu der: %f, %f\n", lderiv_cpu[i+sz], lderiv_gpu[i+sz]);
+			printf("SOL 2\n");
+			printf("x cpu/gpu der: %f, %f\n", xderiv_cpu[i+2*sz], xderiv_gpu[i+2*sz]);
+			printf("y cpu/gpu der: %f, %f\n", yderiv_cpu[i+2*sz], yderiv_gpu[i+2*sz]);
+			printf("z cpu/gpu der: %f, %f\n", zderiv_cpu[i+2*sz], zderiv_gpu[i+2*sz]);
+			printf("l cpu/gpu der: %f, %f\n", lderiv_cpu[i+2*sz], lderiv_gpu[i+2*sz]);
+			printf("SOL 3\n");
+			printf("x cpu/gpu der: %f, %f\n", xderiv_cpu[i+3*sz], xderiv_gpu[i+3*sz]);
+			printf("y cpu/gpu der: %f, %f\n", yderiv_cpu[i+3*sz], yderiv_gpu[i+3*sz]);
+			printf("z cpu/gpu der: %f, %f\n", zderiv_cpu[i+3*sz], zderiv_gpu[i+3*sz]);
+			printf("l cpu/gpu der: %f, %f\n", lderiv_cpu[i+3*sz], lderiv_gpu[i+3*sz]);
+		}
+		break;
+	}
+
 	//printf("***\n***Derivatives with errors larger than 1.e-5 ***\n");
+
 
 	#if 0
 	for (int i=0; i < 20; i++) {
@@ -384,6 +448,10 @@ void setupDerivativeWeights()
         	der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
 			der->setKernelType(FUN_CL::FUN1_DERIV4_WEIGHT4);
 			break;
+		case FUN4_DERIV4_WEIGHT4:
+        	der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+			der->setKernelType(FUN_CL::FUN4_DERIV4_WEIGHT4);
+			break;
 		}
 		//printf("before computeAllWeights\n");
     	der->computeAllWeightsForAllStencilsEmpty(); 
@@ -425,8 +493,9 @@ int main(int argc, char** argv)
 	tm.printAll(stdout, 60);
 
 	//kernel_type = FUN_KERNEL;
-	//kernel_type = FUN1_DERIV4_WEIGHT4;
-	kernel_type = FUN1_DERIV1_WEIGHT4;
+	//kernel_type = FUN1_DERIV4_WEIGHT4; // ux,uy,uz,up
+	//kernel_type = FUN1_DERIV1_WEIGHT4;
+	kernel_type = FUN4_DERIV4_WEIGHT4;
 
     tm["main_total"]->start();
 
@@ -439,7 +508,7 @@ int main(int argc, char** argv)
 	initializeArrays();
 	//printf("*******  setupDerivativeWeights *************\n");
 	setupDerivativeWeights();
-	//printf("*******  exit setupDerivativeWeights *************\n");
+	printf("*******  exit setupDerivativeWeights *************\n");
 
 	switch (kernel_type) {
 	case FUN_KERNEL:
@@ -450,11 +519,14 @@ int main(int argc, char** argv)
 		computeOnGPU();
 		checkDerivativeAccuracy();
 		break;
+	case FUN4_DERIV4_WEIGHT4:
 	case FUN1_DERIV4_WEIGHT4:
 	case FUN1_DERIV1_WEIGHT4:
 		//printf("**** Compute on CPU4 ****\n");
 		computeOnCPU4(); // must be called before GPU
 		//printf("**** Compute on GPU4 ****\n");
+	printf("----------------------------------------------------------------------------------\n");
+	printf("----------------------------------------------------------------------------------\n");
 		computeOnGPU4();
 		checkDerivativeAccuracy4();
 		break;

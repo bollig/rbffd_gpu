@@ -236,10 +236,43 @@ Workgroup size, GPU time.
 >>>> local size: 1000
 >>>> number workgroups: 1000
 >>>> total nb workitems: 1000000, 
-166 ms (optimized code) (chosen by compouter, 1000 items/group)
+166 ms (optimized code) (chosen by computer, 1000 items/group)
 125 ms (non-optimized), 32 items/group 
 
 
 Do not understand. Unoptimized code is faster.  (125 vs 140 ms) (10%
 difference)
 ----------------------------------------------------------------------
+I execute a loop 10 times when I call a derivative kernel. 
+I placed a barrier(CLK_GLOBAL_MEM_FENCE) at the end of each loop iteration,
+and the time went from 125ms to 116ms (in non-optimized OpenCL). 
+There are 32 items per workgroup. 
+
+Return to optimized OpenCL. 
+Optimized: same case: 203ms with barriers. 
+Optimized: same case: 136ms without barriers. 
+
+BARRIERS VERY EXPENSIVE in optimized mode!!! Unfortunate. Perhaps calling
+kernels multiple times is faster, but then one must get data from global
+memory multiple times. 
+
+attribute vec_hint: double4
+4 deriv * 4 func: 200 ms (optimized code) (RANDOM), 170ms (COMPACT)
+(speedup: 2.5x, assuming no errors.)
+remove attribute double4, COMPACT: 215ms 
+Change to autoselect workgroup size: 210ms
+add back attribute double4: 237ms.  (SHOULD BE 170ms)
+return to 32 element workgroup size: 204ms (COMPACT) (cannot get back to 170ms) 
+RANDOM, 32 el/workgroup: 193ms (same timing as COMPACT)
+   WHY? COMPACT USED TO BE FASTER. 
+100x50x50: 37ms (COMPACT and RANDOM),  (older timngs were double.)
+ (It is possible that my implementation no longer is memory bound?)
+stencil: 32
+ONE FUNCTION, ONE DERIVATIVE on 100x50x50: 30ms. 
+ONE FUNCTION, ONE DERIVATIVE on 100x100x100: 114ms (104ms per derivative)
+ONE FUNCTION, FOUR DERIVATIVEs on 100x100x100: 144ms (36ms per derivative, speedup: 2.9)
+FOUR FUNCTIONS, FOUR DERIVATIVES on 100x100x100: 208ms (16 derivatives, 13ms per der, speedup: 8) (optimized)
+     same case: 216ms (unoptimized compiler option )
+----------------------------------------------------------------------
+
+DERIVE NOT WORKING (16 deriv)

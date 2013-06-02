@@ -140,14 +140,19 @@ void computeDeriv1Weight4Fun1(
 //----------------------------------------------------------------------
 // compute 4 derivatives of four functions
 // Different formats possible for ww, sol, der
-void computeDeriv1Weight4Fun4(     
+// Two main cases: store (ux,uy,...) close in memory, 
+// or store (ux,vx,wx,wl) close in memory. 
+// Third case: (store 16 derivatives close in memory). 
+// The three cases change how data is input into the function. 
+
+void computeDeriv4Weight4Fun4(     
          __global int* stencils, 
-         __global double* ww, 
+         __global double4* ww, 
          __global double* solution, 
-         __global double* derx,
-         __global double* dery,
-         __global double* derz,
-         __global double* derl,
+         __global double4* ders0,
+         __global double4* ders1,
+         __global double4* ders2,
+         __global double4* ders3,
    		int nb_stencils, 
    		int stencil_size)  
 {   
@@ -156,44 +161,40 @@ void computeDeriv1Weight4Fun4(
    if(i >= nb_stencils) return;
 
    {
-   		//double* dd = derx;   // illegal because changing address space
-        double dx = 0.;
-        double dy = 0.;
-        double dz = 0.;
-        double dl = 0.;
+        double4 dd0 = 0.;  // d/d{x,y,z,l}(sol0)
+        double4 dd1 = 0.;
+        double4 dd2 = 0.;
+        double4 dd3 = 0.;
 		//double sol = 1.;
 
 		#if 1
         for (int j = 0; j < stencil_size; j++) { 
             int indx = i*stencil_size + j;
-			int ind  = indx << 2;
 			#if 1
-			double sol = solution[stencils[indx]];
+			int ind = stencils[indx];
+			// The solution vectors are not compact
+			double sol0 = solution[ind];
+			double sol1 = solution[ind +   nb_stencils];
+			double sol2 = solution[ind + 2*nb_stencils];
+			double sol3 = solution[ind + 3*nb_stencils];
 			#else
 			#endif
 
 
 			#if 1
-			#if 1     
-            dx += sol * ww[ind];     // 125ms with memory update (non-optimized)
-            dy += sol * ww[ind+1];   // 140ms when optimized (hard to believe)
-            dz += sol * ww[ind+2];    
-            dl += sol * ww[ind+3];    
-			#else
-            dx += sol;    // cost: 88ms with memory update
-            dy += sol;   
-            dz += sol;
-            dl += sol;
-			#endif
+            dd0 += sol0 * ww[ind];     // 125ms with memory update (non-optimized)
+            dd1 += sol1 * ww[ind];     // 125ms with memory update (non-optimized)
+            dd2 += sol2 * ww[ind];     // 125ms with memory update (non-optimized)
+            dd3 += sol3 * ww[ind];     // 125ms with memory update (non-optimized)
 			#endif
         }   
 		#endif
 
 		#if 1
-        derx[i] = dx;     // cost: 15ms wihtout rest of code (unoptimized)
-        dery[i] = dy;    
-        derz[i] = dz;    
-        derl[i] = dl;    
+        ders0[i] = dd0;     // cost: 15ms wihtout rest of code (unoptimized)
+        ders1[i] = dd1;    
+        ders2[i] = dd2;    
+        ders3[i] = dd3;    
 		#endif
    }    
    //if (i == 0) printf("exit computeDeriv1Weight4Fun1 CL function\n");

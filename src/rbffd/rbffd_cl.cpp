@@ -49,8 +49,11 @@ void RBFFD_CL::loadKernel(const std::string& kernel_name, const std::string& ker
         useDouble = false;
     }
 
+	cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+	cout << "++++++       LOAD KERNEL                           +++++++++\n";
 	cout << "kernel_name= " << kernel_name << endl;
 	cout << "kernel_source_file = " << kernel_source_file << endl;
+	cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
 
     // The true here specifies we search throught the dir specified by environment variable CL_KERNELS
     std::string my_source = this->loadFileContents(kernel_source_file.c_str(), true);

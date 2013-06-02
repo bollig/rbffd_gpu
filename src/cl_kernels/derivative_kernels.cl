@@ -224,11 +224,13 @@ void computeDeriv1Weight4Fun1Kernel(
    		int nb_stencils, 
    		int stencil_size)  
 {   
+#if 0
 	if (get_global_id(0) == 0) {
 		printf(">>>> local size: %d\n", get_local_size(0));
 		printf(">>>> number workgroups: %d\n", get_num_groups(0));
 		printf(">>>> total nb workitems: %d\n", get_global_size(0));
 	}
+#endif
 
 	for (int i=0; i < 10; i++) { 
 		computeDeriv1Weight4Fun1(     
@@ -238,27 +240,28 @@ void computeDeriv1Weight4Fun1Kernel(
          derx, dery, derz, derl,
    		nb_stencils, 
 		stencil_size);
+		//barrier(CLK_GLOBAL_MEM_FENCE);
 	} 
 }
 //----------------------------------------------------------------------
-__kernel __attribute__((vec_type_hint(double4)))
-void computeDeriv1Weight4Fun4Kernel(     
+__kernel  __attribute__((vec_type_hint(double4)))
+void computeDeriv4Weight4Fun4Kernel(     
          __global int* stencils, 
-         __global double* ww, 
+         __global double4* ww, 
          __global double* solution, 
-         __global double* derx,
-         __global double* dery,
-         __global double* derz,
-         __global double* derl,
+         __global double4* ders0,
+         __global double4* ders1,
+         __global double4* ders2,
+         __global double4* ders3,
    		int nb_stencils, 
    		int stencil_size)  
 {
 	for (int i=0; i < 10; i++) { 
-		computeDeriv1Weight4Fun4(     
+		computeDeriv4Weight4Fun4(     
          stencils, 
          ww, 
          solution, 
-         derx, dery, derz, derl,
+         ders0, ders1, ders2, ders3,
    		nb_stencils, 
 		stencil_size);
 	} 

@@ -40,6 +40,9 @@ void FUN_CL::setKernelType(KernelType kernel_type_)
  	case FUN1_DERIV1_WEIGHT4:
     	loadKernel("computeDeriv1Weight4Fun1Kernel", "derivative_kernels.cl");
 		break;
+ 	case FUN4_DERIV4_WEIGHT4:
+    	loadKernel("computeDeriv4Weight4Fun4Kernel", "derivative_kernels.cl");
+		break;
 	}
 
 	// Derivative weights must have been computed by now. 
@@ -155,14 +158,11 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
         kernel.setArg(i++, sup_stencils.dev); //gpu_stencils);
         kernel.setArg(i++, sup_all_weights.dev); //gpu_all_weights);
         kernel.setArg(i++, u.dev);              // 4 functions
-		printf("after u\n");
         kernel.setArg(i++, deriv_x.dev);        
-		printf("after deriv_x\n");
         kernel.setArg(i++, deriv_y.dev);       
-		printf("after deriv_y\n");
         kernel.setArg(i++, deriv_z.dev);      
-		printf("after deriv_z\n");
         kernel.setArg(i++, deriv_l.dev);     
+
         //FIXME: we want to pass a unsigned int for maximum array lengths, but OpenCL does not allow
         //unsigned int arguments at this time
         kernel.setArg(i++, sizeof(unsigned int), &nb_stencils);               // const

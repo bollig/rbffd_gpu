@@ -17,7 +17,8 @@ class FUN_CL : public RBFFD_CL
 	// FUN1_DERIV4_WEIGHT4: 1 function, 4 derivatives, use double4
 	// FUN1_DERIV1_WEIGHT4: 1 function, 4 derivatives, use double
 		enum KernelType {FUN_KERNEL, FUN_INV_KERNEL, FUN_DERIV4_KERNEL, 
-		  FUN1_DERIV4_WEIGHT4, FUN1_DERIV1_WEIGHT4};
+		  FUN1_DERIV4_WEIGHT4, FUN1_DERIV1_WEIGHT4,
+		  FUN4_DERIV1_WEIGHT4};  // 4 functions, 4 derivatives, using double on GPU
 		KernelType kernel_type; // poor name
 
 	public:

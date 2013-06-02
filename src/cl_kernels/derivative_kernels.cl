@@ -224,8 +224,37 @@ void computeDeriv1Weight4Fun1Kernel(
    		int nb_stencils, 
    		int stencil_size)  
 {   
+	if (get_global_id(0) == 0) {
+		printf(">>>> local size: %d\n", get_local_size(0));
+		printf(">>>> number workgroups: %d\n", get_num_groups(0));
+		printf(">>>> total nb workitems: %d\n", get_global_size(0));
+	}
+
 	for (int i=0; i < 10; i++) { 
 		computeDeriv1Weight4Fun1(     
+         stencils, 
+         ww, 
+         solution, 
+         derx, dery, derz, derl,
+   		nb_stencils, 
+		stencil_size);
+	} 
+}
+//----------------------------------------------------------------------
+__kernel __attribute__((vec_type_hint(double4)))
+void computeDeriv1Weight4Fun4Kernel(     
+         __global int* stencils, 
+         __global double* ww, 
+         __global double* solution, 
+         __global double* derx,
+         __global double* dery,
+         __global double* derz,
+         __global double* derl,
+   		int nb_stencils, 
+   		int stencil_size)  
+{
+	for (int i=0; i < 10; i++) { 
+		computeDeriv1Weight4Fun4(     
          stencils, 
          ww, 
          solution, 

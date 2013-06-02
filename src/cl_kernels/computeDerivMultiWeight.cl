@@ -100,7 +100,7 @@ void computeDeriv1Weight4Fun1(
         double dy = 0.;
         double dz = 0.;
         double dl = 0.;
-		double sol = 1.;
+		//double sol = 1.;
 
 		#if 1
         for (int j = 0; j < stencil_size; j++) { 
@@ -114,8 +114,69 @@ void computeDeriv1Weight4Fun1(
 
 			#if 1
 			#if 1     
-            dx += sol * ww[ind];     // 125ms with memory update
-            dy += sol * ww[ind+1];    
+            dx += sol * ww[ind];     // 125ms with memory update (non-optimized)
+            dy += sol * ww[ind+1];   // 140ms when optimized (hard to believe)
+            dz += sol * ww[ind+2];    
+            dl += sol * ww[ind+3];    
+			#else
+            dx += sol;    // cost: 88ms with memory update
+            dy += sol;   
+            dz += sol;
+            dl += sol;
+			#endif
+			#endif
+        }   
+		#endif
+
+		#if 1
+        derx[i] = dx;     // cost: 15ms wihtout rest of code (unoptimized)
+        dery[i] = dy;    
+        derz[i] = dz;    
+        derl[i] = dl;    
+		#endif
+   }    
+   //if (i == 0) printf("exit computeDeriv1Weight4Fun1 CL function\n");
+}
+//----------------------------------------------------------------------
+// compute 4 derivatives of four functions
+// Different formats possible for ww, sol, der
+void computeDeriv1Weight4Fun4(     
+         __global int* stencils, 
+         __global double* ww, 
+         __global double* solution, 
+         __global double* derx,
+         __global double* dery,
+         __global double* derz,
+         __global double* derl,
+   		int nb_stencils, 
+   		int stencil_size)  
+{   
+   int i = get_global_id(0);    
+
+   if(i >= nb_stencils) return;
+
+   {
+   		//double* dd = derx;   // illegal because changing address space
+        double dx = 0.;
+        double dy = 0.;
+        double dz = 0.;
+        double dl = 0.;
+		//double sol = 1.;
+
+		#if 1
+        for (int j = 0; j < stencil_size; j++) { 
+            int indx = i*stencil_size + j;
+			int ind  = indx << 2;
+			#if 1
+			double sol = solution[stencils[indx]];
+			#else
+			#endif
+
+
+			#if 1
+			#if 1     
+            dx += sol * ww[ind];     // 125ms with memory update (non-optimized)
+            dy += sol * ww[ind+1];   // 140ms when optimized (hard to believe)
             dz += sol * ww[ind+2];    
             dl += sol * ww[ind+3];    
 			#else

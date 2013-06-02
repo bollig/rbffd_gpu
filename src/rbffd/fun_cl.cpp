@@ -176,7 +176,7 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 
 #if 1
     // User specifies work group size
-    int items_per_group = 1;
+    int items_per_group = 32;
     int nn = nb_stencils % items_per_group;
     int nd = nb_stencils / items_per_group;
     int tot_items = (nn != 0) ? (nd+1)*items_per_group : nb_stencils; 
@@ -188,7 +188,7 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
     enqueueKernel(kernel, cl::NDRange(tot_items), cl::NDRange(items_per_group), true);
 #else
 	printf("nb_stencils= %d\n", nb_stencils);
-	enqueueKernel:kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
+	enqueueKernel(kernel, cl::NDRange(nb_stencils), cl::NullRange, true);
 #endif
 
     tm["applyWeights"]->end();

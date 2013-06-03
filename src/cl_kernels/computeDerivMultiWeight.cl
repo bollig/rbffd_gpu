@@ -145,6 +145,9 @@ void computeDeriv1Weight4Fun1(
 // Third case: (store 16 derivatives close in memory). 
 // The three cases change how data is input into the function. 
 
+// This routine: derivatives are compact ders0=(ux,uy,uz,up)
+// solution: (u1,u2,...),(v1,v2,...),...,(p1,p2,...)
+
 void computeDeriv4Weight4Fun4(     
          __global int* stencils, 
          __global double4* ww, 
@@ -159,13 +162,10 @@ void computeDeriv4Weight4Fun4(
    int i = get_global_id(0);    
 
    if(i >= nb_stencils) return;
-
-   {
-        double4 dd0 = 0.;  // d/d{x,y,z,l}(sol0)
-        double4 dd1 = 0.;
-        double4 dd2 = 0.;
-        double4 dd3 = 0.;
-		//double sol = 1.;
+        double4 dds0 = 0.;  // d/d{x,y,z,l}(sol0)
+        double4 dds1 = 0.;
+        double4 dds2 = 0.;
+        double4 dds3 = 0.;
 
 		#if 1
         for (int j = 0; j < stencil_size; j++) { 
@@ -173,30 +173,36 @@ void computeDeriv4Weight4Fun4(
 			#if 1
 			int ind = stencils[indx];
 			// The solution vectors are not compact
-			double sol0 = solution[ind];
-			double sol1 = solution[ind +   nb_stencils];
-			double sol2 = solution[ind + 2*nb_stencils];
-			double sol3 = solution[ind + 3*nb_stencils];
 			#else
 			#endif
 
-
-			#if 1
-            dd0 += sol0 * ww[ind];     // 125ms with memory update (non-optimized)
-            dd1 += sol1 * ww[ind];     // 125ms with memory update (non-optimized)
-            dd2 += sol2 * ww[ind];     // 125ms with memory update (non-optimized)
-            dd3 += sol3 * ww[ind];     // 125ms with memory update (non-optimized)
+			#if 0
+			double4 www = ww[indx];
+            dds0 += sol0 * www;     // 125ms with memory update (non-optimized)
+            dds1 += sol1 * www;     // 125ms with memory update (non-optimized)
+            dds2 += sol2 * www;     // 125ms with memory update (non-optimized)
+            dds3 += sol3 * www;     // 125ms with memory update (non-optimized)
+			#else
+			double sol0 = solution[ind];
+            dds0 += sol0 * ww[indx];     // 125ms with memory update (non-optimized)
+			double sol1 = solution[ind +   nb_stencils];  // not aligned in general
+            dds1 += sol1 * ww[indx];     // 125ms with memory update (non-optimized)
+			double sol2 = solution[ind + 2*nb_stencils];  // not aligned in general
+            dds2 += sol2 * ww[indx];     // 125ms with memory update (non-optimized)
+			double sol3 = solution[ind + 3*nb_stencils];
+            dds3 += sol3 * ww[indx];     // 125ms with memory update (non-optimized)
+			//if (j == 0) printf("GPU w= %f, %f, %f, %f\n", ww[indx].x, ww[indx].y, ww[indx].z, ww[indx].w);
 			#endif
         }   
 		#endif
 
 		#if 1
-        ders0[i] = dd0;     // cost: 15ms wihtout rest of code (unoptimized)
-        ders1[i] = dd1;    
-        ders2[i] = dd2;    
-        ders3[i] = dd3;    
+        ders0[i] = dds0;     // cost: 15ms wihtout rest of code (unoptimized)
+        ders1[i] = dds1;    
+        ders2[i] = dds2;    
+        ders3[i] = dds3;    
+        //printf("GPU i=%d, dd0= %f\n", i, dd0);
 		#endif
-   }    
-   //if (i == 0) printf("exit computeDeriv1Weight4Fun1 CL function\n");
+   //if (i == 0) printf("exit computeDeriv4Weight4Fun1 CL function\n");
 }
 //----------------------------------------------------------------------

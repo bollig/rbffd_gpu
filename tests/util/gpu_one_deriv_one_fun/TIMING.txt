@@ -273,6 +273,41 @@ ONE FUNCTION, ONE DERIVATIVE on 100x100x100: 114ms (104ms per derivative)
 ONE FUNCTION, FOUR DERIVATIVEs on 100x100x100: 144ms (36ms per derivative, speedup: 2.9)
 FOUR FUNCTIONS, FOUR DERIVATIVES on 100x100x100: 208ms (16 derivatives, 13ms per der, speedup: 8) (optimized)
      same case: 216ms (unoptimized compiler option )
+
+functions, 4 derivatives. 100x100x100, 32 nodes per stencil. 
+Once I fixed my error in the CPU, time went to 529ms. (from 200ms) :-( for 4
+    (same with and without compiler optimization)
+Removed hint for double4 packing: time went to 1700ms!! (with compiler optimization off)
+
+Tried 128x128x64 (eliminates potential alignment problems in CL kernel). Time: 620ms (higher GPU time cannot be accounted
+for simply by increased grid size.o
+
+611ms: changed CL code to use a temporary. No significant timing difference. 
+            double4 www = ww[indx];
+            dds0 += sol0 * www; 
+            dds1 += sol1 * www;
+            dds2 += sol2 * www;
+            dds3 += sol3 * www;
+            #else
+            dds0 += sol0 * ww[indx];
+            dds1 += sol1 * ww[indx];
+            dds2 += sol2 * ww[indx];
+            dds3 += sol3 * ww[indx];
+            #endif
+
+I Changed ordering without effect on timing. 
+			double sol0 = solution[ind];
+            dds0 += sol0 * ww[indx];
+			double sol1 = solution[ind +   nb_stencils];
+            dds1 += sol1 * ww[indx];
+			double sol2 = solution[ind + 2*nb_stencils];
+            dds2 += sol2 * ww[indx];
+			double sol3 = solution[ind + 3*nb_stencils];
+            dds3 += sol3 * ww[indx];
+ 
+I will probably have to implement INV ordering where RBF point if the fastest changing index. 
+INV had no effect when I only had a single function. Perhaps efficiency will
+increase now because code is more complex to optimzie. 
 ----------------------------------------------------------------------
 
 DERIVE NOT WORKING (16 deriv)

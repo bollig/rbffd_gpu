@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include <algorithm>
 #include "pdes/parabolic/heat_pde.h"
 
 #include "grids/regulargrid.h"
@@ -17,25 +18,32 @@
 vector<double> u_cpu;
 RBFFD_CL::SuperBuffer<double> u_gpu;
 
-vector<double> xderiv_cpu;
-vector<double> yderiv_cpu;
-vector<double> zderiv_cpu;
-vector<double> lderiv_cpu;
+vector<double> xderiv_cpu, uderiv_cpu;
+vector<double> yderiv_cpu, vderiv_cpu;
+vector<double> zderiv_cpu, wderiv_cpu;
+vector<double> lderiv_cpu, pderiv_cpu;
 
-RBFFD_CL::SuperBuffer<double> xderiv_gpu;
-RBFFD_CL::SuperBuffer<double> yderiv_gpu;
-RBFFD_CL::SuperBuffer<double> zderiv_gpu;
-RBFFD_CL::SuperBuffer<double> lderiv_gpu;
+vector<double> u,v,w,p;
+vector<double> ux,uy,uz,ul;
+vector<double> vx,vy,vz,vl;
+vector<double> wx,wy,wz,wl;
+vector<double> px,py,pz,pl;
+
+// derivatives with respect to (x,y,z,lapl)
+RBFFD_CL::SuperBuffer<double> uderiv_gpu, xderiv_gpu;
+RBFFD_CL::SuperBuffer<double> vderiv_gpu, yderiv_gpu;
+RBFFD_CL::SuperBuffer<double> wderiv_gpu, zderiv_gpu;
+RBFFD_CL::SuperBuffer<double> pderiv_gpu, lderiv_gpu;
 
 RBFFD_CL::SuperBuffer<double> deriv4_gpu;
-
 
 
 // Sames types as in rbffd/fun_cl.h
 enum KernelType {FUN_KERNEL, FUN_INV_KERNEL, FUN_DERIV4_KERNEL,
 	FUN1_DERIV4_WEIGHT4,
-	FUN1_DERIV1_WEIGHT4,
-	FUN4_DERIV4_WEIGHT4};
+	//FUN1_DERIV1_WEIGHT4,
+	FUN4_DERIV4_WEIGHT4,
+	FUN4_INV_DERIV4_WEIGHT4};
 KernelType kernel_type;
 
 Grid* grid;
@@ -50,6 +58,55 @@ FUN_CL* der;
 
 using namespace std;
 
+//----------------------------------------------------------------------
+typedef std::vector<double> VD;
+void vectorBreakup(VD& v4_src, VD& va, VD& vb, VD& vc, VD& vd)
+{
+	int sz = v4_src.size() >> 2;
+	va.assign(&v4_src[0],    &v4_src[1*sz]);
+	vb.assign(&v4_src[1*sz], &v4_src[2*sz]);
+	vc.assign(&v4_src[2*sz], &v4_src[3*sz]);
+	vd.assign(&v4_src[3*sz], &v4_src[4*sz]);
+}
+//----------------------------------------------------------------------
+typedef std::vector<double> VD;
+void vectorBreakupAoS(VD& v4_src, VD& va, VD& vb, VD& vc, VD& vd)
+{
+	int sz = v4_src.size() >> 2;
+	va.resize(sz);
+	vb.resize(sz);
+	vc.resize(sz);
+	vd.resize(sz);
+
+	for (int i=0; i < sz; i+=4) {
+		va[i] = v4_src[i+0];
+		vb[i] = v4_src[i+1];
+		vc[i] = v4_src[i+2];
+		vd[i] = v4_src[i+3];
+	}
+}
+//----------------------------------------------------------------------
+void vectorCombine(VD& va, VD& vb, VD& vc, VD& vd, VD& v4_target)
+{
+	int sz = va.size();
+	v4_target.resize(sz*4);
+	std::copy(va.begin(), va.end(), v4_target.begin());
+	std::copy(vb.begin(), vb.end(), v4_target.begin()+sz);
+	std::copy(vc.begin(), vc.end(), v4_target.begin()+2*sz);
+	std::copy(vd.begin(), vd.end(), v4_target.begin()+3*sz);
+}
+//----------------------------------------------------------------------
+void vectorCombineAoS(VD& va, VD& vb, VD& vc, VD& vd, VD& v4_target)
+{
+	int sz = va.size();
+	v4_target.resize(sz*4);
+	for (int i=0; i < sz; i++) {
+		v4_target[4*i+0] = va[i];
+		v4_target[4*i+1] = vb[i];
+		v4_target[4*i+2] = vc[i];
+		v4_target[4*i+3] = vd[i];
+	}
+}
 //----------------------------------------------------------------------
 void setupTimers(EB::TimerList& tm) {
     tm["main_total"] 		= new EB::Timer("[main] Total Time");
@@ -98,9 +155,14 @@ void initializeArrays()
 	}
 }
 //----------------------------------------------------------------------
+void initializeOneDDerivatives(int size)
+{
+	ux.resize(size);
+}
+//----------------------------------------------------------------------
 void computeOnGPU4()
 {
-	//printf("Enter computerOnGPU4\n");
+	printf("Enter computerOnGPU4\n");
 	// Do not overwrite xderiv_cpu, so allocate new space on host (to compare against CPU results)
     tm["gpu_tests"]->start();
 
@@ -112,6 +174,7 @@ void computeOnGPU4()
 	}
 
 	der->convertWeights();
+	printf("after convertWeights\n");
 
 	// Not in in RBBF (knows nothing about SuperBuffer). Must redesign
 	switch (kernel_type) {
@@ -120,24 +183,48 @@ void computeOnGPU4()
     	der->computeDerivs(u_gpu, deriv4_gpu, true); 
 		deriv4_gpu.copyToHost();
 		break;
-	case FUN1_DERIV1_WEIGHT4:
+	//case FUN1_DERIV1_WEIGHT4:
 	case FUN4_DERIV4_WEIGHT4:
-		xderiv_gpu = RBFFD_CL::SuperBuffer<double>(xderiv_cpu.size(), "xderiv_gpu"); 
-		yderiv_gpu = RBFFD_CL::SuperBuffer<double>(yderiv_cpu.size(), "yderiv_gpu"); 
-		zderiv_gpu = RBFFD_CL::SuperBuffer<double>(zderiv_cpu.size(), "zderiv_gpu"); 
-		lderiv_gpu = RBFFD_CL::SuperBuffer<double>(lderiv_cpu.size(), "lderiv_gpu"); 
+		vectorCombineAoS(ux,uy,uz,ul,uderiv_cpu);
+		vectorCombineAoS(vx,vy,vz,vl,vderiv_cpu);
+		vectorCombineAoS(wx,wy,wz,wl,wderiv_cpu);
+		vectorCombineAoS(px,py,pz,pl,pderiv_cpu);
 
-    	der->computeDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
-    	der->computeDerivs(u_gpu, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); 
+		uderiv_gpu = RBFFD_CL::SuperBuffer<double>(uderiv_cpu.size(), "uderiv_gpu"); 
+		vderiv_gpu = RBFFD_CL::SuperBuffer<double>(vderiv_cpu.size(), "wderiv_gpu"); 
+		wderiv_gpu = RBFFD_CL::SuperBuffer<double>(wderiv_cpu.size(), "wderiv_gpu"); 
+		pderiv_gpu = RBFFD_CL::SuperBuffer<double>(pderiv_cpu.size(), "pderiv_gpu"); 
 
-		xderiv_gpu.copyToHost();
-		yderiv_gpu.copyToHost();
-		zderiv_gpu.copyToHost();
-		lderiv_gpu.copyToHost();
+		//printf("size of deriv arrays: %d, %d, %d, %d, %d\n", u_gpu.hostSize(), uderiv_gpu.hostSize(), vderiv_gpu.hostSize(), wderiv_gpu.hostSize(), pderiv_gpu.hostSize());
+
+    	der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
+    	der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
+
+		uderiv_gpu.copyToHost();
+		vderiv_gpu.copyToHost();
+		wderiv_gpu.copyToHost();
+		pderiv_gpu.copyToHost();
+
+		for (int i=0; i < 5; i++) {
+			printf("(%d), cpu, u=%f, uderiv(ux,uy,uz,ul)= %f, %f, %f, %f\n", i, u_cpu[i], uderiv_cpu[4*i],uderiv_cpu[4*i+1],uderiv_cpu[4*i+2],uderiv_cpu[4*i+3]);
+			printf("(%d), gpu, u=%f, uderiv(ux,uy,uz,ul)= %f, %f, %f, %f\n", i, u_gpu[i], uderiv_gpu[4*i],uderiv_gpu[4*i+1],uderiv_gpu[4*i+2],uderiv_gpu[4*i+3]);
+		}
+
+		//u_gpu.copyToHost();
+
+		// // ERROR ON GPU???
+		// WHY ARE DERIVATIVES ZERO?)
+
+		#if 0
+		for (int i=0; i < 5; i++) {
+			printf("(%d), gpu, uderiv= %f, %f, %f, %f\n", i, uderiv_gpu[4*i],uderiv_gpu[4*i+1],uderiv_gpu[4*i+2],uderiv_gpu[4*i+3]);
+			printf("(%d), gpu, u= %f, %f, %f, %f\n", i, u[4*i],u[4*i+1],u[4*i+2],u[4*i+3]);
+		}
 		break;
+		#endif
 	}
 
-	u_gpu.copyToHost();
+	//u_gpu.copyToHost();
 
     tm["gpu_tests"]->end();
 }
@@ -173,25 +260,77 @@ void computeOnCPU4()
 {
     tm["cpu_tests"]->start();
     der_cpu = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
-
     der_cpu->computeAllWeightsForAllStencilsEmpty();
 	// Weights must already be computed
 
 	switch (kernel_type) {
+	#if 0
 	case FUN1_DERIV1_WEIGHT4:
     	der_cpu->computeDeriv(RBFFD::X,    u_cpu, xderiv_cpu, true);
     	der_cpu->computeDeriv(RBFFD::Y,    u_cpu, yderiv_cpu, true);
     	der_cpu->computeDeriv(RBFFD::Z,    u_cpu, zderiv_cpu, true);
     	der_cpu->computeDeriv(RBFFD::LAPL, u_cpu, lderiv_cpu, true);
 		break;
+	#endif
 	case FUN4_DERIV4_WEIGHT4:
-		vector<double> u,v,w,p;
-		vector<double> ux,uy,uz,ul;
-		vector<double> vx,vy,vz,vl;
-		vector<double> wx,wy,wz,wl;
-		vector<double> px,py,pz,pl;
 		int sz = u_cpu.size() >> 2;
-		u.assign(&u_cpu[0], &u_cpu[sz]);
+		printf("before breakup\n");
+		printf("sz= %d\n", sz);
+		// solution is SoA on GPU (u1,u2,...),(v1,v2,...),...
+		vectorBreakup(u_cpu, u, v, w, p);
+		printf("after breakup\n");
+
+		//initializeOneDDerivatives(u.size());
+
+		printf("before computer Deriv\n");
+		printf("u size: %d\n", u.size());
+		printf("ux size: %d\n", ux.size());
+    	der_cpu->computeDeriv(RBFFD::X, u, ux, true); 
+		printf("after computer Deriv\n");
+    	der_cpu->computeDeriv(RBFFD::X, v, vx, true);
+    	der_cpu->computeDeriv(RBFFD::X, w, wx, true);
+    	der_cpu->computeDeriv(RBFFD::X, p, px, true);
+		for (int i=0; i < 5; i++) {
+			printf("u,ux,vx,wx,px= %f, %f, %f, %f, %f\n", u[i],ux[i],vx[i],wx[i],px[i]);
+		}
+
+    	der_cpu->computeDeriv(RBFFD::Y, u, uy, true);
+    	der_cpu->computeDeriv(RBFFD::Y, v, vy, true);
+    	der_cpu->computeDeriv(RBFFD::Y, w, wy, true);
+    	der_cpu->computeDeriv(RBFFD::Y, p, py, true);
+		for (int i=0; i < 5; i++) {
+			printf("u,uy,vy,wy,py= %f, %f, %f, %f, %f\n", u[i],uy[i],vy[i],wy[i],py[i]);
+		}
+
+    	der_cpu->computeDeriv(RBFFD::Z, u, uz, true);
+    	der_cpu->computeDeriv(RBFFD::Z, v, vz, true);
+    	der_cpu->computeDeriv(RBFFD::Z, w, wz, true);
+    	der_cpu->computeDeriv(RBFFD::Z, p, pz, true);
+		for (int i=0; i < 5; i++) {
+			printf("u,uz,vz,wz,pz= %f, %f, %f, %f, %f\n", u[i],uz[i],vz[i],wz[i],pz[i]);
+		}
+
+    	der_cpu->computeDeriv(RBFFD::LAPL, u, ul, true);
+    	der_cpu->computeDeriv(RBFFD::LAPL, v, vl, true);
+    	der_cpu->computeDeriv(RBFFD::LAPL, w, wl, true);
+    	der_cpu->computeDeriv(RBFFD::LAPL, p, pl, true);
+		for (int i=0; i < 5; i++) {
+			printf("u,ul,vl,wl,pl= %f, %f, %f, %f, %f\n", u[i],ul[i],vl[i],wl[i],pl[i]);
+		}
+
+		#if 0
+		vectorCombine(ux,vx,wx,px,xderiv_cpu);
+		vectorCombine(uy,vy,wy,py,yderiv_cpu);
+		vectorCombine(uz,vz,wz,pz,zderiv_cpu);
+		vectorCombine(ul,vl,wl,pl,lderiv_cpu);
+		#endif
+
+		#if 0
+		vectorCombine(ux,uy,uz,ul,uderiv_cpu);
+		vectorCombine(vx,vy,vz,vl,vderiv_cpu);
+		vectorCombine(wx,wy,wz,wl,wderiv_cpu);
+		vectorCombine(px,py,pz,pl,pderiv_cpu);
+		#endif
 		break;
 	}
 
@@ -290,12 +429,19 @@ void checkDerivativeAccuracy4()
 		AoS2SoA(xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu, deriv4_cpu);
 		xnorm = linfnorm(*deriv4_gpu.host, deriv4_cpu);
 		break;
-	case FUN1_DERIV1_WEIGHT4:
+	//case FUN1_DERIV1_WEIGHT4:
 	case FUN4_DERIV4_WEIGHT4:
-		xnorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
-		ynorm = linfnorm(*yderiv_gpu.host, yderiv_cpu);
-		znorm = linfnorm(*zderiv_gpu.host, zderiv_cpu);
-		lnorm = linfnorm(*lderiv_gpu.host, lderiv_cpu);
+		//printf("step 1\n");
+		//printf("size of uderiv_cpu: %d\n", uderiv_cpu.size());
+		//printf("size of uderiv_gpu: %d\n", uderiv_gpu.hostSize());
+		xnorm = linfnorm(*uderiv_gpu.host, uderiv_cpu);
+		//printf("step 2\n");
+		ynorm = linfnorm(*vderiv_gpu.host, vderiv_cpu);
+		//printf("step 3\n");
+		znorm = linfnorm(*wderiv_gpu.host, wderiv_cpu);
+		lnorm = linfnorm(*pderiv_gpu.host, pderiv_cpu);
+		//printf("size of pderiv_cpu: %d\n", pderiv_cpu.size());
+		//printf("size of pderiv_gpu: %d\n", pderiv_gpu.hostSize());
 		printf("x,y,z,l norms: %f, %f, %f, %f\n", xnorm, ynorm, znorm, lnorm);
 		xnorm = (xnorm > ynorm) ? xnorm : ynorm;
 		xnorm = (xnorm > znorm) ? xnorm : znorm;
@@ -318,30 +464,34 @@ void checkDerivativeAccuracy4()
 
 	switch (kernel_type) {
 	case FUN4_DERIV4_WEIGHT4:
-		int sz = xderiv_cpu.size() / 4;
-		for (int i=0; i < 20; i++) {
+		#if 0
+		int sz = uderiv_cpu.size() / 4;
+		//printf("CPU deriv size: %d\n", uderiv_cpu.size());
+		//printf("GPU deriv size: %d\n", uderiv_gpu.hostSize());
+		for (int i=0; i < 5; i++) {
 			printf("----- i = %d -------\n", i);
 			printf("SOL 0\n");
-			printf("x cpu/gpu der: %f, %f\n", xderiv_cpu[i], xderiv_gpu[i]);
-			printf("y cpu/gpu der: %f, %f\n", yderiv_cpu[i], yderiv_gpu[i]);
-			printf("z cpu/gpu der: %f, %f\n", zderiv_cpu[i], zderiv_gpu[i]);
-			printf("l cpu/gpu der: %f, %f\n", lderiv_cpu[i], lderiv_gpu[i]);
+			printf("x cpu/gpu der: %f, %f\n", uderiv_cpu[i], uderiv_gpu[i]);
+			printf("y cpu/gpu der: %f, %f\n", vderiv_cpu[i], vderiv_gpu[i]);
+			printf("z cpu/gpu der: %f, %f\n", wderiv_cpu[i], wderiv_gpu[i]);
+			printf("l cpu/gpu der: %f, %f\n", pderiv_cpu[i], pderiv_gpu[i]);
 			printf("SOL 1\n");
-			printf("x cpu/gpu der: %f, %f\n", xderiv_cpu[i+sz], xderiv_gpu[i+sz]);
-			printf("y cpu/gpu der: %f, %f\n", yderiv_cpu[i+sz], yderiv_gpu[i+sz]);
-			printf("z cpu/gpu der: %f, %f\n", zderiv_cpu[i+sz], zderiv_gpu[i+sz]);
-			printf("l cpu/gpu der: %f, %f\n", lderiv_cpu[i+sz], lderiv_gpu[i+sz]);
+			printf("x cpu/gpu der: %f, %f\n", uderiv_cpu[i+sz], uderiv_gpu[i+sz]);
+			printf("y cpu/gpu der: %f, %f\n", vderiv_cpu[i+sz], vderiv_gpu[i+sz]);
+			printf("z cpu/gpu der: %f, %f\n", wderiv_cpu[i+sz], wderiv_gpu[i+sz]);
+			printf("l cpu/gpu der: %f, %f\n", pderiv_cpu[i+sz], pderiv_gpu[i+sz]);
 			printf("SOL 2\n");
-			printf("x cpu/gpu der: %f, %f\n", xderiv_cpu[i+2*sz], xderiv_gpu[i+2*sz]);
-			printf("y cpu/gpu der: %f, %f\n", yderiv_cpu[i+2*sz], yderiv_gpu[i+2*sz]);
-			printf("z cpu/gpu der: %f, %f\n", zderiv_cpu[i+2*sz], zderiv_gpu[i+2*sz]);
-			printf("l cpu/gpu der: %f, %f\n", lderiv_cpu[i+2*sz], lderiv_gpu[i+2*sz]);
+			printf("x cpu/gpu der: %f, %f\n", uderiv_cpu[i+2*sz], uderiv_gpu[i+2*sz]);
+			printf("y cpu/gpu der: %f, %f\n", vderiv_cpu[i+2*sz], vderiv_gpu[i+2*sz]);
+			printf("z cpu/gpu der: %f, %f\n", wderiv_cpu[i+2*sz], wderiv_gpu[i+2*sz]);
+			printf("l cpu/gpu der: %f, %f\n", pderiv_cpu[i+2*sz], pderiv_gpu[i+2*sz]);
 			printf("SOL 3\n");
-			printf("x cpu/gpu der: %f, %f\n", xderiv_cpu[i+3*sz], xderiv_gpu[i+3*sz]);
-			printf("y cpu/gpu der: %f, %f\n", yderiv_cpu[i+3*sz], yderiv_gpu[i+3*sz]);
-			printf("z cpu/gpu der: %f, %f\n", zderiv_cpu[i+3*sz], zderiv_gpu[i+3*sz]);
-			printf("l cpu/gpu der: %f, %f\n", lderiv_cpu[i+3*sz], lderiv_gpu[i+3*sz]);
+			printf("x cpu/gpu der: %f, %f\n", uderiv_cpu[i+3*sz], uderiv_gpu[i+3*sz]);
+			printf("y cpu/gpu der: %f, %f\n", vderiv_cpu[i+3*sz], vderiv_gpu[i+3*sz]);
+			printf("z cpu/gpu der: %f, %f\n", wderiv_cpu[i+3*sz], wderiv_gpu[i+3*sz]);
+			printf("l cpu/gpu der: %f, %f\n", pderiv_cpu[i+3*sz], pderiv_gpu[i+3*sz]);
 		}
+		#endif
 		break;
 	}
 
@@ -372,15 +522,17 @@ void checkDerivativeAccuracy4()
 	printf("----\n");
 	switch (kernel_type) {
 	case FUN1_DERIV4_WEIGHT4:
-		for (int i=0; i < 20; i++) {
+		for (int i=0; i < 5; i++) {
 			printf("(%d) GPU: x,y,z,l= %f, %f, %f, %f\n", i, deriv4_gpu[4*i], deriv4_gpu[4*i+1], deriv4_gpu[4*i+2], deriv4_gpu[4*i+3]);
 		}
 		break;
+	#if 0
 	case FUN1_DERIV1_WEIGHT4:
 		for (int i=0; i < 20; i++) {
 			printf("(%d) GPU: x,y,z,l= %f, %f, %f, %f\n", i, xderiv_gpu[i], yderiv_gpu[i], zderiv_gpu[i], lderiv_gpu[i]);
 		}
 		break;
+	#endif
 	}
     tm["deriv_accuracy"]->end();
 }
@@ -440,10 +592,12 @@ void setupDerivativeWeights()
         	der = new FUN_CL(RBFFD::X, grid, dim); 
 			der->setKernelType(FUN_CL::FUN_INV_KERNEL);
 			break;
+		#if 0
 		case FUN1_DERIV1_WEIGHT4:
         	der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
 			der->setKernelType(FUN_CL::FUN1_DERIV1_WEIGHT4);
 			break;
+		#endif
 		case FUN1_DERIV4_WEIGHT4:
         	der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
 			der->setKernelType(FUN_CL::FUN1_DERIV4_WEIGHT4);
@@ -494,7 +648,6 @@ int main(int argc, char** argv)
 
 	//kernel_type = FUN_KERNEL;
 	//kernel_type = FUN1_DERIV4_WEIGHT4; // ux,uy,uz,up
-	//kernel_type = FUN1_DERIV1_WEIGHT4;
 	kernel_type = FUN4_DERIV4_WEIGHT4;
 
     tm["main_total"]->start();
@@ -521,10 +674,10 @@ int main(int argc, char** argv)
 		break;
 	case FUN4_DERIV4_WEIGHT4:
 	case FUN1_DERIV4_WEIGHT4:
-	case FUN1_DERIV1_WEIGHT4:
-		//printf("**** Compute on CPU4 ****\n");
+	//case FUN1_DERIV1_WEIGHT4:
+		printf("**** Compute on CPU4 ****\n");
 		computeOnCPU4(); // must be called before GPU
-		//printf("**** Compute on GPU4 ****\n");
+		printf("**** Exit Compute on CPU4 ****\n");
 	printf("----------------------------------------------------------------------------------\n");
 	printf("----------------------------------------------------------------------------------\n");
 		computeOnGPU4();

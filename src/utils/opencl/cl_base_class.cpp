@@ -153,8 +153,8 @@ void CLBaseClass::loadProgram(std::string& kernel_source, bool enable_fp64)
             }
      //       printf("Loading kernels from the directory: %s and .\n **** Specified by environment variable: CL_KERNELS\n", kernel_dir);
             char includes[PATH_MAX];
-            sprintf(includes, "-I%s -I%s", kernel_dir, cwd);
-            //sprintf(includes, "-cl-opt-disable -I%s -I%s", kernel_dir, cwd);
+            //sprintf(includes, "-I%s -I%s", kernel_dir, cwd);
+            sprintf(includes, "-cl-opt-disable -I%s -I%s", kernel_dir, cwd);
             err = program.build(devices, includes);
     }
     catch (cl::Error er) {

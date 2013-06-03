@@ -270,7 +270,7 @@ class RBFFD
 
 		// Synonymous
         virtual void computeDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) { 
-		    printf("[RBFFD] enter computeDeriv\n");
+		    //printf("[RBFFD] enter computeDeriv\n");
         	applyWeightsForDeriv(which, u, deriv, isChangedU=true);
 		}
 
@@ -282,12 +282,12 @@ class RBFFD
 
         virtual void applyWeightsForDeriv(DerType which, std::vector<double>& u, std::vector<double>& deriv, bool isChangedU=true) {
             //            std::cout << "CPU: ";
-			printf("[RBFFD] INSIDE applyWeightsForDeriv [RBFFD]\n");
+			//printf("[RBFFD] INSIDE applyWeightsForDeriv [RBFFD]\n");
             unsigned int nb_stencils = grid_ref.getStencilsSize(); 
-			printf("deriv.size: %d\n", deriv.size());
-			printf("nb_stencils: %d\n", nb_stencils);
+			//printf("deriv.size: %d\n", deriv.size());
+			//printf("nb_stencils: %d\n", nb_stencils);
             if (deriv.size() < nb_stencils) { 
-                std::cout << "[RBFFD] Resizing deriv to nb_stencils=" << nb_stencils << " (was: " << deriv.size() << ")\n";
+                //std::cout << "[RBFFD] Resizing deriv to nb_stencils=" << nb_stencils << " (was: " << deriv.size() << ")\n";
                 deriv.resize(nb_stencils); 
             }
             // Start at index 0 and apply weights to nb_stencils associated with solution values u[0]->u[nb_stencils]

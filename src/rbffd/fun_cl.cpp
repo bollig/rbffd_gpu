@@ -43,27 +43,30 @@ void FUN_CL::setKernelType(KernelType kernel_type_)
  	case FUN4_DERIV4_WEIGHT4:
     	loadKernel("computeDeriv4Weight4Fun4Kernel", "derivative_kernels.cl");
 		break;
+ 	case FUN4_DERIV4_WEIGHT4_INV:
+    	loadKernel("computeDeriv4Weight4Fun4InvKernel", "derivative_kernels.cl");
+		break;
 	}
 
 	// Derivative weights must have been computed by now. 
-	printf("*** before allocateGPUMem ***\n");
+	//printf("*** before allocateGPUMem ***\n");
     this->allocateGPUMem();
-	printf("*** after allocateGPUMem ***\n");
+	//printf("*** after allocateGPUMem ***\n");
 }
 //----------------------------------------------------------------------
 void FUN_CL::allocateGPUMem()
 {
 	//RBFFD_CL::allocateGPUMem();
 
-	printf("entering allocateGPUMem in fun_cl.cpp\n");
+	//printf("entering allocateGPUMem in fun_cl.cpp\n");
     unsigned int float_size = useDouble? sizeof(double) : sizeof(float);
 
-	printf("nb_stencils= %d\n", nb_stencils);
-	printf("nb_nodes= %d\n", nb_nodes);
-	printf("nodes_per_stencil= %d\n", nodes_per_stencil);
+	//printf("nb_stencils= %d\n", nb_stencils);
+	//printf("nb_nodes= %d\n", nb_nodes);
+	//printf("nodes_per_stencil= %d\n", nodes_per_stencil);
 
-	printf("**** nb_nodes= %d\n", nb_nodes);
-	printf("nodes_per_stencil= %d\n", nodes_per_stencil);
+	//printf("**** nb_nodes= %d\n", nb_nodes);
+	//printf("nodes_per_stencil= %d\n", nodes_per_stencil);
 	//sup_stencils = SuperBuffer<int>(nb_nodes*nodes_per_stencil);
 	//sup_all_weights = SuperBuffer<double>(nb_nodes*nodes_per_stencil*4);
 	// Must replace with actual values at some point
@@ -92,17 +95,19 @@ void FUN_CL::convertWeights()
 	case FUN_DERIV4_KERNEL:
 	case FUN1_DERIV4_WEIGHT4:
 	case FUN1_DERIV1_WEIGHT4:
-		printf("FUN_KERNEL\n");
+	case FUN4_DERIV4_WEIGHT4:
+		//printf("FUN_KERNEL\n");
 		nbnode_nbsten_type = true;
 		// Weights must have been computed before converting
 		convertWeightToContiguous(*sup_all_weights.host, *sup_stencils.host, nodes_per_stencil, is_padded, nbnode_nbsten_type);
-		printf("after convertWeight\n");
+		//printf("after convertWeight\n");
 		break;
 	case FUN_INV_KERNEL:
-		printf("FUN_INV_KERNEL\n");
+	case FUN4_DERIV4_WEIGHT4_INV:
+		//printf("FUN_INV_KERNEL\n");
 		nbnode_nbsten_type = false;
 		convertWeightToContiguous(*sup_all_weights.host, *sup_stencils.host, nodes_per_stencil, is_padded, nbnode_nbsten_type);
-		printf("after convertWeight\n");
+		//printf("after convertWeight\n");
 		break;
 	}
 }
@@ -114,6 +119,9 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 		printf("Kernel not defined\n");
 		exit(0);
 	}
+
+    int nb_stencils = nb_nodes;
+    int stencil_size = grid_ref.getMaxStencilSize();
 
 	printf("computeDerivs/applyWeightsFoDerivDouble using SuperBuffer arguments\n");
 	//if (isChangedU) u.copyToDevice();
@@ -129,11 +137,17 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 	for (int i=0; i < 20; i++) {
 		printf("sup_stencils[%d] = %d\n", i, sup_stencils[i]);
 	}
+	#endif
 
-	for (int i=0; i < 20; i++) {
-		printf("sup_all_weights[%d] = %f\n", i, sup_all_weights[i]);
+	#if 0
+	// Seem to be correct
+	for (int i=0; i < sup_all_weights.hostSize(); i++) {
+		printf("sup_all_weights[%d,%d] = %f\n", i, i%stencil_size, sup_all_weights[i]);
 	}
+	exit(0);
+	#endif
 
+	#if 0
 	for (int i=0; i < 20; i++) {
 		printf("[beforeCopyToHost] u.dev[%d] = %f\n", i, (*u.host)[i]);
 	}
@@ -147,11 +161,9 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 
     err = queue.finish(); // added by GE
     tm["applyWeights"]->start();
-    int nb_stencils = nb_nodes;
-    int stencil_size = grid_ref.getMaxStencilSize();
 
-	printf("*** nb_stencils= %d\n", nb_stencils);
-	printf("*** stencil_size= %d\n", stencil_size);
+	//printf("*** nb_stencils= %d\n", nb_stencils);
+	//printf("*** stencil_size= %d\n", stencil_size);
 
     try {
         int i = 0;
@@ -174,7 +186,7 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 		exit(0);
     }
 
-#if 1
+#if 0
     // User specifies work group size
     int items_per_group = 32;
     int nn = nb_stencils % items_per_group;
@@ -237,9 +249,9 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
     int nb_stencils = nb_nodes;
     int stencil_size = grid_ref.getMaxStencilSize();
 
-	printf("*** nb_stencils= %d\n", nb_stencils);
-	printf("*** stencil_size= %d\n", stencil_size);
-	printf("*** deriv_x_size= %d\n", deriv_x.hostSize());
+	//printf("*** nb_stencils= %d\n", nb_stencils);
+	//printf("*** stencil_size= %d\n", stencil_size);
+	//printf("*** deriv_x_size= %d\n", deriv_x.hostSize());
 
 	//for (int i=0; i < 50; i++) {
 		//printf("w[%d] = %f\n", i, sup_all_weights[i]);
@@ -295,7 +307,7 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
     //int nn = nb_stencils % items_per_group;
     //int nd = nb_stencils / items_per_group;
     //int tot_items = (nn != 0) ? (nd+1)*items_per_group : nb_stencils; 
-	printf("nb_stencils= %d\n", nb_stencils);
+	//printf("nb_stencils= %d\n", nb_stencils);
 	enqueueKernel(kernel, cl::NDRange(tot_items), cl::NullRange, true);
 #endif
 

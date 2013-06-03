@@ -18,7 +18,8 @@ class FUN_CL : public RBFFD_CL
 	// FUN1_DERIV1_WEIGHT4: 1 function, 4 derivatives, use double
 		enum KernelType {FUN_KERNEL, FUN_INV_KERNEL, FUN_DERIV4_KERNEL, 
 		  FUN1_DERIV4_WEIGHT4, FUN1_DERIV1_WEIGHT4,
-		  FUN4_DERIV4_WEIGHT4};  // 4 functions, 4 derivatives, using double on GPU
+		  FUN4_DERIV4_WEIGHT4,  // 4 functions, 4 derivatives, using double4 on GPU, stencil node = fastest index
+		  FUN4_DERIV4_WEIGHT4_INV}; // 4 fun, 4 deriv, using double4 on GPU, rbf node = fastest index.
 		KernelType kernel_type; // poor name
 
 	public:

@@ -14,6 +14,11 @@ using namespace std;
 : RBFFD(typesToCompute, grid, dim_num, rank),
     useDouble(true), alignWeights(true), alignMultiple(32)
 {
+	// Choose the first Phi device (WORKS)
+	// Choose "1" for the MIC
+	viennacl::ocl::set_context_device_type(1, viennacl::ocl::accelerator_tag());
+	std::cout << viennacl::ocl::current_context().current_device().info() << "\n";
+//
     this->setupTimers();
     this->loadKernel();
     this->allocateGPUMem();

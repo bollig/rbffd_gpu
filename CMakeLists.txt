@@ -128,7 +128,7 @@ SET( FRAMEWORK_DEP_INCLUDE_DIRS
 add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall 
   #-std=c++0x 
     -O2 
-    -g 
+    #-g 
     -DNDEBUG 
     #-DTHRUST_DEBUG )  
     ) 
@@ -138,7 +138,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   add_definitions(
       -DUSE_CLANG
       -DDEBUG_ALL
-	  -g 
+	 # -g 
       -stdlib=libc++
   )
 endif()

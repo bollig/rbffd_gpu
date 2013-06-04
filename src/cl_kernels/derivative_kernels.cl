@@ -267,3 +267,26 @@ void computeDeriv4Weight4Fun4Kernel(
 	} 
 }
 //----------------------------------------------------------------------
+__kernel  __attribute__((vec_type_hint(double4)))
+void computeDeriv4Weight4Fun4InvKernel(     
+         __global int* stencils, 
+         __global double4* ww, 
+         __global double* solution, 
+         __global double4* ders0,
+         __global double4* ders1,
+         __global double4* ders2,
+         __global double4* ders3,
+   		int nb_stencils, 
+   		int stencil_size)  
+{
+	for (int i=0; i < 10; i++) { 
+		computeDeriv4Weight4Fun4Inv(     
+         stencils, 
+         ww, 
+         solution, 
+         ders0, ders1, ders2, ders3,
+   		nb_stencils, 
+		stencil_size);
+	} 
+}
+//----------------------------------------------------------------------

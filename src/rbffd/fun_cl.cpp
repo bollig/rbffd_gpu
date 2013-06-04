@@ -186,7 +186,7 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 		exit(0);
     }
 
-#if 0
+#if 1
     // User specifies work group size
     int items_per_group = 32;
     int nn = nb_stencils % items_per_group;

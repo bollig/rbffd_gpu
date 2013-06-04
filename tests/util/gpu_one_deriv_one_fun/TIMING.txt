@@ -307,7 +307,30 @@ I Changed ordering without effect on timing.
  
 I will probably have to implement INV ordering where RBF point if the fastest changing index. 
 INV had no effect when I only had a single function. Perhaps efficiency will
-increase now because code is more complex to optimzie. 
+increase now because code is more complex to optimize. 
+
+When using INV ordering, timing is 2290ms (not clear why the difference!) (optimization off)
+  (I thought the ordering was more conducive to acceleration)
+  Optimization on: 2000ms (hardly any difference). VERY STRANGE. 
+  These two timings: computer chose the work group size. 
+  When work group size is 32, timing is 1700ms. 
+  Create AoS instead of SoA for function, and time goes to 1475. 
+
+DIRECT ordering: timing is 227ms when I use AoS for solution.  (four times less memory access). 
+  128x128x64, 32 node stencil. 32 item worksize.  474secon.
+
+So best time with 16 derivative calculations: 227ms  on 128x128.64/32 (stencil) (FUN4_DERIV4_WEIGHT4)
+     (regular time on this configuration: 470ms. So 227ms could have been a fluke)
+Same on 100x100x100/32: 215ms (FUN4_DERIV4_WEIGHT4) (5.5% difference from 128x128x64/32, which is the same as
+   the ratio of points.)
+
+Operation count: one derivative: 32*2 operations \sum_i w_i s_i, 16 derivatives, 10^6 points.
+  Total operations: one billion operations in in 0.2 sec ==> 5 Gops/sec. 
+  Peak speed: one Teraflop, so we are off by x200. NOT EVEN REMOTELY CLOSE.
+
+The above was with RANDOM ordering. 
+With COMPACT ordering, I get 176ms for 16 derivatives, AoS, 32 nodes/stencil. 
+Timing on GPU is not affected by "-g" compilation flag. 
+
 ----------------------------------------------------------------------
 
-DERIVE NOT WORKING (16 deriv)

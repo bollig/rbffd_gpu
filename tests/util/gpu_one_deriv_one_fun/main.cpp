@@ -43,7 +43,7 @@ enum KernelType {FUN_KERNEL, FUN_INV_KERNEL, FUN_DERIV4_KERNEL,
 	FUN1_DERIV4_WEIGHT4,
 	//FUN1_DERIV1_WEIGHT4,
 	FUN4_DERIV4_WEIGHT4,
-	FUN4_INV_DERIV4_WEIGHT4};
+	FUN4_DERIV4_WEIGHT4_INV};
 KernelType kernel_type;
 
 Grid* grid;
@@ -185,6 +185,7 @@ void computeOnGPU4()
 		break;
 	//case FUN1_DERIV1_WEIGHT4:
 	case FUN4_DERIV4_WEIGHT4:
+	case FUN4_DERIV4_WEIGHT4_INV:
 		vectorCombineAoS(ux,uy,uz,ul,uderiv_cpu);
 		vectorCombineAoS(vx,vy,vz,vl,vderiv_cpu);
 		vectorCombineAoS(wx,wy,wz,wl,wderiv_cpu);
@@ -273,6 +274,7 @@ void computeOnCPU4()
 		break;
 	#endif
 	case FUN4_DERIV4_WEIGHT4:
+	case FUN4_DERIV4_WEIGHT4_INV:
 		int sz = u_cpu.size() >> 2;
 		printf("before breakup\n");
 		printf("sz= %d\n", sz);
@@ -422,7 +424,10 @@ void checkDerivativeAccuracy4()
 	// deriv_gpu: (ux,uy,uz,ul)_1, (ux,uy,uz,ul)_2
 	// Array of Structures to Structure of Arrays
 	vector<double> deriv4_cpu;
-	double xnorm, ynorm, znorm, lnorm;
+	double xnorm=1.e6;
+	double ynorm=1.e6;
+	double znorm=1.e6;
+	double lnorm=1.e6;
 
 	switch (kernel_type) {
 	case FUN1_DERIV4_WEIGHT4:
@@ -431,6 +436,7 @@ void checkDerivativeAccuracy4()
 		break;
 	//case FUN1_DERIV1_WEIGHT4:
 	case FUN4_DERIV4_WEIGHT4:
+	case FUN4_DERIV4_WEIGHT4_INV:
 		//printf("step 1\n");
 		//printf("size of uderiv_cpu: %d\n", uderiv_cpu.size());
 		//printf("size of uderiv_gpu: %d\n", uderiv_gpu.hostSize());
@@ -464,6 +470,7 @@ void checkDerivativeAccuracy4()
 
 	switch (kernel_type) {
 	case FUN4_DERIV4_WEIGHT4:
+	case FUN4_DERIV4_WEIGHT4_INV:
 		#if 0
 		int sz = uderiv_cpu.size() / 4;
 		//printf("CPU deriv size: %d\n", uderiv_cpu.size());
@@ -567,8 +574,8 @@ void createGrid()
     tm["sort+grid"]->end();
 
     tm["stencils"]->start();
-	//Grid::st_generator_t stencil_type = Grid::ST_COMPACT;
-	Grid::st_generator_t stencil_type = Grid::ST_RANDOM;
+	Grid::st_generator_t stencil_type = Grid::ST_COMPACT;
+	//Grid::st_generator_t stencil_type = Grid::ST_RANDOM;
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
     tm["stencils"]->end();
 
@@ -605,6 +612,10 @@ void setupDerivativeWeights()
 		case FUN4_DERIV4_WEIGHT4:
         	der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
 			der->setKernelType(FUN_CL::FUN4_DERIV4_WEIGHT4);
+			break;
+		case FUN4_DERIV4_WEIGHT4_INV:
+        	der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
+			der->setKernelType(FUN_CL::FUN4_DERIV4_WEIGHT4_INV);
 			break;
 		}
 		//printf("before computeAllWeights\n");
@@ -649,6 +660,7 @@ int main(int argc, char** argv)
 	//kernel_type = FUN_KERNEL;
 	//kernel_type = FUN1_DERIV4_WEIGHT4; // ux,uy,uz,up
 	kernel_type = FUN4_DERIV4_WEIGHT4;
+	//kernel_type = FUN4_DERIV4_WEIGHT4_INV;
 
     tm["main_total"]->start();
 
@@ -673,6 +685,7 @@ int main(int argc, char** argv)
 		checkDerivativeAccuracy();
 		break;
 	case FUN4_DERIV4_WEIGHT4:
+	case FUN4_DERIV4_WEIGHT4_INV:
 	case FUN1_DERIV4_WEIGHT4:
 	//case FUN1_DERIV1_WEIGHT4:
 		printf("**** Compute on CPU4 ****\n");

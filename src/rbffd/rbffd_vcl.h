@@ -13,6 +13,7 @@ class RBFFD_VCL : public RBFFD
         // Weight buffers matching number of weights we have in super class
         VCL_ELL_MAT_t* gpu_weights[NUM_DERIVATIVE_TYPES]; 
         // Nodes are X, Y, Z vectors (will transform to theta, lambda)
+        VCL_ELL_MAT_t* gpu_all_weights;
         VCL_VEC4_t* gpu_nodes;
 
         UBLAS_MAT_t* cpu_weights_d[NUM_DERIVATIVE_TYPES];

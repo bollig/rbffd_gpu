@@ -6,7 +6,7 @@
 
 #define USE_POLY_DATA 0
 
-#include "pde_writer.h"
+#include "grids/domain.h"
 #include <vtkXMLWriter.h>
 
 #if USE_POLY_DATA
@@ -53,7 +53,7 @@ class VtuDomainWriter
 		}
 
 
-		VtuDomainWriter(Domain* subdomain_, int mpi_rank, int mpi_size)
+		VtuDomainWriter(Domain* subdomain, int mpi_rank, int mpi_size)
 		{ 
 #if USE_POLY_DATA
 			uwriter = vtkPolyDataWriter::New();

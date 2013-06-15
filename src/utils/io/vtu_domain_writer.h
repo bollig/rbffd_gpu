@@ -140,7 +140,7 @@ class VtuDomainWriter
 			uwriter->SetInput(ugrid);
 
 			char fname[FILENAME_MAX];
-			sprintf(fname, "subdomain_%d_of_%d.vtk", mpi_rank, mpi_size);
+			sprintf(fname, "subdomain_%d.%d.vtk", mpi_size, mpi_rank);
 			uwriter->SetFileName(fname);
 			uwriter->Write();
 		}

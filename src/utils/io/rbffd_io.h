@@ -49,6 +49,6 @@ public:
 				std::vector<T>& values, int width, int height, std::string& filename);
 };
 
-#include "rbffd_io.cpp"
+#include "rbffd_io.hpp"
 #endif
 

@@ -327,10 +327,10 @@ Same on 100x100x100/32: 215ms (FUN4_DERIV4_WEIGHT4) (5.5% difference from 128x12
 Operation count: one derivative: 32*2 operations \sum_i w_i s_i, 16 derivatives, 10^6 points.
   Total operations: one billion operations in in 0.2 sec ==> 5 Gops/sec. 
   Peak speed: one Teraflop, so we are off by x200. NOT EVEN REMOTELY CLOSE.
+  (done 10 times in GPU). therefore, 50 Gops/sec (5% of machine in double precision)
 
 The above was with RANDOM ordering. 
 With COMPACT ordering, I get 176ms for 16 derivatives, AoS, 32 nodes/stencil. 
 Timing on GPU is not affected by "-g" compilation flag. 
 
 ----------------------------------------------------------------------
-

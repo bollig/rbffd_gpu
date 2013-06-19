@@ -56,7 +56,9 @@
 		util/gpu_compute_multi_derivs_weight_fun
 		util/gpu_compute_multi_derivs_weight_fun4
 		util/gpu_deriv_fun
-		util/gpu_one_deriv_one_fun
+		#util/gpu_one_deriv_one_fun   # MUST FIX CMakeLists.txt
+		util/create_files
+		util/vcl_one_deriv_one_fun
 		util/matrix_market_io
 
 

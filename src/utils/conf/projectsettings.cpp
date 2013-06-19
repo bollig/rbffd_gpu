@@ -1,4 +1,3 @@
-#include "projectsettings.h"
 #include <string>
 #include <map>
 #include <stdlib.h>
@@ -14,8 +13,13 @@
 #include <limits.h>
 #include <getopt.h>		// for getopt
 
+#include "projectsettings.h"
+//#include "globals.h"
+
+ProjectSettings* ProjectSettingsSingleton::settings = 0;
+
 // Definition of the static tm in project settings
-EB::TimerList ProjectSettings::tm;
+//EB::TimerList ProjectSettings::tm;
 
 void closeLogFile(void) {
     fprintf(stderr, "Closing STDOUT file\n");
@@ -24,9 +28,9 @@ void closeLogFile(void) {
 
 void debugExit(void) {
 
-    ProjectSettings::tm["total"]->stop();
+    //ProjectSettings::tm["total"]->stop();
     //ProjectSettings::tm.printAll();
-    ProjectSettings::tm.writeToFile("atExit_timers.log");
+    //ProjectSettings::tm.writeToFile("atExit_timers.log");
 
     std::cout.flush();
     fflush(stdout);
@@ -49,9 +53,18 @@ void ProjectSettings::default_config() {
     cli_filename.append("/test.conf");
 }
 
+ProjectSettings::ProjectSettings() 
+{
+    setupTimers();
+    this->default_config();
+	//if (!globals::ps) globals::ps = this; // global static variable ps
+	//globals::ps = this; // global static variable ps
+	ProjectSettingsSingleton::setProjectSettings(this);
+}
+
 void ProjectSettings::setupTimers() {
-    tm["total"] = new EB::Timer("[AT EXIT] Total runtime until EXIT was called");
-    tm["total"]->start();
+    //tm["total"] = new EB::Timer("[AT EXIT] Total runtime until EXIT was called");
+    //tm["total"]->start();
 }
 
 ProjectSettings::ProjectSettings(int argc, char** argv) :
@@ -59,6 +72,9 @@ ProjectSettings::ProjectSettings(int argc, char** argv) :
 {
     setupTimers();
     this->default_config();
+	ProjectSettingsSingleton::setProjectSettings(this);
+	//if (!globals::ps) globals::ps = this; // global static variable ps
+	//if (!globals::ps) globals::ps = this; // global static variable ps
 
     this->parseCommandLineArgs(argc, argv, 0);
     this->ParseFile(cli_filename);
@@ -69,6 +85,9 @@ ProjectSettings::ProjectSettings(int argc, char** argv, int mpi_rank):
 {
     setupTimers();
     this->default_config();
+	ProjectSettingsSingleton::setProjectSettings(this);
+	//globals::ps = this; // global static variable ps
+	//if (!globals::ps) globals::ps = this; // global static variable ps
 
     this->parseCommandLineArgs(argc, argv, mpi_rank);
     this->ParseFile(cli_filename);
@@ -79,6 +98,9 @@ ProjectSettings::ProjectSettings(int argc, char** argv, int mpi_rank):
 ProjectSettings::ProjectSettings(const std::string filename)
 {
     setupTimers();
+	//globals::ps = this; // global static variable ps
+	//if (!globals::ps) globals::ps = this; // global static variable ps
+	ProjectSettingsSingleton::setProjectSettings(this);
     this->ParseFile(filename);
 }
 

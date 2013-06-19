@@ -9,9 +9,11 @@
 #include <sstream>
 //#include <fstream>
 #include <sstream>
-#include "timer_eb.h"
+//#include "timer_eb.h"
+//
 
-
+#define REQUIRED ProjectSettingsSingleton::getRequired
+#define OPTIONAL ProjectSettingsSingleton::getOptional
 /**
   * PARSE A CONFIGURATION FILE FORMATTED AS:
   *
@@ -29,7 +31,7 @@ public:
     enum settings_priority_t {required = 0, optional};
 
 // Static so we can call in atExit
-    static EB::TimerList tm; 
+    //static EB::TimerList tm; 
 
 protected:
     // The map of KEY = VALUE settings
@@ -45,6 +47,7 @@ protected:
 
 public:
     // Read the file and add settings to the settings map
+    ProjectSettings();
     ProjectSettings(int argc, char** argv);
     ProjectSettings(int argc, char** argv, int mpi_rank);
     ProjectSettings(const std::string filename);
@@ -94,6 +97,16 @@ public:
         return ss_typecast<RT>(settings[key]);
     }
 
+	template <typename RT>
+    inline RT getOptional(std::string key, std::string defaultval = "0") {
+    	return GetSettingAs<RT>(key, ProjectSettings::optional, defaultval);
+	}
+
+	template <typename RT>
+    inline RT getRequired(std::string key) {
+    	return GetSettingAs<RT>(key, ProjectSettings::required);
+	}
+
     // Check if KEY = VALUE pair was found in config file
     bool Exists(std::string key) { if(settings.find(key) == settings.end()) { return false; } else { return true; } }
 
@@ -121,4 +134,38 @@ protected:
 };
 
 
-#endif // PROJECTSETTINGS_H
+//----------------------------------------------------------------------
+#if 1
+class ProjectSettingsSingleton
+{
+public:
+	static ProjectSettings* settings;
+
+public:
+	static ProjectSettings* getProjectSettings() { 
+		//if (!settings) {
+			//printf("inside ProjectSettingsSingleton constructor\n");
+			//settings = new ProjectSettings();
+		//}
+		return settings; 
+	}
+	static void setProjectSettings(ProjectSettings* ps) {
+		settings = ps;
+	}
+
+	template <typename RT>
+    static inline RT getRequired(std::string key) {
+    	return settings->getRequired<RT>(key);
+	}
+
+	template <typename RT>
+    static inline RT getOptional(std::string key, std::string defaultval = "0") {
+    	return settings->getOptional<RT>(key, defaultval);
+	}
+};
+
+
+// __PROJECTSETTINGS_H__
+#endif
+
+#endif 

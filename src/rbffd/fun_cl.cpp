@@ -19,6 +19,7 @@ FUN_CL::FUN_CL(DerTypes typesToCompute, Grid* grid, int dim_num, int rank)
     nb_stencils = stencil_map.size();
 }
 //----------------------------------------------------------------------
+#if 1
 void FUN_CL::setKernelType(KernelType kernel_type_)
 {
 	kernel_type = kernel_type_;
@@ -53,6 +54,7 @@ void FUN_CL::setKernelType(KernelType kernel_type_)
     this->allocateGPUMem();
 	//printf("*** after allocateGPUMem ***\n");
 }
+#endif
 //----------------------------------------------------------------------
 void FUN_CL::allocateGPUMem()
 {
@@ -85,6 +87,7 @@ void FUN_CL::allocateGPUMem()
 	printf("sup_all_weights,  dev = %d pts\n", sup_all_weights.devSize());
 }
 //----------------------------------------------------------------------
+#if 1
 void FUN_CL::convertWeights()
 {
 	bool nbnode_nbsten_type;
@@ -111,7 +114,9 @@ void FUN_CL::convertWeights()
 		break;
 	}
 }
+#endif
 //----------------------------------------------------------------------
+#if 1
 void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, 
 			SuperBuffer<double>& deriv_y, SuperBuffer<double>& deriv_z, SuperBuffer<double>& deriv_l, bool isChangedU)
 {
@@ -205,7 +210,9 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 
     tm["applyWeights"]->end();
 }
+#endif
 //----------------------------------------------------------------------
+#if 1
 void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x, bool isChangedU)
 {
 	if (kernel_type  == -1) {
@@ -313,4 +320,5 @@ void FUN_CL::computeDerivs(SuperBuffer<double>& u, SuperBuffer<double>& deriv_x,
 
     tm["applyWeights"]->end();
 }
+#endif
 //----------------------------------------------------------------------

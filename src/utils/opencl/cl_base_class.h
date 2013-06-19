@@ -144,6 +144,7 @@ public:
 public:
 	
 
+// Included inside base class
 template <typename T> 
 class SuperBuffer {
 public:

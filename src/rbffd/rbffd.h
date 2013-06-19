@@ -445,6 +445,15 @@ class RBFFD
             return cachedEigenvalues;
         }
 
+
+	public:
+	// Made public by G. Erlebacher for access by external programs. 
+        // Get a filename appropriate for output from this class
+        // same as getFilename(std::string, int) however it uses 
+        // the class's internal name instead of a user specified string. 
+        std::string getFilename(DerType which); 
+
+
     protected: 
         void setupTimers(); 
 
@@ -459,11 +468,6 @@ class RBFFD
         // descriptive and appropriate to the pde like
         // "output_file_ncar_poisson1_iteration_10.ascii" 
         std::string getFilename(DerType which, std::string base_filename);
-
-        // Get a filename appropriate for output from this class
-        // same as getFilename(std::string, int) however it uses 
-        // the class's internal name instead of a user specified string. 
-        std::string getFilename(DerType which); 
 
         // Get a string that gives some detail about the grid (used by
         // expandFilename(...)) 

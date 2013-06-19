@@ -657,9 +657,9 @@ int main(int argc, char** argv)
 	setupTimers(tm);
 	tm.printAll(stdout, 60);
 
-	//kernel_type = FUN_KERNEL;
+	kernel_type = FUN_KERNEL;
 	//kernel_type = FUN1_DERIV4_WEIGHT4; // ux,uy,uz,up
-	kernel_type = FUN4_DERIV4_WEIGHT4;
+	//kernel_type = FUN4_DERIV4_WEIGHT4;
 	//kernel_type = FUN4_DERIV4_WEIGHT4_INV;
 
     tm["main_total"]->start();

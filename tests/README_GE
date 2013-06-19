@@ -1,0 +1,22 @@
+Screwed up tests with derivative multi, and multi_weights. Fix tomorrow. 
+
+Create data files for the following cases: 
+
+10 nodes per stencil
+32 nodes per stencil
+33 nodes per stencil
+64 nodes per stencil
+
+Compact versus random stencils
+(6 cases)
+
+(nb elements)
+16*16*16 = 4096 nodes (40960,131k,135k,262k)
+32*32*32 = 2^(15) = 32,768 (328k,1.05M,1.08M,2.1M)
+64*64*64 = 2^(18) = 262,144 (2.6M,8.4M,8.6M,16.8M)
+128*128*128 = 2,097,152 (20.9M,67M,69M,134M)
+100*100*100 = 1000000 nodes (1.e6)
+
+Largest array in double: 134M*8 = 1.07Gbytes 
+  (The MIC has 32 Gbytes of memory, so it is possible.)
+----------------------------------------------------------------------

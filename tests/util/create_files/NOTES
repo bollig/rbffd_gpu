@@ -1,0 +1,24 @@
+Create a range of weight arrays for different grids: 
+
+Surface of a sphere, 
+Volume of a cube. 
+
+nodes: (16,32,64,128)^3
+stencil size: 8,16,32,33,64 
+
+// not achievable but gives best/worse performance data. 
+// so sphere vs cube is irrelevant
+COMPACT: best  case matrix
+RANDOM:  worst case matrix
+
+Sphere surface vs 3D cube will influence how close to compact I can get. 
+----------------------------------------------------------------------
+
+Within the analysis code, do: 
+cuthill_mcgee, reordering based on on space-filling curves.  (alternatives to COMPACT and RANDOM)
+
+----------------------------------------------------------------------
+June 18, 2013
+create_files.py : create a series of weight files (random and compactly distributed) 
+for benchmarking. Currenlty in ascii form. Should generate binary version directly.
+----------------------------------------------------------------------

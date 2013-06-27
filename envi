@@ -2,3 +2,8 @@ export OPENCL_ROOT=/opt/intel/opencl-1.2-3.0.67279/
 export ARMADILLO_ROOT=$HOME/local 
 export CL_KERNELS=/mnt/global/LCSE/gerlebacher/src/rbf_fd/rbffd_gpu/src/cl_kernels
 ~                                                                                                                                                        
+
+#FSU-HPC
+#export OPENCL_ROOT=/opt/intel/opencl-1.2-3.0.67279/
+#export ARMADILLO_ROOT=$HOME/local/usr
+#export CL_KERNELS=$HOME/src/rbffd_gpu/src/cl_kernels

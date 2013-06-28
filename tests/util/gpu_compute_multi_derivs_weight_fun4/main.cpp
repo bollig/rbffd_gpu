@@ -34,7 +34,8 @@ int main(int argc, char** argv) {
 	tm["total"]->start();
 
     Communicator* comm_unit = new Communicator(argc, argv);
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
+    //ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
+    ProjectSettings* settings = new ProjectSettings("test.conf");
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required); 
     int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
@@ -100,6 +101,8 @@ int main(int argc, char** argv) {
 	tm["rbffd"]->start();
     RBFFD* der;
 
+	printf("use_gpu= %d\n", use_gpu);
+
     if (use_gpu) {
         der = new RBFFD_MULTI_WEIGHT_FUN4_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
         //der = new RBFFD_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
@@ -149,10 +152,15 @@ int main(int argc, char** argv) {
     // helps avoid overhead of passing "u" to the GPU.
     tm["cpu_tests"]->start();
     der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
+	printf("gordon 1\n");
     der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false); // originally false
+	printf("gordon 2\n");
     der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false); // orig false
+	printf("gordon 3\n");
     der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false); // orig false
     tm["cpu_tests"]->end();
+
+	printf("gordon\n");
 
     der->applyWeightsForDeriv(u, xderiv_gpu, yderiv_gpu, zderiv_gpu, lderiv_gpu, true); // do not time
     tm["gpu_tests"]->start();

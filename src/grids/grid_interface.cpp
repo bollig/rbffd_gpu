@@ -140,6 +140,7 @@ void Grid::writeAvgRadiiToFile(std::string filename) {
     std::string fname = "avg_radii_"; 
     this->writeVecToFile(fname, filename, avg_stencil_radii); 
 }
+
 //----------------------------------------------------------------------------
 
 void Grid::writeStencilsToFile(std::string filename) {
@@ -225,15 +226,14 @@ Grid::GridLoadErrType Grid::loadFromFile(std::string filename) {
         return NO_STENCIL_FILES;
     } else {
         stencilsComputed = true;
+	// Since we avoid loading stencil radii from disk, lets recompute them: 
+	this->computeStencilRadii();
     }
 
     if (this->loadExtraFromFile(filename)) {
         printf("Error loading additional data\n"); 
         return NO_EXTRA_FILES;
     }
-
-    // Since we avoid loading stencil radii from disk, lets recompute them: 
-    this->computeStencilRadii();
     
     return GRID_AND_STENCILS_LOADED;
 }
@@ -548,11 +548,11 @@ void Grid::generateStencils(st_generator_t generator_choice)
 //----------------------------------------------------------------------------
 void Grid::computeStencilRadii() {
     // NOTE: this currently assumes that nodes are sorted [boundary; interior]
-    this->avg_stencil_radii.resize(node_list.size()); 
-    this->min_stencil_radii.resize(node_list.size()); 
-    this->max_stencil_radii.resize(node_list.size()); 
+    this->avg_stencil_radii.resize(stencil_map.size()); 
+    this->min_stencil_radii.resize(stencil_map.size()); 
+    this->max_stencil_radii.resize(stencil_map.size()); 
 
-    int nb_rbf = node_list.size();
+    int nb_rbf = stencil_map.size();
     int nb_bnd = boundary_indices.size();
     std::vector<NodeType>& rbf_centers = node_list;
 

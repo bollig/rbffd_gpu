@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
     //grid->writeToFile(); 
 
 
+
     // 0: 2D problem; 1: 3D problem
     //ExactSolution* exact_heat_regulargrid = new ExactRegularGrid(dim, 1.0, 1.0);
 
@@ -109,11 +110,10 @@ int main(int argc, char** argv) {
     der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false); // orig false
     der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false); // orig false
 
-    der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);  // do not time (timer offset=1)
+    der->applyWeightsForDeriv(RBFFD::X, u, xderiv_gpu, true);
     der->applyWeightsForDeriv(RBFFD::Y, u, yderiv_gpu, false); // orig false
-    //der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false); // orig: false
-    //der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false); // orig: false
-
+    der->applyWeightsForDeriv(RBFFD::Z, u, zderiv_gpu, false); // orig: false
+    der->applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_gpu, false); // orig: false
 
     double max_diff = 0.; 
     for (size_t i = 0; i < rbf_centers.size(); i++) {

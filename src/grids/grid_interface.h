@@ -184,7 +184,7 @@ class Grid
         void writeAvgRadiiToFile(std::string filename); 
         void writeMaxRadiiToFile(std::string filename); 
         void writeMinRadiiToFile(std::string filename); 
-        void writeStencilsToFile(std::string filename); 
+        virtual void writeStencilsToFile(std::string filename); 
         virtual void writeExtraToFile(std::string filename); 
 
         virtual void printNodeList(std::string label); 

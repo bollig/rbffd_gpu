@@ -1,32 +1,25 @@
 /*
- *  
- *  load full grid
- *  if metis part file not exists
- *  	load full stencils
- *  else 
- *  	load metis part file
- *  	for each metis line
- *  		if part equals mpi_rank
- *  			read stencil
- *  		else 
- *  			discard stencil
- *  for each stencil
- *  	compute weight
- *  
- *  for each stencil
- *  	write weights
- **/
+ * 
+ * Load metis domain
+ * Load all weights
+ * Load simple function (option to select 1's, sin(x), input file). 
+ * Apply weights to function using SpMV
+ * 
+ */
 
 #include <stdlib.h>
 #include <sstream>
 #include <map>
 #include <iostream> 
+#include <cmath>
+
+#include "utils/norms.h"
 
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
-#include "utils/io/vtu_domain_writer.h"
 #include "rbffd/rbffd.h"
+#include "rbffd/derivative_tests.h"
 
 #include <boost/program_options.hpp>
 
@@ -58,7 +51,8 @@ int main(int argc, char** argv) {
 	tm["settings"] = new Timer("[Main] Load settings");
 	tm["derSetup"] = new Timer("[Main] Setup RBFFD class");
 	tm["weights"] = new Timer("[Main] Compute Weights");
-	tm["writeWeights"] = new Timer("[Main] Output weights to file");
+	tm["loadWeights"] = new Timer("[Main] Read weights from file");
+	tm["tests"] = new Timer("[Main] Derivative tests");
 
 	tm["total"]->start();
 
@@ -225,19 +219,24 @@ int main(int argc, char** argv) {
 #else 
 	int mpi_rank = 0; 
 	int mpi_size = 1;
-#endif 
+#endif 	
 
-	tm["gridReader"]->start();
-	Grid* grid = new GridReader(grid_filename, grid_num_cols, grid_size);
-	grid->setMaxStencilSize(stencil_size);
-	tm["gridReader"]->stop();
+	Grid* grid;
 
-	tm["loadGrid"]->start();
-	Grid::GridLoadErrType err = grid->loadFromFile(grid_filename);
-	tm["loadGrid"]->stop();
-	if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
-		std::cout << "ERROR: unable to read grid. Exiting..." << std::endl;
-		exit(-1);
+	// Master process loads grid in case we we need collectives like MPI_Reduce
+	if (!mpi_rank) { 
+		tm["gridReader"]->start();
+		grid = new GridReader(grid_filename, grid_num_cols, grid_size);
+		grid->setMaxStencilSize(stencil_size);
+		tm["gridReader"]->stop();
+
+		tm["loadGrid"]->start();
+		Grid::GridLoadErrType err = grid->loadFromFile(grid_filename);
+		tm["loadGrid"]->stop();
+		if ((err == Grid::NO_GRID_FILES) || (err == Grid::NO_STENCIL_FILES)) {
+			std::cout << "ERROR: Master process unable to read grid. Exiting..." << std::endl;
+			exit(-1);
+		}
 	}
 
 	// Less memory efficient but will get the job done: 
@@ -252,12 +251,15 @@ int main(int argc, char** argv) {
 	// Similar to GridReader. Although it should not read in the stencils unless they end in a rank #. 
 
 	Domain* subdomain; 
-	subdomain = new METISDomain(mpi_rank, mpi_size, grid, grid_dim, partition_filename, part_file_loaded); 
-	subdomain->writeToFile(); 
-	VtuDomainWriter* vtu = new VtuDomainWriter(subdomain, mpi_rank, mpi_size);
-	std::cout << "DECOMPOSED\n";
+	subdomain = new METISDomain(mpi_rank, mpi_size, grid_dim, stencil_size); 
+	Grid::GridLoadErrType d_load_err = subdomain->loadFromFile(); 
+	if (d_load_err) { 
+		std::cout << "ERROR: process " << mpi_rank << " could not load domain\n";
+		exit(-1);
+	}
 
-#if 1
+	std::cout << "DECOMPOSED\n";
+#if 0
 	if (debug) {
 		subdomain->printVerboseDependencyGraph();
 		subdomain->printNodeList("All Centers Needed by This Process");
@@ -297,29 +299,99 @@ int main(int argc, char** argv) {
 		der->setHVScalars(hv_k, hv_gamma);
 	}
 	der->setWeightType((RBFFD::WeightType)weight_method);
-	der->setComputeConditionNumber(true);
 	tm["derSetup"]->stop();
 
-	printf("start computing weights\n");
-	tm["weights"]->start();
-	// NOTE: good test for Direct vs Contour
-	// Grid 11x11, vareps=0.05; Look at stencil 12. SHould have -100, 25,
-	// 25, 25, 25 (i.e., -4,1,1,1,1) not sure why scaling is off.
-	der->computeAllWeightsForAllStencils();
-	tm["weights"]->stop();
+	printf("Attempting to load Stencil Weights\n");
 
-	cout << "end computing weights" << endl;
-
-	tm["writeWeights"]->start();
+	// Try loading all the weight files
+	tm["loadWeights"]->start();
 	der->overrideFileDetail(true);
 	der->setAsciiWeights(ascii_weights);
-	der->writeAllWeightsToFile();
-	cout << "end write weights to file" << endl;
-	tm["writeWeights"]->stop();
+	int load_err = der->loadAllWeightsFromFile();
+	tm["loadWeights"]->stop();
+
+
+
+	// By now our weights are loaded as Differentiation Matrices
+	// 
+	// Lets go ahead and use them to compute derivatives
+	unsigned int N_part = subdomain->getNodeListSize();
+
+	std::vector<double> u(N_part,1.);
+	std::vector<double> u_x(N_part,1.);
+	std::vector<double> u_y(N_part,1.);
+	std::vector<double> u_z(N_part,1.);
+	std::vector<double> u_l(N_part,1.);
+
+	for (int i = 0; i < N_part; i++) {
+		NodeType& node = subdomain->getNode(i); 
+		//u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
+		u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
+		u_x[i] = cos(node[0]); 
+		u_y[i] = -2*sin(node[1]); 
+		//u_z[i] = 5.*exp(5.*node[2]); 
+		u_z[i] = 0.; 
+		//u_l[i] = -sin(node[0]) - 2. * cos(node[1]) + 25. * exp(5.*node[2]); 
+		u_l[i] = -sin(node[0]) - 2. * cos(node[1]) ;
+	} 
+	
+
+	cout << "start computing derivative (on CPU)" << endl;
+
+	std::vector<double> xderiv_cpu(N_part);	
+	std::vector<double> yderiv_cpu(N_part);	
+	std::vector<double> zderiv_cpu(N_part);	
+	std::vector<double> lderiv_cpu(N_part);	
+
+
+//TODO: need to make apply work with synchronization
+
+
+	// Verify that the CPU works
+	// NOTE: we pass booleans at the end of the param list to indicate that
+	// the function "u" is new (true) or same as previous calls (false). This
+	// helps avoid overhead of passing "u" to the GPU.
+	der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
+
+	double x_l2 = l2norm( u_x, xderiv_cpu );
+	double x_l1 = l1norm( u_x, xderiv_cpu );
+	double x_linf = linfnorm( u_x, xderiv_cpu );
+	double deriv_l2 = l2norm( xderiv_cpu );
+
+	std::cout << "X (L1, L2, Linf): " << x_l1 << ", " << x_l2 << ", " << x_linf << "\n"; 
+
+	der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
+
+	double y_l2 = l2norm( u_y, yderiv_cpu );
+	double y_l1 = l1norm( u_y, yderiv_cpu );
+	double y_linf = linfnorm( u_y, yderiv_cpu );
+
+	std::cout << "Y (L1, L2, Linf): " << y_l1 << ", " << y_l2 << ", " << y_linf << "\n";
+
+	der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
+
+	double z_l2 = l2norm( u_z, zderiv_cpu );
+	double z_l1 = l1norm( u_z, zderiv_cpu );
+	double z_linf = linfnorm( u_z, zderiv_cpu );
+
+	std::cout << "Z (L1, L2, Linf): " << z_l1 << ", " << z_l2 << ", " << z_linf << "\n";
+
+	der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
+
+	double l_l2 = l2norm( u_l, lderiv_cpu );
+	double l_l1 = l1norm( u_l, lderiv_cpu );
+	double l_linf = linfnorm( u_l, lderiv_cpu );
+
+	std::cout << "Lapl (L1, L2, Linf): " << l_l1 << ", " << l_l2 << ", " << l_linf << "\n";
+
+	std::cout << "Done checking apply on CPU and GPU\n";
+
 
 #if 1
-	delete(grid);
-	std::cout << "Deleted grid\n";
+	if (!mpi_rank) { 
+		delete(grid);
+		std::cout << "Deleted grid\n";
+	}
 	delete(subdomain); 
 	std::cout << "Deleted subdomain\n";
 #endif 

@@ -101,7 +101,7 @@ class Domain : public Grid, public MPISendable
             sprintf(prefix, "_rank%d_of_%da", this->id, this->comm_size); 
             std::string s = Grid::getFileDetailString(); 
 #else 
-            sprintf(prefix, "rank%d_of_%d", this->id, this->comm_size); 
+            sprintf(prefix, "%s_rank_%d_of_%d", this->className().c_str(), this->id, this->comm_size); 
 	    std::string s = "";
 #endif 
             s.append(prefix); 
@@ -138,27 +138,36 @@ class Domain : public Grid, public MPISendable
             // More verbose print:
             printVector(this->boundary_indices, label); 
         }
+	
+	virtual void writeStencilsToFile(std::string filename);
         
         virtual void writeExtraToFile(std::string filename) {
             this->writeG2LToFile(filename);
             this->writeL2GToFile(filename);
+  	    this->writeStencilsToFile(filename);
            // this->writeLocalSolutionToFile(filename);
         }
 
         // TODO: allow subdomains to load from disk rather than always
         // initializing on master and then distributing. This would provide
         // restart capabiility!
-        //virtual int loadExtraFromFile(std::string filename) {
-           // this->loadG2LFromFile(filename);
-           // this->loadL2GFromFile(filename);
-           // this->loadLocalSolutionFromFile(filename);
-        //}
+        virtual Grid::GridLoadErrType loadExtraFromFile(std::string filename) {
+		Grid::GridLoadErrType status = this->loadG2LFromFile(filename);
+		if (status) { return status; }
+		status = this->loadL2GFromFile(filename);
+		if (status) { return status; }
+
+		return GRID_AND_STENCILS_LOADED;
+        }
 
         //--------------------------------------------------
         // Domain specific routines: 
         //--------------------------------------------------
         void writeG2LToFile(std::string filename); 
         void writeL2GToFile(std::string filename); 
+
+        Grid::GridLoadErrType loadG2LFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadL2GFromFile(std::string grid_filename); 
 
         // Decompose the current domain into x_divisions by y_divisions by z_divisions. 	
         void generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions = 1, int z_divisions = 1); 

@@ -4,7 +4,7 @@
                              -----------------
                      ViennaCL - The Vienna Computing Library
                              -----------------
-                            
+
    authors:    Karl Rupp                          rupp@iue.tuwien.ac.at
                Florian Rudolf                     flo.rudy+viennacl@gmail.com
                Josef Weinbub                      weinbub@iue.tuwien.ac.at
@@ -17,6 +17,7 @@
 
 // include necessary system headers
 #include <iostream>
+
 
 //include basic scalar and vector types of ViennaCL
 #include "viennacl/scalar.hpp"
@@ -40,21 +41,24 @@ int main()
 {
   //Change this type definition to double if your gpu supports that
   typedef float       ScalarType;
-  
+
+  // Choose the Phi (WORKS)
+  viennacl::ocl::set_context_device_type(0, viennacl::ocl::accelerator_tag());
+
   /////////////////////////////////////////////////
   ///////////// Scalar operations /////////////////
   /////////////////////////////////////////////////
-  
+
   //
   // Define a few CPU scalars:
   //
   ScalarType s1 = static_cast<ScalarType>(3.1415926);
   ScalarType s2 = static_cast<ScalarType>(2.71763);
   ScalarType s3 = static_cast<ScalarType>(42.0);
-  
+
   //
   // ViennaCL scalars are defined in the same way:
-  //  
+  //
   viennacl::scalar<ScalarType> vcl_s1;
   viennacl::scalar<ScalarType> vcl_s2 = static_cast<ScalarType>(1.0);
   viennacl::scalar<ScalarType> vcl_s3 = static_cast<ScalarType>(1.0);
@@ -65,18 +69,18 @@ int main()
   vcl_s1 = s1;
   s2 = vcl_s2;
   vcl_s3 = s3;
-  
+
   //
   // Operations between GPU scalars work just as for CPU scalars:
   // (Note that such single compute kernels on the GPU are considerably slower than on the CPU)
   //
-  
+
   s1 += s2;
   vcl_s1 += vcl_s2;
-  
+
   s1 *= s2;
   vcl_s1 *= vcl_s2;
-  
+
   s1 -= s2;
   vcl_s1 -= vcl_s2;
 
@@ -85,30 +89,38 @@ int main()
 
   s1 = s2 + s3;
   vcl_s1 = vcl_s2 + vcl_s3;
-  
+
   s1 = s2 + s3 * s2 - s3 / s1;
   vcl_s1 = vcl_s2 + vcl_s3 * vcl_s2 - vcl_s3 / vcl_s1;
-  
-  
+
+
   //
   // Operations can also be mixed:
   //
 
   vcl_s1 = s1 * vcl_s2 + s3 - vcl_s3;
-  
-  
+
+
   //
   // Output stream is overloaded as well:
   //
-  
+
   std::cout << "CPU scalar s2: " << s2 << std::endl;
   std::cout << "GPU scalar vcl_s2: " << vcl_s2 << std::endl;
 
-  
+  std::vector< viennacl::ocl::device > devices = viennacl::ocl::platform().devices();
+
+  for (int i = 0; i < devices.size(); i++) {
+      std::cout << devices[i].info() << "\n";
+  }
+
+  std::cout << "SELECTED DEVICE: \n";
+  std::cout << viennacl::ocl::current_context().current_device().info() << "\n";
+
   /////////////////////////////////////////////////
   ///////////// Vector operations /////////////////
   /////////////////////////////////////////////////
-  
+
   //
   // Define a few vectors (from STL and plain C) and viennacl::vectors
   //
@@ -124,14 +136,14 @@ int main()
   // Let us fill the CPU vectors with random values:
   // (random<> is a helper function from Random.hpp)
   //
-  
+
   for (unsigned int i = 0; i < 10; ++i)
   {
-    std_vec1[i] = random<ScalarType>(); 
+    std_vec1[i] = random<ScalarType>();
     vcl_vec2(i) = random<ScalarType>();  //also works for GPU vectors, but is MUCH slower (approx. factor 10.000) than the CPU analogue
-    plain_vec3[i] = random<ScalarType>(); 
+    plain_vec3[i] = random<ScalarType>();
   }
-  
+
   //
   // Copy the CPU vectors to the GPU vectors and vice versa
   //
@@ -139,11 +151,11 @@ int main()
   copy(vcl_vec2.begin(), vcl_vec2.end(), std_vec2.begin()); //either the STL way
   copy(vcl_vec2, std_vec2);                                 //using the short hand notation for objects that provide .begin() and .end() members
   copy(vcl_vec2.begin(), vcl_vec2.end(), plain_vec3);       //copy to plain C vector
-  
+
   //
   // Compute the inner product of two GPU vectors and write the result to either CPU or GPU
   //
-  
+
   vcl_s1 = viennacl::linalg::inner_prod(vcl_vec1, vcl_vec2);
   s1 = viennacl::linalg::inner_prod(vcl_vec1, vcl_vec2);
 
@@ -154,7 +166,7 @@ int main()
   s1 = viennacl::linalg::norm_1(vcl_vec1);
   vcl_s2 = viennacl::linalg::norm_2(vcl_vec2);
   s3 = viennacl::linalg::norm_inf(vcl_vec3);
-  
+
   //
   // Plane rotation of two vectors:
   //
@@ -164,19 +176,19 @@ int main()
   //
   // Use viennacl::vector via the overloaded operators just as you would write it on paper:
   //
-  
+
   //simple expression:
   vcl_vec1 = vcl_s1 * vcl_vec2 / vcl_s3;
-  
+
   //more complicated expression:
   vcl_vec1 = vcl_vec2 / vcl_s1 + vcl_s2 * (vcl_vec1 - vcl_s2 * vcl_vec2);
 
   //
   // Swap the content of two vectors without a temporary vector:
   //
-  
+
   swap(vcl_vec1, vcl_vec2);
-  
+
 
   //
   //  That's it. Move on to the second tutorial, where dense matrices are explained.

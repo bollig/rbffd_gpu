@@ -50,7 +50,7 @@ Grid* grid;
 int dim;
 int stencil_size;
 int use_gpu;
-EB::TimerList tm; 
+EB::TimerList tmr; 
 ProjectSettings* settings;
 RBFFD* der_cpu;
 FUN_CL* der;
@@ -108,19 +108,19 @@ void vectorCombineAoS(VD& va, VD& vb, VD& vc, VD& vd, VD& v4_target)
 	}
 }
 //----------------------------------------------------------------------
-void setupTimers(EB::TimerList& tm) {
-    tm["main_total"] 		= new EB::Timer("[main] Total Time");
-    tm["total"] 			= new EB::Timer("[main] Remaining time");
-    tm["rbffd"] 			= new EB::Timer("[main] RBFFD constructor");
-    tm["destructor"] 		= new EB::Timer("[main] Destructors");
-    tm["stencils"] 			= new EB::Timer("[main] Stencil computation");
-    tm["cpu_tests"] 		= new EB::Timer("[main] CPU tests");
-    tm["gpu_tests"] 		= new EB::Timer("[main] GPU tests");
-    tm["compute_weights"] 	= new EB::Timer("[main] Stencil weights");
-    tm["deriv_accuracy"] 	= new EB::Timer("[main] Derivative Accuracy");
-    tm["sort+grid"] 		= new EB::Timer("[main] Sort + Grid generation");
-	tm["solution_check"] 	= new EB::Timer("[main] Solution check");
-	tm.printAll(stdout, 60);
+void setupTimers(EB::TimerList& tmr) {
+    tmr["main_total"] 		= new EB::Timer("[main] Total Time");
+    tmr["total"] 			= new EB::Timer("[main] Remaining time");
+    tmr["rbffd"] 			= new EB::Timer("[main] RBFFD constructor");
+    tmr["destructor"] 		= new EB::Timer("[main] Destructors");
+    tmr["stencils"] 			= new EB::Timer("[main] Stencil computation");
+    tmr["cpu_tests"] 		= new EB::Timer("[main] CPU tests");
+    tmr["gpu_tests"] 		= new EB::Timer("[main] GPU tests");
+    tmr["compute_weights"] 	= new EB::Timer("[main] Stencil weights");
+    tmr["deriv_accuracy"] 	= new EB::Timer("[main] Derivative Accuracy");
+    tmr["sort+grid"] 		= new EB::Timer("[main] Sort + Grid generation");
+	tmr["solution_check"] 	= new EB::Timer("[main] Solution check");
+	tmr.printAll(stdout, 60);
 }
 //----------------------------------------------------------------------
 void initializeArrays()
@@ -164,7 +164,7 @@ void computeOnGPU4()
 {
 	printf("Enter computerOnGPU4\n");
 	// Do not overwrite xderiv_cpu, so allocate new space on host (to compare against CPU results)
-    tm["gpu_tests"]->start();
+    tmr["gpu_tests"]->start();
 
 	u_gpu = RBFFD_CL::SuperBuffer<double>(u_cpu, "u_cpu"); 
 	u_gpu.copyToDevice();
@@ -227,14 +227,14 @@ void computeOnGPU4()
 
 	//u_gpu.copyToHost();
 
-    tm["gpu_tests"]->end();
+    tmr["gpu_tests"]->end();
 }
 //----------------------------------------------------------------------
 void computeOnGPU()
 {
 	//printf("Enter computerOnGPU\n");
 	// Do not overwrite xderiv_cpu, so allocate new space on host (to compare against CPU results)
-    tm["gpu_tests"]->start();
+    tmr["gpu_tests"]->start();
 	xderiv_gpu = RBFFD_CL::SuperBuffer<double>(xderiv_cpu.size(), "xderiv_cpu"); 
 
 	u_gpu = RBFFD_CL::SuperBuffer<double>(u_cpu, "u_cpu"); 
@@ -254,12 +254,12 @@ void computeOnGPU()
 
 	xderiv_gpu.copyToHost();
 	//u_gpu.copyToHost();
-    tm["gpu_tests"]->end();
+    tmr["gpu_tests"]->end();
 }
 //----------------------------------------------------------------------
 void computeOnCPU4()
 {
-    tm["cpu_tests"]->start();
+    tmr["cpu_tests"]->start();
     der_cpu = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     der_cpu->computeAllWeightsForAllStencilsEmpty();
 	der_cpu->setAsciiWeights(1);
@@ -339,7 +339,7 @@ void computeOnCPU4()
 		break;
 	}
 
-	tm["cpu_tests"]->end();
+	tmr["cpu_tests"]->end();
 
 	//for (int i=0; i < 20; i++) {
 		//printf("(%d), CPU4: u,dudx= %f, %f, %f, %f\n", i, u_cpu[i], xderiv_cpu[i], yderiv_cpu[i], zderiv_cpu[i], lderiv_cpu[i]);
@@ -349,7 +349,7 @@ void computeOnCPU4()
 void computeOnCPU()
 {
 //	printf("\n***** ComputeOnCPU *****\n");
-    tm["cpu_tests"]->start();
+    tmr["cpu_tests"]->start();
 
     der_cpu = new RBFFD(RBFFD::X, grid, dim); 
     der_cpu->computeAllWeightsForAllStencilsEmpty();
@@ -366,14 +366,14 @@ void computeOnCPU()
 
     der_cpu->computeDeriv(RBFFD::X, u_cpu, xderiv_cpu, true);
 
-	tm["cpu_tests"]->end();
+	tmr["cpu_tests"]->end();
 	#endif
 	//printf("***** exit ComputeOnCPU *****\n\n");
 }
 //----------------------------------------------------------------------
 void checkDerivativeAccuracy()
 {
-    tm["deriv_accuracy"]->start();
+    tmr["deriv_accuracy"]->start();
 	double xnorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
 	printf("*********************************************\n");
 	printf("**       INF derivative error norm: %f    ***\n", xnorm);
@@ -403,7 +403,7 @@ void checkDerivativeAccuracy()
 		}
 	}
 	#endif
-    tm["deriv_accuracy"]->end();
+    tmr["deriv_accuracy"]->end();
 }
 //----------------------------------------------------------------------
 // Array of Structures to Structure of Arrays
@@ -423,7 +423,7 @@ void AoS2SoA(std::vector<double>& xderiv_cpu, std::vector<double>& yderiv_cpu,
 //----------------------------------------------------------------------
 void checkDerivativeAccuracy4()
 {
-    tm["deriv_accuracy"]->start();
+    tmr["deriv_accuracy"]->start();
 	// deriv_gpu: (ux,uy,uz,ul)_1, (ux,uy,uz,ul)_2
 	// Array of Structures to Structure of Arrays
 	vector<double> deriv4_cpu;
@@ -544,12 +544,12 @@ void checkDerivativeAccuracy4()
 		break;
 	#endif
 	}
-    tm["deriv_accuracy"]->end();
+    tmr["deriv_accuracy"]->end();
 }
 //----------------------------------------------------------------------
 void createGrid()
 {
-	tm["total"]->start();
+	tmr["total"]->start();
 
     int dim = 3;
     int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
@@ -569,18 +569,18 @@ void createGrid()
     use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
 
 	grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
-	tm["total"]->end();
+	tmr["total"]->end();
 
-    tm["sort+grid"]->start();
+    tmr["sort+grid"]->start();
     grid->setSortBoundaryNodes(true); 
     grid->generate();
-    tm["sort+grid"]->end();
+    tmr["sort+grid"]->end();
 
-    tm["stencils"]->start();
+    tmr["stencils"]->start();
 	Grid::st_generator_t stencil_type = Grid::ST_COMPACT;
 	//Grid::st_generator_t stencil_type = Grid::ST_RANDOM;
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
-    tm["stencils"]->end();
+    tmr["stencils"]->end();
 
 }
 //----------------------------------------------------------------------
@@ -588,7 +588,7 @@ void setupDerivativeWeights()
 {
 	// Might need more options for setKernelType
 	//
-    tm["compute_weights"]->start();
+    tmr["compute_weights"]->start();
     if (use_gpu) {
 		switch (kernel_type) {
 		case FUN_KERNEL:
@@ -636,13 +636,13 @@ void setupDerivativeWeights()
 	//printf("*** exit setupDerivativeWeights\n");
 
 	// weights are all in one large array (for all derivatives)
-    tm["compute_weights"]->end();
+    tmr["compute_weights"]->end();
 
 }
 //----------------------------------------------------------------------
 void cleanup()
 {
-    tm["destructor"]->start();
+    tmr["destructor"]->start();
 	delete(der);
 	//printf("after delete der\n");
 	delete(der_cpu);
@@ -652,13 +652,13 @@ void cleanup()
     delete(settings);
 	//printf("after delete settings\n");
     cout.flush();
-    tm["destructor"]->end();
+    tmr["destructor"]->end();
 }
 //----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-	setupTimers(tm);
-	tm.printAll(stdout, 60);
+	setupTimers(tmr);
+	tmr.printAll(stdout, 60);
 
 	//kernel_type = FUN_KERNEL;
 	//kernel_type = FUN1_DERIV4_WEIGHT4; // ux,uy,uz,up
@@ -667,7 +667,7 @@ int main(int argc, char** argv)
 	// First function to try with ViennaCL
 	kernel_type = FUN4_DERIV4_WEIGHT4;
 
-    tm["main_total"]->start();
+    tmr["main_total"]->start();
 
     Communicator* comm_unit = new Communicator(argc, argv);
     settings = new ProjectSettings(argc, argv, comm_unit->getRank());
@@ -704,8 +704,8 @@ int main(int argc, char** argv)
 	}
 
 
-    tm["main_total"]->end();
-	tm.printAll(stdout, 60);
+    tmr["main_total"]->end();
+	tmr.printAll(stdout, 60);
 
 	cleanup();
 

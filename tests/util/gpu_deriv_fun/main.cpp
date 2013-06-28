@@ -22,7 +22,7 @@ Grid* grid;
 int dim;
 int stencil_size;
 int use_gpu;
-EB::TimerList tm; 
+EB::TimerList tmr; 
 ProjectSettings* settings;
 RBFFD* der_cpu;
 FUN_CL* der;
@@ -31,19 +31,19 @@ FUN_CL* der;
 using namespace std;
 
 //----------------------------------------------------------------------
-void setupTimers(EB::TimerList& tm) {
-    tm["main_total"] 		= new EB::Timer("[main] Total Time");
-    tm["total"] 			= new EB::Timer("[main] Remaining time");
-    tm["rbffd"] 			= new EB::Timer("[main] RBFFD constructor");
-    tm["destructor"] 		= new EB::Timer("[main] Destructors");
-    tm["stencils"] 			= new EB::Timer("[main] Stencil computation");
-    tm["cpu_tests"] 		= new EB::Timer("[main] CPU tests");
-    tm["gpu_tests"] 		= new EB::Timer("[main] GPU tests");
-    tm["compute_weights"] 	= new EB::Timer("[main] Stencil weights");
-    tm["deriv_accuracy"] 	= new EB::Timer("[main] Derivative Accuracy");
-    tm["sort+grid"] 		= new EB::Timer("[main] Sort + Grid generation");
-	tm["solution_check"] 	= new EB::Timer("[main] Solution check");
-	tm.printAll(stdout, 60);
+void setupTimers() {
+    tmr["main_total"] 		= new EB::Timer("[main] Total Time");
+    tmr["total"] 			= new EB::Timer("[main] Remaining time");
+    tmr["rbffd"] 			= new EB::Timer("[main] RBFFD constructor");
+    tmr["destructor"] 		= new EB::Timer("[main] Destructors");
+    tmr["stencils"] 			= new EB::Timer("[main] Stencil computation");
+    tmr["cpu_tests"] 		= new EB::Timer("[main] CPU tests");
+    tmr["gpu_tests"] 		= new EB::Timer("[main] GPU tests");
+    tmr["compute_weights"] 	= new EB::Timer("[main] Stencil weights");
+    tmr["deriv_accuracy"] 	= new EB::Timer("[main] Derivative Accuracy");
+    tmr["sort+grid"] 		= new EB::Timer("[main] Sort + Grid generation");
+	tmr["solution_check"] 	= new EB::Timer("[main] Solution check");
+	tmr.printAll(stdout, 60);
 }
 //----------------------------------------------------------------------
 void initializeArrays()
@@ -71,7 +71,7 @@ void initializeArrays()
 void computeOnGPU()
 {
 	// Do not overwrite xderiv_cpu, so allocate new space on host (to compare against CPU results)
-    tm["gpu_tests"]->start();
+    tmr["gpu_tests"]->start();
 	xderiv_gpu = RBFFD_CL::SuperBuffer<double>(xderiv_cpu.size(), "xderiv_cpu"); 
 	yderiv_gpu = RBFFD_CL::SuperBuffer<double>(yderiv_cpu.size(), "yderiv_cpu");
 	zderiv_gpu = RBFFD_CL::SuperBuffer<double>(zderiv_cpu.size(), "zderiv_cpu");
@@ -97,13 +97,13 @@ void computeOnGPU()
 	lderiv_gpu.copyToHost();
 
 	u_gpu.copyToHost();
-    tm["gpu_tests"]->end();
+    tmr["gpu_tests"]->end();
 }
 //----------------------------------------------------------------------
 void computeOnCPU()
 {
 	printf("\n***** ComputeOnCPU *****\n");
-    tm["cpu_tests"]->start();
+    tmr["cpu_tests"]->start();
     der_cpu = new RBFFD(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
     der_cpu->computeAllWeightsForAllStencilsEmpty();
 
@@ -138,14 +138,14 @@ void computeOnCPU()
     der_cpu->computeDeriv(RBFFD::LAPL, &u_cpu[2*nb_nodes], &lderiv_cpu[2*nb_nodes], false); // originally false
     der_cpu->computeDeriv(RBFFD::LAPL, &u_cpu[3*nb_nodes], &lderiv_cpu[3*nb_nodes], false); // originally false
 
-	tm["cpu_tests"]->end();
+	tmr["cpu_tests"]->end();
 	#endif
 	printf("***** exit ComputeOnCPU *****\n\n");
 }
 //----------------------------------------------------------------------
 void checkDerivativeAccuracy()
 {
-    tm["deriv_accuracy"]->start();
+    tmr["deriv_accuracy"]->start();
 	double xnorm = linfnorm(*xderiv_gpu.host, xderiv_cpu);
 	double ynorm = linfnorm(*yderiv_gpu.host, yderiv_cpu);
 	double znorm = linfnorm(*zderiv_gpu.host, zderiv_cpu);
@@ -169,12 +169,12 @@ void checkDerivativeAccuracy()
 			   i, zderiv_cpu[i], i, lderiv_cpu[i]); 
 		}
 	}
-    tm["deriv_accuracy"]->end();
+    tmr["deriv_accuracy"]->end();
 }
 //----------------------------------------------------------------------
 void createGrid()
 {
-	tm["total"]->start();
+	tmr["total"]->start();
 
     int dim = 3;
     int nx = settings->GetSettingAs<int>("NB_X", ProjectSettings::required); 
@@ -194,24 +194,24 @@ void createGrid()
     use_gpu = settings->GetSettingAs<int>("USE_GPU", ProjectSettings::optional, "1"); 
 
 	grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
-	tm["total"]->end();
+	tmr["total"]->end();
 
-    tm["sort+grid"]->start();
+    tmr["sort+grid"]->start();
     grid->setSortBoundaryNodes(true); 
     grid->generate();
-    tm["sort+grid"]->end();
+    tmr["sort+grid"]->end();
 
-    tm["stencils"]->start();
+    tmr["stencils"]->start();
 	Grid::st_generator_t stencil_type = Grid::ST_COMPACT;
 	//Grid::st_generator_t stencil_type = Grid::ST_RANDOM;
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
-    tm["stencils"]->end();
+    tmr["stencils"]->end();
 
 }
 //----------------------------------------------------------------------
 void setupDerivativeWeights()
 {
-    tm["compute_weights"]->start();
+    tmr["compute_weights"]->start();
     if (use_gpu) {
         der = new FUN_CL(RBFFD::X | RBFFD::Y | RBFFD::Z | RBFFD::LAPL, grid, dim); 
 		// Must be called before setKernelType
@@ -231,13 +231,13 @@ void setupDerivativeWeights()
 	printf("*** epsilon= %f\n", epsilon);
 
 	// weights are all in one large array (for all derivatives)
-    tm["compute_weights"]->end();
+    tmr["compute_weights"]->end();
 
 }
 //----------------------------------------------------------------------
 void cleanup()
 {
-    tm["destructor"]->start();
+    tmr["destructor"]->start();
 	delete(der);
 	printf("after delete der\n");
 	delete(der_cpu);
@@ -247,15 +247,15 @@ void cleanup()
     delete(settings);
 	printf("after delete settings\n");
     cout.flush();
-    tm["destructor"]->end();
+    tmr["destructor"]->end();
 }
 //----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-	setupTimers(tm);
-	tm.printAll(stdout, 60);
+	setupTimers();
+	tmr.printAll(stdout, 60);
 
-    tm["main_total"]->start();
+    tmr["main_total"]->start();
 
     Communicator* comm_unit = new Communicator(argc, argv);
     settings = new ProjectSettings(argc, argv, comm_unit->getRank());
@@ -268,8 +268,8 @@ int main(int argc, char** argv)
 	computeOnGPU();
 	checkDerivativeAccuracy();
 
-    tm["main_total"]->end();
-	tm.printAll(stdout, 60);
+    tmr["main_total"]->end();
+	tmr.printAll(stdout, 60);
 
 	cleanup();
 

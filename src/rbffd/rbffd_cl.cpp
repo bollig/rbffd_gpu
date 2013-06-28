@@ -15,10 +15,11 @@ using namespace std;
     deleteCPUWeightsBuffer(false),
     deleteCPUNodesBuffer(false),
     deleteCPUStencilsBuffer(false),
-    useDouble(true),
-// Gordon: changing alignWeights to true will break gpu_compute_derivs; 
-    alignWeights(false), alignMultiple(32)
+    useDouble(true)
 {
+    // Gordon: changing alignWeights to true will break gpu_compute_derivs; 
+    alignWeights=false;
+    alignMultiple=32;
 
 	//GE: added as a means to avoid deleting that which is not allocated
 	for (int i=0; i < NUM_DERIVATIVE_TYPES; i++) {
@@ -26,8 +27,9 @@ using namespace std;
 	}
 
     this->setupTimers();
-    this->loadKernel();
+    //this->loadKernel();
     this->allocateGPUMem();
+#if 0
     //this->updateStencilsOnGPU(false);
     this->updateStencilsOnGPU(true); //GE
     std::cout << "Done copying stencils\n";
@@ -35,6 +37,7 @@ using namespace std;
     //this->updateNodesOnGPU(false);
     this->updateNodesOnGPU(true);
     std::cout << "Done copying nodes\n";
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -339,14 +342,9 @@ void RBFFD_CL::clearCPUWeights() {
 // 3) send new u to GPU
 // 4) call kernel to inner prod weights and u writing to deriv
 // 5) get deriv from GPU
-<<<<<<< HEAD
 void RBFFD_CL::updateWeightsDouble(bool forceFinish)
 {
 // simply create one large array of zeros. Don't worry about correct weights
-=======
-void RBFFD_CL::updateWeightsDouble(bool forceFinish) {
-
->>>>>>> cc5bb8b243576d3f8b75b983235bf051eef55d8e
 	//std::cout << "GE enter updateWeightsDouble\n";
     if (weightsModified) {
 
@@ -520,13 +518,8 @@ void RBFFD_CL::updateFunctionDouble(unsigned int start_indx, unsigned int nb_val
 		std::cout << "nb_vals= " << nb_vals << "\n";
         exit(EXIT_FAILURE);
     } else {
-<<<<<<< HEAD
-		std::cout << "Updating solution: " << function_mem_bytes << " bytes \n";
-		std::cout << start_indx << ", " << nb_vals << "\n";
-=======
 	std::cout << "Updating solution: " << function_mem_bytes << " bytes \n";
 	std::cout << start_indx << ", " << nb_vals << "\n";
->>>>>>> cc5bb8b243576d3f8b75b983235bf051eef55d8e
     }
     // TODO: mask off fields not update
 	printf("rbffd_cl::updateFunDouble, mem_bytes= %d\n", function_mem_bytes);
@@ -589,7 +582,6 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
     //this->updateWeightsOnGPU(false);
-<<<<<<< HEAD
 
     this->updateWeightsOnGPU(true); //GE
 
@@ -600,9 +592,6 @@ void RBFFD_CL::applyWeightsForDerivDouble(DerType which, unsigned int start_indx
 	// One should not take into account the time for read/write of data to the GPU, since in a good code, 
 	// one would minimize read/writing to the GPU. 
     tm["applyWeights"]->start();
-=======
-    this->updateWeightsOnGPU(true); //GE
->>>>>>> cc5bb8b243576d3f8b75b983235bf051eef55d8e
 
     try {
         int i = 0;
@@ -673,26 +662,16 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
     //cout << "GPU VERSION OF APPLY WEIGHTS FOR DERIVATIVES: " << which << std::endl;
 
     if (isChangedU) {
-<<<<<<< HEAD
         this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
         //this->updateFunctionOnGPU(start_indx, nb_stencils, u, true); //GE
-=======
-        //this->updateFunctionOnGPU(start_indx, nb_stencils, u, false);
-        this->updateFunctionOnGPU(start_indx, nb_stencils, u, true); //GE
->>>>>>> cc5bb8b243576d3f8b75b983235bf051eef55d8e
     }
 
     // Will only update if necessary
     // false here implies that we should not block on the update to finish
-<<<<<<< HEAD
     this->updateWeightsOnGPU(false);
     //this->updateWeightsOnGPU(true); //GE
 
     tm["applyWeights"]->start();
-=======
-    //this->updateWeightsOnGPU(false);
-    this->updateWeightsOnGPU(true); //GE
->>>>>>> cc5bb8b243576d3f8b75b983235bf051eef55d8e
 
     try {
         int i = 0;

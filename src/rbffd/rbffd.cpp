@@ -29,7 +29,7 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
         computeSFCoperators(false), asciiWeights(0),
 // Gordon: changing alignWeights to true will break gpu_compute_derivs; 
 // I put this on the CPU to allow for CPU optimization if required
-    	alignWeights(false), alignMultiple(32)
+    	alignWeights(false), alignMultiple(32),
         override_file_detail(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize();

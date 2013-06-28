@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
 	tm["total"] = new Timer("[Main] Total runtime for this proc");
 	tm["grid"] = new Timer("[Main] Grid generation");
 	tm["settings"] = new Timer("[Main] Load settings");
+	tm["metis"] = new Timer("[Main] Construct METIS adjacency graph with BOOST");
 
 	tm["total"]->start();
 
@@ -83,18 +84,23 @@ int main(int argc, char** argv) {
 	double maxY = 1.;
 	double minZ = -1.;
 	double maxZ = 1.;
+	tm["settings"]->stop(); 
 
+	tm["grid"]->start();
 	Grid* grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
 	grid->setSortBoundaryNodes(true); 
 	grid->generate();
 	int grid_size = grid->getNodeListSize();
-	grid->generateStencils(stencil_size, Grid::ST_KDTREE);   // nearest nb_points
+	grid->setNSHashDims(10, 10, 10);
+	grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
 	if (output_filename_specified) { 
 		grid->writeToFile(output_filename); 
 	} else { 
 		grid->writeToFile(); 
 	}
+	tm["grid"]->stop();
 
+	tm["metis"]->start();
 	{
 		// Assemble a DIRECTED graph that is the spadjacency_list our stencils
 		//		typedef adjacency_list <boost::vecS, boost::setS, boost::bidirectionalS> Graph;
@@ -166,8 +172,10 @@ int main(int argc, char** argv) {
 		grout.close();
 		std::cout << "Wrote the METIS graph file: metis_stencils.graph" << std::endl;
 	}
+	tm["metis"]->stop();
 
-
+	tm["total"]->stop();
+	tm.printAll();
 
 	delete(grid);
 

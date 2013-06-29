@@ -1,8 +1,8 @@
-#include <stdlib.h>
-#include <math.h>
 #include "rbffd_multi_weight_fun_cl.h"
+#include <math.h>
 #include "timer_eb.h"
 #include "common_typedefs.h"     // Declares type FLOAT
+#include <stdlib.h>
 
 
 using namespace EB;

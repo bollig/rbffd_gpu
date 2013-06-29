@@ -1,12 +1,12 @@
 #ifndef _STENCILS_H_
 #define _STENCILS_H_
 
-#include <stdio.h>
 #include <armadillo>
 #include <math.h>
 #include <Vec3.h>
 #include "rbffd/rbfs/rbf.h"
 #include "contour_svd.h"
+#include <stdio.h>
 
 
 // Rewrite of Matlab/Octave version written by Grady Wright. Code obtained August 14, 2009

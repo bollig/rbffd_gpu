@@ -1,8 +1,7 @@
 #ifndef _RBFFD_H_
 #define _RBFFD_H_
 
-#include <stdlib.h>
-#include <iostream>
+#include <mpi.h>
 #include <vector>
 #include <cmath>
 #include <complex> 
@@ -12,6 +11,8 @@
 #include "utils/conf/projectsettings.h"
 #include "timer_eb.h"
 #include "common_typedefs.h"
+#include <stdlib.h>
+#include <iostream>
 
 // Armadillo is causing compile errors in NVCC. I use forward declarations here to
 // avoid interping all the arma content in NVCC (it works fine with GCC).

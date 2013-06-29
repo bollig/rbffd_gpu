@@ -1,6 +1,7 @@
 // THIS IS adapted from verbose_monitor.cu
 // PROVIDED BY THE CUSP v0.1 EXAMPLES
 
+#include <mpi.h>
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
 #include "timer_eb.h" 

@@ -1,10 +1,10 @@
+#include "utils/comm/communicator.h"
 #include <stdlib.h>
 
 #include "utils/conf/projectsettings.h"
 
 #include "grids/regulargrid.h"
 
-#include "utils/comm/communicator.h"
 
 using namespace std;
 

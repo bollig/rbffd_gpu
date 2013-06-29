@@ -1,3 +1,4 @@
+#include "utils/comm/communicator.h"
 #include <vtkScalarBarActor.h>
 #include <vtkActor.h>
 #include <vtkAppendPolyData.h>
@@ -50,7 +51,6 @@
 #include "exact_solutions/exact_solution.h"
 #include "exact_solutions/exact_ncar_poisson1.h"
 #include "exact_solutions/exact_ncar_poisson2.h"
-#include "utils/comm/communicator.h"
 #include "utils/conf/projectsettings.h"
 
 

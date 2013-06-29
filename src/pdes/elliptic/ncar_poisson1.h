@@ -1,11 +1,11 @@
 #ifndef _NCAR_POISSON_1_H_
 #define _NCAR_POISSON_1_H_
 
+#include "utils/comm/communicator.h"
 #include <vector>
 #include <ArrayT.h>
 #include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
-#include "utils/comm/communicator.h"
 #include "rbffd/rbffd.h"
 #include "utils/conf/projectsettings.h"
 

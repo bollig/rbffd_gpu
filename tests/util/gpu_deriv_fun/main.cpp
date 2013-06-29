@@ -1,3 +1,4 @@
+#include "utils/comm/communicator.h"
 #include <stdlib.h>
 
 #include "pdes/parabolic/heat_pde.h"
@@ -11,7 +12,6 @@
 
 #include "exact_solutions/exact_regulargrid.h"
 
-#include "utils/comm/communicator.h"
 #include "timer_eb.h"
 
 vector<double> u_cpu, xderiv_cpu, yderiv_cpu, zderiv_cpu, lderiv_cpu; 

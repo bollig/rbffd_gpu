@@ -1,3 +1,4 @@
+#include "utils/comm/communicator.h"
 #include <stdlib.h>
 #include <iostream>
 
@@ -7,7 +8,6 @@
 
 #include "grids/domain.h"
 
-#include "utils/comm/communicator.h"
 
 using namespace std;
 

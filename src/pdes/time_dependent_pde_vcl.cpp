@@ -1,4 +1,6 @@
 
+#include "time_dependent_pde_vcl.h"
+
 #include <viennacl/linalg/norm_1.hpp>
 #include <viennacl/linalg/norm_2.hpp>
 #include <viennacl/linalg/norm_inf.hpp>
@@ -9,8 +11,6 @@
 #include <viennacl/vector_proxy.hpp>
 #include <viennacl/linalg/vector_operations.hpp>
 
-
-#include "time_dependent_pde_vcl.h"
 
 #include <iomanip>
 #include <iostream>

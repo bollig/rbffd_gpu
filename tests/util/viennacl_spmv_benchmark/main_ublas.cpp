@@ -1,6 +1,7 @@
 // THIS IS adapted from verbose_monitor.cu
 // PROVIDED BY THE CUSP v0.1 EXAMPLES
 
+#include <mpi.h>
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
 #include <viennacl/ell_matrix.hpp>

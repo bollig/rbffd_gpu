@@ -1,4 +1,5 @@
 #include "pde.h"
+#include <stdio.h> // make sure it appears before mpi stuff
 
 #include "utils/norms.h"
 

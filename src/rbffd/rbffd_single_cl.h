@@ -2,8 +2,8 @@
 #define __RBFFD_SINGLE_CL_H__
 
 //#include <CL/cl.hpp> 
-#include "utils/opencl/cl_base_class.h"
 #include "rbffd_cl.h"
+#include "utils/opencl/cl_base_class.h"
 #include "utils/opencl/structs.h"
 
 class RBFFD_SINGLE_CL : public RBFFD_CL

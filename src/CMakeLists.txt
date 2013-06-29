@@ -73,7 +73,7 @@ SET( REQUIRED_CL_SOURCE_FILES
     pdes/time_dependent_pde_vcl.cpp
     rbffd/rbffd_cl.cpp
     rbffd/fun_cl.cpp
-    rbffd/fun_vcl.cpp
+    #rbffd/fun_vcl.cpp
     rbffd/rbffd_single_cl.cpp
     rbffd/rbffd_multi_cl.cpp
 	rbffd/rbffd_multi_weight_cl.cpp

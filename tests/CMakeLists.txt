@@ -41,11 +41,6 @@
 		util/project_settings
 		util/surface_integral
 		util/surface_projection
-		util/viennacl_simple_example	# Needs macro for add_cl_test
-		util/viennacl_spmv_benchmark
-		util/viennacl_gmres_poisson
-		util/viennacl_1d_pgmres
-		util/viennacl_stokes_pgmres
 		util/cusp_1d_pgmres
 		#util/vtk_stencil_visualizer
 		util/test_complex
@@ -54,11 +49,11 @@
 		util/gpu_compute_multiple_derivs
 		util/gpu_compute_multiple_derivs_weight
 		util/gpu_compute_multi_derivs_weight_fun
-		util/gpu_compute_multi_derivs_weight_fun4
+		#util/gpu_compute_multi_derivs_weight_fun4
 		util/gpu_deriv_fun
-		#util/gpu_one_deriv_one_fun   # MUST FIX CMakeLists.txt
+		util/gpu_one_deriv_one_fun   # MUST FIX CMakeLists.txt
 		util/create_files
-		util/vcl_one_deriv_one_fun
+		#util/vcl_one_deriv_one_fun  # must have forgotten to add it to git
 		util/matrix_market_io
 
 
@@ -66,9 +61,18 @@
 		util/cusp_gmres_poisson
 		util/cusp_stokes_steady
 
-		unified
+		# put vienna code at the end since ViennaCL may not be
+		# compiled . 
+		util/viennacl_simple_example	# Needs macro for add_cl_test
+		util/viennacl_spmv_benchmark
+		util/viennacl_gmres_poisson
+		util/viennacl_1d_pgmres
+		util/viennacl_stokes_pgmres
 
-		template
+		# Let Evan get these running again. There are template
+		# problems on FSU HPC
+		#unified
+		#template
 	)
 
 	FOREACH (test ${TEST_COLLECTION})

@@ -1,10 +1,10 @@
 #ifndef __RBFFD_MULTI_WEIGHT_FUN4_CL_H__
 #define __RBFFD_MULTI_WEIGHT_FUN4_CL_H__
 
+#include "rbffd_cl.h"
 //#include <CL/cl.hpp> 
 #include "utils/opencl/cl_base_class.h"
 //#include "rbffd.h"
-#include "rbffd_cl.h"
 #include "utils/opencl/structs.h"
 
 class RBFFD_MULTI_WEIGHT_FUN4_CL : public RBFFD_CL

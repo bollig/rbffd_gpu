@@ -1,3 +1,4 @@
+#include "utils/comm/communicator.h"
 #include <stdlib.h>
 #include <map> 
 
@@ -11,7 +12,6 @@
 #include "rbffd/rbffd_cl.h"
 
 #include "timer_eb.h"
-#include "utils/comm/communicator.h"
 #include "utils/io/pde_writer.h"
 
 #if USE_VTK

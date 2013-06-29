@@ -1,6 +1,6 @@
+#include "rbffd_multi_cl.h"
 #include <stdlib.h>
 #include <math.h>
-#include "rbffd_multi_cl.h"
 #include "timer_eb.h"
 #include "common_typedefs.h"     // Declares type FLOAT
 

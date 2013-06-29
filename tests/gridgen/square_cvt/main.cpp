@@ -1,10 +1,8 @@
+#include "utils/comm/communicator.h"
+#include "utils/conf/projectsettings.h"
+#include "grids/cvt/cvt.h"
 #include <stdlib.h>
 
-#include "utils/conf/projectsettings.h"
-
-#include "grids/cvt/cvt.h"
-
-#include "utils/comm/communicator.h"
 
 using namespace std;
 

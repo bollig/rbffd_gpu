@@ -2,10 +2,10 @@
 #define __RBFFD_CL_H__
 
 //#include <CL/cl.hpp> 
+#include "rbffd.h"
 #include <string>
 #include <vector>
 #include "utils/opencl/cl_base_class.h"
-#include "rbffd.h"
 #include "utils/opencl/structs.h"
 
 

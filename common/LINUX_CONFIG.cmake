@@ -36,9 +36,12 @@ ENDIF (CUDA_FOUND)
 
 
 # One or more dirs split by spaces. This is a command so it can be called multiple times
+# FSU HPC intel module intel-impi-x86_64
+set(MPI_INCLUDE $ENV{I_MPI_ROOT}/include64)
 INCLUDE_DIRECTORIES (
     # RHEL location for openmpi
-    /usr/include/openmpi-x86_64/
+    #/usr/include/openmpi-x86_64/
+    $ENV{MPI_INCLUDE}   # 
 )
 
 # One or more dirs split by spaces. This is a command so it can be called multiple times

@@ -1,10 +1,7 @@
-#include <stdlib.h>
-
-#include "utils/conf/projectsettings.h"
-
-#include "grids/cvt/nested_sphere_cvt.h"
-
 #include "utils/comm/communicator.h"
+#include <stdlib.h>
+#include "utils/conf/projectsettings.h"
+#include "grids/cvt/nested_sphere_cvt.h"
 
 using namespace std;
 

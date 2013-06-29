@@ -1,9 +1,9 @@
 #ifndef __IMPLICIT_PDE_H__
 #define __IMPLICIT_PDE_H__
 
+#include "utils/comm/communicator.h"
 #include "pdes/pde.h"
 #include "grids/domain.h"
-#include "utils/comm/communicator.h"
 
 #include <iostream> 
 #include <fstream> 

@@ -1,3 +1,4 @@
+#include <mpi.h>  // must before stdlib if mpich2 library
 #include <stdlib.h>
 #include <map> 
 

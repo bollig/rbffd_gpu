@@ -3,9 +3,9 @@
 
 //#include <vector>
 //#include <ArrayT.h>
+#include "utils/comm/communicator.h"
 #include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
-#include "utils/comm/communicator.h"
 #include "rbffd/rbffd.h"
 #include "ncar_poisson1.h"
 #include "utils/conf/projectsettings.h"

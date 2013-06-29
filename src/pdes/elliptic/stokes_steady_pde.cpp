@@ -1,3 +1,8 @@
+
+// contains include mpi.h via communicator, which must be calseld before stdio.h or stdlib.h for
+// mpich2
+
+#include <mpi.h>
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
 #include "viennacl/io/matrix_market.hpp"

@@ -1,13 +1,12 @@
 #define REMOVE_SOLUTION_FROM_DOMAIN
 
-#include <stdlib.h>
+//#include <set>
+
+#include "domain.h"
 #include <algorithm>
 #include <iostream>
 #include <fstream>
-#include "domain.h"
 
-//#include <set>
-#include "utils/comm/communicator.h"
 
 using namespace std;
 //using namespace boost;

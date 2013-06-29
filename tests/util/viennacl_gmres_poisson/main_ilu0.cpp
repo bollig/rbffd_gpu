@@ -2,6 +2,7 @@
 //  - Solution in one component (not U,V,W,P)
 //  - Use preconditioner ILU0 (ILU with zero-fill-in) 
 //
+#include <mpi.h>
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
 #include "timer_eb.h" 

@@ -1,11 +1,9 @@
-#include <stdlib.h>
-#include <iostream>
-
-#include "utils/conf/projectsettings.h"
-
-#include "grids/regulargrid.h"
 #include "utils/comm/communicator.h"
 #include "timer_eb.h" 
+#include <stdlib.h>
+#include <iostream>
+#include "utils/conf/projectsettings.h"
+#include "grids/regulargrid.h"
 
 using namespace std;
 

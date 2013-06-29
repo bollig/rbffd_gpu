@@ -4,10 +4,11 @@
 // Default: 0
 #define SCALE_B_BY_GAMMA 0
 
+#include <mpi.h>
+#include "rbffd.h"
 #include "rbffd/stencils.h"
 #include "utils/geom/cart2sph.h"
 
-#include "rbffd.h"
 #include "rbfs/rbf_gaussian.h"
 // For writing weights in (sparse) matrix market format
 #include "mmio.h"

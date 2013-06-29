@@ -1,3 +1,4 @@
+#include <mpi.h>
 #include "grids/grid_reader.h"
 #include "rbffd/rbffd.h"
 #include "timer_eb.h" 

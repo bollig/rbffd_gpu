@@ -1,9 +1,10 @@
 #ifndef __TIME_DEPENDENT_PDE_VCL_H_
 #define __TIME_DEPENDENT_PDE_VCL_H__
 
+#include <mpi.h>
+#include "rbffd/rbffd_vcl.h"
 #include "time_dependent_pde.h"
 
-#include "rbffd/rbffd_vcl.h"
 
 #include "utils/opencl/viennacl_typedefs.h"
 

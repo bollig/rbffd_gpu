@@ -5,10 +5,11 @@
 #define USE_ALLTOALLV 1
 #endif 
 
-#include "grids/grid_interface.h"
+#include <mpi.h>  // make sure it is called first, even if not required
 #include "rbffd/rbffd.h"
 #include "utils/comm/communicator.h"
 #include "utils/comm/mpisendable.h"
+#include "grids/grid_interface.h"
 
 #include "exact_solutions/exact_solution.h"
 

@@ -2,6 +2,7 @@
 #define __RBFFD_MULTI_WEIGHT_CL_H__
 
 //#include <CL/cl.hpp> 
+#include <mpi.h>
 #include "utils/opencl/cl_base_class.h"
 //#include "rbffd.h"
 #include "rbffd_cl.h"

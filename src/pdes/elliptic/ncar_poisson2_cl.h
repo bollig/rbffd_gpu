@@ -3,9 +3,9 @@
 
 //#include <vector>
 //#include <ArrayT.h>
+#include "utils/comm/communicator.h"
 #include "grids/domain_decomposition/gpu.h"
 #include "exact_solutions/exact_solution.h"
-#include "utils/comm/communicator.h"
 #include "rbffd/derivative.h"
 #include "ncar_poisson1.h"
 

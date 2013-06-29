@@ -1,3 +1,4 @@
+#include "utils/comm/communicator.h"
 #include <stdlib.h>
 
 #include <algorithm>
@@ -12,7 +13,6 @@
 
 #include "exact_solutions/exact_regulargrid.h"
 
-#include "utils/comm/communicator.h"
 #include "timer_eb.h"
 
 vector<double> u_cpu;

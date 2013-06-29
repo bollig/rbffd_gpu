@@ -1,7 +1,11 @@
 #ifndef _Domain_H_
 #define _Domain_H_
 
+// make sure that stdlib comes after MPI includes, which means make sure stdlib is included
+// in the same file as the mpi stuff
+#include "utils/comm/communicator.h"
 #include "utils/comm/mpisendable.h"
+#include <stdlib.h>
 
 #include <vector>
 #include <set>

@@ -1,10 +1,9 @@
-#include <stdlib.h>
 
+
+#include "utils/comm/communicator.h"
 #include "utils/conf/projectsettings.h"
 
 #include "grids/cvt/nested_ellipse_cvt.h"
-
-#include "utils/comm/communicator.h"
 
 #include "pdes/elliptic/nonuniform_poisson1_cl.cpp"
 #include "exact_solutions/exact_ncar_poisson2.h"

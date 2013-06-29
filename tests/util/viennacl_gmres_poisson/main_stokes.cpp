@@ -1,5 +1,6 @@
-#include "grids/grid_reader.h"
+#include <mpi.h>
 #include "rbffd/rbffd.h"
+#include "grids/grid_reader.h"
 #include "timer_eb.h" 
 // Overrides the ilu.hpp include for ilu0.hpp
 // Its the same code for now, but i will add parallelization details to my ilu0

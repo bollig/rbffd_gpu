@@ -1,3 +1,4 @@
+#include "utils/comm/communicator.h"
 #include "boost/tuple/tuple.hpp" 
 #include "boost/tuple/tuple_comparison.hpp" 
 #include "boost/tuple/tuple_io.hpp" 
@@ -12,7 +13,6 @@
 #include "rbffd/rbffd_cl.h"
 
 #include "timer_eb.h"
-#include "utils/comm/communicator.h"
 #include "utils/io/pde_writer.h"
 
 #if USE_VTK

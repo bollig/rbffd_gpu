@@ -1,9 +1,9 @@
 #ifndef __NonUniform_POISSON_1_CL_H__
 #define __NonUniform_POISSON_1_CL_H__
 
+#include "utils/comm/communicator.h"
 #include "grids/domain.h"
 #include "exact_solutions/exact_solution.h"
-#include "utils/comm/communicator.h"
 #include "rbffd/rbffd.h"
 #include "pdes/elliptic/ncar_poisson1.h"
 #include "utils/conf/projectsettings.h"

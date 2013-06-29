@@ -1,8 +1,9 @@
 // THIS IS adapted from verbose_monitor.cu
 // PROVIDED BY THE CUSP v0.1 EXAMPLES
 
-#include "grids/grid_reader.h"
+#include <mpi.h>
 #include "rbffd/rbffd.h"
+#include "grids/grid_reader.h"
 #include "timer_eb.h" 
 
 #include <viennacl/compressed_matrix.hpp>

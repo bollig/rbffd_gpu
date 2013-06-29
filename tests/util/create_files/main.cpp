@@ -1,3 +1,4 @@
+#include "utils/comm/communicator.h"
 #include <stdlib.h>
 
 #include "pdes/parabolic/heat_pde.h"
@@ -11,7 +12,6 @@
 
 #include "exact_solutions/exact_regulargrid.h"
 
-#include "utils/comm/communicator.h"
 #include "timer_eb.h"
 #include "utils/io/rbffd_io.h"
 
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
 {
     Communicator* comm_unit = new Communicator(argc, argv);
     settings = new ProjectSettings("test.conf");
-    settings->ParseFile("create.conf");
+    //settings->ParseFile("create.conf");
 	std::string node_dist = REQUIRED<std::string>("NODE_DIST");
 	printf("node_dist= %s\n", node_dist.c_str());
 

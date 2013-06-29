@@ -2,6 +2,8 @@
 #define __COMMUNICATOR_H__
 
 #include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <vector> 
 #include "Vec3.h"
 #include "utils/comm/mpisendable.h"

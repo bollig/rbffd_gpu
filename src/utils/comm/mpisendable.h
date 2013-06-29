@@ -3,6 +3,8 @@
 
 // NOTE: include mpi.h must be before stdlib.h for mpich2
 #include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <vector> 
 #include <set> 

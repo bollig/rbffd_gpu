@@ -1,9 +1,9 @@
 #ifndef __HEAT_PDE_CL_H__
 #define __HEAT_PDE_CL_H__
 
+#include "rbffd/rbffd_cl.h"
 #include "utils/opencl/cl_base_class.h"
 #include "pdes/parabolic/heat_pde.h"
-#include "rbffd/rbffd_cl.h"
 
 class HeatPDE_CL : public HeatPDE, public CLBaseClass 
 {

@@ -1,9 +1,9 @@
 #ifndef __STOKES_STEADY_PDE_H__
 #define __STOKES_STEADY_PDE_H__
 
-#include "utils/spherical_harmonics.h"
-
+#include <mpi.h>
 #include "pdes/pde.h"
+#include "utils/spherical_harmonics.h"
 
 #include "utils/geom/cart2sph.h"
 

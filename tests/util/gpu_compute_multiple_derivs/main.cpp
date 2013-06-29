@@ -1,3 +1,4 @@
+#include "utils/comm/communicator.h"
 #include <stdlib.h>
 
 #include "pdes/parabolic/heat_pde.h"
@@ -10,7 +11,6 @@
 
 #include "exact_solutions/exact_regulargrid.h"
 
-#include "utils/comm/communicator.h"
 #include "timer_eb.h"
 
 

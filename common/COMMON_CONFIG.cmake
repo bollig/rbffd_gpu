@@ -92,6 +92,9 @@ if(Boost_FOUND)
 #      add_executable(foo foo.cc)
 #      target_link_libraries(foo ${Boost_LIBRARIES})
 #   endif()
+else()
+  set(Boost_INCLUDE_DIRS $ENV(HOME)/local/boost_1_53_0)
+  include_directories(BEFORE ${Boost_INCLUDE_DIRS})
 endif()
 
 

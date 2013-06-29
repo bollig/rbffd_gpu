@@ -26,6 +26,24 @@ elif [ $HOSTNAME = "hpc-15-35" ] ; then
 	export BOOST_ROOT=/panfs/storage.local/scs/home/gerlebacher/local/boost_1_53_0/
 	export BOOST_INCLUDEDIR=/panfs/storage.local/scs/home/gerlebacher/local/boost_1_53_0/
 	echo "fsu mic"
+elif [ $HOSTNAME = "casiornis" ] ; then
+	echo "casiorni"
+	module purge
+	module load intel
+	export MPI_ROOT=/usr/mpi/intel/mvapich2-1.6-qlc/
+	export MPI_INCLUDE=$MPI_ROOT/include
+	export MPI_LIB=$MPI_ROOT/lib
+	export MPI_LIB_FILE=$MPI_LIB/libmpich.so
+	export OPENCL_ROOT=/opt/intel/opencl-1.2-3.0.67279/
+	export ARMADILLO_ROOT=$HOME/local/usr
+	export CL_KERNELS=$HOME/src/rbffd_gpu/src/cl_kernels
+	export BOOST_ROOT=/usr/include/boost
+	#export BOOST_INCLUDEDIR=/usr/include
+	#export BOOST_LIBDIR=/usr/lib64
+	export BOOST_ROOT=$HOME/local/boost_1_53_0/
+	export BOOST_INCLUDEDIR=$BOOST_ROOT
+	export FFTW_ROOT=/panfs/storage.local/scs/home/gerlebacher/local/usr
+	echo "casiorni"
 fi
 
 

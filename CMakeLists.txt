@@ -108,13 +108,13 @@ include_directories(/opt/hpc/intel/mvapich/include/ ${inc_paths})
 
 # This is an external dependency
 # Its name should not change
-set(MPI_LIB $ENV{I_MPI_ROOT}/lib64)  # module -intel-impi-x86_64
-message("*** MPI_LIB = ${MPI_LIB}")
+message("*** MPI_LIB = $ENV{MPI_LIB}")
+message("*** MPI_LIB_FILE = $ENV{MPI_LIB_FILE}")
 SET( FRAMEWORK_DEPENDENCIES
 	$ENV{EXTERNAL_LIB_DEPENDENCIES}
 	${Boost_LIBRARIES}
         #$ENV{I_MPI_ROOT}/intel64/lib/libmpi.so   # on hpc (GE)
-        ${MPI_LIB}/libmpich.so   # on hpc (GE) Not sure what this is. 
+        $ENV{MPI_LIB_FILE}   # defined in envi
         #/opt/hpc/gnu/openmpi/lib64/libmpi.so
 	#${CUDA_LIBRARIES}
 )
@@ -126,10 +126,10 @@ message("${Boost_LIBRARIES}")
 # this source tree we can reference their subtree as ${<name>_SOURCE_DIR}
 # so long as CMake is told that they are subdirs (i.e., add_subdirectory) 
 message("external include dirs **** : ${EXTERNAL_INCLUDE_DIRS}")
-message("mpi include dirs **** : ${MPI_INCLUDE}")
+message("mpi include dirs **** : $ENV{MPI_INCLUDE}")
 SET( FRAMEWORK_DEP_INCLUDE_DIRS
 	$ENV{EXTERNAL_INCLUDE_DIRS}
-	${MPI_INCLUDE}  # on hpc (GE)
+	$ENV{MPI_INCLUDE}  # on hpc (GE)
 	#/opt/hpc/gnu/openmpi/include/    # added by GE
 	#${timing_SOURCE_DIR}
 	#${CUDA_INCLUDE_DIRS}

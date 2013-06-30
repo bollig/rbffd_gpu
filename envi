@@ -30,9 +30,10 @@ elif [ $HOSTNAME = "casiornis" ] ; then
 	echo "casiorni"
 	module purge
 	module load intel
-	export MPI_ROOT=/usr/mpi/intel/mvapich2-1.6-qlc/
-	export MPI_INCLUDE=$MPI_ROOT/include
-	export MPI_LIB=$MPI_ROOT/lib
+	module load impi/intel
+	export MPI_ROOT=$INTEL_MPI_PATH
+	export MPI_INCLUDE=$MPI_ROOT/include64
+	export MPI_LIB=$MPI_ROOT/lib64
 	export MPI_LIB_FILE=$MPI_LIB/libmpich.so
 	export OPENCL_ROOT=/opt/intel/opencl-1.2-3.0.67279/
 	export ARMADILLO_ROOT=$HOME/local/usr

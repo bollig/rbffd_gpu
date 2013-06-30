@@ -35,15 +35,19 @@ CLBaseClass::CLBaseClass(int rank) {
         std::cout << "Creating cl::Context (only selecting GPU devices)" << std::endl;
         //context = cl::Context(CL_DEVICE_TYPE_GPU, properties);
         context = cl::Context(CL_DEVICE_TYPE_ACCELERATOR, properties);
+        std::cout << "1" << std::endl;
         // This prevents the context from being created again
         contextCreated++;
     }
 
+        std::cout << "2" << std::endl;
     devices = context.getInfo<CL_CONTEXT_DEVICES>();
+        std::cout << "3" << std::endl;
 
     //create the command queue we will use to execute OpenCL commands
     try{
         deviceUsed = rank % devices.size();
+        std::cout << "4" << std::endl;
         queue = cl::CommandQueue(context, devices[deviceUsed], CL_QUEUE_PROFILING_ENABLE, &err);
         printf("[initialize] Using CL device: %d\n", deviceUsed);
         std::cout << "\tDevice Name: " <<

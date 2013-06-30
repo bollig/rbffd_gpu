@@ -328,8 +328,11 @@ int main(int argc, char** argv) {
 	for (int i = 0; i < N_part; i++) {
 		NodeType& node = subdomain->getNode(i); 
 		//u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
-		//u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
+#if 1
+		u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
+#else 
 		u[i] = 1;
+#endif 
 		u_x[i] = cos(node[0]); 
 		u_y[i] = -2*sin(node[1]); 
 		//u_z[i] = 5.*exp(5.*node[2]); 
@@ -356,8 +359,6 @@ int main(int argc, char** argv) {
     if (!mpi_rank) {
         std::cout << "U (L1, L2, Linf): " << u_l1 << ", " << u_l2 << ", " << u_linf << "\n"; 
     }
-
-
 
 	// Verify that the CPU works
 	// NOTE: we pass booleans at the end of the param list to indicate that

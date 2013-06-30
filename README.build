@@ -20,7 +20,7 @@ Casiornis (Cascade.msi.umn.edu):
 
 Modules: 
   1) local                    5) suacct                   9) vtune/2013/update7      13) impi/4.1.0.030/intel    17) vtk/5.4.2
-  2) vars                     6) base                    10) zlib/1.2.8              14) fftw/3.3.3-impi-double
+  2) vars                     6) base                    10) zlib/1.2.8              14) fftw/3.3.3-impi-double  18) metis/5.0.2
   3) user                     7) cuda/5.0                11) bzip2/1.0.6-gnu4.8.0    15) intel/2013/update4
   4) moab                     8) cmake/2.8.11            12) boost/1.53.0            16) mkl/11.0.4.183
 

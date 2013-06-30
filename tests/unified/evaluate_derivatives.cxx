@@ -14,7 +14,7 @@
 #include <iostream> 
 #include <cmath>
 
-#include "utils/norms.h"
+#include "utils/mpi_norms.h"
 
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
@@ -315,7 +315,9 @@ int main(int argc, char** argv) {
 	// By now our weights are loaded as Differentiation Matrices
 	// 
 	// Lets go ahead and use them to compute derivatives
-	unsigned int N_part = subdomain->getNodeListSize();
+    // Our local matrix is NxM with N < M (its under-determined)
+	unsigned int N_part = subdomain->getStencilsSize();
+	unsigned int M_part = subdomain->getNodeListSize();
 
 	std::vector<double> u(N_part,1.);
 	std::vector<double> u_x(N_part,1.);
@@ -326,7 +328,8 @@ int main(int argc, char** argv) {
 	for (int i = 0; i < N_part; i++) {
 		NodeType& node = subdomain->getNode(i); 
 		//u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
-		u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
+		//u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
+		u[i] = 1;
 		u_x[i] = cos(node[0]); 
 		u_y[i] = -2*sin(node[1]); 
 		//u_z[i] = 5.*exp(5.*node[2]); 
@@ -346,6 +349,15 @@ int main(int argc, char** argv) {
 
 //TODO: need to make apply work with synchronization
 
+	double u_l2 = l2norm( mpi_rank, u);
+	double u_l1 = l1norm( mpi_rank, u);
+	double u_linf = linfnorm( mpi_rank, u);
+
+    if (!mpi_rank) {
+        std::cout << "U (L1, L2, Linf): " << u_l1 << ", " << u_l2 << ", " << u_linf << "\n"; 
+    }
+
+
 
 	// Verify that the CPU works
 	// NOTE: we pass booleans at the end of the param list to indicate that
@@ -353,38 +365,46 @@ int main(int argc, char** argv) {
 	// helps avoid overhead of passing "u" to the GPU.
 	der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
 
-	double x_l2 = l2norm( u_x, xderiv_cpu );
-	double x_l1 = l1norm( u_x, xderiv_cpu );
-	double x_linf = linfnorm( u_x, xderiv_cpu );
-	double deriv_l2 = l2norm( xderiv_cpu );
+	double x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu );
+	double x_l1 = l1norm( mpi_rank, u_x, xderiv_cpu );
+	double x_linf = linfnorm( mpi_rank, u_x, xderiv_cpu );
+	double deriv_l2 = l2norm( mpi_rank, xderiv_cpu );
 
-	std::cout << "X (L1, L2, Linf): " << x_l1 << ", " << x_l2 << ", " << x_linf << "\n"; 
+    if (!mpi_rank) {
+        std::cout << "X (L1, L2, Linf): " << x_l1 << ", " << x_l2 << ", " << x_linf << "\n"; 
+    }
 
 	der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
 
-	double y_l2 = l2norm( u_y, yderiv_cpu );
-	double y_l1 = l1norm( u_y, yderiv_cpu );
-	double y_linf = linfnorm( u_y, yderiv_cpu );
+	double y_l2 = l2norm( mpi_rank, u_y, yderiv_cpu );
+	double y_l1 = l1norm( mpi_rank, u_y, yderiv_cpu );
+	double y_linf = linfnorm( mpi_rank, u_y, yderiv_cpu );
 
-	std::cout << "Y (L1, L2, Linf): " << y_l1 << ", " << y_l2 << ", " << y_linf << "\n";
+    if (!mpi_rank) {
+        std::cout << "Y (L1, L2, Linf): " << y_l1 << ", " << y_l2 << ", " << y_linf << "\n";
+    }
 
 	der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
 
-	double z_l2 = l2norm( u_z, zderiv_cpu );
-	double z_l1 = l1norm( u_z, zderiv_cpu );
-	double z_linf = linfnorm( u_z, zderiv_cpu );
+	double z_l2 = l2norm( mpi_rank, u_z, zderiv_cpu );
+	double z_l1 = l1norm( mpi_rank, u_z, zderiv_cpu );
+	double z_linf = linfnorm( mpi_rank, u_z, zderiv_cpu );
 
-	std::cout << "Z (L1, L2, Linf): " << z_l1 << ", " << z_l2 << ", " << z_linf << "\n";
+    if (!mpi_rank) {
+        std::cout << "Z (L1, L2, Linf): " << z_l1 << ", " << z_l2 << ", " << z_linf << "\n";
+    }
 
 	der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
 
-	double l_l2 = l2norm( u_l, lderiv_cpu );
-	double l_l1 = l1norm( u_l, lderiv_cpu );
-	double l_linf = linfnorm( u_l, lderiv_cpu );
+	double l_l2 = l2norm( mpi_rank, u_l, lderiv_cpu );
+	double l_l1 = l1norm( mpi_rank, u_l, lderiv_cpu );
+	double l_linf = linfnorm( mpi_rank, u_l, lderiv_cpu );
 
-	std::cout << "Lapl (L1, L2, Linf): " << l_l1 << ", " << l_l2 << ", " << l_linf << "\n";
+    if (!mpi_rank) {
+        std::cout << "Lapl (L1, L2, Linf): " << l_l1 << ", " << l_l2 << ", " << l_linf << "\n";
 
-	std::cout << "Done checking apply on CPU and GPU\n";
+        std::cout << "Done checking apply on CPU and GPU\n";
+    }
 
 
 #if 1

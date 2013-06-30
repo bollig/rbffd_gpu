@@ -50,6 +50,7 @@ SET(REQUIRED_SOURCE_FILES
     utils/geom/cart2sph.cpp
     utils/random.cpp
     utils/norms.cpp
+    utils/mpi_norms.cpp
     )
 
 

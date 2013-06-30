@@ -213,9 +213,13 @@ int main(int argc, char** argv) {
 
 
 #if 1
-	MPI::Init(argc, argv);
-	int mpi_rank = MPI::COMM_WORLD.Get_rank();
-	int mpi_size = MPI::COMM_WORLD.Get_size();
+	MPI_Init(&argc, &argv);
+	int mpi_rank;
+	int mpi_size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  
+    std::cout << "MPI Initialized: " << mpi_rank << ", " << mpi_size << std::endl;
 #else 
 	int mpi_rank = 0; 
 	int mpi_size = 1;
@@ -402,6 +406,7 @@ int main(int argc, char** argv) {
 	double l_linf = linfnorm( mpi_rank, u_l, lderiv_cpu );
 
     if (!mpi_rank) {
+        std::cout << "mpi_rank: " << mpi_rank << std::endl;
         std::cout << "Lapl (L1, L2, Linf): " << l_l1 << ", " << l_l2 << ", " << l_linf << "\n";
 
         std::cout << "Done checking apply on CPU and GPU\n";

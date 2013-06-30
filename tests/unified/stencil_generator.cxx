@@ -240,7 +240,9 @@ int main(int argc, char** argv) {
 
 
 	std::cout << "----------------  END OF MAIN ------------------\n";
-	tm.writeAllToFile("time_log.stencils");
+    char buf[256]; 
+    sprintf(buf, "time_log.stencils"); 
+	tm.writeAllToFile(buf);
 	tm.clear();
 
 	return 0;

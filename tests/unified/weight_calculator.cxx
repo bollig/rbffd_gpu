@@ -613,10 +613,11 @@ int main(int argc, char** argv) {
     tm.printAll();
 
 
-    std::cout << "----------------  END OF MAIN ------------------\n";
-    tm.writeAllToFile();
-    tm.clear();
-
+	std::cout << "----------------  END OF MAIN ------------------\n";
+    char buf[256]; 
+    sprintf(buf, "time_log.generate.%d", mpi_rank); 
+	tm.writeAllToFile(buf);
+	tm.clear();
     printf("\n\nREACHED THE END OF MAIN\n\n");
 
     return 0;

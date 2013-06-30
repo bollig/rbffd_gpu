@@ -50,7 +50,9 @@ int main(int argc, char** argv) {
 	tm["writeStencils"] = new Timer("[Main] Write Stencils to Disk");
 	tm["settings"] = new Timer("[Main] Load settings");
 	tm["derSetup"] = new Timer("[Main] Setup RBFFD class");
-	tm["weights"] = new Timer("[Main] Compute Weights");
+	tm["assembleTest"] = new Timer("[Main] Assemble test vectors");
+	tm["computeDerivs"] = new Timer("[Main] Compute Derivatives");
+	tm["computeNorms"] = new Timer("[Main] Compute Norms");
 	tm["loadWeights"] = new Timer("[Main] Read weights from file");
 	tm["tests"] = new Timer("[Main] Derivative tests");
 
@@ -316,6 +318,7 @@ int main(int argc, char** argv) {
 
 
 
+    tm["assembleTest"]->start(); 
 	// By now our weights are loaded as Differentiation Matrices
 	// 
 	// Lets go ahead and use them to compute derivatives
@@ -329,10 +332,11 @@ int main(int argc, char** argv) {
 	std::vector<double> u_z(N_part,1.);
 	std::vector<double> u_l(N_part,1.);
 
+
 	for (int i = 0; i < N_part; i++) {
 		NodeType& node = subdomain->getNode(i); 
 		//u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
-#if 1
+#if 0
 		u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
 #else 
 		u[i] = 1;
@@ -344,9 +348,6 @@ int main(int argc, char** argv) {
 		//u_l[i] = -sin(node[0]) - 2. * cos(node[1]) + 25. * exp(5.*node[2]); 
 		u_l[i] = -sin(node[0]) - 2. * cos(node[1]) ;
 	} 
-	
-
-	cout << "start computing derivative (on CPU)" << endl;
 
 	std::vector<double> xderiv_cpu(N_part);	
 	std::vector<double> yderiv_cpu(N_part);	
@@ -364,12 +365,19 @@ int main(int argc, char** argv) {
         std::cout << "U (L1, L2, Linf): " << u_l1 << ", " << u_l2 << ", " << u_linf << "\n"; 
     }
 
+    tm["assembleTest"]->stop();
+
+	cout << "start computing derivative (on CPU)" << endl;
+
+    tm["computeDeriv"]->start();
 	// Verify that the CPU works
 	// NOTE: we pass booleans at the end of the param list to indicate that
 	// the function "u" is new (true) or same as previous calls (false). This
 	// helps avoid overhead of passing "u" to the GPU.
 	der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
+    tm["computeDeriv"]->stop();
 
+    tm["computeNorms"]->start();
 	double x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu );
 	double x_l1 = l1norm( mpi_rank, u_x, xderiv_cpu );
 	double x_linf = linfnorm( mpi_rank, u_x, xderiv_cpu );
@@ -378,9 +386,13 @@ int main(int argc, char** argv) {
     if (!mpi_rank) {
         std::cout << "X (L1, L2, Linf): " << x_l1 << ", " << x_l2 << ", " << x_linf << "\n"; 
     }
+    tm["computeNorms"]->stop();
 
+    tm["computeDeriv"]->start();
 	der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
+    tm["computeDeriv"]->stop();
 
+    tm["computeNorms"]->start();
 	double y_l2 = l2norm( mpi_rank, u_y, yderiv_cpu );
 	double y_l1 = l1norm( mpi_rank, u_y, yderiv_cpu );
 	double y_linf = linfnorm( mpi_rank, u_y, yderiv_cpu );
@@ -388,9 +400,13 @@ int main(int argc, char** argv) {
     if (!mpi_rank) {
         std::cout << "Y (L1, L2, Linf): " << y_l1 << ", " << y_l2 << ", " << y_linf << "\n";
     }
+    tm["computeNorms"]->stop();
 
+    tm["computeDeriv"]->start();
 	der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
+    tm["computeDeriv"]->stop();
 
+    tm["computeNorms"]->start();
 	double z_l2 = l2norm( mpi_rank, u_z, zderiv_cpu );
 	double z_l1 = l1norm( mpi_rank, u_z, zderiv_cpu );
 	double z_linf = linfnorm( mpi_rank, u_z, zderiv_cpu );
@@ -398,9 +414,14 @@ int main(int argc, char** argv) {
     if (!mpi_rank) {
         std::cout << "Z (L1, L2, Linf): " << z_l1 << ", " << z_l2 << ", " << z_linf << "\n";
     }
+    tm["computeNorms"]->stop();
 
+    tm["computeDeriv"]->start();
 	der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
+    tm["computeDeriv"]->stop();
 
+
+    tm["computeNorms"]->start();
 	double l_l2 = l2norm( mpi_rank, u_l, lderiv_cpu );
 	double l_l1 = l1norm( mpi_rank, u_l, lderiv_cpu );
 	double l_linf = linfnorm( mpi_rank, u_l, lderiv_cpu );
@@ -408,11 +429,11 @@ int main(int argc, char** argv) {
     if (!mpi_rank) {
         std::cout << "mpi_rank: " << mpi_rank << std::endl;
         std::cout << "Lapl (L1, L2, Linf): " << l_l1 << ", " << l_l2 << ", " << l_linf << "\n";
-
-        std::cout << "Done checking apply on CPU and GPU\n";
     }
 
+    tm["computeNorms"]->stop();
 
+    std::cout << "Done checking apply on CPU and GPU\n";
 #if 1
 	if (!mpi_rank) { 
 		delete(grid);
@@ -425,10 +446,9 @@ int main(int argc, char** argv) {
 	tm["total"]->stop();
 	tm.printAll();
 
-
 	std::cout << "----------------  END OF MAIN ------------------\n";
     char buf[256]; 
-    sprintf(buf, "time_log.stencils.%d", mpi_rank); 
+    sprintf(buf, "time_log.derivs.%d", mpi_rank); 
 	tm.writeAllToFile(buf);
 	tm.clear();
 	MPI::Finalize();

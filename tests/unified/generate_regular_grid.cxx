@@ -174,12 +174,17 @@ int main(int argc, char** argv) {
 	}
 	tm["metis"]->stop();
 
-	tm["total"]->stop();
-	tm.printAll();
-
 	delete(grid);
 
+	tm["total"]->stop();
+	tm.printAll();
 	cout.flush();
+
+	std::cout << "----------------  END OF MAIN ------------------\n";
+    char buf[256]; 
+    sprintf(buf, "time_log.generate"); 
+	tm.writeAllToFile(buf);
+	tm.clear();
 
 	exit(EXIT_SUCCESS);
 }

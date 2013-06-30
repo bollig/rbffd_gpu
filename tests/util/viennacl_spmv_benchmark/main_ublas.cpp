@@ -1,5 +1,8 @@
 // THIS IS adapted from verbose_monitor.cu
 // PROVIDED BY THE CUSP v0.1 EXAMPLES
+#include "rbffd/rbffd.h"
+#include "grids/grid_reader.h"
+#include "timer_eb.h"
 
 #include <viennacl/compressed_matrix.hpp>
 #include <viennacl/coordinate_matrix.hpp>
@@ -26,10 +29,6 @@
 #include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 
-#include "grids/grid_reader.h"
-#include "rbffd/rbffd.h"
-#include "timer_eb.h"
-
 
 #include "utils/spherical_harmonics.h"
 
@@ -49,10 +48,10 @@ using namespace std;
 // Then we can templatize most routines and specialize as necessary
 
 #if 0
-typedef double SCALARTYPE; 
-#else 
-typedef float SCALARTYPE; 
-#endif 
+typedef double SCALARTYPE;
+#else
+typedef float SCALARTYPE;
+#endif
 
 typedef std::vector< std::map< unsigned int, SCALARTYPE> > STL_Sparse_Mat;
 typedef boost::numeric::ublas::compressed_matrix<SCALARTYPE> UBLAS_CSR_Mat;
@@ -375,14 +374,14 @@ int main(int argc, char** argv)
     grids.push_back("~/GRIDS/md/md127.16384");
     grids.push_back("~/GRIDS/md/md165.27556");
     grids.push_back("~/GRIDS/gw/md165.27556");
-#endif 
+#endif
     grids.push_back("~/sphere_grids/md063.04096");
-    grids.push_back("~/sphere_grids/md079.06400"); 
+    grids.push_back("~/sphere_grids/md079.06400");
     grids.push_back("~/sphere_grids/md089.08100");
     grids.push_back("~/sphere_grids/md100.10201");
     grids.push_back("~/sphere_grids/md127.16384");
     grids.push_back("~/sphere_grids/md141.20164");
-    grids.push_back("~/sphere_grids/md165.27556");  
+    grids.push_back("~/sphere_grids/md165.27556");
     grids.push_back("~/sphere_grids/scvtmesh001.100000");
     grids.push_back("~/sphere_grids/scvtmesh002.500000");
     grids.push_back("~/sphere_grids/scvtmesh003.1000000");
@@ -407,18 +406,18 @@ int main(int argc, char** argv)
         // Get contours from rbfzone.blogspot.com to choose eps_c1 and eps_c2 based on stencil_size (n)
 	// NOTE: for benchmarking the size matters but eps_c* do not. We can
 	// get junk derivatives and benchmark the same (the FLOP count matters,
-	// not the accuracy). 
-	// Also, the sparsity pattern matters (KDTree vs LSH) 
+	// not the accuracy).
+	// Also, the sparsity pattern matters (KDTree vs LSH)
 #if 0
         unsigned int stencil_size = 40;
         SCALARTYPE eps_c1 = 0.027;
         SCALARTYPE eps_c2 = 0.274;
 #else
         unsigned int stencil_size = 50;
-	if (argc > 1) { 
-		stencil_size = atoi(argv[1]); 
+	if (argc > 1) {
+		stencil_size = atoi(argv[1]);
 		std::cout << "USING STENCIL SIZE: " << stencil_size << std::endl;
-	} 
+	}
         SCALARTYPE eps_c1 = 0.027;
         SCALARTYPE eps_c2 = 0.274;
 #endif
@@ -445,9 +444,9 @@ int main(int argc, char** argv)
 #else
 #if 0
             grid->setNSHashDims(50, 50,50);
-#else 
+#else
             grid->setNSHashDims(100, 100, 100);
-#endif 
+#endif
             grid->generateStencils(Grid::ST_HASH);
 #endif
 	    timers[stencil_timer_name]->stop();
@@ -473,20 +472,20 @@ int main(int argc, char** argv)
 
 #if 0
 	{
-		// Test custom SpMV 
+		// Test custom SpMV
 		std::string stencil_timer_name = grid_name + " Apply Weights";
 		timers[apply_timer_name] = new EB::Timer(apply_timer_name.c_str());
 		unsigned int nb_centers = grid->getNodeListSize();
 		unsigned int nb_stencils = grid->getStencilsSize();
 		std::vector<SCALARTYPE> u(nb_centers, 1.);
 		std::vector<SCALARTYPE> xderiv_gpu(nb_stencils);
-		for (int nn=0; nn< 10; nn++) { 
-			timers[apply_timer_name]->start(); 
+		for (int nn=0; nn< 10; nn++) {
+			timers[apply_timer_name]->start();
 			der->applyWeightsForDeriv(RBFFD::XSFC, u, xderiv_gpu, true);
-			timers[apply_timer_name]->stop(); 
+			timers[apply_timer_name]->stop();
 		}
 	}
-#endif 
+#endif
 
         if (!primed)  {
             cout << "Priming GPU with dummy operations (removes compile from benchmarks)\n";
@@ -498,7 +497,7 @@ int main(int argc, char** argv)
         {
 #if 0
             run_test<COO_CPU, COO_CPU>(der, *grid);
-#endif 
+#endif
             run_test<COO_CPU, COO_GPU>(der, *grid);
 #if 1
             run_test<CSR_CPU, CSR_CPU>(der, *grid);

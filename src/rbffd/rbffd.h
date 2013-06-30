@@ -1,6 +1,7 @@
 #ifndef _RBFFD_H_
 #define _RBFFD_H_
 
+#include "grids/domain.h"
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
@@ -24,7 +25,6 @@ namespace arma
 
 typedef std::complex<double> CMPLX;
 
-#include "grids/domain.h"
 
 class RBFFD
 {

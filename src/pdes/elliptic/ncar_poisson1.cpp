@@ -1,9 +1,11 @@
+
+#include "rbffd/rbffd.h"
+#include "ncar_poisson1.h"
+
 #include <stdlib.h>
 #include <math.h>
-#include "ncar_poisson1.h"
 #include "exact_solutions/exact_solution.h"
 #include <armadillo>
-#include "rbffd/rbffd.h"
 
 #include "timer_eb.h"
 
@@ -76,7 +78,7 @@ NCARPoisson1::NCARPoisson1(ProjectSettings* settings, ExactSolution* _solution, 
     use_uniform_diffusivity = settings->GetSettingAs<int>("USE_UNIFORM_DIFFUSIVITY", ProjectSettings::required);
     test_dirichlet_lockdown = settings->GetSettingAs<int>("TEST_DIRICHLET_LOCKDOWN", ProjectSettings::optional);
 }
-#endif 
+#endif
 
 //----------------------------------------------------------------------
 
@@ -114,7 +116,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
 
         double prev_eps = left_eps;
 
-        bool goodDirection = true; 
+        bool goodDirection = true;
         bool wentRight = false;
 
         arma::colvec exact(nn);
@@ -168,7 +170,7 @@ void NCARPoisson1::solve(Communicator* comm_unit) {
             cout << "USING EPSILON: " << new_eps << "\t";
 
             if (!weightsPrecomputed) {
-                der->computeAllWeightsForAllStencils(); 
+                der->computeAllWeightsForAllStencils();
             }
 
             // The derivative weights go into a matrix that is TotNumNodes x TotNumNodes

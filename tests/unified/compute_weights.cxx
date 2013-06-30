@@ -17,11 +17,7 @@
  *  	write weights
  **/
 
-#include <stdlib.h>
-#include <sstream>
-#include <map>
-#include <iostream> 
-
+#include <mpi.h> 
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
@@ -32,7 +28,11 @@
 
 #include "timer_eb.h"
 
-#include <mpi.h> 
+#include <stdlib.h>
+#include <sstream>
+#include <map>
+#include <iostream> 
+
 
 using namespace std;
 using namespace EB;

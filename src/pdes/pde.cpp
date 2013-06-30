@@ -1,33 +1,34 @@
+
 #include "pde.h"
 
 #include "utils/norms.h"
 
 #include <algorithm>
 #include <cmath>
-#include <iostream> 
-#include <fstream> 
+#include <iostream>
+#include <fstream>
 
 void PDE::setupTimers()
 {
-    tm["sendrecv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
-    tm["sendrecv_wait"] = new EB::Timer("[PDE] Wait for MPI Barrier CPU to CPU"); 
-    tm["alltoallv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU"); 
+    tm["sendrecv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU");
+    tm["sendrecv_wait"] = new EB::Timer("[PDE] Wait for MPI Barrier CPU to CPU");
+    tm["alltoallv"] = new EB::Timer("[PDE] MPI Communicate PDE CPU to CPU");
 }
 
 int PDE::send(int my_rank, int receiver_rank) {
     // Initially we have nothing to send.
-    return 0; 
+    return 0;
 }
 
 int PDE::receive(int my_rank, int sender_rank, int comm_size) {
-    // Initially we have nothing to receive 
+    // Initially we have nothing to receive
     return 0;
 }
 
 //----------------------------------------------------------------------------
 std::string PDE::getFileDetailString() {
-    std::stringstream ss(std::stringstream::out); 
-    ss << "pde_" << grid_ref.getFileDetailString();  
+    std::stringstream ss(std::stringstream::out);
+    ss << "pde_" << grid_ref.getFileDetailString();
     return ss.str();
 }
 
@@ -36,38 +37,38 @@ std::string PDE::getFilename(std::string base_filename, int iter) {
     std::stringstream ss(std::stringstream::out);
 #if 0
     if (iter < 0) {
-        ss << base_filename << "_" << this->getFileDetailString() << "_final.ascii";  
+        ss << base_filename << "_" << this->getFileDetailString() << "_final.ascii";
     } else if (iter == 0) {
-        ss << base_filename << "_" << this->getFileDetailString() << "_initial.ascii";  
+        ss << base_filename << "_" << this->getFileDetailString() << "_initial.ascii";
     } else {
-        ss << base_filename << "_" << this->getFileDetailString() << "_" << iter << "iters.ascii";  
+        ss << base_filename << "_" << this->getFileDetailString() << "_" << iter << "iters.ascii";
     }
-#endif 
-    ss << base_filename << "_" << grid_ref.getFilename(iter); 
+#endif
+    ss << base_filename << "_" << grid_ref.getFilename(iter);
     std::string filename = ss.str();
     return filename;
 }
 
 //----------------------------------------------------------------------------
 std::string PDE::getFilename(int iter) {
-    return this->getFilename(this->className(), iter); 
+    return this->getFilename(this->className(), iter);
 }
 
 //----------------------------------------------------------------------
 
 void PDE::writeLocalSolutionToFile(std::string filename) {
 
-    std::string fname = "sol_"; 
-    fname.append(filename); 
-    std::ofstream fout(fname.c_str()); 
+    std::string fname = "sol_";
+    fname.append(filename);
+    std::ofstream fout(fname.c_str());
     if (fout.is_open()) {
-        std::vector<double>::iterator sit;  
+        std::vector<double>::iterator sit;
         for (sit = U_G.begin(); sit != U_G.end(); sit++) {
-            fout << (*sit) << std::endl; 
+            fout << (*sit) << std::endl;
         }
     } else {
-        printf("Error opening file to write\n"); 
-        exit(EXIT_FAILURE); 
+        printf("Error opening file to write\n");
+        exit(EXIT_FAILURE);
     }
     fout.close();
     std::cout << "[PDE] \tWrote " << U_G.size() << " local solution values to \t" << fname << std::endl;
@@ -81,33 +82,33 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
     if (comm_ref.getRank() == Communicator::MASTER) {
 
         std::string fname = "globalsol_";
-        fname.append(filename); 
+        fname.append(filename);
 #if 0
-        char nstr[256]; 
-        std::string fname = "globalsol_"; 
-        sprintf(nstr,"%lunodes",global_U_G.size()); 
-        fname.append(nstr); 
+        char nstr[256];
+        std::string fname = "globalsol_";
+        sprintf(nstr,"%lunodes",global_U_G.size());
+        fname.append(nstr);
 
         if (iter < 0) {
-            fname.append("_final.ascii");  
+            fname.append("_final.ascii");
         } else if (iter == 0) {
-            fname.append("_initial.ascii");  
+            fname.append("_initial.ascii");
         } else {
-            char iterstr[256]; 
-            sprintf(iterstr, "%d", iter); 
-            fname.append("_"); 
-            fname.append(iterstr); 
-            fname.append("iters.ascii");  
+            char iterstr[256];
+            sprintf(iterstr, "%d", iter);
+            fname.append("_");
+            fname.append(iterstr);
+            fname.append("iters.ascii");
         }
-#endif 
-        std::ofstream fout(fname.c_str()); 
+#endif
+        std::ofstream fout(fname.c_str());
         if (fout.is_open()) {
             for (size_t i = 0; i < global_U_G.size(); i++) {
-                fout << global_U_G[i] << std::endl; 
+                fout << global_U_G[i] << std::endl;
             }
         } else {
-            printf("Error opening file to write\n"); 
-            exit(EXIT_FAILURE); 
+            printf("Error opening file to write\n");
+            exit(EXIT_FAILURE);
         }
         fout.close();
         std::cout << "[PDE] \tWrote " << global_U_G.size() << " global solution values to \t" << fname << std::endl;
@@ -116,7 +117,7 @@ void PDE::writeGlobalSolutionToFile(std::string filename) {
     }
 }
 
-// By default we send updates for the SOLUTION of our PDE. 
+// By default we send updates for the SOLUTION of our PDE.
 int PDE::sendUpdate(int my_rank, int receiver_rank) {
     return this->sendUpdate(this->U_G, my_rank, receiver_rank, "U_G");
 }
@@ -128,13 +129,13 @@ int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_ra
     if (my_rank != receiver_rank) {
         //vector<int>::iterator oit;
         // vector<set<int> > O; gives us the list of (global) indices which we
-        // are sending to receiver_rank		
+        // are sending to receiver_rank
 
         // FIXME: domain should not make these public. hide them behind accessors
         std::vector<std::vector<int> >& O_by_rank = grid_ref.O_by_rank;
         std::vector<int>::iterator oit;
 
-        // We send a list of node values 
+        // We send a list of node values
         vector<double> U_O(O_by_rank[receiver_rank].size());
 
         if (O_by_rank.size() > 0) { // Many segfault issues are caused by empty sets.
@@ -143,16 +144,16 @@ int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_ra
 
             for (oit = O_by_rank[receiver_rank].begin(); oit
                     != O_by_rank[receiver_rank].end(); oit++, i++) {
-                int g_indx = *oit; 
+                int g_indx = *oit;
                 int l_indx = grid_ref.g2l(g_indx);
-                // Elements in O are in global indices 
+                // Elements in O are in global indices
                 // so we need to first convert to local to index our U_G
                 U_O[i] = vec[l_indx];
 #if 0
                 cout << "SEND "<< label << "\t(Targeting Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")" << std::endl;
                 cout << receiver_rank << " vec[" << l_indx << "] = " << vec[l_indx] << "\tU_O[" << i << "] = " << U_O[i] << std::endl;
 
-#endif 
+#endif
             }
         } else {
             cout << "O_BY_RANK for " << receiver_rank << " is 0" << std::endl;
@@ -162,7 +163,7 @@ int PDE::sendUpdate(std::vector<SolutionType>& vec, int my_rank, int receiver_ra
 #if 0
         cout << "O_by_rank[" << receiver_rank << "].size = "
             << O_by_rank[receiver_rank].size() << endl;
-#endif 
+#endif
         sendSTL(&O_by_rank[receiver_rank], my_rank, receiver_rank);
         sendSTL(&U_O, my_rank, receiver_rank);
         //        cout << "RANK " << my_rank << " REPORTS: sent update to RANK " << receiver_rank << endl;
@@ -178,7 +179,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
     if (my_rank != sender_rank) {
         vector<int>::iterator rit;
         int i = 0;
-        // We receive a list of (global) indices which we are receiving from sender_rank		
+        // We receive a list of (global) indices which we are receiving from sender_rank
         vector<double> U_R;
         // Also need to tell what subset of O was received.
         vector<int> R_sub;
@@ -186,7 +187,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
         recvSTL(&R_sub, my_rank, sender_rank);
         recvSTL(&U_R, my_rank, sender_rank);
 
-        // EFB06112011: 
+        // EFB06112011:
         // FIXME: we need to improve communication so we are not making
         // connections for 0 transfers
 #if 0
@@ -195,15 +196,15 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
             std::cout << "[PDE] error. did not receive any updates\n";
             exit(EXIT_FAILURE);
         }
-#endif 
+#endif
 
-        // Then we integrate the values as an update: 
+        // Then we integrate the values as an update:
         for (rit = R_sub.begin(); rit != R_sub.end(); rit++, i++) {
             int l_indx = grid_ref.g2l(*rit);
-#if 0 
-            int g_indx = *rit; 
+#if 0
+            int g_indx = *rit;
             cout << label << "\t(Global Index): " << g_indx << "\t (Local Index:" << l_indx << ")\tOld vec[" << l_indx << "]: " << vec[l_indx] << "\t New U_G[" << l_indx << "]: " << U_R[i] << endl;
-#endif 
+#endif
             // Global to local mapping required
             vec[l_indx] = U_R[i]; // Overwrite with new values
         }
@@ -211,7 +212,7 @@ int PDE::receiveUpdate(std::vector<SolutionType>& vec, int my_rank, int sender_r
         //        cout << "RANK " << my_rank << " REPORTS: received update from RANK " << sender_rank << endl;
     }
 
-    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this
 }
 
 
@@ -237,10 +238,10 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
                 U_Q[i] = U_G[grid_ref.g2l(*qit)];
             }
 
-#if 0    
+#if 0
             cout << "SENDING CPU" << receiver_rank << " U_G[" << *qit
                 << "]: " << U_G[grid_ref.g2l(*qit)] << endl;
-#endif 
+#endif
         }
 
         // This Q is already in global indexing
@@ -248,7 +249,7 @@ int PDE::sendFinal(int my_rank, int receiver_rank) {
         sendSTL(&U_Q, my_rank, receiver_rank);
         //    cout << "RANK " << my_rank << " REPORTS: sent final" << endl;
     }
-    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this
 }
 
 
@@ -278,9 +279,9 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
     set<int>::iterator qit;
     int i = 0;
     for (qit = remoteQ.begin(); qit != remoteQ.end(); qit++, i++) {
-        int l_indx = i; 
+        int l_indx = i;
         int g_indx = *qit;
-        global_U_G[g_indx] = remoteU_Q[l_indx]; 
+        global_U_G[g_indx] = remoteU_Q[l_indx];
     }
 
     cout << "RECEIVED FINAL (size=" << remoteQ.size() << " FROM CPU " << sender_rank << endl;
@@ -290,8 +291,8 @@ int PDE::receiveFinal(int my_rank, int sender_rank) {
     for (it = global_U_G.begin(); it != global_U_G.end(); it++) {
         cout << "\tU_G[" << (*it).first << "] = " << (*it).second << endl;
     }
-#endif 
-    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
+#endif
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this
 }
 
 int PDE::initFinal() {
@@ -300,11 +301,11 @@ int PDE::initFinal() {
     set<int>::iterator qit;
     int i = 0;
     for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
-        unsigned int l_indx = grid_ref.g2l(*qit); 
+        unsigned int l_indx = grid_ref.g2l(*qit);
         unsigned int g_indx = *qit;
-        global_U_G[g_indx] = U_G[l_indx]; 
+        global_U_G[g_indx] = U_G[l_indx];
     }
-    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this
 }
 
 int PDE::updateFinal() {
@@ -320,12 +321,12 @@ int PDE::updateFinal() {
     set<int>::iterator qit;
     int i = 0;
     for (qit = grid_ref.Q.begin(); qit != grid_ref.Q.end(); qit++, i++) {
-        unsigned int l_indx = grid_ref.g2l(*qit); 
+        unsigned int l_indx = grid_ref.g2l(*qit);
         unsigned int g_indx = *qit;
-        global_U_G[g_indx] = U_G[l_indx]; 
+        global_U_G[g_indx] = U_G[l_indx];
     }
     std::cout << "GLOBAL_U_G.size() = " << global_U_G.size() << std::endl;
-    return 0;  // FIXME: return number of bytes received in case we want to monitor this 
+    return 0;  // FIXME: return number of bytes received in case we want to monitor this
 }
 
 void PDE::printSolution(std::string set_label) {
@@ -346,11 +347,11 @@ void PDE::printSolution(std::string set_label) {
 
 
 void PDE::getGlobalSolution(std::vector<double> *final) {
-    // The global_U_G map is sorted according to node index. All we need is to fill the 
+    // The global_U_G map is sorted according to node index. All we need is to fill the
     // output vector and we're done.
     map<int, double>::iterator it;
     final->resize(global_U_G.size());
-    unsigned int i = 0; 
+    unsigned int i = 0;
     for (it = global_U_G.begin(); it != global_U_G.end(); it++, i++) {
         (*final)[i] = (*it).second;
     }
@@ -370,7 +371,7 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
     }
     //fout.close();
     fclose(fdsol);
-    return i; 
+    return i;
 }
 
 
@@ -378,13 +379,13 @@ int PDE::writeGlobalGridAndSolutionToFile(std::vector<NodeType>& nodes, std::str
 
 struct ltclass {
     bool operator() (unsigned int i, unsigned int j) { return (i<j); }
-} srtobject; 
+} srtobject;
 
 
 void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionType>& sol_vec, Grid& grid, double rel_err_max, bool ignore_high_error)
 {
     std::set<unsigned int>& b_indices = grid.getSortedBoundarySet();
-    std::set<unsigned int>& i_indices = grid.getSortedInteriorSet(); 
+    std::set<unsigned int>& i_indices = grid.getSortedInteriorSet();
     unsigned int nb_bnd = b_indices.size();
     unsigned int nb_int = i_indices.size();
     //int nb_centers = grid.getNodeListSize();
@@ -392,14 +393,14 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
 
 #if 0
-    if (rel_err_max < 0) { 
-        rel_err_max = rel_err_tol; 
+    if (rel_err_max < 0) {
+        rel_err_max = rel_err_tol;
     }
-#endif 
+#endif
     vector<double> sol_error(nb_stencils);
 
     std::vector<double> sol_vec_bnd(nb_bnd);
-    std::vector<double> sol_exact_bnd(nb_bnd); 
+    std::vector<double> sol_exact_bnd(nb_bnd);
 
     std::vector<double> sol_vec_int(nb_int);
     std::vector<double> sol_exact_int(nb_int);
@@ -409,32 +410,32 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 
     std::set<unsigned int>::iterator it;
     int i = 0;
-    for (it = b_indices.begin(); it != b_indices.end(); it++, i++) { 
+    for (it = b_indices.begin(); it != b_indices.end(); it++, i++) {
         int j = *it;
-        sol_vec_bnd[i] = sol_vec[j]; 
-        sol_exact_bnd[i] = sol_exact[j]; 
+        sol_vec_bnd[i] = sol_vec[j];
+        sol_exact_bnd[i] = sol_exact[j];
     }
     int k = 0;
     int l = 0;
-    for (it = i_indices.begin(); it != i_indices.end(); it++, k++) { 
+    for (it = i_indices.begin(); it != i_indices.end(); it++, k++) {
         int j = *it;
-        sol_vec_int[k] = sol_vec[j]; 
-        sol_exact_int[k] = sol_exact[j]; 
+        sol_vec_int[k] = sol_vec[j];
+        sol_exact_int[k] = sol_exact[j];
 
         // Assume that the nodes at the tail of the sol_vec are not part of
-        // the subdomain (i.e., that they're ghost nodes) 
+        // the subdomain (i.e., that they're ghost nodes)
         if (j < nb_stencils) {
             // Now, what if the stencil contains boundary nodes? Most error
-            // accumulates where stencils are unbalanced 
-            StencilType& st = grid.getStencil(j); 
+            // accumulates where stencils are unbalanced
+            StencilType& st = grid.getStencil(j);
 #if 0
             std::cout << "ST[" << j << "].size= " << st.size() << std::endl;
             std::cout << "bindices.size= " << bindices.size() << std::endl;
-#endif 
+#endif
             // does the stencil contain any nodes that are on the boundary?
-            bool dep_boundary = false; 
+            bool dep_boundary = false;
             for (unsigned int sz = 0; sz < st.size(); sz ++) {
-                for(std::set<unsigned int>::iterator bit = b_indices.begin(); bit != b_indices.end(); bit++) 
+                for(std::set<unsigned int>::iterator bit = b_indices.begin(); bit != b_indices.end(); bit++)
                 {
                     if ((unsigned int)st[sz] == *bit){
                         dep_boundary=true;
@@ -443,8 +444,8 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
                 }
             }
             if (!dep_boundary) {
-                sol_vec_int_no_bnd.push_back(sol_vec[j]); 
-                sol_exact_int_no_bnd.push_back(sol_exact[j]); 
+                sol_vec_int_no_bnd.push_back(sol_vec[j]);
+                sol_exact_int_no_bnd.push_back(sol_exact[j]);
                 l++;
             }
         }
@@ -460,39 +461,39 @@ void PDE::checkError(std::vector<SolutionType>& sol_exact, std::vector<SolutionT
 }
 
 void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_exact, std::string label, double rel_err_max, bool ignore_high_error) {
-    // We want: || x_exact - x_approx ||_{1,2,inf} 
+    // We want: || x_exact - x_approx ||_{1,2,inf}
     // and  || x_exact - x_approx ||_{1,2,inf} / || x_exact ||_{1,2,inf}
 
     // NOTE: for normalized error, If our denom is 0 we add 1 to it and get a relative err assuming the numer will be less than 1
     int nb_pts = sol_vec.size();
-    double l1fabs = l1norm(sol_vec, sol_exact, 0, nb_pts); 
+    double l1fabs = l1norm(sol_vec, sol_exact, 0, nb_pts);
     double l1denom = l1norm(sol_exact, 0, nb_pts);
     double l1rel = (l1denom > 1e-10) ? l1fabs/l1denom : (l1fabs+1.)/(l1denom+1.);
-    double l2fabs = l2norm(sol_vec, sol_exact, 0, nb_pts); 
+    double l2fabs = l2norm(sol_vec, sol_exact, 0, nb_pts);
     double l2denom = l2norm(sol_exact, 0, nb_pts);
     double l2rel = (l2denom > 1e-10) ? l2fabs/l2denom : (l2fabs+1.)/(l2denom+1.);
-    double lifabs = linfnorm(sol_vec, sol_exact, 0, nb_pts); 
-    double linfdenom = linfnorm(sol_exact, 0, nb_pts); 
+    double lifabs = linfnorm(sol_vec, sol_exact, 0, nb_pts);
+    double linfdenom = linfnorm(sol_exact, 0, nb_pts);
     double lirel = (linfdenom > 1e-10) ? lifabs/linfdenom : (lifabs+1.)/(linfdenom+1.);
 #define COMPONENTWISE_ERR 0
 #if COMPONENTWISE_ERR
-    double comp_sum; 
+    double comp_sum;
     for (unsigned int i=0; i < nb_pts; i++) {
-        double abserr = fabs(sol_vec[i] - sol_exact[i]); 
+        double abserr = fabs(sol_vec[i] - sol_exact[i]);
         // If our denom is 0 we add 1 to it and get a relative err assuming the numer will be less than 1
         double relerr = (fabs(sol_exact[i]) > 1e-10) ? abserr / fabs(sol_exact[i]) : (abserr + 1.) / (fabs(sol_exact[i]) + 1.);
         std::cout <<  "AbsErr[" << i << "] = " << abserr << "\t" << sol_exact[i] << "\t";
         std::cout <<  "RelErr[" << i << "] = " << relerr << std::endl;
-        comp_sum += abserr; 
+        comp_sum += abserr;
     }
     std::cout << "SUM OF ABS ERR: " << comp_sum << std::endl;
-#endif 
+#endif
 
     // Only print this when we're looking at the global norms
     if (!label.compare("")) {
-        printf("========= Norms For Current Solution ========\n"); 
-        printf("Absolute =>  || x_exact - x_approx ||_p                    ,  where p={1,2,inf}\n"); 
-        printf("Relative =>  || x_exact - x_approx ||_p / || x_exact ||_p  ,  where p={1,2,inf}\n"); 
+        printf("========= Norms For Current Solution ========\n");
+        printf("Absolute =>  || x_exact - x_approx ||_p                    ,  where p={1,2,inf}\n");
+        printf("Relative =>  || x_exact - x_approx ||_p / || x_exact ||_p  ,  where p={1,2,inf}\n");
     }
 
     printf("%s l1 error (%d nodes):   Absolute = %le,    Relative = %le \n", label.c_str(), nb_pts, l1fabs, l1rel);
@@ -501,32 +502,32 @@ void PDE::calcSolNorms(std::vector<double>& sol_vec, std::vector<double>& sol_ex
 
 #if 0
     if (l1rel > rel_err_max) {
-        printf("[PDE] Error! l1 relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*l1rel, 100.*rel_err_max); 
+        printf("[PDE] Error! l1 relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*l1rel, 100.*rel_err_max);
         exit(EXIT_FAILURE);
     }
-#endif 
+#endif
     if (l2rel > rel_err_max) {
-        printf("[PDE] Error! l2 relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*l2rel, 100.*rel_err_max); 
+        printf("[PDE] Error! l2 relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*l2rel, 100.*rel_err_max);
         if (!ignore_high_error)
             exit(EXIT_FAILURE);
     }
 #if 0
     if (lirel > rel_err_max) {
-        printf("[PDE] Error! linf relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*lirel, 100.*rel_err_max); 
+        printf("[PDE] Error! linf relative error (=%f%%) is too high to continue. We require %f%% or less.\n", 100.*lirel, 100.*rel_err_max);
         exit(EXIT_FAILURE);
     }
-#endif 
+#endif
 
 #define CATCH_NANS 1
 #if CATCH_NANS
     if ((l1fabs != l1fabs) ||
-            (l2fabs != l2fabs) || 
+            (l2fabs != l2fabs) ||
             (lifabs != lifabs)) {
         std::cout << "Caught NaNs in error!\n";
         exit(EXIT_FAILURE);
     }
 
-#endif 
+#endif
 }
 
 
@@ -534,9 +535,9 @@ void PDE::checkNorms(double max_l2_norm, bool ignore_high_error) {
     this->syncCPUtoGPU();
     std::vector<SolutionType>& sol_vec = this->U_G;
     int nb_pts = sol_vec.size();
-    double l1fabs = l1norm(sol_vec, 0, nb_pts); 
-    double l2fabs = l2norm(sol_vec, 0, nb_pts); 
-    double lifabs = linfnorm(sol_vec, 0, nb_pts); 
+    double l1fabs = l1norm(sol_vec, 0, nb_pts);
+    double l2fabs = l2norm(sol_vec, 0, nb_pts);
+    double lifabs = linfnorm(sol_vec, 0, nb_pts);
 
     printf("\tApprox Solution  l1  norm (%d nodes):  %le\n", nb_pts, l1fabs);
     printf("\tApprox Solution  l2  norm (%d nodes):  %le\n", nb_pts, l2fabs);
@@ -544,7 +545,7 @@ void PDE::checkNorms(double max_l2_norm, bool ignore_high_error) {
 
     if (max_l2_norm > 0) {
         if (l2fabs > max_l2_norm) {
-            printf("Approx Solution l2 norm exceeds %le!", max_l2_norm); 
+            printf("Approx Solution l2 norm exceeds %le!", max_l2_norm);
             if (!ignore_high_error)
                 exit(EXIT_FAILURE);
         }
@@ -553,7 +554,7 @@ void PDE::checkNorms(double max_l2_norm, bool ignore_high_error) {
     if (max_l2_norm < 0) {
 
         if (l2fabs > 1e100) {
-            printf("Approx Solution l2 norm exceeds 1.0e100. Assuming instability!"); 
+            printf("Approx Solution l2 norm exceeds 1.0e100. Assuming instability!");
             if (!ignore_high_error)
                 exit(EXIT_FAILURE);
         }
@@ -563,7 +564,7 @@ void PDE::checkNorms(double max_l2_norm, bool ignore_high_error) {
     // NaN is the only thing that satisfies this and we should DEFINITELY exit
     // if its encountered
     if (l2fabs != l2fabs) {
-        printf("NaN encountered. Modify support parameter or node distribution to improve stability"); 
+        printf("NaN encountered. Modify support parameter or node distribution to improve stability");
         exit(EXIT_FAILURE);
     }
 

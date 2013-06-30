@@ -1,3 +1,6 @@
+
+#include "utils/comm/communicator.h"
+
 #include <stdlib.h>
 #include <iostream>
 
@@ -7,7 +10,6 @@
 
 #include "grids/domain.h"
 
-#include "utils/comm/communicator.h"
 
 using namespace std;
 
@@ -17,7 +19,7 @@ int main(int argc, char** argv) {
     ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
 
     // All processes should full this subdomain pointer
-    Domain* subdomain; 
+    Domain* subdomain;
 
     if (comm_unit->getRank() == Communicator::MASTER) { // MASTER THREAD 0
         std::cout << "MPI RANK " << comm_unit->getRank() << ": loading project configuration and generating grid." << endl;
@@ -57,21 +59,21 @@ int main(int argc, char** argv) {
         grid->generateStencils(Grid::ST_BRUTE_FORCE);	// populates the stencil map stored inside the grid class
         grid->writeToFile();
 
-        int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well 
-        int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1; 
+        int x_subdivisions = comm_unit->getSize();		// reduce this to impact y dimension as well
+        int y_subdivisions = (comm_unit->getSize() - x_subdivisions) + 1;
 
-        Domain* original_domain = new Domain(dim, grid, comm_unit->getSize()); 
-        //domain_decomp->printVerboseDependencyGraph(); 
+        Domain* original_domain = new Domain(dim, grid, comm_unit->getSize());
+        //domain_decomp->printVerboseDependencyGraph();
 
         // pre allocate pointers to all of the subdivisions
         std::vector<Domain*> subdomain_list(x_subdivisions*y_subdivisions);
         // allocate and fill in details on subdivisions
-        original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions); 
+        original_domain->generateDecomposition(subdomain_list, x_subdivisions, y_subdivisions);
 
-        subdomain = subdomain_list[0]; 
+        subdomain = subdomain_list[0];
         for (int i = 1; i < comm_unit->getSize(); i++) {
             std::cout << "Sending subdomain[" << i << "]\n";
-            comm_unit->sendObject(subdomain_list[i], i); 
+            comm_unit->sendObject(subdomain_list[i], i);
         }
 
         delete(grid);
@@ -84,9 +86,9 @@ int main(int argc, char** argv) {
     }
 
 
-    subdomain->printVerboseDependencyGraph(); 
+    subdomain->printVerboseDependencyGraph();
 
-    delete(subdomain); 
+    delete(subdomain);
     delete(settings);
     delete(comm_unit);
 

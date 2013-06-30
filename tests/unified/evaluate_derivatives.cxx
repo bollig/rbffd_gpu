@@ -6,6 +6,7 @@
  * Apply weights to function using SpMV
  * 
  */
+#include <mpi.h> 
 
 #include <stdlib.h>
 #include <sstream>
@@ -25,7 +26,6 @@
 
 #include "timer_eb.h"
 
-#include <mpi.h> 
 
 using namespace std;
 using namespace EB;

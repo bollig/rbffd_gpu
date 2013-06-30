@@ -1,6 +1,8 @@
 #ifndef __HEAT_PDE_CUSP_H__
 #define __HEAT_PDE_CUSP_H__
 
+#include "pdes/parabolic/heat_pde.h"
+
 #include <cusp/multiply.h>
 #include <cusp/blas.h>
 #include <cusp/hyb_matrix.h>
@@ -12,7 +14,6 @@
 //#include "rbffd/rbffd.h"
 
 
-#include "pdes/parabolic/heat_pde.h"
 
 class RBFFD;  
 

@@ -4,10 +4,10 @@
 // Default: 0
 #define SCALE_B_BY_GAMMA 0
 
+#include "rbffd.h"
 #include "rbffd/stencils.h"
 #include "utils/geom/cart2sph.h"
 
-#include "rbffd.h"
 #include "rbfs/rbf_gaussian.h"
 // For writing weights in (sparse) matrix market format
 #include "mmio.h"
@@ -26,7 +26,7 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
         weightsModified(false), weightMethod(RBFFD::Direct),
         hv_k(2), hv_gamma(8e-4), useHyperviscosity(0),
         eigenvalues_computed(false), computeCondNums(false),
-        computeSFCoperators(false), asciiWeights(0), 
+        computeSFCoperators(false), asciiWeights(0),
 	override_file_detail(false)
 {
     int nb_rbfs = grid_ref.getNodeListSize();

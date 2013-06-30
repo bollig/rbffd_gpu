@@ -1,9 +1,9 @@
 #ifndef __RBFFD_CL_H__
 #define __RBFFD_CL_H__
 
+#include "rbffd.h"
 //#include <CL/cl.hpp> 
 #include "utils/opencl/cl_base_class.h"
-#include "rbffd.h"
 #include "utils/opencl/structs.h"
 
 class RBFFD_CL : public RBFFD, public CLBaseClass

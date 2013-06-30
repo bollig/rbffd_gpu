@@ -1,13 +1,14 @@
 #define REMOVE_SOLUTION_FROM_DOMAIN
 
+#include "utils/comm/communicator.h"
+#include "domain.h"
+
 #include <stdlib.h>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
-#include "domain.h"
 
 //#include <set>
-#include "utils/comm/communicator.h"
 
 using namespace std;
 //using namespace boost;
@@ -19,14 +20,14 @@ Domain::Domain(const Domain& subdomain) {
 }
 
 Domain::Domain(int dimension, Grid* grid, int _comm_size)
-    : 
+    :
         dim_num(dimension),
         id(0), comm_size(_comm_size),
         inclMX(true),inclMY(true),inclMZ(true)
 {
     xmin = grid->xmin;
     xmax = grid->xmax;
-    ymin = grid->ymin; 
+    ymin = grid->ymin;
     ymax = grid->ymax;
     zmin = grid->zmin;
     zmax = grid->zmax;
@@ -35,14 +36,14 @@ Domain::Domain(int dimension, Grid* grid, int _comm_size)
     this->global_num_nodes = grid->getNodeListSize();
 
     // Forms sets (Q,O,R) and l2g/g2l maps
-    fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii()); 
+    fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii());
     this->max_st_size = grid->getMaxStencilSize();
 }
 
 
 // Construct a new Domain object
-Domain::Domain(int dimension, unsigned int global_nb_nodes, 
-        double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, 
+Domain::Domain(int dimension, unsigned int global_nb_nodes,
+        double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax,
         int _comm_rank, int _comm_size) :
     dim_num(dimension),
     id(_comm_rank), comm_size(_comm_size),
@@ -53,14 +54,14 @@ Domain::Domain(int dimension, unsigned int global_nb_nodes,
     global_num_nodes = global_nb_nodes;
     xmin = _xmin;
     xmax = _xmax;
-    ymin = _ymin; 
+    ymin = _ymin;
     ymax = _ymax;
     zmin = _zmin;
     zmax = _zmax;
 }
 
 
-void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions, int z_divisions) 
+void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions, int z_divisions)
 {
     int gx = x_divisions;
     int gy = y_divisions;
@@ -91,8 +92,8 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         double xm = xmin + igx * deltax;
         double ym = ymin + igy * deltay;
         double zm = zmin + igz * deltaz;
-        
-        // Far end of boundary. doctor the set to make sure we get ALL nodes included. 
+
+        // Far end of boundary. doctor the set to make sure we get ALL nodes included.
         // Had an issue with 3 processors and the 3rd proc should have gotten
         // (xmin, 1] as its domain but it was really (xmin,1) and the boundary
         // node was lost. This was not a problem for 2 processors though.
@@ -107,10 +108,10 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         double back_bound = (igz==gz-1) ? zmax : zm+deltaz;
 
         printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound);
-        printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
+        printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1);
         subdomains[id] = new Domain(dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
         subdomains[id]->setMaxStencilSize(this->max_st_size);
-        subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1); 
+        subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1);
     }
 
     // Figure out the sets Bi, Oi Qi
@@ -120,24 +121,24 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         printf("\n ***************** CPU %d ***************** \n", i);
         // Forms sets (Q,O,R) and l2g/g2l maps
         std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
-        subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii); 
+        subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii);
     }
 
     for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** FILLING O_by_rank for CPU%d ***************** \n", i);
         for (unsigned int j = 0; j < subdomains.size(); j++) {
-            subdomains[i]->fill_O_by_rank(subdomains[j]->R, j); 
+            subdomains[i]->fill_O_by_rank(subdomains[j]->R, j);
         }
     }
 
     for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** FILLING R_by_rank for CPU%d ***************** \n", i);
         for (unsigned int j = 0; j < subdomains.size(); j++) {
-            subdomains[i]->fill_R_by_rank(subdomains[j]->O, j); 
+            subdomains[i]->fill_R_by_rank(subdomains[j]->O, j);
         }
     }
 
- 
+
     //return subdomains;
 }
 
@@ -145,7 +146,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
 
 int Domain::send(int my_rank, int receiver_rank) {
 
-    sendSTL(&id, my_rank, receiver_rank);  
+    sendSTL(&id, my_rank, receiver_rank);
 
     MPI_Send(&global_num_nodes, 1, MPI::UNSIGNED, receiver_rank, TAG, MPI_COMM_WORLD);
 
@@ -175,7 +176,7 @@ int Domain::send(int my_rank, int receiver_rank) {
     sendSTL(&O_by_rank, my_rank, receiver_rank); // Subsets of O that this Domain will send out to each other Domain
     sendSTL(&R_by_rank, my_rank, receiver_rank); // Subsets of R that this Domain will receive from every other Domain
     sendSTL(&boundary_indices, my_rank, receiver_rank);
-    sendSTL(&max_st_size, my_rank, receiver_rank);  
+    sendSTL(&max_st_size, my_rank, receiver_rank);
 
     cout << "RANK " << my_rank << " REPORTS: sent Domain object" << endl;
     return 0;           // FIXME: return bytes sent (in case we need to monitor this)
@@ -186,11 +187,11 @@ int Domain::receive(int my_rank, int sender_rank, int _comm_size) {
     MPI_Status stat;
 
     // Start by identifying the subdomain ID
-    recvSTL(&id, my_rank, sender_rank);  
+    recvSTL(&id, my_rank, sender_rank);
 
     MPI_Recv(&global_num_nodes, 1, MPI::UNSIGNED, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
-    // Get the subdomain bounds 
+    // Get the subdomain bounds
     double buff[6];
     MPI_Recv(&buff, 6, MPI::DOUBLE, sender_rank, TAG, MPI_COMM_WORLD, &stat);
 
@@ -198,7 +199,7 @@ int Domain::receive(int my_rank, int sender_rank, int _comm_size) {
     xmax = buff[1];
     ymin = buff[2];
     ymax = buff[3];
-    zmin = buff[4]; 
+    zmin = buff[4];
     zmax = buff[5];
 
     recvSTL(&Q, my_rank, sender_rank); // All stencil centers in this CPUs QUEUE
@@ -222,14 +223,14 @@ int Domain::receive(int my_rank, int sender_rank, int _comm_size) {
     recvSTL(&glob_to_loc, my_rank, sender_rank); // g2l
 
     recvSTL(&O_by_rank, my_rank, sender_rank); // Subsets of O that this Domain will send out to each other Domain
-    recvSTL(&R_by_rank, my_rank, sender_rank); 
+    recvSTL(&R_by_rank, my_rank, sender_rank);
     recvSTL(&boundary_indices, my_rank, sender_rank);
-    recvSTL(&max_st_size, my_rank, sender_rank);  
+    recvSTL(&max_st_size, my_rank, sender_rank);
 
     this->nb_nodes = node_list.size();
 
     set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
-    this->comm_size = _comm_size; 
+    this->comm_size = _comm_size;
     cout << "RANK " << my_rank << " of " << comm_size << " REPORTS: received Domain object" << endl;
     return 0;           // FIXME: return bytes sent (in case we need to monitor this)
 }
@@ -247,12 +248,12 @@ void Domain::printVerboseDependencyGraph() {
         printStencil(stencil_map[i], "Q_STENCIL: ");
     }
     printCenters(node_list, "G_CENTERS");
-#else 
+#else
     std::cout << "-----------------------------\n";
-    std::cout << "See stencils_" << max_st_size << "_" << this->getFilename() 
+    std::cout << "See stencils_" << max_st_size << "_" << this->getFilename()
         << " for average stencil indices\n";
     std::cout << "-----------------------------\n";
-    std::cout << "See avg_radii_" << this->getFilename() << " for average stencil radii\n"; 
+    std::cout << "See avg_radii_" << this->getFilename() << " for average stencil radii\n";
     std::cout << "-----------------------------\n";
 #endif
 }
@@ -265,10 +266,10 @@ void Domain::fill_O_by_rank(std::set<int>& subdomain_R, int subdomain_rank) {
        O_by_rank.resize(comm_size);
     }
 
-    // subdomain_R contains the R for one subdomain. 
+    // subdomain_R contains the R for one subdomain.
     // We take the intersection to find what elements of R on that subdomain
     // are sent by this processor and use the builtin STL inserter for efficiency
-    set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end())); 
+    set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end()));
     return;
 }
 
@@ -278,11 +279,11 @@ void Domain::fill_R_by_rank(std::set<int>& subdomain_O, int subdomain_rank) {
     if (R_by_rank.size() == 0) {
         R_by_rank.resize(comm_size);
     }
-    // subdomain_O contains the O for one subdomain. 
+    // subdomain_O contains the O for one subdomain.
     // We take the intersection to find what elements of R on that subdomain
     // are sent by processor indicated by subdomain_rank and use the builtin
     // STL inserter for efficiency
-    set_intersection(subdomain_O.begin(), subdomain_O.end(), this->R.begin(), this->R.end(), inserter(R_by_rank[subdomain_rank], R_by_rank[subdomain_rank].end())); 
+    set_intersection(subdomain_O.begin(), subdomain_O.end(), this->R.begin(), this->R.end(), inserter(R_by_rank[subdomain_rank], R_by_rank[subdomain_rank].end()));
     return;
 }
 
@@ -299,7 +300,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // std::set<int> B; 		// Centers on BOUNDARY (in O and D or both)
     // std::set<int> QmD; 		// Interior centers (computed without RECEIVING)
     // std::set<int> QmB; 		// Interior centers without dependence on R
-    // std::set<int> BmO; 		// 
+    // std::set<int> BmO; 		//
     // std::set<int> R;			// Nodes REQUIRED from other Domains.
     //
     set<int>::iterator qit;
@@ -311,7 +312,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     //   printf("NB_STENCILS: %d\n", stencils.size());
 
 #if 1
-// TODO: 
+// TODO:
 // This adds all nodes to Q, then gets all nodes associated with stencils in Q
 // the only thing is that rbf_centers[i] => stencils[i]. We need rbf_centers[i] => stencils[l2g(rbf_centers[i])]
 
@@ -322,10 +323,10 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
         if (this->isInsideSubdomain(pt, i)) {
             Q.insert(i);
         }
-    } 
-    int depR = 0; 
+    }
+    int depR = 0;
     for (qit = Q.begin(); qit != Q.end(); qit++) {
-        StencilType& st = stencils[*qit]; 
+        StencilType& st = stencils[*qit];
 
         // Now, if the center is in Q but it depends on nodes in R then we need to distinguish
         depR = 0;
@@ -336,7 +337,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
             //            std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2) << std::endl;
             // If any stencil node is outside the domain, then set this to true
             if (!this->isInsideSubdomain(pt2, j)) {
-                depR = 1;  
+                depR = 1;
             }
         }
         //        std::cout << "end stencil" << std::endl;
@@ -344,7 +345,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
             D.insert(*qit);
         }
     }
-#endif 
+#endif
 
 
     std::cout << "Q size before set operations: " << Q.size() << std::endl;
@@ -353,7 +354,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     // Each Q (a set) is, by construction, sorted
 
     //Create set of stencil points of all elements of Q (ineffecient since there are repeats)
-    set<int> SQ; 
+    set<int> SQ;
     std::cout << "SQ.size before difference: " << SQ.size() << std::endl;
     stencilSet(Q, stencils, SQ);
     std::cout << "SQ.size before difference: " << SQ.size() << std::endl;
@@ -393,10 +394,10 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
     // (QmD D R) = (Q\B B\O O R)  (NOTE: O and D overlap and are NOT guaranteed to be the same, so we maintain B\O
     //
-    // QmD contains all nodes we can operate on without RECEIVING 
+    // QmD contains all nodes we can operate on without RECEIVING
     // D   contains all nodes we must wait to operate on after RECEIVING R
     // R   contains all nodes we receive
-    // 
+    //
     // NOTE: by using QmD we can operate on stencils in kernels that do not break to RECEIVE
 
     //      SENDING can happen without kernels breaking, so we dont need to worry about that.
@@ -405,12 +406,12 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     set_union(D.begin(), D.end(), O.begin(), O.end(), inserter(B, B.end()));
 #if 0
     // D* = B\O (so we can arrange G = { Q\B O\D* D* R }
-    // By ordering nodes this way, we have the OPTION of operating on {Q\B O\D} 
+    // By ordering nodes this way, we have the OPTION of operating on {Q\B O\D}
     // while communication happens for O and R. However, if we are on the GPU, O\D STILL require
-    // GPU to CPU transfer before it can be completed. That is why we concentrate kernels on 
+    // GPU to CPU transfer before it can be completed. That is why we concentrate kernels on
     // Q\B and B.
     set_difference(O.begin(), O.end(), D.begin(), D.end(), inserter(OmD, OmD.end()));
-#endif 
+#endif
     // QmD != Q\B
     set_difference(Q.begin(), Q.end(), D.begin(), D.end(), inserter(QmD, QmD.end()));
     set_difference(Q.begin(), Q.end(), B.begin(), B.end(), inserter(QmB, QmB.end()));
@@ -436,14 +437,14 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
     // Generate stencil membership lists (i.e., which set each stencil center belongs to)
     this->fillCenterSets(rbf_centers, stencil);
 
-    //******************************** 
+    //********************************
     // GEN MAPPINGS local/global and full stencil sets based on membership.
     //********************************
     set<int>::iterator qit;
     int i = 0;
 
     // generate local to global map.
-    // Index of local map corresponds to position in G (list of all centers). 
+    // Index of local map corresponds to position in G (list of all centers).
     // The local map elements map G[i] back to global domain indices
 
     // We want these maps in order: (Q\B B\O O R) where B=(D O)
@@ -505,17 +506,17 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
             inserter(boundary_indices, boundary_indices.end()));
     printf("SUBDOMAIN BOUNDARY.size= %d\n", (int)boundary_indices.size());
     for (int i = 0; i < (int)boundary_indices.size(); i++) {
-        //EVAN: 
+        //EVAN:
 #if 0
         cout << "Subdomain Adding Boundary Node[" << i << "] = " << boundary_indices[i]
             << " (local index: " << g2l(boundary_indices[i]) << ")"
             << endl;
-#endif 
+#endif
         boundary_indices[i] = g2l(boundary_indices[i]);
     }
     printf("GLOBAL_BOUNDARY.size= %d\n", (int) boundary_indices.size());
 
-    // Finally: update the number of known nodes: 
+    // Finally: update the number of known nodes:
     nb_nodes = node_list.size();
 
 
@@ -537,7 +538,7 @@ void Domain::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>& Sse
         StencilType& si = stencil[qi];
         //        std::cout << "Working on stencil: " << qi << std::endl;
         for (unsigned int j = 0; j < si.size(); j++) {
-            //         std::cout << si[j] << " "; 
+            //         std::cout << si[j] << " ";
             Sset.insert(si[j]);
         }
         //       std::cout << std::endl;
@@ -566,13 +567,13 @@ void Domain::printStencilNodesIn(const vector<StencilType>& stencils, const set<
 // HERE: center_set is in local index
 void Domain::printCenterMemberships(const set<int>& center_set, std::string display_name) {
     // Center[ ID ] =     [Q|.]  [D|.]  [O|.]  [R][+]
-    // NOTE: [a|b] --> if (true) then a else b. 
+    // NOTE: [a|b] --> if (true) then a else b.
     // 	ID --> global node id
-    // CONDITIONS: 
-    //  Q  --> in set Q? 
-    //  D  --> in set D? 
-    //  O  --> in set O? 
-    //  R  --> depends on nodes in R? 
+    // CONDITIONS:
+    //  Q  --> in set Q?
+    //  D  --> in set D?
+    //  O  --> in set O?
+    //  R  --> depends on nodes in R?
     //  +  --> is the center in R?
     cout << "\t" << display_name
         << "[ global_index | local_index ] = \t[Q|.]   [D|.]   [Q|.]   [R][+]   [B|.]"
@@ -587,18 +588,18 @@ void Domain::printCenterMemberships(const set<int>& center_set, std::string disp
     cout << "\tGaps in global indices are indicated with [... GAP ...]" << endl;
     cout << "\t-------------------------------------------------" << endl;
     int i = 0;
-    int j = 0; 
+    int j = 0;
     for (set<int>::const_iterator setiter = center_set.begin(); setiter
             != center_set.end(); setiter++, i++, j++) {
         if (j != *setiter) {
             //            cout << "\tGAP\t------------------------------------------" << std::endl;
             cout << "[... GAP ...]" << std::endl;
-            j = *setiter; 
+            j = *setiter;
         }
 
-        cout << i << "\t" << display_name 
+        cout << i << "\t" << display_name
             << "[ global:" << (*setiter)
-            << " | local:" << g2l(*setiter) 
+            << " | local:" << g2l(*setiter)
             << " ] =\t\t";
 
         if (isInSet(*setiter, Q)) {
@@ -773,20 +774,20 @@ void Domain::printCenters(const std::vector<NodeType>& centers, std::string cent
 void Domain::printStencil(const StencilType& stencil, std::string stencil_label) {
     cout << stencil_label << " = " << "\t";
     int i = 0;
-    int index_sum = 0; 
+    int index_sum = 0;
     if (loc_to_glob.size() > 0) {
         for (StencilType::const_iterator setiter = stencil.begin(); setiter
                 != stencil.end(); setiter++, i++) {
             // True -> stencil[i][j] is in center set
             cout << " [" << *setiter << " (" << loc_to_glob[*setiter] << ")] ";
-            index_sum += *setiter; 
+            index_sum += *setiter;
         }
     } else { // WE MIGHT BE IN THE ORIGINAL CODE
         for (StencilType::const_iterator setiter = stencil.begin(); setiter
                 != stencil.end(); setiter++, i++) {
             // True -> stencil[i][j] is in center set
             cout << " [" << *setiter << " (" << *setiter << ")] ";
-            index_sum += *setiter; 
+            index_sum += *setiter;
         }
     }
     cout << " SUM: " << index_sum;
@@ -819,20 +820,20 @@ void Domain::printStencilPlus(const StencilType& stencil, const std::vector<
 
 void Domain::writeG2LToFile(std::string filename) {
 
-    std::string fname = "g2lmap_"; 
-    fname.append(filename); 
-    std::ofstream fout(fname.c_str()); 
+    std::string fname = "g2lmap_";
+    fname.append(filename);
+    std::ofstream fout(fname.c_str());
     if (fout.is_open()) {
-        std::map<int, int>::iterator mit;  
+        std::map<int, int>::iterator mit;
         for (mit = glob_to_loc.begin(); mit != glob_to_loc.end(); mit++) {
             // Subtract 1 because all indices are offset by 1. When an element
             // doesnt exist its mapped to 0. By subtracting 1 off everything we
-            // get -1 when an index is not in the map 
-            fout << (*mit).first << " " << (*mit).second - 1 << std::endl; 
+            // get -1 when an index is not in the map
+            fout << (*mit).first << " " << (*mit).second - 1 << std::endl;
         }
     } else {
-        printf("Error opening file to write\n"); 
-        exit(EXIT_FAILURE); 
+        printf("Error opening file to write\n");
+        exit(EXIT_FAILURE);
     }
     fout.close();
     std::cout << "[Domain] \tWrote " << glob_to_loc.size() << " global to local index map elements to \t" << fname << std::endl;
@@ -843,18 +844,18 @@ void Domain::writeG2LToFile(std::string filename) {
 
 void Domain::writeL2GToFile(std::string filename) {
 
-    std::string fname = "l2gmap_"; 
-    fname.append(filename); 
-    std::ofstream fout(fname.c_str()); 
+    std::string fname = "l2gmap_";
+    fname.append(filename);
+    std::ofstream fout(fname.c_str());
     if (fout.is_open()) {
-        std::vector<int>::iterator mit;  
-        int i = 0; 
+        std::vector<int>::iterator mit;
+        int i = 0;
         for (mit = loc_to_glob.begin(); mit != loc_to_glob.end(); mit++, i++) {
-            fout << i << " " << (*mit) << std::endl; 
+            fout << i << " " << (*mit) << std::endl;
         }
     } else {
-        printf("Error opening file to write\n"); 
-        exit(EXIT_FAILURE); 
+        printf("Error opening file to write\n");
+        exit(EXIT_FAILURE);
     }
     fout.close();
     std::cout << "[Domain] \tWrote " << loc_to_glob.size() << " local to global index map elements to \t" << fname << std::endl;
@@ -864,61 +865,61 @@ void Domain::writeL2GToFile(std::string filename) {
 //----------------------------------------------------------------------
 
 Grid::GridLoadErrType Domain::loadG2LFromFile(std::string filename) {
-	std::string fname = "g2lmap_"; 
+	std::string fname = "g2lmap_";
 	fname.append(filename);
-	std::cout << "[" << this->className() << "] \treading global to local (g2lmap) file: " << fname << std::endl;    
+	std::cout << "[" << this->className() << "] \treading global to local (g2lmap) file: " << fname << std::endl;
 
-	std::ifstream fin; 
-	fin.open(fname.c_str()); 
+	std::ifstream fin;
+	fin.open(fname.c_str());
 
 	if (fin.is_open()) {
-		glob_to_loc.clear(); 
+		glob_to_loc.clear();
 		while (fin.good()) {
 			unsigned int glob_indx, loc_indx;
-			fin >> glob_indx >> loc_indx; 
+			fin >> glob_indx >> loc_indx;
 			if (!fin.eof()) {
-				glob_to_loc[glob_indx] = loc_indx; 
+				glob_to_loc[glob_indx] = loc_indx;
 			}
 		}
 	} else {
-		printf("Error opening g2lmap file to read\n"); 
+		printf("Error opening g2lmap file to read\n");
 		return NO_EXTRA_FILES;
 	}
 
-	fin.close(); 
+	fin.close();
 
 	std::cout << "[" << this->className() << "] \tLoaded " << glob_to_loc.size() << " global to local mappings from \t" << fname << std::endl;
-	return GRID_AND_STENCILS_LOADED; 
+	return GRID_AND_STENCILS_LOADED;
 }
 
 //----------------------------------------------------------------------
 
 Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
-	std::string fname = "l2gmap_"; 
+	std::string fname = "l2gmap_";
 	fname.append(filename);
-	std::cout << "[" << this->className() << "] \treading local to global (l2gmap) file: " << fname << std::endl;    
+	std::cout << "[" << this->className() << "] \treading local to global (l2gmap) file: " << fname << std::endl;
 
-	std::ifstream fin; 
-	fin.open(fname.c_str()); 
+	std::ifstream fin;
+	fin.open(fname.c_str());
 
 	if (fin.is_open()) {
-		loc_to_glob.clear(); 
+		loc_to_glob.clear();
 		while (fin.good()) {
 			unsigned int glob_indx, loc_indx;
-			fin >> loc_indx >> glob_indx; 
+			fin >> loc_indx >> glob_indx;
 			if (!fin.eof()) {
 				loc_to_glob.push_back(glob_indx);
 			}
 		}
 	} else {
-		printf("Error opening l2gmap file to read\n"); 
+		printf("Error opening l2gmap file to read\n");
 		return NO_EXTRA_FILES;
 	}
 
-	fin.close(); 
+	fin.close();
 
 	std::cout << "[" << this->className() << "] \tLoaded " << loc_to_glob.size() << " global to local mappings from \t" << fname << std::endl;
-	return GRID_AND_STENCILS_LOADED; 
+	return GRID_AND_STENCILS_LOADED;
 }
 
 
@@ -927,27 +928,27 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
 void Domain::writeStencilsToFile(std::string filename) {
 	if (max_st_size > 0) {
 #if 1
-		std::ostringstream prefix; 
+		std::ostringstream prefix;
 		prefix << "stencils_maxsz" << this->max_st_size << "_";
 
-		std::string fname = prefix.str(); 
-		fname.append(filename); 
-#endif 
-		std::cout << "[" << this->className() << "] \t writing stencils to file: " << fname << std::endl;    
+		std::string fname = prefix.str();
+		fname.append(filename);
+#endif
+		std::cout << "[" << this->className() << "] \t writing stencils to file: " << fname << std::endl;
 
-		std::ofstream fout(fname.c_str()); 
+		std::ofstream fout(fname.c_str());
 
 		if (fout.is_open()) {
 			for (unsigned int i = 0; i < stencil_map.size(); i++) {
-				fout << stencil_map[i].size(); 
+				fout << stencil_map[i].size();
 				for (unsigned int j=0; j < stencil_map[i].size(); j++) {
 					fout << " " << stencil_map[i][j];
 				}
 				fout << std::endl;
 			}
 		} else {
-			printf("Error opening file to write\n"); 
-			exit(EXIT_FAILURE); 
+			printf("Error opening file to write\n");
+			exit(EXIT_FAILURE);
 		}
 		fout.close();
 		std::cout << "[" << this->className() << "] \tWrote " << stencil_map.size() << " stencils to \t" << fname << std::endl;

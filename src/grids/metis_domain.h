@@ -1,6 +1,9 @@
 #ifndef _METISDomain_H_
 #define _METISDomain_H_
 
+#include "grids/domain.h"
+#include "common_typedefs.h"
+
 #include <stdlib.h>
 #include <limits.h>
 #include <stdio.h>
@@ -8,14 +11,13 @@
 #include <fstream> 
 #include <sstream>
 #include <string>
+#include <string.h>
 
 
 #include <vector>
 #include <set>
 #include <map>
 
-#include "grids/domain.h"
-#include "common_typedefs.h"
 
 class METISDomain : public Domain
 {

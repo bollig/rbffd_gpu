@@ -1,9 +1,8 @@
+#include "heat_pde_cusp.h"
+
 #include <cusp/multiply.h>
 #include <cusp/io/matrix_market.h>
 #include <cusp/blas.h>
-
-#include "heat_pde_cusp.h"
-
 //#include "rbffd/rbffd_cl.h"
 
 //----------------------------------------------------------------------

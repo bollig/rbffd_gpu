@@ -131,7 +131,9 @@ add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall
     # -g 
     -DNDEBUG 
     #-DTHRUST_DEBUG )  
+    -DMPICH_IGNORE_CXX_SEEK
     ) 
+
 
 message(STATUS "CompilerID: ${CMAKE_CXX_COMPILER_ID}")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

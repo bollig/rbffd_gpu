@@ -1,3 +1,5 @@
+#include <mpi.h>
+
 #include "heat_pde_cusp.h"
 
 #include <cusp/multiply.h>

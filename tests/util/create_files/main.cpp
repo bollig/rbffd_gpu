@@ -93,7 +93,15 @@ int main(int argc, char** argv)
 {
     Communicator* comm_unit = new Communicator(argc, argv);
     settings = new ProjectSettings("test.conf");
-    //settings->ParseFile("create.conf");
+
+	// Parse file created by python script
+	// Uncomment if not using a script
+	bool use_script = REQUIRED<bool>("USE_PYTHON_SCRIPT");
+
+	if (use_script) {
+    	settings->ParseFile("create.conf");
+	}
+
 	std::string node_dist = REQUIRED<std::string>("NODE_DIST");
 	printf("node_dist= %s\n", node_dist.c_str());
 

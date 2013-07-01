@@ -1,7 +1,7 @@
 #!/bin/sh
 if [ $HOSTNAME = "S2" ] ; then
 	echo "Frodo"
-	cmake -DUSE_MPI=off DUSE_ICC=on -DBOOST_ROOT=/usr/local -DOPENCL_ROOT=/opt/intel/opencl-1.2-3.0.67279/ -DARMADILLO_ROOT=$HOME/local -DUSE_VTK=off -DUSE_CUDA=off ..
+	cmake -DUSE_MPI=off -DUSE_ICC=on -DBOOST_ROOT=/usr/local -DOPENCL_ROOT=/opt/intel/opencl-1.2-3.0.67279/ -DARMADILLO_ROOT=$HOME/local -DUSE_VTK=off -DUSE_CUDA=off ..
 	echo "Frodo"
 #----------------------
 elif [ $HOSTNAME = "hpc-15-35" ] ; then 

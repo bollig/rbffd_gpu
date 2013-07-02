@@ -31,16 +31,17 @@ STEN_SIZE=17
 NPROC=$PBS_NP
 NPROC=1
 METIS_FILE=metis_stencils.graph.part.${NPROC}
+JOB_RAN_FILE=job_ran
 
 NEW_WORKDIR=$PBS_O_WORKDIR/test_${N}_${NPROC}proc
 
 mkdir -p $NEW_WORKDIR
 cd $NEW_WORKDIR
 
-if [ ! -f $METIS_FILE ] 
+if [ ! -f $JOB_RAN_FILE ] 
 then
-	touch $METIS_FILE 
-	PART_FILE=""	
+	touch $JOB_RAN_FILE
+
 
 	# Read grid, generate stencils (Note: -c 4 is required because MD nodes have 4 cols)
 	$PBS_O_WORKDIR/sten_gen.x -g ~/sphere_grids/md${MD}.${N} -c 4 -N ${N} -n ${STEN_SIZE} -w 0 -l 100
@@ -52,8 +53,6 @@ then
 
 	echo "gpmetis Exit status: $?"
 
-else
-	PARTFILE="-p $METIS_FILE"
 fi
 
 mpirun -l -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}

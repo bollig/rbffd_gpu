@@ -123,7 +123,7 @@ class METISDomain : public Domain
 #if FAIL_ON_MISSING_PARTFILE
 				exit(EXIT_FAILURE);
 #else 
-                printf("Assuming one processor");
+                printf("Assuming one processor: %d\n", this->global_num_nodes);
                 for (int pp = 0; pp < this->global_num_nodes; pp++) {
                     metis_part.push_back(0);
                 }

@@ -59,10 +59,11 @@ JOB_RAN_FILE=job_ran
 TEST_TYPE=md
 NEW_WORKDIR=$PBS_O_WORKDIR/${TEST_TYPE}_${N}_${STEN_SIZE}_${NPROC}proc
 
-MPI_EXE=mpirun -r ssh -f $PBS_NODEFILE
+MY_MPI_EXE="mpirun -r ssh"
+#-f $PBS_NODEFILE
 
 mkdir -p $NEW_WORKDIR
 cd $NEW_WORKDIR
-	${MPI_EXE} -l -np ${NPROC} hostname
+	${MY_MPI_EXE} -l -np ${NPROC} hostname
 	echo "hostname Exit status: $?"
 date

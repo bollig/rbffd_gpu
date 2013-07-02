@@ -1,5 +1,5 @@
 #!/bin/bash -l 
-#PBS -l walltime=01:00:00,nodes=8:ppn=8
+#PBS -l walltime=01:00:00,nodes=16:ppn=8
 #PBS -q batch
 #PBS -m ae 
 ##PBS -N example2_simple
@@ -45,6 +45,7 @@ module list
 
 export LD_LIBRARY_PATH=/opt/intel/opencl/lib64:$LD_LIBRARY_PATH
 
+MY_MPI_EXE="mpirun -r ssh -l"
 date
 
 MD=165
@@ -78,17 +79,17 @@ then
 
 	echo "gpmetis Exit status: $?"
 
-	mpirun -l -np ${NPROC} hostname
+	${MY_MPI_EXE} -np ${NPROC} hostname
 	echo "hostname Exit status: $?"
 
 	# add -l for verbose logging of output 
-	mpirun -l -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
+	${MY_MPI_EXE} -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
 
 	echo "compute_weights Exit status: $?"
 	touch $JOB_RAN_FILE
 fi
 
-mpirun -l -np ${NPROC} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+${MY_MPI_EXE} -np ${NPROC} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 echo "evaluate_derivatives Exit status: $?"
 

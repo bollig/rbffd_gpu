@@ -10,8 +10,8 @@
 # DONE:	read stencils
 # DONE:	compute weights
 # DONE:	write weights
-# TODO:	assemble 
-# TODO:	solve
+# TODO:	assemble GPU
+# TODO:	solve GPU
 
 
 # -c : number of cols in the grid file (3:X,Y,Z; 4:X,Y,Z,ignore)
@@ -21,19 +21,18 @@
 # -l : LSH grid size (<val>^3 overlaid grid)
 
 
-# Generate a regular grid of size 100^3 
-#./gen_regular_grid.x -x 100 -y 100 -z 100
 
 MD=165
 N=27556
-STEN_SIZE=17
+STEN_SIZE=101
 
 NPROC=$PBS_NP
 NPROC=1
 METIS_FILE=metis_stencils.graph.part.${NPROC}
 JOB_RAN_FILE=job_ran
 
-NEW_WORKDIR=$PBS_O_WORKDIR/test_${N}_${NPROC}proc
+TEST_TYPE=md
+NEW_WORKDIR=$PBS_O_WORKDIR/${TEST_TYPE}_${N}_${NPROC}proc
 
 mkdir -p $NEW_WORKDIR
 cd $NEW_WORKDIR
@@ -42,6 +41,8 @@ if [ ! -f $JOB_RAN_FILE ]
 then
 	touch $JOB_RAN_FILE
 
+	# Generate a regular grid of size 100^3 
+	#./gen_regular_grid.x -x 100 -y 100 -z 100
 
 	# Read grid, generate stencils (Note: -c 4 is required because MD nodes have 4 cols)
 	$PBS_O_WORKDIR/sten_gen.x -g ~/sphere_grids/md${MD}.${N} -c 4 -N ${N} -n ${STEN_SIZE} -w 0 -l 100
@@ -53,11 +54,10 @@ then
 
 	echo "gpmetis Exit status: $?"
 
+	mpirun -l -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
+
+	echo "compute_weights Exit status: $?"
 fi
-
-mpirun -l -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
-
-echo "compute_weights Exit status: $?"
 
 mpirun -l -np ${NPROC} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 

@@ -615,7 +615,7 @@ int main(int argc, char** argv) {
 
 	std::cout << "----------------  END OF MAIN ------------------\n";
     char buf[256]; 
-    sprintf(buf, "time_log.generate.%d", mpi_rank); 
+    sprintf(buf, "time_log.weight_calculator.%d", mpi_rank); 
 	tm.writeAllToFile(buf);
 	tm.clear();
     printf("\n\nREACHED THE END OF MAIN\n\n");

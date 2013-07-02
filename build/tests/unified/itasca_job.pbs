@@ -51,7 +51,10 @@ MD=165
 N=27556
 STEN_SIZE=17
 
-NEW_WORKDIR=$PBS_O_WORKDIR/test_${N}_${PBS_NP}proc
+NPROC=$PBS_NP
+NPROC=1
+
+NEW_WORKDIR=$PBS_O_WORKDIR/test_${N}_${NPROC}proc
 
 mkdir -p $NEW_WORKDIR
 cd $NEW_WORKDIR
@@ -61,16 +64,24 @@ $PBS_O_WORKDIR/sten_gen.x -g ~/sphere_grids/md${MD}.${N} -c 4 -N ${N} -n ${STEN_
 
 echo "sten_gen Exit status: $?"
 
-# Decompose domain for parallel run into PBS_NP partitions
-gpmetis metis_stencils.graph ${PBS_NP}
+# Decompose domain for parallel run into NPROC partitions
+gpmetis metis_stencils.graph ${NPROC}
 
 echo "gpmetis Exit status: $?"
 
-mpirun -l -np ${PBS_NP} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${PBS_NP}
+METIS_FILE=metis_stencils.graph.part.${NPROC}
+if [ ! -f $METIS_FILE ] 
+then
+	PART_FILE=""	
+else
+	PARTFILE="-p $METIS_FILE"
+fi
+
+mpirun -l -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
 
 echo "compute_weights Exit status: $?"
 
-mpirun -l -np ${PBS_NP} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+mpirun -l -np ${NPROC} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 echo "evaluate_derivatives Exit status: $?"
 

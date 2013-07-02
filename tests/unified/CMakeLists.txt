@@ -23,6 +23,7 @@ SET (ARGV
 require_config()   # Default is to require test.conf
 require_file(run.sh) 
 require_file(generate.sh) 
+require_file(itasca_job.pbs) 
 
 add_serial_framework_test( "gen_reg_grid.x" "generate_regular_grid.cxx" "${ARGV}" )
 add_serial_framework_test( "sten_gen.x" "stencil_generator.cxx" "${ARGV}" )

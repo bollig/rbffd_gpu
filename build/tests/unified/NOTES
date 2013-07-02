@@ -1,0 +1,5 @@
+- evaluate derivs computes SpMV
+	- DONE: add collective (Reduce) for norms
+		- mention in the thesis that a Reduce is preferred (2ms for N=27556; 8procs) over Allreduce (30ms for N=27556; 8procs) on Itasca	
+	- TODO: iterate
+	- TODO: Overlap comm

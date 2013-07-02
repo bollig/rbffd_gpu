@@ -1,5 +1,8 @@
+
 #ifndef _METISDomain_H_
 #define _METISDomain_H_
+
+#define FAIL_ON_MISSING_PARTFILE 0
 
 #include "grids/domain.h"
 #include "common_typedefs.h"
@@ -117,7 +120,14 @@ class METISDomain : public Domain
 				}
 			} else {
 				printf("Error opening node file to read\n"); 
+#if FAIL_ON_MISSING_PARTFILE
 				exit(EXIT_FAILURE);
+#else 
+                printf("Assuming one processor");
+                for (int pp = 0; pp < this->global_num_nodes; pp++) {
+                    metis_part.push_back(0);
+                }
+#endif 
 				return -1;
 			}
 			fin.close(); 

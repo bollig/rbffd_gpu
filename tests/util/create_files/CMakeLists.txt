@@ -25,3 +25,7 @@ require_config()   # Default is to require test.conf
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
 add_serial_opencl_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" )
+LINK_COMMAND( "${rbffd_gpu_SOURCE_DIR}/src/rbffd" "${CMAKE_CURRENT_BINARY_DIR}" "r"  )
+LINK_COMMAND( "${rbffd_gpu_SOURCE_DIR}/src/utils"  "${CMAKE_CURRENT_BINARY_DIR}" "u"  )
+LINK_COMMAND( "${rbffd_gpu_SOURCE_DIR}/src/cl_kernels" "${CMAKE_CURRENT_BINARY_DIR}" "cl"  )
+LINK_COMMAND( "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/ss" "src"  )

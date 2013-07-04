@@ -115,6 +115,25 @@ MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source )
 
 ENDMACRO ( COPY_KERNEL_SOLVER_COMMAND _source _destination)
 
+#------------------------------------------
+#  Added by G. Erlebacher (July 3, 2013)
+MACRO ( LINK_COMMAND _source_dir _dest_dir _dest_name )
+    SET (_destination "${_dest_dir}")
+	#IF (NOT EXISTS ${_destination})
+    	ADD_CUSTOM_TARGET( ${_dest_name} ALL )
+    	ADD_CUSTOM_COMMAND(
+        	TARGET ${_dest_name}
+			POST_BUILD
+        	COMMAND
+			# HOW to ignore errors!!! -f (force: delete first if exists)
+        	echo "ln -f -s ${_source_dir} ${_destination}" && ln -f -s ${_source_dir} ${_destination}
+			VERBATIM
+    	)
+	#ENDIF (NOT EXISTS ${_destination})
+ENDMACRO ( LINK_COMMAND _source_dir _dest_dir _dest_name )
+#------------------------------------------
+
+
 MACRO ( COPY_FILE_COMMAND _source_filename _source_dir _dest_filename _dest_dir)
 
     SET (_source "${_source_dir}/${_source_filename}")

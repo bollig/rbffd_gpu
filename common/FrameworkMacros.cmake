@@ -144,7 +144,6 @@ MACRO ( LINK_COMMAND _source_dir _dest_dir _target )
 ENDMACRO ( LINK_COMMAND _source_dir _dest_dir _dest_name )
 #------------------------------------------
 
-
 MACRO ( COPY_FILE_COMMAND _source_filename _source_dir _dest_filename _dest_dir)
 
     SET (_source "${_source_dir}/${_source_filename}")

@@ -23,7 +23,7 @@ func_kernel = ["FUN_KERNEL",
                "FUN4_DERIV4_WEIGHT4_INV",
                "FUN1_DERIV4_WEIGHT4"]
 
-#func_kernel = ["FUN_KERNEL"]
+func_kernel = ["FUN1_DERIV4_WEIGHT4"]
 
 os.system("mkdir %s" % output_dir )
 

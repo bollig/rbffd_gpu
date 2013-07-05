@@ -777,7 +777,8 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
 	cl_ulong start = 0, end = 0;
 	event.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
 	event.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
-	printf("GPU execution time = %.2f ms\n", (float) (end-start)*1.e-6);
+	gpu_kernel_exec_time = (float) (end-start)*1.e-6;
+	//printf("GPU execution time = %.2f (ms)\n", gpu_kernel_exec_time);
 	return; // TEMPORARY
 }
 //----------------------------------------------------------------------

@@ -181,11 +181,17 @@ void computeOnGPU4()
     case FUN1_DERIV4_WEIGHT4:
         deriv4_gpu = RBFFD_CL::SuperBuffer<double>(4*xderiv_cpu.size(), "deriv4_gpu"); 
         der->computeDerivs(u_gpu, deriv4_gpu, true); 
+		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
         der->computeDerivs(u_gpu, deriv4_gpu, true); 
+		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
         der->computeDerivs(u_gpu, deriv4_gpu, true); 
+		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
         der->computeDerivs(u_gpu, deriv4_gpu, true); 
+		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
         der->computeDerivs(u_gpu, deriv4_gpu, true); 
+		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
         der->computeDerivs(u_gpu, deriv4_gpu, true); 
+		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
         deriv4_gpu.copyToHost();
         break;
     //case FUN1_DERIV1_WEIGHT4:

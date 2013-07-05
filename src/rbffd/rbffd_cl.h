@@ -23,6 +23,8 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         bool deleteCPUWeightsBuffer;
         bool deleteCPUNodesBuffer;
         bool deleteCPUStencilsBuffer;
+		// returned by enqueueKernel()
+		double gpu_kernel_exec_time;
 
         cl::Buffer gpu_stencils; 
         unsigned int*    cpu_stencils;
@@ -96,6 +98,10 @@ class RBFFD_CL : public RBFFD, public CLBaseClass
         cl::Buffer& getGPUStencils() { return gpu_stencils; }
         cl::Buffer& getGPUNodes() { return gpu_nodes; }
         cl::Buffer& getGPUWeights(DerType which) { return gpu_weights[getDerTypeIndx(which)]; }
+
+		// measured in millisec (ms)
+		double getGpuExecutionTime() 
+			{ return gpu_kernel_exec_time; }
 
 
         // FIXME: assumes size of buffers does not change (should check if it

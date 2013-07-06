@@ -1,5 +1,5 @@
 #!/bin/bash -l 
-#PBS -l walltime=01:00:00,nodes=16:ppn=8
+#PBS -l walltime=01:00:00,nodes=32:ppn=8
 #PBS -q batch
 #PBS -m ae 
 ##PBS -N example2_simple

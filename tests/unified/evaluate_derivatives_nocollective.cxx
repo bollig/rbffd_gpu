@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     tm["initialize"] = new Timer("[Main] Load settings and MPI_Init");
     tm["derSetup"] = new Timer("[Main] Setup RBFFD class");
     tm["assembleTest"] = new Timer("[Main] Assemble test vectors");
-    tm["SpMV"] = new Timer("[Main] Compute Derivatives");
+    tm["computeDeriv"] = new Timer("[Main] Compute Derivatives");
     tm["computeNorms"] = new Timer("[Main] Compute Norms");
     tm["loadWeights"] = new Timer("[Main] Read weights from file");
     tm["tests"] = new Timer("[Main] Derivative tests");
@@ -371,17 +371,6 @@ int main(int argc, char** argv) {
     cout << "start computing derivative (on CPU)" << endl;
     tm["assembleTest"]->stop();
 
-    // Need a class that will run: 
-    //   a) SpMV on DM and solution vector
-    //   b) alltoallv communication to synchronize output vector
-    //   c) compute norms
-    //   d) Need a class that inherits test and uses VCL, clSpMV formats
-
-    SpMVTest *derTest = new SpMVTest(der); 
-    derTest->useAlltoallv(true);
-
-    // TODO: prime hw here.
-
     for (int i = 0; i < 100; i++) { 
         tm["computeNorms"]->start();
         u_l2 = l2norm( mpi_rank, u);
@@ -389,14 +378,15 @@ int main(int argc, char** argv) {
         u_linf = linfnorm( mpi_rank, u);
         tm["computeNorms"]->stop();
 
+
         // Verify that the CPU works
         // NOTE: we pass booleans at the end of the param list to indicate that
         // the function "u" is new (true) or same as previous calls (false). This
         // helps avoid overhead of passing "u" to the GPU.
 
-        tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::X, u, xderiv_cpu, true);
-        tm["SpMV"]->stop();
+        tm["computeDeriv"]->start();
+        der->RBFFD::applyWeightsForDeriv(RBFFD::X, u, xderiv_cpu, true);
+        tm["computeDeriv"]->stop();
 
         tm["computeNorms"]->start();
         x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu );
@@ -404,9 +394,9 @@ int main(int argc, char** argv) {
         x_linf = linfnorm( mpi_rank, u_x, xderiv_cpu );
         tm["computeNorms"]->stop();
 
-        tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, u, yderiv_cpu, false);
-        tm["SpMV"]->stop();
+        tm["computeDeriv"]->start();
+        der->RBFFD::applyWeightsForDeriv(RBFFD::Y, u, yderiv_cpu, false);
+        tm["computeDeriv"]->stop();
 
         tm["computeNorms"]->start();
         y_l2 = l2norm( mpi_rank, u_y, yderiv_cpu );
@@ -414,9 +404,9 @@ int main(int argc, char** argv) {
         y_linf = linfnorm( mpi_rank, u_y, yderiv_cpu );
         tm["computeNorms"]->stop();
 
-        tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, u, zderiv_cpu, false);
-        tm["SpMV"]->stop();
+        tm["computeDeriv"]->start();
+        der->RBFFD::applyWeightsForDeriv(RBFFD::Z, u, zderiv_cpu, false);
+        tm["computeDeriv"]->stop();
 
         tm["computeNorms"]->start();
         z_l2 = l2norm( mpi_rank, u_z, zderiv_cpu );
@@ -424,9 +414,9 @@ int main(int argc, char** argv) {
         z_linf = linfnorm( mpi_rank, u_z, zderiv_cpu );
         tm["computeNorms"]->stop();
 
-        tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, u, lderiv_cpu, false);
-        tm["SpMV"]->stop();
+        tm["computeDeriv"]->start();
+        der->RBFFD::applyWeightsForDeriv(RBFFD::LAPL, u, lderiv_cpu, false);
+        tm["computeDeriv"]->stop();
 
 
         tm["computeNorms"]->start();

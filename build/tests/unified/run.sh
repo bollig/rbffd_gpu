@@ -28,7 +28,7 @@ MD=165
 N=1000
 STEN_SIZE=101
 
-NPROC=2
+NPROC=4
 #NPROC=1
 #~/sphere_grids/md${MD}.${N}
 
@@ -59,8 +59,8 @@ then
 
 	echo "gpmetis Exit status: $?"
 
-	${MY_MPI_EXE} -np ${NPROC} hostname
-	echo "hostname Exit status: $?"
+	#	${MY_MPI_EXE} -np ${NPROC} hostname
+	# echo "hostname Exit status: $?"
 
 	# add -l for verbose logging of output 
 	${MY_MPI_EXE} -np ${NPROC} ../compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
@@ -69,7 +69,7 @@ then
 	touch $JOB_RAN_FILE
 fi
 
-${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+#${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 echo "evaluate_derivatives Exit status: $?"
 

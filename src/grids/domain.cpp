@@ -869,18 +869,24 @@ void Domain::writeOMapToFile(std::string filename) {
     std::string fname = "O_by_rank_";
     fname.append(filename);
     std::ofstream fout(fname.c_str());
+    int obr_count = 0;
     if (fout.is_open()) {
-        std::vector<int>::iterator mit;
+        std::vector< std::vector<int> >::iterator mit;
+        std::vector<int>::iterator nit;
         int i = 0;
-        for (mit = loc_to_glob.begin(); mit != loc_to_glob.end(); mit++, i++) {
-            fout << i << " " << (*mit) << std::endl;
+        for (mit = O_by_rank.begin(); mit != O_by_rank.end(); mit++, i++) {
+            for (nit = (*mit).begin(); nit != (*mit).end(); nit++, obr_count++) {
+                // We write the <rank> <node_indx> to file.
+                fout << i << " " << (*nit) << std::endl;
+            }
         }
     } else {
         printf("Error opening file to write\n");
         exit(EXIT_FAILURE);
     }
     fout.close();
-    std::cout << "[Domain] \tWrote " << loc_to_glob.size() << " local to global index map elements to \t" << fname << std::endl;
+    std::cout << "[Domain] \tWrote " << obr_count << " O_by_rank map elements to \t" << fname << std::endl;
+
 
 }
 
@@ -891,21 +897,25 @@ void Domain::writeRMapToFile(std::string filename) {
     std::string fname = "R_by_rank_";
     fname.append(filename);
     std::ofstream fout(fname.c_str());
+    int rbr_count = 0;
     if (fout.is_open()) {
-        std::vector<int>::iterator mit;
+        std::vector< std::vector<int> >::iterator mit;
+        std::vector<int>::iterator nit;
         int i = 0;
-        for (mit = loc_to_glob.begin(); mit != loc_to_glob.end(); mit++, i++) {
-            fout << i << " " << (*mit) << std::endl;
+        for (mit = R_by_rank.begin(); mit != R_by_rank.end(); mit++, i++) {
+            for (nit = (*mit).begin(); nit != (*mit).end(); nit++, rbr_count++) {
+                // We write the <rank> <node_indx> to file.
+                fout << i << " " << (*nit) << std::endl;
+            }
         }
     } else {
         printf("Error opening file to write\n");
         exit(EXIT_FAILURE);
     }
     fout.close();
-    std::cout << "[Domain] \tWrote " << loc_to_glob.size() << " local to global index map elements to \t" << fname << std::endl;
+    std::cout << "[Domain] \tWrote " << rbr_count << " R_by_rank map elements to \t" << fname << std::endl;
 
 }
-
 
 //----------------------------------------------------------------------
 

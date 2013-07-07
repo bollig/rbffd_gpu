@@ -20,7 +20,7 @@
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
 #include "rbffd/rbffd.h"
-#include "rbffd/derivative_tests.h"
+#include "rbffd/spmv_test.h"
 
 #include <boost/program_options.hpp>
 
@@ -269,8 +269,7 @@ int main(int argc, char** argv) {
 
     tm["loadDomain"]->stop();
 
-#if 0
-    if (debug) {
+#if 1
         subdomain->printVerboseDependencyGraph();
         subdomain->printNodeList("All Centers Needed by This Process");
 
@@ -292,7 +291,6 @@ int main(int argc, char** argv) {
             }
         }
         printf("OK\n");
-    }
 #endif 
 
     tm["derSetup"]->start();
@@ -376,18 +374,21 @@ int main(int argc, char** argv) {
     //   b) alltoallv communication to synchronize output vector
     //   c) compute norms
     //   d) Need a class that inherits test and uses VCL, clSpMV formats
+    std::cout << " Builing SpMVTest\n";
 
-    SpMVTest *derTest = new SpMVTest(der); 
+    SpMVTest *derTest = new SpMVTest(der, subdomain, mpi_rank, mpi_size ); 
+    std::cout << " Built SpMVTest\n";
     derTest->useAlltoallv(true);
 
     // TODO: prime hw here.
-
+    std::cout << " Entering loop\n";
     for (int i = 0; i < 100; i++) { 
         tm["computeNorms"]->start();
         u_l2 = l2norm( mpi_rank, u);
         u_l1 = l1norm( mpi_rank, u);
         u_linf = linfnorm( mpi_rank, u);
         tm["computeNorms"]->stop();
+    std::cout << " Done with first norm in loop\n";
 
         // Verify that the CPU works
         // NOTE: we pass booleans at the end of the param list to indicate that
@@ -395,8 +396,9 @@ int main(int argc, char** argv) {
         // helps avoid overhead of passing "u" to the GPU.
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::X, u, xderiv_cpu, true);
+        derTest->SpMV(RBFFD::X, u, xderiv_cpu);
         tm["SpMV"]->stop();
+    std::cout << " Done with first spmv in loop\n";
 
         tm["computeNorms"]->start();
         x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu );
@@ -405,7 +407,7 @@ int main(int argc, char** argv) {
         tm["computeNorms"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, u, yderiv_cpu, false);
+        derTest->SpMV(RBFFD::Y, u, yderiv_cpu);
         tm["SpMV"]->stop();
 
         tm["computeNorms"]->start();
@@ -415,7 +417,7 @@ int main(int argc, char** argv) {
         tm["computeNorms"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, u, zderiv_cpu, false);
+        derTest->SpMV(RBFFD::Z, u, zderiv_cpu);
         tm["SpMV"]->stop();
 
         tm["computeNorms"]->start();
@@ -425,7 +427,7 @@ int main(int argc, char** argv) {
         tm["computeNorms"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, u, lderiv_cpu, false);
+        derTest->SpMV(RBFFD::LAPL, u, lderiv_cpu);
         tm["SpMV"]->stop();
 
 

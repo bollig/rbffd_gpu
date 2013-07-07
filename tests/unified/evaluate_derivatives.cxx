@@ -382,13 +382,12 @@ int main(int argc, char** argv) {
 
     // TODO: prime hw here.
     std::cout << " Entering loop\n";
-    for (int i = 0; i < 100; i++) { 
+    for (int i = 0; i < 10000; i++) { 
         tm["computeNorms"]->start();
         u_l2 = l2norm( mpi_rank, u);
         u_l1 = l1norm( mpi_rank, u);
         u_linf = linfnorm( mpi_rank, u);
         tm["computeNorms"]->stop();
-    std::cout << " Done with first norm in loop\n";
 
         // Verify that the CPU works
         // NOTE: we pass booleans at the end of the param list to indicate that
@@ -398,7 +397,6 @@ int main(int argc, char** argv) {
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::X, u, xderiv_cpu);
         tm["SpMV"]->stop();
-    std::cout << " Done with first spmv in loop\n";
 
         tm["computeNorms"]->start();
         x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu );
@@ -451,6 +449,9 @@ int main(int argc, char** argv) {
     }
     
     tm["cleanup"]->start();
+
+    delete(derTest); 
+
     // We used MPI_reduce for norms, so only the master needs to printkkj
     if (mpi_rank == 0) {
         std::cout << "U (L1, L2, Linf): " << u_l1 << ", " << u_l2 << ", " << u_linf << "\n"; 

@@ -189,12 +189,13 @@ class METISDomain : public Domain
             // Get the counts required by each of the processes first
             MPI_Alltoall(my_r_sizes, 1, MPI_INT, their_r_sizes, 1, MPI_INT, MPI_COMM_WORLD);
 
+#if 0
             if (id == 0) { 
                 for (int i = 0; i < comm_size; i++) {
-                    std::cout << "Rank[" << i << "] = " << their_r_sizes[i] << std::endl;
+                    std::cout << "Rank[" << i << "] needs " << their_r_sizes[i] << std::endl;
                 }
             }
-
+#endif 
 
             int sdispls[comm_size];
             int rdispls[comm_size];
@@ -214,8 +215,10 @@ class METISDomain : public Domain
                 R_tot += their_r_sizes[i]; 
             }
 
-            std::cout << "O_tot = " << O_tot << std::endl;
-            std::cout << "R_tot = " << R_tot << std::endl;
+#if 0
+            std::cout << "sending = " << O_tot << std::endl;
+            std::cout << "receiving = " << R_tot << std::endl;
+#endif
 
             int sendbuf[O_tot]; 
             int recvbuf[R_tot]; 
@@ -245,25 +248,6 @@ class METISDomain : public Domain
                     O_by_rank[i][j] = recvbuf[rdispls[i]+j]; 
                 }
             } 
-
-
-#if 0
-            // TODO: now get the actual dependencies
-
-            //std::cout << "START: " << nb_stencils << "\n";
-            //std::cout << "END : " << nb_nodes << "\n";
-            O_by_rank.clear(); 
-            O_by_rank.resize(comm_size); 
-
-            for (int i = nb_stencils ; i < nb_nodes; i++) { 
-                int rank = metis_part[l2g(i)];
-                int indx = l2g(i);
-                
-                // l2g(i) => global index
-                // metis_part[l2g(i)] => rank
-                O_by_rank[rank].push_back(indx); 
-            }
-#endif 
         } 
 }; 
 #endif 

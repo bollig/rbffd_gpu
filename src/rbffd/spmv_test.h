@@ -23,6 +23,8 @@ class SpMVTest
         bool alltoallv;
         int rank, size;
 
+        int sol_dim; 
+
         double* sbuf; 
         int* sendcounts; 
         int* sdispls; 
@@ -33,7 +35,7 @@ class SpMVTest
         EB::TimerList tm; 
 
     public: 
-        SpMVTest(RBFFD* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size) {
+        SpMVTest(RBFFD* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1) {
             setupTimers(); 
             allocateCommBuffers(); 
         }
@@ -47,38 +49,41 @@ class SpMVTest
             delete [] rbuf; 
 
             tm.printAll();
+            char buf[256]; 
+            sprintf(buf, "time_log.spmvtest.%d", rank); 
+            tm.writeToFile(buf);
             tm.clear();
         }
 
         void allocateCommBuffers() {
-            std::cout << "Allocating comm buffers\n";
-            std::cout << grid->O_by_rank.size() << "\n";
+            // std::cout << "Allocating comm buffers\n";
+            // std::cout << grid->O_by_rank.size() << "\n";
             this->sdispls = new int[grid->O_by_rank.size()]; 
             this->sendcounts = new int[grid->O_by_rank.size()]; 
             sdispls[0] = 0;
-            sendcounts[0] = grid->dim_num*(grid->O_by_rank[0].size()); 
+            sendcounts[0] = this->sol_dim*(grid->O_by_rank[0].size()); 
             unsigned int O_tot = sendcounts[0]; 
-            std::cout << "sdispl[" << 0 << "] = " << sdispls[0] << ", sendcounts = " << sendcounts[0] << std::endl;
+            //std::cout << "sdispl[" << 0 << "] = " << sdispls[0] << ", sendcounts = " << sendcounts[0] << std::endl;
             for (size_t i = 1; i < grid->O_by_rank.size(); i++) {
-                sendcounts[i] = grid->dim_num*(grid->O_by_rank[i].size()); 
+                sendcounts[i] = this->sol_dim*(grid->O_by_rank[i].size()); 
                 sdispls[i] = sdispls[i-1] + sendcounts[i-1];
                 O_tot += sendcounts[i]; 
-                std::cout << "sdispl[" << i << "] = " << sdispls[i] << ", sendcounts = " << sendcounts[i] << std::endl;
+                //std::cout << "sdispl[" << i << "] = " << sdispls[i] << ", sendcounts = " << sendcounts[i] << std::endl;
             }
             
             this->rdispls = new int[grid->R_by_rank.size()]; 
             this->recvcounts = new int[grid->R_by_rank.size()]; 
             rdispls[0] = 0; 
-            recvcounts[0] = grid->dim_num*grid->R_by_rank[0].size(); 
+            recvcounts[0] = this->sol_dim*grid->R_by_rank[0].size(); 
             unsigned int R_tot = recvcounts[0];
             for (size_t i = 1; i < grid->R_by_rank.size(); i++) {
                 rdispls[i] = rdispls[i-1] + recvcounts[i-1];
-                recvcounts[i] = grid->dim_num*grid->R_by_rank[i].size(); 
+                recvcounts[i] = this->sol_dim*grid->R_by_rank[i].size(); 
                 R_tot += recvcounts[i]; 
             }
 
-            std::cout << "O_tot = " << O_tot << std::endl;
-            std::cout << "R_tot = " << R_tot << std::endl;
+            // std::cout << "O_tot = " << O_tot << std::endl;
+            // std::cout << "R_tot = " << R_tot << std::endl;
 
             // Not sure if we need to use malloc to guarantee contiguous?
             this->sbuf = new double[O_tot];  
@@ -153,8 +158,8 @@ class SpMVTest
                         k = this->sdispls[i]; 
                         for (size_t j = 0; j < grid->O_by_rank[i].size(); j++) {
                             unsigned int s_indx = grid->g2l(grid->O_by_rank[i][j]);
-                            s_indx *= grid->dim_num; 
-                            for (unsigned int d=0; d < grid->dim_num; d++) {
+                            s_indx *= this->sol_dim; 
+                            for (unsigned int d=0; d < this->sol_dim; d++) {
                                 this->sbuf[k] = vec[s_indx+d];
                                 k++; 
                             }
@@ -166,7 +171,7 @@ class SpMVTest
                     MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
                     tm["alltoallv"]->stop(); 
 
-                    tm["post_alltotallv"]->start();
+                    tm["post_alltoallv"]->start();
                     // IF we need this barrier then our results will vary as #proc increases
                     // but I dont think alltoall requires a barrier. internally
                     // it can be isend/irecv but there should be a barrier
@@ -178,21 +183,21 @@ class SpMVTest
                         k = this->rdispls[i]; 
                         for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
                             unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                            r_indx *= grid->dim_num;
+                            r_indx *= this->sol_dim;
                             //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
                             //                                    std::cout << "Receiving " << r_indx << "\n";
                             // TODO: need to translate to local
                             // indexing properly. This hack assumes all
                             // boundary are dirichlet and appear first
                             // in the list
-                            for (unsigned int d=0; d < grid->dim_num; d++) { 
+                            for (unsigned int d=0; d < this->sol_dim; d++) { 
                                 vec[r_indx+d] = this->rbuf[k];  
                                 k++; 
                             }
                         }
                     }
 
-                    tm["post_alltotallv"]->stop();
+                    tm["post_alltoallv"]->stop();
                     // Make sure to barrier here so we know when all communication is done for all processors
                     //MPI_Barrier(MPI_COMM_WORLD);
                     // NOTE: actually Alltoallv has internal barrier (as of MPI

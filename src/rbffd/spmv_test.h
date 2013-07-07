@@ -109,10 +109,6 @@ class SpMVTest
         // Does a simple CPU CSR SpMV
         // can apply to subset of problem 
         void SpMV(RBFFD::DerType which, std::vector<double>& u, std::vector<double>& out_deriv) {
-            tm["synchronize"]->start();
-            this->synchronize(u);
-            tm["synchronize"]->stop();
- 
             tm["spmv"]->start();
             std::vector<double*> DM = rbffd->getWeights(which);
             std::vector<StencilType>& stencils = grid->getStencils();

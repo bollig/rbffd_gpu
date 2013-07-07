@@ -31,7 +31,7 @@ double l1norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2)
 double l1norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2, int n1, int n2) {
     double global_val = 0;
     // reuse the local norms from norms.h
-    double local_val = l2norm(v1, v2, n1, n2);
+    double local_val = l1norm(v1, v2, n1, n2);
     NORM_REDUCE(&local_val, &global_val, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return global_val;
 }
@@ -78,7 +78,7 @@ double l2norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2, in
 
 double l2norm(int mpi_rank, std::vector<double>& v1)
 {
-    return l1norm(mpi_rank, v1, 0, v1.size());
+    return l2norm(mpi_rank, v1, 0, v1.size());
 }
 
 //----------------------------------------------------------------------
@@ -95,7 +95,7 @@ double l2norm(int mpi_rank, std::vector<double>& v1, int n1, int n2) {
 
 double linfnorm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2) {
     if (v1.size() != v2.size()) {
-        std::cout << "Error! in l2norm(...): vectors are not same length. assuming 0's for missing elements" << std::endl;
+        std::cout << "Error! in linfnorm(...): vectors are not same length. assuming 0's for missing elements" << std::endl;
         //exit(EXIT_FAILURE);
     }
 

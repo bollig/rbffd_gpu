@@ -199,11 +199,14 @@ int main(int argc, char** argv) {
             }
         }
 #else
-        typedef boost::adjacency_matrix<boost::undirectedS> UGraph;
+        // Note: this assumes a dense matrix underneath
+        typedef property<vertex_index_t, int > VertexProperty;
+        typedef boost::adjacency_list<boost::setS, boost::vecS, boost::undirectedS, VertexProperty> UGraph;
         UGraph ug(grid->getNodeListSize());
 
         for (int i = 0; i < grid_size; i++) { 
             StencilType& s = grid->getStencil(i); 
+
             // Start with index 1 to neglect the connection to
             // itself (the 1 on diag of matrix). Its assumed by metis. 
             for (int j = 1; j < stencil_size; j++) {
@@ -214,8 +217,8 @@ int main(int argc, char** argv) {
             }
         }
 #endif  
-        tm["assemble_METIS_graph"]->stop(); 
         std::cout << "Assembled.\n";
+        tm["assemble_METIS_graph"]->stop(); 
 
         tm["output_METIS_graph"]->start(); 
         // Dump the graph file for METIS

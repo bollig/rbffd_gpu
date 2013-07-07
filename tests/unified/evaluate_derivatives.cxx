@@ -382,10 +382,10 @@ int main(int argc, char** argv) {
 
     // TODO: prime hw here.
     std::cout << " Entering loop\n";
-    for (int i = 0; i < 10000; i++) { 
+    for (int i = 0; i < 1; i++) { 
         tm["computeNorms"]->start();
-        u_l2 = l2norm( mpi_rank, u);
-        u_l1 = l1norm( mpi_rank, u);
+        u_l2 = l2norm( mpi_rank, u, 0, N_part);
+        u_l1 = l1norm( mpi_rank, u, 0, N_part);
         u_linf = linfnorm( mpi_rank, u);
         tm["computeNorms"]->stop();
 
@@ -399,9 +399,9 @@ int main(int argc, char** argv) {
         tm["SpMV"]->stop();
 
         tm["computeNorms"]->start();
-        x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu );
-        x_l1 = l1norm( mpi_rank, u_x, xderiv_cpu );
-        x_linf = linfnorm( mpi_rank, u_x, xderiv_cpu );
+        x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu , 0 , N_part);
+        x_l1 = l1norm( mpi_rank, u_x, xderiv_cpu, 0 , N_part );
+        x_linf = linfnorm( mpi_rank, u_x, xderiv_cpu , 0 , N_part);
         tm["computeNorms"]->stop();
 
         tm["SpMV"]->start();
@@ -409,9 +409,9 @@ int main(int argc, char** argv) {
         tm["SpMV"]->stop();
 
         tm["computeNorms"]->start();
-        y_l2 = l2norm( mpi_rank, u_y, yderiv_cpu );
-        y_l1 = l1norm( mpi_rank, u_y, yderiv_cpu );
-        y_linf = linfnorm( mpi_rank, u_y, yderiv_cpu );
+        y_l2 = l2norm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
+        y_l1 = l1norm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
+        y_linf = linfnorm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
         tm["computeNorms"]->stop();
 
         tm["SpMV"]->start();
@@ -419,9 +419,9 @@ int main(int argc, char** argv) {
         tm["SpMV"]->stop();
 
         tm["computeNorms"]->start();
-        z_l2 = l2norm( mpi_rank, u_z, zderiv_cpu );
-        z_l1 = l1norm( mpi_rank, u_z, zderiv_cpu );
-        z_linf = linfnorm( mpi_rank, u_z, zderiv_cpu );
+        z_l2 = l2norm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
+        z_l1 = l1norm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
+        z_linf = linfnorm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
         tm["computeNorms"]->stop();
 
         tm["SpMV"]->start();
@@ -430,9 +430,9 @@ int main(int argc, char** argv) {
 
 
         tm["computeNorms"]->start();
-        l_l2 = l2norm( mpi_rank, u_l, lderiv_cpu );
-        l_l1 = l1norm( mpi_rank, u_l, lderiv_cpu );
-        l_linf = linfnorm( mpi_rank, u_l, lderiv_cpu );
+        l_l2 = l2norm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
+        l_l1 = l1norm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
+        l_linf = linfnorm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
         tm["computeNorms"]->stop();
 
         // Ensure that the compiler is not trimming this loop by 
@@ -442,9 +442,9 @@ int main(int argc, char** argv) {
             u_new[j] = u[j] + 0.001 * (xderiv_cpu[j] + yderiv_cpu[j] + zderiv_cpu[j]);
         }
         tm["computeNorms"]->start();
-        n_l2 = l2norm( mpi_rank, u_new);
-        n_l1 = l1norm( mpi_rank, u_new);
-        n_linf = linfnorm( mpi_rank, u_new);
+        n_l2 = l2norm( mpi_rank, u_new, 0 , N_part);
+        n_l1 = l1norm( mpi_rank, u_new, 0 , N_part);
+        n_linf = linfnorm( mpi_rank, u_new, 0 , N_part);
         tm["computeNorms"]->stop();
     }
     

@@ -7,9 +7,9 @@
 //----------------------------------------------------------------------
 // L1 Norms
 //----------------------------------------------------------------------
-//double l1norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2, int n1, int n2);
+double l1norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2, int n1, int n2);
 double l1norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2); 
-//double l1norm(int mpi_rank, std::vector<double>& v1, int n1, int n2);
+double l1norm(int mpi_rank, std::vector<double>& v1, int n1, int n2);
 double l1norm(int mpi_rank, std::vector<double>& v1);
 //----------------------------------------------------------------------
 
@@ -25,10 +25,10 @@ double l1norm(int mpi_rank, std::vector<double>& v1);
 //----------------------------------------------------------------------
 // L2 Norms
 //----------------------------------------------------------------------
-//double l2norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2, int n1, int n2);
+double l2norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2, int n1, int n2);
 double l2norm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2);
 double l2norm(int mpi_rank, std::vector<double>& v1);
-//double l2norm(int mpi_rank, std::vector<double>& v1, int n1, int n2);
+double l2norm(int mpi_rank, std::vector<double>& v1, int n1, int n2);
 //double l2norm(int mpi_rank, double v1);
 //double l2norm(int mpi_rank, Vec3& v1);
 //----------------------------------------------------------------------
@@ -45,10 +45,10 @@ double l2norm(int mpi_rank, std::vector<double>& v1);
 //----------------------------------------------------------------------
 // Linf (Infinity) Norms
 //----------------------------------------------------------------------
-//double linfnorm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2, int n1, int n2);
+double linfnorm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2, int n1, int n2);
 double linfnorm(int mpi_rank, std::vector<double>& v1, std::vector<double>& v2);
 double linfnorm(int mpi_rank, std::vector<double>& v1);
-//double linfnorm(int mpi_rank, std::vector<double>& v1, int n1, int n2);
+double linfnorm(int mpi_rank, std::vector<double>& v1, int n1, int n2);
 //----------------------------------------------------------------------
 
 #endif 

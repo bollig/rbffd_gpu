@@ -376,9 +376,10 @@ int main(int argc, char** argv) {
     //   d) Need a class that inherits test and uses VCL, clSpMV formats
     std::cout << " Builing SpMVTest\n";
 
+    // Run an SpMV test that uses MPI_Alltoallv for synchronization of the
+    // solution vector
     SpMVTest *derTest = new SpMVTest(der, subdomain, mpi_rank, mpi_size ); 
     std::cout << " Built SpMVTest\n";
-    derTest->useAlltoallv(true);
 
     // TODO: prime hw here.
     std::cout << " Entering loop\n";

@@ -20,7 +20,6 @@ class SpMVTest
     protected:
         RBFFD* rbffd; 
         Domain* grid; 
-        bool alltoallv;
         int rank, size;
 
         int sol_dim; 
@@ -56,6 +55,7 @@ class SpMVTest
         }
 
         void allocateCommBuffers() {
+            tm["allocateCommBufs"]->start();
             // std::cout << "Allocating comm buffers\n";
             // std::cout << grid->O_by_rank.size() << "\n";
             this->sdispls = new int[grid->O_by_rank.size()]; 
@@ -88,6 +88,7 @@ class SpMVTest
             // Not sure if we need to use malloc to guarantee contiguous?
             this->sbuf = new double[O_tot];  
             this->rbuf = new double[R_tot];
+            tm["allocateCommBufs"]->stop();
         }
 
 
@@ -99,11 +100,7 @@ class SpMVTest
             tm["pre_alltoallv"] = new EB::Timer("[SpMVTest] Memcpy input to MPI_Alltoallv"); 
             tm["post_alltoallv"] = new EB::Timer("[SpMVTest] Memcpy output from Alltoallv");
             tm["sendrecv_wait"] = new EB::Timer("[SpMVTest] Barrier before MPI_Alltoallv"); 
-        }
-
-        // Enable / disable Alltoallv (alternative: send/recv)
-        void useAlltoallv(bool yn) {
-            alltoallv = yn;
+            tm["allocateCommBufs"] = new EB::Timer("[SpMVTest] Allocate buffers for MPI_Alltoallv");
         }
 
         // Does a simple CPU CSR SpMV

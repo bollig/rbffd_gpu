@@ -85,7 +85,7 @@ double l2norm(int mpi_rank, std::vector<double>& v1)
 
 double l2norm(int mpi_rank, std::vector<double>& v1, int n1, int n2) {
     double global_val = 0;
-    double local_val = l2norm(v1);
+    double local_val = l2norm(v1, n1, n2);
     local_val *= local_val;
     NORM_REDUCE(&local_val, &global_val, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return sqrt(global_val);

@@ -144,7 +144,9 @@ class Domain : public Grid, public MPISendable
         virtual void writeExtraToFile(std::string filename) {
             this->writeG2LToFile(filename);
             this->writeL2GToFile(filename);
-  	    this->writeStencilsToFile(filename);
+            this->writeStencilsToFile(filename);
+            this->writeOMapToFile(filename);
+            this->writeRMapToFile(filename);
            // this->writeLocalSolutionToFile(filename);
         }
 
@@ -152,12 +154,15 @@ class Domain : public Grid, public MPISendable
         // initializing on master and then distributing. This would provide
         // restart capabiility!
         virtual Grid::GridLoadErrType loadExtraFromFile(std::string filename) {
-		Grid::GridLoadErrType status = this->loadG2LFromFile(filename);
-		if (status) { return status; }
-		status = this->loadL2GFromFile(filename);
-		if (status) { return status; }
-
-		return GRID_AND_STENCILS_LOADED;
+            Grid::GridLoadErrType status = this->loadG2LFromFile(filename);
+            if (status) { return status; }
+            status = this->loadL2GFromFile(filename);
+            if (status) { return status; }
+            status = this->loadOMapFromFile(filename);
+            if (status) { return status; }
+            status = this->loadRMapFromFile(filename);
+            if (status) { return status; }
+            return GRID_AND_STENCILS_LOADED;
         }
 
         //--------------------------------------------------
@@ -165,9 +170,13 @@ class Domain : public Grid, public MPISendable
         //--------------------------------------------------
         void writeG2LToFile(std::string filename); 
         void writeL2GToFile(std::string filename); 
+        void writeOMapToFile(std::string filename); 
+        void writeRMapToFile(std::string filename); 
 
         Grid::GridLoadErrType loadG2LFromFile(std::string grid_filename); 
         Grid::GridLoadErrType loadL2GFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadOMapFromFile(std::string grid_filename); 
+        Grid::GridLoadErrType loadRMapFromFile(std::string grid_filename); 
 
         // Decompose the current domain into x_divisions by y_divisions by z_divisions. 	
         void generateDecomposition(std::vector<Domain*>& subdomains, int x_divisions, int y_divisions = 1, int z_divisions = 1); 

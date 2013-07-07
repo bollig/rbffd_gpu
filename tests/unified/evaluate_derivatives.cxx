@@ -269,7 +269,7 @@ int main(int argc, char** argv) {
 
     tm["loadDomain"]->stop();
 
-#if 1
+#if 0
         subdomain->printVerboseDependencyGraph();
         subdomain->printNodeList("All Centers Needed by This Process");
 

@@ -864,6 +864,51 @@ void Domain::writeL2GToFile(std::string filename) {
 
 //----------------------------------------------------------------------
 
+void Domain::writeOMapToFile(std::string filename) {
+
+    std::string fname = "O_by_rank_";
+    fname.append(filename);
+    std::ofstream fout(fname.c_str());
+    if (fout.is_open()) {
+        std::vector<int>::iterator mit;
+        int i = 0;
+        for (mit = loc_to_glob.begin(); mit != loc_to_glob.end(); mit++, i++) {
+            fout << i << " " << (*mit) << std::endl;
+        }
+    } else {
+        printf("Error opening file to write\n");
+        exit(EXIT_FAILURE);
+    }
+    fout.close();
+    std::cout << "[Domain] \tWrote " << loc_to_glob.size() << " local to global index map elements to \t" << fname << std::endl;
+
+}
+
+//----------------------------------------------------------------------
+
+void Domain::writeRMapToFile(std::string filename) {
+
+    std::string fname = "R_by_rank_";
+    fname.append(filename);
+    std::ofstream fout(fname.c_str());
+    if (fout.is_open()) {
+        std::vector<int>::iterator mit;
+        int i = 0;
+        for (mit = loc_to_glob.begin(); mit != loc_to_glob.end(); mit++, i++) {
+            fout << i << " " << (*mit) << std::endl;
+        }
+    } else {
+        printf("Error opening file to write\n");
+        exit(EXIT_FAILURE);
+    }
+    fout.close();
+    std::cout << "[Domain] \tWrote " << loc_to_glob.size() << " local to global index map elements to \t" << fname << std::endl;
+
+}
+
+
+//----------------------------------------------------------------------
+
 Grid::GridLoadErrType Domain::loadG2LFromFile(std::string filename) {
 	std::string fname = "g2lmap_";
 	fname.append(filename);
@@ -921,6 +966,73 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
 	std::cout << "[" << this->className() << "] \tLoaded " << loc_to_glob.size() << " global to local mappings from \t" << fname << std::endl;
 	return GRID_AND_STENCILS_LOADED;
 }
+
+//----------------------------------------------------------------------
+
+Grid::GridLoadErrType Domain::loadOMapFromFile(std::string filename) {
+	std::string fname = "O_by_rank_";
+	fname.append(filename);
+	std::cout << "[" << this->className() << "] \treading O_by_rank map file: " << fname << std::endl;
+
+	std::ifstream fin;
+	fin.open(fname.c_str());
+    O_by_rank.resize(comm_size);
+
+    int obr_count = 0;
+
+	if (fin.is_open()) {
+		while (fin.good()) {
+			unsigned int O_indx, lrank;
+			fin >> lrank >> O_indx;
+			if (!fin.eof()) {
+				O_by_rank[lrank].push_back(O_indx);
+                obr_count++;
+			}
+		}
+	} else {
+		printf("Error opening O_by_rank file to read\n");
+		return NO_EXTRA_FILES;
+	}
+
+	fin.close();
+
+	std::cout << "[" << this->className() << "] \tLoaded " << obr_count << " mappings from \t" << fname << std::endl;
+	return GRID_AND_STENCILS_LOADED;
+}
+
+//----------------------------------------------------------------------
+
+Grid::GridLoadErrType Domain::loadRMapFromFile(std::string filename) {
+	std::string fname = "R_by_rank_";
+	fname.append(filename);
+	std::cout << "[" << this->className() << "] \treading R_by_rank map file: " << fname << std::endl;
+
+	std::ifstream fin;
+	fin.open(fname.c_str());
+    R_by_rank.resize(comm_size);
+
+    int obr_count = 0;
+
+	if (fin.is_open()) {
+		while (fin.good()) {
+			unsigned int O_indx, lrank;
+			fin >> lrank >> O_indx;
+			if (!fin.eof()) {
+				R_by_rank[lrank].push_back(O_indx);
+                obr_count++;
+			}
+		}
+	} else {
+		printf("Error opening R_by_rank file to read\n");
+		return NO_EXTRA_FILES;
+	}
+
+	fin.close();
+
+	std::cout << "[" << this->className() << "] \tLoaded " << obr_count << " mappings from \t" << fname << std::endl;
+	return GRID_AND_STENCILS_LOADED;
+}
+
 
 
 //----------------------------------------------------------------------

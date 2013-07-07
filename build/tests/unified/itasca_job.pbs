@@ -49,8 +49,10 @@ MY_MPI_EXE="mpirun -r ssh -l"
 date
 
 MD=165
-N=1000
+N=1000000
 STEN_SIZE=101
+NPERDIM=100
+GRID_FILE=$HOME/GRIDS/regular/${NPERDIM}_cubed/regulargrid_${NPERDIM}x_${NPERDIM}y_${NPERDIM}z_final.ascii
 
 NPROC=$PBS_NP
 #NPROC=1
@@ -62,7 +64,6 @@ JOB_RAN_FILE=job_ran
 TEST_TYPE=reg
 NEW_WORKDIR=$PBS_O_WORKDIR/${TEST_TYPE}_${N}_${STEN_SIZE}_${NPROC}proc
 
-GRID_FILE=$HOME/GRIDS/regular/10_cubed/regulargrid_10x_10y_10z_final.ascii
 
 mkdir -p $NEW_WORKDIR
 cd $NEW_WORKDIR

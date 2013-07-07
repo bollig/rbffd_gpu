@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
 
     // TODO: prime hw here.
     std::cout << " Entering loop\n";
-    for (int i = 0; i < 1; i++) { 
+    for (int i = 0; i < 1000; i++) { 
         tm["computeNorms"]->start();
         u_l2 = l2norm( mpi_rank, u, 0, N_part);
         u_l1 = l1norm( mpi_rank, u, 0, N_part);

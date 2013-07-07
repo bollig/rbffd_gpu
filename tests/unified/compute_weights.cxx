@@ -254,10 +254,12 @@ int main(int argc, char** argv) {
 	Domain* subdomain; 
 	subdomain = new METISDomain(mpi_rank, mpi_size, grid, grid_dim, partition_filename, part_file_loaded); 
 	subdomain->writeToFile(); 
+#if 1
 	VtuDomainWriter* vtu = new VtuDomainWriter(subdomain, mpi_rank, mpi_size);
 	std::cout << "DECOMPOSED\n";
+#endif 
 
-#if 1
+#if 0
 	if (debug) {
 		subdomain->printVerboseDependencyGraph();
 		subdomain->printNodeList("All Centers Needed by This Process");
@@ -284,6 +286,7 @@ int main(int argc, char** argv) {
 #endif 
 
 	tm["derSetup"]->start();
+    std::cout << "Computing Weights\n";
 	RBFFD* der = new RBFFD(weight_choices, subdomain, grid_dim, mpi_rank);
 
 	der->setUseHyperviscosity(use_hyperviscosity);

@@ -6,6 +6,7 @@
 
 #include <boost/program_options.hpp>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/adjacency_matrix.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/undirected_graph.hpp>
 #include <boost/graph/directed_graph.hpp>
@@ -34,6 +35,9 @@ int main(int argc, char** argv) {
 	tm["stencils"] = new Timer("[Main] Stencil generation");
 	tm["writeStencils"] = new Timer("[Main] Write Stencils to Disk");
 	tm["settings"] = new Timer("[Main] Load settings");
+    tm["METIS_graph"] = new Timer("[Main] Assemble and write METIS graph to file"); 
+    tm["assemble_METIS_graph"] = new Timer("[Main] Assemble METIS graph"); 
+    tm["output_METIS_graph"] = new Timer("[Main] write METIS graph to file"); 
 
 	tm["total"]->start();
 
@@ -159,80 +163,105 @@ int main(int argc, char** argv) {
 		tm["writeStencils"]->stop();
 	}
 
+    tm["METIS_graph"]->start(); 
+    std::cout << "Generating Adjacency Graph for METIS\n";
 	{
-		// Assemble a DIRECTED graph that is the spadjacency_list our stencils
-//		typedef adjacency_list <boost::vecS, boost::setS, boost::bidirectionalS> Graph;
-
-#if BOOST_VERSION > 104900
-		typedef boost::undirected_graph<> Graph;
-#else
-	// For Older versions of boost.
-        typedef boost::adjacency_list < boost::vecS, boost::vecS, boost::undirectedS> Graph;
-#endif
-		Graph g;
-		Graph::vertex_descriptor vds[grid_size]; 
-
-		// Since the graph uses setS we cant use int indices for
-		// vertices. These will be our ref indices
-		for (int i = 0; i < grid_size; i++) {
-			vds[i] = g.add_vertex();
-		}
-
-		for (int i = 0; i < grid_size; i++) { 
-			StencilType& s = grid->getStencil(i); 
-			// Start with index 1 to neglect the connection to
-			// itself (the 1 on diag of matrix). Its assumed by metis. 
-			for (int j = 1; j < stencil_size; j++) {
-				if (s[j] < grid_size) 
-				{
-					g.add_edge(vds[i], vds[s[j]]);
-				}
-			}
-		}
+        tm["assemble_METIS_graph"]->start(); 
+        // Assemble a DIRECTED graph that is the spadjacency_list our stencils
+        //		typedef adjacency_list <boost::vecS, boost::setS, boost::bidirectionalS> Graph;
 
 #if 0
-	// perhaps we can visualize with graphviz?
-		std::ofstream gvout("undirected_graph.graphviz"); 
-		write_graphviz(gvout, g);
-		gvout.close();
-		std::cout << "Wrote the graphviz file: undirected_graph.graphviz" << std::endl;
-#endif 
+        // TODO: we might need this for backwards compat.
+#if BOOST_VERSION > 104900
+        typedef boost::undirected_graph<> Graph;
+#else
+        // For Older versions of boost.
+        typedef boost::adjacency_list < boost::vecS, boost::vecS, boost::undirectedS> Graph;
+#endif
+        Graph g;
+        Graph::vertex_descriptor vds[grid_size]; 
 
-		// Dump the graph file for METIS
+        // Since the graph uses setS we cant use int indices for
+        // vertices. These will be our ref indices
+        for (int i = 0; i < grid_size; i++) {
+            vds[i] = g.add_vertex();
+        }
 
-		std::ostringstream grouts;
-		// First the number of vertices, edges
-		// Then all connections for each node (assumes at least one connection per node
-		unsigned int num_edges = 0;
-	      	for (int i = 0; i < boost::num_vertices(g); i++) {
-			boost::graph_traits<Graph>::adjacency_iterator e, e_end;
-			boost::graph_traits<Graph>::vertex_descriptor 
-				s = boost::vertex(i, g);
-			//cout << "the edges incident to v: " << i+1 << "\n";
-			std::set<unsigned int> unique_verts; 
-			for (tie(e, e_end) = boost::adjacent_vertices(s, g); e != e_end; ++e) {
-				unique_verts.insert(get_vertex_index(*e,g)); 
-			}
-			for (std::set<unsigned int>::iterator it = unique_verts.begin(); it != unique_verts.end(); it++) {
-				// Add 1 to the index to make sure we are indexing from 1 in metis
-			//	std::cout << (*it) + 1 << "\n";
-				grouts << (*it) + 1 << " ";
-				num_edges++; 
-			}
-			grouts << "\n";
-		}	
+        for (int i = 0; i < grid_size; i++) { 
+            StencilType& s = grid->getStencil(i); 
+            // Start with index 1 to neglect the connection to
+            // itself (the 1 on diag of matrix). Its assumed by metis. 
+            for (int j = 1; j < stencil_size; j++) {
+                if (s[j] < grid_size) 
+                {
+                    g.add_edge(vds[i], vds[s[j]]);
+                }
+            }
+        }
+#else
+        typedef boost::adjacency_matrix<boost::undirectedS> UGraph;
+        UGraph ug(grid->getNodeListSize());
 
-		std::ofstream grout("metis_stencils.graph"); 
-		// We can divide num_edges by 2 to get correct count because edges are symmetric
-		grout << boost::num_vertices(g) << " " << num_edges / 2 << "\n"; 
-		grout << grouts.str();
-		
-		grout.close();
-		std::cout << "Wrote the METIS graph file: metis_stencils.graph" << std::endl;
-	}
+        for (int i = 0; i < grid_size; i++) { 
+            StencilType& s = grid->getStencil(i); 
+            // Start with index 1 to neglect the connection to
+            // itself (the 1 on diag of matrix). Its assumed by metis. 
+            for (int j = 1; j < stencil_size; j++) {
+                if (s[j] < grid_size) 
+                {
+                    boost::add_edge(i, s[j], ug);
+                }
+            }
+        }
+#endif  
+        tm["assemble_METIS_graph"]->stop(); 
+        std::cout << "Assembled.\n";
+
+        tm["output_METIS_graph"]->start(); 
+        // Dump the graph file for METIS
+        
+        // Assemble the graph inplace in temp file:
+        char* outname = "metis_stencils.graph";
+        std::ofstream grout(outname);
+
+        // Assume we have an adjacency graph with all edges present as described
+        // by our stencils. Now we need to get the edges not present. To do
+        // this, we first iterate through all nodes and get any edges that
+        // connect to those nodes. Then, 
+        //  
+        //
+        // First the number of vertices, edges
+        // Then all connections for each node (assumes at least one connection per node
+        unsigned int num_edges = 0;
+
+        grout << boost::num_vertices(ug) << " " << boost::num_edges(ug) << "\n"; 
+        for (int i = 0; i < boost::num_vertices(ug); i++) {
+            boost::graph_traits<UGraph>::adjacency_iterator e, e_end;
+            boost::graph_traits<UGraph>::vertex_descriptor s = boost::vertex(i, ug);
+            // With the adjacency_matrix we assume 
+            // that edges are bidirectional and unique
+            for (tie(e, e_end) = boost::adjacent_vertices(s, ug); e != e_end; ++e) {
+                grout << *e + 1 << " ";
+                num_edges++; 
+            }
+            grout << "\n";
+        }
+
+        if (num_edges/2 != boost::num_edges(ug)) {
+            std::cout << "ERROR: num_edges does not match!\n";
+            exit(-1); 
+        }    
+
+        // This will delete the file:
+        grout.close();
+
+        tm["output_METIS_graph"]->stop(); 
+        std::cout << "Wrote the METIS graph file: metis_stencils.graph" << std::endl;
+    }
+    tm["METIS_graph"]->stop(); 
 
 
-	delete(grid);
+    delete(grid);
 	std::cout << "Deleted grid\n";
 
 	tm["total"]->stop();

@@ -729,11 +729,11 @@ void RBFFD_CL::applyWeightsForDerivSingle(DerType which, unsigned int start_indx
 void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_work_items, const cl::NDRange& items_per_workgroup, bool is_finish)
 {
 	cl_int err; // already defined in base opencl class
-	printf("before queue.enqueueNDRangeKernal\n");
+	//printf("before queue.enqueueNDRangeKernal\n");
     err = queue.enqueueNDRangeKernel(kernel, /* offset */ cl::NullRange,
             tot_work_items, items_per_workgroup, NULL, &event);
 
-	printf("after queue.enqueueNDRangeKernal\n");
+	//printf("after queue.enqueueNDRangeKernal\n");
  
 //END-START gives you hints on kind of “pure HW execution time”
 //10
@@ -744,7 +744,7 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
 	std::vector<cl::Event> ve;
 	ve.push_back(event);
 
-	printf("after push_back\n");
+	//printf("after push_back\n");
     if (err != CL_SUCCESS) {
         std::cerr << "CommandQueue::enqueueNDRangeKernel()" \
             " failed (" << err << ")\n";
@@ -752,19 +752,21 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
         exit(EXIT_FAILURE);
     }
 
+	#if 0
 	if (is_finish) {
 		printf("wait for queue to finish\n");
 		try {
     		err = queue.finish();
-			printf("finish, err= %d\n", err);
+			//printf("finish, err= %d\n", err);
         	//queue.flush(); // needed? (done by clwaitForEvents);
     	} catch (cl::Error er) {
         	printf("[enqueueKernel] ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
 			exit(0);
     	}
-		printf("err= %d\n", err);
+		//printf("err= %d\n", err);
 	}
 	printf("after queue finish\n");
+	#endif
 
 	try {
 		printf("before waitForEvents\n");
@@ -779,6 +781,9 @@ void RBFFD_CL::enqueueKernel(const cl::Kernel& kernel, const cl::NDRange& tot_wo
 	event.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
 	gpu_kernel_exec_time = (float) (end-start)*1.e-6;
 	//printf("GPU execution time = %.2f (ms)\n", gpu_kernel_exec_time);
+	//
+	//  WaitForEvent: returns when event registers "COMPLETED"
+	//  Finish: returns all previously queued OpenCL commands are issued and have completed. 
 	return; // TEMPORARY
 }
 //----------------------------------------------------------------------

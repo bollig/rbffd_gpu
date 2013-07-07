@@ -7,4 +7,6 @@
 typedef double FLOAT; 
 typedef double4 FLOAT4;
 
+#include "cl_attributes.h"
+
 #endif 

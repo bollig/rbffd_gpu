@@ -34,3 +34,18 @@ Last kernel required:
   -------------
 
 ----------------------------------------------------------------------
+July 7, 2013
+Given 128^3 points and stencils with 32 nodes and evaluating derivatives for four derivatives, I am allocating
+in double precision, 
+128*128*128*32*4*8 = 2 Gbytes, which is larger than can be allocated on the GPU apparently. 
+
+There is some kind of error: 
+a_output_cascade_phi_/compact_x_weights_direct__no_hv_stsize_16_3d_128x_128y_128z.mtxb_FUN4_DERIV4_WEIGHT4_INV:
+Error does not occur in compact case. There is sufficient memory. 
+----------------------------------------------------------------------
+I removed "finished from rbffd_cl::enqueueKernel()
+----------------------------------------------------------------------
+July 7, 2013
+Removed call to clFinish() in rbffd_cl::enqueueKernel() . Error has gone away (although if it is memory-related somehow, I am afraid it will remake its appearance)
+----------------------------------------------------------------------
+----------------------------------------------------------------------

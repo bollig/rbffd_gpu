@@ -59,6 +59,22 @@ FUN_CL* der;
 using namespace std;
 
 //----------------------------------------------------------------------
+void printTimes(std::vector<double>& timings)
+{
+	double mean = 0.;
+	double std = 0.;
+	for (int i=0; i < timings.size(); i++) {
+		mean += timings[i];
+		std += timings[i]*timings[i];
+	}
+	mean /= timings.size();
+	std = sqrt(std/timings.size()-mean*mean);
+	printf("mean times: ");
+	for (int i=0; i < timings.size(); i++) printf("%f, ", timings[i]);
+	printf("\n");
+	printf("mean time= %f (ms), standard deviation= %f (ms)\n", mean, std);
+}
+//----------------------------------------------------------------------
 typedef std::vector<double> VD;
 void vectorBreakup(VD& v4_src, VD& va, VD& vb, VD& vc, VD& vd)
 {
@@ -120,7 +136,7 @@ void setupTimers(EB::TimerList& tm) {
     tm["deriv_accuracy"]     = new EB::Timer("[main] Derivative Accuracy");
     tm["sort+grid"]         = new EB::Timer("[main] Sort + Grid generation");
     tm["solution_check"]     = new EB::Timer("[main] Solution check");
-    tm.printAll(stdout, 60);
+    //tm.printAll(stdout, 60);
 }
 //----------------------------------------------------------------------
 void initializeArrays()
@@ -176,22 +192,21 @@ void computeOnGPU4()
     der->convertWeights();
     printf("after convertWeights\n");
 
+	std::vector<double> timing;
+	timing.resize(0);
+
     // Not in in RBBF (knows nothing about SuperBuffer). Must redesign
     switch (kernel_type) {
     case FUN1_DERIV4_WEIGHT4:
         deriv4_gpu = RBFFD_CL::SuperBuffer<double>(4*xderiv_cpu.size(), "deriv4_gpu"); 
-        der->computeDerivs(u_gpu, deriv4_gpu, true); 
-		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
-        der->computeDerivs(u_gpu, deriv4_gpu, true); 
-		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
-        der->computeDerivs(u_gpu, deriv4_gpu, true); 
-		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
-        der->computeDerivs(u_gpu, deriv4_gpu, true); 
-		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
-        der->computeDerivs(u_gpu, deriv4_gpu, true); 
-		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
-        der->computeDerivs(u_gpu, deriv4_gpu, true); 
-		printf("GPU execution time: %f (ms)\n", der->getGpuExecutionTime());
+		for (int i=0; i < 3; i++) {
+        	der->computeDerivs(u_gpu, deriv4_gpu, true); 
+		}
+		for (int i=0; i < 5; i++) {
+        	der->computeDerivs(u_gpu, deriv4_gpu, true); 
+			timing.push_back(der->getGpuExecutionTime());
+		}
+		printTimes(timing);
         deriv4_gpu.copyToHost();
         break;
     //case FUN1_DERIV1_WEIGHT4:
@@ -209,12 +224,14 @@ void computeOnGPU4()
 
         //printf("size of deriv arrays: %d, %d, %d, %d, %d\n", u_gpu.hostSize(), uderiv_gpu.hostSize(), vderiv_gpu.hostSize(), wderiv_gpu.hostSize(), pderiv_gpu.hostSize());
 
-        der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
-        der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
-        der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
-        der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
-        der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
-        der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
+		for (int i=0; i < 3; i++) {
+        	der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
+		}
+		for (int i=0; i < 5; i++) {
+        	der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
+			timing.push_back(der->getGpuExecutionTime());
+		}
+		printTimes(timing);
 
         uderiv_gpu.copyToHost();
         vderiv_gpu.copyToHost();
@@ -258,14 +275,19 @@ void computeOnGPU()
         //printf("[main] u_gpu[%d]= %f\n", i, u_gpu[i]);
     //}
 
+	std::vector<double> timing;
+	timing.resize(0);
+
     der->convertWeights();
     // Not in in RBBF (knows nothing about SuperBuffer). Must redesign
-    der->computeDerivs(u_gpu, xderiv_gpu, true); 
-    der->computeDerivs(u_gpu, xderiv_gpu, true); 
-    der->computeDerivs(u_gpu, xderiv_gpu, true); 
-    der->computeDerivs(u_gpu, xderiv_gpu, true); 
-    der->computeDerivs(u_gpu, xderiv_gpu, true); 
-    der->computeDerivs(u_gpu, xderiv_gpu, true); 
+	for (int i=0; i < 3; i++) {
+    	der->computeDerivs(u_gpu, xderiv_gpu, true); 
+	}
+	for (int i=0; i < 5; i++) {
+    	der->computeDerivs(u_gpu, xderiv_gpu, true); 
+		timing.push_back(der->getGpuExecutionTime());
+	}
+	printTimes(timing);
 
     //for (int i=0; i < 10; i++) {
         //printf("GPU bef) xder(i) = %f\n", i, xderiv_gpu[i]);
@@ -593,8 +615,13 @@ void createGrid()
     tm["sort+grid"]->end();
 
     tm["stencils"]->start();
-    Grid::st_generator_t stencil_type = Grid::ST_COMPACT;
-    //Grid::st_generator_t stencil_type = Grid::ST_RANDOM;
+    Grid::st_generator_t stencil_type;
+	std::string node_dist = REQUIRED<std::string>("NODE_DIST");
+	if (node_dist == "random") {
+    	stencil_type = Grid::ST_RANDOM;
+	} else if (node_dist == "compact") {
+    	stencil_type = Grid::ST_COMPACT;
+	}
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
     tm["stencils"]->end();
 
@@ -674,7 +701,7 @@ void cleanup()
 int main(int argc, char** argv)
 {
     setupTimers(tm);
-    tm.printAll(stdout, 60);
+    //tm.printAll(stdout, 60);
     //kernel_type = FUN1_DERIV4_WEIGHT4; // ux,uy,uz,up
     //kernel_type = FUN4_DERIV4_WEIGHT4;
     //kernel_type = FUN4_DERIV4_WEIGHT4_INV;

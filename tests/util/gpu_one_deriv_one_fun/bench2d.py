@@ -9,8 +9,8 @@ output_dir = "output_%s_%s" % (coprocessor, notes)
 
 #nb_sten = [16,31,32,33,64]
 #nb_pts = [8,16,32,64,128]
-nb_sten = [32]
-nb_pts = [64]
+nb_sten = [16,32]
+nb_pts = [64,128,256]
 sten = ["compact", "random"]
 
 #nb_sten = [32]
@@ -23,7 +23,9 @@ func_kernel = ["FUN_KERNEL",
                "FUN4_DERIV4_WEIGHT4_INV",
                "FUN1_DERIV4_WEIGHT4"]
 
-func_kernel = ["FUN1_DERIV4_WEIGHT4"]
+#func_kernel = ["FUN_KERNEL"]
+#func_kernel = ["FUN1_DERIV4_WEIGHT4"]
+
 
 os.system("mkdir %s" % output_dir )
 
@@ -46,7 +48,7 @@ for ns in nb_sten:
                        fd = open('data.conf', 'w')
                        fd.write(file_content)
                        fd.close()
-                       out_file = "%s_x_weights_direct__no_hv_stsize_%d_3d_%dx_%dy_1z.mtxb_%s" % (s,ns,np,np,kernel)
+                       out_file = "%s_x_weights_direct__no_hv_stsize_%d_2d_%dx_%dy_1z.mtxb_%s" % (s,ns,np,np,kernel)
                        out_full_path = "%s/%s" % (output_dir, out_file)
 
                        CMD = "cat data.conf > %s" % out_full_path

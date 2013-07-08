@@ -49,6 +49,7 @@ KernelType kernel_type;
 Grid* grid;
 int dim;
 int stencil_size;
+int nx, ny, nz;
 int use_gpu;
 EB::TimerList tm; 
 ProjectSettings* settings;
@@ -59,7 +60,17 @@ FUN_CL* der;
 using namespace std;
 
 //----------------------------------------------------------------------
-void printTimes(std::vector<double>& timings)
+#if 0
+double gigaFlops(int npts, int nsten, double time)
+// time: one matrix/vector multiply  (ms)
+{
+	double gflops = (2.*npts*nsten)/(time*1.e-3)*1.e-9;
+	return(gflops);
+	gigaFlops(nx*ny*nz, 
+}
+#endif
+//----------------------------------------------------------------------
+void printTimes(std::vector<double>& timings, int npts, int stencil_size, int nb_derivs)
 {
 	double mean = 0.;
 	double std = 0.;
@@ -69,10 +80,12 @@ void printTimes(std::vector<double>& timings)
 	}
 	mean /= timings.size();
 	std = sqrt(std/timings.size()-mean*mean);
+	double gflop = 2.*npts*stencil_size*nb_derivs*1.e-9 / (mean*1.e-3) ;
 	printf("mean times: ");
 	for (int i=0; i < timings.size(); i++) printf("%f, ", timings[i]);
+	double time_per_deriv = mean/nb_derivs;
 	printf("\n");
-	printf("mean time= %f (ms), standard deviation= %f (ms)\n", mean, std);
+	printf("mean time= %f (ms), standard deviation= %f (ms), Gflops: %f, time per derivative: %f (ms)\n", mean, std, gflop, time_per_deriv);
 }
 //----------------------------------------------------------------------
 typedef std::vector<double> VD;
@@ -206,7 +219,8 @@ void computeOnGPU4()
         	der->computeDerivs(u_gpu, deriv4_gpu, true); 
 			timing.push_back(der->getGpuExecutionTime());
 		}
-		printTimes(timing);
+		printTimes(timing, nx*ny*nz, stencil_size, 4);
+		//double gflop = gigaFlops(nx*ny*nz, stencil_size, mean_time);
         deriv4_gpu.copyToHost();
         break;
     //case FUN1_DERIV1_WEIGHT4:
@@ -231,7 +245,7 @@ void computeOnGPU4()
         	der->computeDerivs(u_gpu, uderiv_gpu, vderiv_gpu, wderiv_gpu, pderiv_gpu, true); 
 			timing.push_back(der->getGpuExecutionTime());
 		}
-		printTimes(timing);
+		printTimes(timing, nx*ny*nz, stencil_size, 16);
 
         uderiv_gpu.copyToHost();
         vderiv_gpu.copyToHost();
@@ -287,7 +301,7 @@ void computeOnGPU()
     	der->computeDerivs(u_gpu, xderiv_gpu, true); 
 		timing.push_back(der->getGpuExecutionTime());
 	}
-	printTimes(timing);
+	printTimes(timing, nx*ny*nz, stencil_size, 1);
 
     //for (int i=0; i < 10; i++) {
         //printf("GPU bef) xder(i) = %f\n", i, xderiv_gpu[i]);
@@ -590,9 +604,9 @@ void createGrid()
     tm["total"]->start();
 
     int dim = 3;
-    int nx = REQUIRED<int>("NB_X");
-    int ny = REQUIRED<int>("NB_Y");
-    int nz = REQUIRED<int>("NB_Z");
+    nx = REQUIRED<int>("NB_X");
+    ny = REQUIRED<int>("NB_Y");
+    nz = REQUIRED<int>("NB_Z");
 
     // FIX: PROGRAM TO DEAL WITH SINGLE WEIGHT 
 
@@ -605,6 +619,7 @@ void createGrid()
 
     stencil_size = REQUIRED<int>("STENCIL_SIZE"); 
     use_gpu      = OPTIONAL<int>("USE_GPU", "1"); 
+
 
     grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
     tm["total"]->end();

@@ -1,11 +1,13 @@
 # Must be used from build/tests/util/create_files
 # Makefile should place it there.  (does not at this time.)
 
+# all calculations done in double precision
+
 import os
 
 coprocessor = "cascade_phi"
 notes = "study_of_attributes"   # for output file name
-output_dir = "d_output_%s_%s" % (coprocessor, notes)
+output_dir = "e_output_%s_%s" % (coprocessor, notes)
 
 #nb_sten = [16,31,32,33,64]
 #nb_pts = [8,16,32,64,128]
@@ -19,22 +21,30 @@ func_kernel = ["FUN_KERNEL",
                "FUN4_DERIV4_WEIGHT4_INV",
                "FUN1_DERIV4_WEIGHT4"]
 
+# other options take much longer time. 
+func_kernel = ["FUN_KERNEL", 
+               "FUN4_DERIV4_WEIGHT4",
+               "FUN1_DERIV4_WEIGHT4"]
+
 kernel_attributes = ["double4", 
                      "double",
                      "float4",
                      "float",
                      ""]
 
+# float, double none produce the same results
+kernel_attributes = ["double4", ""]
+
 nb_sten = [16,32,64]
 nb_pts = [128]
-nb_pts = [64]
+nb_pts = [64,128]
 nb_sten = [16,32]
-nb_sten = [32]
+nb_sten = [16,32,64]
 #kernel_attributes = ["double4"]
 #func_kernel = ["FUN4_DERIV4_WEIGHT4_INV"]
 
 sten = ["random", "compact"]
-sten = ["compact"]
+#sten = ["compact"]
 
 os.system("mkdir %s" % output_dir )
 

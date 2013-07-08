@@ -1,5 +1,5 @@
 
                   // =================================================
-                  #define ATTRIBUTES 
+                  #define ATTRIBUTES __attribute__((vec_type_hint(double4)))
                   // =================================================
                        

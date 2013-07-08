@@ -35,10 +35,7 @@ kernel_attributes = ["double4",
 # float, double none produce the same results
 kernel_attributes = ["double4", ""]
 
-nb_sten = [16,32,64]
-nb_pts = [128]
 nb_pts = [64,128]
-nb_sten = [16,32]
 nb_sten = [16,32,64]
 #kernel_attributes = ["double4"]
 #func_kernel = ["FUN4_DERIV4_WEIGHT4_INV"]

@@ -80,10 +80,10 @@ void printTimes(std::vector<double>& timings, int npts, int stencil_size, int nb
 	}
 	mean /= timings.size();
 	std = sqrt(std/timings.size()-mean*mean);
-	double gflop = 2.*npts*stencil_size*nb_derivs*1.e-9 / (mean*1.e-3) ;
 	printf("mean times: ");
 	for (int i=0; i < timings.size(); i++) printf("%f, ", timings[i]);
 	double time_per_deriv = mean/nb_derivs;
+	double gflop = 2.*npts*stencil_size*1.e-9 / (time_per_deriv*1.e-3) ;
 	printf("\n");
 	printf("mean time= %f (ms), standard deviation= %f (ms), Gflops: %f, time per derivative: %f (ms)\n", mean, std, gflop, time_per_deriv);
 }

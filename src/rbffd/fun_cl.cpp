@@ -73,9 +73,11 @@ void FUN_CL::allocateGPUMem()
 	//sup_all_weights = SuperBuffer<double>(nb_nodes*nodes_per_stencil*4);
 	// Must replace with actual values at some point
 
+	sup_stencils.setName("stencils");
 	sup_stencils.create(nb_nodes*nodes_per_stencil);
 	// Save space for x,y,z,l derivative (even if I compute only one, for code 
 	// simplification
+	sup_all_weights.setName("weights");
 	sup_all_weights.create(nb_nodes*nodes_per_stencil*4);
 
 

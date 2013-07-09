@@ -4,6 +4,7 @@
 // Common types in here: 
 
 // Set single or double precision here.
+// Must also change useDouble.cl in cl_kernels to be consistent (GE)
 #if 1
 typedef double FLOAT;
 #else

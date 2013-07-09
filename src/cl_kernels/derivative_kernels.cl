@@ -25,7 +25,8 @@ int stencil_size)
 }
 //----------------------------------------------------------
 // GPU Only routine
-__kernel void computeDerivMultiKernel(       
+__kernel ATTRIBUTES
+void computeDerivMultiKernel(       
          __global int* stencils,     // double4
          __global FLOAT* restrict wx,    // double4
          __global FLOAT* restrict wy,    // double4
@@ -50,7 +51,8 @@ __kernel void computeDerivMultiKernel(
 }
 //----------------------------------------------------------------------
 // GPU Only routine, consolidate weights
-__kernel void computeDerivMultiWeightKernel(       
+__kernel ATTRIBUTES
+void computeDerivMultiWeightKernel(       
          __global int* stencils,     // double4
          __global FLOAT* restrict ww,    // double4
          //__global FLOAT* restrict wy,    // double4
@@ -77,7 +79,8 @@ __kernel void computeDerivMultiWeightKernel(
 // GPU Only routine, consolidate weights
 // Weights: [rbf_node][stencil_point][which_deriv]
 // works properly
-__kernel void computeDerivMultiWeightFunKernel(       
+__kernel ATTRIBUTES
+void computeDerivMultiWeightFunKernel(       
          __global int* stencils,     // double4
          __global FLOAT* restrict ww4,    // multiple weights
          __global FLOAT* restrict solution,   // multiple functions
@@ -101,7 +104,8 @@ __kernel void computeDerivMultiWeightFunKernel(
 // GPU Only routine, consolidate weights
 // Weights: [stencil_point][rbf_node]
 // Single weight, single function
-__kernel void computeDerivWeight1Fun1InvKernel(       
+__kernel ATTRIBUTES
+void computeDerivWeight1Fun1InvKernel(       
          __global int* stencils,   
          __global FLOAT* restrict ww4,    
          __global FLOAT* restrict solution,  
@@ -122,8 +126,7 @@ __kernel void computeDerivWeight1Fun1InvKernel(
 // GPU Only routine, consolidate weights
 // Weights: [stencil_point][rbf_node]
 // Single weight, single function
-//__kernel __attribute__((vec_type_hint(double4)))
-__kernel 
+__kernel ATTRIBUTES
 void computeDerivWeight1Fun1Kernel(       
          __global int* stencils,   
          __global FLOAT* restrict ww4,    
@@ -171,7 +174,8 @@ __kernel void computeDeriv4Weight1Fun1Kernel(
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------
 // GPU Only routine, consolidate weights
-__kernel void computeDerivMultiWeightFun4Kernel(       
+__kernel __attribute__((vec_type_hint(double4)))
+void computeDerivMultiWeightFun4Kernel(       
          __global int* stencils,     // double4
          __global FLOAT* restrict ww4,    // multiple weights
          __global double4* restrict solution,   // multiple functions
@@ -192,7 +196,7 @@ __kernel void computeDerivMultiWeightFun4Kernel(
 	} 
 }
 //----------------------------------------------------------------------
-__kernel __attribute__((vec_type_hint(double4)))
+__kernel ATTRIBUTES
 void computeDeriv4Weight4Fun1Kernel(     
          __global int* stencils, 
          __global double4* ww, 
@@ -212,7 +216,7 @@ void computeDeriv4Weight4Fun1Kernel(
 	} 
 }
 //----------------------------------------------------------------------
-__kernel __attribute__((vec_type_hint(double4)))
+__kernel ATTRIBUTES
 void computeDeriv1Weight4Fun1Kernel(     
          __global int* stencils, 
          __global double* ww, 
@@ -244,7 +248,7 @@ void computeDeriv1Weight4Fun1Kernel(
 	} 
 }
 //----------------------------------------------------------------------
-__kernel  __attribute__((vec_type_hint(double4)))
+__kernel ATTRIBUTES
 void computeDeriv4Weight4Fun4Kernel(     
          __global int* stencils, 
          __global double4* ww, 
@@ -267,7 +271,7 @@ void computeDeriv4Weight4Fun4Kernel(
 	} 
 }
 //----------------------------------------------------------------------
-__kernel  __attribute__((vec_type_hint(double4)))
+__kernel  ATTRIBUTES
 void computeDeriv4Weight4Fun4InvKernel(     
          __global int* stencils, 
          __global double4* ww, 

@@ -115,6 +115,35 @@ MACRO ( COPY_KERNEL_SOLVER_COMMAND  _source )
 
 ENDMACRO ( COPY_KERNEL_SOLVER_COMMAND _source _destination)
 
+#------------------------------------------
+#  Added by G. Erlebacher (July 3, 2013)
+MACRO ( LINK_COMMAND _source_dir _dest_dir _target )
+    IF (NOT DEFINED ${TARGET_COUNT})
+        SET(TARGET_COUNT 0 CACHE TYPE INTERNAL)
+        MARK_AS_ADVANCED(TARGET_COUNT)
+    ENDIF (NOT DEFINED ${TARGET_COUNT})
+
+    increment(TARGET_COUNT)
+    SET (_destination "${_dest_dir}")
+	# Every target must be unique within a project
+	# Cannot change the value of an argument
+	SET (_targett "${_target}_${_source_dir}_${_dest_dir}_${TARGET_COUNT}")
+	# cannot have "/" in target names
+    STRING(REPLACE "/" "_" _targett ${_targett})
+	message("*** targett: ${_targett}")
+
+    ADD_CUSTOM_TARGET( ${_targett} ALL )
+    ADD_CUSTOM_COMMAND(
+       	TARGET ${_targett}
+		POST_BUILD
+       	COMMAND
+		# HOW to ignore errors!!! -f (force: delete first if exists)
+       	echo "ln -f -s ${_source_dir} ${_destination}" && ln -f -s ${_source_dir} ${_destination}
+		VERBATIM
+   	)
+ENDMACRO ( LINK_COMMAND _source_dir _dest_dir _dest_name )
+#------------------------------------------
+
 MACRO ( COPY_FILE_COMMAND _source_filename _source_dir _dest_filename _dest_dir)
 
     SET (_source "${_source_dir}/${_source_filename}")

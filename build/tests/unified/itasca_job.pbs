@@ -1,5 +1,5 @@
 #!/bin/bash -l 
-#PBS -l walltime=01:00:00,nodes=1:ppn=8
+#PBS -l walltime=01:00:00,nodes=1:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
 ##PBS -N example2_simple
@@ -55,7 +55,7 @@ NPERDIM=100
 GRID_FILE=$HOME/GRIDS/regular/${NPERDIM}_cubed/regulargrid_${NPERDIM}x_${NPERDIM}y_${NPERDIM}z_final.ascii
 
 NPROC=$PBS_NP
-#NPROC=1
+NPROC=2
 #~/sphere_grids/md${MD}.${N}
 
 METIS_FILE=metis_stencils.graph.part.${NPROC}
@@ -78,23 +78,26 @@ then
 	$PBS_O_WORKDIR/sten_gen.x -g ${GRID_FILE} -c 3 -N ${N} -n ${STEN_SIZE} -w 0 -l 100
 
 	echo "sten_gen Exit status: $?"
+	#sleep 5s
 
 	# Decompose domain for parallel run into NPROC partitions
 	gpmetis metis_stencils.graph ${NPROC}
 
 	echo "gpmetis Exit status: $?"
+	#sleep 5s
 
 	${MY_MPI_EXE} -np ${NPROC} hostname
 	echo "hostname Exit status: $?"
 
 	# add -l for verbose logging of output 
-	${MY_MPI_EXE} -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
+	${MY_MPI_EXE} -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
 
 	echo "compute_weights Exit status: $?"
+	#sleep 5s
 	touch $JOB_RAN_FILE
 fi
 
-${MY_MPI_EXE} -np ${NPROC} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+${MY_MPI_EXE} -np ${NPROC} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 echo "evaluate_derivatives Exit status: $?"
 

@@ -988,6 +988,10 @@ Grid::GridLoadErrType Domain::loadOMapFromFile(std::string filename) {
 	fin.open(fname.c_str());
     O_by_rank.resize(comm_size);
 
+    for (int i = 0 ; i < comm_size; i++) {
+        O_by_rank[i].clear();
+    }
+
     int obr_count = 0;
 
 	if (fin.is_open()) {
@@ -1021,14 +1025,18 @@ Grid::GridLoadErrType Domain::loadRMapFromFile(std::string filename) {
 	fin.open(fname.c_str());
     R_by_rank.resize(comm_size);
 
+    for (int i = 0 ; i < comm_size; i++) {
+        R_by_rank[i].clear();
+    }
+
     int obr_count = 0;
 
 	if (fin.is_open()) {
 		while (fin.good()) {
-			unsigned int O_indx, lrank;
-			fin >> lrank >> O_indx;
+			unsigned int R_indx, lrank;
+			fin >> lrank >> R_indx;
 			if (!fin.eof()) {
-				R_by_rank[lrank].push_back(O_indx);
+				R_by_rank[lrank].push_back(R_indx);
                 obr_count++;
 			}
 		}

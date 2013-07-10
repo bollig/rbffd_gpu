@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
 	Domain* subdomain; 
 	subdomain = new METISDomain(mpi_rank, mpi_size, grid, grid_dim, partition_filename, part_file_loaded); 
 	subdomain->writeToFile(); 
-#if 1
+#if 0
 	VtuDomainWriter* vtu = new VtuDomainWriter(subdomain, mpi_rank, mpi_size);
 	std::cout << "DECOMPOSED\n";
 #endif 

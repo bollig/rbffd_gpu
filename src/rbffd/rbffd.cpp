@@ -29,12 +29,12 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
         computeSFCoperators(false), asciiWeights(0),
 	override_file_detail(false)
 {
-    int nb_rbfs = grid_ref.getNodeListSize();
+    int nb_stencils = grid_ref.getStencilsSize();
 
     for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
         // Set all weights to point to NULL
         // If they do NOT point to NULL then they have been computed
-        this->weights[i].resize(nb_rbfs, NULL);
+        this->weights[i].resize(nb_stencils, NULL);
     }
 
     derTypeStr[X_i] = "x";
@@ -64,8 +64,8 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
     // but more importantly, the stencil nodes (neighbors)
     // also have their own supports
     // TODO: verify that the Domain class passes all nb_rbf support params to each subdomain
-    var_epsilon.resize(nb_rbfs);
-    condNums.resize(nb_rbfs);
+    var_epsilon.resize(nb_stencils);
+    condNums.resize(nb_stencils);
 
     this->setupTimers();
 }
@@ -1049,15 +1049,14 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         //if (f !=stdin)
         fclose(f);
 
-        // EVAN! Do NOT allocate N*M. Thats a dense matrix!
         // Expect the grid to be able to tell us what we need to load
         int req_nz = 0;
 
         // Convert to our weights (CSR FORMAT):
-        for (int irbf = 0; irbf < N; irbf++) {
+        for (int irbf = 0; irbf < M; irbf++) {
             //req_nz += stencil[irbf].size();
             //this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()];
-	    req_nz += grid_ref.getMaxStencilSize();
+            req_nz += grid_ref.getMaxStencilSize();
             this->weights[getDerTypeIndx(which)][irbf] = new double[grid_ref.getMaxStencilSize()];
         }
 
@@ -1170,18 +1169,18 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         fclose(f);
 
 
-        // EVAN! Do NOT allocate N*M. Thats a dense matrix!
         // Expect the grid to be able to tell us what we need to load
         int req_nz = 0;
 
         // Convert to our weights (CSR FORMAT):
-        for (int irbf = 0; irbf < N; irbf++) {
+        for (int irbf = 0; irbf < M; irbf++) {
             req_nz += stencil[irbf].size();
             this->weights[getDerTypeIndx(which)][irbf] = new double[stencil[irbf].size()];
         }
 
         if (req_nz < nz) {
             printf("[RBFFD] ERROR! File contains too many nonzeros. I have not allocated enough memory!\n");
+            std::cout << "ERROR ERROR ERROR\n";
             exit(EXIT_FAILURE);
         }
 
@@ -1273,9 +1272,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         fprintf(stdout, "Writing %u weights to %s\n", nz, filename.c_str());
 
         // Num stencils (x_weights.size())
-        const unsigned int M = (*deriv_choice_ptr).size();
-        // We have a square MxN matrix
-        const unsigned int N = M;
+        const unsigned int M = grid_ref.getStencilsSize();
+        // We have a square MxN matrix on one processor, but
+        // rectangular matrix on distributed jobs
+        // M rows; N columns (nb_stencils x nb_nodes)
+        const unsigned int N = grid_ref.getNodeListSize();
 
         // Value obtained from mm_set_* routine
         MM_typecode matcode;
@@ -1323,9 +1324,11 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         fprintf(stdout, "Writing %u weights to %s\n", nz, filename.c_str());
 
         // Num stencils (x_weights.size())
-        const unsigned int M = (*deriv_choice_ptr).size();
-        // We have a square MxN matrix
-        const unsigned int N = M;
+        const unsigned int M = grid_ref.getStencilsSize();
+        // We have a square MxN matrix on one processor, but
+        // rectangular matrix on distributed jobs
+        // M rows; N columns (nb_stencils x nb_nodes)
+        const unsigned int N = grid_ref.getNodeListSize();
 
         // Value obtained from mm_set_* routine
         MM_typecode matcode;
@@ -1348,6 +1351,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         /* NOTE: matrix market files use 1-based indices, i.e. first element
            of a vector has index 1, not 0.  */
         //    fprintf(stdout, "Writing file contents: \n");
+        size_t ver_count = 0;
         for (unsigned int i = 0; i < stencil.size(); i++) {
             for (unsigned int j = 0; j < stencil[i].size(); j++) {
                 // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
@@ -1358,8 +1362,10 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 fwrite(&ii, 1 , sizeof(int), f);
                 fwrite(&jj, 1 , sizeof(int), f);
                 fwrite(&kk, 1, sizeof(double), f);
+                ver_count ++;
             }
         }
+        std::cout << "Wrote " << ver_count  << " rows to " << filename << std::endl;
 
         fclose(f);
     }

@@ -1,7 +1,7 @@
 #source $HOME/../shared/cascade_env.sh
 echo "Loading intel module" 
 module load intel/2013
-module load impi/intel
+module load pmpi/intel
 module load mkl/11.0.4.183
 module load cmake
 module load fftw

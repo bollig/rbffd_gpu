@@ -45,7 +45,7 @@ module list
 
 export LD_LIBRARY_PATH=/opt/intel/opencl/lib64:$LD_LIBRARY_PATH
 
-MY_MPI_EXE="mpirun -r ssh -l"
+MY_MPI_EXE="mpirun "
 date
 
 MD=165

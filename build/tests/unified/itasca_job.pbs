@@ -1,5 +1,5 @@
 #!/bin/bash -l 
-#PBS -l walltime=04:00:00,nodes=128:ppn=8,pmem=2500mb
+#PBS -l walltime=06:00:00,nodes=128:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
 #PBS -N pmpi_scaling
@@ -50,11 +50,14 @@ date
 
 MD=165
 N=1000000
-STEN_SIZE=101
+STEN_SIZE=50
 NPERDIM=100
 GRID_FILE=$HOME/GRIDS/regular/${NPERDIM}_cubed/regulargrid_${NPERDIM}x_${NPERDIM}y_${NPERDIM}z_final.ascii
 
 NPROC=$PBS_NP
+
+for STEN_SIZE in 17 31 50 101
+do
 
 for NPROC in 1 2 4 8 16 32 64 128 256 512 1024
 do
@@ -122,4 +125,5 @@ do
 
 	date
 	cd - 
+done
 done

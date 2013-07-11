@@ -826,10 +826,9 @@ void Domain::writeG2LToFile(std::string filename) {
     if (fout.is_open()) {
         std::map<int, int>::iterator mit;
         for (mit = glob_to_loc.begin(); mit != glob_to_loc.end(); mit++) {
-            // Subtract 1 because all indices are offset by 1. When an element
-            // doesnt exist its mapped to 0. By subtracting 1 off everything we
-            // get -1 when an index is not in the map
-            fout << (*mit).first << " " << (*mit).second - 1 << std::endl;
+            // NOTE: the map is already offset by -1 so that all the elements
+            // that have no index map to -1
+            fout << (*mit).first << " " << (*mit).second << std::endl;
         }
     } else {
         printf("Error opening file to write\n");

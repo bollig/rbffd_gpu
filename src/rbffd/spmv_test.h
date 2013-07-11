@@ -124,9 +124,6 @@ class SpMVTest
             }
             tm["spmv"]->stop();
 
-            tm["synchronize"]->start();
-            this->synchronize(out_deriv);
-            tm["synchronize"]->stop();
         }
 
         // Perform sendrecv
@@ -137,6 +134,7 @@ class SpMVTest
                 // Copies data from vec to transfer, then writes received data into vec
                 // before returning. 
 
+            tm["synchronize"]->start();
                 if (size > 1) {
                     //tm["sendrecv_wait"]->start();
 
@@ -201,6 +199,7 @@ class SpMVTest
                     // v2), so this is unecessary
 
                 }
+            tm["synchronize"]->stop();
         }
 };
 

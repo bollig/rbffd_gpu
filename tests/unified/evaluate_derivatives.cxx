@@ -55,6 +55,7 @@ int main(int argc, char** argv) {
     tm["SpMV"] = new Timer("[Main] Compute Derivatives");
     tm["computeNorms"] = new Timer("[Main] Compute Norms");
     tm["computeUpdate"] = new Timer("[Main] Compute mock timestep update");
+    tm["synchronize"] = new Timer("[Main] Synchronize (perform MPI Comm)");
     tm["loadWeights"] = new Timer("[Main] Read weights from file");
     tm["tests"] = new Timer("[Main] Derivative tests");
     tm["cleanup"] = new Timer("[Main] Cleanup (delete) Domain and print final norms");
@@ -382,9 +383,14 @@ int main(int argc, char** argv) {
     SpMVTest *derTest = new SpMVTest(der, subdomain, mpi_rank, mpi_size ); 
     std::cout << " Built SpMVTest\n";
 
+    tm["synchronize"]->start();
+    derTest->synchronize(u_new);
+    tm["synchronize"]->stop();
+
     // TODO: prime hw here.
-    std::cout << " Entering loop\n";
+    std::cout << " Entering loop: " << N_part << " rows \n";
     for (int i = 0; i < 1000; i++) { 
+
         tm["computeNorms"]->start();
         u_l2 = l2norm( mpi_rank, u, 0, N_part);
         u_l1 = l1norm( mpi_rank, u, 0, N_part);
@@ -451,6 +457,10 @@ int main(int argc, char** argv) {
         n_l1 = l1norm( mpi_rank, u_new, 0 , N_part);
         n_linf = linfnorm( mpi_rank, u_new, 0 , N_part);
         tm["computeNorms"]->stop();
+
+        tm["synchronize"]->start();
+        derTest->synchronize(u_new);
+        tm["synchronize"]->stop();
     }
     
     tm["cleanup"]->start();

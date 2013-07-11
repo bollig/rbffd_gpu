@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 	grid->setSortBoundaryNodes(true); 
 	grid->generate();
 	int grid_size = grid->getNodeListSize();
-	grid->setNSHashDims(10, 10, 10);
+	grid->setNSHashDims(100, 100, 100);
 	grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
 	if (output_filename_specified) { 
 		grid->writeToFile(output_filename); 

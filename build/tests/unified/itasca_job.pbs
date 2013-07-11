@@ -1,5 +1,5 @@
 #!/bin/bash -l 
-#PBS -l walltime=02:00:00,nodes=128:ppn=8,pmem=2500mb
+#PBS -l walltime=06:00:00,nodes=128:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
 #PBS -N ompi_scaling
@@ -45,7 +45,7 @@ module list
 
 export LD_LIBRARY_PATH=/opt/intel/opencl/lib64:$LD_LIBRARY_PATH
 
-MY_MPI_EXE="mpirun -r ssh -l "
+MY_MPI_EXE="mpirun "
 date
 
 MD=165
@@ -55,6 +55,9 @@ NPERDIM=100
 GRID_FILE=$HOME/GRIDS/regular/${NPERDIM}_cubed/regulargrid_${NPERDIM}x_${NPERDIM}y_${NPERDIM}z_final.ascii
 
 NPROC=$PBS_NP
+
+for STEN_SIZE in 17 31 50 101
+do
 
 for NPROC in 1 2 4 8 16 32 64 128 256 512 1024
 do
@@ -122,4 +125,5 @@ do
 
 	date
 	cd - 
+done
 done

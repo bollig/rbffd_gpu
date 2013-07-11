@@ -2,7 +2,7 @@
 #PBS -l walltime=02:00:00,nodes=128:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N impi_scaling
+#PBS -N ompi_scaling
 ## PBS -e error.$PBS_JOBID
 ## PBS -o output.$PBS_JOBID
 
@@ -27,7 +27,7 @@ echo ------------------------------------------------------
 #source $HOME/../shared/cascade_env.sh
 echo "Loading intel module" 
 module load intel/2013
-module load impi/intel
+module load ompi/intel
 module load mkl/11.0.4.183
 module load cmake
 module load fftw

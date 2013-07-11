@@ -1482,7 +1482,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 		unsigned int sz = stencil.size();
 		int st_center = -1;
 
-		// in other routines, Evan uses "n+np" for the stencil size. I do not know what this eans. 
+		// in other routines, Evan uses "n+np" for the stencil size. I do not know what this means. 
 
 		int type_index = getDerTypeIndx(which); 
 		if (this->weights[type_index][irbf] == NULL) {
@@ -1495,7 +1495,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 	//----------------------------------------------------------------------
 	void RBFFD::computeWeightsForStencil_Empty(DerType which, int irbf)
 	{
-		// First index is the center node. Set to 1. Set all others to zero. 
+		// First index is the center node. Set to 1. Set all others to some non-zero value (only for testing)
 
 		StencilType& stencil = grid_ref.getStencil(irbf);
 		unsigned int sz = stencil.size();
@@ -1509,7 +1509,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 		}
 		w[0] = 1.0;
 		for (unsigned int j = 1; j < sz; j++) {
-			w[j] = 0.0;
+			w[j] = 0.5;
 		}
 		
 		#if 0
@@ -1518,7 +1518,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 		}
 		this->weights[type_index][irbf][0] = 1.0;
 		for (unsigned int j = 1; j < sz; j++) {
-			this->weights[type_index][irbf][j] = 0.0;
+			this->weights[type_index][irbf][j] = 0.5;
 		}
 		#endif
 	}

@@ -49,3 +49,7 @@ July 7, 2013
 Removed call to clFinish() in rbffd_cl::enqueueKernel() . Error has gone away (although if it is memory-related somehow, I am afraid it will remake its appearance)
 ----------------------------------------------------------------------
 ----------------------------------------------------------------------
+July 10, 2013
+The random stencil is not even monotonically ordered. That slows down any algorithm even more.  In other words, the nonzero elements of the 
+matrix row to be multiplied by the function (whose derivative is taken), are not ordered. 
+----------------------------------------------------------------------

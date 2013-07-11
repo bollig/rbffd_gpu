@@ -55,7 +55,7 @@ NPERDIM=100
 GRID_FILE=$HOME/GRIDS/regular/${NPERDIM}_cubed/regulargrid_${NPERDIM}x_${NPERDIM}y_${NPERDIM}z_final.ascii
 
 NPROC=$PBS_NP
-NPROC=2
+#NPROC=2
 #~/sphere_grids/md${MD}.${N}
 
 METIS_FILE=metis_stencils.graph.part.${NPROC}

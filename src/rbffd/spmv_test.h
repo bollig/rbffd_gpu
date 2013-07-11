@@ -138,14 +138,14 @@ class SpMVTest
                 // before returning. 
 
                 if (size > 1) {
-                    tm["sendrecv_wait"]->start();
+                    //tm["sendrecv_wait"]->start();
 
                     // Added a barrier here to ensure that we only time the
                     // communication and copy into CPU memory. Copy to GPU
                     // memory is another timer
-                    MPI_Barrier(MPI_COMM_WORLD);
+                    //MPI_Barrier(MPI_COMM_WORLD);
 
-                    tm["sendrecv_wait"]->stop();
+                    //tm["sendrecv_wait"]->stop();
 
                     tm["pre_alltoallv"]->start();
                     // TODO: the barrier can happen after this memcpy that preceeds the Alltoall 

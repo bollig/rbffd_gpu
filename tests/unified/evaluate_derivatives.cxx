@@ -54,6 +54,7 @@ int main(int argc, char** argv) {
     tm["assembleTest"] = new Timer("[Main] Assemble test vectors");
     tm["SpMV"] = new Timer("[Main] Compute Derivatives");
     tm["computeNorms"] = new Timer("[Main] Compute Norms");
+    tm["computeUpdate"] = new Timer("[Main] Compute mock timestep update");
     tm["loadWeights"] = new Timer("[Main] Read weights from file");
     tm["tests"] = new Timer("[Main] Derivative tests");
     tm["cleanup"] = new Timer("[Main] Cleanup (delete) Domain and print final norms");
@@ -436,12 +437,15 @@ int main(int argc, char** argv) {
         l_linf = linfnorm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
         tm["computeNorms"]->stop();
 
+        tm["computeUpdate"]->start();
         // Ensure that the compiler is not trimming this loop by 
         // pretending to calc an updated solution
         for (int j = 0; j < M_part; j++) {
-            // Mimic Euler update
-            u_new[j] = u[j] + 0.001 * (xderiv_cpu[j] + yderiv_cpu[j] + zderiv_cpu[j]);
+            // Mock an update 
+            u_new[j] = u[j] + 0.001 * (xderiv_cpu[j] + 0.25 * yderiv_cpu[j] + 0.5*zderiv_cpu[j] + 0.75 * lderiv_cpu[j]);
         }
+        tm["computeUpdate"]->stop();
+
         tm["computeNorms"]->start();
         n_l2 = l2norm( mpi_rank, u_new, 0 , N_part);
         n_l1 = l1norm( mpi_rank, u_new, 0 , N_part);

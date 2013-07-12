@@ -1,6 +1,6 @@
 #!/bin/bash -l 
 
-for NODES in 1 2 4 8 16 32 64 128 256 512 128
+for NODES in 1 2 4 8 16 32 64 128
 do 
 	EXEC_FILE=itasca_strong_impi_${NODES}.pbs
 

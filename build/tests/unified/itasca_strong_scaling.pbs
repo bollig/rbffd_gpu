@@ -2,7 +2,7 @@
 #PBS -l walltime=06:00:00,nodes=128:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N strong_impi_scaling
+#PBS -N strong_pmpi_scaling
 ## PBS -e error.$PBS_JOBID
 ## PBS -o output.$PBS_JOBID
 
@@ -27,7 +27,7 @@ echo ------------------------------------------------------
 #source $HOME/../shared/cascade_env.sh
 echo "Loading intel module" 
 module load intel/2013
-module load impi/intel
+module load pmpi/intel
 module load mkl/11.0.4.183
 module load cmake
 module load fftw
@@ -44,6 +44,17 @@ module list
 #echo "============================"
 
 export LD_LIBRARY_PATH=/opt/intel/opencl/lib64:$LD_LIBRARY_PATH
+
+
+export MPI_MAX_REMSH=16
+export MPI_MAX_MPID_WAITING=64
+export MPI_BUNDLE_MPIDS=N
+export OMP_NUM_THREADS=1
+export MPI_DEBUG_CONT=0
+
+a1=$(cat $PBS_NODEFILE | sort | uniq)
+time pdsh -w `echo $a1 | sed 's/ /,/g'` date >& check_node
+
 
 date
 
@@ -62,7 +73,7 @@ do
 for NPROC in 1 2 4 8 16 32 64 128 256 512 1024
 do
 
-	MY_MPI_EXE="mpirun -r ssh -l -np ${NPROC}"
+	MY_MPI_EXE="mpirun -np ${PBS_NP} -hostfile ${PBS_NODEFILE} "
 
 
 	METIS_FILE=metis_stencils.graph.part.${NPROC}

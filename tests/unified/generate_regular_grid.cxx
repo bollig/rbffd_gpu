@@ -26,7 +26,6 @@ int main(int argc, char** argv) {
 	tm["total"] = new Timer("[Main] Total runtime for this proc");
 	tm["grid"] = new Timer("[Main] Grid generation");
 	tm["settings"] = new Timer("[Main] Load settings");
-	tm["metis"] = new Timer("[Main] Construct METIS adjacency graph with BOOST");
 
 	tm["total"]->start();
 
@@ -39,6 +38,7 @@ int main(int argc, char** argv) {
 		("nx,x", po::value<int>(), "Grid resolution in the X direction")
 		("ny,y", po::value<int>(), "Grid resolution in the Y direction")
 		("nz,z", po::value<int>(), "Grid resolution in the Z direction")
+		("hash_resolution,l", po::value<int>(), "Hashing grid overlay resolution in each direction")
 		("stencil_size,s", po::value<int>(), "Stencil size")
 		;
 
@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
 	int ny = 1; 
 	int nz = 1; 
 	int stencil_size = 5; 
+    int hash_resolution = 100; 
 	if (vm.count("nx")) {
 		nx = vm["nx"].as<int>() ;
 	} 
@@ -75,6 +76,11 @@ int main(int argc, char** argv) {
 	if (vm.count("stencil_size")) {
 		stencil_size = vm["stencil_size"].as<int>() ;
 	}
+
+	if (vm.count("hash_resolution")) {
+		hash_resolution = vm["hash_resolution"].as<int>() ;
+	}
+
 
 	int dim = 3;
 
@@ -91,7 +97,7 @@ int main(int argc, char** argv) {
 	grid->setSortBoundaryNodes(true); 
 	grid->generate();
 	int grid_size = grid->getNodeListSize();
-	grid->setNSHashDims(100, 100, 100);
+	grid->setNSHashDims(hash_resolution, hash_resolution, hash_resolution);
 	grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
 	if (output_filename_specified) { 
 		grid->writeToFile(output_filename); 
@@ -99,80 +105,6 @@ int main(int argc, char** argv) {
 		grid->writeToFile(); 
 	}
 	tm["grid"]->stop();
-
-	tm["metis"]->start();
-	{
-		// Assemble a DIRECTED graph that is the spadjacency_list our stencils
-		//		typedef adjacency_list <boost::vecS, boost::setS, boost::bidirectionalS> Graph;
-
-#if BOOST_VERSION > 104900
-		typedef boost::undirected_graph<> Graph;
-#else
-		// For Older versions of boost.
-		typedef boost::adjacency_list < boost::vecS, boost::vecS, boost::undirectedS> Graph;
-#endif
-		Graph g;
-		Graph::vertex_descriptor vds[grid_size]; 
-
-		// Since the graph uses setS we cant use int indices for
-		// vertices. These will be our ref indices
-		for (int i = 0; i < grid_size; i++) {
-			vds[i] = g.add_vertex();
-		}
-
-		for (int i = 0; i < grid_size; i++) { 
-			StencilType& s = grid->getStencil(i); 
-			// Start with index 1 to neglect the connection to
-			// itself (the 1 on diag of matrix). Its assumed by metis. 
-			for (int j = 1; j < stencil_size; j++) {
-				if (s[j] < grid_size) 
-				{
-					g.add_edge(vds[i], vds[s[j]]);
-				}
-			}
-		}
-
-#if 0 
-	// Perhaps we can visualize with graphviz? 
-		std::ofstream gvout("undirected_graph.graphviz"); 
-		write_graphviz(gvout, g);
-		gvout.close();
-		std::cout << "Wrote the graphviz file: undirected_graph.graphviz" << std::endl;
-#endif 
-
-		// Dump the graph file for METIS
-
-		std::ostringstream grouts;
-		// First the number of vertices, edges
-		// Then all connections for each node (assumes at least one connection per node
-		unsigned int num_edges = 0;
-		for (int i = 0; i < boost::num_vertices(g); i++) {
-			boost::graph_traits<Graph>::adjacency_iterator e, e_end;
-			boost::graph_traits<Graph>::vertex_descriptor 
-				s = boost::vertex(i, g);
-			//cout << "the edges incident to v: " << i+1 << "\n";
-			std::set<unsigned int> unique_verts; 
-			for (tie(e, e_end) = boost::adjacent_vertices(s, g); e != e_end; ++e) {
-				unique_verts.insert(get_vertex_index(*e,g)); 
-			}
-			for (std::set<unsigned int>::iterator it = unique_verts.begin(); it != unique_verts.end(); it++) {
-				// Add 1 to the index to make sure we are indexing from 1 in metis
-				//	std::cout << (*it) + 1 << "\n";
-				grouts << (*it) + 1 << " ";
-				num_edges++; 
-			}
-			grouts << "\n";
-		}	
-
-		std::ofstream grout("metis_stencils.graph"); 
-		// We can divide num_edges by 2 to get correct count because edges are symmetric
-		grout << boost::num_vertices(g) << " " << num_edges / 2 << "\n"; 
-		grout << grouts.str();
-
-		grout.close();
-		std::cout << "Wrote the METIS graph file: metis_stencils.graph" << std::endl;
-	}
-	tm["metis"]->stop();
 
 	delete(grid);
 

@@ -54,6 +54,8 @@ int main(int argc, char** argv) {
     tm["assembleTest"] = new Timer("[Main] Assemble test vectors");
     tm["SpMV"] = new Timer("[Main] Compute Derivatives");
     tm["computeNorms"] = new Timer("[Main] Compute Norms");
+    tm["computeUpdate"] = new Timer("[Main] Compute mock timestep update");
+    tm["synchronize"] = new Timer("[Main] Synchronize (perform MPI Comm)");
     tm["loadWeights"] = new Timer("[Main] Read weights from file");
     tm["tests"] = new Timer("[Main] Derivative tests");
     tm["cleanup"] = new Timer("[Main] Cleanup (delete) Domain and print final norms");
@@ -382,13 +384,8 @@ int main(int argc, char** argv) {
     std::cout << " Built SpMVTest\n";
 
     // TODO: prime hw here.
-    std::cout << " Entering loop\n";
+    std::cout << " Entering loop: " << N_part << " rows \n";
     for (int i = 0; i < 1000; i++) { 
-        tm["computeNorms"]->start();
-        u_l2 = l2norm( mpi_rank, u, 0, N_part);
-        u_l1 = l1norm( mpi_rank, u, 0, N_part);
-        u_linf = linfnorm( mpi_rank, u);
-        tm["computeNorms"]->stop();
 
         // Verify that the CPU works
         // NOTE: we pass booleans at the end of the param list to indicate that
@@ -399,58 +396,96 @@ int main(int argc, char** argv) {
         derTest->SpMV(RBFFD::X, u, xderiv_cpu);
         tm["SpMV"]->stop();
 
-        tm["computeNorms"]->start();
-        x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu , 0 , N_part);
-        x_l1 = l1norm( mpi_rank, u_x, xderiv_cpu, 0 , N_part );
-        x_linf = linfnorm( mpi_rank, u_x, xderiv_cpu , 0 , N_part);
-        tm["computeNorms"]->stop();
+        // Note: we will test a mock Rk4 update. That requires each intermediate
+        // SpMV to synchronize 
+        tm["synchronize"]->start();
+        derTest->synchronize(u_new);
+        tm["synchronize"]->stop();
 
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::Y, u, yderiv_cpu);
         tm["SpMV"]->stop();
 
-        tm["computeNorms"]->start();
-        y_l2 = l2norm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
-        y_l1 = l1norm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
-        y_linf = linfnorm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
-        tm["computeNorms"]->stop();
+        tm["synchronize"]->start();
+        derTest->synchronize(u_new);
+        tm["synchronize"]->stop();
 
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::Z, u, zderiv_cpu);
         tm["SpMV"]->stop();
-
-        tm["computeNorms"]->start();
-        z_l2 = l2norm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
-        z_l1 = l1norm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
-        z_linf = linfnorm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
-        tm["computeNorms"]->stop();
+ 
+        tm["synchronize"]->start();
+        derTest->synchronize(u_new);
+        tm["synchronize"]->stop();
 
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::LAPL, u, lderiv_cpu);
         tm["SpMV"]->stop();
 
+#if 0 
+        tm["synchronize"]->start();
+        derTest->synchronize(u_new);
+        tm["synchronize"]->stop();
+#endif 
 
-        tm["computeNorms"]->start();
-        l_l2 = l2norm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
-        l_l1 = l1norm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
-        l_linf = linfnorm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
-        tm["computeNorms"]->stop();
-
+        tm["computeUpdate"]->start();
         // Ensure that the compiler is not trimming this loop by 
         // pretending to calc an updated solution
         for (int j = 0; j < M_part; j++) {
-            // Mimic Euler update
-            u_new[j] = u[j] + 0.001 * (xderiv_cpu[j] + yderiv_cpu[j] + zderiv_cpu[j]);
+            // Mock an RK4 timestep. If this were real each of the derivs would
+            // be same operator applied to different intermediate vectors
+            u_new[j] = u[j] + (1./6.) * (xderiv_cpu[j] + 2. * yderiv_cpu[j] + 2. * zderiv_cpu[j] + lderiv_cpu[j]);
         }
-        tm["computeNorms"]->start();
-        n_l2 = l2norm( mpi_rank, u_new, 0 , N_part);
-        n_l1 = l1norm( mpi_rank, u_new, 0 , N_part);
-        n_linf = linfnorm( mpi_rank, u_new, 0 , N_part);
-        tm["computeNorms"]->stop();
-    }
-    
-    tm["cleanup"]->start();
+        tm["computeUpdate"]->stop();
 
+        // Last of the comm points in an RK4. Should only require 4 per
+        // iteration
+        tm["synchronize"]->start();
+        derTest->synchronize(u_new);
+        tm["synchronize"]->stop();
+    }
+    // Compute the norms to make sure we have a complete picture. 
+
+    tm["computeNorms"]->start();
+    u_l2 = l2norm( mpi_rank, u, 0, N_part);
+    u_l1 = l1norm( mpi_rank, u, 0, N_part);
+    u_linf = linfnorm( mpi_rank, u);
+    tm["computeNorms"]->stop();
+
+    tm["computeNorms"]->start();
+    x_l2 = l2norm( mpi_rank, u_x, xderiv_cpu , 0 , N_part);
+    x_l1 = l1norm( mpi_rank, u_x, xderiv_cpu, 0 , N_part );
+    x_linf = linfnorm( mpi_rank, u_x, xderiv_cpu , 0 , N_part);
+    tm["computeNorms"]->stop();
+
+
+    tm["computeNorms"]->start();
+    y_l2 = l2norm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
+    y_l1 = l1norm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
+    y_linf = linfnorm( mpi_rank, u_y, yderiv_cpu , 0 , N_part);
+    tm["computeNorms"]->stop();
+
+
+    tm["computeNorms"]->start();
+    z_l2 = l2norm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
+    z_l1 = l1norm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
+    z_linf = linfnorm( mpi_rank, u_z, zderiv_cpu , 0 , N_part);
+    tm["computeNorms"]->stop();
+
+    tm["computeNorms"]->start();
+    l_l2 = l2norm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
+    l_l1 = l1norm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
+    l_linf = linfnorm( mpi_rank, u_l, lderiv_cpu , 0 , N_part);
+    tm["computeNorms"]->stop();
+
+    tm["computeNorms"]->start();
+    n_l2 = l2norm( mpi_rank, u_new, 0 , N_part);
+    n_l1 = l1norm( mpi_rank, u_new, 0 , N_part);
+    n_linf = linfnorm( mpi_rank, u_new, 0 , N_part);
+    tm["computeNorms"]->stop();
+
+
+    tm["cleanup"]->start();
     delete(derTest); 
 
     // We used MPI_reduce for norms, so only the master needs to printkkj

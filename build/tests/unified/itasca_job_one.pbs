@@ -1,8 +1,8 @@
 #!/bin/bash -l 
-#PBS -l walltime=06:00:00,nodes=128:ppn=8,pmem=2500mb
+#PBS -l walltime=02:00:00,nodes=1:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N ompi_scaling
+#PBS -N impi_scaling
 ## PBS -e error.$PBS_JOBID
 ## PBS -o output.$PBS_JOBID
 
@@ -27,7 +27,7 @@ echo ------------------------------------------------------
 #source $HOME/../shared/cascade_env.sh
 echo "Loading intel module" 
 module load intel/2013
-module load ompi/intel
+module load impi/intel
 module load mkl/11.0.4.183
 module load cmake
 module load fftw
@@ -45,7 +45,7 @@ module list
 
 export LD_LIBRARY_PATH=/opt/intel/opencl/lib64:$LD_LIBRARY_PATH
 
-MY_MPI_EXE="mpirun "
+MY_MPI_EXE="mpirun -r ssh -l "
 date
 
 MD=165
@@ -56,12 +56,7 @@ GRID_FILE=$HOME/GRIDS/regular/${NPERDIM}_cubed/regulargrid_${NPERDIM}x_${NPERDIM
 
 NPROC=$PBS_NP
 
-for STEN_SIZE in 17 31 50 101 500 1000
-do
-
-for NPROC in 1 2 4 8 16 32 64 128 256 512 1024
-do
-	#NPROC=2
+	NPROC=1
 	#~/sphere_grids/md${MD}.${N}
 
 	METIS_FILE=metis_stencils.graph.part.${NPROC}
@@ -125,5 +120,3 @@ do
 
 	date
 	cd - 
-done
-done

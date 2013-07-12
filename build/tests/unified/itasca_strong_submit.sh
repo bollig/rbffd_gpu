@@ -2,14 +2,17 @@
 
 for NODES in 1 2 4 8 16 32 64 128
 do 
-	EXEC_FILE=itasca_strong_impi_${NODES}.pbs
+
+for STEN_SIZE in 17 31 50 101
+do
+	EXEC_FILE=itasca_strong_${STEN_SIZE}_${NODES}.pbs
 
 cat > ${EXEC_FILE}  << EOF 
 #!/bin/bash -l
 #PBS -l walltime=4:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N strong_impi_scaling
+#PBS -N strong_${STEN_SIZE}_impi
 ## PBS -e error.\$PBS_JOBID
 ## PBS -o output.\$PBS_JOBID
 
@@ -56,9 +59,9 @@ date
 
 TEST_TYPE=strong
 MD=165
+NPERDIM=160
 N=4096000
 STEN_SIZE=50
-NPERDIM=160
 GRID_FILE=\$HOME/GRIDS/regular/\${NPERDIM}_cubed/regulargrid_\${NPERDIM}x_\${NPERDIM}y_\${NPERDIM}z_final.ascii
 
 PROC_LIST=\$PBS_NP
@@ -66,19 +69,17 @@ PROC_LIST=\$PBS_NP
 if [ "\$PBS_NP" = "8" ]; then
 	PROC_LIST="1 2 4 8"
 fi
+#500 1000
 
-for STEN_SIZE in 17 31 50 101 500 1000
+for NPROC in \$PROC_LIST
 do
-
-	for NPROC in \$PROC_LIST
-	do
 	MY_MPI_EXE="mpirun -r ssh -l -np \${NPROC}"
 
 
 	METIS_FILE=metis_stencils.graph.part.\${NPROC}
 	JOB_RAN_FILE=job_ran
 
-	NEW_WORKDIR=\$PBS_O_WORKDIR/\${TEST_TYPE}_\${N}_\${STEN_SIZE}_\${NPROC}proc
+	NEW_WORKDIR=\$PBS_O_WORKDIR/\${TEST_TYPE}_\${N}_${STEN_SIZE}_\${NPROC}proc
 
 	# If NPROC is 1 then we cant use MPIRUN
 	if [ "\$NPROC" = "1" ]; then
@@ -95,7 +96,7 @@ do
 		#./gen_regular_grid.x -x 100 -y 100 -z 100
 
 		# Read grid, generate stencils (Note: -c 4 is required because MD nodes have 4 cols)
-		\$PBS_O_WORKDIR/sten_gen.x -g \${GRID_FILE} -c 3 -N \${N} -n \${STEN_SIZE} -w 0 -l 100
+		\$PBS_O_WORKDIR/sten_gen.x -g \${GRID_FILE} -c 3 -N \${N} -n ${STEN_SIZE} -w 0 -l 100
 
 		echo "sten_gen Exit status: \$?"
 		#sleep 5s
@@ -110,14 +111,14 @@ do
 		echo "hostname Exit status: \$?"
 
 		# add -l for verbose logging of output 
-		\${MY_MPI_EXE} \$PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -N \${N} -n \${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.\${NPROC}
+		\${MY_MPI_EXE} \$PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -N \${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.\${NPROC}
 
 		echo "compute_weights Exit status: \$?"
 		#sleep 5s
 		touch \$JOB_RAN_FILE
 	fi
 
-	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -N \${N}  -n \${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 	echo "evaluate_derivatives Exit status: \$?"
 
@@ -140,9 +141,9 @@ do
 	date
 	cd - 
 done
-done
 
 EOF
 
-	qsub ${EXEC_FILE}
+#	qsub ${EXEC_FILE}
 done 
+done

@@ -276,6 +276,7 @@ class Domain : public Grid, public MPISendable
         // global to local
         // build a hash table
         int g2l(int ix) {
+            //return glob_to_loc[ix]-1;
             return glob_to_loc[ix]-1;
         }
 

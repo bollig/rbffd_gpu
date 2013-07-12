@@ -45,7 +45,6 @@ module list
 
 export LD_LIBRARY_PATH=/opt/intel/opencl/lib64:$LD_LIBRARY_PATH
 
-MY_MPI_EXE="mpirun -r ssh -l -np ${NPROC}"
 date
 
 TEST_TYPE=strong
@@ -62,8 +61,9 @@ do
 
 for NPROC in 1 2 4 8 16 32 64 128 256 512 1024
 do
-	#NPROC=2
-	#~/sphere_grids/md${MD}.${N}
+
+	MY_MPI_EXE="mpirun -r ssh -l -np ${NPROC}"
+
 
 	METIS_FILE=metis_stencils.graph.part.${NPROC}
 	JOB_RAN_FILE=job_ran

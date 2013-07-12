@@ -53,6 +53,8 @@ int main(int argc, char** argv) {
     tm["derSetup"] = new Timer("[Main] Setup RBFFD class");
     tm["assembleTest"] = new Timer("[Main] Assemble test vectors");
     tm["SpMV"] = new Timer("[Main] Compute Derivatives");
+    tm["iteration"] = new Timer("[Main] Complete One Iteration");
+    tm["SpMV_w_comm"] = new Timer("[Main] SpMV + Alltoallv");
     tm["computeNorms"] = new Timer("[Main] Compute Norms");
     tm["computeUpdate"] = new Timer("[Main] Compute mock timestep update");
     tm["synchronize"] = new Timer("[Main] Synchronize (perform MPI Comm)");
@@ -386,12 +388,14 @@ int main(int argc, char** argv) {
     // TODO: prime hw here.
     std::cout << " Entering loop: " << N_part << " rows \n";
     for (int i = 0; i < 1000; i++) { 
+        tm["iteration"]->start();
 
         // Verify that the CPU works
         // NOTE: we pass booleans at the end of the param list to indicate that
         // the function "u" is new (true) or same as previous calls (false). This
         // helps avoid overhead of passing "u" to the GPU.
 
+        tm["SpMV_w_comm"]->start();
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::X, u, xderiv_cpu);
         tm["SpMV"]->stop();
@@ -399,34 +403,39 @@ int main(int argc, char** argv) {
         // Note: we will test a mock Rk4 update. That requires each intermediate
         // SpMV to synchronize 
         tm["synchronize"]->start();
-        derTest->synchronize(u_new);
+        derTest->synchronize(xderiv_cpu);
         tm["synchronize"]->stop();
+        tm["SpMV_w_comm"]->stop();
 
+        tm["SpMV_w_comm"]->start();
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::Y, u, yderiv_cpu);
         tm["SpMV"]->stop();
 
         tm["synchronize"]->start();
-        derTest->synchronize(u_new);
+        derTest->synchronize(yderiv_cpu);
         tm["synchronize"]->stop();
+        tm["SpMV_w_comm"]->stop();
 
+        tm["SpMV_w_comm"]->start();
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::Z, u, zderiv_cpu);
         tm["SpMV"]->stop();
  
         tm["synchronize"]->start();
-        derTest->synchronize(u_new);
+        derTest->synchronize(zderiv_cpu);
         tm["synchronize"]->stop();
+        tm["SpMV_w_comm"]->stop();
 
+        tm["SpMV_w_comm"]->start();
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::LAPL, u, lderiv_cpu);
         tm["SpMV"]->stop();
 
-#if 0 
         tm["synchronize"]->start();
-        derTest->synchronize(u_new);
+        derTest->synchronize(lderiv_cpu);
         tm["synchronize"]->stop();
-#endif 
+        tm["SpMV_w_comm"]->stop();
 
         tm["computeUpdate"]->start();
         // Ensure that the compiler is not trimming this loop by 
@@ -438,11 +447,17 @@ int main(int argc, char** argv) {
         }
         tm["computeUpdate"]->stop();
 
+#if 0
         // Last of the comm points in an RK4. Should only require 4 per
-        // iteration
+        // iteration. NOTE: if we comm before we apply the timestep update
+        // we can simply bypass this by extending the update to M_part instead
+        // of N_Part
         tm["synchronize"]->start();
         derTest->synchronize(u_new);
         tm["synchronize"]->stop();
+#endif
+
+        tm["iteration"]->stop();
     }
     // Compute the norms to make sure we have a complete picture. 
 

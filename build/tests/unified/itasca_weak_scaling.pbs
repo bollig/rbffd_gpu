@@ -52,16 +52,19 @@ MD=165
 STEN_SIZE=50
 NPERDIM=160
 GRID_FILE=$HOME/GRIDS/regular/${NPERDIM}_cubed/regulargrid_${NPERDIM}x_${NPERDIM}y_${NPERDIM}z_final.ascii
-
+typeset -i N
+N=4000
+typeset -i NPROC
 NPROC=$PBS_NP
 
 for STEN_SIZE in 17 31 50 101 500 1000
 do
- #16 32 64 128 256 512 1024
+ # 16 32 64 128 256 512 1024
 for NPROC in 1 2 4 8
 do
-	(( N = 4000 * $NPROC ))
+	let N=4000*$NPROC
 	echo "USING N=$N"
+	echo "USING NPROC=$NPROC"
 
 	MY_MPI_EXE="mpirun -r ssh -l -np ${NPROC}"
 

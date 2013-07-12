@@ -1,5 +1,5 @@
 #!/bin/bash -l 
-#PBS -l walltime=06:00:00,nodes=128:ppn=8,pmem=2500mb
+#PBS -l walltime=08:00:00,nodes=128:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
 #PBS -N strong_pmpi_scaling

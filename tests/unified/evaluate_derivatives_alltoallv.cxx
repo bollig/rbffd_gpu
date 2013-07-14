@@ -20,7 +20,7 @@
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
 #include "rbffd/rbffd.h"
-#include "rbffd/spmv_test.h"
+#include "rbffd/spmv_test_alltoallv.h"
 
 #include <boost/program_options.hpp>
 
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     tm["assembleTest"] = new Timer("[Main] Assemble test vectors");
     tm["SpMV"] = new Timer("[Main] Compute Derivatives");
     tm["iteration"] = new Timer("[Main] Complete One Iteration");
-    tm["SpMV_w_comm"] = new Timer("[Main] SpMV + Comm");
+    tm["SpMV_w_comm"] = new Timer("[Main] SpMV + Alltoallv");
     tm["computeNorms"] = new Timer("[Main] Compute Norms");
     tm["computeUpdate"] = new Timer("[Main] Compute mock timestep update");
     tm["synchronize"] = new Timer("[Main] Synchronize (perform MPI Comm)");

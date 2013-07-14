@@ -118,7 +118,7 @@ do
 		touch \$JOB_RAN_FILE
 	fi
 
-	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives_isend.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 	echo "evaluate_derivatives Exit status: \$?"
 

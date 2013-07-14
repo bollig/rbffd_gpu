@@ -31,6 +31,7 @@ load_vtk()
 add_serial_framework_test( "compute_weights.x" "compute_weights.cxx" "${ARGV}" )
 add_serial_framework_test( "evaluate_derivatives.x" "evaluate_derivatives.cxx" "${ARGV}" )
 add_serial_framework_test( "evaluate_derivatives_isend.x" "evaluate_derivatives_isend.cxx" "${ARGV}" )
+add_serial_framework_test( "evaluate_derivatives_alltoallv.x" "evaluate_derivatives_alltoallv.cxx" "${ARGV}" )
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 

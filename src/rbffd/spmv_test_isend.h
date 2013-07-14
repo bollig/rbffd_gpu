@@ -123,9 +123,9 @@ class SpMVTest
         void setupTimers() {
             tm["synchronize"] = new EB::Timer("[SpMVTest] Synchronize (MPI_Isend/MPI_Irecv");
             tm["spmv"] = new EB::Timer("[SpMVTest] perform SpMV");
-            tm["alltoallv"] = new EB::Timer("[SpMVTest] MPI_Isend/MPI_Irecv Only (no memcpy)"); 
-            tm["pre_alltoallv"] = new EB::Timer("[SpMVTest] Memcpy input to MPI_Isend"); 
-            tm["post_alltoallv"] = new EB::Timer("[SpMVTest] Memcpy output from MPI_Irecv");
+            tm["irecv"] = new EB::Timer("[SpMVTest] MPI_Irecv"); 
+            tm["pre_isend"] = new EB::Timer("[SpMVTest] Memcpy input to MPI_Isend"); 
+            tm["post_irecv"] = new EB::Timer("[SpMVTest] Memcpy output from MPI_Irecv");
             tm["sendrecv_wait"] = new EB::Timer("[SpMVTest] Barrier before MPI_Isend"); 
             tm["allocateCommBufs"] = new EB::Timer("[SpMVTest] Allocate buffers for MPI_Isend/MPI_Irecv");
         }
@@ -163,18 +163,24 @@ class SpMVTest
 
             tm["synchronize"]->start();
             if (size > 1) {
-                //tm["sendrecv_wait"]->start();
+                // This is equivalent to: 
+                // 
+                // MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
+                //
+ 
+                // Buffer recvs
+                tm["irecv"]->start();
+                int r_count = 0;
+                for (int i = 0; i < this->size; i++) { 
+                    if (this->recvcounts[i] > 0) {
+                        MPI_Irecv(this->rbuf + this->rdispls[i], this->recvcounts[i], MPI_DOUBLE, i, MPI_ANY_TAG, MPI_COMM_WORLD, &R_reqs[r_count]);
+                        r_count++;
+                    }
+                }
 
-                // Added a barrier here to ensure that we only time the
-                // communication and copy into CPU memory. Copy to GPU
-                // memory is another timer
-                //MPI_Barrier(MPI_COMM_WORLD);
 
-                //tm["sendrecv_wait"]->stop();
-
-                tm["pre_alltoallv"]->start();
-                // TODO: the barrier can happen after this memcpy that preceeds the Alltoall 
-                // Copy elements of set to sbuf
+                tm["pre_isend"]->start();
+                // Prep-Send: Copy elements of set to sbuf
                 unsigned int k = 0; 
                 for (size_t i = 0; i < grid->O_by_rank.size(); i++) {
                     k = this->sdispls[i]; 
@@ -187,21 +193,9 @@ class SpMVTest
                         }
                     }
                 }
-                tm["pre_alltoallv"]->stop();
-                tm["alltoallv"]->start(); 
+                tm["pre_isend"]->stop();
 
-                // This is equivalent to: 
-                // 
-                // MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
-                //
-                int r_count = 0;
-                for (int i = 0; i < this->size; i++) { 
-                    if (this->recvcounts[i] > 0) {
-                        MPI_Irecv(this->rbuf + this->rdispls[i], this->recvcounts[i], MPI_DOUBLE, i, MPI_ANY_TAG, MPI_COMM_WORLD, &R_reqs[r_count]);
-                        r_count++;
-                    }
-                }
-
+                // Send
                 int o_count = 0;
                 for (int i = 0; i < this->size; i++) { 
                     if (this->sendcounts[i] > 0) {
@@ -210,11 +204,13 @@ class SpMVTest
                     }
                 }
 
+                // Barrier: wait for recvs to finish
                 MPI_Waitall(r_comm_size, R_reqs, R_stats); 
-                tm["alltoallv"]->stop(); 
+                tm["irecv"]->stop();
 
-                tm["post_alltoallv"]->start();
-                               k = 0; 
+                // Post-Recv: copy elements out
+                tm["post_irecv"]->start();
+                k = 0; 
                 for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
                     k = this->rdispls[i]; 
                     for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
@@ -233,12 +229,7 @@ class SpMVTest
                     }
                 }
 
-                tm["post_alltoallv"]->stop();
-                // Make sure to barrier here so we know when all communication is done for all processors
-                //MPI_Barrier(MPI_COMM_WORLD);
-                // NOTE: actually Alltoallv has internal barrier (as of MPI
-                // v2), so this is unecessary
-
+                tm["post_irecv"]->stop();
             }
             tm["synchronize"]->stop();
         }

@@ -125,10 +125,8 @@ do
 
 	echo "evaluate_derivatives Exit status: \$?"
 
-	#rm *.ascii
-	#rm metis_stencils*
-	#rm *.bmtx
-	#rm *.mtx
+	rm *.ascii *.bmtx *.mtx 
+	rm metis_stencils*
 
 	echo "Done with cleanup" 
 

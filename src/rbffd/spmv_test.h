@@ -166,9 +166,9 @@ class SpMVTest
 
             tm["synchronize"]->start();
             if (size > 1) {
-                // I found 16+ processors comm best with Isend/Irecv. Alltoallv
-                // for < 16
-                if (size > 16) { 
+                // I found 8+ processors comm best with Isend/Irecv. Alltoallv
+                // for < 8 
+                if (size > 8) { 
                     // This is equivalent to: 
                     // 
                     // MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
@@ -237,7 +237,7 @@ class SpMVTest
 
                     tm["post_irecv"]->stop();
                 } else {
-                    // I found that < 16 procs we have better comm patterns with
+                    // I found that <= 8 procs we have better comm patterns with
                     // MPI_Alltoallv
                     tm["pre_alltoallv"]->start();
                     // TODO: the barrier can happen after this memcpy that preceeds the Alltoall 

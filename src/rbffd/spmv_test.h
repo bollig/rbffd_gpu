@@ -168,7 +168,7 @@ class SpMVTest
             if (size > 1) {
                 // I found 16+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 16
-                if (size < 16) { 
+                if (size > 16) { 
                     // This is equivalent to: 
                     // 
                     // MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
@@ -255,8 +255,8 @@ class SpMVTest
                         }
                     }
                     tm["pre_alltoallv"]->stop();
-                    tm["alltoallv"]->start(); 
 
+                    tm["alltoallv"]->start(); 
                     MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
                     tm["alltoallv"]->stop(); 
 

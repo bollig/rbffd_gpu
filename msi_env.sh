@@ -10,6 +10,7 @@ module load vtk/5.4.2
 module load metis
 
 export ARMADILLO_ROOT=$HOME/../shared/intel-soft
+export FFTW_ROOT=/soft/fftw/fftw-3.2.2
 
 module list
 

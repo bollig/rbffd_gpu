@@ -5,12 +5,12 @@ do
 
 for STEN_SIZE in 17 31 50 101
 do
-	EXEC_FILE=cascde_strong_${STEN_SIZE}_${NODES}.pbs
+	EXEC_FILE=cascade_strong_${STEN_SIZE}_${NODES}.pbs
 
 cat > ${EXEC_FILE}  << EOF 
 #!/bin/bash -l
-#PBS -l walltime=4:00:00,nodes=${NODES}:ppn=1:gpus=2:cascade
-#PBS -q batch
+#PBS -l walltime=4:00:00,nodes=${NODES}:ppn=1:gpus=1:cascade
+#PBS -q cascade
 #PBS -m ae 
 #PBS -N strong_${STEN_SIZE}_impi
 ## PBS -e error.\$PBS_JOBID
@@ -64,15 +64,8 @@ N=4096000
 STEN_SIZE=50
 GRID_FILE=\$HOME/GRIDS/regular/\${NPERDIM}_cubed/regulargrid_\${NPERDIM}x_\${NPERDIM}y_\${NPERDIM}z_final.ascii
 
-PROC_LIST=\$PBS_NP
+NPROC=\$PBS_NP
 
-if [ "\$PBS_NP" = "8" ]; then
-	PROC_LIST="1 2 4 8"
-fi
-#500 1000
-
-for NPROC in \$PROC_LIST
-do
 	MY_MPI_EXE="mpirun -r ssh -l -np \${NPROC}"
 
 
@@ -138,7 +131,6 @@ do
 
 	date
 	cd - 
-done
 
 EOF
 

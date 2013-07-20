@@ -246,6 +246,7 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
         // Iterate until we get all 0s. This allows SOME shortcutting.
         while (iterator) {
             if (computedTypes & getDerType(which)) {
+                // TODO: benchmark assembly
                 std::cout << "Allocating CPU_WEIGHTS_D["<< which << "]\n";
                 cpu_weights_d[which] = new UBLAS_MAT_t(nb_stencils, nb_nodes, nb_stencils*n );
 
@@ -259,6 +260,7 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
                     }
                 }
 
+                // TODO: benchmark the copy
                 viennacl::copy(*(cpu_weights_d[which]), *(gpu_weights[which]));
 
                 std::cout << "COPIED WEIGHT " << derTypeStr[which] << std::endl;

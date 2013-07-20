@@ -134,7 +134,7 @@ add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall
 
     # This option is required for MPICH2. It gets rid of errors when mpi.h is
     # not included before stdio.h
-    -DMPICH_IGNORE_CXX_SEEK
+    #    -DMPICH_IGNORE_CXX_SEEK
     ) 
 
 

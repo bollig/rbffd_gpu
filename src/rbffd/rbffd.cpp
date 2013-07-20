@@ -1356,10 +1356,16 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         /* NOTE: matrix market files use 1-based indices, i.e. first element
            of a vector has index 1, not 0.  */
         //    fprintf(stdout, "Writing file contents: \n");
+        //    stencil.size(): number of rows
+        //    stencil[i].size(): number of non-zeros per row
         for (unsigned int i = 0; i < stencil.size(); i++) {
             for (unsigned int j = 0; j < stencil[i].size(); j++) {
                 // Add 1 because matrix market assumes we index 1:N instead of 0:N-1
-                fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]);
+                // Assumes 0th stencil value is always the row number
+                // Only correct if first element of stencil is the diagonal element
+                //fprintf(f, "%d %d %24.16le\n", stencil[i][0]+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]);
+                // The first column is the row number plus one
+                fprintf(f, "%d %d %24.16le\n", i+1, stencil[i][j]+1, (*deriv_choice_ptr)[i][j]);
             }
         }
 

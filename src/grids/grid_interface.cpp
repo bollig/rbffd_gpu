@@ -711,11 +711,11 @@ void Grid::generateStencilsRandom()
 		stencil_map[i][0] = i;
 	}
 
-	for (int j=1; j < stencil_size; j++) {
-		int count = 0;
+    for (int i=0; i < nb_rbf; i++) {
 		std::random_shuffle(indices.begin(), indices.end());
-		for (int i=0; i < nb_rbf; i++) {
-			stencil_map[i][j] = indices[i];
+		for (int j=0; j < indices.size(); j++) {
+			stencil_map[i][j] = indices[j];
+            //printf("i=%d, j=%d, sten= %d\n", i, j, indices[j]);
 		}
 	}
 

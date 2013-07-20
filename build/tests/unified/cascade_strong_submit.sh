@@ -36,9 +36,7 @@ echo ------------------------------------------------------
 
 #source \$HOME/../shared/cascade_env.sh
 echo "Loading intel module" 
-module load intel/2013
-module load impi/intel
-module load mkl/11.0.4.183
+module load intel/cluster
 module load cmake
 module load fftw
 module load boost/1.53.0
@@ -115,8 +113,8 @@ NPROC=\$PBS_NP
 
 	echo "evaluate_derivatives Exit status: \$?"
 
-	rm *.ascii *.bmtx *.mtx 
-	rm metis_stencils*
+	#rm *.ascii *.bmtx *.mtx 
+	#rm metis_stencils*
 
 	echo "Done with cleanup" 
 

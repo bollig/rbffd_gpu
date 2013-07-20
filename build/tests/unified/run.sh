@@ -21,14 +21,14 @@
 # -l : LSH grid size (<val>^3 overlaid grid)
 
 
-MY_MPI_EXE="mpirun -r ssh -l"
+MY_MPI_EXE="mpirun -l"
 date
 
 MD=165
 N=1000
 STEN_SIZE=101
 
-NPROC=4
+NPROC=$PBS_NP
 #NPROC=1
 #~/sphere_grids/md${MD}.${N}
 
@@ -66,7 +66,7 @@ then
 	${MY_MPI_EXE} -np ${NPROC} ../compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
 
 	echo "compute_weights Exit status: $?"
-	touch $JOB_RAN_FILE
+	#touch $JOB_RAN_FILE
 fi
 
 ${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 

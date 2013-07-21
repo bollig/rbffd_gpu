@@ -93,6 +93,8 @@ namespace viennacl
         return parallel_norm_1(v, mpi_rank, dummy );
     }
 
+
+#ifdef VIENNACL_HAVE_UBLAS
     template < >
     double
     norm_1(boost::numeric::ublas::vector_range< boost::numeric::ublas::vector<double> > const& v, int const& mpi_rank)
@@ -116,6 +118,10 @@ namespace viennacl
 
             return r[0];
     }
+
+#endif
+
+
  } // end namespace linalg
 } // end namespace viennacl
 #endif

@@ -43,36 +43,6 @@ using namespace boost;
 
 namespace po = boost::program_options;
 
-void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
-        tlist["checkNorms"]->start();
-
-        VCL_VEC_t g_diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(0, NC*NN)); 
-
-        VCL_VEC_t g_exact_view = viennacl::vector_range<VCL_VEC_t>( exact, viennacl::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
-
-        g_diff -= g_exact_view; 
-
-        // Compute by component (requires slices of the vector)
-        for (unsigned int i =0; i < NC; i++) {
-
-            // TODO: add slice of vector_range and vice versa
-            viennacl::vector_slice<VCL_VEC_t> exact_view( g_exact_view, viennacl::slice(i, NC, NN)); 
-
-            viennacl::vector_slice<VCL_VEC_t> diff(g_diff, viennacl::slice(i, NC, NN)); 
-
-            double an1 = viennacl::linalg::norm_1(diff, comm_ref);
-            double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref); 
-            double an2 = viennacl::linalg::norm_2(diff, comm_ref);
-            double rn2 = an2 / viennacl::linalg::norm_2(exact_view, comm_ref); 
-            double aninf = viennacl::linalg::norm_inf(diff, comm_ref);
-            double rninf = aninf / viennacl::linalg::norm_inf(exact_view, comm_ref); 
-
-            std::cout << "COMPONENT [" << i << "]\n";
-            std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1 << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1 << std::endl;  
-            std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2 << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2 << std::endl;  
-            std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf << std::endl;  
-        }
-
 
 int main(int argc, char** argv) {
 
@@ -369,7 +339,7 @@ int main(int argc, char** argv) {
     unsigned int N_part = subdomain->getStencilsSize();
     unsigned int M_part = subdomain->getNodeListSize();
 
-    UBLAS_VEC_t u(M_part,1.);
+    UBLAS_VEC_t u_cpu(M_part,1.);
     UBLAS_VEC_t u_x(M_part,1.);
     UBLAS_VEC_t u_y(M_part,1.);
     UBLAS_VEC_t u_z(M_part,1.);
@@ -377,7 +347,7 @@ int main(int argc, char** argv) {
     UBLAS_VEC_t u_new(M_part,1.);
 
     VCL_VEC_t u_gpu(M_part);
-    VCL_VEC_t u_new_gpu(M_part,1.);
+    VCL_VEC_t u_new_gpu(M_part);
 
 
 
@@ -387,7 +357,7 @@ int main(int argc, char** argv) {
 #if 0
         u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
 #else 
-        u[i] = 1;
+        u_cpu[i] = 1;
 #endif 
         u_x[i] = cos(node[0]); 
         u_y[i] = -2*sin(node[1]); 
@@ -433,15 +403,18 @@ int main(int argc, char** argv) {
     std::cout << " Built SpMVTest\n";
 
     // Prime the tubes: 
-    derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
-    derTest->SpMV(RBFFD::Y, u_gpu, yderiv_gpu);
-    derTest->SpMV(RBFFD::Z, u_gpu, zderiv_gpu);
-    derTest->SpMV(RBFFD::LAPL, u_gpu, xderiv_gpu);
+    derTest->SpMV(RBFFD::X, u_cpu, u_gpu, xderiv_gpu);
+    derTest->SpMV(RBFFD::Y, u_cpu, u_gpu, yderiv_gpu);
+    derTest->SpMV(RBFFD::Z, u_cpu, u_gpu, zderiv_gpu);
+    derTest->SpMV(RBFFD::LAPL, u_cpu, u_gpu, xderiv_gpu);
+
+    // Prime AXPY. 
+    u_new_gpu = 0.5*u_gpu + 1.*xderiv_gpu; 
 
 
     // TODO: prime hw here.
     std::cout << " Entering loop: " << N_part << " rows \n";
-    for (int i = 0; i < 1000; i++) { 
+    for (int i = 0; i < 100; i++) { 
         tm["iteration"]->start();
 
         // Verify that the CPU works
@@ -453,45 +426,42 @@ int main(int argc, char** argv) {
         // order to compute the deriv. 
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
+        derTest->SpMV(RBFFD::X, u_cpu, u_gpu, xderiv_gpu);
         tm["SpMV"]->stop();
 
         // We simulate an RK4 which has intermediate steps
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, xderiv_gpu, yderiv_gpu);
+        derTest->SpMV(RBFFD::Y, xderiv_cpu, xderiv_gpu, yderiv_gpu);
         tm["SpMV"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, yderiv_gpu, zderiv_gpu);
+        derTest->SpMV(RBFFD::Z, yderiv_cpu, yderiv_gpu, zderiv_gpu);
         tm["SpMV"]->stop();
  
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, zderiv_gpu, lderiv_gpu);
+        derTest->SpMV(RBFFD::LAPL, zderiv_cpu, zderiv_gpu, lderiv_gpu);
         tm["SpMV"]->stop();
 
         tm["computeUpdate"]->start();
         // Ensure that the compiler is not trimming this loop by 
         // pretending to calc an updated solution
-        for (int j = 0; j < M_part; j++) {
-            // Mock an RK4 timestep. If this were real each of the derivs would
-            // be same operator applied to different intermediate vectors
-            u_new_gpu[j] = u[j] + (1./6.) * (xderiv_gpu[j] + 2. * yderiv_gpu[j] + 2. * zderiv_gpu[j] + lderiv_gpu[j]);
-        }
+        // TODO: use views
+
+        u_new_gpu = u_gpu + (1./6.) * (xderiv_gpu + 2. * yderiv_gpu + 2. * zderiv_gpu + lderiv_gpu);
         tm["computeUpdate"]->stop();
 
         tm["iteration"]->stop();
     }
 
-    double an1 = viennacl::linalg::norm_1(diff, comm_ref);
-    double an2 = viennacl::linalg::norm_2(diff, comm_ref);
-    double aninf = viennacl::linalg::norm_inf(diff, comm_ref);
-
     // Compute the norms to make sure we have a complete picture. 
 
     tm["computeNorms"]->start();
 
-    u_l2 = viennacl::linalg::norm_2(viennacl::vector_range<VCL_VEC_t>(u_gpu, 0, N_part), mpi_rank);
-    u_l1 = viennacl::linalg::norm_1(viennacl::vector_range<VCL_VEC_t>(u_gpu, 0, N_part), mpi_rank);
+    VCL_VEC_t temp = viennacl::vector_range<VCL_VEC_t>(u_gpu, viennacl::range(0, N_part)); 
+    u_l2 = viennacl::linalg::norm_2(temp, mpi_rank);
+    u_l1 = viennacl::linalg::norm_1(temp, mpi_rank);
+    u_linf = viennacl::linalg::norm_inf(temp, mpi_rank);
+#if 0
     u_l2 = l2norm( mpi_rank, u, 0, N_part);
     u_l1 = l1norm( mpi_rank, u, 0, N_part);
     u_linf = linfnorm( mpi_rank, u);
@@ -528,7 +498,7 @@ int main(int argc, char** argv) {
     n_l1 = l1norm( mpi_rank, u_new, 0 , N_part);
     n_linf = linfnorm( mpi_rank, u_new, 0 , N_part);
     tm["computeNorms"]->stop();
-
+#endif 
 
     tm["cleanup"]->start();
     delete(derTest); 

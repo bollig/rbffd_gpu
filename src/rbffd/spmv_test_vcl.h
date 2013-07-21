@@ -17,6 +17,40 @@
 
 #include "utils/opencl/viennacl_typedefs.h"
 
+#include <viennacl/compressed_matrix.hpp>
+#include <viennacl/coordinate_matrix.hpp>
+#include <viennacl/ell_matrix.hpp>
+#include <viennacl/linalg/gmres.hpp>
+#include <viennacl/linalg/norm_1.hpp>
+#include <viennacl/linalg/norm_2.hpp>
+#include <viennacl/linalg/norm_inf.hpp>
+#include <viennacl/linalg/prod.hpp> 
+#include <viennacl/io/matrix_market.hpp>
+#include <viennacl/matrix.hpp>
+#include <viennacl/vector.hpp> 
+#include <viennacl/vector_proxy.hpp> 
+#include <viennacl/matrix_proxy.hpp> 
+#include <viennacl/linalg/vector_operations.hpp> 
+
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/matrix_proxy.hpp>
+#include <boost/numeric/ublas/banded.hpp>
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/vector_proxy.hpp>
+#include <boost/numeric/ublas/vector_sparse.hpp>
+#include <boost/numeric/ublas/vector_of_vector.hpp>
+#include <boost/numeric/ublas/vector_expression.hpp>
+#include <boost/numeric/ublas/io.hpp>
+#include <boost/numeric/ublas/operation.hpp>
+#include <boost/numeric/ublas/lu.hpp>
+#include <boost/filesystem.hpp>
+
+#include "viennacl/linalg/parallel_norm_1.hpp"                                                                                     
+#include "viennacl/linalg/parallel_norm_2.hpp"
+#include "viennacl/linalg/parallel_norm_inf.hpp"
+
+
 class SpMVTest
 {
     protected:
@@ -136,7 +170,7 @@ class SpMVTest
 
         // Does a simple CPU CSR SpMV
         // can apply to subset of problem 
-        void SpMV(RBFFD::DerType which, VCL_VEC_t& u, VCL_VEC_t& out_deriv) {
+        void SpMV(RBFFD::DerType which, UBLAS_VEC_t& u_cpu, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
             // TODO: 
             // GPU Matrix
             // GPU Vector
@@ -170,13 +204,19 @@ class SpMVTest
 
             tm["spmv"]->start();
             //std::vector<double*> DM = rbffd->getWeights(which);
-            VCL_ELL_MAT_t* DM = rbffd->getGPUWeights(which);
-
+            VCL_ELL_MAT_t& DM_ell = *(rbffd->getGPUWeights(which));
+            VCL_CSR_MAT_t DM(DM_ell.size1(), DM_ell.size2(), DM_ell.nnz()); 
             int nb_stencils = grid->getStencilsSize();
+            int nb_nodes = grid->getNodeListSize();
             int nb_qmb_rows = grid->QmB_size;
-            
+
+            viennacl::matrix_range<VCL_CSR_MAT_t> DM_qmb(DM, viennacl::range(0, nb_qmb_rows), viennacl::range(0, nb_nodes));
+            viennacl::matrix_range<VCL_CSR_MAT_t> DM_b(DM, viennacl::range(nb_qmb_rows, nb_stencils), viennacl::range(0, nb_nodes));
+
+            viennacl::vector_range<VCL_VEC_t> out_deriv_qmb(out_deriv, viennacl::range(0, nb_qmb_rows));
+
             // TODO: prod on first nb_qmb_rows. 
-            
+            out_deriv_qmb = viennacl::linalg::prod(DM_qmb, u_gpu); 
 
 
             //------------
@@ -188,7 +228,7 @@ class SpMVTest
             // Fill Sendbuf 
             //------------
 
-            this->encodeSendBuf(u);
+            this->encodeSendBuf(u_cpu);
 
             //------------
             // Send O
@@ -209,7 +249,7 @@ class SpMVTest
             // Copy R up 
             //------------
 
-            this->decodeRecvBuf(u);
+            this->decodeRecvBuf(u_cpu);
 
             //TODO: send to GPU;
 
@@ -245,7 +285,7 @@ class SpMVTest
             }
         }
 
-        void encodeSendBuf(VCL_VEC_t& vec) {
+        void encodeSendBuf(UBLAS_VEC_t& vec) {
             tm["encode_send"]->start();
             // Prep-Send: Copy elements of set to sbuf
             unsigned int k = 0; 
@@ -278,7 +318,7 @@ class SpMVTest
             tm["irecv"]->stop();
         }
 
-        void decodeRecvBuf(VCL_VEC_t &vec) {
+        void decodeRecvBuf(UBLAS_VEC_t &vec) {
             // Post-Recv: copy elements out
             tm["decode_recv"]->start();
             unsigned int k = 0; 

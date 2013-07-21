@@ -11,7 +11,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -32,27 +32,27 @@ namespace viennacl
   //
   // generic norm_1 function
   //   uses tag dispatch to identify which algorithm
-  //   should be called 
+  //   should be called
   //
-  namespace linalg 
+  namespace linalg
   {
-    
+
     #ifdef VIENNACL_HAVE_UBLAS
     // ----------------------------------------------------
     // UBLAS
     //
     template< typename VectorT >
     typename viennacl::enable_if< viennacl::is_ublas< typename viennacl::traits::tag_of< VectorT >::type >::value,
-                                  typename VectorT::value_type      
-                                >::type    
+                                  typename VectorT::value_type
+                                >::type
     norm_1(VectorT const& vector)
     {
       // std::cout << "ublas .. " << std::endl;
       return boost::numeric::ublas::norm_1(vector);
     }
     #endif
-    
-    
+
+
     // ----------------------------------------------------
     // STL
     //
@@ -66,44 +66,44 @@ namespace viennacl
       typename VectorT::value_type result = 0;
       for (typename VectorT::size_type i=0; i<v1.size(); ++i)
         result += fabs(v1[i]);
-      
+
       return result;
     }
-    
+
     // ----------------------------------------------------
     // VIENNACL
     //
     template< typename ScalarType, unsigned int alignment >
-    viennacl::scalar_expression< const viennacl::vector<ScalarType, alignment>, 
+    viennacl::scalar_expression< const viennacl::vector<ScalarType, alignment>,
                                  const viennacl::vector<ScalarType, alignment>,
                                  viennacl::op_norm_1 >
-    norm_1(viennacl::vector<ScalarType, alignment> const & vector, 
+    norm_1(viennacl::vector<ScalarType, alignment> const & vector,
          typename viennacl::enable_if< viennacl::is_viennacl< typename viennacl::traits::tag_of< viennacl::vector<ScalarType, alignment> >::type >::value
                                      >::type* dummy = 0)
     {
-      return viennacl::scalar_expression< const viennacl::vector<ScalarType, alignment>, 
+      return viennacl::scalar_expression< const viennacl::vector<ScalarType, alignment>,
                                           const viennacl::vector<ScalarType, alignment>,
                                           viennacl::op_norm_1 >(vector, vector);
     }
 
     template< typename VectorType >
-    viennacl::scalar_expression< const viennacl::vector_range<VectorType>, 
+    viennacl::scalar_expression< const viennacl::vector_range<VectorType>,
                                  const viennacl::vector_range<VectorType>,
                                  viennacl::op_norm_1 >
     norm_1(viennacl::vector_range<VectorType> const & vector)
     {
-      return viennacl::scalar_expression< const viennacl::vector_range<VectorType>, 
+      return viennacl::scalar_expression< const viennacl::vector_range<VectorType>,
                                           const viennacl::vector_range<VectorType>,
                                           viennacl::op_norm_1 >(vector, vector);
     }
 
     template< typename VectorType >
-    viennacl::scalar_expression< const viennacl::vector_slice<VectorType>, 
+    viennacl::scalar_expression< const viennacl::vector_slice<VectorType>,
                                  const viennacl::vector_slice<VectorType>,
                                  viennacl::op_norm_1 >
     norm_1(viennacl::vector_slice<VectorType> const & vector)
     {
-      return viennacl::scalar_expression< const viennacl::vector_slice<VectorType>, 
+      return viennacl::scalar_expression< const viennacl::vector_slice<VectorType>,
                                           const viennacl::vector_slice<VectorType>,
                                           viennacl::op_norm_1 >(vector, vector);
     }

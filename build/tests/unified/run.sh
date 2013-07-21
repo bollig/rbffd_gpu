@@ -21,14 +21,14 @@
 # -l : LSH grid size (<val>^3 overlaid grid)
 
 
-MY_MPI_EXE="mpirun -r ssh -l"
+MY_MPI_EXE="mpirun -l -perhost 1"
 date
 
 MD=165
 N=1000
 STEN_SIZE=101
 
-NPROC=4
+NPROC=2
 #NPROC=1
 #~/sphere_grids/md${MD}.${N}
 
@@ -69,7 +69,7 @@ then
 	touch $JOB_RAN_FILE
 fi
 
-${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives_overlap.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 echo "evaluate_derivatives Exit status: $?"
 

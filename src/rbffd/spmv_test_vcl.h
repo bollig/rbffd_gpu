@@ -40,7 +40,7 @@ class SpMVTest
         EB::TimerList tm; 
 
     public: 
-        SpMVTest_VCL(RBFFD* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1) {
+        SpMVTest(RBFFD* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1) {
             o_comm_size=0; 
             r_comm_size=0;
             setupTimers(); 
@@ -123,6 +123,7 @@ class SpMVTest
         void setupTimers() {
             tm["synchronize"] = new EB::Timer("[SpMVTest] Synchronize (MPI_Isend/MPI_Irecv");
             tm["spmv"] = new EB::Timer("[SpMVTest] perform SpMV");
+            tm["spmv_w_comm"] = new EB::Timer("[SpMVTest] SpMV + Communication");
             tm["irecv"] = new EB::Timer("[SpMVTest] MPI_Irecv"); 
             tm["encode_send"] = new EB::Timer("[SpMVTest] Encode sendbuf (collect all O_by_rank into one vector)"); 
             tm["decode_recv"] = new EB::Timer("[SpMVTest] Decode recvbuf (scatter R_by_rank into memory)");
@@ -170,9 +171,9 @@ class SpMVTest
             std::vector<StencilType>& stencils = grid->getStencils();
             //int nb_nodes = grid->getNodeListSize();
             int nb_stencils = grid->getStencilsSize();
-            int nb_qmb_rows = grid->QmB.size();
+            int nb_qmb_rows = grid->QmB_size;
             
-            std::cout << "Queuing Q\B.size() = " << nb_qmb_rows << std::endl;
+            std::cout << "Queuing QmB.size() = " << nb_qmb_rows << std::endl;
             for (unsigned int i=0; i < nb_qmb_rows; i++) {
                 double* w = DM[i];
                 StencilType& st = stencils[i];
@@ -194,7 +195,7 @@ class SpMVTest
             // Fill Sendbuf 
             //------------
 
-            this->encodeSendbuf();
+            this->encodeSendBuf(u);
 
             //------------
             // Send O
@@ -214,7 +215,7 @@ class SpMVTest
             // Copy R up 
             //------------
 
-            this->decodeRecvBuf();
+            this->decodeRecvBuf(u);
 
             //TODO: send to GPU;
 
@@ -233,6 +234,7 @@ class SpMVTest
             tm["spmv"]->stop();
 
             tm["spmv_w_comm"]->stop();
+            exit(-1);
         }
 
 
@@ -248,7 +250,7 @@ class SpMVTest
             }
         }
 
-        void encodeSendBuf() {
+        void encodeSendBuf(std::vector<double>& vec) {
             tm["encode_send"]->start();
             // Prep-Send: Copy elements of set to sbuf
             unsigned int k = 0; 
@@ -281,10 +283,10 @@ class SpMVTest
             tm["irecv"]->stop();
         }
 
-        void decodeRecvBuf() {
+        void decodeRecvBuf(std::vector<double> &vec) {
             // Post-Recv: copy elements out
             tm["decode_recv"]->start();
-            k = 0; 
+            unsigned int k = 0; 
             for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
                 k = this->rdispls[i]; 
                 for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {

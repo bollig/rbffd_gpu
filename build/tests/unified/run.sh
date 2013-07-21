@@ -25,10 +25,10 @@ MY_MPI_EXE="mpirun -l"
 date
 
 MD=165
-N=1000
-STEN_SIZE=101
+N=10000
+STEN_SIZE=11
 
-NPROC=$PBS_NP
+NPROC=$PBS_NUM_NODES
 #NPROC=1
 #~/sphere_grids/md${MD}.${N}
 
@@ -38,7 +38,7 @@ JOB_RAN_FILE=job_ran
 TEST_TYPE=reg
 NEW_WORKDIR=./${TEST_TYPE}_${N}_${STEN_SIZE}_${NPROC}proc
 
-GRID_FILE=$HOME/GRIDS/regular/10_cubed/regulargrid_10x_10y_10z_final.ascii
+GRID_FILE=$HOME/GRIDS/regular/100_cubed/regulargrid_100x_100y_100z_final.ascii
 
 mkdir -p $NEW_WORKDIR
 cd $NEW_WORKDIR
@@ -63,13 +63,14 @@ then
 	# echo "hostname Exit status: $?"
 
 	# add -l for verbose logging of output 
-	${MY_MPI_EXE} -np ${NPROC} ../compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
 
 	echo "compute_weights Exit status: $?"
-	#touch $JOB_RAN_FILE
+	touch $JOB_RAN_FILE
 fi
 
-${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+	${MY_MPI_EXE} -np ${NPROC} ../compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
+
+	#${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives_overlap.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 echo "evaluate_derivatives Exit status: $?"
 

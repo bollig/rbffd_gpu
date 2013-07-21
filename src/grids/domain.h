@@ -42,7 +42,11 @@ class Domain : public Grid, public MPISendable
         //
         // ***************************************************
 
+    public:
+        int QmB_size, BmO_size, O_size, R_size;
+        int QmD_size, B_size, D_size, Q_size, G_size;
 
+//    protected:
         // 1) These are the sets of stencil centers
         std::set<int> G; 			// All nodes required for computation
         std::set<int> Q;			// All stencil centers in this CPU's QUEUE							
@@ -57,6 +61,7 @@ class Domain : public Grid, public MPISendable
         std::set<int> QmB;
         std::set<int> BmO;
         std::set<int> R;			// Nodes REQUIRED from other Domains (not stencil centers) 
+
 
     protected: 
         // 5) These are the maps between local and global indexing space

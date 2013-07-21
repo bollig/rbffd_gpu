@@ -321,6 +321,7 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
     for (unsigned int i = 0; i < rbf_centers.size(); i++) {
         NodeType& pt = rbf_centers[i];
         if (this->isInsideSubdomain(pt, i)) {
+            // Insert the global index
             Q.insert(i);
         }
     }
@@ -334,9 +335,9 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
         for (unsigned int j = 1; j < st.size(); j++) { // Check all nodes in corresponding stencil
             unsigned int indx = st[j];
             NodeType& pt2 = rbf_centers[indx];
-            //            std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2) << std::endl;
+            // std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2, indx) << std::endl;
             // If any stencil node is outside the domain, then set this to true
-            if (!this->isInsideSubdomain(pt2, j)) {
+            if (!isInsideSubdomain(pt2, indx)) {
                 depR = 1;
             }
         }
@@ -419,16 +420,26 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 
     set_union(Q.begin(), Q.end(), R.begin(), R.end(), inserter(G, G.end()));
 
-    printf("Q size= %d\n", (int) Q.size());
-    printf("O.size= %d\n", (int) O.size());
-    printf("D.size= %d\n", (int) D.size());
-    //    printf("OmD.size= %d\n", (int) OmD.size());
-    printf("B.size= %d\n", (int) B.size());
-    printf("QmD.size= %d\n", (int) QmD.size());
     printf("QmB.size= %d\n", (int) QmB.size());
+    this->QmB_size = QmB.size();
     printf("BmO.size= %d\n", (int) BmO.size());
+    this->BmO_size = BmO.size();
+    printf("O.size= %d\n", (int) O.size());
+    this->O_size = O.size();
     printf("R.size= %d\n", (int) R.size());
+    this->R_size = R.size();
+
     printf("G.size = %d\n", (int) G.size());
+    this->G_size = G.size();
+    printf("Q size= %d\n", (int) Q.size());
+    this->Q_size = Q.size();
+    printf("QmD.size= %d\n", (int) QmD.size());
+    this->QmD_size = QmD.size();
+    printf("D.size= %d\n", (int) D.size());
+    this->D_size = D.size();
+    printf("B.size= %d\n", (int) B.size());
+    this->B_size = B.size();
+    //    printf("OmD.size= %d\n", (int) OmD.size());
 }
 
 //----------------------------------------------------------------------
@@ -847,6 +858,8 @@ void Domain::writeL2GToFile(std::string filename) {
     fname.append(filename);
     std::ofstream fout(fname.c_str());
     if (fout.is_open()) {
+        fout << QmB.size() << " " << BmO.size() << " " << O.size() << " " << R.size() << std::endl;
+        fout << Q.size() << " " << G.size() << " " << D.size() << " " << B.size() << " " << QmD.size() << std::endl;
         std::vector<int>::iterator mit;
         int i = 0;
         for (mit = loc_to_glob.begin(); mit != loc_to_glob.end(); mit++, i++) {
@@ -957,6 +970,14 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
 	fin.open(fname.c_str());
 
 	if (fin.is_open()) {
+        fin >> this->QmB_size >> this->BmO_size >> this->O_size >> this->R_size;
+        fin >> Q_size >> G_size >> D_size >> B_size >> QmD_size;
+
+        // TODO:
+        // So we can load the file and know that the nodes are ordered QmB BmO O
+        // and R. Then we also know the nodes are ordered: QmD D R so we can
+        // refill each of the vectors/sets as we read in files
+
 		loc_to_glob.clear();
 		while (fin.good()) {
 			unsigned int glob_indx, loc_indx;

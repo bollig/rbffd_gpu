@@ -29,6 +29,7 @@ N=10000
 STEN_SIZE=11
 
 NPROC=$PBS_NUM_NODES
+NPROC=4
 #NPROC=1
 #~/sphere_grids/md${MD}.${N}
 
@@ -64,13 +65,13 @@ then
 
 	# add -l for verbose logging of output 
 
+	${MY_MPI_EXE} -np ${NPROC} ../compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
 	echo "compute_weights Exit status: $?"
 	touch $JOB_RAN_FILE
 fi
 
-	${MY_MPI_EXE} -np ${NPROC} ../compute_weights.x -w 15 -g input_grid.ascii -a -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
 
-	#${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives_overlap.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+	${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives_overlap.x -g input_grid.ascii -a -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 echo "evaluate_derivatives Exit status: $?"
 

@@ -858,8 +858,10 @@ void Domain::writeL2GToFile(std::string filename) {
     fname.append(filename);
     std::ofstream fout(fname.c_str());
     if (fout.is_open()) {
-        fout << QmB.size() << " " << BmO.size() << " " << O.size() << " " << R.size() << std::endl;
-        fout << Q.size() << " " << G.size() << " " << D.size() << " " << B.size() << " " << QmD.size() << std::endl;
+        fout << G_size << " " << Q_size << " " << B_size << std::endl;
+        fout << QmB_size << " " << BmO_size << " " << O_size << " " << R_size << std::endl;
+        fout << QmD_size << " " << D_size << " " << R_size << std::endl;
+
         std::vector<int>::iterator mit;
         int i = 0;
         for (mit = loc_to_glob.begin(); mit != loc_to_glob.end(); mit++, i++) {
@@ -970,20 +972,64 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
 	fin.open(fname.c_str());
 
 	if (fin.is_open()) {
-        fin >> this->QmB_size >> this->BmO_size >> this->O_size >> this->R_size;
-        fin >> Q_size >> G_size >> D_size >> B_size >> QmD_size;
+        fin >> G_size >> Q_size >> B_size;
+        fin >> QmB_size >> BmO_size >> O_size >> R_size;
+        fin >> QmD_size >> D_size >> R_size;
 
         // TODO:
         // So we can load the file and know that the nodes are ordered QmB BmO O
         // and R. Then we also know the nodes are ordered: QmD D R so we can
         // refill each of the vectors/sets as we read in files
 
+        this->G.clear();
+        this->Q.clear();
+        this->B.clear();
+        this->QmB.clear();
+        this->BmO.clear();
+        this->O.clear();
+        this->R.clear();
+        this->QmD.clear();
+        this->D.clear();
+
+        unsigned int kk = 0;
 		loc_to_glob.clear();
 		while (fin.good()) {
 			unsigned int glob_indx, loc_indx;
 			fin >> loc_indx >> glob_indx;
 			if (!fin.eof()) {
 				loc_to_glob.push_back(glob_indx);
+
+                // Populate index sets (for legacy code)
+                G.insert(glob_indx);
+                if (kk < Q_size) {
+                    Q.insert(glob_indx);
+                }
+                // QmB BmO O R
+                if (kk < QmB_size) {
+                    QmB.insert(glob_indx);
+                } else {
+                    if (kk < QmB_size + BmO_size) {
+                        BmO.insert(glob_indx);
+                    } else {
+                        if (kk < QmB_size + BmO_size + O_size) {
+                            O.insert(glob_indx);
+                        } else {
+                            R.insert(glob_indx);
+                        }
+                    }
+                    // B = BmO + O
+                    if (kk < QmB_size + BmO_size + O_size) {
+                        B.insert(glob_indx);
+                    }
+                }
+                // QmD D R
+                if (kk < QmD_size) {
+                    QmD.insert(glob_indx);
+                } else {
+                    if (kk < QmD_size + D_size) {
+                        D.insert(glob_indx);
+                    }
+                }
 			}
 		}
 	} else {

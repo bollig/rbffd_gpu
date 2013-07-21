@@ -173,7 +173,7 @@ class SpMVTest
             int nb_stencils = grid->getStencilsSize();
             int nb_qmb_rows = grid->QmB_size;
             
-            std::cout << "Queuing QmB.size() = " << nb_qmb_rows << std::endl;
+            // std::cout << "Queuing QmB.size() = " << nb_qmb_rows << std::endl;
             for (unsigned int i=0; i < nb_qmb_rows; i++) {
                 double* w = DM[i];
                 StencilType& st = stencils[i];
@@ -210,6 +210,7 @@ class SpMVTest
                 }
                 this->postAlltoallv();
             }
+            tm["synchronize"]->stop();
 
             //------------
             // Copy R up 
@@ -219,7 +220,7 @@ class SpMVTest
 
             //TODO: send to GPU;
 
-            std::cout << "Queuing B.size() = " << nb_stencils - nb_qmb_rows << std::endl;
+            //std::cout << "Queuing B.size() = " << nb_stencils - nb_qmb_rows << std::endl;
 
             for (unsigned int i=nb_qmb_rows; i < nb_stencils; i++) {
                 double* w = DM[i];
@@ -234,7 +235,6 @@ class SpMVTest
             tm["spmv"]->stop();
 
             tm["spmv_w_comm"]->stop();
-            exit(-1);
         }
 
 

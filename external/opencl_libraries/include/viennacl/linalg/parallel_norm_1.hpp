@@ -11,7 +11,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -20,6 +20,7 @@
 /** @file norm_1.hpp
     @brief Generic interface for the l^1-norm. See viennacl/linalg/vector_operations.hpp for implementations.
 */
+#include <mpi.h>
 
 #include <math.h>    //for sqrt()
 #include "viennacl/forwards.h"
@@ -28,7 +29,6 @@
 #include "viennacl/meta/tag_of.hpp"
 
 #include "viennacl/linalg/norm_1.hpp"
-#include "utils/comm/communicator.h"
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
@@ -49,76 +49,72 @@ namespace viennacl
   //
   // generic norm_1 function
   //   uses tag dispatch to identify which algorithm
-  //   should be called 
+  //   should be called
   //
-  namespace linalg 
+  namespace linalg
   {
 
     // Generic for GPU (compute norm on gpu, transfer scalar to cpu, reduce and return to the gpu)
     template <typename VectorType>
     typename VectorType::value_type
-    parallel_norm_1(VectorType const& v, Communicator const& comm_unit, typename VectorType::value_type& dummy) 
+    parallel_norm_1(VectorType const& v, int const& mpi_rank, typename VectorType::value_type& dummy)
     {
-        // Force the GPU norm to the cpu. 
+        // Force the GPU norm to the cpu.
         double norm = viennacl::linalg::norm_1(v);
-        double r[1]; 
-        
-        MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, comm_unit.getComm()); 
-            MPI_Barrier(MPI_COMM_WORLD); 
-       
-        return (typename VectorType::value_type)r[0]; 
+        double r[1];
+
+        MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+        return (typename VectorType::value_type)r[0];
     }
 
 
     template <typename VectorType>
     //typename VectorType::value_type
     double
-    parallel_norm_1(VectorType const& v, Communicator const& comm_unit, double& dummy) 
+    parallel_norm_1(VectorType const& v, int const& mpi_rank, double& dummy)
     {
         // MPI will segfault if we dont declare norm as an array type
         //typename VectorType::value_type norm = viennacl::linalg::norm_1(v);
         double norm = viennacl::linalg::norm_1(v);
-        double r[1]; 
-        
-        MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, comm_unit.getComm()); 
-            MPI_Barrier(MPI_COMM_WORLD); 
-       
-        return r[0]; 
+        double r[1];
+
+        MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+        return r[0];
     }
 
     template <typename VectorType>
     typename VectorType::value_type
-    norm_1(VectorType const& v, Communicator const& comm_unit) 
+    norm_1(VectorType const& v, int const& mpi_rank)
     {
         // Redirect the call to appropriate float or double routines (Type size matters with MPI)
-        typename VectorType::value_type dummy; 
-        return parallel_norm_1(v, comm_unit, dummy ); 
+        typename VectorType::value_type dummy;
+        return parallel_norm_1(v, mpi_rank, dummy );
     }
 
     template < >
     double
-    norm_1(boost::numeric::ublas::vector_range< boost::numeric::ublas::vector<double> > const& v, Communicator const& comm_unit) 
+    norm_1(boost::numeric::ublas::vector_range< boost::numeric::ublas::vector<double> > const& v, int const& mpi_rank)
     {
             double norm = boost::numeric::ublas::norm_1(v);
-            double r[1]; 
+            double r[1];
 
-            MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, comm_unit.getComm()); 
-            MPI_Barrier(MPI_COMM_WORLD); 
+            MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-            return r[0]; 
+            return r[0];
     }
 
     template < >
     double
-    norm_1(boost::numeric::ublas::vector_slice< boost::numeric::ublas::vector<double> > const& v, Communicator const& comm_unit) 
+    norm_1(boost::numeric::ublas::vector_slice< boost::numeric::ublas::vector<double> > const& v, int const& mpi_rank)
     {
             double norm = boost::numeric::ublas::norm_1(v);
-            double r[1]; 
+            double r[1];
 
-            MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, comm_unit.getComm()); 
-            MPI_Barrier(MPI_COMM_WORLD); 
+            MPI_Allreduce(&norm, r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-            return r[0]; 
+            return r[0];
     }
  } // end namespace linalg
 } // end namespace viennacl

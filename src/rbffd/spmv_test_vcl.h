@@ -15,10 +15,12 @@
 #include "timer_eb.h"
 #include "common_typedefs.h"
 
+#include "utils/opencl/viennacl_typedefs.h"
+
 class SpMVTest
 {
     protected:
-        RBFFD* rbffd; 
+        RBFFD_VCL* rbffd; 
         Domain* grid; 
         int rank, size;
 
@@ -40,7 +42,7 @@ class SpMVTest
         EB::TimerList tm; 
 
     public: 
-        SpMVTest(RBFFD* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1) {
+        SpMVTest(RBFFD_VCL* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1) {
             o_comm_size=0; 
             r_comm_size=0;
             setupTimers(); 
@@ -134,7 +136,7 @@ class SpMVTest
 
         // Does a simple CPU CSR SpMV
         // can apply to subset of problem 
-        void SpMV(RBFFD::DerType which, std::vector<double>& u, std::vector<double>& out_deriv) {
+        void SpMV(RBFFD::DerType which, VCL_VEC_t& u, VCL_VEC_t& out_deriv) {
             // TODO: 
             // GPU Matrix
             // GPU Vector
@@ -167,23 +169,14 @@ class SpMVTest
             //------------
 
             tm["spmv"]->start();
-            std::vector<double*> DM = rbffd->getWeights(which);
-            std::vector<StencilType>& stencils = grid->getStencils();
-            //int nb_nodes = grid->getNodeListSize();
+            //std::vector<double*> DM = rbffd->getWeights(which);
+            VCL_ELL_MAT_t* DM = rbffd->getGPUWeights(which);
+
             int nb_stencils = grid->getStencilsSize();
             int nb_qmb_rows = grid->QmB_size;
             
-            // std::cout << "Queuing QmB.size() = " << nb_qmb_rows << std::endl;
-            for (unsigned int i=0; i < nb_qmb_rows; i++) {
-                double* w = DM[i];
-                StencilType& st = stencils[i];
-                double der = 0.0;
-                unsigned int n = st.size();
-                for (unsigned int s=0; s < n; s++) {
-                    der += w[s] * u[st[s]];
-                }
-                out_deriv[i] = der;
-            }
+            // TODO: prod on first nb_qmb_rows. 
+            
 
 
             //------------
@@ -222,6 +215,7 @@ class SpMVTest
 
             //std::cout << "Queuing B.size() = " << nb_stencils - nb_qmb_rows << std::endl;
 
+#if 0
             for (unsigned int i=nb_qmb_rows; i < nb_stencils; i++) {
                 double* w = DM[i];
                 StencilType& st = stencils[i];
@@ -232,6 +226,7 @@ class SpMVTest
                 }
                 out_deriv[i] = der;
             }
+#endif 
             tm["spmv"]->stop();
 
             tm["spmv_w_comm"]->stop();
@@ -250,7 +245,7 @@ class SpMVTest
             }
         }
 
-        void encodeSendBuf(std::vector<double>& vec) {
+        void encodeSendBuf(VCL_VEC_t& vec) {
             tm["encode_send"]->start();
             // Prep-Send: Copy elements of set to sbuf
             unsigned int k = 0; 
@@ -283,7 +278,7 @@ class SpMVTest
             tm["irecv"]->stop();
         }
 
-        void decodeRecvBuf(std::vector<double> &vec) {
+        void decodeRecvBuf(VCL_VEC_t &vec) {
             // Post-Recv: copy elements out
             tm["decode_recv"]->start();
             unsigned int k = 0; 

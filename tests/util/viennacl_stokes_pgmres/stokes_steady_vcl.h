@@ -399,7 +399,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
 #if 1
-            viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov, NC); 
+            viennacl::linalg::parallel_gmres_tag tag(comm_ref.getRank(), grid_ref, tol, restart*krylov, krylov, NC); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
@@ -472,12 +472,12 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             viennacl::vector_slice<VCL_VEC_t> diff(g_diff, viennacl::slice(i, NC, NN)); 
 
-            double an1 = viennacl::linalg::norm_1(diff, comm_ref);
-            double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref); 
-            double an2 = viennacl::linalg::norm_2(diff, comm_ref);
-            double rn2 = an2 / viennacl::linalg::norm_2(exact_view, comm_ref); 
-            double aninf = viennacl::linalg::norm_inf(diff, comm_ref);
-            double rninf = aninf / viennacl::linalg::norm_inf(exact_view, comm_ref); 
+            double an1 = viennacl::linalg::norm_1(diff, comm_ref.getRank());
+            double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref.getRank()); 
+            double an2 = viennacl::linalg::norm_2(diff, comm_ref.getRank());
+            double rn2 = an2 / viennacl::linalg::norm_2(exact_view, comm_ref.getRank()); 
+            double aninf = viennacl::linalg::norm_inf(diff, comm_ref.getRank());
+            double rninf = aninf / viennacl::linalg::norm_inf(exact_view, comm_ref.getRank()); 
 
             std::cout << "COMPONENT [" << i << "]\n";
             std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1 << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1 << std::endl;  
@@ -486,12 +486,12 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
         // Global difference
-        double an1_g = viennacl::linalg::norm_1(g_diff, comm_ref);
-        double rn1_g = an1_g / viennacl::linalg::norm_1(g_exact_view, comm_ref); 
-        double an2_g = viennacl::linalg::norm_2(g_diff, comm_ref);
-        double rn2_g = an2_g / viennacl::linalg::norm_2(g_exact_view, comm_ref); 
-        double aninf_g = viennacl::linalg::norm_inf(g_diff, comm_ref);
-        double rninf_g = aninf_g / viennacl::linalg::norm_inf(g_exact_view, comm_ref); 
+        double an1_g = viennacl::linalg::norm_1(g_diff, comm_ref.getRank());
+        double rn1_g = an1_g / viennacl::linalg::norm_1(g_exact_view, comm_ref.getRank()); 
+        double an2_g = viennacl::linalg::norm_2(g_diff, comm_ref.getRank());
+        double rn2_g = an2_g / viennacl::linalg::norm_2(g_exact_view, comm_ref.getRank()); 
+        double aninf_g = viennacl::linalg::norm_inf(g_diff, comm_ref.getRank());
+        double rninf_g = aninf_g / viennacl::linalg::norm_inf(g_exact_view, comm_ref.getRank()); 
 
         std::cout << "GLOBAL ERROR " << NN << " (CPU)\n";
         std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1_g << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1_g << std::endl;  
@@ -520,12 +520,12 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             boost::numeric::ublas::vector_slice<UBLAS_VEC_t> diff(g_diff, boost::numeric::ublas::slice(i, NC, NN)); 
 
-            double an1 = viennacl::linalg::norm_1(diff, comm_ref);
-            double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref); 
-            double an2 = viennacl::linalg::norm_2(diff, comm_ref);
-            double rn2 = an2 / viennacl::linalg::norm_2(exact_view, comm_ref); 
-            double aninf = viennacl::linalg::norm_inf(diff, comm_ref);
-            double rninf = aninf / viennacl::linalg::norm_inf(exact_view, comm_ref); 
+            double an1 = viennacl::linalg::norm_1(diff, comm_ref.getRank());
+            double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref.getRank()); 
+            double an2 = viennacl::linalg::norm_2(diff, comm_ref.getRank());
+            double rn2 = an2 / viennacl::linalg::norm_2(exact_view, comm_ref.getRank()); 
+            double aninf = viennacl::linalg::norm_inf(diff, comm_ref.getRank());
+            double rninf = aninf / viennacl::linalg::norm_inf(exact_view, comm_ref.getRank()); 
 
             std::cout << "COMPONENT [" << i << "]\n";
             std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1 << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1 << std::endl;  
@@ -534,12 +534,12 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
         }
 
         // Global difference
-        double an1_g = viennacl::linalg::norm_1(g_diff, comm_ref);
-        double rn1_g = an1_g / viennacl::linalg::norm_1(g_exact_view, comm_ref); 
-        double an2_g = viennacl::linalg::norm_2(g_diff, comm_ref);
-        double rn2_g = an2_g / viennacl::linalg::norm_2(g_exact_view, comm_ref); 
-        double aninf_g = viennacl::linalg::norm_inf(g_diff, comm_ref);
-        double rninf_g = aninf_g / viennacl::linalg::norm_inf(g_exact_view, comm_ref); 
+        double an1_g = viennacl::linalg::norm_1(g_diff, comm_ref.getRank());
+        double rn1_g = an1_g / viennacl::linalg::norm_1(g_exact_view, comm_ref.getRank()); 
+        double an2_g = viennacl::linalg::norm_2(g_diff, comm_ref.getRank());
+        double rn2_g = an2_g / viennacl::linalg::norm_2(g_exact_view, comm_ref.getRank()); 
+        double aninf_g = viennacl::linalg::norm_inf(g_diff, comm_ref.getRank());
+        double rninf_g = aninf_g / viennacl::linalg::norm_inf(g_exact_view, comm_ref.getRank()); 
 
         std::cout << "GLOBAL ERROR " << NN << " (CPU)\n";
         std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1_g << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1_g << std::endl;  

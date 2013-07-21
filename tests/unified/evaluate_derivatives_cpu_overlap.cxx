@@ -20,17 +20,8 @@
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
-#include "rbffd/rbffd_vcl.h"
+#include "rbffd/rbffd.h"
 #include "rbffd/spmv_test_vcl.h"
-
-#include "utils/opencl/viennacl_typedefs.h"
-
-#include <viennacl/linalg/vector_operations.hpp> 
-#include <viennacl/vector_proxy.hpp> 
-#include <viennacl/linalg/prod.hpp> 
-#include "viennacl/linalg/parallel_norm_1.hpp"                                                                                     
-#include "viennacl/linalg/parallel_norm_2.hpp"
-#include "viennacl/linalg/parallel_norm_inf.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -43,36 +34,9 @@ using namespace boost;
 
 namespace po = boost::program_options;
 
-void checkNorms(VCL_VEC_t& sol, VCL_VEC_t& exact) {
-        tlist["checkNorms"]->start();
-
-        VCL_VEC_t g_diff = viennacl::vector_range<VCL_VEC_t>(sol, viennacl::range(0, NC*NN)); 
-
-        VCL_VEC_t g_exact_view = viennacl::vector_range<VCL_VEC_t>( exact, viennacl::range(0 + nb_bnd, g_diff.size()+nb_bnd)); 
-
-        g_diff -= g_exact_view; 
-
-        // Compute by component (requires slices of the vector)
-        for (unsigned int i =0; i < NC; i++) {
-
-            // TODO: add slice of vector_range and vice versa
-            viennacl::vector_slice<VCL_VEC_t> exact_view( g_exact_view, viennacl::slice(i, NC, NN)); 
-
-            viennacl::vector_slice<VCL_VEC_t> diff(g_diff, viennacl::slice(i, NC, NN)); 
-
-            double an1 = viennacl::linalg::norm_1(diff, comm_ref);
-            double rn1 = an1 / viennacl::linalg::norm_1(exact_view, comm_ref); 
-            double an2 = viennacl::linalg::norm_2(diff, comm_ref);
-            double rn2 = an2 / viennacl::linalg::norm_2(exact_view, comm_ref); 
-            double aninf = viennacl::linalg::norm_inf(diff, comm_ref);
-            double rninf = aninf / viennacl::linalg::norm_inf(exact_view, comm_ref); 
-
-            std::cout << "COMPONENT [" << i << "]\n";
-            std::cout << "Abs l1   Norm: \t" << std::left << std::scientific << std::setw(12) << an1 << " \t\tRel l1   Norm: \t" << std::left << std::scientific << std::setw(12) << rn1 << std::endl;  
-            std::cout << "Abs l2   Norm: \t" << std::left << std::scientific << std::setw(12) << an2 << " \t\tRel l2   Norm: \t" << std::left << std::scientific << std::setw(12) << rn2 << std::endl;  
-            std::cout << "Abs linf Norm: \t" << std::left << std::scientific << std::setw(12) << aninf << " \t\tRel linf Norm: \t" << std::left << std::scientific << std::setw(12) << rninf << std::endl;  
-        }
-
+//----------------------------------------------------------------------
+//NOTE: EVERYTHING BELOW IN MAIN WAS COPIED FROM heat_regulargrid_2d/main.cpp
+//----------------------------------------------------------------------
 
 int main(int argc, char** argv) {
 
@@ -335,7 +299,7 @@ int main(int argc, char** argv) {
 #endif 
 
     tm["derSetup"]->start();
-    RBFFD_VCL* der = new RBFFD_VCL(weight_choices, subdomain, grid_dim, mpi_rank);
+    RBFFD* der = new RBFFD(weight_choices, subdomain, grid_dim, mpi_rank);
 
     der->setUseHyperviscosity(use_hyperviscosity);
     // If both are zero assume we havent set anything
@@ -369,16 +333,12 @@ int main(int argc, char** argv) {
     unsigned int N_part = subdomain->getStencilsSize();
     unsigned int M_part = subdomain->getNodeListSize();
 
-    UBLAS_VEC_t u(M_part,1.);
-    UBLAS_VEC_t u_x(M_part,1.);
-    UBLAS_VEC_t u_y(M_part,1.);
-    UBLAS_VEC_t u_z(M_part,1.);
-    UBLAS_VEC_t u_l(M_part,1.);
-    UBLAS_VEC_t u_new(M_part,1.);
-
-    VCL_VEC_t u_gpu(M_part);
-    VCL_VEC_t u_new_gpu(M_part,1.);
-
+    std::vector<double> u(M_part,1.);
+    std::vector<double> u_x(M_part,1.);
+    std::vector<double> u_y(M_part,1.);
+    std::vector<double> u_z(M_part,1.);
+    std::vector<double> u_l(M_part,1.);
+    std::vector<double> u_new(M_part,1.);
 
 
     for (int i = 0; i < M_part; i++) {
@@ -397,16 +357,10 @@ int main(int argc, char** argv) {
         u_l[i] = -sin(node[0]) - 2. * cos(node[1]) ;
     } 
 
-    UBLAS_VEC_t xderiv_cpu(M_part);	
-    UBLAS_VEC_t yderiv_cpu(M_part);	
-    UBLAS_VEC_t zderiv_cpu(M_part);	
-    UBLAS_VEC_t lderiv_cpu(M_part);	
-
-    VCL_VEC_t xderiv_gpu(M_part);	
-    VCL_VEC_t yderiv_gpu(M_part);	
-    VCL_VEC_t zderiv_gpu(M_part);	
-    VCL_VEC_t lderiv_gpu(M_part);	
-
+    std::vector<double> xderiv_cpu(M_part);	
+    std::vector<double> yderiv_cpu(M_part);	
+    std::vector<double> zderiv_cpu(M_part);	
+    std::vector<double> lderiv_cpu(M_part);	
 
 
     //TODO: need to make apply work with synchronization
@@ -432,13 +386,6 @@ int main(int argc, char** argv) {
     SpMVTest *derTest = new SpMVTest(der, subdomain, mpi_rank, mpi_size ); 
     std::cout << " Built SpMVTest\n";
 
-    // Prime the tubes: 
-    derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
-    derTest->SpMV(RBFFD::Y, u_gpu, yderiv_gpu);
-    derTest->SpMV(RBFFD::Z, u_gpu, zderiv_gpu);
-    derTest->SpMV(RBFFD::LAPL, u_gpu, xderiv_gpu);
-
-
     // TODO: prime hw here.
     std::cout << " Entering loop: " << N_part << " rows \n";
     for (int i = 0; i < 1000; i++) { 
@@ -453,20 +400,20 @@ int main(int argc, char** argv) {
         // order to compute the deriv. 
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
+        derTest->SpMV(RBFFD::X, u, xderiv_cpu);
         tm["SpMV"]->stop();
 
-        // We simulate an RK4 which has intermediate steps
+        // We simulate an RK4
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, xderiv_gpu, yderiv_gpu);
+        derTest->SpMV(RBFFD::Y, xderiv_cpu, yderiv_cpu);
         tm["SpMV"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, yderiv_gpu, zderiv_gpu);
+        derTest->SpMV(RBFFD::Z, yderiv_cpu, zderiv_cpu);
         tm["SpMV"]->stop();
  
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, zderiv_gpu, lderiv_gpu);
+        derTest->SpMV(RBFFD::LAPL, zderiv_cpu, lderiv_cpu);
         tm["SpMV"]->stop();
 
         tm["computeUpdate"]->start();
@@ -475,23 +422,25 @@ int main(int argc, char** argv) {
         for (int j = 0; j < M_part; j++) {
             // Mock an RK4 timestep. If this were real each of the derivs would
             // be same operator applied to different intermediate vectors
-            u_new_gpu[j] = u[j] + (1./6.) * (xderiv_gpu[j] + 2. * yderiv_gpu[j] + 2. * zderiv_gpu[j] + lderiv_gpu[j]);
+            u_new[j] = u[j] + (1./6.) * (xderiv_cpu[j] + 2. * yderiv_cpu[j] + 2. * zderiv_cpu[j] + lderiv_cpu[j]);
         }
         tm["computeUpdate"]->stop();
 
+#if 0
+        // Last of the comm points in an RK4. Should only require 4 per
+        // iteration. NOTE: if we comm before we apply the timestep update
+        // we can simply bypass this by extending the update to M_part instead
+        // of N_Part
+        tm["synchronize"]->start();
+        derTest->synchronize(u_new);
+        tm["synchronize"]->stop();
+#endif
+
         tm["iteration"]->stop();
     }
-
-    double an1 = viennacl::linalg::norm_1(diff, comm_ref);
-    double an2 = viennacl::linalg::norm_2(diff, comm_ref);
-    double aninf = viennacl::linalg::norm_inf(diff, comm_ref);
-
     // Compute the norms to make sure we have a complete picture. 
 
     tm["computeNorms"]->start();
-
-    u_l2 = viennacl::linalg::norm_2(viennacl::vector_range<VCL_VEC_t>(u_gpu, 0, N_part), mpi_rank);
-    u_l1 = viennacl::linalg::norm_1(viennacl::vector_range<VCL_VEC_t>(u_gpu, 0, N_part), mpi_rank);
     u_l2 = l2norm( mpi_rank, u, 0, N_part);
     u_l1 = l1norm( mpi_rank, u, 0, N_part);
     u_linf = linfnorm( mpi_rank, u);

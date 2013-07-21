@@ -1,7 +1,6 @@
 // Evan Bollig 2012
 //
 // Performs GMRES in parallel using an assumed additive schwarz decomposition.
-// The comm_unit provides details of the MPI environment (rank, size, communicator, etc.)
 // The domain provides the details of additive schwarz decomposition (implicit restriction operator)
 //      - Implicit because we work directly on solution nodes, not on the differentiation matrix.
 //      - if R is a restriction operator (eye only where stencils are part of
@@ -35,6 +34,7 @@ License:         MIT (X11), see file LICENSE in the base directory
 /** @file parallel_gmres.hpp
   @brief Implementations of the generalized minimum residual method are in this file.
   */
+#include <mpi.h>
 
 #include <vector>
 #include <cmath>
@@ -57,7 +57,6 @@ License:         MIT (X11), see file LICENSE in the base directory
 #include "viennacl/linalg/parallel_norm_inf.hpp"
 #include "viennacl/linalg/parallel_inner_prod.hpp"
 
-#include "utils/comm/communicator.h"
 #include "grids/domain.h"
 
 #include <boost/numeric/ublas/matrix.hpp>
@@ -92,9 +91,9 @@ namespace viennacl
                  * @param max_iterations The maximum number of iterations (including restarts
                  * @param R     The maximum dimension of the Krylov space before restart (number of restarts is found by max_iterations / R)
                  */
-                parallel_gmres_tag(Communicator& comm_unit, Domain& decomposition, double tol = 1e-10, unsigned int max_iterations = 300, unsigned int R = 20, unsigned int solution_dim_per_node = 1)
+                parallel_gmres_tag(Domain& decomposition, double tol = 1e-10, unsigned int max_iterations = 300, unsigned int R = 20, unsigned int solution_dim_per_node = 1)
                     : gmres_tag(tol, max_iterations, R),
-                    comm_ref(comm_unit), grid_ref(decomposition),
+                    grid_ref(decomposition),
                     sol_dim(solution_dim_per_node)
             {
                 std::cout << "GMRES for " << sol_dim << " components\n";
@@ -117,8 +116,6 @@ namespace viennacl
                     tlist.clear();
                 }
 
-                Communicator const& comm() const { return this->comm_ref; }
-
                 void allocateCommBuffers() {
                     tlist["allocate"]->start();
 #if 0
@@ -129,6 +126,10 @@ namespace viennacl
                     int* recvcounts;
                     double* rbuf;
 #endif
+
+                    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+                    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
                     this->sdispls = new int[grid_ref.O_by_rank.size()];
                     this->sendcounts = new int[grid_ref.O_by_rank.size()];
                     sdispls[0] = 0;
@@ -272,13 +273,15 @@ namespace viennacl
                     void
                     alltoall_subset(VectorType& vec, typename VectorType::value_type& dummy) const
                     {
+                        int mpi_size;
+                        MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
                         // Share data in vector with all other processors. Will only transfer
                         // data associated with nodes in overlap between domains.
                         // Uses MPI_Alltoallv and MPI_Barrier.
                         // Copies data from vec to transfer, then writes received data into vec
                         // before returning.
-                        if (comm_ref.getSize() > 1) {
+                        if (mpi_size > 1) {
                             tlist["gmres_alltoall"]->start();
 
                             // GPU array is arranged as {QmB BmO O R}
@@ -287,8 +290,7 @@ namespace viennacl
                             //std::cout << "VCL TRANSFER " << grid_ref.O_by_rank.size() << "\n";
                             syncSetO(vec);
 
-                            MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm());
-                            comm_ref.barrier();
+                            MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD);
 
                             syncSetR(vec);
                             tlist["gmres_alltoall"]->stop();
@@ -302,14 +304,13 @@ namespace viennacl
                     void
                     alltoall_subset(VectorType& vec, double& dummy) const
                     {
-
 #if 1
                         // Share data in vector with all other processors. Will only transfer
                         // data associated with nodes in overlap between domains.
                         // Uses MPI_Alltoallv and MPI_Barrier.
                         // Copies data from vec to transfer, then writes received data into vec
                         // before returning.
-                        if (comm_ref.getSize() > 1) {
+                        if (mpi_size > 1) {
 
                             //std::cout << "vec size = " << vec.size() << std::endl;
                             tlist["gmres_alltoall"]->start();
@@ -329,9 +330,8 @@ namespace viennacl
                                 }
                             }
 
-                            MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, comm_ref.getComm());
+                            MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD);
 
-                            comm_ref.barrier();
                             k = 0;
                             for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
                                 k = this->rdispls[i];
@@ -367,7 +367,8 @@ namespace viennacl
 
 
             protected:
-                Communicator& comm_ref;
+                int mpi_size;
+                int mpi_rank;
                 Domain& grid_ref;
                 unsigned int sol_dim;
                 mutable double* sbuf;
@@ -537,7 +538,7 @@ namespace viennacl
                 v[k] = new vcl::vector_range<VectorType>(v_full[k], vcl::range(0,NN));
             }
 
-            MPI_Barrier(MPI_COMM_WORLD);
+//            MPI_Barrier(MPI_COMM_WORLD);
 
 #if GMRES_DEBUG
             if (tag.comm().isMaster())
@@ -768,7 +769,7 @@ namespace viennacl
                 v[k] = new ublas::vector_range<VectorType>(v_full[k], ublas::range(0,NN));
             }
 
-            MPI_Barrier(MPI_COMM_WORLD);
+            //MPI_Barrier(MPI_COMM_WORLD);
 
 #if GMRES_DEBUG
             if (tag.comm().isMaster())

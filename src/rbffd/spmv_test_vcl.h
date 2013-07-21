@@ -216,7 +216,7 @@ class SpMVTest
             viennacl::vector_range<VCL_VEC_t> out_deriv_qmb(out_deriv, viennacl::range(0, nb_qmb_rows));
 
             // TODO: prod on first nb_qmb_rows. 
-            out_deriv_qmb = viennacl::linalg::prod(DM_qmb, u_gpu); 
+//            out_deriv_qmb = viennacl::linalg::prod(DM_qmb, u_gpu); 
 
 
             //------------

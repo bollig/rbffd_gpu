@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
     tm["assembleTest"] = new Timer("[Main] Assemble test vectors");
     tm["SpMV"] = new Timer("[Main] Compute Derivatives");
     tm["iteration"] = new Timer("[Main] Complete One Iteration");
+    tm["finish"] = new Timer("[Main] ViennaCL Finish queue");
     tm["SpMV_w_comm"] = new Timer("[Main] SpMV + Comm");
     tm["computeNorms"] = new Timer("[Main] Compute Norms");
     tm["computeUpdate"] = new Timer("[Main] Compute mock timestep update");
@@ -421,6 +422,9 @@ int main(int argc, char** argv) {
     viennacl::copy(u_new, u_new_gpu);
     viennacl::copy(u_cpu, u_gpu);
 
+    // Flush the queues before starting a benchmark
+    viennacl::backend::finish();
+
     // TODO: prime hw here.
     std::cout << " Entering loop: " << N_part << " rows \n";
     for (int i = 0; i < 100; i++) { 
@@ -459,6 +463,9 @@ int main(int argc, char** argv) {
         u_new_gpu = u_gpu + (1./6.) * (xderiv_gpu + 2. * yderiv_gpu + 2. * zderiv_gpu + lderiv_gpu);
         tm["computeUpdate"]->stop();
 
+        tm["finish"]->start();
+        viennacl::backend::finish();
+        tm["finish"]->stop(); 
         tm["iteration"]->stop();
     }
 
@@ -518,7 +525,7 @@ int main(int argc, char** argv) {
     tm["cleanup"]->start();
     delete(derTest); 
 
-    // We used MPI_reduce for norms, so only the master needs to printkkj
+    // We used MPI_reduce for norms, so only the master needs to print
     if (mpi_rank == 0) {
         std::cout << "U (L1, L2, Linf): " << u_l1 << ", " << u_l2 << ", " << u_linf << "\n"; 
         std::cout << "X (L1, L2, Linf): " << x_l1 << ", " << x_l2 << ", " << x_linf << "\n"; 

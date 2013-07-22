@@ -192,9 +192,9 @@ class SpMVTest
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-                if (size > 8) { 
+                //if (size > 8) { 
                     this->postIrecvs(); 
-                }
+                //}
                 // Else we use Alltoallv and dont need to worry
             }
 
@@ -202,7 +202,6 @@ class SpMVTest
             // Queue Q\B
             //------------
 
-            tm["spmv"]->start();
             //std::vector<double*> DM = rbffd->getWeights(which);
             VCL_ELL_MAT_t& DM_qmb = *(rbffd->getGPUWeightsSetQmB(which));
             VCL_ELL_MAT_t& DM_b = *(rbffd->getGPUWeightsSetB(which));
@@ -221,6 +220,7 @@ class SpMVTest
             // Start Async copy O Down
             //------------
  
+            tm["spmv"]->start();
             // SpMV on first QmB rows
             project(out_deriv, r3) = (VCL_VEC_t) viennacl::linalg::prod(DM_qmb, u_gpu); 
            
@@ -237,11 +237,11 @@ class SpMVTest
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-                if (size > 8) { 
+          //      if (size > 8) { 
                     // NOTE: this includes waitall on irecvs
                     this->postIsends(); 
-                }
-                this->postAlltoallv();
+           //     }
+            //    this->postAlltoallv();
             }
             tm["synchronize"]->stop();
 
@@ -386,144 +386,6 @@ class SpMVTest
             tm["alltoallv"]->start(); 
             MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
             tm["alltoallv"]->stop(); 
-        }
-
-
-
-        // Perform sendrecv
-        void synchronize(std::vector<double>& vec) {
-            // Share data in vector with all other processors. Will only transfer
-            // data associated with nodes in overlap between domains. 
-            // Uses MPI_Alltoallv and MPI_Barrier. 
-            // Copies data from vec to transfer, then writes received data into vec
-            // before returning. 
-
-            tm["synchronize"]->start();
-            if (size > 1) {
-                // I found 8+ processors comm best with Isend/Irecv. Alltoallv
-                // for < 8 
-                if (size > 8) { 
-                    // This is equivalent to: 
-                    // 
-                    // MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
-                    //
-
-                    // Buffer recvs
-                    tm["irecv"]->start();
-                    int r_count = 0;
-                    for (int i = 0; i < this->size; i++) { 
-                        if (this->recvcounts[i] > 0) {
-                            MPI_Irecv(this->rbuf + this->rdispls[i], this->recvcounts[i], MPI_DOUBLE, i, MPI_ANY_TAG, MPI_COMM_WORLD, &R_reqs[r_count]);
-                            r_count++;
-                        }
-                    }
-
-
-                    tm["encode_send"]->start();
-                    // Prep-Send: Copy elements of set to sbuf
-                    unsigned int k = 0; 
-                    for (size_t i = 0; i < grid->O_by_rank.size(); i++) {
-                        k = this->sdispls[i]; 
-                        for (size_t j = 0; j < grid->O_by_rank[i].size(); j++) {
-                            unsigned int s_indx = grid->g2l(grid->O_by_rank[i][j]);
-                            s_indx *= this->sol_dim; 
-                            for (unsigned int d=0; d < this->sol_dim; d++) {
-                                this->sbuf[k] = vec[s_indx+d];
-                                k++; 
-                            }
-                        }
-                    }
-                    tm["encode_send"]->stop();
-
-                    // Send
-                    int o_count = 0;
-                    for (int i = 0; i < this->size; i++) { 
-                        if (this->sendcounts[i] > 0) {
-                            MPI_Isend(this->sbuf + this->sdispls[i], this->sendcounts[i], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &O_reqs[o_count]);
-                            o_count++;
-                        }
-                    }
-
-                    // Barrier: wait for recvs to finish
-                    MPI_Waitall(r_comm_size, R_reqs, R_stats); 
-                    tm["irecv"]->stop();
-
-                    // Post-Recv: copy elements out
-                    tm["decode_recv"]->start();
-                    k = 0; 
-                    for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
-                        k = this->rdispls[i]; 
-                        for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
-                            unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                            r_indx *= this->sol_dim;
-                            //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
-                            //                                    std::cout << "Receiving " << r_indx << "\n";
-                            // TODO: need to translate to local
-                            // indexing properly. This hack assumes all
-                            // boundary are dirichlet and appear first
-                            // in the list
-                            for (unsigned int d=0; d < this->sol_dim; d++) { 
-                                vec[r_indx+d] = this->rbuf[k];  
-                                k++; 
-                            }
-                        }
-                    }
-
-                    tm["decode_recv"]->stop();
-                } else {
-                    // I found that <= 8 procs we have better comm patterns with
-                    // MPI_Alltoallv
-                    tm["encode_send"]->start();
-                    // TODO: the barrier can happen after this memcpy that preceeds the Alltoall 
-                    // Copy elements of set to sbuf
-                    unsigned int k = 0; 
-                    for (size_t i = 0; i < grid->O_by_rank.size(); i++) {
-                        k = this->sdispls[i]; 
-                        for (size_t j = 0; j < grid->O_by_rank[i].size(); j++) {
-                            unsigned int s_indx = grid->g2l(grid->O_by_rank[i][j]);
-                            s_indx *= this->sol_dim; 
-                            for (unsigned int d=0; d < this->sol_dim; d++) {
-                                this->sbuf[k] = vec[s_indx+d];
-                                k++; 
-                            }
-                        }
-                    }
-                    tm["encode_send"]->stop();
-
-                    tm["alltoallv"]->start(); 
-                    MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
-                    tm["alltoallv"]->stop(); 
-
-                    tm["decode_recv"]->start();
-                    // IF we need this barrier then our results will vary as #proc increases
-                    // but I dont think alltoall requires a barrier. internally
-                    // it can be isend/irecv but there should be a barrier
-                    // internally
-                    //comm_ref.barrier();
-
-                    k = 0; 
-                    for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
-                        k = this->rdispls[i]; 
-                        for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
-                            unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                            r_indx *= this->sol_dim;
-                            //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
-                            //                                    std::cout << "Receiving " << r_indx << "\n";
-                            // TODO: need to translate to local
-                            // indexing properly. This hack assumes all
-                            // boundary are dirichlet and appear first
-                            // in the list
-                            for (unsigned int d=0; d < this->sol_dim; d++) { 
-                                vec[r_indx+d] = this->rbuf[k];  
-                                k++; 
-                            }
-                        }
-                    }
-
-                    tm["decode_recv"]->stop();
-                }
-            }
-            tm["synchronize"]->stop();
         }
 };
 

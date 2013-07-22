@@ -28,7 +28,7 @@ MD=165
 N=100000
 STEN_SIZE=101
 
-NPROC=2
+NPROC=4
 #NPROC=1
 #~/sphere_grids/md${MD}.${N}
 

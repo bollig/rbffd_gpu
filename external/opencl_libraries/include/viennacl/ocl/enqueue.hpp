@@ -2,9 +2,10 @@
 #define VIENNACL_OCL_ENQUEUE_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file enqueue.hpp
+/** @file viennacl/ocl/enqueue.hpp
     @brief Enqueues kernels into command queues
 */
 
@@ -53,8 +54,8 @@ namespace viennacl
         std::cout << "ViennaCL: Local work size: '"   << k.local_work_size() << "'..." << std::endl;
         #endif
       
-        size_t tmp_global = k.global_work_size();
-        size_t tmp_local = k.local_work_size();
+        std::size_t tmp_global = k.global_work_size();
+        std::size_t tmp_local = k.local_work_size();
         
         cl_int err;
         if (tmp_global == 1 && tmp_local == 1)
@@ -109,11 +110,11 @@ namespace viennacl
         std::cout << "ViennaCL: Local work size: '"   << k.local_work_size(0) << ", " << k.local_work_size(1) << "'..." << std::endl;
         #endif
 
-        size_t tmp_global[2]; 
+        std::size_t tmp_global[2]; 
         tmp_global[0] = k.global_work_size(0);
         tmp_global[1] = k.global_work_size(1);
         
-        size_t tmp_local[2];
+        std::size_t tmp_local[2];
         tmp_local[0] = k.local_work_size(0);
         tmp_local[1] = k.local_work_size(1);
         

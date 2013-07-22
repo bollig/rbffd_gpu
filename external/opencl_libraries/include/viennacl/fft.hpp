@@ -2,9 +2,10 @@
 #define VIENNACL_FFT_HPP
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -18,7 +19,7 @@
 ============================================================================= */
 
 /** @file fft.hpp
-    @brief All routines related to the Fast Fourier Transform. Experimental in 1.2.x.
+    @brief All routines related to the Fast Fourier Transform. Experimental.
 */
 
 #include <viennacl/vector.hpp>
@@ -49,9 +50,12 @@ namespace viennacl
 }
 
 /// @cond
-namespace viennacl {
-  namespace detail {
-    namespace fft {
+namespace viennacl 
+{
+  namespace detail 
+  {
+    namespace fft 
+    {
 
         inline bool is_radix2(std::size_t data_size) {
             return !((data_size > 2) && (data_size & (data_size - 1)));
@@ -221,9 +225,7 @@ namespace viennacl {
         template<class SCALARTYPE, unsigned int ALIGNMENT>
         void bluestein(viennacl::vector<SCALARTYPE, ALIGNMENT>& in,
                        viennacl::vector<SCALARTYPE, ALIGNMENT>& out,
-                       std::size_t batch_num,
-                       SCALARTYPE sign = -1.0
-                       )
+                       std::size_t /*batch_num*/)
         {
           viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
 
@@ -326,9 +328,9 @@ namespace viennacl {
                                   );
         }
         
-        template<class SCALARTYPE, unsigned int ALIGNMENT>
-        void real_to_complex(viennacl::vector<SCALARTYPE, ALIGNMENT> const & in,
-                             viennacl::vector<SCALARTYPE, ALIGNMENT> & out,
+        template<class SCALARTYPE>
+        void real_to_complex(viennacl::vector_base<SCALARTYPE> const & in,
+                             viennacl::vector_base<SCALARTYPE> & out,
                              std::size_t size) 
         {
           viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
@@ -338,9 +340,9 @@ namespace viennacl {
             viennacl::ocl::enqueue(kernel(in, out, static_cast<cl_uint>(size)));
         }
 
-        template<class SCALARTYPE, unsigned int ALIGNMENT>
-        void complex_to_real(viennacl::vector<SCALARTYPE, ALIGNMENT> const & in,
-                             viennacl::vector<SCALARTYPE, ALIGNMENT>& out,
+        template<class SCALARTYPE>
+        void complex_to_real(viennacl::vector_base<SCALARTYPE> const & in,
+                             viennacl::vector_base<SCALARTYPE>& out,
                              std::size_t size)
         {
           viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
@@ -350,8 +352,8 @@ namespace viennacl {
             viennacl::ocl::enqueue(kernel(in, out, static_cast<cl_uint>(size)));
         }
 
-        template<class SCALARTYPE, unsigned int ALIGNMENT>
-        void reverse(viennacl::vector<SCALARTYPE, ALIGNMENT>& in)
+        template<class SCALARTYPE>
+        void reverse(viennacl::vector_base<SCALARTYPE>& in)
         {
           viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
             std::size_t size = in.size();
@@ -382,8 +384,8 @@ namespace viennacl {
       if(!detail::fft::is_radix2(size)) 
       {
           viennacl::vector<SCALARTYPE, ALIGNMENT> output(input.size());
-          detail::fft::direct(input.handle(),
-                              output.handle(),
+          detail::fft::direct(viennacl::traits::opencl_handle(input),
+                              viennacl::traits::opencl_handle(output),
                               size,
                               size,
                               batch_num,
@@ -391,7 +393,7 @@ namespace viennacl {
 
           viennacl::copy(output, input);
       } else {
-          detail::fft::radix2(input.handle(), size, size, batch_num, sign);
+          detail::fft::radix2(viennacl::traits::opencl_handle(input), size, size, batch_num, sign);
       }
   }
 
@@ -415,10 +417,10 @@ namespace viennacl {
       if(detail::fft::is_radix2(size))
       {
           viennacl::copy(input, output);
-          detail::fft::radix2(output.handle(), size, size, batch_num, sign);
+          detail::fft::radix2(viennacl::traits::opencl_handle(output), size, size, batch_num, sign);
       } else {
-          detail::fft::direct(input.handle(),
-                              output.handle(),
+          detail::fft::direct(viennacl::traits::opencl_handle(input),
+                              viennacl::traits::opencl_handle(output),
                               size,
                               size,
                               batch_num,
@@ -444,14 +446,14 @@ namespace viennacl {
       // batch with rows
       if(detail::fft::is_radix2(cols_num)) 
       {
-          detail::fft::radix2(input.handle(), cols_num, cols_int, rows_num, sign, detail::fft::FFT_DATA_ORDER::ROW_MAJOR);
+          detail::fft::radix2(viennacl::traits::opencl_handle(input), cols_num, cols_int, rows_num, sign, detail::fft::FFT_DATA_ORDER::ROW_MAJOR);
       } 
       else
       {
           viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT> output(input.size1(), input.size2());
 
-          detail::fft::direct(input.handle(),
-                              output.handle(),
+          detail::fft::direct(viennacl::traits::opencl_handle(input),
+                              viennacl::traits::opencl_handle(output),
                               cols_num,
                               cols_int,
                               rows_num,
@@ -464,12 +466,12 @@ namespace viennacl {
 
       // batch with cols
       if (detail::fft::is_radix2(rows_num)) {
-          detail::fft::radix2(input.handle(), rows_num, cols_int, cols_num, sign, detail::fft::FFT_DATA_ORDER::COL_MAJOR);
+          detail::fft::radix2(viennacl::traits::opencl_handle(input), rows_num, cols_int, cols_num, sign, detail::fft::FFT_DATA_ORDER::COL_MAJOR);
       } else {
           viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT> output(input.size1(), input.size2());
 
-          detail::fft::direct(input.handle(),
-                              output.handle(),
+          detail::fft::direct(viennacl::traits::opencl_handle(input),
+                              viennacl::traits::opencl_handle(output),
                               rows_num,
                               cols_int,
                               cols_num,
@@ -502,12 +504,12 @@ namespace viennacl {
       if(detail::fft::is_radix2(cols_num))
       {
           output = input;
-          detail::fft::radix2(output.handle(), cols_num, cols_int, rows_num, sign, detail::fft::FFT_DATA_ORDER::ROW_MAJOR);
+          detail::fft::radix2(viennacl::traits::opencl_handle(output), cols_num, cols_int, rows_num, sign, detail::fft::FFT_DATA_ORDER::ROW_MAJOR);
       } 
       else
       {
-          detail::fft::direct(input.handle(),
-                              output.handle(),
+          detail::fft::direct(viennacl::traits::opencl_handle(input),
+                              viennacl::traits::opencl_handle(output),
                               cols_num,
                               cols_int,
                               rows_num,
@@ -519,15 +521,15 @@ namespace viennacl {
       // batch with cols
       if(detail::fft::is_radix2(rows_num))
       {
-          detail::fft::radix2(output.handle(), rows_num, cols_int, cols_num, sign, detail::fft::FFT_DATA_ORDER::COL_MAJOR);
+          detail::fft::radix2(viennacl::traits::opencl_handle(output), rows_num, cols_int, cols_num, sign, detail::fft::FFT_DATA_ORDER::COL_MAJOR);
       } 
       else
       {
           viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT> tmp(output.size1(), output.size2());
           tmp = output;
 
-          detail::fft::direct(tmp.handle(),
-                              output.handle(),
+          detail::fft::direct(viennacl::traits::opencl_handle(tmp),
+                              viennacl::traits::opencl_handle(output),
                               rows_num,
                               cols_int,
                               cols_num,

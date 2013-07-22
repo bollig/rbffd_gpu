@@ -2,9 +2,10 @@
 #define VIENNACL_TOEPLITZ_MATRIX_HPP
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -18,7 +19,7 @@
 ============================================================================= */
 
 /** @file toeplitz_matrix.hpp
-    @brief Implementation of the toeplitz_matrix class for efficient manipulation of Toeplitz matrices.  Experimental in 1.2.x.
+    @brief Implementation of the toeplitz_matrix class for efficient manipulation of Toeplitz matrices.  Experimental.
 */
 
 #include "viennacl/forwards.h"
@@ -41,6 +42,8 @@ namespace viennacl {
     class toeplitz_matrix
     {
       public:
+        typedef viennacl::backend::mem_handle                                                              handle_type;
+        typedef scalar<typename viennacl::tools::CHECK_SCALAR_TEMPLATE_ARGUMENT<SCALARTYPE>::ResultType>   value_type;
 
         /**
          * @brief The default constructor. Does not allocate any memory.
@@ -58,7 +61,8 @@ namespace viennacl {
         */
         explicit toeplitz_matrix(std::size_t rows, std::size_t cols) : elements_(rows * 2)
         {
-          assert(rows == cols && "Toeplitz matrix must be square!");
+          assert(rows == cols && bool("Toeplitz matrix must be square!"));
+          (void)cols;  // avoid 'unused parameter' warning in optimized builds
           viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
         }
         
@@ -69,7 +73,7 @@ namespace viennacl {
         * @param sz         New size of matrix
         * @param preserve   If true, existing values are preserved.
         */
-        void resize(size_t sz, bool preserve = true) {
+        void resize(std::size_t sz, bool preserve = true) {
             elements_.resize(sz * 2, preserve);
         }
 
@@ -77,7 +81,7 @@ namespace viennacl {
         *
         *   @return OpenCL handle
         */
-        viennacl::ocl::handle<cl_mem> handle() const { return elements_.handle(); }
+        handle_type const & handle() const { return elements_.handle(); }
 
         /**
          * @brief Returns an internal viennacl::vector, which represents a Toeplitz matrix elements
@@ -114,7 +118,7 @@ namespace viennacl {
          */
         entry_proxy<SCALARTYPE> operator()(std::size_t row_index, std::size_t col_index) 
         {
-            assert(row_index < size1() && col_index < size2() && "Invalid access");
+            assert(row_index < size1() && col_index < size2() && bool("Invalid access"));
             
             int index = static_cast<int>(col_index) - static_cast<int>(row_index);
             
@@ -139,7 +143,7 @@ namespace viennacl {
 
     private:
         toeplitz_matrix(toeplitz_matrix const & t) {}
-        toeplitz_matrix & operator=(toeplitz_matrix const & t) {}
+        toeplitz_matrix & operator=(toeplitz_matrix const & t);
         
       
         viennacl::vector<SCALARTYPE, ALIGNMENT> elements_;
@@ -155,7 +159,7 @@ namespace viennacl {
     void copy(std::vector<SCALARTYPE> const & cpu_vec, toeplitz_matrix<SCALARTYPE, ALIGNMENT>& gpu_mat)
     {
         std::size_t size = gpu_mat.size1();
-        assert((size * 2 - 1)  == cpu_vec.size() && "Size mismatch");
+        assert((size * 2 - 1)  == cpu_vec.size() && bool("Size mismatch"));
         std::vector<SCALARTYPE> rvrs(cpu_vec.size());
         std::copy(cpu_vec.begin(), cpu_vec.end(), rvrs.begin());
         std::reverse(rvrs.begin(), rvrs.end());
@@ -177,7 +181,7 @@ namespace viennacl {
     void copy(toeplitz_matrix<SCALARTYPE, ALIGNMENT> const & gpu_mat, std::vector<SCALARTYPE> & cpu_vec)
     {
         std::size_t size = gpu_mat.size1();
-        assert((size * 2 - 1)  == cpu_vec.size() && "Size mismatch");
+        assert((size * 2 - 1)  == cpu_vec.size() && bool("Size mismatch"));
         std::vector<SCALARTYPE> tmp(size * 2);
         copy(gpu_mat.elements(), tmp);
         std::reverse(tmp.begin(), tmp.end());
@@ -197,8 +201,8 @@ namespace viennacl {
     void copy(toeplitz_matrix<SCALARTYPE, ALIGNMENT> const & tep_src, MATRIXTYPE & com_dst)
     {
         std::size_t size = tep_src.size1();
-        assert(size == com_dst.size1() && "Size mismatch");
-        assert(size == com_dst.size2() && "Size mismatch");
+        assert(size == com_dst.size1() && bool("Size mismatch"));
+        assert(size == com_dst.size2() && bool("Size mismatch"));
         std::vector<SCALARTYPE> tmp(tep_src.size1() * 2 - 1);
         copy(tep_src, tmp);
 
@@ -217,8 +221,8 @@ namespace viennacl {
     void copy(MATRIXTYPE const & com_src, toeplitz_matrix<SCALARTYPE, ALIGNMENT>& tep_dst)
     {
         std::size_t size = tep_dst.size1();
-        assert(size == com_src.size1() && "Size mismatch");
-        assert(size == com_src.size2() && "Size mismatch");
+        assert(size == com_src.size1() && bool("Size mismatch"));
+        assert(size == com_src.size2() && bool("Size mismatch"));
 
         std::vector<SCALARTYPE> tmp(2*size - 1);
 
@@ -277,4 +281,4 @@ namespace viennacl {
 
 }
 
-#endif // _VIENNACL_TOEPLITZ_MATRIX_HPP
+#endif // VIENNACL_TOEPLITZ_MATRIX_HPP

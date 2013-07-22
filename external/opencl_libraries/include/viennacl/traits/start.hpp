@@ -2,9 +2,10 @@
 #define VIENNACL_TRAITS_START_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file start.hpp
+/** @file viennacl/traits/start.hpp
     @brief Extracts the underlying OpenCL start index handle from a vector, a matrix, an expression etc.
 */
 
@@ -45,7 +46,7 @@ namespace viennacl
     //ViennaCL vector leads to start index 0:
     template <typename ScalarType, unsigned int ALIGNMENT>
     typename result_of::size_type<viennacl::vector<ScalarType, ALIGNMENT> >::type
-    start(viennacl::vector<ScalarType, ALIGNMENT> const & v)
+    start(viennacl::vector<ScalarType, ALIGNMENT> const &)
     {
       return 0; 
     }
@@ -66,7 +67,7 @@ namespace viennacl
     //ViennaCL matrix leads to start index 0:
     template <typename ScalarType, typename F, unsigned int ALIGNMENT>
     typename result_of::size_type<viennacl::matrix<ScalarType, F, ALIGNMENT> >::type
-    start1(viennacl::matrix<ScalarType, F, ALIGNMENT> const & v)
+    start1(viennacl::matrix<ScalarType, F, ALIGNMENT> const &)
     {
       return 0; 
     }
@@ -85,7 +86,7 @@ namespace viennacl
     //ViennaCL matrix leads to start index 0:
     template <typename ScalarType, typename F, unsigned int ALIGNMENT>
     typename result_of::size_type<viennacl::matrix<ScalarType, F, ALIGNMENT> >::type
-    start2(viennacl::matrix<ScalarType, F, ALIGNMENT> const & v)
+    start2(viennacl::matrix<ScalarType, F, ALIGNMENT> const &)
     {
       return 0; 
     }

@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_POWER_ITER_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2011, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file power_iter.hpp
+/** @file viennacl/linalg/power_iter.hpp
     @brief Defines a tag for the configuration of the power iteration method.
     
     Contributed by Astrid Rupp.
@@ -95,7 +96,7 @@ namespace viennacl
 
       for (std::size_t i=0; i<tag.max_iterations(); ++i)
       {
-        if (std::abs<CPU_ScalarType>(norm - norm_prev) / std::abs<CPU_ScalarType>(norm) < epsilon)
+        if (std::fabs(norm - norm_prev) / std::fabs(norm) < epsilon)
           break; 
            
         r /= norm;

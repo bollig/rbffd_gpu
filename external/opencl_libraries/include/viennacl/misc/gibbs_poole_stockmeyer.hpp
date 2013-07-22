@@ -2,9 +2,10 @@
 #define VIENNACL_MISC_GIBBS_POOLE_STOCKMEYER_HPP
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -19,7 +20,7 @@
 
 
 /** @file viennacl/misc/gibbs_poole_stockmeyer.hpp
- *  @brief Implementation of the Gibbs-Poole-Stockmeyer algorithm.  Experimental in 1.2.x.
+ *  @brief Implementation of the Gibbs-Poole-Stockmeyer algorithm.  Experimental.
  *    
  *  Contributed by Philipp Grabenweger, interface adjustments by Karl Rupp.
  */

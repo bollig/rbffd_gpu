@@ -1,6 +1,8 @@
 #ifndef __RBFFD_VCL_H__
 #define __RBFFD_VCL_H__
 
+#define VIENNACL_HAVE_UBLAS 1
+
 //#include <CL/cl.hpp> 
 //#include "utils/opencl/cl_base_class.h"
 #include "rbffd.h"
@@ -64,10 +66,9 @@ class RBFFD_VCL : public RBFFD
         }; 
 
 
-        // This should be: 
+        // TODO: assemble global weights based on SetQmB and B
         VCL_ELL_MAT_t* getGPUWeights(DerType which) { return gpu_weights[getDerTypeIndx(which)]; }
         VCL_ELL_MAT_t* getGPUWeights(DerTypeIndx which_i) { return gpu_weights[which_i]; }
-
 
         // FIXME: assumes size of buffers does not change (should check if it
         // does and resize accordingly on the GPU. 

@@ -1,10 +1,11 @@
-#ifndef VIENNACL_BICGSTAB_HPP_
-#define VIENNACL_BICGSTAB_HPP_
+#ifndef VIENNACL_LINALG_BICGSTAB_HPP_
+#define VIENNACL_LINALG_BICGSTAB_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -27,6 +28,7 @@
 #include "viennacl/tools/tools.hpp"
 #include "viennacl/linalg/prod.hpp"
 #include "viennacl/linalg/inner_prod.hpp"
+#include "viennacl/linalg/norm_2.hpp"
 #include "viennacl/traits/clear.hpp"
 #include "viennacl/traits/size.hpp"
 #include "viennacl/meta/result_of.hpp"
@@ -44,18 +46,22 @@ namespace viennacl
         /** @brief The constructor
         *
         * @param tol              Relative tolerance for the residual (solver quits if ||r|| < tol * ||r_initial||)
-        * @param max_iterations   The maximum number of iterations
+        * @param max_iters        The maximum number of iterations
+        * @param max_iters_before_restart   The maximum number of iterations before BiCGStab is reinitialized (to avoid accumulation of round-off errors)
         */
-        bicgstab_tag(double tol = 1e-8, unsigned int max_iterations = 300) : _tol(tol), _iterations(max_iterations) {};
+        bicgstab_tag(double tol = 1e-8, std::size_t max_iters = 400, std::size_t max_iters_before_restart = 200) 
+          : tol_(tol), iterations_(max_iters), iterations_before_restart_(max_iters_before_restart) {};
       
         /** @brief Returns the relative tolerance */
-        double tolerance() const { return _tol; }
+        double tolerance() const { return tol_; }
         /** @brief Returns the maximum number of iterations */
-        unsigned int max_iterations() const { return _iterations; }
+        std::size_t max_iterations() const { return iterations_; }
+        /** @brief Returns the maximum number of iterations before a restart*/
+        std::size_t max_iterations_before_restart() const { return iterations_before_restart_; }
         
         /** @brief Return the number of solver iterations: */
-        unsigned int iters() const { return iters_taken_; }
-        void iters(unsigned int i) const { iters_taken_ = i; }
+        std::size_t iters() const { return iters_taken_; }
+        void iters(std::size_t i) const { iters_taken_ = i; }
         
         /** @brief Returns the estimated relative error at the end of the solver run */
         double error() const { return last_error_; }
@@ -63,11 +69,12 @@ namespace viennacl
         void error(double e) const { last_error_ = e; }
         
       private:
-        double _tol;
-        unsigned int _iterations;
+        double tol_;
+        std::size_t iterations_;
+        std::size_t iterations_before_restart_;
 
         //return values from solver
-        mutable unsigned int iters_taken_;
+        mutable std::size_t iters_taken_;
         mutable double last_error_;
     };
     
@@ -97,63 +104,67 @@ namespace viennacl
       VectorType tmp1(problem_size);
       VectorType s(problem_size);
 
-      CPU_ScalarType ip_rr0star = viennacl::linalg::inner_prod(rhs,r0star);
-      CPU_ScalarType norm_rhs_host = ip_rr0star;
+      CPU_ScalarType norm_rhs_host = viennacl::linalg::norm_2(residual);
+      CPU_ScalarType ip_rr0star = norm_rhs_host * norm_rhs_host;
       CPU_ScalarType beta;
       CPU_ScalarType alpha;
       CPU_ScalarType omega;
-      ScalarType inner_prod_temp; //temporary variable for inner product computation
-      ScalarType new_ip_rr0star = 0;
+      //ScalarType inner_prod_temp; //temporary variable for inner product computation
+      CPU_ScalarType new_ip_rr0star = 0;
+      CPU_ScalarType residual_norm = norm_rhs_host;
       
       if (norm_rhs_host == 0) //solution is zero if RHS norm is zero
         return result;
       
-      for (unsigned int i = 0; i < tag.max_iterations(); ++i)
+      bool restart_flag = true;
+      std::size_t last_restart = 0;
+      for (std::size_t i = 0; i < tag.max_iterations(); ++i)
       {
+        if (restart_flag)
+        {
+          residual = rhs;
+          residual -= viennacl::linalg::prod(matrix, result);
+          p = residual;
+          r0star = residual;
+          ip_rr0star = viennacl::linalg::norm_2(residual);
+          ip_rr0star *= ip_rr0star;
+          restart_flag = false;
+          last_restart = i;
+        }
+        
         tag.iters(i+1);
         tmp0 = viennacl::linalg::prod(matrix, p);
-        //alpha = ip_rr0star / viennacl::linalg::inner_prod(tmp0, r0star);
-        inner_prod_temp = viennacl::linalg::inner_prod(tmp0, r0star);
-        alpha = ip_rr0star / static_cast<CPU_ScalarType>(inner_prod_temp);
+        alpha = ip_rr0star / viennacl::linalg::inner_prod(tmp0, r0star);
 
-        //s = residual - alpha*tmp0;
-        s = residual;
-        s -= alpha*tmp0;
+        s = residual - alpha*tmp0;
         
         tmp1 = viennacl::linalg::prod(matrix, s);
-        //omega = viennacl::linalg::inner_prod(tmp1, s) / viennacl::linalg::inner_prod(tmp1, tmp1);
-        inner_prod_temp = viennacl::linalg::inner_prod(tmp1, s);
-        omega = inner_prod_temp;
-        inner_prod_temp = viennacl::linalg::inner_prod(tmp1, tmp1);
-        omega /= inner_prod_temp;
+        CPU_ScalarType norm_tmp1 = viennacl::linalg::norm_2(tmp1);
+        omega = viennacl::linalg::inner_prod(tmp1, s) / (norm_tmp1 * norm_tmp1);
         
-        //result += alpha * p + omega * s;
-        result += alpha * p;
-        result += omega * s;
+        result += alpha * p + omega * s;
+        residual = s - omega * tmp1;
         
-        //residual = s - omega * tmp1;
-        residual = s;
-        residual -= omega*tmp1;
-        
-        new_ip_rr0star = viennacl::linalg::inner_prod(residual,r0star);
-        if (fabs(CPU_ScalarType(viennacl::linalg::inner_prod(residual, residual)) / norm_rhs_host) < tag.tolerance() * tag.tolerance())
+        new_ip_rr0star = viennacl::linalg::inner_prod(residual, r0star);
+        residual_norm = viennacl::linalg::norm_2(residual);
+        if (std::fabs(residual_norm / norm_rhs_host) < tag.tolerance())
           break;
         
-        //beta = new_ip_rr0star / ip_rr0star * alpha/omega;
-        CPU_ScalarType cpu_temp = new_ip_rr0star; //read from device only once
-        beta = cpu_temp / ip_rr0star * alpha/omega;
-        ip_rr0star = cpu_temp;
+        beta = new_ip_rr0star / ip_rr0star * alpha/omega;
+        ip_rr0star = new_ip_rr0star;
 
+        if (ip_rr0star == 0 || omega == 0 || i - last_restart > tag.max_iterations_before_restart()) //search direction degenerate. A restart might help
+          restart_flag = true;
+        
         // Execution of
         //  p = residual + beta * (p - omega*tmp0);
         // without introducing temporary vectors:
         p -= omega * tmp0;
-        p *= beta;
-        p += residual;
+        p = residual + beta * p;
       }
       
       //store last error estimate:
-      tag.error(std::sqrt(fabs(CPU_ScalarType(viennacl::linalg::inner_prod(residual, residual)) / norm_rhs_host)));
+      tag.error(residual_norm / norm_rhs_host);
       
       return result;
     }
@@ -181,10 +192,9 @@ namespace viennacl
       typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
       unsigned int problem_size = viennacl::traits::size(rhs);
       VectorType result(problem_size);
-      result.clear();
+      viennacl::traits::clear(result);
 
       VectorType residual = rhs;
-      precond.apply(residual);
       VectorType r0star = residual;  //can be chosen arbitrarily in fact
       VectorType tmp0(problem_size);
       VectorType tmp1(problem_size);
@@ -192,66 +202,72 @@ namespace viennacl
       
       VectorType p = residual;
 
-      CPU_ScalarType ip_rr0star = viennacl::linalg::inner_prod(residual,r0star);
-      CPU_ScalarType norm_rhs_host = ip_rr0star;
+      CPU_ScalarType ip_rr0star = viennacl::linalg::norm_2(residual);
+      CPU_ScalarType norm_rhs_host = viennacl::linalg::norm_2(residual);
       CPU_ScalarType beta;
       CPU_ScalarType alpha;
       CPU_ScalarType omega;
-      ScalarType new_ip_rr0star = 0;
-      ScalarType inner_prod_temp; //temporary variable for inner product
+      CPU_ScalarType new_ip_rr0star = 0;
+      CPU_ScalarType residual_norm = norm_rhs_host;
       
       if (norm_rhs_host == 0) //solution is zero if RHS norm is zero
         return result;
       
+      bool restart_flag = true;
+      std::size_t last_restart = 0;
       for (unsigned int i = 0; i < tag.max_iterations(); ++i)
       {
+        if (restart_flag)
+        {
+          residual = rhs;
+          residual -= viennacl::linalg::prod(matrix, result);
+          precond.apply(residual);
+          p = residual;
+          r0star = residual;
+          ip_rr0star = viennacl::linalg::norm_2(residual);
+          ip_rr0star *= ip_rr0star;
+          restart_flag = false;
+          last_restart = i;
+        }
+        
         tag.iters(i+1);
         tmp0 = viennacl::linalg::prod(matrix, p);
         precond.apply(tmp0);
-        //alpha = ip_rr0star / viennacl::linalg::inner_prod(tmp0, r0star);
-        inner_prod_temp = viennacl::linalg::inner_prod(tmp0, r0star);
-        alpha = ip_rr0star / static_cast<CPU_ScalarType>(inner_prod_temp);
+        alpha = ip_rr0star / viennacl::linalg::inner_prod(tmp0, r0star);
 
-        //s = residual - alpha*tmp0;
-        s = residual;
-        s -= alpha*tmp0;
+        s = residual - alpha*tmp0;
 
         tmp1 = viennacl::linalg::prod(matrix, s);
         precond.apply(tmp1);
-        //omega = viennacl::linalg::inner_prod(tmp1, s) / viennacl::linalg::inner_prod(tmp1, tmp1);
-        inner_prod_temp = viennacl::linalg::inner_prod(tmp1, s);
-        omega = inner_prod_temp;
-        inner_prod_temp = viennacl::linalg::inner_prod(tmp1, tmp1);
-        omega /= inner_prod_temp;
+        CPU_ScalarType norm_tmp1 = viennacl::linalg::norm_2(tmp1);
+        omega = viennacl::linalg::inner_prod(tmp1, s) / (norm_tmp1 * norm_tmp1);
         
-        //result += alpha * p + omega * s;
-        result += alpha * p;
-        result += omega * s;
-        //residual = s - omega * tmp1;
-        residual = s;
-        residual -= omega*tmp1;
+        result += alpha * p + omega * s;
+        residual = s - omega * tmp1;
         
-        new_ip_rr0star = viennacl::linalg::inner_prod(residual,r0star);
-        if (fabs(CPU_ScalarType(viennacl::linalg::inner_prod(residual, residual) / norm_rhs_host)) < tag.tolerance() * tag.tolerance() )
+        residual_norm = viennacl::linalg::norm_2(residual);
+        if (residual_norm / norm_rhs_host < tag.tolerance())
           break;
-        
-        //beta = new_ip_rr0star / ip_rr0star * alpha/omega;
-        CPU_ScalarType cpu_temp = new_ip_rr0star; //read from device only once
-        beta = cpu_temp / ip_rr0star * alpha/omega;
-        ip_rr0star = cpu_temp;
 
+        new_ip_rr0star = viennacl::linalg::inner_prod(residual, r0star);
+        
+        beta = new_ip_rr0star / ip_rr0star * alpha/omega;
+        ip_rr0star = new_ip_rr0star;
+
+        if (ip_rr0star == 0 || omega == 0 || i - last_restart > tag.max_iterations_before_restart()) //search direction degenerate. A restart might help
+          restart_flag = true;
+        
         // Execution of
         //  p = residual + beta * (p - omega*tmp0);
         // without introducing temporary vectors:
         p -= omega * tmp0;
-        p *= beta;
-        p += residual;
+        p = residual + beta * p;
         
         //std::cout << "Rel. Residual in current step: " << std::sqrt(std::fabs(viennacl::linalg::inner_prod(residual, residual) / norm_rhs_host)) << std::endl;
       }
       
       //store last error estimate:
-      tag.error(std::sqrt(fabs(CPU_ScalarType(viennacl::linalg::inner_prod(residual, residual)) / norm_rhs_host)));
+      tag.error(residual_norm / norm_rhs_host);
       
       return result;
     }

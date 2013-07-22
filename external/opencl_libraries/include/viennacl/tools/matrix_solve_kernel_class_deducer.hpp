@@ -2,9 +2,10 @@
 #define VIENNACL_TOOLS_MATRIX_SOLVE_KERNEL_CLASS_DEDUCER_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file matrix_solve_kernel_class_deducer.hpp
+/** @file viennacl/tools/matrix_solve_kernel_class_deducer.hpp
     @brief Implementation of a helper meta class for deducing the correct kernels for the dense matrix solver
 */
 
@@ -40,36 +41,42 @@ namespace viennacl
     /** @brief deduces kernel type for A \ B, where A, B, C are MatrixType1 and MatrixType2 */
     template <typename MatrixType1, typename MatrixType2>
     struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER
-    {};
-    
-    template <typename SCALARTYPE, unsigned int ALIGNMENT>
-    struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER< viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT>,
-                                              viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT> >
     {
-      typedef viennacl::linalg::kernels::matrix_solve_row_row<SCALARTYPE, ALIGNMENT>     ResultType;
-    };
-
-    template <typename SCALARTYPE, unsigned int ALIGNMENT>
-    struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER< viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT>,
-                                              viennacl::matrix<SCALARTYPE, viennacl::column_major, ALIGNMENT> >
-    {
-      typedef viennacl::linalg::kernels::matrix_solve_row_col<SCALARTYPE, ALIGNMENT>     ResultType;
-    };
-
-    template <typename SCALARTYPE, unsigned int ALIGNMENT>
-    struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER< viennacl::matrix<SCALARTYPE, viennacl::column_major, ALIGNMENT>,
-                                              viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT> >
-    {
-      typedef viennacl::linalg::kernels::matrix_solve_col_row<SCALARTYPE, ALIGNMENT>     ResultType;
-    };
-
-    template <typename SCALARTYPE, unsigned int ALIGNMENT>
-    struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER< viennacl::matrix<SCALARTYPE, viennacl::column_major, ALIGNMENT>,
-                                              viennacl::matrix<SCALARTYPE, viennacl::column_major, ALIGNMENT> >
-    {
-      typedef viennacl::linalg::kernels::matrix_solve_col_col<SCALARTYPE, ALIGNMENT>     ResultType;
+      typedef typename MatrixType1::ERROR_INVALID_TEMPLATE_ARGUMENTS_PROVIDED   ResultType;
     };
     
+    
+    /** \cond */
+    template <typename SCALARTYPE>
+    struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER< viennacl::matrix_base<SCALARTYPE, viennacl::row_major>,
+                                              viennacl::matrix_base<SCALARTYPE, viennacl::row_major> >
+    {
+      typedef viennacl::linalg::kernels::matrix_solve_row_row<SCALARTYPE, 1>     ResultType;
+    };
+
+    template <typename SCALARTYPE>
+    struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER< viennacl::matrix_base<SCALARTYPE, viennacl::row_major>,
+                                              viennacl::matrix_base<SCALARTYPE, viennacl::column_major> >
+    {
+      typedef viennacl::linalg::kernels::matrix_solve_row_col<SCALARTYPE, 1>     ResultType;
+    };
+
+    template <typename SCALARTYPE>
+    struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER< viennacl::matrix_base<SCALARTYPE, viennacl::column_major>,
+                                              viennacl::matrix_base<SCALARTYPE, viennacl::row_major> >
+    {
+      typedef viennacl::linalg::kernels::matrix_solve_col_row<SCALARTYPE, 1>     ResultType;
+    };
+
+    template <typename SCALARTYPE>
+    struct MATRIX_SOLVE_KERNEL_CLASS_DEDUCER< viennacl::matrix_base<SCALARTYPE, viennacl::column_major>,
+                                              viennacl::matrix_base<SCALARTYPE, viennacl::column_major> >
+    {
+      typedef viennacl::linalg::kernels::matrix_solve_col_col<SCALARTYPE, 1>     ResultType;
+    };
+
+    
+    /** \endcond */
   }
 
 }

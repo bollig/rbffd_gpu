@@ -2,9 +2,10 @@
 #define VIENNACL_OCL_LOCAL_MEM_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -18,7 +19,7 @@
 ============================================================================= */
 
 
-/** @file local_mem.hpp
+/** @file viennacl/ocl/local_mem.hpp
     @brief A local (shared) memory object for OpenCL
 */
 

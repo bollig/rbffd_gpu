@@ -387,7 +387,7 @@ int main(int argc, char** argv) {
 
     // TODO: prime hw here.
     std::cout << " Entering loop: " << N_part << " rows \n";
-    for (int i = 0; i < 1000; i++) { 
+    for (int i = 0; i < 100; i++) { 
         tm["iteration"]->start();
 
         // Verify that the CPU works

@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_ILU_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -23,8 +24,7 @@
 
 #include "viennacl/linalg/detail/ilu/ilut.hpp"
 #include "viennacl/linalg/detail/ilu/ilu0.hpp"
-#include "viennacl/linalg/detail/ilu/host_block_ilu.hpp"
-//#include "viennacl/linalg/detail/ilu/opencl_block_ilu.hpp" //to be enabled in 1.4.0
+#include "viennacl/linalg/detail/ilu/block_ilu.hpp"
 
 #endif
 

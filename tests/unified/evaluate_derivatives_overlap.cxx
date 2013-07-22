@@ -20,7 +20,7 @@
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
-#include "rbffd/rbffd_vcl.h"
+#include "rbffd/rbffd_vcl_overlap.h"
 #include "rbffd/spmv_test_vcl.h"
 
 #include "utils/opencl/viennacl_typedefs.h"
@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
 #endif 
 
     tm["derSetup"]->start();
-    RBFFD_VCL* der = new RBFFD_VCL(weight_choices, subdomain, grid_dim, mpi_rank);
+    RBFFD_VCL_OVERLAP* der = new RBFFD_VCL_OVERLAP(weight_choices, subdomain, grid_dim, mpi_rank);
 
     der->setUseHyperviscosity(use_hyperviscosity);
     // If both are zero assume we havent set anything
@@ -327,6 +327,7 @@ int main(int argc, char** argv) {
     der->overrideFileDetail(true);
     der->setAsciiWeights(ascii_weights);
     int load_err = der->loadAllWeightsFromFile();
+    der->updateWeightsOnGPU(true); 
     tm["loadWeights"]->stop();
 
 
@@ -339,12 +340,12 @@ int main(int argc, char** argv) {
     unsigned int N_part = subdomain->getStencilsSize();
     unsigned int M_part = subdomain->getNodeListSize();
 
-    UBLAS_VEC_t u_cpu(M_part,1.);
-    UBLAS_VEC_t u_x(M_part,1.);
-    UBLAS_VEC_t u_y(M_part,1.);
-    UBLAS_VEC_t u_z(M_part,1.);
-    UBLAS_VEC_t u_l(M_part,1.);
-    UBLAS_VEC_t u_new(M_part,1.);
+    std::vector<double> u_cpu(M_part,1.);
+    std::vector<double> u_x(M_part,1.);
+    std::vector<double> u_y(M_part,1.);
+    std::vector<double> u_z(M_part,1.);
+    std::vector<double> u_l(M_part,1.);
+    std::vector<double> u_new(M_part,1.);
 
     VCL_VEC_t u_gpu(M_part);
     VCL_VEC_t u_new_gpu(M_part);
@@ -366,11 +367,13 @@ int main(int argc, char** argv) {
         //u_l[i] = -sin(node[0]) - 2. * cos(node[1]) + 25. * exp(5.*node[2]); 
         u_l[i] = -sin(node[0]) - 2. * cos(node[1]) ;
     } 
+    viennacl::copy(u_cpu, u_gpu);
+    viennacl::copy(u_new, u_new_gpu);
 
-    UBLAS_VEC_t xderiv_cpu(M_part);	
-    UBLAS_VEC_t yderiv_cpu(M_part);	
-    UBLAS_VEC_t zderiv_cpu(M_part);	
-    UBLAS_VEC_t lderiv_cpu(M_part);	
+    std::vector<double> xderiv_cpu(M_part);	
+    std::vector<double> yderiv_cpu(M_part);	
+    std::vector<double> zderiv_cpu(M_part);	
+    std::vector<double> lderiv_cpu(M_part);	
 
     VCL_VEC_t xderiv_gpu(M_part);	
     VCL_VEC_t yderiv_gpu(M_part);	
@@ -406,11 +409,16 @@ int main(int argc, char** argv) {
     derTest->SpMV(RBFFD::X, u_cpu, u_gpu, xderiv_gpu);
     derTest->SpMV(RBFFD::Y, u_cpu, u_gpu, yderiv_gpu);
     derTest->SpMV(RBFFD::Z, u_cpu, u_gpu, zderiv_gpu);
-    derTest->SpMV(RBFFD::LAPL, u_cpu, u_gpu, xderiv_gpu);
+    derTest->SpMV(RBFFD::LAPL, u_cpu, u_gpu, lderiv_gpu);
 
     // Prime AXPY. 
     u_new_gpu = 0.5*u_gpu + 1.*xderiv_gpu; 
 
+    viennacl::copy(xderiv_cpu, xderiv_gpu);
+    viennacl::copy(yderiv_cpu, yderiv_gpu);
+    viennacl::copy(zderiv_cpu, zderiv_gpu);
+    viennacl::copy(lderiv_cpu, lderiv_gpu);
+    viennacl::copy(u_new, u_new_gpu);
 
     // TODO: prime hw here.
     std::cout << " Entering loop: " << N_part << " rows \n";
@@ -455,16 +463,21 @@ int main(int argc, char** argv) {
 
     // Compute the norms to make sure we have a complete picture. 
 
-    tm["computeNorms"]->start();
-
     VCL_VEC_t temp = viennacl::vector_range<VCL_VEC_t>(u_gpu, viennacl::range(0, N_part)); 
     u_l2 = viennacl::linalg::norm_2(temp, mpi_rank);
     u_l1 = viennacl::linalg::norm_1(temp, mpi_rank);
     u_linf = viennacl::linalg::norm_inf(temp, mpi_rank);
-#if 0
-    u_l2 = l2norm( mpi_rank, u, 0, N_part);
-    u_l1 = l1norm( mpi_rank, u, 0, N_part);
-    u_linf = linfnorm( mpi_rank, u);
+
+    viennacl::copy(u_gpu, u_cpu);
+    viennacl::copy(xderiv_gpu, xderiv_cpu);
+    viennacl::copy(yderiv_gpu, yderiv_cpu);
+    viennacl::copy(zderiv_gpu, zderiv_cpu);
+    viennacl::copy(lderiv_gpu, lderiv_cpu);
+
+    tm["computeNorms"]->start();
+    u_l2 = l2norm( mpi_rank, u_cpu, 0, N_part);
+    u_l1 = l1norm( mpi_rank, u_cpu, 0, N_part);
+    u_linf = linfnorm( mpi_rank, u_cpu);
     tm["computeNorms"]->stop();
 
     tm["computeNorms"]->start();
@@ -498,7 +511,6 @@ int main(int argc, char** argv) {
     n_l1 = l1norm( mpi_rank, u_new, 0 , N_part);
     n_linf = linfnorm( mpi_rank, u_new, 0 , N_part);
     tm["computeNorms"]->stop();
-#endif 
 
     tm["cleanup"]->start();
     delete(derTest); 

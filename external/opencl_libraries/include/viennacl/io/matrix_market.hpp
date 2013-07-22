@@ -2,9 +2,10 @@
 #define VIENNACL_IO_MATRIX_MARKET_HPP
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -39,9 +40,9 @@ namespace viennacl
   namespace io
   {
     //helper
-    namespace
+    namespace detail
     {
-      void trim(char * buffer, long max_size)
+      inline void trim(char * buffer, long max_size)
       {
         //trim at beginning of string
         long start = 0;
@@ -75,7 +76,7 @@ namespace viennacl
           buffer[0] = 0;
       }      
       
-      std::string tolower(std::string & s)
+      inline std::string tolower(std::string & s)
       {
         std::transform(s.begin(), s.end(), s.begin(), static_cast < int(*)(int) > (std::tolower));
         return s;
@@ -100,7 +101,9 @@ namespace viennacl
                                       const char * file,
                                       long index_base)
     {
-      std::cout << "Reading matrix market file" << std::endl;
+      typedef typename viennacl::result_of::cpu_value_type<typename viennacl::result_of::value_type<MatrixType>::type>::type    ScalarType;
+      
+      //std::cout << "Reading matrix market file" << std::endl;
       char buffer[1025];
       std::ifstream reader(file);
       std::string token;
@@ -116,7 +119,7 @@ namespace viennacl
       
       if (!reader){
         std::cerr << "ViennaCL: Matrix Market Reader: Cannot open file " << file << std::endl;
-        return 0;
+        return EXIT_FAILURE;
       }
       
       while (reader.good())
@@ -126,7 +129,7 @@ namespace viennacl
         {
           reader.getline(buffer, 1024);
           ++linenum;
-          trim(buffer, 1024);
+          detail::trim(buffer, 1024);
         }
         while (reader.good() && buffer[0] == 0);
         
@@ -137,23 +140,23 @@ namespace viennacl
             //parse header:
             std::stringstream line(std::string(buffer + 2));
             line >> token;
-            if (tolower(token) != "matrixmarket")
+            if (detail::tolower(token) != "matrixmarket")
             {
               std::cerr << "Error in file " << file << " at line " << linenum << " in file " << file << ": Expected 'MatrixMarket', got '" << token << "'" << std::endl;
               return 0;
             }
 
             line >> token;
-            if (tolower(token) != "matrix")
+            if (detail::tolower(token) != "matrix")
             {
               std::cerr << "Error in file " << file << " at line " << linenum << " in file " << file << ": Expected 'matrix', got '" << token << "'" << std::endl;
               return 0;
             }
 
             line >> token;
-            if (tolower(token) != "coordinate")
+            if (detail::tolower(token) != "coordinate")
             {
-              if (tolower(token) == "array")
+              if (detail::tolower(token) == "array")
               {
                 dense_format = true;
                 std::cerr << "Error in file " << file << " at line " << linenum << " in file " << file << ": 'array' type is not supported yet!" << std::endl;
@@ -167,15 +170,15 @@ namespace viennacl
             }
 
             line >> token;
-            if (tolower(token) != "real")
+            if (detail::tolower(token) != "real")
             {
               std::cerr << "Error in file " << file << ": The MatrixMarket reader provided with ViennaCL supports only real valued floating point arithmetic." << std::endl;
               return 0;
             }
 
             line >> token;
-            if (tolower(token) == "general"){ }
-            else if (tolower(token) == "symmetric"){ symmetric = true; }
+            if (detail::tolower(token) == "general"){ }
+            else if (detail::tolower(token) == "symmetric"){ symmetric = true; }
             else
             {
               std::cerr << "Error in file " << file << ": The MatrixMarket reader provided with ViennaCL supports only general or symmetric matrices." << std::endl;
@@ -231,7 +234,7 @@ namespace viennacl
             //read data
             if (dense_format)
             {
-              double value;
+              ScalarType value;
               line >> value;
               viennacl::traits::fill(mat, cur_row, cur_col, value);
               
@@ -246,7 +249,7 @@ namespace viennacl
             {
               long row;
               long col;
-              double value;
+              ScalarType value;
               
               //parse data:
               if (line.good())

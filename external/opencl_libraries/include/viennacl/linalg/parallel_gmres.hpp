@@ -186,7 +186,8 @@ namespace viennacl
 
                         viennacl::vector_range< GPUVectorType > setR(gpu_vec, viennacl::range((offset_to_set_R-offset_to_interior) * sol_dim, ((offset_to_set_R-offset_to_interior)+set_R_size) * sol_dim));
 
-                        double* vec = new double[set_R_size * sol_dim];
+                        //double* vec = new double[set_R_size * sol_dim];
+                        std::vector<double> vec(set_R_size * sol_dim);
 
                         unsigned int k = 0;
                         for (size_t i = 0; i < grid_ref.R_by_rank.size(); i++) {
@@ -210,8 +211,10 @@ namespace viennacl
                             }
                         }
 
-                        viennacl::copy(vec, setR, set_R_size * sol_dim);
-                        delete [] vec;
+                        viennacl::copy(vec, setR);
+                        //viennacl::copy(vec, setR, set_R_size * sol_dim);
+
+                        //delete [] vec;
                         tlist["setR"]->stop();
                     }
 
@@ -235,13 +238,14 @@ namespace viennacl
                         unsigned int offset_to_interior = nb_bnd;
                         unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
-                        //                    std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
+                        // std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
 
                         viennacl::vector_range< GPUVectorType > setO(gpu_vec, viennacl::range((offset_to_set_O - offset_to_interior) * sol_dim, ((offset_to_set_O-offset_to_interior)+set_O_size) * sol_dim));
 
-                        double* vec = new double[set_O_size * sol_dim];
+                        //double* vec = new double[set_O_size * sol_dim];
+                        std::vector<double> vec(set_O_size * sol_dim);
 
-                        viennacl::copy(setO, vec, set_O_size * sol_dim);
+                        viennacl::copy(setO, vec); //, set_O_size * sol_dim);
 
                         // Copy elements to sbuf individually in case multiple procs receive the values
                         unsigned int k = 0;
@@ -263,7 +267,7 @@ namespace viennacl
                             }
                         }
 
-                        delete [] vec;
+                        //delete [] vec;
                         tlist["setO"]->stop();
                     }
 
@@ -364,11 +368,10 @@ namespace viennacl
                     }
 
 
-
-
-            protected:
+            public:
                 int mpi_size;
                 int mpi_rank;
+            protected:
                 Domain& grid_ref;
                 unsigned int sol_dim;
                 mutable double* sbuf;
@@ -541,16 +544,16 @@ namespace viennacl
 //            MPI_Barrier(MPI_COMM_WORLD);
 
 #if GMRES_DEBUG
-            if (tag.comm().isMaster())
+            if (tag.mpi_rank == 0)
                 std::cout << "Starting Parallel GMRES..." << std::endl;
 #endif
             tag.iters(0);
 
             // Save very first residual norm so we know when to stop
-            CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.comm());
+            CPU_ScalarType b_norm = viennacl::linalg::norm_2(b, tag.mpi_rank);
             v0 = b_full;
             precond.apply(v0_full);
-            CPU_ScalarType resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
+            CPU_ScalarType resid0 = viennacl::linalg::norm_2(v0, tag.mpi_rank) / b_norm;
             //std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
             do{
@@ -559,7 +562,7 @@ namespace viennacl
                 w = viennacl::linalg::prod(A, x_full) - b;                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full);
                 precond.apply(w_full);                                  // V(0) = M*V(0)     //
-                beta = viennacl::linalg::norm_2(w, tag.comm());
+                beta = viennacl::linalg::norm_2(w, tag.mpi_rank);
                 w /= gpu_scalar_minus_1 * beta;                                         // V(0) = -V(0)/beta //
 
                 *(v[0]) = w;
@@ -574,7 +577,7 @@ namespace viennacl
                 if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
                 {
 #if GMRES_DEBUG
-                    if (tag.comm().isMaster())
+                    if (tag.mpi_rank == 0)
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
 #endif
                     tag.error(beta / b_norm);
@@ -593,7 +596,7 @@ namespace viennacl
 
                     //apply preconditioner
                     //can't pass in ref to column in V so need to use copy (w)
-                    v0 = viennacl::linalg::prod(A,w_full);
+                    v0 = (VectorType) viennacl::linalg::prod(A,w_full);
                     tag.alltoall_subset(v0_full);
                     //V(i+1) = A*w = M*A*V(i)    //
                     precond.apply(v0_full);
@@ -601,13 +604,13 @@ namespace viennacl
 
                     for (int k = 0; k <= i; k++){
                         //  H(k,i) = <V(i+1),V(k)>    //
-                        H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
+                        H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.mpi_rank);
                         // V(i+1) -= H(k, i) * V(k)  //
                         //std::cout << v[k]->size() << "," << w.size() << H(k,i) * *(v[k])  << std::endl;
                         w -= H(k,i) * *(v[k]);
                     }
 
-                    H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());
+                    H(i+1,i) = viennacl::linalg::norm_2(w, tag.mpi_rank);
 
 
 #ifdef VIENNACL_GMRES_DEBUG
@@ -772,16 +775,16 @@ namespace viennacl
             //MPI_Barrier(MPI_COMM_WORLD);
 
 #if GMRES_DEBUG
-            if (tag.comm().isMaster())
+            if (tag.mpi_rank == 0)
                 std::cout << "Starting Parallel GMRES..." << std::endl;
 #endif
             tag.iters(0);
 
             // Save very first residual norm so we know when to stop
-            double b_norm = viennacl::linalg::norm_2(b, tag.comm());
+            double b_norm = viennacl::linalg::norm_2(b, tag.mpi_rank);
             v0 = b_full;
             precond.apply(v0);
-            double resid0 = viennacl::linalg::norm_2(v0, tag.comm()) / b_norm;
+            double resid0 = viennacl::linalg::norm_2(v0, tag.mpi_rank) / b_norm;
             //std::cout << "B_norm = " << b_norm << ", Resid0 = " << resid0 << std::endl;
 
 
@@ -791,7 +794,7 @@ namespace viennacl
                 w = b - viennacl::linalg::prod(A, x_full);                  // V(0) = A*x        //
                 tag.alltoall_subset(w_full);
                 precond.apply(w_full);                                  // V(0) = M*V(0)     //
-                beta = viennacl::linalg::norm_2(w, tag.comm());
+                beta = viennacl::linalg::norm_2(w, tag.mpi_rank);
                 w /= beta;                                         // V(0) = -V(0)/beta //
 
                 *(v[0]) = w;
@@ -806,7 +809,7 @@ namespace viennacl
                 if (beta / b_norm < tag.tolerance() || (b_norm == CPU_ScalarType(0.0)) )
                 {
 #if GMRES_DEBUG
-                    if (tag.comm().isMaster())
+                    if (tag.mpi_rank == 0)
                         std::cout << "Allowed Error reached at begin of loop" << std::endl;
 #endif
                     tag.error(beta / b_norm);
@@ -833,12 +836,12 @@ namespace viennacl
 
                     for (int k = 0; k <= i; k++){
                         //  H(k,i) = <V(i+1),V(k)>    //
-                        H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.comm());
+                        H(k, i) = viennacl::linalg::inner_prod(w, *(v[k]), tag.mpi_rank);
                         // V(i+1) -= H(k, i) * V(k)  //
                         w -= H(k,i) * *(v[k]);
                     }
 
-                    H(i+1,i) = viennacl::linalg::norm_2(w, tag.comm());
+                    H(i+1,i) = viennacl::linalg::norm_2(w, tag.mpi_rank);
 
 #ifdef VIENNACL_GMRES_DEBUG
                     std::cout << "H[" << i << "] = ";

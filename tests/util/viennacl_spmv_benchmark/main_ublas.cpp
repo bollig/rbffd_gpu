@@ -249,7 +249,7 @@ void run_SpMV(RBFFD& der, Grid& grid) {
     timers[assemble_timer_name]->stop();
 
     timers[copy_timer_name]->start();
-    A_op = new OpMatType(N,N);
+    A_op = new OpMatType();//(N,N);
     copy(*A, *A_op);
 
     VCL_Vec* F_op = new VCL_Vec(N);

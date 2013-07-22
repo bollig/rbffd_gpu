@@ -1,6 +1,8 @@
 #ifndef VIENNACL_LINALG_KERNELS_HYB_MATRIX_SOURCE_HPP_
 #define VIENNACL_LINALG_KERNELS_HYB_MATRIX_SOURCE_HPP_
 //Automatically generated file from auxiliary-directory, do not edit manually!
+/** @file hyb_matrix_source.h
+ *  @brief OpenCL kernel source file, generated automatically from scripts in auxiliary/. */
 namespace viennacl
 {
  namespace linalg
@@ -54,3 +56,4 @@ const char * const hyb_matrix_align1_vec_mul =
  }  //namespace linalg
 }  //namespace viennacl
 #endif
+

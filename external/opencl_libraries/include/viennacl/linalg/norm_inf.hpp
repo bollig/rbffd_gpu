@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_NORM_INF_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -21,7 +22,7 @@
     @brief Generic interface for the l^infty-norm. See viennacl/linalg/vector_operations.hpp for implementations.
 */
 
-#include <math.h>    //for sqrt()
+#include <cmath>
 #include "viennacl/forwards.h"
 #include "viennacl/tools/tools.hpp"
 #include "viennacl/meta/enable_if.hpp"
@@ -37,7 +38,7 @@ namespace viennacl
   namespace linalg 
   {
     
-    #ifdef VIENNACL_HAVE_UBLAS
+    #ifdef VIENNACL_WITH_UBLAS
     // ----------------------------------------------------
     // UBLAS
     //
@@ -47,7 +48,6 @@ namespace viennacl
                                 >::type    
     norm_inf(VectorT const& v1)
     {
-      // std::cout << "ublas .. " << std::endl;
       return boost::numeric::ublas::norm_inf(v1);
     }
     #endif
@@ -56,18 +56,15 @@ namespace viennacl
     // ----------------------------------------------------
     // STL
     //
-    template< typename VectorT>
-    typename VectorT::value_type
-    norm_inf(VectorT const& v1,
-         typename viennacl::enable_if< viennacl::is_stl< typename viennacl::traits::tag_of< VectorT >::type >::value
-                                            >::type* dummy = 0)
+    template< typename T, typename A >
+    T norm_inf(std::vector<T, A> const & v1)
     {
       //std::cout << "stl .. " << std::endl;
-      typename VectorT::value_type result = 0;
-      for (typename VectorT::size_type i=0; i<v1.size(); ++i)
+      T result = 0;
+      for (typename std::vector<T, A>::size_type i=0; i<v1.size(); ++i)
       {
-        if (fabs(v1[i]) > result)
-          result = fabs(v1[i]);
+        if (std::fabs(v1[i]) > result)
+          result = std::fabs(v1[i]);
       }
       
       return result;
@@ -80,9 +77,7 @@ namespace viennacl
     viennacl::scalar_expression< const viennacl::vector<ScalarType, alignment>, 
                                  const viennacl::vector<ScalarType, alignment>,
                                  viennacl::op_norm_inf >
-    norm_inf(viennacl::vector<ScalarType, alignment> const & v1, 
-         typename viennacl::enable_if< viennacl::is_viennacl< typename viennacl::traits::tag_of< viennacl::vector<ScalarType, alignment> >::type >::value
-                                            >::type* dummy = 0)
+    norm_inf(viennacl::vector<ScalarType, alignment> const & v1)
     {
        //std::cout << "viennacl .. " << std::endl;
       return viennacl::scalar_expression< const viennacl::vector<ScalarType, alignment>, 
@@ -112,6 +107,19 @@ namespace viennacl
                                           viennacl::op_norm_inf >(vector, vector);
     }
 
+    // with vector expression:
+    template <typename LHS, typename RHS, typename OP>
+    viennacl::scalar_expression<const viennacl::vector_expression<const LHS, const RHS, OP>, 
+                                const viennacl::vector_expression<const LHS, const RHS, OP>,
+                                viennacl::op_norm_inf>
+    norm_inf(viennacl::vector_expression<const LHS, const RHS, OP> const & vector)
+    {
+      return viennacl::scalar_expression< const viennacl::vector_expression<const LHS, const RHS, OP>, 
+                                          const viennacl::vector_expression<const LHS, const RHS, OP>,
+                                          viennacl::op_norm_inf >(vector, vector);
+    }
+    
+    
   } // end namespace linalg
 } // end namespace viennacl
 #endif

@@ -25,7 +25,7 @@ MY_MPI_EXE="mpirun -l -perhost 1"
 date
 
 MD=165
-N=1000
+N=100000
 STEN_SIZE=101
 
 NPROC=2
@@ -38,7 +38,7 @@ JOB_RAN_FILE=job_ran
 TEST_TYPE=reg
 NEW_WORKDIR=./${TEST_TYPE}_${N}_${STEN_SIZE}_${NPROC}proc
 
-GRID_FILE=$HOME/GRIDS/regular/10_cubed/regulargrid_10x_10y_10z_final.ascii
+GRID_FILE=$HOME/GRIDS/regular/100_cubed/regulargrid_100x_100y_100z_final.ascii
 
 mkdir -p $NEW_WORKDIR
 cd $NEW_WORKDIR

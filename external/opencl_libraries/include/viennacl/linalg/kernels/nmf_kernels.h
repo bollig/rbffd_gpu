@@ -7,6 +7,8 @@
 #include "viennacl/linalg/kernels/nmf_source.h"
 
 //Automatically generated file from aux-directory, do not edit manually!
+/** @file nmf_kernels.h
+ *  @brief OpenCL kernel file, generated automatically from scripts in auxiliary/. */
 namespace viennacl
 {
  namespace linalg
@@ -87,3 +89,4 @@ namespace viennacl
  }  //namespace linalg
 }  //namespace viennacl
 #endif
+

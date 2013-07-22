@@ -4,6 +4,7 @@
 #include "timer_eb.h"
 #include "common_typedefs.h"     // Declares type FLOAT
 
+#include <viennacl/ell_matrix.hpp>
 
 using namespace EB;
 using namespace std;
@@ -14,6 +15,7 @@ using namespace std;
 : RBFFD(typesToCompute, grid, dim_num, rank),
     useDouble(true), alignWeights(true), alignMultiple(32)
 {
+#if 1
     std::cout << "SETING UP OPENCL CONTEXT\n";
     // Choose the Phi (WORKS)
     viennacl::ocl::set_context_device_type(0, CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR);
@@ -27,7 +29,8 @@ using namespace std;
     }
     std::cout << "SELECTED DEVICE: \n";
     std::cout << viennacl::ocl::current_context().current_device().info() << "\n";
-
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
     this->setupTimers();
     this->loadKernel();
@@ -35,6 +38,7 @@ using namespace std;
     std::cout << "Done copying stencils\n";
 
     this->updateNodesOnGPU(false);
+    this->updateWeightsOnGPU(false);
     std::cout << "Done copying nodes\n";
 }
 
@@ -124,7 +128,7 @@ void RBFFD_VCL::allocateGPUMem() {
     // Iterate until we get all 0s. This allows SOME shortcutting.
     while (iterator) {
         if (computedTypes & getDerType(which)) {
-            gpu_weights[which] = new VCL_ELL_MAT_t(nrows, ncols);//, NNZ);
+            gpu_weights[which] = new VCL_ELL_MAT_t();//nrows, ncols, NNZ);
             bytesAllocated += weights_mem_bytes;
             type_i+=1;
         }
@@ -247,23 +251,27 @@ void RBFFD_VCL::updateWeightsDouble(bool forceFinish) {
         while (iterator) {
             if (computedTypes & getDerType(which)) {
                 // TODO: benchmark assembly
-                std::cout << "Allocating CPU_WEIGHTS_D["<< which << "]\n";
+                std::cout << "Allocating CPU_WEIGHTS_D["<< which << "] = " << derTypeStr[which] << "\n";
                 cpu_weights_d[which] = new UBLAS_MAT_t(nb_stencils, nb_nodes, nb_stencils*n );
 
+#if 1
                 // Weights should be in csr format
                 for (unsigned int i = 0; i < nb_stencils; i++) {
                     StencilType& sten = grid_ref.getStencil(i);
 
                     // Ublas assembles csr fast with an accumulator
                     for (unsigned int j = 0; j < sten.size(); j++) {
+                        //std::cout << "i = " << i << ", sten[j] = " << sten[j] << std::endl;
                         (*(cpu_weights_d[which]))(i, sten[j]) = weights[which][i][j];
                     }
                 }
+                std::cout << "COPYING WEIGHTS " << derTypeStr[which] << std::endl;
 
                 // TODO: benchmark the copy
                 viennacl::copy(*(cpu_weights_d[which]), *(gpu_weights[which]));
 
                 std::cout << "COPIED WEIGHT " << derTypeStr[which] << std::endl;
+#endif
 
                 //viennacl::io::write_matrix_market_file(*(cpu_weights_d[which]), derTypeStr[which] + "_weights.mtx");
                 type_i+=1;

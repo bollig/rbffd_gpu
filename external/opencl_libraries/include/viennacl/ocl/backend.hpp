@@ -2,9 +2,10 @@
 #define VIENNACL_OCL_BACKEND_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file backend.hpp
+/** @file viennacl/ocl/backend.hpp
     @brief Implementations of the OpenCL backend, where all contexts are stored in.
 */
 
@@ -53,7 +54,7 @@ namespace viennacl
             contexts_[current_context_id_].init();
             //create one queue per device:
             std::vector<viennacl::ocl::device> devices = contexts_[current_context_id_].devices();
-            for (size_t j = 0; j<devices.size(); ++j)
+            for (std::size_t j = 0; j<devices.size(); ++j)
               contexts_[current_context_id_].add_queue(devices[j]);
             initialized_[current_context_id_] = true;
             /*
@@ -83,7 +84,7 @@ namespace viennacl
           else
           {
             //set devices for context:
-            for (size_t j = 0; j<devices.size(); ++j)
+            for (std::size_t j = 0; j<devices.size(); ++j)
               contexts_[i].add_device(devices[j]);
           }
         }
@@ -100,14 +101,14 @@ namespace viennacl
                                   std::vector<cl_device_id> const & devices,
                                   std::map< cl_device_id, std::vector< cl_command_queue > > const & queues)
         {
-          assert(devices.size() == queues.size() && "ViennaCL expects one queue per device!");
+          assert(devices.size() == queues.size() && bool("ViennaCL expects one queue per device!"));
           
           if (initialized_[i])
             std::cerr << "ViennaCL: Warning in init_context(): Providing a list of devices has no effect, because context for ViennaCL is already created!" << std::endl;
           else
           {
             //set devices for context:
-            for (size_t j = 0; j<devices.size(); ++j)
+            for (std::size_t j = 0; j<devices.size(); ++j)
               contexts_[i].add_device(devices[j]);
             
             //init context:
@@ -120,7 +121,7 @@ namespace viennacl
                               ++qit)
             {
               std::vector<cl_command_queue> const & queues_for_device = qit->second;
-              for (size_t j=0; j<queues_for_device.size(); ++j)
+              for (std::size_t j=0; j<queues_for_device.size(); ++j)
                 contexts_[i].add_queue(qit->first, queues_for_device[j]);
             }
             
@@ -137,11 +138,11 @@ namespace viennacl
         */
         static void setup_context(long i, cl_context c, std::vector<cl_device_id> const & devices, std::vector<cl_command_queue> const & queue)
         {
-          assert(devices.size() == queue.size() && "ViennaCL expects one queue per device!");
+          assert(devices.size() == queue.size() && bool("ViennaCL expects one queue per device!"));
           
           //wrap queue vector into map
           std::map< cl_device_id, std::vector<cl_command_queue> > queues_map;
-          for (size_t j = 0; j<devices.size(); ++j)
+          for (std::size_t j = 0; j<devices.size(); ++j)
             queues_map[devices[j]].push_back(queue[j]);
           
           setup_context(i, c, devices, queues_map);

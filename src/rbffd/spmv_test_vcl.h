@@ -54,7 +54,7 @@
 class SpMVTest
 {
     protected:
-        RBFFD_VCL* rbffd; 
+        RBFFD_VCL_OVERLAP* rbffd; 
         Domain* grid; 
         int rank, size;
 
@@ -76,7 +76,7 @@ class SpMVTest
         EB::TimerList tm; 
 
     public: 
-        SpMVTest(RBFFD_VCL* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1) {
+        SpMVTest(RBFFD_VCL_OVERLAP* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1) {
             o_comm_size=0; 
             r_comm_size=0;
             setupTimers(); 
@@ -170,7 +170,7 @@ class SpMVTest
 
         // Does a simple CPU CSR SpMV
         // can apply to subset of problem 
-        void SpMV(RBFFD::DerType which, UBLAS_VEC_t& u_cpu, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
+        void SpMV(RBFFD::DerType which, std::vector<double>& u_cpu, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
             // TODO: 
             // GPU Matrix
             // GPU Vector
@@ -204,31 +204,37 @@ class SpMVTest
 
             tm["spmv"]->start();
             //std::vector<double*> DM = rbffd->getWeights(which);
-            VCL_ELL_MAT_t& DM_ell = *(rbffd->getGPUWeights(which));
-            VCL_CSR_MAT_t DM(DM_ell.size1(), DM_ell.size2(), DM_ell.nnz()); 
+            VCL_ELL_MAT_t& DM_qmb = *(rbffd->getGPUWeightsSetQmB(which));
+            VCL_ELL_MAT_t& DM_b = *(rbffd->getGPUWeightsSetB(which));
+
             int nb_stencils = grid->getStencilsSize();
             int nb_nodes = grid->getNodeListSize();
             int nb_qmb_rows = grid->QmB_size;
 
-            viennacl::matrix_range<VCL_CSR_MAT_t> DM_qmb(DM, viennacl::range(0, nb_qmb_rows), viennacl::range(0, nb_nodes));
-            viennacl::matrix_range<VCL_CSR_MAT_t> DM_b(DM, viennacl::range(nb_qmb_rows, nb_stencils), viennacl::range(0, nb_nodes));
+//            viennacl::matrix_range<VCL_CSR_MAT_t> DM_qmb(DM, viennacl::range(0, nb_qmb_rows), viennacl::range(0, nb_nodes));
+ ////           viennacl::matrix_range<VCL_CSR_MAT_t> DM_b(DM, viennacl::range(nb_qmb_rows, nb_stencils), viennacl::range(0, nb_nodes));
+            viennacl::range r1(0, nb_stencils);
+            viennacl::range r2(0, nb_nodes);
 
-            viennacl::vector_range<VCL_VEC_t> out_deriv_qmb(out_deriv, viennacl::range(0, nb_qmb_rows));
+            viennacl::range r3(0, nb_qmb_rows);
+            viennacl::range r4(nb_qmb_rows, nb_stencils);
 
-            // TODO: prod on first nb_qmb_rows. 
-//            out_deriv_qmb = viennacl::linalg::prod(DM_qmb, u_gpu); 
-
-
+            std::cout << "None: " << viennacl::linalg::norm_1(out_deriv) << "\n";
             //------------
-            // Copy O Down
+            // Start Async copy O Down
             //------------
-
+ 
+            // SpMV on first QmB rows
+            project(out_deriv, r3) = (VCL_VEC_t) viennacl::linalg::prod(DM_qmb, u_gpu); 
+           
+            std::cout << "QmB: " << viennacl::linalg::norm_1(out_deriv) << "\n";
+            std::cout << "QmB: " << viennacl::linalg::norm_1(out_deriv) << "\n";
 
             //------------
             // Fill Sendbuf 
             //------------
 
-            this->encodeSendBuf(u_cpu);
+            this->encodeSendBuf(u_gpu);
 
             //------------
             // Send O
@@ -249,25 +255,14 @@ class SpMVTest
             // Copy R up 
             //------------
 
-            this->decodeRecvBuf(u_cpu);
+            this->decodeRecvBuf(u_gpu);
 
             //TODO: send to GPU;
 
-            //std::cout << "Queuing B.size() = " << nb_stencils - nb_qmb_rows << std::endl;
+            project(out_deriv, r4) = (VCL_VEC_t) viennacl::linalg::prod(DM_b, u_gpu); 
 
-#if 0
-            for (unsigned int i=nb_qmb_rows; i < nb_stencils; i++) {
-                double* w = DM[i];
-                StencilType& st = stencils[i];
-                double der = 0.0;
-                unsigned int n = st.size();
-                for (unsigned int s=0; s < n; s++) {
-                    der += w[s] * u[st[s]];
-                }
-                out_deriv[i] = der;
-            }
-#endif 
             tm["spmv"]->stop();
+            std::cout << "Full: " << viennacl::linalg::norm_1(out_deriv) << "\n";
 
             tm["spmv_w_comm"]->stop();
         }
@@ -285,14 +280,41 @@ class SpMVTest
             }
         }
 
-        void encodeSendBuf(UBLAS_VEC_t& vec) {
+        void encodeSendBuf(VCL_VEC_t& gpu_vec) {
+            unsigned int set_Q_size = grid->Q_size;
+            unsigned int set_O_size = grid->O_size;
+            unsigned int nb_bnd = grid->getBoundaryIndicesSize();
+
+            //std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
+
+            // OUR SOLUTION IS ARRANGED IN THIS FASHION:
+            //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
+            //  Minus 1 because we start indexing at 0
+
+            // TODO: fix this. We have to maintain an additional index
+            // map to convert from local node indices to the linear
+            // system indices (i.e. filter off the dirichlet boundary
+            // node indices
+            unsigned int offset_to_interior = nb_bnd;
+            unsigned int offset_to_set_O = (set_Q_size - set_O_size);
+
+            // std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
+
+            viennacl::vector_range< VCL_VEC_t > setO(gpu_vec, viennacl::range((offset_to_set_O - offset_to_interior) * sol_dim, ((offset_to_set_O-offset_to_interior)+set_O_size) * sol_dim));
+
+            //double* vec = new double[set_O_size * sol_dim];
+            std::vector<double> vec(set_O_size * sol_dim);
+
+            viennacl::copy(setO, vec); //, set_O_size * sol_dim);
+
             tm["encode_send"]->start();
             // Prep-Send: Copy elements of set to sbuf
             unsigned int k = 0; 
             for (size_t i = 0; i < grid->O_by_rank.size(); i++) {
                 k = this->sdispls[i]; 
                 for (size_t j = 0; j < grid->O_by_rank[i].size(); j++) {
-                    unsigned int s_indx = grid->g2l(grid->O_by_rank[i][j]);
+                    int s_indx = grid->g2l(grid->O_by_rank[i][j]);
+                    s_indx -= offset_to_set_O;
                     s_indx *= this->sol_dim; 
                     for (unsigned int d=0; d < this->sol_dim; d++) {
                         this->sbuf[k] = vec[s_indx+d];
@@ -318,7 +340,26 @@ class SpMVTest
             tm["irecv"]->stop();
         }
 
-        void decodeRecvBuf(UBLAS_VEC_t &vec) {
+        void decodeRecvBuf(VCL_VEC_t &gpu_vec) {
+            unsigned int set_Q_size = grid->Q_size;
+            unsigned int set_R_size = grid->R_size;
+            unsigned int nb_bnd = grid->getBoundaryIndicesSize();
+
+            // OUR SOLUTION IS ARRANGED IN THIS FASHION:
+            //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
+
+            // TODO: fix this. We have to maintain an additional index
+            // map to convert from local node indices to the linear
+            // system indices (i.e. filter off the dirichlet boundary
+            // node indices
+            unsigned int offset_to_interior = nb_bnd;
+            unsigned int offset_to_set_R = set_Q_size;
+
+            viennacl::vector_range< VCL_VEC_t > setR(gpu_vec, viennacl::range((offset_to_set_R-offset_to_interior) * sol_dim, ((offset_to_set_R-offset_to_interior)+set_R_size) * sol_dim));
+
+            //double* vec = new double[set_R_size * sol_dim];
+            std::vector<double> vec(set_R_size * sol_dim);
+
             // Post-Recv: copy elements out
             tm["decode_recv"]->start();
             unsigned int k = 0; 
@@ -340,6 +381,9 @@ class SpMVTest
                 }
             }
             tm["decode_recv"]->stop();
+
+            viennacl::copy(vec, setR);
+            //viennacl::copy(vec, setR, set_R_size * sol_dim);
         }
 
 

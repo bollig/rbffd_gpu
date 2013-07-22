@@ -7,6 +7,8 @@
 #include "viennacl/linalg/kernels/hyb_matrix_source.h"
 
 //Automatically generated file from aux-directory, do not edit manually!
+/** @file hyb_matrix_kernels.h
+ *  @brief OpenCL kernel file, generated automatically from scripts in auxiliary/. */
 namespace viennacl
 {
  namespace linalg
@@ -83,3 +85,4 @@ namespace viennacl
  }  //namespace linalg
 }  //namespace viennacl
 #endif
+

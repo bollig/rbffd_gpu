@@ -7,6 +7,8 @@
 #include "viennacl/linalg/kernels/ilu_source.h"
 
 //Automatically generated file from aux-directory, do not edit manually!
+/** @file ilu_kernels.h
+ *  @brief OpenCL kernel file, generated automatically from scripts in auxiliary/. */
 namespace viennacl
 {
  namespace linalg
@@ -33,14 +35,14 @@ namespace viennacl
       if (!init_done[context_.handle().get()])
       {
         std::string source;
-        source.append(ilu_align1_block_ilu_substitute);
+        source.append(ilu_align1_level_scheduling_substitute);
         std::string prog_name = program_name();
         #ifdef VIENNACL_BUILD_INFO
         std::cout << "Creating program " << prog_name << std::endl;
         #endif
         context_.add_program(source, prog_name);
         viennacl::ocl::program & prog_ = context_.get_program(prog_name);
-        prog_.add_kernel("block_ilu_substitute");
+        prog_.add_kernel("level_scheduling_substitute");
         init_done[context_.handle().get()] = true;
        } //if
      } //init
@@ -65,14 +67,14 @@ namespace viennacl
       {
         std::string source;
         std::string fp64_ext = viennacl::ocl::current_device().double_support_extension();
-        source.append(viennacl::tools::make_double_kernel(ilu_align1_block_ilu_substitute, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(ilu_align1_level_scheduling_substitute, fp64_ext));
         std::string prog_name = program_name();
         #ifdef VIENNACL_BUILD_INFO
         std::cout << "Creating program " << prog_name << std::endl;
         #endif
         context_.add_program(source, prog_name);
         viennacl::ocl::program & prog_ = context_.get_program(prog_name);
-        prog_.add_kernel("block_ilu_substitute");
+        prog_.add_kernel("level_scheduling_substitute");
         init_done[context_.handle().get()] = true;
        } //if
      } //init
@@ -83,3 +85,4 @@ namespace viennacl
  }  //namespace linalg
 }  //namespace viennacl
 #endif
+

@@ -2,9 +2,10 @@
 #define VIENNACL_TOOLS_MATRIX_KERNEL_CLASS_DEDUCER_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file matrix_kernel_class_deducer.hpp
+/** @file viennacl/tools/matrix_kernel_class_deducer.hpp
     @brief Implementation of a helper meta class for deducing the correct kernels for the supplied matrix
 */
 
@@ -38,34 +39,24 @@ namespace viennacl
     /**     @brief Implementation of a helper meta class for deducing the correct kernels for the supplied matrix */
     template <typename MatrixType1>
     struct MATRIX_KERNEL_CLASS_DEDUCER
-    {};
-    
-    template <typename SCALARTYPE, unsigned int ALIGNMENT>
-    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT> >
     {
-      typedef viennacl::linalg::kernels::matrix_row<SCALARTYPE, ALIGNMENT>     ResultType;
+      typedef typename MatrixType1::ERROR_INVALID_ARGUMENT_FOR_KERNEL_CLASS_DEDUCER    ResultType;
     };
     
-    template <typename SCALARTYPE, unsigned int ALIGNMENT>
-    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix<SCALARTYPE, viennacl::column_major, ALIGNMENT> >
+    /** \cond */
+    template <typename SCALARTYPE>
+    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix_base<SCALARTYPE, viennacl::row_major> >
     {
-      typedef viennacl::linalg::kernels::matrix_col<SCALARTYPE, ALIGNMENT>     ResultType;
+      typedef viennacl::linalg::kernels::matrix_row<SCALARTYPE, 1>     ResultType;
+    };
+    
+    template <typename SCALARTYPE>
+    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix_base<SCALARTYPE, viennacl::column_major> >
+    {
+      typedef viennacl::linalg::kernels::matrix_col<SCALARTYPE, 1>     ResultType;
     };
 
-    //support for matrix range:
-    template <typename T>
-    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix_range<T> >
-    {
-      typedef typename MATRIX_KERNEL_CLASS_DEDUCER<T>::ResultType    ResultType;
-    };
-    
-    //support for matrix slice:
-    template <typename T>
-    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix_slice<T> >
-    {
-      typedef typename MATRIX_KERNEL_CLASS_DEDUCER<T>::ResultType    ResultType;
-    };
-    
+    /** \endcond */
   }
 
 }

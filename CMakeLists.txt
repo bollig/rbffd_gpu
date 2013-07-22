@@ -130,6 +130,7 @@ add_definitions(-DUSE_DOUBLE_VEC3 -DUSE_KDTREE -Wall
     -O3 
     # -g 
     -DNDEBUG 
+    -DVIENNACL_WITH_OPENCL
     #-DTHRUST_DEBUG )  
 
     # This option is required for MPICH2. It gets rid of errors when mpi.h is

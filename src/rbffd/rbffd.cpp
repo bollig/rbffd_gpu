@@ -1225,6 +1225,10 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             i+= 1;
         }
 
+        // This will trigger the weights update later on in RBFFD_CL and
+        // RBFFD_VCL
+        this->weightsModified=true;
+
         return err;
     }
 

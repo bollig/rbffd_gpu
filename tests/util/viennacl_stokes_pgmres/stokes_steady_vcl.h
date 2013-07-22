@@ -399,7 +399,7 @@ class StokesSteady_PDE_VCL : public ImplicitPDE
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
 #if 1
-            viennacl::linalg::parallel_gmres_tag tag(comm_ref.getRank(), grid_ref, tol, restart*krylov, krylov, NC); 
+            viennacl::linalg::parallel_gmres_tag tag(grid_ref, tol, restart*krylov, krylov, NC); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 

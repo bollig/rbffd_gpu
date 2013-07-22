@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_BISECT_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -89,12 +90,12 @@ namespace viennacl
               beta_bisect.push_back(betas[i] * betas[i]);
       }
 
-      double xmin = alphas[size - 1] - std::abs<CPU_ScalarType>(betas[size - 1]);
-      double xmax = alphas[size - 1] + std::abs<CPU_ScalarType>(betas[size - 1]);
+      double xmin = alphas[size - 1] - std::fabs(betas[size - 1]);
+      double xmax = alphas[size - 1] + std::fabs(betas[size - 1]);
 
       for(std::size_t i = 0; i < size - 1; i++)
       {
-        double h = std::abs<CPU_ScalarType>(betas[i]) + std::abs<CPU_ScalarType>(betas[i + 1]);
+        double h = std::fabs(betas[i]) + std::fabs(betas[i + 1]);
         if (alphas[i] + h > xmax)
           xmax = alphas[i] + h;
         if (alphas[i] - h < xmin)
@@ -133,7 +134,7 @@ namespace viennacl
           x0 = x_temp[k];
 
         double x1 = (xu + x0) / 2.0;
-        while (x0 - xu > 2.0 * rel_error * (std::abs(xu) + std::abs(x0)) + eps1)
+        while (x0 - xu > 2.0 * rel_error * (std::fabs(xu) + std::fabs(x0)) + eps1)
         {
           std::size_t a = 0;
           double q = 1;
@@ -142,7 +143,7 @@ namespace viennacl
             if(q != 0)
               q = alphas[i] - x1 - beta_bisect[i] / q;
             else
-              q = alphas[i] - x1 - std::abs(betas[i] / rel_error);
+              q = alphas[i] - x1 - std::fabs(betas[i] / rel_error);
 
             if(q < 0)
               a++;

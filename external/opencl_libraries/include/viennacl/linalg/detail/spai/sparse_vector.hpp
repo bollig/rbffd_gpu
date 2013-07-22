@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_DETAIL_SPAI_SPARSE_VECTOR_HPP
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -18,7 +19,7 @@
 ============================================================================= */
 
 /** @file viennacl/linalg/detail/spai/sparse_vector.hpp
-    @brief Implementation of a helper sparse vector class for SPAI. Experimental in 1.2.x.
+    @brief Implementation of a helper sparse vector class for SPAI. Experimental.
     
     SPAI code contributed by Nikolay Lukash
 */
@@ -60,43 +61,43 @@ namespace viennacl
              */
             //getter
             ScalarType& operator[] (const unsigned int ind){
-                return _v[ind];
+                return v_[ind];
                 
             }
             
             void clear(){
-                _v.clear();
+                v_.clear();
             }
             
             const_iterator find(const unsigned int var) const{
-                return _v.find(var);
+                return v_.find(var);
             }
             
             iterator find(const unsigned int var){
-                return _v.find(var);
+                return v_.find(var);
             }
             
             const_iterator begin() const{
-                return _v.begin();
+                return v_.begin();
             }
             
             const_iterator end() const{
-                return _v.end();
+                return v_.end();
             }
             
             
             iterator begin(){
-                return _v.begin();
+                return v_.begin();
             }
             
             iterator end(){
-                return _v.end();
+                return v_.end();
             }
             
             
         private:
-            unsigned int _size;
-            std::map<unsigned int, ScalarType> _v;
+            unsigned int size_;
+            std::map<unsigned int, ScalarType> v_;
         };
       }
     }

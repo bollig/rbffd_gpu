@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_DETAIL_AMG_AMG_DEBUG_HPP
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -48,7 +49,7 @@ namespace viennacl
           typedef typename VIENNACL_AMG_MATRIXTYPE::iterator1 InternalRowIterator;
           typedef typename VIENNACL_AMG_MATRIXTYPE::iterator2 InternalColIterator;
           
-          #ifdef DEBUG
+          #ifdef VIENNACL_AMG_DEBUG
           VIENNACL_AMG_MATRIXTYPE mat2 = mat;
           
           for (InternalRowIterator row_iter = mat2.begin1(); row_iter != mat2.end1(); ++row_iter)
@@ -66,7 +67,7 @@ namespace viennacl
         template <typename VectorType>
         void printvector(VectorType const & vec)
         {
-          #ifdef DEBUGBENCH
+          #ifdef VIENNACL_AMG_DEBUGBENCH
           for (typename VectorType::const_iterator iter = vec.begin(); iter != vec.end(); ++iter)
           {
             std::cout << *iter << " ";

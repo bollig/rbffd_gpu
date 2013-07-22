@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_DETAIL_SPAI_QR_HPP
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -59,8 +60,6 @@ namespace viennacl
         namespace spai
         {
         
-          
-          
           //********** DEBUG FUNCTIONS *****************//
           template< typename T, typename InputIterator>
           void Print(std::ostream& ostr, InputIterator it_begin, InputIterator it_end){
@@ -73,8 +72,8 @@ namespace viennacl
           template<typename VectorType, typename MatrixType>
           void write_to_block(VectorType& con_A_I_J, unsigned int start_ind,  const std::vector<unsigned int>& I, const std::vector<unsigned int>& J, MatrixType& m){
               m.resize(I.size(), J.size(), false);
-              for(size_t i = 0; i < J.size(); ++i){
-                  for(size_t j = 0; j < I.size(); ++j){
+              for(std::size_t i = 0; i < J.size(); ++i){
+                  for(std::size_t j = 0; j < I.size(); ++j){
                       m(j,i) = con_A_I_J[start_ind + i*I.size() + j];
                   }
               }
@@ -85,7 +84,7 @@ namespace viennacl
                                       const std::vector<std::vector<unsigned int> >& g_I, const std::vector<std::vector<unsigned int> >& g_J){
               typedef typename VectorType::value_type ScalarType;
               std::vector<boost::numeric::ublas::matrix<ScalarType> > com_A_I_J(g_I.size());
-              for(size_t i = 0; i < g_I.size(); ++i){
+              for(std::size_t i = 0; i < g_I.size(); ++i){
                   write_to_block( con_A_I_J, blocks_ind[i], g_I[i], g_J[i], com_A_I_J[i]);
                   std::cout<<com_A_I_J[i]<<std::endl;
               }
@@ -95,9 +94,9 @@ namespace viennacl
               typedef typename VectorType::value_type ScalarType;
               std::vector<boost::numeric::ublas::vector<ScalarType> > com_v(g_J.size());
               //Print<ScalarType>(std::cout, con_v.begin(), con_v.end());
-              for(size_t i = 0; i < g_J.size(); ++i){
+              for(std::size_t i = 0; i < g_J.size(); ++i){
                   com_v[i].resize(g_J[i].size());
-                  for(size_t j = 0; j < g_J[i].size(); ++j){
+                  for(std::size_t j = 0; j < g_J[i].size(); ++j){
                       com_v[i](j) = con_v[block_ind[i] + j];
                   }
                   std::cout<<com_v[i]<<std::endl;
@@ -112,10 +111,11 @@ namespace viennacl
           * @param blocks_ind start indices in a certain
           * @param matrix_dims matrix dimensions for each block
           */ 
-          void compute_blocks_size(const std::vector<std::vector<unsigned int> >& g_I, const std::vector<std::vector<unsigned int> >& g_J, 
-                                  unsigned int& sz, std::vector<cl_uint>& blocks_ind, std::vector<cl_uint>& matrix_dims){
+          inline void compute_blocks_size(const std::vector<std::vector<unsigned int> >& g_I, const std::vector<std::vector<unsigned int> >& g_J, 
+                                          unsigned int& sz, std::vector<cl_uint>& blocks_ind, std::vector<cl_uint>& matrix_dims)
+          {
               sz = 0;
-              for(size_t i = 0; i < g_I.size(); ++i){
+              for(std::size_t i = 0; i < g_I.size(); ++i){
                   sz += static_cast<unsigned int>(g_I[i].size()*g_J[i].size());
                   matrix_dims[2*i] = static_cast<cl_uint>(g_I[i].size());
                   matrix_dims[2*i + 1] = static_cast<cl_uint>(g_J[i].size());
@@ -127,9 +127,10 @@ namespace viennacl
           * @param inds container of index sets 
           * @param size output size 
           */ 
-          void get_size(const std::vector<std::vector<unsigned int> >& inds, unsigned int& size){
+          template <typename SizeType>
+          void get_size(const std::vector<std::vector<SizeType> >& inds, SizeType & size){
               size = 0;
-              for (size_t i = 0; i < inds.size(); ++i) {
+              for (std::size_t i = 0; i < inds.size(); ++i) {
                   size += static_cast<unsigned int>(inds[i].size());
               }
           }
@@ -138,8 +139,9 @@ namespace viennacl
           * @param inds container of index sets 
           * @param start_inds output index set 
           */
-          void init_start_inds(const std::vector<std::vector<unsigned int> >& inds, std::vector<cl_uint>& start_inds){
-              for(size_t i = 0; i < inds.size(); ++i){
+          template <typename SizeType>
+          void init_start_inds(const std::vector<std::vector<SizeType> >& inds, std::vector<cl_uint>& start_inds){
+              for(std::size_t i = 0; i < inds.size(); ++i){
                   start_inds[i+1] = start_inds[i] + static_cast<cl_uint>(inds[i].size());
               }
           }
@@ -153,7 +155,7 @@ namespace viennacl
           template<typename MatrixType, typename ScalarType>
           void dot_prod(const MatrixType& A,  unsigned int beg_ind, ScalarType& res){
               res = static_cast<ScalarType>(0);
-              for(size_t i = beg_ind; i < A.size1(); ++i){
+              for(std::size_t i = beg_ind; i < A.size1(); ++i){
                   res += A(i, beg_ind-1)*A(i, beg_ind-1);
               }
           }
@@ -265,10 +267,10 @@ namespace viennacl
           }
           
           //********************** HELP FUNCTIONS FOR GPU-based QR factorization *************************//
-          /** @brief Reading from text file into string
+          /* * @brief Reading from text file into string
           * @param file_name file name
           * @param kernel_source string that contains file
-          */
+          
           void read_kernel_from_file(std::string& file_name, std::string& kernel_source){
               std::ifstream ifs(file_name.c_str(), std::ifstream::in);
               
@@ -281,17 +283,18 @@ namespace viennacl
                   ost<<line<<std::endl;
               }
               kernel_source = ost.str();
-          }
+          }*/
           
           /** @brief Getting max size of rows/columns from container of index set
           * @param inds container of index set
           * @param max_size max size that corresponds to that container
           */
-          void get_max_block_size(const std::vector<std::vector<unsigned int> >& inds, unsigned int& max_size){
+          template <typename SizeType>
+          void get_max_block_size(const std::vector<std::vector<SizeType> >& inds, SizeType max_size){
               max_size = 0;
-              for(unsigned int i = 0; i < inds.size(); ++i){
+              for(std::size_t i = 0; i < inds.size(); ++i){
                   if(inds[i].size() > max_size){
-                      max_size = static_cast<unsigned int>(inds[i].size());
+                      max_size = static_cast<SizeType>(inds[i].size());
                   }
               }
           }
@@ -323,9 +326,9 @@ namespace viennacl
           void apply_q_trans_vec(const MatrixType& R, const VectorType& b_v, VectorType& y){
               typedef typename MatrixType::value_type ScalarType;
               ScalarType inn_prod = static_cast<ScalarType>(0);
-              for(size_t i = 0; i < R.size2(); ++i){
+              for(std::size_t i = 0; i < R.size2(); ++i){
                   custom_dot_prod(R, y, static_cast<unsigned int>(i), inn_prod);
-                  for(size_t j = i; j < R.size1(); ++j){
+                  for(std::size_t j = i; j < R.size1(); ++j){
                       if(i == j){
                           y(j) -= b_v(i)*inn_prod;
                       }
@@ -342,9 +345,10 @@ namespace viennacl
           * @param A output matrix
           */
           template<typename MatrixType, typename VectorType>
-          void apply_q_trans_mat(const MatrixType& R, const VectorType& b_v, MatrixType& A){
+          void apply_q_trans_mat(const MatrixType& R, const VectorType& b_v, MatrixType& A)
+          {
               VectorType tmp_v;
-              for(size_t i = 0; i < A.size2(); ++i){
+              for(std::size_t i = 0; i < A.size2(); ++i){
                   tmp_v = (VectorType)column(A,i);
                   apply_q_trans_vec(R, b_v, tmp_v);
                   column(A,i) = tmp_v;
@@ -352,28 +356,28 @@ namespace viennacl
           }
           
           //parallel QR for GPU
-          /** @brief Inplace QR factorization via Householder reflections c.f. Gene H. Golub, Charles F. Van Loan "Matrix Computations" 3rd edition p.224 performed
-                      on GPU
+          /** @brief Inplace QR factorization via Householder reflections c.f. Gene H. Golub, Charles F. Van Loan "Matrix Computations" 3rd edition p.224 performed on GPU
+          * 
           * @param g_I container of row indices
           * @param g_J container of column indices
           * @param g_A_I_J_vcl contigious matrices, GPU memory is used
           * @param g_bv_vcl contigios vectors beta, GPU memory is used 
           * @param g_is_update container of indicators that show active blocks  
-          * @param cur_iter current iteration
           */
           template<typename ScalarType>
           void block_qr(std::vector<std::vector<unsigned int> >& g_I, 
                         std::vector<std::vector<unsigned int> >& g_J, 
                         block_matrix& g_A_I_J_vcl,
                         block_vector& g_bv_vcl,
-                        std::vector<cl_uint>& g_is_update,
-                        const unsigned int cur_iter){
+                        std::vector<cl_uint>& g_is_update)
+          {
               //typedef typename MatrixType::value_type ScalarType;
-              unsigned int bv_size;
-              unsigned int v_size;
+              unsigned int bv_size = 0;
+              unsigned int v_size = 0;
               //set up arguments for GPU
               //find maximum size of rows/columns
-              unsigned int local_r_n, local_c_n;
+              unsigned int local_r_n = 0;
+              unsigned int local_c_n = 0;
               //find max size for blocks
               get_max_block_size(g_I, local_r_n);
               get_max_block_size(g_J, local_c_n);
@@ -390,16 +394,6 @@ namespace viennacl
               std::vector<ScalarType> v(v_size, static_cast<ScalarType>(0));
               //call qr program
               block_vector v_vcl;
-              /*if(cur_iter == 0)
-              {
-                  //if first run - compile the program
-                  std::string qr_kernel_file_name = "kernels/spai/qr3_a_n.cl";
-                  std::string qr_kernel_source;
-                  read_kernel_from_file(qr_kernel_file_name, qr_kernel_source);
-                  viennacl::ocl::program & qr_prog = viennacl::ocl::current_context().add_program(qr_kernel_source.c_str(), "qr_kernel_source");
-                  qr_prog.add_kernel("block_qr");
-                  //
-              }*/
               
               g_bv_vcl.handle() = viennacl::ocl::current_context().create_memory(CL_MEM_READ_WRITE,  
                                                                       static_cast<unsigned int>(sizeof(ScalarType)*bv_size), 

@@ -1,6 +1,8 @@
 #ifndef VIENNACL_LINALG_KERNELS_ELL_MATRIX_SOURCE_HPP_
 #define VIENNACL_LINALG_KERNELS_ELL_MATRIX_SOURCE_HPP_
 //Automatically generated file from auxiliary-directory, do not edit manually!
+/** @file ell_matrix_source.h
+ *  @brief OpenCL kernel source file, generated automatically from scripts in auxiliary/. */
 namespace viennacl
 {
  namespace linalg
@@ -9,15 +11,15 @@ namespace viennacl
   {
 const char * const ell_matrix_align1_vec_mul = 
 "__kernel void vec_mul(\n"
-"    const __global int* coords,\n"
-"    const __global float* elements,\n"
-"    const __global const float * vector,\n"
+"    __global const unsigned int * coords,\n"
+"    __global const float * elements,\n"
+"    __global const float * vector,\n"
 "    __global float * result,\n"
-"    const unsigned int row_num,\n"
-"    const unsigned int col_num,\n"
-"    const unsigned int internal_row_num,\n"
-"    const unsigned int items_per_row,\n"
-"    const unsigned int aligned_items_per_row\n"
+"    unsigned int row_num,\n"
+"    unsigned int col_num,\n"
+"    unsigned int internal_row_num,\n"
+"    unsigned int items_per_row,\n"
+"    unsigned int aligned_items_per_row\n"
 "    )\n"
 "{\n"
 "    uint glb_id = get_global_id(0);\n"
@@ -46,3 +48,4 @@ const char * const ell_matrix_align1_vec_mul =
  }  //namespace linalg
 }  //namespace viennacl
 #endif
+

@@ -1,6 +1,8 @@
 #ifndef VIENNACL_LINALG_KERNELS_NMF_SOURCE_HPP_
 #define VIENNACL_LINALG_KERNELS_NMF_SOURCE_HPP_
 //Automatically generated file from auxiliary-directory, do not edit manually!
+/** @file nmf_source.h
+ *  @brief OpenCL kernel source file, generated automatically from scripts in auxiliary/. */
 namespace viennacl
 {
  namespace linalg
@@ -39,3 +41,4 @@ const char * const nmf_align1_sub_wise =
  }  //namespace linalg
 }  //namespace viennacl
 #endif
+

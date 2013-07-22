@@ -2,9 +2,10 @@
 #define VIENNACL_OCL_PROGRAM_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file program.hpp
+/** @file viennacl/ocl/program.hpp
     @brief Implements an OpenCL program class for ViennaCL
 */
 
@@ -79,8 +80,8 @@ namespace viennacl
         }
         std::cerr << "ViennaCL: FATAL ERROR: Could not find kernel '" << name << "'" << std::endl;
         std::cout << "Number of kernels in program: " << kernels_.size() << std::endl;
-        assert(!"Kernel not found");
-        return kernels_[0];  //return a defined object
+        throw "Kernel not found";
+        //return kernels_[0];  //return a defined object
       }
 
     private:

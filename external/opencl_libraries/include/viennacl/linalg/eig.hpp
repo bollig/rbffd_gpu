@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_EIG_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2011, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file eig.hpp
+/** @file viennacl/linalg/eig.hpp
 *   @brief Convenience header file including all available eigenvalue algorithms
 */
 

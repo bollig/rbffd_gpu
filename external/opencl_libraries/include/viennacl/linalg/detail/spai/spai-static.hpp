@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_DETAIL_SPAI_SPAI_STATIC_HPP
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -18,7 +19,7 @@
 ============================================================================= */
 
 /** @file viennacl/linalg/detail/spai/spai-static.hpp
-    @brief Implementation of a static SPAI. Experimental in 1.2.x.
+    @brief Implementation of a static SPAI. Experimental.
     
     SPAI code contributed by Nikolay Lukash
 */
@@ -45,12 +46,11 @@
 #include "viennacl/linalg/prod.hpp"
 #include "viennacl/matrix.hpp"
 #include "viennacl/compressed_matrix.hpp"
-#include "viennacl/linalg/compressed_matrix_operations.hpp"
+#include "viennacl/linalg/sparse_matrix_operations.hpp"
 #include "viennacl/linalg/matrix_operations.hpp"
 #include "viennacl/scalar.hpp"
 #include "viennacl/linalg/cg.hpp"
 #include "viennacl/linalg/inner_prod.hpp"
-#include "viennacl/linalg/ilu.hpp"
 
 //#include "boost/numeric/ublas/detail/matrix_assign.hpp"
 
@@ -62,6 +62,18 @@ namespace viennacl
     {
       namespace spai
       {
+        
+        /** @brief Determines if element ind is in set {J}
+        * @param J current set
+        * @param ind current element
+        */
+        template <typename SizeType>
+        bool isInIndexSet(const std::vector<SizeType>& J, SizeType ind)
+        {
+          return (std::find(J.begin(), J.end(), ind) != J.end());
+        }
+        
+        
       
         /********************************* STATIC SPAI FUNCTIONS******************************************/
         
@@ -74,7 +86,7 @@ namespace viennacl
         void fanOutVector(const VectorType& m_in, const std::vector<unsigned int>& J, SparseVectorType& m)
         {
           unsigned int  cnt = 0;
-          for (size_t i = 0; i < J.size(); ++i) 
+          for (std::size_t i = 0; i < J.size(); ++i) 
             m[J[i]] = m_in(cnt++);
         }
         /** @brief Solution of linear:R*x=y system by backward substitution
@@ -89,7 +101,7 @@ namespace viennacl
           for (long i = R.size2()-1; i >= 0 ; i--) 
           {
             x(i) = y(i);
-            for (size_t j = i+1; j < R.size2(); ++j) 
+            for (std::size_t j = i+1; j < R.size2(); ++j) 
                 x(i) -= R(i,j)*x(j);
 
             x(i) /= R(i,i);
@@ -103,7 +115,7 @@ namespace viennacl
         template <typename VectorType, typename ScalarType>
         void projectI(const std::vector<unsigned int>& I, VectorType& y, unsigned int ind)
         {
-          for(size_t i = 0; i < I.size(); ++i)
+          for(std::size_t i = 0; i < I.size(); ++i)
           {
             //y.resize(y.size()+1);
             if(I[i] == ind)
@@ -157,7 +169,7 @@ namespace viennacl
         template <typename SparseVectorType>
         void projectRows(const std::vector<SparseVectorType>& A_v_c, const std::vector<unsigned int>& J, std::vector<unsigned int>& I)
         {
-          for(size_t i = 0; i < J.size(); ++i)
+          for(std::size_t i = 0; i < J.size(); ++i)
           {
             for(typename SparseVectorType::const_iterator col_it = A_v_c[J[i]].begin(); col_it!=A_v_c[J[i]].end(); ++col_it)
             {

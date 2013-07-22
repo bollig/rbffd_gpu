@@ -2,9 +2,10 @@
 #define VIENNACL_LINALG_CIRCULANT_MATRIX_OPERATIONS_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,8 +18,8 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file circulant_matrix_operations.hpp
-    @brief Implementations of operations using circulant_matrix
+/** @file viennacl/linalg/circulant_matrix_operations.hpp
+    @brief Implementations of operations using circulant_matrix. Experimental.
 */
 
 #include "viennacl/forwards.h"
@@ -36,46 +37,7 @@ namespace viennacl
   namespace linalg
   {
     
-    
     // A * x
-    /** @brief Returns a proxy class that represents matrix-vector multiplication with a compressed_matrix
-    *
-    * This is used for the convenience expression result = prod(mat, vec);
-    *
-    * @param mat    The matrix
-    * @param vec    The vector
-    */
-    template<class SCALARTYPE, unsigned int ALIGNMENT, unsigned int VECTOR_ALIGNMENT>
-    vector_expression<const circulant_matrix<SCALARTYPE, ALIGNMENT>,
-                      const vector<SCALARTYPE, VECTOR_ALIGNMENT>, 
-                      op_prod > prod_impl(const circulant_matrix<SCALARTYPE, ALIGNMENT> & mat, 
-                                     const vector<SCALARTYPE, VECTOR_ALIGNMENT> & vec)
-    {
-      return vector_expression<const circulant_matrix<SCALARTYPE, ALIGNMENT>,
-                               const vector<SCALARTYPE, VECTOR_ALIGNMENT>, 
-                               op_prod >(mat, vec);
-    }
-    
-    // A * x
-    /** @brief Returns a proxy class that represents matrix-vector multiplication with a circulant_matrix
-    *
-    * This is used for the convenience expression result = prod(mat, vec);
-    *
-    * @param mat    The matrix
-    * @param vec    The vector
-    * @param NUM_THREADS Number of threads per work group. Can be used for fine-tuning.
-    */
-    template<class SCALARTYPE, unsigned int ALIGNMENT, unsigned int VECTOR_ALIGNMENT>
-    viennacl::vector_expression<const viennacl::circulant_matrix<SCALARTYPE, ALIGNMENT>,
-                                const viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT>, 
-                                viennacl::op_prod > prod_impl(const viennacl::circulant_matrix<SCALARTYPE, ALIGNMENT> & mat, 
-                                                              const viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & vec, 
-                                                              size_t NUM_THREADS)
-    {
-      return viennacl::vector_expression<const viennacl::circulant_matrix<SCALARTYPE, ALIGNMENT>,
-                               const viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT>, 
-                               viennacl::op_prod >(mat, vec);
-    }
     
     /** @brief Carries out matrix-vector multiplication with a circulant_matrix
     *
@@ -85,10 +47,10 @@ namespace viennacl
     * @param vec    The vector
     * @param result The result vector
     */
-      template<class SCALARTYPE, unsigned int ALIGNMENT, unsigned int VECTOR_ALIGNMENT>
+      template<class SCALARTYPE, unsigned int ALIGNMENT>
       void prod_impl(const viennacl::circulant_matrix<SCALARTYPE, ALIGNMENT> & mat, 
-                     const viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & vec,
-                           viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> & result)
+                     const viennacl::vector_base<SCALARTYPE> & vec,
+                           viennacl::vector_base<SCALARTYPE> & result)
       {
         assert(mat.size1() == result.size());
         assert(mat.size2() == vec.size());
@@ -96,11 +58,11 @@ namespace viennacl
         
         //std::cout << "prod(circulant_matrix" << ALIGNMENT << ", vector) called with internal_nnz=" << mat.internal_nnz() << std::endl;
         
-        viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> circ(mat.elements().size() * 2);
+        viennacl::vector<SCALARTYPE> circ(mat.elements().size() * 2);
         viennacl::detail::fft::real_to_complex(mat.elements(), circ, mat.elements().size());
 
-        viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> tmp(vec.size() * 2);
-        viennacl::vector<SCALARTYPE, VECTOR_ALIGNMENT> tmp2(vec.size() * 2);
+        viennacl::vector<SCALARTYPE> tmp(vec.size() * 2);
+        viennacl::vector<SCALARTYPE> tmp2(vec.size() * 2);
 
         viennacl::detail::fft::real_to_complex(vec, tmp, vec.size());
         viennacl::linalg::convolve(circ, tmp, tmp2);
@@ -120,21 +82,19 @@ namespace viennacl
     template <unsigned int MAT_ALIGNMENT>
     viennacl::vector<SCALARTYPE, ALIGNMENT> & 
     viennacl::vector<SCALARTYPE, ALIGNMENT>::operator=(const viennacl::vector_expression< const circulant_matrix<SCALARTYPE, MAT_ALIGNMENT>,
-                                                                                          const viennacl::vector<SCALARTYPE, ALIGNMENT>,
+                                                                                          const viennacl::vector_base<SCALARTYPE>,
                                                                                           viennacl::op_prod> & proxy) 
     {
       // check for the special case x = A * x
-      if (proxy.rhs().handle().get() == this->handle().get())
+      if (viennacl::traits::handle(proxy.rhs()) == viennacl::traits::handle(*this))
       {
         viennacl::vector<SCALARTYPE, ALIGNMENT> result(proxy.rhs().size());
         viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), result);
         *this = result;
-        return *this;
       }
       else
       {
         viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this);
-        return *this;
       }
       return *this;
     }
@@ -148,7 +108,7 @@ namespace viennacl
     template <unsigned int MAT_ALIGNMENT>
     viennacl::vector<SCALARTYPE, ALIGNMENT> & 
     viennacl::vector<SCALARTYPE, ALIGNMENT>::operator+=(const vector_expression< const circulant_matrix<SCALARTYPE, MAT_ALIGNMENT>,
-                                                                                 const vector<SCALARTYPE, ALIGNMENT>,
+                                                                                 const vector_base<SCALARTYPE>,
                                                                                  op_prod> & proxy) 
     {
       vector<SCALARTYPE, ALIGNMENT> result(proxy.lhs().size1());
@@ -165,7 +125,7 @@ namespace viennacl
     template <unsigned int MAT_ALIGNMENT>
     viennacl::vector<SCALARTYPE, ALIGNMENT> & 
     viennacl::vector<SCALARTYPE, ALIGNMENT>::operator-=(const vector_expression< const circulant_matrix<SCALARTYPE, MAT_ALIGNMENT>,
-                                                                                 const vector<SCALARTYPE, ALIGNMENT>,
+                                                                                 const vector_base<SCALARTYPE>,
                                                                                  op_prod> & proxy) 
     {
       vector<SCALARTYPE, ALIGNMENT> result(proxy.get_lhs().size1());
@@ -184,11 +144,11 @@ namespace viennacl
     template <unsigned int MAT_ALIGNMENT>
     viennacl::vector<SCALARTYPE, ALIGNMENT> 
     viennacl::vector<SCALARTYPE, ALIGNMENT>::operator+(const vector_expression< const circulant_matrix<SCALARTYPE, MAT_ALIGNMENT>,
-                                                                                const vector<SCALARTYPE, ALIGNMENT>,
+                                                                                const vector_base<SCALARTYPE>,
                                                                                 op_prod> & proxy) 
     {
-      assert(proxy.get_lhs().size1() == size());
-      vector<SCALARTYPE, ALIGNMENT> result(size());
+      assert(proxy.get_lhs().size1() == base_type::size());
+      vector<SCALARTYPE, ALIGNMENT> result(base_type::size());
       viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), result);
       result += *this;
       return result;
@@ -202,11 +162,11 @@ namespace viennacl
     template <unsigned int MAT_ALIGNMENT>
     viennacl::vector<SCALARTYPE, ALIGNMENT> 
     viennacl::vector<SCALARTYPE, ALIGNMENT>::operator-(const vector_expression< const circulant_matrix<SCALARTYPE, MAT_ALIGNMENT>,
-                                                                                const vector<SCALARTYPE, ALIGNMENT>,
+                                                                                const vector_base<SCALARTYPE>,
                                                                                 op_prod> & proxy) 
     {
-      assert(proxy.get_lhs().size1() == size());
-      vector<SCALARTYPE, ALIGNMENT> result(size());
+      assert(proxy.get_lhs().size1() == base_type::size());
+      vector<SCALARTYPE, ALIGNMENT> result(base_type::size());
       viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), result);
       result = *this - result;
       return result;

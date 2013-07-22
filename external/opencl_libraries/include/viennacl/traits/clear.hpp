@@ -2,9 +2,10 @@
 #define VIENNACL_TRAITS_CLEAR_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -26,17 +27,17 @@
 #include <sstream>
 #include "viennacl/forwards.h"
 
-#ifdef VIENNACL_HAVE_UBLAS  
+#ifdef VIENNACL_WITH_UBLAS  
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #endif
 
-#ifdef VIENNACL_HAVE_EIGEN  
+#ifdef VIENNACL_WITH_EIGEN  
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #endif
 
-#ifdef VIENNACL_HAVE_MTL4
+#ifdef VIENNACL_WITH_MTL4
 #include <boost/numeric/mtl/mtl.hpp>
 #endif
 
@@ -51,6 +52,7 @@ namespace viennacl
   {
     
     //clear:
+    /** @brief Generic routine for setting all entries of a vector to zero. This is the version for non-ViennaCL objects. */
     template <typename VectorType>
     void clear(VectorType & vec)
     {
@@ -60,6 +62,7 @@ namespace viennacl
         vec[i] = 0;  //TODO: Quantity access can also be wrapped...
     }
 
+    /** @brief Generic routine for setting all entries of a vector to zero. This is the version for ViennaCL objects. */
     template <typename ScalarType, unsigned int ALIGNMENT>
     void clear(viennacl::vector<ScalarType, ALIGNMENT> & vec)
     {

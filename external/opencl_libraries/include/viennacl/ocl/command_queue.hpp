@@ -2,9 +2,10 @@
 #define VIENNACL_OCL_COMMAND_QUEUE_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file command_queue.hpp
+/** @file viennacl/ocl/command_queue.hpp
     @brief Implementations of command queue representations
 */
 
@@ -46,7 +47,7 @@ namespace viennacl
     {
       public:
         command_queue() {};
-        command_queue(viennacl::ocl::handle<cl_command_queue> h, cl_device_id dev) : handle_(h) {}
+        command_queue(viennacl::ocl::handle<cl_command_queue> h) : handle_(h) {}
         
         //Copy constructor:
         command_queue(command_queue const & other)
@@ -74,6 +75,7 @@ namespace viennacl
         }
 
         viennacl::ocl::handle<cl_command_queue> const & handle() const { return handle_; }
+        viennacl::ocl::handle<cl_command_queue>       & handle()       { return handle_; }
 
       private:
         

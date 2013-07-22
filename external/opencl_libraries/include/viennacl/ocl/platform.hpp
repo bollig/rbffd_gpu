@@ -2,9 +2,10 @@
 #define VIENNACL_OCL_PLATFORM_HPP_
 
 /* =========================================================================
-   Copyright (c) 2010-2012, Institute for Microelectronics,
+   Copyright (c) 2010-2013, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
+   Portions of this software are copyright by UChicago Argonne, LLC.
 
                             -----------------
                   ViennaCL - The Vienna Computing Library
@@ -17,7 +18,7 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
-/** @file platform.hpp
+/** @file viennacl/ocl/platform.hpp
     @brief Implements a OpenCL platform within ViennaCL
 */
 
@@ -49,9 +50,18 @@ namespace viennacl
           #endif
           err = clGetPlatformIDs(42, ids, &num_platforms);
           VIENNACL_ERR_CHECK(err);
-          assert(num_platforms > pf_index && "ViennaCL: ERROR: Not enough platforms found!");          
+          assert(num_platforms > pf_index && bool("ViennaCL: ERROR: Not enough platforms found!"));
           id_ = ids[pf_index];
-          assert(num_platforms > 0 && "ViennaCL: ERROR: No platform found!");          
+          assert(num_platforms > 0 && bool("ViennaCL: ERROR: No platform found!"));
+        }
+
+        platform(cl_platform_id pf_id) : id_(pf_id) {}
+
+        platform(platform const & other) : id_(other.id_) {}
+        
+        void operator=(cl_platform_id pf_id)
+        {
+          id_ = pf_id;
         }
         
         cl_platform_id id() const
@@ -100,7 +110,7 @@ namespace viennacl
           std::cout << "ViennaCL: Found " << num_devices << " devices." << std::endl;
           #endif
           
-          assert(num_devices > 0 && "Error in viennacl::ocl::platform::devices(): No OpenCL devices available!");
+          assert(num_devices > 0 && bool("Error in viennacl::ocl::platform::devices(): No OpenCL devices available!"));
           std::vector<device> devices;
           
           for (cl_uint i=0; i<num_devices; ++i)
@@ -113,6 +123,25 @@ namespace viennacl
         cl_platform_id id_;
     };
     
+    
+    
+    inline std::vector< platform > get_platforms()
+    {
+      std::vector< platform > ret;
+      cl_int err;
+      cl_uint num_platforms;
+      cl_platform_id ids[42];   //no more than 42 platforms supported...
+      #if defined(VIENNACL_DEBUG_ALL)
+      std::cout << "ViennaCL: Getting platform..." << std::endl;
+      #endif
+      err = clGetPlatformIDs(42, ids, &num_platforms);
+      VIENNACL_ERR_CHECK(err);
+
+      for (cl_uint i = 0; i < num_platforms; ++i)
+        ret.push_back( platform(ids[i]) );
+      
+      return ret;
+    }
   }
 }
 

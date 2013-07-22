@@ -233,7 +233,7 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
             // Tag has (tolerance, total iterations, number iterations between restarts)
 #if 1
-            viennacl::linalg::parallel_gmres_tag tag(comm_ref, grid_ref, tol, restart*krylov, krylov); 
+            viennacl::linalg::parallel_gmres_tag tag(grid_ref, tol, restart*krylov, krylov); 
 #else
             viennacl::linalg::gmres_tag tag(tol, restart*krylov, krylov); 
 #endif 
@@ -283,9 +283,9 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
         diff -= exact_view; 
 
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref.getRank()) / viennacl::linalg::norm_1(exact, comm_ref.getRank()) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref.getRank()) / viennacl::linalg::norm_2(exact, comm_ref.getRank()) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref.getRank()) / viennacl::linalg::norm_inf(exact, comm_ref.getRank()) << std::endl;  
     }
 
 
@@ -296,9 +296,9 @@ class Poisson1D_PDE_VCL : public ImplicitPDE
 
         diff -= exact_view; 
 
-        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref) / viennacl::linalg::norm_1(exact, comm_ref) << std::endl;  
-        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref) / viennacl::linalg::norm_2(exact, comm_ref) << std::endl;  
-        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref) / viennacl::linalg::norm_inf(exact, comm_ref) << std::endl;  
+        std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff, comm_ref.getRank()) / viennacl::linalg::norm_1(exact, comm_ref.getRank()) << std::endl;  
+        std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff, comm_ref.getRank()) / viennacl::linalg::norm_2(exact, comm_ref.getRank()) << std::endl;  
+        std::cout << "Rel linf Norm: " << viennacl::linalg::norm_inf(diff, comm_ref.getRank()) / viennacl::linalg::norm_inf(exact, comm_ref.getRank()) << std::endl;  
     }
 
     void write_System ( )

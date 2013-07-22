@@ -18,24 +18,22 @@ if(ENV_AMDAPPSDKROOT)
  set(ENV_OPENCLROOT $ENV{AMDAPPSDKROOT})
 endif(ENV_AMDAPPSDKROOT)
 
+set(ENV_INTELOCLSDKROOT $ENV{INTELOCLSDKROOT})
+if(ENV_INTELOCLSDKROOT)
+ set(ENV_OPENCLROOT $ENV{INTELOCLSDKROOT})
+endif(ENV_INTELOCLSDKROOT)
+
 set(ENV_OPENCLROOT2 $ENV{OPENCLROOT})
 if(ENV_OPENCLROOT2)
  set(ENV_OPENCLROOT $ENV{OPENCLROOT})
 endif(ENV_OPENCLROOT2)
 
-set(ENV_OPENCLROOT3 $ENV{OPENCL_ROOT})
-if(ENV_OPENCLROOT3)
- MESSAGE(STATUS "SET OPENCLROOT to ENV_OPENCLROOT3")
- set(ENV_OPENCLROOT $ENV{OPENCL_ROOT})
-endif(ENV_OPENCLROOT3)
-
-
 if(ENV_OPENCLROOT)
   find_path(
     OPENCL_INCLUDE_DIR
     NAMES CL/cl.h OpenCL/cl.h
-    PATHS ${ENV_OPENCLROOT}/include ${ENV_OPENCLROOT}
-    NO_DEFAULT_PATH  #uncomment this is you wish to surpress the use of default paths for OpenCL
+    PATHS ${ENV_OPENCLROOT}/include
+    #NO_DEFAULT_PATH  #uncomment this is you wish to surpress the use of default paths for OpenCL
     )
 
   if (("${CMAKE_SYSTEM_NAME}" MATCHES "Linux") OR (${CMAKE_SYSTEM_NAME} MATCHES "Windows"))
@@ -46,21 +44,20 @@ if(ENV_OPENCLROOT)
     else(CMAKE_SIZEOF_VOID_P EQUAL 4)
       set(OPENCL_LIB_SEARCH_PATH
           ${OPENCL_LIB_SEARCH_PATH}
-          ${ENV_OPENCLROOT}/lib/x86_64
-          ${ENV_OPENCLROOT}/lib64)
+          ${ENV_OPENCLROOT}/lib/x86_64)
     endif(CMAKE_SIZEOF_VOID_P EQUAL 4)
   endif(("${CMAKE_SYSTEM_NAME}" MATCHES "Linux") OR (${CMAKE_SYSTEM_NAME} MATCHES "Windows"))
-  MESSAGE(STATUS "SEARCHING FOR OPENCL: ${OPENCL_LIB_SEARCH_PATH}")
   find_library(
     OPENCL_LIBRARY
     NAMES OpenCL
     PATHS ${OPENCL_LIB_SEARCH_PATH}
-    NO_DEFAULT_PATH  #uncomment this is you wish to surpress the use of default paths for OpenCL
+    #NO_DEFAULT_PATH  #uncomment this is you wish to surpress the use of default paths for OpenCL
     )
 else(ENV_OPENCLROOT)
   find_path(
     OPENCL_INCLUDE_DIR
     NAMES CL/cl.h OpenCL/cl.h
+    PATHS ${PROJECT_SOURCE_DIR}      #use the CL/ include folder provided with ViennaCL
     )
 
   find_library(
@@ -79,7 +76,6 @@ find_package_handle_standard_args(
 if(OPENCL_FOUND)
   set(OPENCL_INCLUDE_DIRS ${OPENCL_INCLUDE_DIR})
   set(OPENCL_LIBRARIES ${OPENCL_LIBRARY})
-  message(STATUS "Found OpenCL: ${OPENCL_LIBRARY}")
 else(OPENCL_FOUND)
   set(OPENCL_INCLUDE_DIRS)
   set(OPENCL_LIBRARIES)

@@ -116,7 +116,8 @@ void GMRES_Device(VCL_MAT_t& A, VCL_VEC_t& F, VCL_VEC_t& U_exact, VCL_VEC_t& U_a
     std::cout << "GMRES Tolerance: " << tag.tolerance() << std::endl;
 
     VCL_VEC_t diff(F.size());
-    viennacl::linalg::sub(U_approx_gpu, U_exact, diff);
+    //viennacl::linalg::sub(U_approx_gpu, U_exact, diff);
+    diff = U_approx_gpu - U_exact;
 
     std::cout << "Rel l1   Norm: " << viennacl::linalg::norm_1(diff) / viennacl::linalg::norm_1(U_exact) << std::endl;
     std::cout << "Rel l2   Norm: " << viennacl::linalg::norm_2(diff) / viennacl::linalg::norm_2(U_exact) << std::endl;

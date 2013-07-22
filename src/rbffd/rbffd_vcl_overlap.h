@@ -76,8 +76,6 @@ class RBFFD_VCL_OVERLAP : public RBFFD
         }; 
 
 
-        // TODO: flip boolean to disable requesting GPUWeights in full QxG
-        // matrix. (I.e., get QmBxG and BxG independently
         VCL_ELL_MAT_t* getGPUWeightsSetQmB(DerType which) { return gpu_weights_setqmb[getDerTypeIndx(which)]; }
         VCL_ELL_MAT_t* getGPUWeightsSetB(DerType which) { return gpu_weights_setb[getDerTypeIndx(which)]; }
         VCL_ELL_MAT_t* getGPUWeightsSetQmB(DerTypeIndx which_i) { return gpu_weights_setqmb[which_i]; }

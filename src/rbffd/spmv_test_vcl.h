@@ -170,7 +170,7 @@ class SpMVTest
 
         // Does a simple CPU CSR SpMV
         // can apply to subset of problem 
-        void SpMV(RBFFD::DerType which, std::vector<double>& u_cpu, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
+        void SpMV(RBFFD::DerType which, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
             // TODO: 
             // GPU Matrix
             // GPU Vector
@@ -217,7 +217,6 @@ class SpMVTest
             viennacl::range r3(0, nb_qmb_rows);
             viennacl::range r4(nb_qmb_rows, nb_stencils);
 
-            std::cout << "None: " << viennacl::linalg::norm_1(out_deriv) << "\n";
             //------------
             // Start Async copy O Down
             //------------
@@ -225,8 +224,6 @@ class SpMVTest
             // SpMV on first QmB rows
             project(out_deriv, r3) = (VCL_VEC_t) viennacl::linalg::prod(DM_qmb, u_gpu); 
            
-            std::cout << "QmB: " << viennacl::linalg::norm_1(out_deriv) << "\n";
-
             //------------
             // Fill Sendbuf 
             //------------
@@ -259,7 +256,6 @@ class SpMVTest
             project(out_deriv, r4) = (VCL_VEC_t) viennacl::linalg::prod(DM_b, u_gpu); 
 
             tm["spmv"]->stop();
-            std::cout << "Full: " << viennacl::linalg::norm_1(out_deriv) << "\n";
 
             tm["spmv_w_comm"]->stop();
         }
@@ -343,7 +339,7 @@ class SpMVTest
             unsigned int nb_bnd = grid->getBoundaryIndicesSize();
 
             // OUR SOLUTION IS ARRANGED IN THIS FASHION:
-            //  { Q\B D O R } where B = union(D, O) and Q = union(Q\B D O)
+            //  { Q\B B\O O R } where B = union(D, O) and Q = union(Q\B B\O O)
 
             // TODO: fix this. We have to maintain an additional index
             // map to convert from local node indices to the linear

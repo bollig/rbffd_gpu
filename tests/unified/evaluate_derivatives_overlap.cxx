@@ -355,7 +355,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < M_part; i++) {
         NodeType& node = subdomain->getNode(i); 
         //u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
-#if 0
+#if 1
         u_cpu[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
 #else 
         u_cpu[i] = 1;
@@ -406,19 +406,20 @@ int main(int argc, char** argv) {
     std::cout << " Built SpMVTest\n";
 
     // Prime the tubes: 
-    derTest->SpMV(RBFFD::X, u_cpu, u_gpu, xderiv_gpu);
-    derTest->SpMV(RBFFD::Y, u_cpu, u_gpu, yderiv_gpu);
-    derTest->SpMV(RBFFD::Z, u_cpu, u_gpu, zderiv_gpu);
-    derTest->SpMV(RBFFD::LAPL, u_cpu, u_gpu, lderiv_gpu);
+    derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
+    derTest->SpMV(RBFFD::Y, u_gpu, yderiv_gpu);
+    derTest->SpMV(RBFFD::Z, u_gpu, zderiv_gpu);
+    derTest->SpMV(RBFFD::LAPL, u_gpu, lderiv_gpu);
 
     // Prime AXPY. 
     u_new_gpu = 0.5*u_gpu + 1.*xderiv_gpu; 
-
+ 
     viennacl::copy(xderiv_cpu, xderiv_gpu);
     viennacl::copy(yderiv_cpu, yderiv_gpu);
     viennacl::copy(zderiv_cpu, zderiv_gpu);
     viennacl::copy(lderiv_cpu, lderiv_gpu);
     viennacl::copy(u_new, u_new_gpu);
+    viennacl::copy(u_cpu, u_gpu);
 
     // TODO: prime hw here.
     std::cout << " Entering loop: " << N_part << " rows \n";
@@ -434,20 +435,20 @@ int main(int argc, char** argv) {
         // order to compute the deriv. 
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::X, u_cpu, u_gpu, xderiv_gpu);
+        derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
         tm["SpMV"]->stop();
 
         // We simulate an RK4 which has intermediate steps
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, xderiv_cpu, xderiv_gpu, yderiv_gpu);
+        derTest->SpMV(RBFFD::Y, xderiv_gpu, yderiv_gpu);
         tm["SpMV"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, yderiv_cpu, yderiv_gpu, zderiv_gpu);
+        derTest->SpMV(RBFFD::Z, yderiv_gpu, zderiv_gpu);
         tm["SpMV"]->stop();
  
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, zderiv_cpu, zderiv_gpu, lderiv_gpu);
+        derTest->SpMV(RBFFD::LAPL, zderiv_gpu, lderiv_gpu);
         tm["SpMV"]->stop();
 
         tm["computeUpdate"]->start();
@@ -467,6 +468,14 @@ int main(int argc, char** argv) {
     viennacl::copy(yderiv_gpu, yderiv_cpu);
     viennacl::copy(zderiv_gpu, zderiv_cpu);
     viennacl::copy(lderiv_gpu, lderiv_cpu);
+    viennacl::copy(u_new_gpu, u_new);
+
+    std::cout << "u: " << viennacl::linalg::norm_1(u_gpu) << std::endl;
+    std::cout << "x: " << viennacl::linalg::norm_1(xderiv_gpu) << std::endl;
+    std::cout << "y: " << viennacl::linalg::norm_1(yderiv_gpu) << std::endl;
+    std::cout << "z: " << viennacl::linalg::norm_1(zderiv_gpu) << std::endl;
+    std::cout << "l: " << viennacl::linalg::norm_1(lderiv_gpu) << std::endl;
+    std::cout << "u_n: " << viennacl::linalg::norm_1(u_new_gpu) << std::endl;
 
     tm["computeNorms"]->start();
     u_l2 = l2norm( mpi_rank, u_cpu, 0, N_part);

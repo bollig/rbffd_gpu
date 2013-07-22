@@ -343,7 +343,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < M_part; i++) {
         NodeType& node = subdomain->getNode(i); 
         //u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
-#if 0
+#if 1
         u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
 #else 
         u[i] = 1;
@@ -395,46 +395,47 @@ int main(int argc, char** argv) {
         // the function "u" is new (true) or same as previous calls (false). This
         // helps avoid overhead of passing "u" to the GPU.
 
+        // Note: we will test a mock Rk4 update. That requires each intermediate
+        // SpMV to synchronize 
         tm["SpMV_w_comm"]->start();
+        tm["synchronize"]->start();
+        derTest->synchronize(u);
+        tm["synchronize"]->stop();
+ 
         tm["SpMV"]->start();
         derTest->SpMV(RBFFD::X, u, xderiv_cpu);
         tm["SpMV"]->stop();
+        tm["SpMV_w_comm"]->stop();
 
-        // Note: we will test a mock Rk4 update. That requires each intermediate
-        // SpMV to synchronize 
+        tm["SpMV_w_comm"]->start();
         tm["synchronize"]->start();
         derTest->synchronize(xderiv_cpu);
         tm["synchronize"]->stop();
+
+        tm["SpMV"]->start();
+        derTest->SpMV(RBFFD::Y, xderiv_cpu, yderiv_cpu);
+        tm["SpMV"]->stop();
         tm["SpMV_w_comm"]->stop();
 
         tm["SpMV_w_comm"]->start();
-        tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, u, yderiv_cpu);
-        tm["SpMV"]->stop();
-
         tm["synchronize"]->start();
         derTest->synchronize(yderiv_cpu);
         tm["synchronize"]->stop();
-        tm["SpMV_w_comm"]->stop();
-
-        tm["SpMV_w_comm"]->start();
+        
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, u, zderiv_cpu);
+        derTest->SpMV(RBFFD::Z, yderiv_cpu, zderiv_cpu);
         tm["SpMV"]->stop();
  
+       tm["SpMV_w_comm"]->stop();
+
+        tm["SpMV_w_comm"]->start();
         tm["synchronize"]->start();
         derTest->synchronize(zderiv_cpu);
         tm["synchronize"]->stop();
-        tm["SpMV_w_comm"]->stop();
 
-        tm["SpMV_w_comm"]->start();
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, u, lderiv_cpu);
+        derTest->SpMV(RBFFD::LAPL, zderiv_cpu, lderiv_cpu);
         tm["SpMV"]->stop();
-
-        tm["synchronize"]->start();
-        derTest->synchronize(lderiv_cpu);
-        tm["synchronize"]->stop();
         tm["SpMV_w_comm"]->stop();
 
         tm["computeUpdate"]->start();

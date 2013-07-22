@@ -356,7 +356,7 @@ int main(int argc, char** argv) {
         NodeType& node = subdomain->getNode(i); 
         //u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
 #if 0
-        u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
+        u_cpu[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
 #else 
         u_cpu[i] = 1;
 #endif 
@@ -370,10 +370,10 @@ int main(int argc, char** argv) {
     viennacl::copy(u_cpu, u_gpu);
     viennacl::copy(u_new, u_new_gpu);
 
-    std::vector<double> xderiv_cpu(M_part);	
-    std::vector<double> yderiv_cpu(M_part);	
-    std::vector<double> zderiv_cpu(M_part);	
-    std::vector<double> lderiv_cpu(M_part);	
+    std::vector<double> xderiv_cpu(M_part, 0.);	
+    std::vector<double> yderiv_cpu(M_part, 0.);	
+    std::vector<double> zderiv_cpu(M_part, 0.);	
+    std::vector<double> lderiv_cpu(M_part, 0.);	
 
     VCL_VEC_t xderiv_gpu(M_part);	
     VCL_VEC_t yderiv_gpu(M_part);	
@@ -462,12 +462,6 @@ int main(int argc, char** argv) {
     }
 
     // Compute the norms to make sure we have a complete picture. 
-
-    VCL_VEC_t temp = viennacl::vector_range<VCL_VEC_t>(u_gpu, viennacl::range(0, N_part)); 
-    u_l2 = viennacl::linalg::norm_2(temp, mpi_rank);
-    u_l1 = viennacl::linalg::norm_1(temp, mpi_rank);
-    u_linf = viennacl::linalg::norm_inf(temp, mpi_rank);
-
     viennacl::copy(u_gpu, u_cpu);
     viennacl::copy(xderiv_gpu, xderiv_cpu);
     viennacl::copy(yderiv_gpu, yderiv_cpu);

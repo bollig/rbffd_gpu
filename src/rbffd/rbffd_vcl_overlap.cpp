@@ -291,8 +291,15 @@ void RBFFD_VCL_OVERLAP::updateWeightsDouble(bool forceFinish) {
 
                 std::cout << "COPIED WEIGHT " << derTypeStr[which] << std::endl;
 #endif
+#if 0
+                int rank;
+                MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-                //viennacl::io::write_matrix_market_file(*(cpu_weights_d[which]), derTypeStr[which] + "_weights.mtx");
+                if (rank == 0) {
+                    viennacl::io::write_matrix_market_file(*(cpu_weights_qmb_d[which]), derTypeStr[which] + "_qmb_weights.mtx");
+                    viennacl::io::write_matrix_market_file(*(cpu_weights_b_d[which]), derTypeStr[which] + "_b_weights.mtx");
+                }
+#endif
                 type_i+=1;
             }
             iterator >>= 1;

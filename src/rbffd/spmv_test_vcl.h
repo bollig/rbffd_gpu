@@ -211,8 +211,6 @@ class SpMVTest
             int nb_nodes = grid->getNodeListSize();
             int nb_qmb_rows = grid->QmB_size;
 
-//            viennacl::matrix_range<VCL_CSR_MAT_t> DM_qmb(DM, viennacl::range(0, nb_qmb_rows), viennacl::range(0, nb_nodes));
- ////           viennacl::matrix_range<VCL_CSR_MAT_t> DM_b(DM, viennacl::range(nb_qmb_rows, nb_stencils), viennacl::range(0, nb_nodes));
             viennacl::range r1(0, nb_stencils);
             viennacl::range r2(0, nb_nodes);
 
@@ -227,7 +225,6 @@ class SpMVTest
             // SpMV on first QmB rows
             project(out_deriv, r3) = (VCL_VEC_t) viennacl::linalg::prod(DM_qmb, u_gpu); 
            
-            std::cout << "QmB: " << viennacl::linalg::norm_1(out_deriv) << "\n";
             std::cout << "QmB: " << viennacl::linalg::norm_1(out_deriv) << "\n";
 
             //------------
@@ -362,28 +359,30 @@ class SpMVTest
 
             // Post-Recv: copy elements out
             tm["decode_recv"]->start();
-            unsigned int k = 0; 
+            unsigned int k = 0;
             for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
-                k = this->rdispls[i]; 
+                k = this->rdispls[i];
                 for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
                     unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                    r_indx *= this->sol_dim;
-                    //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
-                    //                                    std::cout << "Receiving " << r_indx << "\n";
+                    // Offset the r_indx to 0 and we'll copy the subset
+                    // into the proper range
+                    r_indx -= offset_to_set_R;
+
+                    r_indx *= sol_dim;
+
                     // TODO: need to translate to local
                     // indexing properly. This hack assumes all
                     // boundary are dirichlet and appear first
                     // in the list
-                    for (unsigned int d=0; d < this->sol_dim; d++) { 
-                        vec[r_indx+d] = this->rbuf[k];  
-                        k++; 
+                    for (unsigned int d = 0; d < sol_dim; d++) {
+                        vec[r_indx+d] = this->rbuf[k];
+                        k++;
                     }
                 }
             }
-            tm["decode_recv"]->stop();
 
+            tm["decode_recv"]->stop();
             viennacl::copy(vec, setR);
-            //viennacl::copy(vec, setR, set_R_size * sol_dim);
         }
 
 

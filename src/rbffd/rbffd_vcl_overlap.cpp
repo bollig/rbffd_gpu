@@ -240,6 +240,8 @@ void RBFFD_VCL_OVERLAP::updateWeightsDouble(bool forceFinish) {
         unsigned int n = grid_ref.getMaxStencilSize();
 
         std::cout << "NS: " << nb_stencils << ", n: " << n << ", nnz: " << gpu_nnz << std::endl;
+        std::cout << "NS QmB: " << nb_qmb_stencils << ", n: " << n << ", nnz: " << nb_qmb_stencils * n << std::endl;
+        std::cout << "NS B: " << nb_b_stencils << ", n: " << n << ", nnz: " << nb_b_stencils * n << std::endl;
         if ((nb_stencils * n) != gpu_nnz) {
             // Critical error between allocate and update
             std::cout << "nb_stencils*n != gpu_nnz" << std::endl;
@@ -291,7 +293,7 @@ void RBFFD_VCL_OVERLAP::updateWeightsDouble(bool forceFinish) {
 
                 std::cout << "COPIED WEIGHT " << derTypeStr[which] << std::endl;
 #endif
-#if 0
+#if 1
                 int rank;
                 MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 

@@ -371,10 +371,12 @@ int main(int argc, char** argv) {
     viennacl::copy(u_cpu, u_gpu);
     viennacl::copy(u_new, u_new_gpu);
 
-    std::vector<double> xderiv_cpu(M_part, 0.);	
-    std::vector<double> yderiv_cpu(M_part, 0.);	
-    std::vector<double> zderiv_cpu(M_part, 0.);	
-    std::vector<double> lderiv_cpu(M_part, 0.);	
+    // If we are not synchronizing or if we are using bad mem locations -100000
+    // should be enough to reflect in the norms
+    std::vector<double> xderiv_cpu(M_part, -100000);	
+    std::vector<double> yderiv_cpu(M_part, -100000);	
+    std::vector<double> zderiv_cpu(M_part, -100000);	
+    std::vector<double> lderiv_cpu(M_part, -100000);	
 
     VCL_VEC_t xderiv_gpu(M_part);	
     VCL_VEC_t yderiv_gpu(M_part);	
@@ -445,15 +447,15 @@ int main(int argc, char** argv) {
 
         // We simulate an RK4 which has intermediate steps
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, xderiv_gpu, yderiv_gpu);
+        derTest->SpMV(RBFFD::Y, u_gpu, yderiv_gpu);
         tm["SpMV"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, yderiv_gpu, zderiv_gpu);
+        derTest->SpMV(RBFFD::Z, u_gpu, zderiv_gpu);
         tm["SpMV"]->stop();
  
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, zderiv_gpu, lderiv_gpu);
+        derTest->SpMV(RBFFD::LAPL, u_gpu, lderiv_gpu);
         tm["SpMV"]->stop();
 
         tm["computeUpdate"]->start();
@@ -461,12 +463,18 @@ int main(int argc, char** argv) {
         // pretending to calc an updated solution
         // TODO: use views
 
-        u_new_gpu = u_gpu + (1./6.) * (xderiv_gpu + 2. * yderiv_gpu + 2. * zderiv_gpu + lderiv_gpu);
-        tm["computeUpdate"]->stop();
+        // Expanded these to ensure that they are asynchronous
+        u_new_gpu = u_gpu; 
+        u_new_gpu += (1./6.) * xderiv_gpu; 
+        u_new_gpu += (2./6.) * yderiv_gpu; 
+        u_new_gpu += (2./6.) * zderiv_gpu; 
+        u_new_gpu += (1./6.) * lderiv_gpu; 
 
         tm["finish"]->start();
         viennacl::backend::finish();
         tm["finish"]->stop(); 
+        tm["computeUpdate"]->stop();
+
         tm["iteration"]->stop();
     }
 
@@ -477,6 +485,8 @@ int main(int argc, char** argv) {
     viennacl::copy(zderiv_gpu, zderiv_cpu);
     viennacl::copy(lderiv_gpu, lderiv_cpu);
     viennacl::copy(u_new_gpu, u_new);
+
+    viennacl::backend::finish();
 
     std::cout << "u: " << viennacl::linalg::norm_1(u_gpu) << std::endl;
     std::cout << "x: " << viennacl::linalg::norm_1(xderiv_gpu) << std::endl;

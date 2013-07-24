@@ -177,11 +177,14 @@ class SpMVTest
 
         void setupTimers() {
             tm["synchronize"] = new EB::Timer("[SpMVTest] Synchronize (MPI_Isend/MPI_Irecv");
-            tm["spmv"] = new EB::Timer("[SpMVTest] perform SpMV");
+            tm["spmv"] = new EB::Timer("[SpMVTest] perform SpMV (Q\\B)");
+            tm["spmv2"] = new EB::Timer("[SpMVTest] perform SpMV (B)");
             tm["spmv_w_comm"] = new EB::Timer("[SpMVTest] SpMV + Communication");
             tm["irecv"] = new EB::Timer("[SpMVTest] MPI_Irecv"); 
             tm["encode_send"] = new EB::Timer("[SpMVTest] Encode sendbuf (collect all O_by_rank into one vector)"); 
+            tm["encode_copy"] = new EB::Timer("[SpMVTest] Copy Device to Host (O)");
             tm["decode_recv"] = new EB::Timer("[SpMVTest] Decode recvbuf (scatter R_by_rank into memory)");
+            tm["decode_copy"] = new EB::Timer("[SpMVTest] Copy Host to Device (R)");
             tm["alltoallv"] = new EB::Timer("[SpMVTest] MPI_Alltoallv Only (no memcpy)"); 
             tm["sendrecv_wait"] = new EB::Timer("[SpMVTest] Barrier before MPI_Isend"); 
             tm["allocateCommBufs"] = new EB::Timer("[SpMVTest] Allocate buffers for MPI_Isend/MPI_Irecv");
@@ -190,6 +193,9 @@ class SpMVTest
         // Does a simple CPU CSR SpMV
         // can apply to subset of problem 
         void SpMV(RBFFD::DerType which, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
+
+            std::cout << "BARRIER\n";
+            MPI_Barrier(MPI_COMM_WORLD); 
             // TODO: 
             // GPU Matrix
             // GPU Vector
@@ -204,14 +210,35 @@ class SpMVTest
             //  queue B
             if (!disable_timers) tm["spmv_w_comm"]->start();
 
+            //std::vector<double*> DM = rbffd->getWeights(which);
+            VCL_ELL_MAT_t& DM_qmb = *(rbffd->getGPUWeightsSetQmB(which));
+            VCL_ELL_MAT_t& DM_b = *(rbffd->getGPUWeightsSetB(which));
+
+            MPI_Barrier(MPI_COMM_WORLD); 
+            int nb_stencils = grid->getStencilsSize();
+            int nb_nodes = grid->getNodeListSize();
+            int nb_qmb_rows = grid->QmB_size;
+
+            viennacl::range r1(0, nb_stencils);
+            viennacl::range r2(0, nb_nodes);
+
+            // Start of vector
+            viennacl::range r3(0, nb_qmb_rows);
+            // End of vector
+            viennacl::range r4(nb_qmb_rows, nb_stencils);
+
+            MPI_Barrier(MPI_COMM_WORLD); 
+        std::cout << "DM_qmb = " << DM_qmb.size1() << ", " << DM_qmb.size2() << ", " << DM_qmb.nnz() << "\n";
+        std::cout << "DM_b = " << DM_b.size1() << ", " << DM_b.size2() << ", " << DM_b.nnz() << "\n";
+
+            if (!disable_timers) tm["synchronize"]->start();
             //------------
             // Post irecv
             //------------
-            if (!disable_timers) tm["synchronize"]->start();
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-                if (size > 8) { 
+                if (size > 1) { 
                     this->postIrecvs(); 
                 }
                 // Else we use Alltoallv and dont need to worry
@@ -221,35 +248,22 @@ class SpMVTest
             // Queue Q\B
             //------------
 
-            //std::vector<double*> DM = rbffd->getWeights(which);
-            VCL_ELL_MAT_t& DM_qmb = *(rbffd->getGPUWeightsSetQmB(which));
-            VCL_ELL_MAT_t& DM_b = *(rbffd->getGPUWeightsSetB(which));
-
-            int nb_stencils = grid->getStencilsSize();
-            int nb_nodes = grid->getNodeListSize();
-            int nb_qmb_rows = grid->QmB_size;
-
-            viennacl::range r1(0, nb_stencils);
-            viennacl::range r2(0, nb_nodes);
-
-            viennacl::range r3(0, nb_qmb_rows);
-            viennacl::range r4(nb_qmb_rows, nb_stencils);
-
-            //------------
-            // Start Async copy O Down
-            //------------
             viennacl::ocl::current_context().switch_queue(0);
  
             if (!disable_timers) tm["spmv"]->start();
             // SpMV on first QmB rows
+            // NOTE: this is asynchronous
             project(out_deriv, r3) = viennacl::linalg::prod(DM_qmb, u_gpu); 
           
-            viennacl::ocl::current_context().switch_queue(1); 
             //------------
-            // Fill Sendbuf 
+            // Start Async copy O Down
             //------------
+            //------------
+            // Fill Sendbuf using Q1 
+            //------------
+            viennacl::ocl::current_context().switch_queue(0); 
 
-            this->encodeSendBuf(u_gpu);
+//            this->encodeSendBuf(u_gpu);
 
             //------------
             // Send O
@@ -258,7 +272,7 @@ class SpMVTest
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-                if (size > 8) { 
+                if (size > 1) { 
                     // NOTE: this includes waitall on irecvs
                     this->postIsends(); 
                 }
@@ -270,20 +284,23 @@ class SpMVTest
             // Copy R up 
             //------------
 
-            this->decodeRecvBuf(u_gpu);
+//            this->decodeRecvBuf(u_gpu);
 
             //TODO: send to GPU;
 
-            project(out_deriv, r4) = viennacl::linalg::prod(DM_b, u_gpu); 
+            if (!disable_timers) tm["spmv2"]->start();
+            if (size > 1) 
+                //project(out_deriv, r4) = viennacl::linalg::prod(DM_b, u_gpu); 
 
             viennacl::ocl::current_context().switch_queue(0); 
             viennacl::ocl::get_queue().finish();
-            viennacl::ocl::current_context().switch_queue(1); 
-            viennacl::ocl::get_queue().finish();
-
             if (!disable_timers) tm["spmv"]->stop();
+            viennacl::ocl::current_context().switch_queue(0); 
+            viennacl::ocl::get_queue().finish();
+            if (!disable_timers) tm["spmv2"]->stop();
 
             if (!disable_timers) tm["spmv_w_comm"]->stop();
+            viennacl::ocl::current_context().switch_queue(0); 
         }
 
 
@@ -324,7 +341,10 @@ class SpMVTest
             //double* vec = new double[set_O_size * sol_dim];
             std::vector<double> vec(set_O_size * sol_dim);
 
+            if (!disable_timers) tm["encode_copy"]->start();
             viennacl::copy(setO, vec); //, set_O_size * sol_dim);
+            viennacl::ocl::get_queue().finish();
+            if (!disable_timers) tm["encode_copy"]->stop();
 
             if (!disable_timers) tm["encode_send"]->start();
             // Prep-Send: Copy elements of set to sbuf
@@ -332,7 +352,7 @@ class SpMVTest
             for (size_t i = 0; i < grid->O_by_rank.size(); i++) {
                 k = this->sdispls[i]; 
                 for (size_t j = 0; j < grid->O_by_rank[i].size(); j++) {
-                    int s_indx = grid->g2l(grid->O_by_rank[i][j]);
+                    unsigned int s_indx = grid->g2l(grid->O_by_rank[i][j]);
                     s_indx -= offset_to_set_O;
                     s_indx *= this->sol_dim; 
                     for (unsigned int d=0; d < this->sol_dim; d++) {
@@ -379,32 +399,32 @@ class SpMVTest
             //double* vec = new double[set_R_size * sol_dim];
             std::vector<double> vec(set_R_size * sol_dim);
 
-            // Post-Recv: copy elements out
             if (!disable_timers) tm["decode_recv"]->start();
+            // Post-Recv: copy elements out
             unsigned int k = 0;
             for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
-                k = this->rdispls[i];
+                k = this->rdispls[i]; 
                 for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
                     unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                    // Offset the r_indx to 0 and we'll copy the subset
-                    // into the proper range
                     r_indx -= offset_to_set_R;
-
-                    r_indx *= sol_dim;
-
+                    r_indx *= this->sol_dim;
+                    //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
+                    //                                    std::cout << "Receiving " << r_indx << "\n";
                     // TODO: need to translate to local
                     // indexing properly. This hack assumes all
                     // boundary are dirichlet and appear first
                     // in the list
-                    for (unsigned int d = 0; d < sol_dim; d++) {
-                        vec[r_indx+d] = this->rbuf[k];
-                        k++;
+                    for (unsigned int d=0; d < this->sol_dim; d++) { 
+                        vec[r_indx+d] = this->rbuf[k];  
+                        k++; 
                     }
                 }
             }
-
             if (!disable_timers) tm["decode_recv"]->stop();
+
+            if (!disable_timers) tm["decode_copy"]->start();
             viennacl::copy(vec, setR);
+            if (!disable_timers) tm["decode_copy"]->stop();
         }
 
 

@@ -332,7 +332,7 @@ int main(int argc, char** argv) {
     unsigned int N_part = subdomain->getStencilsSize();
     unsigned int M_part = subdomain->getNodeListSize();
 
-    std::vector<double> u(M_part,1.);
+    std::vector<double> u_cpu(M_part,1.);
     std::vector<double> u_x(M_part,1.);
     std::vector<double> u_y(M_part,1.);
     std::vector<double> u_z(M_part,1.);
@@ -344,9 +344,9 @@ int main(int argc, char** argv) {
         NodeType& node = subdomain->getNode(i); 
         //u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) + exp(5 * (double)node[2]);
 #if 1
-        u[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
+        u_cpu[i] = sin((double)node[0]) + 2.*cos((double)node[1]) ;
 #else 
-        u[i] = 1;
+        u_cpu[i] = 1;
 #endif 
         u_x[i] = cos(node[0]); 
         u_y[i] = -2*sin(node[1]); 
@@ -356,10 +356,10 @@ int main(int argc, char** argv) {
         u_l[i] = -sin(node[0]) - 2. * cos(node[1]) ;
     } 
 
-    std::vector<double> xderiv_cpu(M_part);	
-    std::vector<double> yderiv_cpu(M_part);	
-    std::vector<double> zderiv_cpu(M_part);	
-    std::vector<double> lderiv_cpu(M_part);	
+    std::vector<double> xderiv_cpu(M_part, -10000);	
+    std::vector<double> yderiv_cpu(M_part, -10000);	
+    std::vector<double> zderiv_cpu(M_part, -10000);	
+    std::vector<double> lderiv_cpu(M_part, -10000);	
 
 
     //TODO: need to make apply work with synchronization
@@ -399,11 +399,11 @@ int main(int argc, char** argv) {
         // SpMV to synchronize 
         tm["SpMV_w_comm"]->start();
         tm["synchronize"]->start();
-        derTest->synchronize(u);
+        derTest->synchronize(u_cpu);
         tm["synchronize"]->stop();
  
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::X, u, xderiv_cpu);
+        derTest->SpMV(RBFFD::X, u_cpu, xderiv_cpu);
         tm["SpMV"]->stop();
         tm["SpMV_w_comm"]->stop();
 
@@ -413,7 +413,7 @@ int main(int argc, char** argv) {
         tm["synchronize"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, xderiv_cpu, yderiv_cpu);
+        derTest->SpMV(RBFFD::Y, u_cpu, yderiv_cpu);
         tm["SpMV"]->stop();
         tm["SpMV_w_comm"]->stop();
 
@@ -423,7 +423,7 @@ int main(int argc, char** argv) {
         tm["synchronize"]->stop();
         
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, yderiv_cpu, zderiv_cpu);
+        derTest->SpMV(RBFFD::Z, u_cpu, zderiv_cpu);
         tm["SpMV"]->stop();
  
        tm["SpMV_w_comm"]->stop();
@@ -434,7 +434,7 @@ int main(int argc, char** argv) {
         tm["synchronize"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, zderiv_cpu, lderiv_cpu);
+        derTest->SpMV(RBFFD::LAPL, u_cpu, lderiv_cpu);
         tm["SpMV"]->stop();
         tm["SpMV_w_comm"]->stop();
 
@@ -444,7 +444,7 @@ int main(int argc, char** argv) {
         for (int j = 0; j < M_part; j++) {
             // Mock an RK4 timestep. If this were real each of the derivs would
             // be same operator applied to different intermediate vectors
-            u_new[j] = u[j] + (1./6.) * (xderiv_cpu[j] + 2. * yderiv_cpu[j] + 2. * zderiv_cpu[j] + lderiv_cpu[j]);
+            u_new[j] = u_cpu[j] + (1./6.) * (xderiv_cpu[j] + 2. * yderiv_cpu[j] + 2. * zderiv_cpu[j] + lderiv_cpu[j]);
         }
         tm["computeUpdate"]->stop();
 
@@ -463,9 +463,9 @@ int main(int argc, char** argv) {
     // Compute the norms to make sure we have a complete picture. 
 
     tm["computeNorms"]->start();
-    u_l2 = l2norm( mpi_rank, u, 0, N_part);
-    u_l1 = l1norm( mpi_rank, u, 0, N_part);
-    u_linf = linfnorm( mpi_rank, u);
+    u_l2 = l2norm( mpi_rank, u_cpu, 0, N_part);
+    u_l1 = l1norm( mpi_rank, u_cpu, 0, N_part);
+    u_linf = linfnorm( mpi_rank, u_cpu);
     tm["computeNorms"]->stop();
 
     tm["computeNorms"]->start();

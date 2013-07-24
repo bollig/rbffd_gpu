@@ -194,8 +194,6 @@ class SpMVTest
         // can apply to subset of problem 
         void SpMV(RBFFD::DerType which, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
 
-            std::cout << "BARRIER\n";
-            MPI_Barrier(MPI_COMM_WORLD); 
             // TODO: 
             // GPU Matrix
             // GPU Vector
@@ -214,7 +212,6 @@ class SpMVTest
             VCL_ELL_MAT_t& DM_qmb = *(rbffd->getGPUWeightsSetQmB(which));
             VCL_ELL_MAT_t& DM_b = *(rbffd->getGPUWeightsSetB(which));
 
-            MPI_Barrier(MPI_COMM_WORLD); 
             int nb_stencils = grid->getStencilsSize();
             int nb_nodes = grid->getNodeListSize();
             int nb_qmb_rows = grid->QmB_size;
@@ -227,9 +224,8 @@ class SpMVTest
             // End of vector
             viennacl::range r4(nb_qmb_rows, nb_stencils);
 
-            MPI_Barrier(MPI_COMM_WORLD); 
-        std::cout << "DM_qmb = " << DM_qmb.size1() << ", " << DM_qmb.size2() << ", " << DM_qmb.nnz() << "\n";
-        std::cout << "DM_b = " << DM_b.size1() << ", " << DM_b.size2() << ", " << DM_b.nnz() << "\n";
+            //     std::cout << "DM_qmb = " << DM_qmb.size1() << ", " << DM_qmb.size2() << ", " << DM_qmb.nnz() << "\n";
+            //     std::cout << "DM_b = " << DM_b.size1() << ", " << DM_b.size2() << ", " << DM_b.nnz() << "\n";
 
             if (!disable_timers) tm["synchronize"]->start();
             //------------
@@ -295,7 +291,9 @@ class SpMVTest
             if (!disable_timers) tm["spmv2"]->start();
             // Check if nnz > 0 (when mpi_size == 0 this is true)
             if (DM_b.nnz() > 0) {
-                project(out_deriv, r4) = viennacl::linalg::prod(DM_b, u_gpu); 
+                // FIXME: typecast needed to get projection starting offset to
+                // function properly
+                project(out_deriv, r4) = (VCL_VEC_t) viennacl::linalg::prod(DM_b, u_gpu); 
             }
 
             viennacl::ocl::current_context().switch_queue(1); 

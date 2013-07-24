@@ -410,6 +410,24 @@ int main(int argc, char** argv) {
 
     derTest->disableTimers(); 
     // Prime the tubes: 
+#if 0
+    if (mpi_rank == 0) { 
+        std::ofstream fout("U_gpu_before"); 
+        fout << u_gpu; 
+        fout.close();
+        std::ofstream fout3("xderiv_gpu_before"); 
+        fout3 << xderiv_gpu; 
+        fout3.close();
+        derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
+        std::ofstream fout2("xderiv_gpu"); 
+        fout2 << subdomain->QmB_size << "\n"; 
+        fout2 << subdomain->B_size << "\n"; 
+        fout2 << xderiv_gpu;
+        fout2.close();
+    exit(-1);
+    }
+#endif
+
     derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
     derTest->SpMV(RBFFD::Y, u_gpu, yderiv_gpu);
     derTest->SpMV(RBFFD::Z, u_gpu, zderiv_gpu);

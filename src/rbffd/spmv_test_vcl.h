@@ -248,12 +248,16 @@ class SpMVTest
             // Queue Q\B
             //------------
 
-            viennacl::ocl::current_context().switch_queue(0);
+            viennacl::ocl::current_context().switch_queue(1);
  
             if (!disable_timers) tm["spmv"]->start();
             // SpMV on first QmB rows
             // NOTE: this is asynchronous
-            project(out_deriv, r3) = viennacl::linalg::prod(DM_qmb, u_gpu); 
+            // Also, I check for nnz > 0 because there are cases when a proc has
+            // Q\B.size == 0 (i.e., all stencils depend on comm)
+            if (DM_qmb.nnz() > 0) {
+                project(out_deriv, r3) = viennacl::linalg::prod(DM_qmb, u_gpu); 
+            }
           
             //------------
             // Start Async copy O Down
@@ -263,7 +267,7 @@ class SpMVTest
             //------------
             viennacl::ocl::current_context().switch_queue(0); 
 
-//            this->encodeSendBuf(u_gpu);
+            this->encodeSendBuf(u_gpu);
 
             //------------
             // Send O
@@ -284,15 +288,17 @@ class SpMVTest
             // Copy R up 
             //------------
 
-//            this->decodeRecvBuf(u_gpu);
+            this->decodeRecvBuf(u_gpu);
 
             //TODO: send to GPU;
 
             if (!disable_timers) tm["spmv2"]->start();
-            if (size > 1) 
-                //project(out_deriv, r4) = viennacl::linalg::prod(DM_b, u_gpu); 
+            // Check if nnz > 0 (when mpi_size == 0 this is true)
+            if (DM_b.nnz() > 0) {
+                project(out_deriv, r4) = viennacl::linalg::prod(DM_b, u_gpu); 
+            }
 
-            viennacl::ocl::current_context().switch_queue(0); 
+            viennacl::ocl::current_context().switch_queue(1); 
             viennacl::ocl::get_queue().finish();
             if (!disable_timers) tm["spmv"]->stop();
             viennacl::ocl::current_context().switch_queue(0); 

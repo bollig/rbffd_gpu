@@ -427,7 +427,7 @@ int main(int argc, char** argv) {
     viennacl::copy(u_cpu, u_gpu);
 
     // Flush the queues before starting a benchmark
-    viennacl::backend::finish();
+    viennacl::ocl::get_queue().finish();
 
     std::cout << " Entering loop: " << N_part << " rows \n";
     for (int i = 0; i < 100; i++) { 

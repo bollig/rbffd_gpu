@@ -27,37 +27,28 @@ namespace viennacl
     {
       return "f_spai_1";
     }
-    static void init()
+    static void init(viennacl::ocl::context & ctx)
     {
-      viennacl::ocl::DOUBLE_PRECISION_CHECKER<float>::apply();
+      viennacl::ocl::DOUBLE_PRECISION_CHECKER<float>::apply(ctx);
       static std::map<cl_context, bool> init_done;
-      viennacl::ocl::context & context_ = viennacl::ocl::current_context();
-      if (!init_done[context_.handle().get()])
+      if (!init_done[ctx.handle().get()])
       {
         std::string source;
-        source.append(spai_align1_block_r_assembly);
-        source.append(spai_align1_block_bv_assembly);
+        source.reserve(8192);
         source.append(spai_align1_assemble_blocks);
+        source.append(spai_align1_block_bv_assembly);
         source.append(spai_align1_block_least_squares);
+        source.append(spai_align1_block_q_mult);
         source.append(spai_align1_block_qr);
         source.append(spai_align1_block_qr_assembly);
         source.append(spai_align1_block_qr_assembly_1);
-        source.append(spai_align1_block_q_mult);
+        source.append(spai_align1_block_r_assembly);
         std::string prog_name = program_name();
         #ifdef VIENNACL_BUILD_INFO
         std::cout << "Creating program " << prog_name << std::endl;
         #endif
-        context_.add_program(source, prog_name);
-        viennacl::ocl::program & prog_ = context_.get_program(prog_name);
-        prog_.add_kernel("block_r_assembly");
-        prog_.add_kernel("block_bv_assembly");
-        prog_.add_kernel("assemble_blocks");
-        prog_.add_kernel("block_least_squares");
-        prog_.add_kernel("block_qr");
-        prog_.add_kernel("block_qr_assembly");
-        prog_.add_kernel("block_qr_assembly_1");
-        prog_.add_kernel("block_q_mult");
-        init_done[context_.handle().get()] = true;
+        ctx.add_program(source, prog_name);
+        init_done[ctx.handle().get()] = true;
        } //if
      } //init
     }; // struct
@@ -72,38 +63,29 @@ namespace viennacl
     {
       return "d_spai_1";
     }
-    static void init()
+    static void init(viennacl::ocl::context & ctx)
     {
-      viennacl::ocl::DOUBLE_PRECISION_CHECKER<double>::apply();
+      viennacl::ocl::DOUBLE_PRECISION_CHECKER<double>::apply(ctx);
       static std::map<cl_context, bool> init_done;
-      viennacl::ocl::context & context_ = viennacl::ocl::current_context();
-      if (!init_done[context_.handle().get()])
+      if (!init_done[ctx.handle().get()])
       {
         std::string source;
-        std::string fp64_ext = viennacl::ocl::current_device().double_support_extension();
-        source.append(viennacl::tools::make_double_kernel(spai_align1_block_r_assembly, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(spai_align1_block_bv_assembly, fp64_ext));
+        source.reserve(8192);
+        std::string fp64_ext = ctx.current_device().double_support_extension();
         source.append(viennacl::tools::make_double_kernel(spai_align1_assemble_blocks, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(spai_align1_block_bv_assembly, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(spai_align1_block_least_squares, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(spai_align1_block_q_mult, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(spai_align1_block_qr, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(spai_align1_block_qr_assembly, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(spai_align1_block_qr_assembly_1, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(spai_align1_block_q_mult, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(spai_align1_block_r_assembly, fp64_ext));
         std::string prog_name = program_name();
         #ifdef VIENNACL_BUILD_INFO
         std::cout << "Creating program " << prog_name << std::endl;
         #endif
-        context_.add_program(source, prog_name);
-        viennacl::ocl::program & prog_ = context_.get_program(prog_name);
-        prog_.add_kernel("block_r_assembly");
-        prog_.add_kernel("block_bv_assembly");
-        prog_.add_kernel("assemble_blocks");
-        prog_.add_kernel("block_least_squares");
-        prog_.add_kernel("block_qr");
-        prog_.add_kernel("block_qr_assembly");
-        prog_.add_kernel("block_qr_assembly_1");
-        prog_.add_kernel("block_q_mult");
-        init_done[context_.handle().get()] = true;
+        ctx.add_program(source, prog_name);
+        init_done[ctx.handle().get()] = true;
        } //if
      } //init
     }; // struct

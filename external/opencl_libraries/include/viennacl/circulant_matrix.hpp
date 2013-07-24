@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -30,7 +30,7 @@
 
 #include "viennacl/fft.hpp"
 
-namespace viennacl 
+namespace viennacl
 {
     /** @brief A Circulant matrix class
     *
@@ -40,17 +40,17 @@ namespace viennacl
     template<class SCALARTYPE, unsigned int ALIGNMENT>
     class circulant_matrix
     {
-      public:     
+      public:
         typedef viennacl::backend::mem_handle                                                              handle_type;
         typedef scalar<typename viennacl::tools::CHECK_SCALAR_TEMPLATE_ARGUMENT<SCALARTYPE>::ResultType>   value_type;
-        
+
         /**
          * @brief The default constructor. Does not allocate any memory.
          *
          */
         explicit circulant_matrix()
         {
-          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
+          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init(viennacl::ocl::current_context());
         }
 
         /**
@@ -63,7 +63,7 @@ namespace viennacl
         {
           assert(rows == cols && bool("Circulant matrix must be square!"));
           (void)cols;  // avoid 'unused parameter' warning in optimized builds
-          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
+          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init(viennacl::ocl::current_context());
         }
 
         /** @brief Resizes the matrix.
@@ -94,7 +94,7 @@ namespace viennacl
          * @brief Returns the number of rows of the matrix
          */
         std::size_t size1() const { return elements_.size(); }
-        
+
         /**
          * @brief Returns the number of columns of the matrix
          */
@@ -119,7 +119,7 @@ namespace viennacl
             int index = static_cast<int>(row_index) - static_cast<int>(col_index);
 
             assert(row_index < size1() && col_index < size2() && bool("Invalid access"));
-            
+
             while (index < 0)
               index += size1();
             return elements_[index];
@@ -140,7 +140,7 @@ namespace viennacl
     private:
         circulant_matrix(circulant_matrix const & t) {}
         circulant_matrix & operator=(circulant_matrix const & t);
-      
+
         viennacl::vector<SCALARTYPE, ALIGNMENT> elements_;
     };
 
@@ -258,6 +258,98 @@ namespace viennacl
         s << ")";
         return s;
     }
+
+    //
+    // Specify available operations:
+    //
+
+    namespace linalg
+    {
+      namespace detail
+      {
+        // x = A * y
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_assign, vector_expression<const circulant_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const circulant_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              // check for the special case x = A * x
+              if (viennacl::traits::handle(lhs) == viennacl::traits::handle(rhs.rhs()))
+              {
+                viennacl::vector<T> temp(rhs.lhs().size1());
+                viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+                lhs = temp;
+              }
+
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), lhs);
+            }
+        };
+
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_inplace_add, vector_expression<const circulant_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const circulant_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.lhs().size1());
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+              lhs += temp;
+            }
+        };
+
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_inplace_sub, vector_expression<const circulant_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const circulant_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.lhs().size1());
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+              lhs -= temp;
+            }
+        };
+
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_assign, vector_expression<const circulant_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const circulant_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, lhs);
+            }
+        };
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_inplace_add, vector_expression<const circulant_matrix<T, A>, vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const circulant_matrix<T, A>, vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::vector<T> temp_result(lhs.size());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, temp_result);
+              lhs += temp_result;
+            }
+        };
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_inplace_sub, vector_expression<const circulant_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const circulant_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::vector<T> temp_result(lhs.size());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, temp_result);
+              lhs -= temp_result;
+            }
+        };
+
+
+
+     } // namespace detail
+   } // namespace linalg
+
 }
 
 #endif // VIENNACL_CIRCULANT_MATRIX_HPP

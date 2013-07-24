@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -34,6 +34,7 @@
 #include "viennacl/ocl/program.hpp"
 #include "viennacl/ocl/device.hpp"
 #include "viennacl/ocl/local_mem.hpp"
+#include "viennacl/ocl/infos.hpp"
 
 namespace viennacl
 {
@@ -46,68 +47,76 @@ namespace viennacl
       cl_uint size;
       cl_uint internal_size;
     };
-    
+
     /** @brief Represents an OpenCL kernel within ViennaCL */
     class kernel
     {
       template <typename KernelType>
       friend void enqueue(KernelType & k, viennacl::ocl::command_queue const & queue);
-      
-      
+
+      template<cl_kernel_info param>
+      friend typename detail::return_type<cl_kernel, param>::Result info(viennacl::ocl::kernel & k);
+
+      template<cl_kernel_info param>
+      friend typename detail::return_type<cl_kernel, param>::Result info(viennacl::ocl::kernel & k, viennacl::ocl::device const & d);
+
+
     public:
       typedef std::size_t            size_type;
-      
-      kernel() : handle_(0)
+
+      kernel() : handle_(), p_program_(NULL), p_context_(NULL), name_()
       {
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Creating kernel object (default CTOR)" << std::endl;
         #endif
-        set_work_size_defaults();
       }
-      
-      kernel(viennacl::ocl::handle<cl_program> const & prog, std::string const & name) 
-       : handle_(0), program_(prog), name_(name), init_done_(false)
+
+      kernel(cl_kernel kernel_handle, viennacl::ocl::program const & kernel_program, viennacl::ocl::context const & kernel_context, std::string const & name)
+        : handle_(kernel_handle, kernel_context), p_program_(&kernel_program), p_context_(&kernel_context), name_(name)
       {
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Creating kernel object (full CTOR)" << std::endl;
         #endif
         set_work_size_defaults();
       }
-      
-      kernel(kernel const & other) 
-       : handle_(other.handle_), program_(other.program_), name_(other.name_), init_done_(other.init_done_)
+
+      kernel(kernel const & other)
+        : handle_(other.handle_), p_program_(other.p_program_), p_context_(other.p_context_), name_(other.name_)
       {
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Creating kernel object (Copy CTOR)" << std::endl;
         #endif
         local_work_size_[0] = other.local_work_size_[0];
         local_work_size_[1] = other.local_work_size_[1];
-        
+        local_work_size_[2] = other.local_work_size_[2];
+
         global_work_size_[0] = other.global_work_size_[0];
         global_work_size_[1] = other.global_work_size_[1];
+        global_work_size_[2] = other.global_work_size_[2];
       }
-      
+
       viennacl::ocl::kernel & operator=(const kernel & other)
       {
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Assigning kernel object" << std::endl;
         #endif
         handle_ = other.handle_;
-        program_ = other.program_;
+        p_program_ = other.p_program_;
+        p_context_ = other.p_context_;
         name_ = other.name_;
-        init_done_ = other.init_done_;
         local_work_size_[0] = other.local_work_size_[0];
         local_work_size_[1] = other.local_work_size_[1];
+        local_work_size_[2] = other.local_work_size_[2];
         global_work_size_[0] = other.global_work_size_[0];
         global_work_size_[1] = other.global_work_size_[1];
+        global_work_size_[2] = other.global_work_size_[2];
         return *this;
       }
-      
-      
+
+
       /** @brief Sets an unsigned integer argument at the provided position */
       void arg(unsigned int pos, cl_uint val)
       {
-        init();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Setting unsigned long kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
@@ -118,18 +127,16 @@ namespace viennacl
       /** @brief Sets four packed unsigned integers as argument at the provided position */
       void arg(unsigned int pos, packed_cl_uint val)
       {
-        init();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Setting packed_cl_uint kernel argument (" << val.start << ", " << val.stride << ", " << val.size << ", " << val.internal_size << ") at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(packed_cl_uint), (void*)&val);
         VIENNACL_ERR_CHECK(err);
       }
-      
+
       /** @brief Sets a single precision floating point argument at the provided position */
       void arg(unsigned int pos, float val)
       {
-        init();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Setting floating point kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
@@ -140,11 +147,40 @@ namespace viennacl
       /** @brief Sets a double precision floating point argument at the provided position */
       void arg(unsigned int pos, double val)
       {
-        init();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Setting double precision kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(double), (void*)&val);
+        VIENNACL_ERR_CHECK(err);
+      }
+
+      /** @brief Sets an int argument at the provided position */
+      void arg(unsigned int pos, cl_int val)
+      {
+        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
+        std::cout << "ViennaCL: Setting int precision kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        #endif
+        cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_int), (void*)&val);
+        VIENNACL_ERR_CHECK(err);
+      }
+
+      /** @brief Sets an unsigned long argument at the provided position */
+      void arg(unsigned int pos, cl_ulong val)
+      {
+        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
+        std::cout << "ViennaCL: Setting ulong precision kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        #endif
+        cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_ulong), (void*)&val);
+        VIENNACL_ERR_CHECK(err);
+      }
+
+      /** @brief Sets an unsigned long argument at the provided position */
+      void arg(unsigned int pos, cl_long val)
+      {
+        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
+        std::cout << "ViennaCL: Setting long precision kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        #endif
+        cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_long), (void*)&val);
         VIENNACL_ERR_CHECK(err);
       }
 
@@ -153,7 +189,8 @@ namespace viennacl
       template<class VCL_TYPE>
       void arg(unsigned int pos, VCL_TYPE const & val)
       {
-        init();
+        assert(&val.handle().opencl_handle().context() == &handle_.context() && bool("Kernel and memory object not in the same context!"));
+
         cl_mem temp = val.handle().opencl_handle().get();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Setting generic kernel argument " << temp << " at pos " << pos << " for kernel " << name_ << std::endl;
@@ -161,14 +198,12 @@ namespace viennacl
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_mem), (void*)&temp);
         VIENNACL_ERR_CHECK(err);
       }
-      
+
       //forward handles directly:
       /** @brief Sets an OpenCL object at the provided position */
       template<class CL_TYPE>
       void arg(unsigned int pos, viennacl::ocl::handle<CL_TYPE> const & h)
       {
-        //arg(pos, h);
-        init();
         CL_TYPE temp = h.get();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Setting handle kernel argument " << temp << " at pos " << pos << " for kernel " << name_ << std::endl;
@@ -176,30 +211,29 @@ namespace viennacl
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(CL_TYPE), (void*)&temp);
         VIENNACL_ERR_CHECK(err);
       }
-      
-      
+
+
       //local buffer argument:
       /** @brief Sets an OpenCL local memory object at the provided position */
       void arg(unsigned int pos, const local_mem & mem)
       {
         unsigned int size =  mem.size();
-        init();
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Setting local memory kernel argument at pos " << pos << " for kernel " << name_ << std::endl;
+        std::cout << "ViennaCL: Setting local memory kernel argument of size " << size << " bytes at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
         cl_int err = clSetKernelArg(handle_.get(), pos, size, 0);
         VIENNACL_ERR_CHECK(err);
       }
-      
-      
-      
+
+
+
       /** @brief Convenience function for setting one kernel parameter */
       template <typename T0>
       kernel & operator()(T0 const & t0)
       {
          arg(0, t0);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting two kernel parameters */
       template <typename T0, typename T1>
@@ -207,7 +241,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting three kernel parameters */
       template <typename T0, typename T1, typename T2>
@@ -215,7 +249,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting four kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3>
@@ -223,7 +257,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting five kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4>
@@ -231,7 +265,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting six kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5>
@@ -239,7 +273,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting seven kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
@@ -247,7 +281,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5); arg(6, t6);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting eight kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
@@ -255,7 +289,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5); arg(6, t6); arg(7, t7);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting nine kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
@@ -263,7 +297,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5); arg(6, t6); arg(7, t7); arg(8, t8);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting ten kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4,
@@ -273,7 +307,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5); arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting eleven kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -283,7 +317,7 @@ namespace viennacl
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5); arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9); arg(10, t10);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting twelve kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -294,7 +328,7 @@ namespace viennacl
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
          arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9); arg(10, t10); arg(11, t11);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting thirteen kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -305,7 +339,7 @@ namespace viennacl
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
          arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9); arg(10, t10); arg(11, t11); arg(12, t12);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting fourteen kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -319,7 +353,7 @@ namespace viennacl
          arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9); arg(10, t10); arg(11, t11);
          arg(12, t12); arg(13, t13);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting fifteen kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -333,7 +367,7 @@ namespace viennacl
          arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9); arg(10, t10); arg(11, t11);
          arg(12, t12); arg(13, t13); arg(14, t14);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting sixteen kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -347,7 +381,7 @@ namespace viennacl
          arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9); arg(10, t10); arg(11, t11);
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting seventeen kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -361,7 +395,7 @@ namespace viennacl
          arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9); arg(10, t10); arg(11, t11);
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15); arg(16, t16);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting eighteen kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -375,7 +409,7 @@ namespace viennacl
          arg(6, t6); arg(7, t7); arg(8, t8); arg(9, t9); arg(10, t10); arg(11, t11);
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15); arg(16, t16); arg(17, t17);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting nineteen kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -393,7 +427,7 @@ namespace viennacl
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15); arg(16, t16); arg(17, t17);
          arg(18, t18);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting twenty kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -411,7 +445,7 @@ namespace viennacl
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15); arg(16, t16); arg(17, t17);
          arg(18, t18); arg(19, t19);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting twentyone kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -429,7 +463,7 @@ namespace viennacl
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15); arg(16, t16); arg(17, t17);
          arg(18, t18); arg(19, t19); arg(20, t20);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting twentytwo kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -447,7 +481,7 @@ namespace viennacl
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15); arg(16, t16); arg(17, t17);
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 23 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -465,7 +499,7 @@ namespace viennacl
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15); arg(16, t16); arg(17, t17);
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21);  arg(22, t22);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 24 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -483,7 +517,7 @@ namespace viennacl
          arg(12, t12); arg(13, t13); arg(14, t14); arg(15, t15); arg(16, t16); arg(17, t17);
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21); arg(22, t22); arg(23, t23);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 25 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -504,7 +538,7 @@ namespace viennacl
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21); arg(22, t22); arg(23, t23);
          arg(24, t24);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 26 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -516,7 +550,7 @@ namespace viennacl
                           T6 const & t6, T7 const & t7, T8 const & t8, T9 const & t9, T10 const & t10, T11 const & t11,
                           T12 const & t12, T13 const & t13, T14 const & t14, T15 const & t15, T16 const & t16, T17 const & t17,
                           T18 const & t18, T19 const & t19, T20 const & t20, T21 const & t21, T22 const & t22, T23 const & t23,
-                          T24 const & t24, T25 const & t25 
+                          T24 const & t24, T25 const & t25
                          )
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
@@ -525,7 +559,7 @@ namespace viennacl
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21); arg(22, t22); arg(23, t23);
          arg(24, t24); arg(25, t25);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 27 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -537,7 +571,7 @@ namespace viennacl
                           T6 const & t6, T7 const & t7, T8 const & t8, T9 const & t9, T10 const & t10, T11 const & t11,
                           T12 const & t12, T13 const & t13, T14 const & t14, T15 const & t15, T16 const & t16, T17 const & t17,
                           T18 const & t18, T19 const & t19, T20 const & t20, T21 const & t21, T22 const & t22, T23 const & t23,
-                          T24 const & t24, T25 const & t25, T26 const & t26 
+                          T24 const & t24, T25 const & t25, T26 const & t26
                          )
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
@@ -546,7 +580,7 @@ namespace viennacl
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21); arg(22, t22); arg(23, t23);
          arg(24, t24); arg(25, t25); arg(26, t26);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 28 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -558,7 +592,7 @@ namespace viennacl
                           T6 const & t6, T7 const & t7, T8 const & t8, T9 const & t9, T10 const & t10, T11 const & t11,
                           T12 const & t12, T13 const & t13, T14 const & t14, T15 const & t15, T16 const & t16, T17 const & t17,
                           T18 const & t18, T19 const & t19, T20 const & t20, T21 const & t21, T22 const & t22, T23 const & t23,
-                          T24 const & t24, T25 const & t25, T26 const & t26, T27 const & t27 
+                          T24 const & t24, T25 const & t25, T26 const & t26, T27 const & t27
                          )
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
@@ -567,7 +601,7 @@ namespace viennacl
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21); arg(22, t22); arg(23, t23);
          arg(24, t24); arg(25, t25); arg(26, t26); arg(27, t27);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 29 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -579,7 +613,7 @@ namespace viennacl
                           T6 const & t6, T7 const & t7, T8 const & t8, T9 const & t9, T10 const & t10, T11 const & t11,
                           T12 const & t12, T13 const & t13, T14 const & t14, T15 const & t15, T16 const & t16, T17 const & t17,
                           T18 const & t18, T19 const & t19, T20 const & t20, T21 const & t21, T22 const & t22, T23 const & t23,
-                          T24 const & t24, T25 const & t25, T26 const & t26, T27 const & t27, T28 const & t28 
+                          T24 const & t24, T25 const & t25, T26 const & t26, T27 const & t27, T28 const & t28
                          )
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
@@ -588,7 +622,7 @@ namespace viennacl
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21); arg(22, t22); arg(23, t23);
          arg(24, t24); arg(25, t25); arg(26, t26); arg(27, t27); arg(28, t28);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 30 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -600,7 +634,7 @@ namespace viennacl
                           T6 const & t6, T7 const & t7, T8 const & t8, T9 const & t9, T10 const & t10, T11 const & t11,
                           T12 const & t12, T13 const & t13, T14 const & t14, T15 const & t15, T16 const & t16, T17 const & t17,
                           T18 const & t18, T19 const & t19, T20 const & t20, T21 const & t21, T22 const & t22, T23 const & t23,
-                          T24 const & t24, T25 const & t25, T26 const & t26, T27 const & t27, T28 const & t28, T29 const & t29 
+                          T24 const & t24, T25 const & t25, T26 const & t26, T27 const & t27, T28 const & t28, T29 const & t29
                          )
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
@@ -609,7 +643,7 @@ namespace viennacl
          arg(18, t18); arg(19, t19); arg(20, t20); arg(21, t21); arg(22, t22); arg(23, t23);
          arg(24, t24); arg(25, t25); arg(26, t26); arg(27, t27); arg(28, t28); arg(29, t29);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 31 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -623,7 +657,7 @@ namespace viennacl
                           T12 const & t12, T13 const & t13, T14 const & t14, T15 const & t15, T16 const & t16, T17 const & t17,
                           T18 const & t18, T19 const & t19, T20 const & t20, T21 const & t21, T22 const & t22, T23 const & t23,
                           T24 const & t24, T25 const & t25, T26 const & t26, T27 const & t27, T28 const & t28, T29 const & t29,
-                          T30 const & t30 
+                          T30 const & t30
                          )
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
@@ -633,7 +667,7 @@ namespace viennacl
          arg(24, t24); arg(25, t25); arg(26, t26); arg(27, t27); arg(28, t28); arg(29, t29);
          arg(30, t30);
          return *this;
-      }     
+      }
 
       /** @brief Convenience function for setting 32 kernel parameters */
       template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
@@ -647,7 +681,7 @@ namespace viennacl
                           T12 const & t12, T13 const & t13, T14 const & t14, T15 const & t15, T16 const & t16, T17 const & t17,
                           T18 const & t18, T19 const & t19, T20 const & t20, T21 const & t21, T22 const & t22, T23 const & t23,
                           T24 const & t24, T25 const & t25, T26 const & t26, T27 const & t27, T28 const & t28, T29 const & t29,
-                          T30 const & t30, T31 const & t31 
+                          T30 const & t30, T31 const & t31
                          )
       {
          arg(0, t0); arg(1, t1); arg(2, t2); arg(3, t3); arg(4, t4); arg(5, t5);
@@ -657,7 +691,7 @@ namespace viennacl
          arg(24, t24); arg(25, t25); arg(26, t26); arg(27, t27); arg(28, t28); arg(29, t29);
          arg(30, t30); arg(31, t31);
          return *this;
-      }     
+      }
 
 
 
@@ -668,7 +702,7 @@ namespace viennacl
       */
       size_type local_work_size(int index = 0) const
       {
-        assert(index == 0 || index == 1);
+        assert(index < 3 && bool("Work size index out of bounds"));
         return local_work_size_[index];
       }
       /** @brief Returns the global work size at the respective dimension
@@ -676,8 +710,8 @@ namespace viennacl
       * @param index   Dimension index (currently either 0 or 1)
       */
       size_type global_work_size(int index = 0) const
-      { 
-        assert(index == 0 || index == 1);
+      {
+        assert(index < 3 && bool("Work size index out of bounds"));
         return global_work_size_[index];
       }
 
@@ -691,7 +725,7 @@ namespace viennacl
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Setting local work size to " << s << " at index " << index << " for kernel " << name_ << std::endl;
         #endif
-        assert(index == 0 || index == 1);
+        assert(index < 3 && bool("Work size index out of bounds"));
         local_work_size_[index] = s;
       }
       /** @brief Sets the global work size at the respective dimension
@@ -700,11 +734,11 @@ namespace viennacl
       * @param s       The new global work size
       */
       void global_work_size(int index, size_type s)
-      { 
+      {
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
         std::cout << "ViennaCL: Setting global work size to " << s << " at index " << index << " for kernel " << name_ << std::endl;
         #endif
-        assert(index == 0 || index == 1);
+        assert(index < 3 && bool("Work size index out of bounds"));
         global_work_size_[index] = s;
       }
 
@@ -712,67 +746,43 @@ namespace viennacl
 
       viennacl::ocl::handle<cl_kernel> const & handle() const { return handle_; }
 
+      viennacl::ocl::context const & context() const { return *p_context_; }
 
     private:
-      void create_kernel()
-      {
-        cl_int err;
-        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Building kernel " << name_ << std::endl;
-        #endif
-        handle_ = clCreateKernel(program_.get(), name_.c_str(), &err);
-        
-        if (err != CL_SUCCESS)
-        {
-          #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-          std::cout << "ViennaCL: Could not create kernel '" << name_ << "'." << std::endl;
-          #endif
-          //std::cerr << "Could not build kernel '" << name_ << "'." << std::endl;
-        }
-        VIENNACL_ERR_CHECK(err);
-      }
 
-      void set_work_size_defaults()
-      {
-        if (   (viennacl::ocl::current_device().type() == CL_DEVICE_TYPE_GPU)
-            || (viennacl::ocl::current_device().type() == CL_DEVICE_TYPE_ACCELERATOR) // Xeon Phi
-           )
-        {
-          local_work_size_[0] = 128; local_work_size_[1] = 0;
-          global_work_size_[0] = 128*128; global_work_size_[1] = 0;
-        }
-        else //assume CPU type:
-        {
-          //conservative assumption: one thread per CPU core:
-          local_work_size_[0] = 1; local_work_size_[1] = 0;
-          
-          size_type units = viennacl::ocl::current_device().max_compute_units();
-          size_type s = 1;
-          
-          while (s < units) // find next power of 2. Important to make reductions work on e.g. six-core CPUs.
-            s *= 2;
-          
-          global_work_size_[0] = s; global_work_size_[1] = 0;
-        }
-      }
+      inline void set_work_size_defaults();    //see context.hpp for implementation
 
-      void init()
-      {
-        if (!init_done_)
-        {
-          create_kernel();
-          init_done_ = true;
-        }
-      }
-      
       viennacl::ocl::handle<cl_kernel> handle_;
-      viennacl::ocl::handle<cl_program> program_;
+      viennacl::ocl::program const * p_program_;
+      viennacl::ocl::context const * p_context_;
       std::string name_;
-      bool init_done_;
-      size_type local_work_size_[2];
-      size_type global_work_size_[2];
+      size_type local_work_size_[3];
+      size_type global_work_size_[3];
     };
-    
+
+    /** @brief Queries information about a kernel
+  *
+  * @param k Corresponding kernel
+  */
+    template<cl_kernel_info param>
+    typename detail::return_type<cl_kernel, param>::Result info(viennacl::ocl::kernel & k)
+    {
+        typedef typename detail::return_type<cl_kernel, param>::Result res_t;
+        return detail::get_info_impl<res_t>()(k.handle_.get(),param);
+    }
+
+  /** @brief Queries information about the execution of a kernel on a particular device
+   *
+   * @param k Corresponding kernel
+   * @param d Corresponding device
+   */
+    template<cl_kernel_info param>
+    typename detail::return_type<cl_kernel, param>::Result info(viennacl::ocl::kernel & k, viennacl::ocl::device const & d)
+    {
+        typedef typename detail::return_type<cl_kernel, param>::Result res_t;
+        return detail::get_info_impl<res_t>()(k.handle_.get(),d.id(),param);
+    }
+
   } //namespace ocl
 } //namespace viennacl
 

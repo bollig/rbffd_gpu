@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -39,19 +39,19 @@ namespace viennacl {
     * @tparam ALIGNMENT    The internal memory size is given by (size()/ALIGNMENT + 1) * ALIGNMENT. ALIGNMENT must be a power of two. Best values or usually 4, 8 or 16, higher values are usually a waste of memory.
     */
     template<class SCALARTYPE, unsigned int ALIGNMENT>
-    class hankel_matrix 
+    class hankel_matrix
     {
       public:
         typedef viennacl::backend::mem_handle                                                              handle_type;
         typedef scalar<typename viennacl::tools::CHECK_SCALAR_TEMPLATE_ARGUMENT<SCALARTYPE>::ResultType>   value_type;
-      
+
         /**
          * @brief The default constructor. Does not allocate any memory.
          *
          */
         explicit hankel_matrix()
         {
-          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
+          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init(viennacl::ocl::current_context());
         }
 
         /**
@@ -63,7 +63,7 @@ namespace viennacl {
         explicit hankel_matrix(std::size_t rows, std::size_t cols) : elements_(rows, cols)
         {
           assert(rows == cols && bool("Hankel matrix must be square!"));
-          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
+          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init(viennacl::ocl::current_context());
         }
 
         /** @brief Resizes the matrix.
@@ -94,7 +94,7 @@ namespace viennacl {
          * @brief Returns the number of rows of the matrix
          */
         std::size_t size1() const { return elements_.size1(); }
-        
+
         /**
          * @brief Returns the number of columns of the matrix
          */
@@ -117,7 +117,7 @@ namespace viennacl {
         entry_proxy<SCALARTYPE> operator()(unsigned int row_index, unsigned int col_index)
         {
             assert(row_index < size1() && col_index < size2() && bool("Invalid access"));
-            
+
             return elements_(size1() - row_index - 1, col_index);
         }
 
@@ -136,7 +136,7 @@ namespace viennacl {
     private:
         hankel_matrix(hankel_matrix const & t) {}
         hankel_matrix & operator=(hankel_matrix const & t);
-      
+
         toeplitz_matrix<SCALARTYPE, ALIGNMENT> elements_;
     };
 
@@ -187,7 +187,7 @@ namespace viennacl {
             for (std::size_t j = 0; j < size; j++)
                 com_dst(i, j) = tmp[i + j];
     }
-    
+
     /** @brief Copies a the matrix-like object to the Hankel matrix from the OpenCL device (either GPU or multi-core CPU)
     *
     *
@@ -241,5 +241,97 @@ namespace viennacl {
         s << ")";
         return s;
     }
+
+    //
+    // Specify available operations:
+    //
+
+    namespace linalg
+    {
+      namespace detail
+      {
+        // x = A * y
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_assign, vector_expression<const hankel_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const hankel_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              // check for the special case x = A * x
+              if (viennacl::traits::handle(lhs) == viennacl::traits::handle(rhs.rhs()))
+              {
+                viennacl::vector<T> temp(rhs.lhs().size1());
+                viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+                lhs = temp;
+              }
+
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), lhs);
+            }
+        };
+
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_inplace_add, vector_expression<const hankel_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const hankel_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.lhs().size1());
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+              lhs += temp;
+            }
+        };
+
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_inplace_sub, vector_expression<const hankel_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const hankel_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.lhs().size1());
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+              lhs -= temp;
+            }
+        };
+
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_assign, vector_expression<const hankel_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const hankel_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, lhs);
+            }
+        };
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_inplace_add, vector_expression<const hankel_matrix<T, A>, vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const hankel_matrix<T, A>, vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::vector<T> temp_result(lhs.size());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, temp_result);
+              lhs += temp_result;
+            }
+        };
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_inplace_sub, vector_expression<const hankel_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const hankel_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::vector<T> temp_result(lhs.size());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, temp_result);
+              lhs -= temp_result;
+            }
+        };
+
+
+
+     } // namespace detail
+   } // namespace linalg
+
 }
 #endif // VIENNACL_HANKEL_MATRIX_HPP

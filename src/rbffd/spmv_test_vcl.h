@@ -74,13 +74,29 @@ class SpMVTest
         MPI_Status* R_stats;
 
         EB::TimerList tm; 
+        std::vector<cl_command_queue> queues;
+
+        int disable_timers;
 
     public: 
-        SpMVTest(RBFFD_VCL_OVERLAP* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1) {
+        SpMVTest(RBFFD_VCL_OVERLAP* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1), disable_timers(0) {
             o_comm_size=0; 
             r_comm_size=0;
             setupTimers(); 
             allocateCommBuffers(); 
+
+           int err; 
+            // We need two queues. One for SpMV and one for mem xfer
+            // (host<->device)
+            viennacl::ocl::current_context().add_queue(viennacl::ocl::current_context().current_device().id() ); 
+            VIENNACL_ERR_CHECK(err);
+
+            std::cout << "ViennaCL uses context: " << viennacl::ocl::current_context().handle().get() << std::endl;
+            std::cout << "ViennaCL uses default queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
+            viennacl::ocl::current_context().switch_queue(1);
+            std::cout << "ViennaCL uses new queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
+            viennacl::ocl::current_context().switch_queue(0);
+            std::cout << "ViennaCL uses first queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
         }
 
         ~SpMVTest() {
@@ -97,6 +113,9 @@ class SpMVTest
             tm.writeToFile(buf);
             tm.clear();
         }
+
+        void enableTimers() { disable_timers = 0; }
+        void disableTimers() { disable_timers = 1; }
 
         void allocateCommBuffers() {
             tm["allocateCommBufs"]->start();
@@ -183,18 +202,18 @@ class SpMVTest
             //  done - waitall(irecv)
             //  copy R up
             //  queue B
-            tm["spmv_w_comm"]->start();
+            if (!disable_timers) tm["spmv_w_comm"]->start();
 
             //------------
             // Post irecv
             //------------
-            tm["synchronize"]->start();
+            if (!disable_timers) tm["synchronize"]->start();
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-                //if (size > 8) { 
+                if (size > 8) { 
                     this->postIrecvs(); 
-                //}
+                }
                 // Else we use Alltoallv and dont need to worry
             }
 
@@ -219,11 +238,13 @@ class SpMVTest
             //------------
             // Start Async copy O Down
             //------------
+            viennacl::ocl::current_context().switch_queue(0);
  
-            tm["spmv"]->start();
+            if (!disable_timers) tm["spmv"]->start();
             // SpMV on first QmB rows
-            project(out_deriv, r3) = (VCL_VEC_t) viennacl::linalg::prod(DM_qmb, u_gpu); 
-           
+            project(out_deriv, r3) = viennacl::linalg::prod(DM_qmb, u_gpu); 
+          
+            viennacl::ocl::current_context().switch_queue(1); 
             //------------
             // Fill Sendbuf 
             //------------
@@ -237,13 +258,13 @@ class SpMVTest
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-          //      if (size > 8) { 
+                if (size > 8) { 
                     // NOTE: this includes waitall on irecvs
                     this->postIsends(); 
-           //     }
-            //    this->postAlltoallv();
+                }
+                this->postAlltoallv();
             }
-            tm["synchronize"]->stop();
+            if (!disable_timers) tm["synchronize"]->stop();
 
             //------------
             // Copy R up 
@@ -253,17 +274,22 @@ class SpMVTest
 
             //TODO: send to GPU;
 
-            project(out_deriv, r4) = (VCL_VEC_t) viennacl::linalg::prod(DM_b, u_gpu); 
+            project(out_deriv, r4) = viennacl::linalg::prod(DM_b, u_gpu); 
 
-            tm["spmv"]->stop();
+            viennacl::ocl::current_context().switch_queue(0); 
+            viennacl::ocl::get_queue().finish();
+            viennacl::ocl::current_context().switch_queue(1); 
+            viennacl::ocl::get_queue().finish();
 
-            tm["spmv_w_comm"]->stop();
+            if (!disable_timers) tm["spmv"]->stop();
+
+            if (!disable_timers) tm["spmv_w_comm"]->stop();
         }
 
 
         void postIrecvs() {
             // Buffer recvs
-            tm["irecv"]->start();
+            if (!disable_timers) tm["irecv"]->start();
             int r_count = 0;
             for (int i = 0; i < this->size; i++) { 
                 if (this->recvcounts[i] > 0) {
@@ -300,7 +326,7 @@ class SpMVTest
 
             viennacl::copy(setO, vec); //, set_O_size * sol_dim);
 
-            tm["encode_send"]->start();
+            if (!disable_timers) tm["encode_send"]->start();
             // Prep-Send: Copy elements of set to sbuf
             unsigned int k = 0; 
             for (size_t i = 0; i < grid->O_by_rank.size(); i++) {
@@ -315,7 +341,7 @@ class SpMVTest
                     }
                 }
             }
-            tm["encode_send"]->stop();
+            if (!disable_timers) tm["encode_send"]->stop();
         }
 
         void postIsends() {
@@ -330,7 +356,7 @@ class SpMVTest
 
             // Barrier: wait for recvs to finish
             MPI_Waitall(r_comm_size, R_reqs, R_stats); 
-            tm["irecv"]->stop();
+            if (!disable_timers) tm["irecv"]->stop();
         }
 
         void decodeRecvBuf(VCL_VEC_t &gpu_vec) {
@@ -354,7 +380,7 @@ class SpMVTest
             std::vector<double> vec(set_R_size * sol_dim);
 
             // Post-Recv: copy elements out
-            tm["decode_recv"]->start();
+            if (!disable_timers) tm["decode_recv"]->start();
             unsigned int k = 0;
             for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
                 k = this->rdispls[i];
@@ -377,15 +403,15 @@ class SpMVTest
                 }
             }
 
-            tm["decode_recv"]->stop();
+            if (!disable_timers) tm["decode_recv"]->stop();
             viennacl::copy(vec, setR);
         }
 
 
         void postAlltoallv() {
-            tm["alltoallv"]->start(); 
+            if (!disable_timers) tm["alltoallv"]->start(); 
             MPI_Alltoallv(this->sbuf, this->sendcounts, this->sdispls, MPI_DOUBLE, this->rbuf, this->recvcounts, this->rdispls, MPI_DOUBLE, MPI_COMM_WORLD); 
-            tm["alltoallv"]->stop(); 
+            if (!disable_timers) tm["alltoallv"]->stop(); 
         }
 };
 

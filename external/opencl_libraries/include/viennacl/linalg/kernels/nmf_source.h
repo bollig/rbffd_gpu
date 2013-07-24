@@ -16,13 +16,13 @@ const char * const nmf_align1_el_wise_mul_div =
 "          __global const float * matrix3,\n"
 "          unsigned int size)\n"
 "{\n"
-"  for (unsigned int i = get_global_id(0); i < size; i += get_global_size(0)) \n"
+"  for (unsigned int i = get_global_id(0); i < size; i += get_global_size(0))\n"
 "  {\n"
 "    float val = matrix1[i] * matrix2[i];\n"
 "    float divisor = matrix3[i];\n"
 "    matrix1[i] = (divisor > 0.00001) ? (val / divisor) : 0;\n"
-"  };\n"
-"};\n"
+"  }\n"
+"}\n"
 ; //nmf_align1_el_wise_mul_div
 
 const char * const nmf_align1_sub_wise = 

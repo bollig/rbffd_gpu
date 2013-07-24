@@ -406,11 +406,13 @@ int main(int argc, char** argv) {
     SpMVTest *derTest = new SpMVTest(der, subdomain, mpi_rank, mpi_size ); 
     std::cout << " Built SpMVTest\n";
 
+    derTest->disableTimers(); 
     // Prime the tubes: 
     derTest->SpMV(RBFFD::X, u_gpu, xderiv_gpu);
     derTest->SpMV(RBFFD::Y, u_gpu, yderiv_gpu);
     derTest->SpMV(RBFFD::Z, u_gpu, zderiv_gpu);
     derTest->SpMV(RBFFD::LAPL, u_gpu, lderiv_gpu);
+    derTest->enableTimers(); 
 
     // Prime AXPY. 
     u_new_gpu = 0.5*u_gpu + 1.*xderiv_gpu; 
@@ -425,7 +427,6 @@ int main(int argc, char** argv) {
     // Flush the queues before starting a benchmark
     viennacl::backend::finish();
 
-    // TODO: prime hw here.
     std::cout << " Entering loop: " << N_part << " rows \n";
     for (int i = 0; i < 100; i++) { 
         tm["iteration"]->start();

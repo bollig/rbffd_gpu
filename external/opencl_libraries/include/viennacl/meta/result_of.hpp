@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -28,18 +28,22 @@
 #include "viennacl/forwards.h"
 
 
-#ifdef VIENNACL_WITH_UBLAS  
+#ifdef VIENNACL_WITH_UBLAS
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #endif
 
-#ifdef VIENNACL_WITH_EIGEN  
+#ifdef VIENNACL_WITH_EIGEN
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #endif
 
 #ifdef VIENNACL_WITH_MTL4
 #include <boost/numeric/mtl/mtl.hpp>
+#endif
+
+#ifdef VIENNACL_WITH_OPENCL
+#include "CL/cl.h"
 #endif
 
 #include <vector>
@@ -59,14 +63,14 @@ namespace viennacl
         typedef typename T::ERROR_ARGUMENT_PROVIDED_IS_NOT_A_VECTOR_OR_A_MATRIX   error_type;
         enum { value = 1 };
       };
-      
+
       /** \cond */
       template <typename T>
       struct alignment<const T>
       {
         enum { value = alignment<T>::value };
       };
-      
+
       template <typename SCALARTYPE, unsigned int ALIGNMENT>
       struct alignment< vector<SCALARTYPE, ALIGNMENT> >
       {
@@ -111,14 +115,14 @@ namespace viennacl
       {
         enum { value = alignment<T>::value };
       };
-      
+
       template <typename LHS, typename RHS>
       struct alignment< matrix_expression<LHS, RHS, op_trans> >
       {
         enum { value = alignment<LHS>::value };
       };
       /** \endcond */
-      
+
       //
       // Majority specifier for matrices (row_major, column_major)
       //
@@ -135,7 +139,7 @@ namespace viennacl
       {
         typedef typename orientation_functor<T>::type  type;
       };
-      
+
       template <typename SCALARTYPE, typename F, unsigned int ALIGNMENT>
       struct orientation_functor< matrix<SCALARTYPE, F, ALIGNMENT> >
       {
@@ -160,10 +164,10 @@ namespace viennacl
         typedef typename orientation_functor<LHS>::type  type;
       };
       /** \endcond */
-      
-      
+
+
       //
-      // Retrieve size_type 
+      // Retrieve size_type
       //
       /** @brief Generic meta-function for retrieving the size_type associated with type T */
       template <typename T>
@@ -179,13 +183,13 @@ namespace viennacl
       {
         typedef std::size_t   type;
       };
-      
+
       template <>
       struct size_type<Eigen::VectorXf>
       {
         typedef std::size_t   type;
       };
-      
+
       template <>
       struct size_type<Eigen::VectorXd>
       {
@@ -199,7 +203,7 @@ namespace viennacl
       };
       #endif
       /** \endcond */
-      
+
       //
       // Retrieve value_type:
       //
@@ -207,45 +211,45 @@ namespace viennacl
       template <typename T>
       struct value_type
       {
-        typedef typename T::value_type    type; 
+        typedef typename T::value_type    type;
       };
-      
+
       /** \cond */
-#ifdef VIENNACL_WITH_EIGEN  
+#ifdef VIENNACL_WITH_EIGEN
       template <>
       struct value_type<Eigen::MatrixXf>
       {
-        typedef Eigen::MatrixXf::RealScalar    type; 
+        typedef Eigen::MatrixXf::RealScalar    type;
       };
-      
+
       template <>
       struct value_type<Eigen::MatrixXd>
       {
-        typedef Eigen::MatrixXd::RealScalar    type; 
+        typedef Eigen::MatrixXd::RealScalar    type;
       };
 
       template <typename ScalarType, int option>
       struct value_type<Eigen::SparseMatrix<ScalarType, option> >
       {
-        typedef ScalarType    type; 
+        typedef ScalarType    type;
       };
 
       template <>
       struct value_type<Eigen::VectorXf>
       {
-        typedef Eigen::VectorXf::RealScalar    type; 
+        typedef Eigen::VectorXf::RealScalar    type;
       };
 
       template <>
       struct value_type<Eigen::VectorXd>
       {
-        typedef Eigen::VectorXd::RealScalar    type; 
+        typedef Eigen::VectorXd::RealScalar    type;
       };
-      
+
 #endif
       /** \endcond */
-      
-      
+
+
       //
       // Retrieve cpu value_type:
       //
@@ -253,7 +257,7 @@ namespace viennacl
       template <typename T>
       struct cpu_value_type
       {
-        typedef typename T::ERROR_CANNOT_DEDUCE_CPU_SCALAR_TYPE_FOR_T    type; 
+        typedef typename T::ERROR_CANNOT_DEDUCE_CPU_SCALAR_TYPE_FOR_T    type;
       };
 
       /** \cond */
@@ -262,115 +266,164 @@ namespace viennacl
       {
         typedef typename cpu_value_type<T>::type    type;
       };
-      
+
+      template <>
+      struct cpu_value_type<char>
+      {
+        typedef char    type;
+      };
+
+      template <>
+      struct cpu_value_type<unsigned char>
+      {
+        typedef unsigned char    type;
+      };
+
+      template <>
+      struct cpu_value_type<short>
+      {
+        typedef short    type;
+      };
+
+      template <>
+      struct cpu_value_type<unsigned short>
+      {
+        typedef unsigned short    type;
+      };
+
+      template <>
+      struct cpu_value_type<int>
+      {
+        typedef int    type;
+      };
+
+      template <>
+      struct cpu_value_type<unsigned int>
+      {
+        typedef unsigned int    type;
+      };
+
+      template <>
+      struct cpu_value_type<long>
+      {
+        typedef int    type;
+      };
+
+      template <>
+      struct cpu_value_type<unsigned long>
+      {
+        typedef unsigned long    type;
+      };
+
+
       template <>
       struct cpu_value_type<float>
       {
-        typedef float    type; 
+        typedef float    type;
       };
-      
+
       template <>
       struct cpu_value_type<double>
       {
-        typedef double    type; 
+        typedef double    type;
       };
-      
+
       template <typename T>
       struct cpu_value_type<viennacl::scalar<T> >
       {
-        typedef T    type; 
+        typedef T    type;
       };
 
       template <typename T>
       struct cpu_value_type<viennacl::vector_base<T> >
       {
-        typedef T    type; 
+        typedef T    type;
       };
-      
+
       template <typename T, unsigned int ALIGNMENT>
       struct cpu_value_type<viennacl::vector<T, ALIGNMENT> >
       {
-        typedef T    type; 
+        typedef T    type;
       };
-      
+
       template <typename T>
       struct cpu_value_type<viennacl::vector_range<T> >
       {
-        typedef typename cpu_value_type<T>::type    type; 
+        typedef typename cpu_value_type<T>::type    type;
       };
 
       template <typename T>
       struct cpu_value_type<viennacl::vector_slice<T> >
       {
-        typedef typename cpu_value_type<T>::type    type; 
+        typedef typename cpu_value_type<T>::type    type;
       };
-      
+
       template <typename T1, typename T2, typename OP>
       struct cpu_value_type<viennacl::vector_expression<const T1, const T2, OP> >
       {
-        typedef typename cpu_value_type<T1>::type    type; 
+        typedef typename cpu_value_type<T1>::type    type;
       };
-      
+
       template <typename T1, typename T2, typename OP>
       struct cpu_value_type<const viennacl::vector_expression<const T1, const T2, OP> >
       {
-        typedef typename cpu_value_type<T1>::type    type; 
+        typedef typename cpu_value_type<T1>::type    type;
       };
-      
-      
+
+
       template <typename T, typename F>
       struct cpu_value_type<viennacl::matrix_base<T, F> >
       {
-        typedef T    type; 
+        typedef T    type;
       };
-      
+
       template <typename T, typename F, unsigned int ALIGNMENT>
       struct cpu_value_type<viennacl::matrix<T, F, ALIGNMENT> >
       {
-        typedef T    type; 
+        typedef T    type;
       };
-      
+
       template <typename T>
       struct cpu_value_type<viennacl::matrix_range<T> >
       {
-        typedef typename cpu_value_type<T>::type    type; 
+        typedef typename cpu_value_type<T>::type    type;
       };
 
       template <typename T>
       struct cpu_value_type<viennacl::matrix_slice<T> >
       {
-        typedef typename cpu_value_type<T>::type    type; 
+        typedef typename cpu_value_type<T>::type    type;
       };
-      
+
       template <typename T1, typename T2, typename OP>
       struct cpu_value_type<viennacl::matrix_expression<T1, T2, OP> >
       {
-        typedef typename cpu_value_type<T1>::type    type; 
+        typedef typename cpu_value_type<T1>::type    type;
       };
-      
-      
-      
+
+
+
       template <typename T>
       struct matrix_expression_internal_storage
       {
         typedef T &     type;
       };
-     
+
       template <>
       struct matrix_expression_internal_storage<const float>
       {
         typedef float type;
       };
-      
+
       template <>
       struct matrix_expression_internal_storage<const double>
       {
         typedef double type;
       };
-      
-      
-      
-      
+
+
+
+
       //
       // Deduce compatible vector type for a matrix type
       //
@@ -421,13 +474,26 @@ namespace viennacl
       };
       #endif
 
-      
+
       template <typename T>
       struct reference_if_nonscalar
       {
         typedef T &    type;
       };
-    
+
+#define VIENNACL_REFERENCE_IF_NONSCALAR_INT(TNAME) \
+      template <> struct reference_if_nonscalar<TNAME>                { typedef                TNAME  type; }; \
+      template <> struct reference_if_nonscalar<const TNAME>          { typedef          const TNAME  type; }; \
+      template <> struct reference_if_nonscalar<unsigned TNAME>       { typedef       unsigned TNAME  type; }; \
+      template <> struct reference_if_nonscalar<const unsigned TNAME> { typedef const unsigned TNAME  type; };
+
+      VIENNACL_REFERENCE_IF_NONSCALAR_INT(char)
+      VIENNACL_REFERENCE_IF_NONSCALAR_INT(short)
+      VIENNACL_REFERENCE_IF_NONSCALAR_INT(int)
+      VIENNACL_REFERENCE_IF_NONSCALAR_INT(long)
+
+#undef VIENNACL_REFERENCE_IF_NONSCALAR_INT
+
       template <>
       struct reference_if_nonscalar<float>
       {
@@ -439,22 +505,62 @@ namespace viennacl
       {
         typedef const float    type;
       };
-      
+
       template <>
       struct reference_if_nonscalar<double>
       {
         typedef double    type;
       };
-      
+
       template <>
       struct reference_if_nonscalar<const double>
       {
         typedef const double    type;
       };
+
       /** \endcond */
-      
+
+      //OpenCL equivalent type
+      template<typename T>
+      struct cl_type
+      {
+          typedef T type;
+      };
+
+#ifdef VIENNACL_WITH_OPENCL
+      template<>
+      struct cl_type<float>{ typedef cl_float type; };
+
+      template<>
+      struct cl_type<double>{ typedef cl_double type; };
+
+      template<>
+      struct cl_type<int>{ typedef cl_int type; };
+
+      template<>
+      struct cl_type<unsigned int>{  typedef cl_uint type; };
+
+      template<>
+      struct cl_type<long>{  typedef cl_long type;  };
+
+      template<>
+      struct cl_type<unsigned long>{ typedef cl_ulong type; };
+
+      template<>
+      struct cl_type<short>{ typedef cl_short type;  };
+
+      template<>
+      struct cl_type<unsigned short>{ typedef cl_ushort type; };
+
+      template<>
+      struct cl_type<char>{ typedef cl_char type; };
+
+      template<>
+      struct cl_type<unsigned char>{ typedef cl_uchar type; };
+#endif
+
     } //namespace result_of
 } //namespace viennacl
-    
+
 
 #endif

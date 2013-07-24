@@ -18,100 +18,30 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
+
 /** @file viennacl/generator/forwards.h
- *  @brief Forward declarations of the important structures for the kernel generator. Experimental.
- *
- *  Generator code contributed by Philippe Tillet
- */
-
-#include <string>
-#include "viennacl/forwards.h"
-
-namespace viennacl
-{
-  namespace generator
-  {
-
-    template<class T>
-    class operation_repeater;
-
-    template<class LHS, class OP_TYPE, class RHS>
-    class compound_node;
-
-    template<class T>
-    struct inner_prod_impl_t;
-
-    struct prod_type;
-
-    struct inner_prod_type;
-
-    template<long VAL>
-    class symbolic_constant;
-
-    template<long VAL>
-    class symbolic_constant_vector;
-
-    template< unsigned int ID, typename SCALARTYPE, unsigned int ALIGNMENT = 1>
-    class symbolic_vector;
-
-    template<unsigned int ID,
-             typename SCALARTYPE, class F = viennacl::row_major, unsigned int ALIGNMENT = 1>
-    class symbolic_matrix;
-
-    template<class REF>
-    class tmp_symbolic_matrix;
-
-    template<unsigned int ID,typename SCALARTYPE>
-    class cpu_symbolic_scalar;
-
-    template<unsigned int ID,typename SCALARTYPE>
-    class gpu_symbolic_scalar;
-
-    template<class Expr, class OP, class Assigned>
-    struct MatVecToken;
-
-    template<class Expr, class OP, class Assigned>
-    struct MatMatToken;
-
-    template<class Expr,unsigned int Step>
-    struct InProdToken;
-
-    template<class Expr>
-    struct ArithmeticToken;
-
-    template<class Bound_, class Operations_>
-    struct repeater_impl;
+ * Forward declarations for the generator
+*/
 
 
-    struct assign_type;
+namespace viennacl{
 
-    struct add_type;
-    struct inplace_add_type;
+  namespace generator{
 
-    struct sub_type;
-    struct inplace_sub_type;
+    class custom_operation;
+    class symbolic_expression_tree_base;
+    class symbolic_kernel_argument;
+    class symbolic_datastructure;
 
-    struct scal_mul_type;
-    struct inplace_scal_mul_type;
+    template<typename ScalarType> class vector;
+    template<typename ScalarType> class scalar;
+    template<class VCL_MATRIX> class matrix;
 
-    struct scal_div_type;
-    struct inplace_scal_div_type;
-
-    struct inner_prod_type;
-    struct prod_type;
-
-    struct elementwise_prod_type;
-    struct elementwise_div_type;
-
-namespace result_of{
-    template<class T>
-    struct is_inner_product_leaf;
-
-    template<class T>
-    struct is_inner_product_impl;
-}
+    namespace utils{
+      class kernel_generation_stream;
+    }
 
   }
-}
-#endif
 
+}
+#endif // FORWARDS_H

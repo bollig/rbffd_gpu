@@ -27,41 +27,30 @@ namespace viennacl
     {
       return "f_scalar_1";
     }
-    static void init()
+    static void init(viennacl::ocl::context & ctx)
     {
-      viennacl::ocl::DOUBLE_PRECISION_CHECKER<float>::apply();
+      viennacl::ocl::DOUBLE_PRECISION_CHECKER<float>::apply(ctx);
       static std::map<cl_context, bool> init_done;
-      viennacl::ocl::context & context_ = viennacl::ocl::current_context();
-      if (!init_done[context_.handle().get()])
+      if (!init_done[ctx.handle().get()])
       {
         std::string source;
+        source.reserve(8192);
+        source.append(scalar_align1_as_cpu);
+        source.append(scalar_align1_as_gpu);
         source.append(scalar_align1_asbs_cpu_cpu);
         source.append(scalar_align1_asbs_cpu_gpu);
-        source.append(scalar_align1_asbs_s_gpu_gpu);
-        source.append(scalar_align1_asbs_s_gpu_cpu);
-        source.append(scalar_align1_as_gpu);
+        source.append(scalar_align1_asbs_gpu_cpu);
         source.append(scalar_align1_asbs_gpu_gpu);
         source.append(scalar_align1_asbs_s_cpu_cpu);
-        source.append(scalar_align1_as_cpu);
-        source.append(scalar_align1_asbs_gpu_cpu);
         source.append(scalar_align1_asbs_s_cpu_gpu);
+        source.append(scalar_align1_asbs_s_gpu_cpu);
+        source.append(scalar_align1_asbs_s_gpu_gpu);
         std::string prog_name = program_name();
         #ifdef VIENNACL_BUILD_INFO
         std::cout << "Creating program " << prog_name << std::endl;
         #endif
-        context_.add_program(source, prog_name);
-        viennacl::ocl::program & prog_ = context_.get_program(prog_name);
-        prog_.add_kernel("asbs_cpu_cpu");
-        prog_.add_kernel("asbs_cpu_gpu");
-        prog_.add_kernel("asbs_s_gpu_gpu");
-        prog_.add_kernel("asbs_s_gpu_cpu");
-        prog_.add_kernel("as_gpu");
-        prog_.add_kernel("asbs_gpu_gpu");
-        prog_.add_kernel("asbs_s_cpu_cpu");
-        prog_.add_kernel("as_cpu");
-        prog_.add_kernel("asbs_gpu_cpu");
-        prog_.add_kernel("asbs_s_cpu_gpu");
-        init_done[context_.handle().get()] = true;
+        ctx.add_program(source, prog_name);
+        init_done[ctx.handle().get()] = true;
        } //if
      } //init
     }; // struct
@@ -76,42 +65,31 @@ namespace viennacl
     {
       return "d_scalar_1";
     }
-    static void init()
+    static void init(viennacl::ocl::context & ctx)
     {
-      viennacl::ocl::DOUBLE_PRECISION_CHECKER<double>::apply();
+      viennacl::ocl::DOUBLE_PRECISION_CHECKER<double>::apply(ctx);
       static std::map<cl_context, bool> init_done;
-      viennacl::ocl::context & context_ = viennacl::ocl::current_context();
-      if (!init_done[context_.handle().get()])
+      if (!init_done[ctx.handle().get()])
       {
         std::string source;
-        std::string fp64_ext = viennacl::ocl::current_device().double_support_extension();
+        source.reserve(8192);
+        std::string fp64_ext = ctx.current_device().double_support_extension();
+        source.append(viennacl::tools::make_double_kernel(scalar_align1_as_cpu, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(scalar_align1_as_gpu, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_cpu_cpu, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_cpu_gpu, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_s_gpu_gpu, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_s_gpu_cpu, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(scalar_align1_as_gpu, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_gpu_cpu, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_gpu_gpu, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_s_cpu_cpu, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(scalar_align1_as_cpu, fp64_ext));
-        source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_gpu_cpu, fp64_ext));
         source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_s_cpu_gpu, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_s_gpu_cpu, fp64_ext));
+        source.append(viennacl::tools::make_double_kernel(scalar_align1_asbs_s_gpu_gpu, fp64_ext));
         std::string prog_name = program_name();
         #ifdef VIENNACL_BUILD_INFO
         std::cout << "Creating program " << prog_name << std::endl;
         #endif
-        context_.add_program(source, prog_name);
-        viennacl::ocl::program & prog_ = context_.get_program(prog_name);
-        prog_.add_kernel("asbs_cpu_cpu");
-        prog_.add_kernel("asbs_cpu_gpu");
-        prog_.add_kernel("asbs_s_gpu_gpu");
-        prog_.add_kernel("asbs_s_gpu_cpu");
-        prog_.add_kernel("as_gpu");
-        prog_.add_kernel("asbs_gpu_gpu");
-        prog_.add_kernel("asbs_s_cpu_cpu");
-        prog_.add_kernel("as_cpu");
-        prog_.add_kernel("asbs_gpu_cpu");
-        prog_.add_kernel("asbs_s_cpu_gpu");
-        init_done[context_.handle().get()] = true;
+        ctx.add_program(source, prog_name);
+        init_done[ctx.handle().get()] = true;
        } //if
      } //init
     }; // struct

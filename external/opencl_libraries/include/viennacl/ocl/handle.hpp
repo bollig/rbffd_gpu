@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -31,6 +31,7 @@
 #include <assert.h>
 #include <string>
 #include <iostream>
+#include "viennacl/ocl/forwards.h"
 #include "viennacl/ocl/error.hpp"
 
 namespace viennacl
@@ -45,7 +46,7 @@ namespace viennacl
     {
       typedef typename OCL_TYPE::ERROR_TEMPLATE_ARGUMENT_FOR_CLASS_INVALID   ErrorType;
     };
-    
+
     /** \cond */
     //cl_mem:
     template <>
@@ -56,7 +57,7 @@ namespace viennacl
         cl_int err = clRetainMemObject(something);
         VIENNACL_ERR_CHECK(err);
       }
-      
+
       static void dec(cl_mem & something)
       {
         #ifndef __APPLE__
@@ -65,7 +66,7 @@ namespace viennacl
         #endif
       }
     };
-    
+
     //cl_program:
     template <>
     struct handle_inc_dec_helper<cl_program>
@@ -75,7 +76,7 @@ namespace viennacl
         cl_int err = clRetainProgram(something);
         VIENNACL_ERR_CHECK(err);
       }
-      
+
       static void dec(cl_program & something)
       {
         #ifndef __APPLE__
@@ -84,7 +85,7 @@ namespace viennacl
         #endif
       }
     };
-    
+
     //cl_kernel:
     template <>
     struct handle_inc_dec_helper<cl_kernel>
@@ -94,7 +95,7 @@ namespace viennacl
         cl_int err = clRetainKernel(something);
         VIENNACL_ERR_CHECK(err);
       }
-      
+
       static void dec(cl_kernel & something)
       {
         #ifndef __APPLE__
@@ -113,7 +114,7 @@ namespace viennacl
         cl_int err = clRetainCommandQueue(something);
         VIENNACL_ERR_CHECK(err);
       }
-      
+
       static void dec(cl_command_queue & something)
       {
         #ifndef __APPLE__
@@ -122,7 +123,7 @@ namespace viennacl
         #endif
       }
     };
-    
+
     //cl_context:
     template <>
     struct handle_inc_dec_helper<cl_context>
@@ -132,7 +133,7 @@ namespace viennacl
         cl_int err = clRetainContext(something);
         VIENNACL_ERR_CHECK(err);
       }
-      
+
       static void dec(cl_context & something)
       {
         #ifndef __APPLE__
@@ -142,60 +143,83 @@ namespace viennacl
       }
     };
     /** \endcond */
-    
+
     /** @brief Handle class the effectively represents a smart pointer for OpenCL handles */
     template<class OCL_TYPE>
     class handle
     {
       public:
-        handle() : h_(0) {}
-        handle(const OCL_TYPE & something) : h_(something) {}
-        handle(const handle & other) : h_(other.h_) { if (h_ != 0) inc(); }
+        handle() : h_(0), p_context_(NULL) {}
+        handle(const OCL_TYPE & something, viennacl::ocl::context const & c) : h_(something), p_context_(&c) {}
+        handle(const handle & other) : h_(other.h_), p_context_(other.p_context_) { if (h_ != 0) inc(); }
         ~handle() { if (h_ != 0) dec(); }
-        
+
         /** @brief Copies the OpenCL handle from the provided handle. Does not take ownership like e.g. std::auto_ptr<>, so both handle objects are valid (more like shared_ptr). */
         handle & operator=(const handle & other)
         {
-          if (h_ != 0) 
+          if (h_ != 0)
             dec();
-          h_ = other.h_;
+          h_         = other.h_;
+          p_context_ = other.p_context_;
           inc();
           return *this;
         }
-        
-        /** @brief Wraps an OpenCL handle. Decreases the reference count if the handle object is destroyed or another OpenCL handle is assigned. */
+
+        /** @brief Wraps an OpenCL handle. Does not change the context of this handle object! Decreases the reference count if the handle object is destroyed or another OpenCL handle is assigned. */
         handle & operator=(const OCL_TYPE & something)
         {
           if (h_ != 0) dec();
           h_ = something;
           return *this;
         }
-        
+
+        /** @brief Wraps an OpenCL handle including its associated context. Decreases the reference count if the handle object is destroyed or another OpenCL handle is assigned. */
+        handle & operator=(std::pair<OCL_TYPE, cl_context> p)
+        {
+          if (h_ != 0) dec();
+          h_         = p.first;
+          p_context_ = p.second;
+          return *this;
+        }
+
+
         /** @brief Implicit conversion to the plain OpenCL handle. DEPRECATED and will be removed some time in the future. */
         operator OCL_TYPE() const { return h_; }
-        
+
         const OCL_TYPE & get() const { return h_; }
-        
-        
-        
+
+        viennacl::ocl::context const & context() const
+        {
+          assert(p_context_ != NULL && bool("Logic error: Accessing dangling context from handle."));
+          return *p_context_;
+        }
+        void context(viennacl::ocl::context const & c) { p_context_ = &c; }
+
+
         /** @brief Swaps the OpenCL handle of two handle objects */
         handle & swap(handle & other)
         {
           OCL_TYPE tmp = other.h_;
           other.h_ = this->h_;
           this->h_ = tmp;
+
+          viennacl::ocl::context const * tmp2 = other.p_context_;
+          other.p_context_ = this->p_context_;
+          this->p_context_ = tmp2;
+
           return *this;
         }
-        
+
         /** @brief Manually increment the OpenCL reference count. Typically called automatically, but is necessary if user-supplied memory objects are wrapped. */
         void inc() { handle_inc_dec_helper<OCL_TYPE>::inc(h_); };
         /** @brief Manually decrement the OpenCL reference count. Typically called automatically, but might be useful with user-supplied memory objects.  */
         void dec() { handle_inc_dec_helper<OCL_TYPE>::dec(h_); };
       private:
         OCL_TYPE h_;
+        viennacl::ocl::context const * p_context_;
     };
 
-    
+
   } //namespace ocl
 } //namespace viennacl
 

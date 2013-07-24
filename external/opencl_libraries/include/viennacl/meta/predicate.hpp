@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -27,6 +27,10 @@
 #include <sstream>
 #include "viennacl/forwards.h"
 
+#ifdef VIENNACL_WITH_OPENCL
+#include "CL/cl.h"
+#endif
+
 namespace viennacl
 {
     /** \cond */  //deactivate Doxygen parsing of the partial specializations
@@ -39,19 +43,19 @@ namespace viennacl
     //{
     //  enum { value = false };
     //};
-  
-    template <>
-    struct is_cpu_scalar<float>
-    {
-      enum { value = true };
-    };
 
-    template <>
-    struct is_cpu_scalar<double>
-    {
-      enum { value = true };
-    };
-    
+    template <> struct is_cpu_scalar<char>           { enum { value = true }; };
+    template <> struct is_cpu_scalar<unsigned char>  { enum { value = true }; };
+    template <> struct is_cpu_scalar<short>          { enum { value = true }; };
+    template <> struct is_cpu_scalar<unsigned short> { enum { value = true }; };
+    template <> struct is_cpu_scalar<int>            { enum { value = true }; };
+    template <> struct is_cpu_scalar<unsigned int>   { enum { value = true }; };
+    template <> struct is_cpu_scalar<long>           { enum { value = true }; };
+    template <> struct is_cpu_scalar<unsigned long>  { enum { value = true }; };
+    template <> struct is_cpu_scalar<float>          { enum { value = true }; };
+    template <> struct is_cpu_scalar<double>         { enum { value = true }; };
+
+
     //
     // is_scalar: checks for viennacl::scalar
     //
@@ -60,7 +64,7 @@ namespace viennacl
     //{
     //  enum { value = false };
     //};
-  
+
     template <typename T>
     struct is_scalar<viennacl::scalar<T> >
     {
@@ -75,7 +79,7 @@ namespace viennacl
     //{
     //  enum { value = false };
     //};
-  
+
     template <typename T>
     struct is_flip_sign_scalar<viennacl::scalar_expression< const scalar<T>,
                                                             const scalar<T>,
@@ -83,7 +87,7 @@ namespace viennacl
     {
       enum { value = true };
     };
-    
+
     //
     // is_any_scalar: checks for either CPU and GPU scalars, i.e. is_cpu_scalar<>::value || is_scalar<>::value
     //
@@ -119,8 +123,8 @@ namespace viennacl
     {
       enum { value = is_row_major<T>::value };
     };
-    
-    
+
+
     //
     // is_circulant_matrix
     //
@@ -135,7 +139,13 @@ namespace viennacl
     {
       enum { value = true };
     };
-    
+
+    template <typename ScalarType, unsigned int ALIGNMENT>
+    struct is_circulant_matrix<const viennacl::circulant_matrix<ScalarType, ALIGNMENT> >
+    {
+      enum { value = true };
+    };
+
     //
     // is_hankel_matrix
     //
@@ -150,7 +160,13 @@ namespace viennacl
     {
       enum { value = true };
     };
-    
+
+    template <typename ScalarType, unsigned int ALIGNMENT>
+    struct is_hankel_matrix<const viennacl::hankel_matrix<ScalarType, ALIGNMENT> >
+    {
+      enum { value = true };
+    };
+
     //
     // is_toeplitz_matrix
     //
@@ -165,7 +181,13 @@ namespace viennacl
     {
       enum { value = true };
     };
-    
+
+    template <typename ScalarType, unsigned int ALIGNMENT>
+    struct is_toeplitz_matrix<const viennacl::toeplitz_matrix<ScalarType, ALIGNMENT> >
+    {
+      enum { value = true };
+    };
+
     //
     // is_vandermonde_matrix
     //
@@ -180,9 +202,14 @@ namespace viennacl
     {
       enum { value = true };
     };
-    
-    
-    
+
+    template <typename ScalarType, unsigned int ALIGNMENT>
+    struct is_vandermonde_matrix<const viennacl::vandermonde_matrix<ScalarType, ALIGNMENT> >
+    {
+      enum { value = true };
+    };
+
+
     //
     // is_compressed_matrix
     //
@@ -243,7 +270,7 @@ namespace viennacl
       enum { value = true };
     };
 
-    
+
     //
     // is_any_sparse_matrix
     //
@@ -277,10 +304,16 @@ namespace viennacl
       enum { value = true };
     };
 
+    template <typename T>
+    struct is_any_sparse_matrix<const T>
+    {
+      enum { value = is_any_sparse_matrix<T>::value };
+    };
+
     /** \endcond */
-    
+
     //////////////// Part 2: Operator predicates ////////////////////
-    
+
     //
     // is_addition
     //
@@ -298,7 +331,7 @@ namespace viennacl
       enum { value = true };
     };
     /** \endcond */
-    
+
     //
     // is_subtraction
     //
@@ -308,7 +341,7 @@ namespace viennacl
     {
       enum { value = false };
     };
-    
+
     /** \cond */
     template <>
     struct is_subtraction<viennacl::op_sub>
@@ -316,7 +349,7 @@ namespace viennacl
       enum { value = true };
     };
     /** \endcond */
-    
+
     //
     // is_product
     //
@@ -333,8 +366,20 @@ namespace viennacl
     {
       enum { value = true };
     };
+
+    template <>
+    struct is_product<viennacl::op_mult>
+    {
+      enum { value = true };
+    };
+
+    template <>
+    struct is_product<viennacl::op_element_binary<op_prod> >
+    {
+      enum { value = true };
+    };
     /** \endcond */
-    
+
     //
     // is_division
     //
@@ -351,10 +396,50 @@ namespace viennacl
     {
       enum { value = true };
     };
+
+    template <>
+    struct is_division<viennacl::op_element_binary<op_div> >
+    {
+      enum { value = true };
+    };
     /** \endcond */
-    
-    
+
+        // is_primitive_type
+    //
+    template<class T>
+    struct is_primitive_type{ enum {value = false}; };
+    template<> struct is_primitive_type<float>{ enum { value = true }; };
+    template<> struct is_primitive_type<double>{ enum { value = true }; };
+    template<> struct is_primitive_type<unsigned int>{ enum { value = true }; };
+    template<> struct is_primitive_type<int>{ enum { value = true }; };
+    template<> struct is_primitive_type<unsigned char>{ enum { value = true }; };
+    template<> struct is_primitive_type<char>{ enum { value = true }; };
+    template<> struct is_primitive_type<unsigned long>{ enum { value = true }; };
+    template<> struct is_primitive_type<long>{ enum { value = true }; };
+    template<> struct is_primitive_type<unsigned short>{ enum { value = true }; };
+    template<> struct is_primitive_type<short>{ enum { value = true }; };
+
+#ifdef VIENNACL_WITH_OPENCL
+
+    //
+    // is_cl_type
+    //
+    template<class T>
+    struct is_cl_type{ enum { value = false }; };
+    template<> struct is_cl_type<cl_float>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_double>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_uint>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_int>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_uchar>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_char>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_ulong>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_long>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_ushort>{ enum { value = true }; };
+    template<> struct is_cl_type<cl_short>{ enum { value = true }; };
+
+#endif
+
 } //namespace viennacl
-    
+
 
 #endif

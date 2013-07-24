@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -44,14 +44,14 @@ namespace viennacl {
       public:
         typedef viennacl::backend::mem_handle                                                              handle_type;
         typedef scalar<typename viennacl::tools::CHECK_SCALAR_TEMPLATE_ARGUMENT<SCALARTYPE>::ResultType>   value_type;
-        
+
         /**
          * @brief The default constructor. Does not allocate any memory.
          *
          */
         explicit vandermonde_matrix()
         {
-          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
+          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init(viennacl::ocl::current_context());
         }
 
         /**
@@ -64,7 +64,7 @@ namespace viennacl {
         {
           assert(rows == cols && bool("Vandermonde matrix must be square in this release!"));
           (void)cols;  // avoid 'unused parameter' warning in optimized builds
-          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init();
+          viennacl::linalg::kernels::fft<SCALARTYPE, 1>::init(viennacl::ocl::current_context());
         }
 
         /** @brief Resizes the matrix.
@@ -94,7 +94,7 @@ namespace viennacl {
          * @brief Returns the number of rows of the matrix
          */
         std::size_t size1() const { return elements_.size(); }
-        
+
         /**
          * @brief Returns the number of columns of the matrix
          */
@@ -128,14 +128,14 @@ namespace viennacl {
         SCALARTYPE operator()(std::size_t row_index, std::size_t col_index) const
         {
             assert(row_index < size1() && col_index < size2() && bool("Invalid access"));
-            
+
             return pow(elements_[row_index], static_cast<int>(col_index));
         }
 
     private:
         vandermonde_matrix(vandermonde_matrix const & t) {}
         vandermonde_matrix & operator=(vandermonde_matrix const & t);
-        
+
         viennacl::vector<SCALARTYPE, ALIGNMENT> elements_;
     };
 
@@ -186,7 +186,7 @@ namespace viennacl {
             }
         }
     }
-    
+
     /** @brief Copies a the matrix-like object to the Vandermonde matrix from the OpenCL device (either GPU or multi-core CPU)
     *
     *
@@ -194,7 +194,7 @@ namespace viennacl {
     * @param vander_dst   A vandermonde_matrix from ViennaCL
     */
     template <typename SCALARTYPE, unsigned int ALIGNMENT, typename MATRIXTYPE>
-    void copy(MATRIXTYPE& com_src, vandermonde_matrix<SCALARTYPE, ALIGNMENT>& vander_dst) 
+    void copy(MATRIXTYPE& com_src, vandermonde_matrix<SCALARTYPE, ALIGNMENT>& vander_dst)
     {
         std::size_t size = vander_dst.size1();
         assert(size == com_src.size1() && bool("Size mismatch"));
@@ -240,6 +240,98 @@ namespace viennacl {
         s << ")";
         return s;
     }
+
+
+    //
+    // Specify available operations:
+    //
+
+    namespace linalg
+    {
+      namespace detail
+      {
+        // x = A * y
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_assign, vector_expression<const vandermonde_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const vandermonde_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              // check for the special case x = A * x
+              if (viennacl::traits::handle(lhs) == viennacl::traits::handle(rhs.rhs()))
+              {
+                viennacl::vector<T> temp(rhs.lhs().size1());
+                viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+                lhs = temp;
+              }
+
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), lhs);
+            }
+        };
+
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_inplace_add, vector_expression<const vandermonde_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const vandermonde_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.lhs().size1());
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+              lhs += temp;
+            }
+        };
+
+        template <typename T, unsigned int A>
+        struct op_executor<vector_base<T>, op_inplace_sub, vector_expression<const vandermonde_matrix<T, A>, const vector_base<T>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const vandermonde_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.lhs().size1());
+              viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
+              lhs -= temp;
+            }
+        };
+
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_assign, vector_expression<const vandermonde_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const vandermonde_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, lhs);
+            }
+        };
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_inplace_add, vector_expression<const vandermonde_matrix<T, A>, vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const vandermonde_matrix<T, A>, vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::vector<T> temp_result(lhs.size());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, temp_result);
+              lhs += temp_result;
+            }
+        };
+
+        // x = A * vec_op
+        template <typename T, unsigned int A, typename LHS, typename RHS, typename OP>
+        struct op_executor<vector_base<T>, op_inplace_sub, vector_expression<const vandermonde_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> >
+        {
+            static void apply(vector_base<T> & lhs, vector_expression<const vandermonde_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
+            {
+              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::vector<T> temp_result(lhs.size());
+              viennacl::linalg::prod_impl(rhs.lhs(), temp, temp_result);
+              lhs -= temp_result;
+            }
+        };
+
+
+
+     } // namespace detail
+   } // namespace linalg
 
 }
 

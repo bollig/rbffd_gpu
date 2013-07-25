@@ -78,11 +78,15 @@ class METISDomain : public Domain
 
 		this->max_st_size = grid_ptr->getMaxStencilSize();
 
+        this->fillCenterSets(grid_ptr->getNodeList(), grid_ptr->getStencils());
+
+        // R_by_rank must be full before filling local data. We sort our R
+        // indices according to R_by_rank. 
+        fill_R_by_rank(); 
+
 		// Forms sets (Q,O,R) and l2g/g2l maps
 		fillLocalData(grid_ptr->getNodeList(), grid_ptr->getStencils(), grid_ptr->getBoundaryIndices(), grid_ptr->getStencilRadii(), grid_ptr->getMaxStencilRadii(), grid_ptr->getMinStencilRadii()); 
 
-        fill_R_by_rank(); 
-        
         // Must happen AFTER R_by_rank is full
         fill_O_by_rank(); 
 
@@ -154,6 +158,7 @@ class METISDomain : public Domain
             int nb_stencils = this->getStencilsSize(); 
             int nb_nodes = this->getNodeListSize(); 
 
+#if 0
             //std::cout << "START: " << nb_stencils << "\n";
             //std::cout << "END : " << nb_nodes << "\n";
             R_by_rank.clear(); 
@@ -167,6 +172,24 @@ class METISDomain : public Domain
                 // metis_part[l2g(i)] => rank
                 R_by_rank[rank].push_back(indx); 
             }
+#else 
+            //std::cout << "START: " << nb_stencils << "\n";
+            //std::cout << "END : " << nb_nodes << "\n";
+            R_by_rank.clear(); 
+            R_by_rank.resize(comm_size); 
+
+            std::set<int>::iterator rit; 
+            for (rit = this->R.begin(); rit != this->R.end(); rit++) {
+                int rank = metis_part[*rit];
+                int indx = *rit;
+                
+                // l2g(i) => global index
+                // metis_part[l2g(i)] => rank
+                R_by_rank[rank].push_back(indx); 
+            }
+#endif 
+            
+            isRfull = 1;
         } 
 
         // Iterate all nodes > nb_stencils (since they're all permuted to the

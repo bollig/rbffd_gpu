@@ -35,6 +35,10 @@ Domain::Domain(int dimension, Grid* grid, int _comm_size)
     // We might need to know how many nodes are in the domain globally for things like Hyperviscosity
     this->global_num_nodes = grid->getNodeListSize();
 
+    // Generate stencil membership lists (i.e., which set each stencil center belongs to)
+    this->fillCenterSets(grid->getNodeList(), grid->getStencils());
+    std::cout << "INSIDE ODDBALL\n";
+
     // Forms sets (Q,O,R) and l2g/g2l maps
     fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii());
     this->max_st_size = grid->getMaxStencilSize();
@@ -114,11 +118,22 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1);
     }
 
-    // Figure out the sets Bi, Oi Qi
-
     printf("nb subdomains: %d\n", (int) subdomains.size());
     for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** CPU %d ***************** \n", i);
+        // Generate stencil membership lists (i.e., which set each stencil center belongs to)
+        subdomains[i]->fillCenterSets(this->node_list, this->stencil_map);
+    }
+
+    for (unsigned int i = 0; i < subdomains.size(); i++) {
+        printf("\n ***************** FILLING R_by_rank for CPU%d ***************** \n", i);
+        for (unsigned int j = 0; j < subdomains.size(); j++) {
+            subdomains[i]->fill_R_by_rank(subdomains[j]->O, j);
+        }
+    }
+
+    for (unsigned int i = 0; i < subdomains.size(); i++) {
+        printf("\n ***************** Local Ordering %d ***************** \n", i);
         // Forms sets (Q,O,R) and l2g/g2l maps
         std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
         subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii);
@@ -131,12 +146,6 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
         }
     }
 
-    for (unsigned int i = 0; i < subdomains.size(); i++) {
-        printf("\n ***************** FILLING R_by_rank for CPU%d ***************** \n", i);
-        for (unsigned int j = 0; j < subdomains.size(); j++) {
-            subdomains[i]->fill_R_by_rank(subdomains[j]->O, j);
-        }
-    }
 
 
     //return subdomains;
@@ -445,8 +454,6 @@ void Domain::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilType>& 
 //----------------------------------------------------------------------
 void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<unsigned int>& boundary, vector<double>& avg_dist, vector<double>& max_dist, vector<double>& min_dist) {
 
-    // Generate stencil membership lists (i.e., which set each stencil center belongs to)
-    this->fillCenterSets(rbf_centers, stencil);
 
     //********************************
     // GEN MAPPINGS local/global and full stencil sets based on membership.
@@ -484,6 +491,25 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         max_stencil_radii.push_back(max_dist[*qit]);
         min_stencil_radii.push_back(min_dist[*qit]);
     }
+#if 1
+    if (R.size() && !isRfull) {
+        std::cout << "Missing R_by_rank info: " << isRfull << "\n";
+        exit(-1);
+    }
+    vector<int>::iterator vit;
+    for (int ri = 0; ri < R_by_rank.size(); ri++) {
+        if (R_by_rank[ri].size()) {
+            for (vit = R_by_rank[ri].begin(); vit != R_by_rank[ri].end(); vit++) {
+                loc_to_glob.push_back(*vit);
+                node_list.push_back(rbf_centers[*vit]); // Assume non-moving node problem so we can store positions at initialization
+                // HOWEVER, NO CONNECTIVITY REQUIRED FOR R (THESE ARE ON OTHER CPUs)
+                avg_stencil_radii.push_back(avg_dist[*vit]);
+                max_stencil_radii.push_back(max_dist[*vit]);
+                min_stencil_radii.push_back(min_dist[*vit]);
+            }
+        }
+    }
+#else
     for (qit = R.begin(); qit != R.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);
         node_list.push_back(rbf_centers[*qit]); // Assume non-moving node problem so we can store positions at initialization
@@ -492,6 +518,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         max_stencil_radii.push_back(max_dist[*qit]);
         min_stencil_radii.push_back(min_dist[*qit]);
     }
+#endif
 
     // global to local map
     for (int i = 0; i < (int)loc_to_glob.size(); i++) {

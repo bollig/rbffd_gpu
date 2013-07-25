@@ -15,6 +15,7 @@ class Domain : public Grid, public MPISendable
     public: 		// Member Properties
 
         int dim_num;
+        int isRfull;
 
         int id; 		// which Domain
         int comm_size; 	// Total number of Domains

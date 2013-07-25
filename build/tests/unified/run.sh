@@ -21,14 +21,14 @@
 # -l : LSH grid size (<val>^3 overlaid grid)
 
 
-MY_MPI_EXE="mpirun -l -perhost 8"
+MY_MPI_EXE="mpirun -l -perhost 16"
 date
 
 MD=165
 N=1000000
 STEN_SIZE=50
 
-NPROC=16
+NPROC=32
 #NPROC=1
 #~/sphere_grids/md${MD}.${N}
 

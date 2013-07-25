@@ -54,7 +54,7 @@
 class SpMVTest
 {
     protected:
-        RBFFD_VCL* rbffd; 
+        RBFFD_VCL_OVERLAP* rbffd; 
         Domain* grid; 
         int rank, size;
 
@@ -74,15 +74,29 @@ class SpMVTest
         MPI_Status* R_stats;
 
         EB::TimerList tm; 
+        std::vector<cl_command_queue> queues;
 
         int disable_timers;
 
     public: 
-        SpMVTest(RBFFD_VCL* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1), disable_timers(0) {
+        SpMVTest(RBFFD_VCL_OVERLAP* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1), disable_timers(0) {
             o_comm_size=0; 
             r_comm_size=0;
             setupTimers(); 
             allocateCommBuffers(); 
+
+           int err; 
+            // We need two queues. One for SpMV and one for mem xfer
+            // (host<->device)
+            viennacl::ocl::current_context().add_queue(viennacl::ocl::current_context().current_device().id() ); 
+            VIENNACL_ERR_CHECK(err);
+
+            std::cout << "ViennaCL uses context: " << viennacl::ocl::current_context().handle().get() << std::endl;
+            std::cout << "ViennaCL uses default queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
+            viennacl::ocl::current_context().switch_queue(1);
+            std::cout << "ViennaCL uses new queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
+            viennacl::ocl::current_context().switch_queue(0);
+            std::cout << "ViennaCL uses first queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
         }
 
         ~SpMVTest() {
@@ -163,7 +177,8 @@ class SpMVTest
 
         void setupTimers() {
             tm["synchronize"] = new EB::Timer("[SpMVTest] Synchronize (Irecv->Waitall)"); 
-            tm["spmv"] = new EB::Timer("[SpMVTest] perform SpMV (Q; no overlap)");
+            tm["spmv"] = new EB::Timer("[SpMVTest] perform SpMV (Q\\B)");
+            tm["spmv2"] = new EB::Timer("[SpMVTest] perform SpMV (B)");
             tm["spmv_w_comm"] = new EB::Timer("[SpMVTest] SpMV + Communication");
             tm["irecv"] = new EB::Timer("[SpMVTest] MPI_Irecv"); 
             tm["encode_send"] = new EB::Timer("[SpMVTest] Encode sendbuf (collect all O_by_rank into one vector)"); 
@@ -179,16 +194,38 @@ class SpMVTest
         // can apply to subset of problem 
         void SpMV(RBFFD::DerType which, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
 
+            // TODO: 
+            // GPU Matrix
+            // GPU Vector
+            //
+            //  done - post irecv
+            //  queue Q\B
+            //  copy O down
+            //  assemble sendbuf
+            //  done - post isends
+            //  done - waitall(irecv)
+            //  copy R up
+            //  queue B
             if (!disable_timers) tm["spmv_w_comm"]->start();
 
             //std::vector<double*> DM = rbffd->getWeights(which);
-            VCL_ELL_MAT_t& DM = *(rbffd->getGPUWeights(which));
+            VCL_ELL_MAT_t& DM_qmb = *(rbffd->getGPUWeightsSetQmB(which));
+            VCL_ELL_MAT_t& DM_b = *(rbffd->getGPUWeightsSetB(which));
 
             int nb_stencils = grid->getStencilsSize();
             int nb_nodes = grid->getNodeListSize();
+            int nb_qmb_rows = grid->QmB_size;
 
             viennacl::range r1(0, nb_stencils);
             viennacl::range r2(0, nb_nodes);
+
+            // Start of vector
+            viennacl::range r3(0, nb_qmb_rows);
+            // End of vector
+            viennacl::range r4(nb_qmb_rows, nb_stencils);
+
+            //     std::cout << "DM_qmb = " << DM_qmb.size1() << ", " << DM_qmb.size2() << ", " << DM_qmb.nnz() << "\n";
+            //     std::cout << "DM_b = " << DM_b.size1() << ", " << DM_b.size2() << ", " << DM_b.nnz() << "\n";
 
             if (!disable_timers) tm["synchronize"]->start();
             //------------
@@ -204,8 +241,27 @@ class SpMVTest
             }
 
             //------------
+            // Queue Q\B
+            //------------
+
+            viennacl::ocl::current_context().switch_queue(1);
+ 
+            if (!disable_timers) tm["spmv"]->start();
+            // SpMV on first QmB rows
+            // NOTE: this is asynchronous
+            // Also, I check for nnz > 0 because there are cases when a proc has
+            // Q\B.size == 0 (i.e., all stencils depend on comm)
+            if (DM_qmb.nnz() > 0) {
+                project(out_deriv, r3) = viennacl::linalg::prod(DM_qmb, u_gpu); 
+            }
+          
+            //------------
+            // Start Async copy O Down
+            //------------
+            //------------
             // Fill Sendbuf using Q1 
             //------------
+            viennacl::ocl::current_context().switch_queue(0); 
 
             this->encodeSendBuf(u_gpu);
 
@@ -230,17 +286,25 @@ class SpMVTest
 
             this->decodeRecvBuf(u_gpu);
 
+            //TODO: send to GPU;
 
-            if (!disable_timers) tm["spmv"]->start();
-            // Check if nnz > 0 (when mpi_size == 1 this is true)
-            if (DM.nnz() > 0) {
-                project(out_deriv, r1) = viennacl::linalg::prod(DM, u_gpu); 
+            if (!disable_timers) tm["spmv2"]->start();
+            // Check if nnz > 0 (when mpi_size == 0 this is true)
+            if (DM_b.nnz() > 0) {
+                // FIXME: typecast needed to get projection starting offset to
+                // function properly
+                project(out_deriv, r4) = (VCL_VEC_t) viennacl::linalg::prod(DM_b, u_gpu); 
             }
 
+            viennacl::ocl::current_context().switch_queue(1); 
             viennacl::ocl::get_queue().finish();
             if (!disable_timers) tm["spmv"]->stop();
+            viennacl::ocl::current_context().switch_queue(0); 
+            viennacl::ocl::get_queue().finish();
+            if (!disable_timers) tm["spmv2"]->stop();
 
             if (!disable_timers) tm["spmv_w_comm"]->stop();
+            viennacl::ocl::current_context().switch_queue(0); 
         }
 
 

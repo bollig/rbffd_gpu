@@ -20,8 +20,8 @@
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
-#include "rbffd/rbffd_vcl_overlap.h"
-#include "rbffd/spmv_test_vcl_overlap.h"
+#include "rbffd/rbffd_vcl.h"
+#include "rbffd/spmv_test_vcl.h"
 
 #include "utils/opencl/viennacl_typedefs.h"
 
@@ -306,7 +306,7 @@ int main(int argc, char** argv) {
 #endif 
 
     tm["derSetup"]->start();
-    RBFFD_VCL_OVERLAP* der = new RBFFD_VCL_OVERLAP(weight_choices, subdomain, grid_dim, mpi_rank);
+    RBFFD_VCL* der = new RBFFD_VCL(weight_choices, subdomain, grid_dim, mpi_rank);
 
     der->setUseHyperviscosity(use_hyperviscosity);
     // If both are zero assume we havent set anything

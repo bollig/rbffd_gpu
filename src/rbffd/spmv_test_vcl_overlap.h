@@ -194,6 +194,8 @@ class SpMVTest
         // can apply to subset of problem 
         void SpMV(RBFFD::DerType which, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
 
+            MPI_Barrier(MPI_COMM_WORLD);
+
             // TODO: 
             // GPU Matrix
             // GPU Vector
@@ -235,7 +237,7 @@ class SpMVTest
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8  on itasca. For cascade lets assume this unless we
                 // see something horrible happen
-                if (size > 1) { 
+                if (size > 8) { 
                     this->postIrecvs(); 
                 }
                 // Else we use Alltoallv and dont need to worry
@@ -273,7 +275,7 @@ class SpMVTest
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-                if (size > 1) { 
+                if (size > 8) { 
                     // NOTE: this includes waitall on irecvs
                     this->postIsends(); 
                 } else {
@@ -358,6 +360,7 @@ class SpMVTest
             for (size_t i = 0; i < grid->O_by_rank.size(); i++) {
                 k = this->sdispls[i]; 
                 for (size_t j = 0; j < grid->O_by_rank[i].size(); j++) {
+#ifdef SOLDIM_GT_1
                     unsigned int s_indx = grid->g2l(grid->O_by_rank[i][j]);
                     s_indx -= offset_to_set_O;
                     s_indx *= this->sol_dim; 
@@ -365,6 +368,11 @@ class SpMVTest
                         this->sbuf[k] = vec[s_indx+d];
                         k++; 
                     }
+#else 
+                    int s_indx = grid->g2l(grid->O_by_rank[i][j]) - offset_to_set_O;
+                    this->sbuf[k] = vec[s_indx]; 
+                    k++;
+#endif 
                 }
             }
             if (!disable_timers) tm["encode_send"]->stop();
@@ -411,6 +419,7 @@ class SpMVTest
             for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
                 k = this->rdispls[i]; 
                 for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
+#ifdef SOLDIM_GT_1
                     unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
                     r_indx -= offset_to_set_R;
                     r_indx *= this->sol_dim;
@@ -424,6 +433,12 @@ class SpMVTest
                         vec[r_indx+d] = this->rbuf[k];  
                         k++; 
                     }
+#else 
+                    int r_indx = grid->g2l(grid->R_by_rank[i][j]);
+                    vec[r_indx - offset_to_set_R] = this->rbuf[k];  
+                    k++; 
+
+#endif 
                 }
             }
             if (!disable_timers) tm["decode_recv"]->stop();

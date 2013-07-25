@@ -27,8 +27,9 @@ using namespace std;
     for (int i = 0; i < devices.size(); i++) {
         std::cout << devices[i].info() << "\n";
     }
+    viennacl::ocl::current_context().switch_device(rank % devices.size());
     std::cout << "SELECTED DEVICE: \n";
-    std::cout << viennacl::ocl::current_context().current_device().info() << "\n";
+    std::cout << viennacl::ocl::current_context().current_device().full_info() << "\n";
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
@@ -285,7 +286,7 @@ void RBFFD_VCL_OVERLAP::updateWeightsDouble(bool forceFinish) {
                     }
                 }
 
-                std::cout << "COPYING WEIGHTS " << derTypeStr[which] << std::endl;
+                std::cout << "COPYING WEIGHTS " << derTypeStr[which] << cpu_weights_qmb_d[which]->nnz() << ", " << cpu_weights_b_d[which]->nnz() << std::endl;
 
                 // TODO: benchmark the copy
                 viennacl::copy(*(cpu_weights_qmb_d[which]), *(gpu_weights_setqmb[which]));
@@ -293,7 +294,7 @@ void RBFFD_VCL_OVERLAP::updateWeightsDouble(bool forceFinish) {
 
                 std::cout << "COPIED WEIGHT " << derTypeStr[which] << std::endl;
 #endif
-#if 1
+#if 0
                 int rank;
                 MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 

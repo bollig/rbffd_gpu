@@ -234,7 +234,7 @@ class SpMVTest
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-                if (size > 1) { 
+                if (size > 8) { 
                     this->postIrecvs(); 
                 }
                 // Else we use Alltoallv and dont need to worry
@@ -272,7 +272,7 @@ class SpMVTest
             if (size > 1) {
                 // I found 8+ processors comm best with Isend/Irecv. Alltoallv
                 // for < 8 
-                if (size > 1) { 
+                if (size > 8) { 
                     // NOTE: this includes waitall on irecvs
                     this->postIsends(); 
                 }

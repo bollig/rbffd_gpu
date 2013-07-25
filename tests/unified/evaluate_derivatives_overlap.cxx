@@ -465,15 +465,15 @@ int main(int argc, char** argv) {
 
         // We simulate an RK4 which has intermediate steps
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, u_gpu, yderiv_gpu);
+        derTest->SpMV(RBFFD::Y, xderiv_gpu, yderiv_gpu);
         tm["SpMV"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, u_gpu, zderiv_gpu);
+        derTest->SpMV(RBFFD::Z, yderiv_gpu, zderiv_gpu);
         tm["SpMV"]->stop();
  
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, u_gpu, lderiv_gpu);
+        derTest->SpMV(RBFFD::LAPL, zderiv_gpu, lderiv_gpu);
         tm["SpMV"]->stop();
 
         tm["computeUpdate"]->start();

@@ -413,7 +413,7 @@ int main(int argc, char** argv) {
         tm["synchronize"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Y, u_cpu, yderiv_cpu);
+        derTest->SpMV(RBFFD::Y, xderiv_cpu, yderiv_cpu);
         tm["SpMV"]->stop();
         tm["SpMV_w_comm"]->stop();
 
@@ -423,7 +423,7 @@ int main(int argc, char** argv) {
         tm["synchronize"]->stop();
         
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::Z, u_cpu, zderiv_cpu);
+        derTest->SpMV(RBFFD::Z, yderiv_cpu, zderiv_cpu);
         tm["SpMV"]->stop();
  
        tm["SpMV_w_comm"]->stop();
@@ -434,7 +434,7 @@ int main(int argc, char** argv) {
         tm["synchronize"]->stop();
 
         tm["SpMV"]->start();
-        derTest->SpMV(RBFFD::LAPL, u_cpu, lderiv_cpu);
+        derTest->SpMV(RBFFD::LAPL, zderiv_cpu, lderiv_cpu);
         tm["SpMV"]->stop();
         tm["SpMV_w_comm"]->stop();
 

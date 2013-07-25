@@ -32,6 +32,8 @@ add_serial_framework_test( "compute_weights.x" "compute_weights.cxx" "${ARGV}" )
 add_serial_framework_test( "evaluate_derivatives.x" "evaluate_derivatives.cxx" "${ARGV}" )
 add_serial_opencl_framework_test( "evaluate_derivatives_overlap.x" "evaluate_derivatives_overlap.cxx" "${ARGV}" )
 add_serial_opencl_framework_test( "evaluate_derivatives_nooverlap.x" "evaluate_derivatives_nooverlap.cxx" "${ARGV}" )
+add_serial_opencl_framework_test( "evaluate_derivatives_overlap_fast.x"
+  "evaluate_derivatives_overlap_fast.cxx" "${ARGV}" )
 add_serial_framework_test( "evaluate_derivatives_isend.x" "evaluate_derivatives_isend.cxx" "${ARGV}" )
 add_serial_framework_test( "evaluate_derivatives_alltoallv.x" "evaluate_derivatives_alltoallv.cxx" "${ARGV}" )
 

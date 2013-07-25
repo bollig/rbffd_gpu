@@ -176,7 +176,7 @@ class SpMVTest
 
 
         void setupTimers() {
-            tm["synchronize"] = new EB::Timer("[SpMVTest] Synchronize (MPI_Isend/MPI_Irecv");
+            tm["synchronize"] = new EB::Timer("[SpMVTest] Synchronize (Irecv->Waitall)"); 
             tm["spmv"] = new EB::Timer("[SpMVTest] perform SpMV (Q\\B)");
             tm["spmv2"] = new EB::Timer("[SpMVTest] perform SpMV (B)");
             tm["spmv_w_comm"] = new EB::Timer("[SpMVTest] SpMV + Communication");

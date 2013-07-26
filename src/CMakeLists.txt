@@ -75,6 +75,7 @@ SET( REQUIRED_CL_SOURCE_FILES
     rbffd/rbffd_cl.cpp
     rbffd/rbffd_vcl.cpp
     rbffd/rbffd_vcl_overlap.cpp
+    rbffd/rbffd_vcl_overlap_project.cpp
     ../external/opencl_libraries/include/pugixml/src/pugixml.cpp
 )
 

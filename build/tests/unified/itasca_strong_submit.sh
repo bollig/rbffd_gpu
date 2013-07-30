@@ -9,10 +9,10 @@ do
 
 cat > ${EXEC_FILE}  << EOF 
 #!/bin/bash -l
-#PBS -l walltime=4:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
+#PBS -l walltime=1:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N strong_${STEN_SIZE}_impi
+#PBS -N strong_${STEN_SIZE}_impi_$PBS_NP
 ## PBS -e error.\$PBS_JOBID
 ## PBS -o output.\$PBS_JOBID
 

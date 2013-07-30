@@ -13,7 +13,7 @@ cat > ${EXEC_FILE}  << EOF
 #PBS -l walltime=02:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N weak_${STEN_SIZE}_impi
+#PBS -N weak_${STEN_SIZE}_impi_${PBS_NP}
 ## PBS -e error.\$PBS_JOBID
 ## PBS -o output.\$PBS_JOBID
 

@@ -79,7 +79,7 @@ do
 	METIS_FILE=metis_stencils.graph.part.\${NPROC}
 	JOB_RAN_FILE=job_ran
 
-	NEW_WORKDIR=\$PBS_O_WORKDIR/\${TEST_TYPE}_\${N}_${STEN_SIZE}_\${NPROC}proc
+	NEW_WORKDIR=\$PBS_O_WORKDIR/four_million_benchmark/\${TEST_TYPE}_\${N}_${STEN_SIZE}_\${NPROC}proc
 
 	# If NPROC is 1 then we cant use MPIRUN
 	if [ "\$NPROC" = "1" ]; then
@@ -118,7 +118,7 @@ do
 		touch \$JOB_RAN_FILE
 	fi
 
-	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives_nocopyout.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 	echo "evaluate_derivatives Exit status: \$?"
 

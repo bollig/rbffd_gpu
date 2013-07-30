@@ -26,6 +26,8 @@ class SpMVTest
 
         int o_comm_size; 
         int r_comm_size; 
+        unsigned int O_tot; 
+        unsigned int R_tot; 
         double* sbuf; 
         int* sendcounts; 
         int* sdispls; 
@@ -70,7 +72,7 @@ class SpMVTest
             this->sendcounts = new int[grid->O_by_rank.size()]; 
             sdispls[0] = 0;
             sendcounts[0] = this->sol_dim*(grid->O_by_rank[0].size()); 
-            unsigned int O_tot = sendcounts[0]; 
+            O_tot = sendcounts[0]; 
 
             if (sendcounts[0] > 0) {
                 o_comm_size++; 
@@ -90,7 +92,7 @@ class SpMVTest
             this->recvcounts = new int[grid->R_by_rank.size()]; 
             rdispls[0] = 0; 
             recvcounts[0] = this->sol_dim*grid->R_by_rank[0].size(); 
-            unsigned int R_tot = recvcounts[0];
+            R_tot = recvcounts[0];
             if (recvcounts[0] > 0) {
                 r_comm_size++; 
             }
@@ -103,8 +105,8 @@ class SpMVTest
                 R_tot += recvcounts[i]; 
             }
 
-            // std::cout << "O_tot = " << O_tot << std::endl;
-            // std::cout << "R_tot = " << R_tot << std::endl;
+            std::cout << "O_tot = " << O_tot << " doubles" << std::endl;
+            std::cout << "R_tot = " << R_tot << " doubles" << std::endl;
             std::cout << "O_COMM_SIZE = " << o_comm_size << std::endl;
             std::cout << "R_COMM_SIZE = " << r_comm_size << std::endl;
 
@@ -216,7 +218,16 @@ class SpMVTest
 
                     // Post-Recv: copy elements out
                     tm["post_irecv"]->start();
+
+                    unsigned int r_start = this->sol_dim * grid->Q_size;
+                    for (size_t i = 0; i < R_tot; i++) {
+                        vec[r_start+i] = this->rbuf[i];  
+                    }
+
+#if 0
+
                     k = 0; 
+                    
                     for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
                         k = this->rdispls[i]; 
                         for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
@@ -234,7 +245,7 @@ class SpMVTest
                             }
                         }
                     }
-
+#endif
                     tm["post_irecv"]->stop();
                 } else {
                     // I found that <= 8 procs we have better comm patterns with
@@ -261,29 +272,9 @@ class SpMVTest
                     tm["alltoallv"]->stop(); 
 
                     tm["post_alltoallv"]->start();
-                    // IF we need this barrier then our results will vary as #proc increases
-                    // but I dont think alltoall requires a barrier. internally
-                    // it can be isend/irecv but there should be a barrier
-                    // internally
-                    //comm_ref.barrier();
-
-                    k = 0; 
-                    for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
-                        k = this->rdispls[i]; 
-                        for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
-                            unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                            r_indx *= this->sol_dim;
-                            //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
-                            //                                    std::cout << "Receiving " << r_indx << "\n";
-                            // TODO: need to translate to local
-                            // indexing properly. This hack assumes all
-                            // boundary are dirichlet and appear first
-                            // in the list
-                            for (unsigned int d=0; d < this->sol_dim; d++) { 
-                                vec[r_indx+d] = this->rbuf[k];  
-                                k++; 
-                            }
-                        }
+                    unsigned int r_start = this->sol_dim * grid->Q_size;
+                    for (size_t i = 0; i < R_tot; i++) {
+                        vec[r_start+i] = this->rbuf[i];  
                     }
 
                     tm["post_alltoallv"]->stop();

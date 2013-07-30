@@ -127,8 +127,10 @@ class CosineBell_VCL : public TimeDependentPDE_VCL
             // A program is one compilation unit and can hold many different compute kernels.
             //
             viennacl::ocl::program & my_prog = viennacl::ocl::current_context().add_program(my_compute_program, "my_compute_program");
-            my_prog.add_kernel("elementwise_prod_neg");  //register elementwise product kernel
-            my_prog.add_kernel("elementwise_prod");  //register elementwise product kernel
+            // Note: no need to add kernels by name. New version of add_program
+            // does this automatically for all kernels
+            //my_prog.add_kernel("elementwise_prod_neg");  //register elementwise product kernel
+            //my_prog.add_kernel("elementwise_prod");  //register elementwise product kernel
 
             // Now we can get the kernels from the program 'my_program'.
             // (Note that first all kernels need to be registered via add_kernel() before get_kernel() can be called,

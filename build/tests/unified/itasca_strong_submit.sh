@@ -2,17 +2,20 @@
 
 for NODES in 1 2 4 8 16 32 64 128
 do 
-
-for STEN_SIZE in 17 31 50 101
+#17 31 50 101
+for STEN_SIZE in 50
 do
 	EXEC_FILE=itasca_strong_${STEN_SIZE}_${NODES}.pbs
 
+	declare -i NP
+	NP=${NODES}*8
+
 cat > ${EXEC_FILE}  << EOF 
 #!/bin/bash -l
-#PBS -l walltime=1:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
+#PBS -l walltime=4:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N strong_${STEN_SIZE}_impi_$PBS_NP
+#PBS -N strong_${STEN_SIZE}_impi_${NP} 
 ## PBS -e error.\$PBS_JOBID
 ## PBS -o output.\$PBS_JOBID
 
@@ -118,12 +121,12 @@ do
 		touch \$JOB_RAN_FILE
 	fi
 
-	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives_nocopyout.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives_nowaitencode.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 	echo "evaluate_derivatives Exit status: \$?"
 
-	rm *.ascii *.bmtx *.mtx 
-	rm metis_stencils*
+	#rm *.ascii *.bmtx *.mtx 
+	#rm metis_stencils*
 
 	echo "Done with cleanup" 
 
@@ -142,6 +145,6 @@ done
 
 EOF
 
-#	qsub ${EXEC_FILE}
+	qsub ${EXEC_FILE}
 done 
 done

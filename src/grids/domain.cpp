@@ -497,7 +497,7 @@ void Domain::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& s
         exit(-1);
     }
     vector<int>::iterator vit;
-    for (int ri = 0; ri < R_by_rank.size(); ri++) {
+    for (unsigned int ri = 0; ri < R_by_rank.size(); ri++) {
         if (R_by_rank[ri].size()) {
             for (vit = R_by_rank[ri].begin(); vit != R_by_rank[ri].end(); vit++) {
                 loc_to_glob.push_back(*vit);
@@ -1018,7 +1018,7 @@ Grid::GridLoadErrType Domain::loadL2GFromFile(std::string filename) {
         this->QmD.clear();
         this->D.clear();
 
-        unsigned int kk = 0;
+        int kk = 0;
 		loc_to_glob.clear();
 		while (fin.good()) {
 			unsigned int glob_indx, loc_indx;

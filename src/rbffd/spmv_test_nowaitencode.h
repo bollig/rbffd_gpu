@@ -22,11 +22,12 @@ class SpMVTest
         Domain* grid; 
         int rank, size;
 
-        unsigned int O_tot, R_tot;
         int sol_dim; 
 
         int o_comm_size; 
         int r_comm_size; 
+        unsigned int O_tot; 
+        unsigned int R_tot; 
         double* sbuf; 
         int* sendcounts; 
         int* sdispls; 
@@ -104,8 +105,8 @@ class SpMVTest
                 R_tot += recvcounts[i]; 
             }
 
-            // std::cout << "O_tot = " << O_tot << std::endl;
-            // std::cout << "R_tot = " << R_tot << std::endl;
+            std::cout << "O_tot = " << O_tot << " doubles" << std::endl;
+            std::cout << "R_tot = " << R_tot << " doubles" << std::endl;
             std::cout << "O_COMM_SIZE = " << o_comm_size << std::endl;
             std::cout << "R_COMM_SIZE = " << r_comm_size << std::endl;
 
@@ -117,27 +118,6 @@ class SpMVTest
             this->R_reqs = new MPI_Request[r_comm_size];
             this->R_stats = new MPI_Status[r_comm_size];
             tm["allocateCommBufs"]->stop();
-
-            unsigned int *O_tot_all;
-            if (rank == 0) {
-                O_tot_all = new unsigned int[this->size*5];
-            }
-            unsigned int s[5];
-            s[0] = O_tot; 
-            s[1] = R_tot;
-            s[2] = o_comm_size;
-            s[3] = r_comm_size;
-            s[4] = grid->Q_size; 
-            MPI_Gather(s, 5, MPI_UNSIGNED, O_tot_all, 5, MPI_UNSIGNED, 0, MPI_COMM_WORLD); 
-
-            if (rank ==0 ) {
-                std::ofstream ftot("O_and_R_totals.log"); 
-                ftot << "O_total, R_total, O_comm_size, R_comm_size, Q_size\n";
-                for (int iii = 0; iii < this->size*5; iii+=5) 
-                    ftot << O_tot_all[iii] << ", " << O_tot_all[iii+1] << ", " << O_tot_all[iii+2] << ", " << O_tot_all[iii+3] << ", " << O_tot_all[iii+4] <<   std::endl;
-                ftot.close();
-            }
-
         }
 
 
@@ -207,10 +187,12 @@ class SpMVTest
                     }
 
 
-                    tm["pre_isend"]->start();
                     // Prep-Send: Copy elements of set to sbuf
                     unsigned int k = 0; 
+                    // Send
+                    int o_count = 0;
                     for (size_t i = 0; i < grid->O_by_rank.size(); i++) {
+                        tm["pre_isend"]->start();
                         k = this->sdispls[i]; 
                         for (size_t j = 0; j < grid->O_by_rank[i].size(); j++) {
                             unsigned int s_indx = grid->g2l(grid->O_by_rank[i][j]);
@@ -220,12 +202,9 @@ class SpMVTest
                                 k++; 
                             }
                         }
-                    }
-                    tm["pre_isend"]->stop();
-
-                    // Send
-                    int o_count = 0;
-                    for (int i = 0; i < this->size; i++) { 
+                        tm["pre_isend"]->stop();
+                        // Queue the isends as fast as we can populate their
+                        // send bufs
                         if (this->sendcounts[i] > 0) {
                             MPI_Isend(this->sbuf + this->sdispls[i], this->sendcounts[i], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &O_reqs[o_count]);
                             o_count++;
@@ -238,7 +217,16 @@ class SpMVTest
 
                     // Post-Recv: copy elements out
                     tm["post_irecv"]->start();
+
+                    unsigned int r_start = this->sol_dim * grid->Q_size;
+                    for (size_t i = 0; i < R_tot; i++) {
+                        vec[r_start+i] = this->rbuf[i];  
+                    }
+
+#if 0
+
                     k = 0; 
+                    
                     for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
                         k = this->rdispls[i]; 
                         for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
@@ -256,7 +244,7 @@ class SpMVTest
                             }
                         }
                     }
-
+#endif
                     tm["post_irecv"]->stop();
                 } else {
                     // I found that <= 8 procs we have better comm patterns with
@@ -283,29 +271,9 @@ class SpMVTest
                     tm["alltoallv"]->stop(); 
 
                     tm["post_alltoallv"]->start();
-                    // IF we need this barrier then our results will vary as #proc increases
-                    // but I dont think alltoall requires a barrier. internally
-                    // it can be isend/irecv but there should be a barrier
-                    // internally
-                    //comm_ref.barrier();
-
-                    k = 0; 
-                    for (size_t i = 0; i < grid->R_by_rank.size(); i++) {
-                        k = this->rdispls[i]; 
-                        for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
-                            unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                            r_indx *= this->sol_dim;
-                            //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
-                            //                                    std::cout << "Receiving " << r_indx << "\n";
-                            // TODO: need to translate to local
-                            // indexing properly. This hack assumes all
-                            // boundary are dirichlet and appear first
-                            // in the list
-                            for (unsigned int d=0; d < this->sol_dim; d++) { 
-                                vec[r_indx+d] = this->rbuf[k];  
-                                k++; 
-                            }
-                        }
+                    unsigned int r_start = this->sol_dim * grid->Q_size;
+                    for (size_t i = 0; i < R_tot; i++) {
+                        vec[r_start+i] = this->rbuf[i];  
                     }
 
                     tm["post_alltoallv"]->stop();

@@ -1,9 +1,12 @@
 #!/bin/bash -l 
 
-for NODES in 1 2 4 8 16 32 64 128
-do 
+SUFFIX=""
 
-for STEN_SIZE in 17 31 50 101
+# 128
+for NODES in 1 2 4 8 16 32 64 
+do 
+	#17 31 50 101
+for STEN_SIZE in 50
 do
 	EXEC_FILE=itasca_weak_${STEN_SIZE}_${NODES}.pbs
 
@@ -13,7 +16,7 @@ cat > ${EXEC_FILE}  << EOF
 #PBS -l walltime=02:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N weak_${STEN_SIZE}_impi_${PBS_NP}
+#PBS -N weak_${STEN_SIZE}_impi_${NODES}${SUFFIX}
 ## PBS -e error.\$PBS_JOBID
 ## PBS -o output.\$PBS_JOBID
 
@@ -82,7 +85,7 @@ do
 	METIS_FILE=metis_stencils.graph.part.\${NPROC}
 	JOB_RAN_FILE=job_ran
 
-	NEW_WORKDIR=\$PBS_O_WORKDIR/\${TEST_TYPE}_\${N}_${STEN_SIZE}_\${NPROC}proc
+	NEW_WORKDIR=\$PBS_O_WORKDIR/four_million_benchmark${SUFFIX}/\${TEST_TYPE}_\${N}_${STEN_SIZE}_\${NPROC}proc
 
 	# If NPROC is 1 then we cant use MPIRUN
 	if [ "\$NPROC" = "1" ]; then
@@ -121,12 +124,12 @@ do
 		touch \$JOB_RAN_FILE
 	fi
 
-	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+	\${MY_MPI_EXE} \$PBS_O_WORKDIR/evaluate_derivatives${SUFFIX}.x -g input_grid.ascii -N \${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 	echo "evaluate_derivatives Exit status: \$?"
 
-	rm *.ascii *.bmtx *.mtx 
-	rm metis_stencils*
+	##rm *.ascii *.bmtx *.mtx 
+	##rm metis_stencils*
 
 	echo "Done with cleanup" 
 
@@ -144,5 +147,6 @@ do
 done
 EOF
 
+	qsub ${EXEC_FILE}
 done
 done

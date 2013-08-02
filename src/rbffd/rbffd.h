@@ -429,6 +429,9 @@ class RBFFD
         // Read/Write weights to disk in ascii matrix market format. 0 = binary (default), 1 = ascii 
         void setAsciiWeights(int binary_or_ascii) { asciiWeights = binary_or_ascii; }
         void writeAllWeightsToFile(); 
+        void writeToEllpackFile(DerType which, std::string filename);
+        void writeToEllpackAsciiFile(DerType which, std::string filename);
+        void writeToEllpackBinaryFile(DerType which, std::string filename);
         void writeToFile(DerType which, std::string filename);
         void writeToAsciiFile(DerType which, std::string filename);
         void writeToBinaryFile(DerType which, std::string filename);

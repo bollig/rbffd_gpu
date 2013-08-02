@@ -707,13 +707,15 @@ void Grid::generateStencilsRandom()
 
 	// fill stencils
 	// first index is itself
-	for (int i=0; i < nb_rbf; i++) {
-		stencil_map[i][0] = i;
-	}
+	//for (int i=0; i < nb_rbf; i++) {
+		//stencil_map[i][0] = i;
+	//}
 
     for (int i=0; i < nb_rbf; i++) {
+        // mix up the nb_rbf indices
 		std::random_shuffle(indices.begin(), indices.end());
-		for (int j=0; j < indices.size(); j++) {
+        // use first nbz indices from the random set
+		for (int j=0; j < stencil_size; j++) {
 			stencil_map[i][j] = indices[j];
             //printf("i=%d, j=%d, sten= %d\n", i, j, indices[j]);
 		}

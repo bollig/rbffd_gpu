@@ -124,8 +124,10 @@ int main(int argc, char** argv)
 //		void convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, 
 //    		bool is_padded, bool nbnode_nbsten_dertype);
 
-	der->setAsciiWeights(1);
+	der->setAsciiWeights(0);
 	file = der->getFilename(RBFFD::X);
+    der->writeToEllpackFile(RBFFD::X, file);
+	der->setAsciiWeights(1);
 	file = node_dist + "_" + file;
 	printf("file: %s\n", file.c_str());
     der->writeToFile(RBFFD::X, file);

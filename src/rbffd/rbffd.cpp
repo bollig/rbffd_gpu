@@ -1314,6 +1314,51 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
             this->writeToBinaryFile(which, filename);
         }
     }
+    //----------------------------------------------------------------------
+    void RBFFD::writeToEllpackFile(DerType which, std::string filename) {
+        // row format: successive entries are along a row
+        if (asciiWeights) {
+            this->writeToEllpackAsciiFile(which, filename);
+        } else {
+            this->writeToEllpackBinaryFile(which, filename);
+        }
+    }
+
+    //--------------------------------------------------------------------
+    void RBFFD::writeToEllpackAsciiFile(DerType which, std::string filename) {
+    }
+    //----------------------------------------------------------------------
+
+    void RBFFD::writeToEllpackBinaryFile(DerType which, std::string filename) {
+    // write stencil array: where are the non-zeros. 
+    // nb rows: stencil.size()
+    // nb of nonzeros: stencil[0].size()
+    //
+        printf("write to Ellpack binary file\n");
+        std::vector<StencilType>& stencil = grid_ref.getStencils();
+        int nb_rows = stencil.size();
+        int nb_nonzeros = stencil[0].size(); // assume all stencils have the same size
+
+        std::vector<int> col_id;
+        std::string ell_filename = "ell_" + filename;
+        printf("1 write to %s\n", ell_filename.c_str());
+        printf("nb_rows= %d\n", nb_rows);
+        printf("nb_nonzeros= %d\n", nb_nonzeros);
+
+        for (int i = 0; i < nb_rows; i++) {
+            for (int j = 0; j < nb_nonzeros; j++) {
+                col_id.push_back(stencil[i][j]);
+            }
+        }
+
+        FILE *fd;
+        printf("2 write to %s\n", ell_filename.c_str());
+        fd = fopen(ell_filename.c_str(), "w");
+        fprintf(fd, "#nb_rows  nb_nonzeros\n");
+        fprintf(fd, "%d %d\n", nb_rows, nb_nonzeros);
+        fwrite(&col_id[0], sizeof(int), col_id.size(), fd);
+        fclose(fd);
+    }
 
     //--------------------------------------------------------------------
 

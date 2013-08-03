@@ -4,6 +4,8 @@
 #include "pdes/parabolic/heat_pde.h"
 
 #include "grids/regulargrid.h"
+#include "grids/domain_nompi.h"
+//#include "grids/domain.h"
 
 #include "rbffd/rbffd_cl.h"
 #include "rbffd/fun_cl.h"
@@ -76,6 +78,16 @@ void createGrid()
 	}
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
 
+    int subx = 2;
+    int suby = 2;
+    int subz = 2;
+    printf("Generate subdomain\n");
+    printf("grid node list size= %d\n", grid->getNodeList().size());
+    DomainNoMPI* dom = new DomainNoMPI(dim, grid, 0);
+    printf("dom node list size= %d\n", dom->getNodeList().size());
+    std::vector<DomainNoMPI*> doms;
+    dom->GEgenerateDecomposition(doms, subx, suby, subz);
+    printf("number subdomains= %d\n", doms.size());
 }
 //----------------------------------------------------------------------
 void setupDerivativeWeights()

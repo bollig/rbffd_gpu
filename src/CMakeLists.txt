@@ -22,6 +22,7 @@ SET(REQUIRED_SOURCE_FILES
     grids/grid_reader.cpp
     grids/grid_interface.cpp
     grids/domain.cpp
+    grids/domain_nompi.cpp
 
 
     #    pdes/parabolic/heat.cpp

@@ -23,12 +23,16 @@ DomainNoMPI::DomainNoMPI(int dimension, Grid* grid, int _comm_size)
         id(0), comm_size(_comm_size),
         inclMX(true),inclMY(true),inclMZ(true)
 {
+    // Use this constructor to create a wrapper. 
+  
     xmin = grid->xmin;
     xmax = grid->xmax;
     ymin = grid->ymin; 
     ymax = grid->ymax;
     zmin = grid->zmin;
     zmax = grid->zmax;
+
+    this->grid = grid; // Perhaps temporary, at least until I get this routine working
 
     // We might need to know how many nodes are in the domain globally for things like Hyperviscosity
     this->global_num_nodes = grid->getNodeListSize();
@@ -37,19 +41,25 @@ DomainNoMPI::DomainNoMPI(int dimension, Grid* grid, int _comm_size)
     printf("inside DomainNoMPI constructor\n");
     printf("nodelist size: %d\n", grid->getNodeList().size());
     printf("stencil size: %d\n", grid->getStencils().size());
+    printf("... fillLocalData from constructor\n");
+  
+    // Why fill data on the entire grid. I DO NOT FOLLOW.
     fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii()); 
+    //printf("after fillLocalData from constructor\n"); exit(0);
     this->max_st_size = grid->getMaxStencilSize();
 }
 
 
 // Construct a new DomainNoMPI object
-DomainNoMPI::DomainNoMPI(int dimension, unsigned int global_nb_nodes, 
+DomainNoMPI::DomainNoMPI(Grid* grid, int dimension, unsigned int global_nb_nodes, 
         double _xmin, double _xmax, double _ymin, double _ymax, double _zmin, double _zmax, 
         int _comm_rank, int _comm_size) :
     dim_num(dimension),
     id(_comm_rank), comm_size(_comm_size),
     inclMX(false),inclMY(false),inclMZ(false)
 {
+
+    this->grid = grid;
 
     // These are props of Grid inherited by DomainNoMPI
     global_num_nodes = global_nb_nodes;
@@ -64,6 +74,7 @@ DomainNoMPI::DomainNoMPI(int dimension, unsigned int global_nb_nodes,
 
 void DomainNoMPI::generateDecomposition(std::vector<DomainNoMPI*>& subdomains, int x_divisions, int y_divisions, int z_divisions) 
 {
+#if 0
     int gx = x_divisions;
     int gy = y_divisions;
     int gz = z_divisions;
@@ -142,6 +153,7 @@ void DomainNoMPI::generateDecomposition(std::vector<DomainNoMPI*>& subdomains, i
 
  
     //return subdomains;
+#endif
 }
 //----------------------------------------------------------------------
 void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains, int x_divisions, int y_divisions, int z_divisions) 
@@ -192,7 +204,7 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
 
         printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound);
         printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
-        DomainNoMPI* dom = new DomainNoMPI(dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
+        DomainNoMPI* dom = new DomainNoMPI(grid, dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
         //subdomains[id] = new DomainNoMPI(dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
         //subdomains[id]->setMaxStencilSize(this->max_st_size);
         //subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1); 
@@ -208,10 +220,18 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
         printf("\n ***************** CPU %d ***************** \n", i);
         // Forms sets (Q,O,R) and l2g/g2l maps
         std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
-        subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii); 
+        printf("about to enter fillLocalData\n");
+        subdomains[i]->fillLocalData( grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii());
         printf("subdomain %d filled\n", i); 
         printf("subdomain %d STENCIL MAP SIZE: %d\n", i, subdomains[i]->stencil_map.size());
         printf("subdomain %d NB NODES: %d\n", i, subdomains[i]->getNodeListSize());
+        //printCenterMemberships(subdomains[i]->G, "G");
+
+        char file[80];
+        sprintf(file, "g2l_%0d", i);
+        subdomains[i]->writeG2LToFile(file); // works
+        sprintf(file, "l2g_%0d", i);
+        subdomains[i]->writeL2GToFile(file); // works
     }
 
     for (unsigned int i = 0; i < subdomains.size(); i++) {
@@ -228,7 +248,6 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
         }
     }
 
- 
     //return subdomains;
 }
 //----------------------------------------------------------------------
@@ -398,6 +417,7 @@ void DomainNoMPI::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilTy
     //
     set<int>::iterator qit;
 
+    printf("... enter fillCenterSets\n");
     printf("DomainNoMPI %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f (Checking %dD)\n", id, xmin, xmax,
             ymin, ymax, zmin, zmax, dim_num);
     //    printf("NB_NODES: %d\n", rbf_centers.size());
@@ -411,13 +431,15 @@ void DomainNoMPI::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilTy
 
 
     // Generate sets Q and D
-    printf("nb rbf_centers: %d\n", rbf_centers.size());
+    // Q represents number of nodes in the domain. The {Qs} form a partition of the entire domain
+    printf("fillCenterSets, nb rbf_centers: %d\n", rbf_centers.size());
     for (unsigned int i = 0; i < rbf_centers.size(); i++) {
         NodeType& pt = rbf_centers[i];
         if (this->isInsideSubdomain(pt, i)) {
             Q.insert(i);
         }
     } 
+    //printf("****** Q size: %d *****\n", Q.size());
     int depR = 0; 
     for (qit = Q.begin(); qit != Q.end(); qit++) {
         StencilType& st = stencils[*qit]; 
@@ -497,7 +519,9 @@ void DomainNoMPI::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilTy
     //      SENDING can happen without kernels breaking, so we dont need to worry about that.
     // B = O U D, this used to be B=O U, But B\O is NOT_GUARANTEED_EQUAL to Dep, so we
     // do an additional subtraction to guarantee that B\O == D
+    //printf("... before set_union\n");
     set_union(D.begin(), D.end(), O.begin(), O.end(), inserter(B, B.end()));
+    //printf("... after set_union\n");
 #if 0
     // D* = B\O (so we can arrange G = { Q\B O\D* D* R }
     // By ordering nodes this way, we have the OPTION of operating on {Q\B O\D} 
@@ -529,7 +553,14 @@ void DomainNoMPI::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilTy
 void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<unsigned int>& boundary, vector<double>& avg_dist, vector<double>& max_dist, vector<double>& min_dist) {
 
     // Generate stencil membership lists (i.e., which set each stencil center belongs to)
+    //printf("just entered fillLocalData\n"); // Not entering for last subdomain (7)
+    //{
+        //printf("enter fillLocalData, before fillCenterSets, nb rbf_centers: %d\n", rbf_centers.size()); 
+        //return;
+    //}
     this->fillCenterSets(rbf_centers, stencil);
+    //printf("after fillCenterSets, nb rbf_centers: %d\n", rbf_centers.size()); return;
+    //printf("... enter fillLocalData\n"); return;
 
     //******************************** 
     // GEN MAPPINGS local/global and full stencil sets based on membership.
@@ -577,6 +608,8 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
         min_stencil_radii.push_back(min_dist[*qit]);
     }
 
+    printf("*** diff of sets = %d\n", G.size()-R.size()-BmO.size()-O.size()-QmB.size());
+
     // global to local map
     for (int i = 0; i < (int)loc_to_glob.size(); i++) {
         // We offset the global local indices by 1. Since the map returns 0 for
@@ -588,23 +621,20 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
 
     std::cout << "DomainNoMPI stencils size = " << stencil_map.size() << std::endl;
     // Convert all stencils to local indexing.
-    print("0\n");
+    printf("0\n");
     printf("stencil map size: %d\n", stencil_map.size());
     for (int i = 0; i < (int)stencil_map.size(); i++) {
         for (int j = 0; j < (int)stencil_map[i].size(); j++) {
             stencil_map[i][j] = g2l(stencil_map[i][j]);
         }
     }
-    printf("1\n");
 
     // This forms the boundary set (needed)
 
     printf("MASTER BOUNDARY.size= %d\n", (int) boundary.size());
-    printf("2\n");
 
     set_intersection(Q.begin(), Q.end(), boundary.begin(), boundary.end(),
             inserter(boundary_indices, boundary_indices.end()));
-    printf("3\n");
     printf("SUBDOMAIN BOUNDARY.size= %d\n", (int)boundary_indices.size());
     for (int i = 0; i < (int)boundary_indices.size(); i++) {
         //EVAN: 

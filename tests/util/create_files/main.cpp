@@ -79,8 +79,8 @@ void createGrid()
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
 
     int subx = 2;
-    int suby = 2;
-    int subz = 2;
+    int suby = 1;
+    int subz = 1;
     printf("Generate subdomain\n");
     printf("grid node list size= %d\n", grid->getNodeList().size());
     DomainNoMPI* dom = new DomainNoMPI(dim, grid, 0);

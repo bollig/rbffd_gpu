@@ -124,7 +124,6 @@ void DomainNoMPI::generateDecomposition(std::vector<DomainNoMPI*>& subdomains, i
         // Forms sets (Q,O,R) and l2g/g2l maps
         std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
         subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii); 
-        printf("subdomain %d filled\n", i); exit(2);
     }
 
     for (unsigned int i = 0; i < subdomains.size(); i++) {
@@ -152,7 +151,13 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
     int gy = y_divisions;
     int gz = z_divisions;
     //    std::vector<Domain*> subdomains;
-    subdomains.resize(gx*gy*gz);
+    subdomains.reserve(gx*gy*gz);
+    subdomains.resize(0);
+    printf("subdomain capacity= %d\n", subdomains.capacity());
+    if (subdomains.size() != 0) {
+        printf("subdomains size must be zero initially\n");
+        exit(1);
+    }
 
     // We partition points by divying up the extents
     double deltax = (double) (xmax - xmin) / (double) gx;
@@ -162,19 +167,9 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
     printf("domain decomposition deltas (dx, dy, dz) = (%f, %f, %f)\n", deltax, deltay, deltaz);
 
     // Initialize subdomains datastructures
-    for (int id = 0; id < gx * gy * gz; id++) {
-        // Derived these on paper. They work, but it takes a while to verify
-
-        // 1) Find the slice in which we lie (NOTE: "i" or "x" is varying fastest;
-        //      for "k" switch gx to gz, and swap igz and igx equations)
-        //int igz = id / gx*gy;  // BUG (Gordon Erlebacher discovered, Aug. 2, 2013)
-        int igz = id / (gx*gy);
-        // 2) Find the row within the slice
-        int igy = (id - igz * (gx*gy)) / gx;
-        // 3) Find the column within the row
-        int igx = (id - igz * (gx*gy)) - igy * gx;
-
-        //        printf("igx = %d, igy = %d, igz = %d\n", igx, igy, igz);
+    for (int igz = 0; igz < z_divisions; igz++) {
+    for (int igy = 0; igy < y_divisions; igy++) {
+    for (int igx = 0; igx < x_divisions; igx++) {
         double xm = xmin + igx * deltax;
         double ym = ymin + igy * deltay;
         double zm = zmin + igz * deltaz;
@@ -193,12 +188,18 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
         double front_bound = zm;
         double back_bound = (igz==gz-1) ? zmax : zm+deltaz;
 
+        int id = igx + x_divisions*(igy + y_divisions*igz);
+
         printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound);
         printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
-        subdomains[id] = new DomainNoMPI(dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
-        subdomains[id]->setMaxStencilSize(this->max_st_size);
-        subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1); 
-    }
+        DomainNoMPI* dom = new DomainNoMPI(dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
+        //subdomains[id] = new DomainNoMPI(dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
+        //subdomains[id]->setMaxStencilSize(this->max_st_size);
+        //subdomains[id]->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1); 
+        dom->setMaxStencilSize(this->max_st_size);
+        dom->setInclusiveMaxBoundary(igx == gx-1, igy == gy-1, igz == gz-1); 
+        subdomains.push_back(dom); // Must delete arrays to prevent memory leak
+    }}}
 
     // Figure out the sets Bi, Oi Qi
 
@@ -208,6 +209,9 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
         // Forms sets (Q,O,R) and l2g/g2l maps
         std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
         subdomains[i]->fillLocalData( this->node_list, this->stencil_map, this->boundary_indices, this->avg_stencil_radii, this->max_stencil_radii, this->min_stencil_radii); 
+        printf("subdomain %d filled\n", i); 
+        printf("subdomain %d STENCIL MAP SIZE: %d\n", i, subdomains[i]->stencil_map.size());
+        printf("subdomain %d NB NODES: %d\n", i, subdomains[i]->getNodeListSize());
     }
 
     for (unsigned int i = 0; i < subdomains.size(); i++) {
@@ -525,9 +529,7 @@ void DomainNoMPI::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilTy
 void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilType>& stencil, vector<unsigned int>& boundary, vector<double>& avg_dist, vector<double>& max_dist, vector<double>& min_dist) {
 
     // Generate stencil membership lists (i.e., which set each stencil center belongs to)
-    printf("enter fillLocalData\n");
     this->fillCenterSets(rbf_centers, stencil);
-    printf("after fillCenterSets\n");
 
     //******************************** 
     // GEN MAPPINGS local/global and full stencil sets based on membership.
@@ -542,7 +544,7 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
     // We want these maps in order: (Q\B B\O O R) where B=(D O)
     // to make it more convenient when we work on memory management
     for (qit = QmB.begin(); qit != QmB.end(); qit++, i++) {
-        printf("*qit= %d\n", *qit);
+        //printf("*qit= %d\n", *qit);
         loc_to_glob.push_back(*qit);
         node_list.push_back(rbf_centers[*qit]); // In order to compute we need the physical locations of all function values
         stencil_map.push_back(stencil[*qit]); // We also need to push the connectivity to evaluate stencils
@@ -586,17 +588,23 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
 
     std::cout << "DomainNoMPI stencils size = " << stencil_map.size() << std::endl;
     // Convert all stencils to local indexing.
+    print("0\n");
+    printf("stencil map size: %d\n", stencil_map.size());
     for (int i = 0; i < (int)stencil_map.size(); i++) {
         for (int j = 0; j < (int)stencil_map[i].size(); j++) {
             stencil_map[i][j] = g2l(stencil_map[i][j]);
         }
     }
+    printf("1\n");
 
     // This forms the boundary set (needed)
 
     printf("MASTER BOUNDARY.size= %d\n", (int) boundary.size());
+    printf("2\n");
+
     set_intersection(Q.begin(), Q.end(), boundary.begin(), boundary.end(),
             inserter(boundary_indices, boundary_indices.end()));
+    printf("3\n");
     printf("SUBDOMAIN BOUNDARY.size= %d\n", (int)boundary_indices.size());
     for (int i = 0; i < (int)boundary_indices.size(); i++) {
         //EVAN: 

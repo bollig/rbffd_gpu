@@ -96,6 +96,7 @@ class DomainNoMPI : public Grid //, public MPISendable
 
         DomainNoMPI(int dim_num, Grid* _grid, int _comm_size);
 
+        void writeToEllpackBinaryFile(std::string filename);
 
         //--------------------------
         // Override Grid:: functions

@@ -228,10 +228,15 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
         //printCenterMemberships(subdomains[i]->G, "G");
 
         char file[80];
+    #if 0
         sprintf(file, "g2l_%0d", i);
         subdomains[i]->writeG2LToFile(file); // works
         sprintf(file, "l2g_%0d", i);
         subdomains[i]->writeL2GToFile(file); // works
+    #endif
+        sprintf(file, "ellsubdomain_%0d", i);
+        //printf("file name for Ellpack: %s\n", file);
+        subdomains[i]->writeToEllpackBinaryFile(file);
     }
 
     for (unsigned int i = 0; i < subdomains.size(); i++) {
@@ -992,7 +997,43 @@ void DomainNoMPI::writeL2GToFile(std::string filename) {
     std::cout << "[DomainNoMPI] \tWrote " << loc_to_glob.size() << " local to global index map elements to \t" << fname << std::endl;
 
 }
+//----------------------------------------------------------------------
+void DomainNoMPI::writeToEllpackBinaryFile(std::string filename) 
+{
+    // write stencil array: where are the non-zeros. 
+    // nb rows: stencil.size()
+    // nb of nonzeros: stencil[0].size()
+    //
+        printf("write to Ellpack binary file\n");
+        std::vector<StencilType>& stencil = stencil_map;
+        printf("writeToEllpack: stencil size: %d\n", stencil.size());
+        int nb_rows = stencil.size();
+        int nb_nonzeros = stencil[0].size(); // assume all stencils have the same size
 
+        std::vector<int> col_id;
+        std::string ell_filename = "ell_" + filename;
+        printf("1 write to %s\n", ell_filename.c_str());
+        printf("nb_rows= %d\n", nb_rows);
+        printf("nb_nonzeros= %d\n", nb_nonzeros);
+        printf("Extended domain size= %d\n", G.size());
 
+        for (int i = 0; i < nb_rows; i++) {
+            for (int j = 0; j < nb_nonzeros; j++) {
+                col_id.push_back(stencil[i][j]);
+                //printf("stencil[%d][%d]= %d\n", i, j, stencil[i][j]);
+            }
+        }
 
+        // number of rows of col_id should be the number of derivatives to be be computed
+        // The vector of values (not dealt with here), is the number of indices in the G set
+        // which is the Q set (the nodes in the subdomain) + all nodes required for the stencil
+        // So I must encode the domain size in the header of the Ellpack file. 
+
+        FILE *fd;
+        fd = fopen(ell_filename.c_str(), "w");
+        fprintf(fd, "#nb_rows  nb_nonzeros, extended domain size\n");
+        fprintf(fd, "%d %d %d\n", nb_rows, nb_nonzeros, G.size());
+        fwrite(&col_id[0], sizeof(int), col_id.size(), fd);
+        fclose(fd);
+}
 //----------------------------------------------------------------------

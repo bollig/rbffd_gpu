@@ -28,6 +28,8 @@ int use_gpu;
 ProjectSettings* settings;
 RBFFD* der_cpu;
 RBFFD* der;
+std::vector<DomainNoMPI*> doms;
+DomainNoMPI* dom;
 
 using namespace std;
 
@@ -73,21 +75,33 @@ void createGrid()
 	Grid::st_generator_t stencil_type;
 	if (node_dist == "compact") {
 		stencil_type = Grid::ST_COMPACT;
-	} else {
+	} else if (node_dist == "random") {
 		stencil_type = Grid::ST_RANDOM;
+    } else if (node_dist == "kd-tree") {
+        stencil_type = Grid::ST_KDTREE;
+    } else {
+        printf("stencil type %s not implemented\n", stencil_type);
+        exit(0);
 	}
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
 
     int subx = 2;
-    int suby = 1;
+    int suby = 2;
     int subz = 1;
     printf("Generate subdomain\n");
     printf("grid node list size= %d\n", grid->getNodeList().size());
-    DomainNoMPI* dom = new DomainNoMPI(dim, grid, 0);
+    dom = new DomainNoMPI(dim, grid, 0);
     printf("dom node list size= %d\n", dom->getNodeList().size());
-    std::vector<DomainNoMPI*> doms;
+
+    //std::string file = der->getFilename(RBFFD::X);  // DOES NOT WORK. WHY?
+    std::string file = "xxx";
+    printf("++++++ file= %s ++++++\n", file.c_str());
+    file = "ell_subdomain_" +file; 
+    printf("++++++ file= %s ++++++\n", file.c_str());
+    printf("--------------------- before GEgenerateDecomposition ----------------------\n");
     dom->GEgenerateDecomposition(doms, subx, suby, subz);
-    printf("number subdomains= %d\n", doms.size());
+    printf("--------------------- after GEgenerateDecomposition ----------------------\n");
+    printf("WRITE DOMS\n");
 }
 //----------------------------------------------------------------------
 void setupDerivativeWeights()
@@ -136,9 +150,10 @@ int main(int argc, char** argv)
 //		void convertWeightToContiguous(std::vector<double>& weights_d, std::vector<int>& stencils_d, int stencil_size, 
 //    		bool is_padded, bool nbnode_nbsten_dertype);
 
+#if 0
 	der->setAsciiWeights(0);
-	file = der->getFilename(RBFFD::X);
-    der->writeToEllpackFile(RBFFD::X, file);
+    printf("***** der= %ld\n", (long) der);
+	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
 	der->setAsciiWeights(1);
 	file = node_dist + "_" + file;
 	printf("file: %s\n", file.c_str());
@@ -151,6 +166,7 @@ int main(int argc, char** argv)
 	std::vector<int> rows, cols;
 	std::vector<double> values;
 	int width, height;
+
 	io.loadFromAsciMMFile(rows, cols, values, width, height, file);
 
 	printf("=======================================\n");
@@ -182,6 +198,16 @@ int main(int argc, char** argv)
 	for (int i=0; i < 10; i++) {
 		printf("load binary: iof1, r,c,v= %d, %d, %f\n", rows[i], cols[i], valuesf1[i]);
 	}
+#endif
+
+	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
+    file = "ell_" + file;
+    der->writeToEllpackFile(RBFFD::X, file);
+
+	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
+    file = "ell_subdomain_" + file;
+    dom->writeToEllpackBinaryFile(file, doms);
+    printf("number subdomains= %d\n", doms.size());
 
     exit(EXIT_SUCCESS);
 }

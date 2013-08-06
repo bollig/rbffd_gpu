@@ -234,11 +234,14 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
         sprintf(file, "l2g_%0d", i);
         subdomains[i]->writeL2GToFile(file); // works
     #endif
-        sprintf(file, "ellsubdomain_%0d", i);
+        sprintf(file, "ellsubdomain_%0d.mtxb", i);
         //printf("file name for Ellpack: %s\n", file);
-        subdomains[i]->writeToEllpackBinaryFile(file);
+        //subdomains[i]->writeToEllpackBinaryFile(file);
     }
 
+#if 0
+    // The next method never return, but code is identical to Evan's original code. 
+    // Perhaps does not work if no MPI? 
     for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** FILLING O_by_rank for CPU%d ***************** \n", i);
         for (unsigned int j = 0; j < subdomains.size(); j++) {
@@ -252,7 +255,7 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
             subdomains[i]->fill_R_by_rank(subdomains[j]->O, j); 
         }
     }
-
+#endif
     //return subdomains;
 }
 //----------------------------------------------------------------------
@@ -386,7 +389,13 @@ void DomainNoMPI::fill_O_by_rank(std::set<int>& subdomain_R, int subdomain_rank)
     // subdomain_R contains the R for one subdomain. 
     // We take the intersection to find what elements of R on that subdomain
     // are sent by this processor and use the builtin STL inserter for efficiency
+    printf("before set_intersection\n");
+    printf("subdomain_R size: %d\n", subdomain_R.size());
+    printf("this_O size: %d\n", this->O.size());
+    printf("rank: %d\n", subdomain_rank);
+    printf("O_by_rank size: %d\n", O_by_rank.size());
     set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end())); 
+    printf("after set_intersection\n");
     return;
 }
 
@@ -998,24 +1007,51 @@ void DomainNoMPI::writeL2GToFile(std::string filename) {
 
 }
 //----------------------------------------------------------------------
-void DomainNoMPI::writeToEllpackBinaryFile(std::string filename) 
+void DomainNoMPI::writeToEllpackBinaryFile(std::string filename, std::vector<DomainNoMPI*>& subdomains)
+{
+    // write several subdomains to a single file
+    // top of the file is a list of the characteristics of all subdomains. 
+    // Only store col_id file (rowise). 
+
+    printf("write to Ellpack binary file\n");
+    FILE *fd;
+    fd = fopen(filename.c_str(), "w");
+    fprintf(fd, "#nb_rows  nb_nonzeros, extended domain size (for each subdomain)\n");
+    fprintf(fd, "%d   # number of subdomains\n", subdomains.size());
+
+    for (int i=0; i < subdomains.size(); i++) {
+        DomainNoMPI& domain = *subdomains[i];
+        std::vector<StencilType>& stencil = domain.getStencils();
+        int nb_rows = stencil.size();
+        int nb_nonzeros = stencil[0].size(); // assume all stencils have the same size
+        fprintf(fd, "%d %d %d\n", nb_rows, nb_nonzeros, domain.G.size());
+    }
+
+    for (int i=0; i < subdomains.size(); i++) {
+        DomainNoMPI& dom = *subdomains[i];
+        writeToEllpackBinaryFile(fd, dom);
+    }
+
+    fclose(fd);
+}
+//----------------------------------------------------------------------
+void DomainNoMPI::writeToEllpackBinaryFile(FILE* fd, DomainNoMPI& domain)
 {
     // write stencil array: where are the non-zeros. 
     // nb rows: stencil.size()
     // nb of nonzeros: stencil[0].size()
     //
-        printf("write to Ellpack binary file\n");
-        std::vector<StencilType>& stencil = stencil_map;
+        std::vector<StencilType>& stencil = domain.getStencils();
         printf("writeToEllpack: stencil size: %d\n", stencil.size());
         int nb_rows = stencil.size();
         int nb_nonzeros = stencil[0].size(); // assume all stencils have the same size
 
         std::vector<int> col_id;
-        std::string ell_filename = "ell_" + filename;
-        printf("1 write to %s\n", ell_filename.c_str());
-        printf("nb_rows= %d\n", nb_rows);
-        printf("nb_nonzeros= %d\n", nb_nonzeros);
-        printf("Extended domain size= %d\n", G.size());
+        //std::string ell_filename = "ell_" + filename;
+        //printf("1 write to %s\n", ell_filename.c_str());
+        //printf("nb_rows= %d\n", nb_rows);
+        //printf("nb_nonzeros= %d\n", nb_nonzeros);
+        //printf("Extended domain size= %d\n", G.size());
 
         for (int i = 0; i < nb_rows; i++) {
             for (int j = 0; j < nb_nonzeros; j++) {
@@ -1029,11 +1065,11 @@ void DomainNoMPI::writeToEllpackBinaryFile(std::string filename)
         // which is the Q set (the nodes in the subdomain) + all nodes required for the stencil
         // So I must encode the domain size in the header of the Ellpack file. 
 
-        FILE *fd;
-        fd = fopen(ell_filename.c_str(), "w");
-        fprintf(fd, "#nb_rows  nb_nonzeros, extended domain size\n");
-        fprintf(fd, "%d %d %d\n", nb_rows, nb_nonzeros, G.size());
+        //FILE *fd;
+        //fd = fopen(ell_filename.c_str(), "w");
+        //fprintf(fd, "#nb_rows  nb_nonzeros, extended domain size\n");
+        //fprintf(fd, "%d %d %d\n", nb_rows, nb_nonzeros, G.size());
         fwrite(&col_id[0], sizeof(int), col_id.size(), fd);
-        fclose(fd);
+        //fclose(fd);
 }
 //----------------------------------------------------------------------

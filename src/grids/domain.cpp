@@ -86,7 +86,7 @@ void Domain::generateDecomposition(std::vector<Domain*>& subdomains, int x_divis
 
         // 1) Find the slice in which we lie (NOTE: "i" or "x" is varying fastest;
         //      for "k" switch gx to gz, and swap igz and igx equations)
-        int igz = id / gx*gy;
+        int igz = id / (gx*gy);
         // 2) Find the row within the slice
         int igy = (id - igz * (gx*gy)) / gx;
         // 3) Find the column within the row

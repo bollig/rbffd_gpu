@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
 	int ny = 1; 
 	int nz = 1; 
 	int stencil_size = 5; 
-    int hash_resolution = 100; 
+	int hash_resolution = 100; 
 	if (vm.count("nx")) {
 		nx = vm["nx"].as<int>() ;
 	} 

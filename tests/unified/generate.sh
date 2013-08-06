@@ -14,6 +14,6 @@ do
 	echo ${N}
 	mkdir -p ${N}_cubed 
 	cd ${N}_cubed
-	../gen_reg_grid.x -x ${N} -y ${N} -z ${N} -s ${STEN} 
+	../gen_reg_grid.x -x ${N} -y ${N} -z ${N} -s ${STEN} -l 10
 	cd ../
 done

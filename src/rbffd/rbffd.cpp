@@ -14,6 +14,10 @@
 #include "mmio.h"
 #include "utils/random.h"
 
+namespace gercm {
+    void geRCM(std::vector<int>& col_id, int nb_rows, int nb_nnz_per_row, std::vector<int>& perm, std::vector<int>& perm_inv);
+    int getBandwidth(std::vector<int>& col_id, int nb_rows, int nnz_row);
+}
 
 typedef RBF_Gaussian IRBF;
 
@@ -1358,6 +1362,12 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         fprintf(fd, "%d %d\n", nb_rows, nb_nonzeros);
         fwrite(&col_id[0], sizeof(int), col_id.size(), fd);
         fclose(fd);
+
+
+        printf("TRY REVERSE CUTHILL McGee\n");
+        std::vector<int> perm;
+        std::vector<int> perm_inv;
+        gercm::geRCM(col_id, nb_rows, nb_nonzeros, perm, perm_inv);
     }
 
     //--------------------------------------------------------------------

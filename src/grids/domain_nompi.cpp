@@ -1102,6 +1102,22 @@ void DomainNoMPI::writeToEllpackBinaryFile(std::string filename, std::vector<Dom
         writeToEllpackBinaryFile(fd, dom);
     }
 
+    // not necessarily the best way since the subdomains are not kept together, but 
+    // ok since the the size of each Qbeg_rows can be determined through  nb_rows
+    for (int i=0; i < subdomains.size(); i++) {
+        DomainNoMPI& dom = *subdomains[i];
+        fwrite(&dom.Qbeg_rows[0], sizeof(int), dom.Qbeg_rows.size(), fd);
+        printf("write: Qbeg_rows.size: %d\n", dom.Qbeg_rows.size());
+    }
+    for (int i=0; i < subdomains.size(); i++) {
+        DomainNoMPI& dom = *subdomains[i];
+        fwrite(&dom.Qend_rows[0], sizeof(int), dom.Qend_rows.size(), fd);
+        printf("write: Qend_rows.size: %d\n", dom.Qend_rows.size());
+        if (i < 10) {
+            printf("domainnompi::writeToEllpack: Qbeg/Qend= %d, %d\n", Qbeg_rows[i], Qend_rows[i]);
+        }
+    }
+
     fclose(fd);
 }
 //----------------------------------------------------------------------
@@ -1148,8 +1164,6 @@ void DomainNoMPI::writeToEllpackBinaryFile(FILE* fd, DomainNoMPI& domain)
         //fprintf(fd, "%d %d %d\n", nb_rows, nb_nonzeros, G.size());
         fwrite(&col_id[0], sizeof(int), col_id.size(), fd);
         // just in case the number of nonzeros per row is not constant (for future perhaps)
-        fwrite(&Qbeg_rows[0], sizeof(int), Qbeg_rows.size(), fd);
-        fwrite(&Qend_rows[0], sizeof(int), Qend_rows.size(), fd);
         //fclose(fd);
 }
 //----------------------------------------------------------------------

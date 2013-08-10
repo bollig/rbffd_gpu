@@ -23,6 +23,7 @@ SET(REQUIRED_SOURCE_FILES
     grids/grid_interface.cpp
     grids/domain.cpp
     grids/domain_nompi.cpp
+    grids/ge_rcm_single.cpp
 
 
     #    pdes/parabolic/heat.cpp

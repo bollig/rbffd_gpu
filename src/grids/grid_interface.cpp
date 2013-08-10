@@ -806,6 +806,9 @@ void Grid::generateStencilsKDTree()
         for (unsigned int j = 0; j < max_st_size; j++) { 
             if (nearest_dists[j] < max_st_radius) {
                 st[j] = nearest_ids[j]; 
+                if (i < 10 && j < 5) {
+                    printf("stencil[%d][%d]= %d\n", i, j, st[j]);
+                }
             } else {
                 st.resize(j); // trim off extra entries in each stencil
                 break; 

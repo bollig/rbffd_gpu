@@ -1,1 +1,17 @@
 note: original_grid.cpp is the original Grid class provided in Gordons code. I am tired of fighting it so I have a simplified Grid interface which i am switching to. I renamed the class to distinguish its use in cases like original_heat and so its obvious which tests I need to concentrate on updating.
+
+Set Q : all nodes in subdomain
+set SQ : Q + all stencil nodes
+set R = SQ \ Q : nodes not in Q, but required in the stencils of Q
+
+   Dx = Q * (vQ, vR)^T
+
+Decompose dX = (Q R) (vQ, vR)^T
+
+
+   Deriv(fQ) = (Q, R) (vQ, vR)^T
+
+So create an additional R_rows array to give me the first element of R in each row. 
+This is in addition to xadj_row[nb_rows]. 
+----------------------------------------------------------------------
+

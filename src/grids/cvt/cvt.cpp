@@ -742,7 +742,7 @@ void CVT::cvt_iterate(int dim_num, int n, int batch, int sample, bool initialize
     // Reconstruct our kdtree for range queries using the new seeds
 
 #if USE_KDTREE
-#if 0
+#if 1
     timers["kbuild"]->start();
     delete(kdtree);
     kdtree = new KDTree(r, n, dim_num);

@@ -221,10 +221,14 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
         // Forms sets (Q,O,R) and l2g/g2l maps
         std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
         printf("about to enter fillLocalData\n");
-        subdomains[i]->fillLocalData( grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii());
+        //Subdomain& s = *subdomains[i];
+        Grid& s = *grid;
+        subdomains[i]->fillLocalData( grid->getNodeList(), s.getStencils(), s.getBoundaryIndices(), s.getStencilRadii(), s.getMaxStencilRadii(), s.getMinStencilRadii());
         printf("subdomain %d filled\n", i); 
         printf("subdomain %d STENCIL MAP SIZE: %d\n", i, subdomains[i]->stencil_map.size());
         printf("subdomain %d NB NODES: %d\n", i, subdomains[i]->getNodeListSize());
+        printf("subdomain %d Q size: %d\n", i, subdomains[i]->Q.size());
+        printf("subdomain %d R size: %d\n", i, subdomains[i]->R.size());
         //printCenterMemberships(subdomains[i]->G, "G");
 
         char file[80];
@@ -461,7 +465,7 @@ void DomainNoMPI::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilTy
         // Now, if the center is in Q but it depends on nodes in R then we need to distinguish
         depR = 0;
         //        std::cout << "begin stencil" << std::endl;
-        for (unsigned int j = 1; j < st.size(); j++) { // Check all nodes in corresponding stencil
+        for (unsigned int j = 0; j < st.size(); j++) { // Check all nodes in corresponding stencil
             unsigned int indx = st[j];
             NodeType& pt2 = rbf_centers[indx];
             //            std::cout << *qit << ": " << pt2 << "==>"<< this->isInsideSubdomain(pt2) << std::endl;
@@ -600,7 +604,7 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
     for (qit = BmO.begin(); qit != BmO.end(); qit++, i++) {
         loc_to_glob.push_back(*qit);
         node_list.push_back(rbf_centers[*qit]);
-        stencil_map.push_back(stencil[*qit]);
+        stencil_map.push_back(stencil[*qit]); // in global coordinates?
         avg_stencil_radii.push_back(avg_dist[*qit]);
         max_stencil_radii.push_back(max_dist[*qit]);
         min_stencil_radii.push_back(min_dist[*qit]);
@@ -622,6 +626,17 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
         min_stencil_radii.push_back(min_dist[*qit]);
     }
 
+#if 0
+    printf("*** inside fillLocalData\n");
+    for (int i=0; i < 5; i++) {
+        for (int j=0; j < 5; j++) {
+           printf("(dom) stencil[%d][%d]= %d\n", i, j, stencil[i][j]);
+           printf("  (subdom) stencil_map[%d][%d]= %d\n", i, j, stencil_map[i][j]);
+        }
+    }
+#endif
+
+
     printf("*** diff of sets = %d\n", G.size()-R.size()-BmO.size()-O.size()-QmB.size());
 
     // global to local map
@@ -639,9 +654,61 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
     printf("stencil map size: %d\n", stencil_map.size());
     for (int i = 0; i < (int)stencil_map.size(); i++) {
         for (int j = 0; j < (int)stencil_map[i].size(); j++) {
-            stencil_map[i][j] = g2l(stencil_map[i][j]);
+            stencil_map[i][j] = g2l(stencil_map[i][j]); // in local coordinates
         }
     }
+
+    // create an R_row array: R_row[i] points to the first element that is in R
+    // if there is no element of R on that row, R_row[i] points to the first element
+    // of the next row
+
+    // only works for stencils of constant size
+    printf("*** stencil map.size = %d\n", stencil_map.size());
+    printf("*** Q size: %d\n", Q.size());
+    printf("*** R size: %d\n", R.size());
+    //for (set<int>::iterator qit=R.begin(); qit != R.end(); qit++) {
+        //printf("R= glob %d, loc %d\n", *qit, g2l(*qit)); // work ok
+    //}
+    //if (R.size() != 0) exit(0); // REMOVE WHEN DONE
+    int qrows = Q.size();
+    int count = 0;
+    int countn = 0;
+    std::vector<int> Qbeg_rows(stencil_map.size());
+    std::vector<int> Qend_rows(stencil_map.size(),-1);
+    for (int i=0; i < (int) stencil_map.size(); i++) {
+        Qbeg_rows[i] = stencil_map[i].size()*i;
+        //Qend_rows[i] = -1;
+        for (int j=0; j < stencil_map[i].size(); j++) {
+            int s = stencil_map[i][j];
+            if (s >= Q.size()) {
+                Qend_rows[i] = Qbeg_rows[i] + j;
+                break;
+            }
+        }
+        if (Qend_rows[i] == -1) {
+            Qend_rows[i] = Qbeg_rows[i] + stencil_map[i].size();
+            count++;
+        } else {
+            if (countn++ > 1000) continue;
+            printf("\nstencil row %d: \n", i, Qbeg_rows[i], Qend_rows[i]);
+            for (int j=0; j < (int) stencil_map[i].size(); j++) {
+                printf("%d,", stencil_map[i][j]-Q.size()); // negative if in Q, else positive
+            }
+        }
+    }
+    printf("\n");
+    printf("*** nb rows without elements in R: %d\n", count);
+
+#if 0
+    for (int i=0; i < (int) stencil_map.size(); i++) {
+    for (int i=0; i < 10; i++) {
+        printf("stencil row %d: \n", i, Qbeg_rows[i], Qend_rows[i]);
+        for (int j=0; j < (int) stencil_map[i].size(); j++) {
+            printf("%d,", stencil_map[i][j]);
+        }
+        printf("\n");
+    }
+#endif
 
     // This forms the boundary set (needed)
 
@@ -1041,22 +1108,29 @@ void DomainNoMPI::writeToEllpackBinaryFile(FILE* fd, DomainNoMPI& domain)
     // nb rows: stencil.size()
     // nb of nonzeros: stencil[0].size()
     //
-        std::vector<StencilType>& stencil = domain.getStencils();
-        printf("writeToEllpack: stencil size: %d\n", stencil.size());
-        int nb_rows = stencil.size();
-        int nb_nonzeros = stencil[0].size(); // assume all stencils have the same size
+        std::vector<StencilType>& stencils = domain.getStencils();
+        printf("*** writeToEllpack: stencil size: %d\n", stencils.size());
+        int nb_rows = stencils.size();
+        int nb_nonzeros = stencils[0].size(); // assume all stencils have the same size
 
-        std::vector<int> col_id;
+        std::vector<int> col_id(nb_rows*nb_nonzeros);
         //std::string ell_filename = "ell_" + filename;
         //printf("1 write to %s\n", ell_filename.c_str());
         //printf("nb_rows= %d\n", nb_rows);
         //printf("nb_nonzeros= %d\n", nb_nonzeros);
         //printf("Extended domain size= %d\n", G.size());
 
+    for (int i=0; i < 5; i++) {
+        for (int j=0; j < 5; j++) {
+           printf("(writeToEll) stencil[%d][%d]= %d\n", i, j, stencils[i][j]);
+        }
+    }
+
         for (int i = 0; i < nb_rows; i++) {
             for (int j = 0; j < nb_nonzeros; j++) {
-                col_id.push_back(stencil[i][j]);
-                //printf("stencil[%d][%d]= %d\n", i, j, stencil[i][j]);
+                col_id[j+i*nb_nonzeros] = stencils[i][j];
+                //if (j < 5 and i < 5) printf("stencils[%d][%d]= %d\n", i, j, stencils[i][j]);
+                //printf("stencils[%d][%d]= %d\n", i, j, stencils[i][j]);
             }
         }
 

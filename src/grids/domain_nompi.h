@@ -62,6 +62,7 @@ class DomainNoMPI : public Grid //, public MPISendable
 
         std::set<int> QmD; 			// Interior stencil centers excluding stencils dependent on RECEIVING
         std::set<int> QmB;
+        std::set<int> QmR;     // GE: all stencils are contained in QmR
         std::set<int> BmO;
         std::set<int> R;			// Nodes REQUIRED from other DomainNoMPIs (not stencil centers) 
 

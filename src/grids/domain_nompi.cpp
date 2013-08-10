@@ -576,6 +576,7 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
         //printf("enter fillLocalData, before fillCenterSets, nb rbf_centers: %d\n", rbf_centers.size()); 
         //return;
     //}
+
     this->fillCenterSets(rbf_centers, stencil);
     //printf("after fillCenterSets, nb rbf_centers: %d\n", rbf_centers.size()); return;
     //printf("... enter fillLocalData\n"); return;
@@ -653,9 +654,11 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
     printf("0\n");
     printf("stencil map size: %d\n", stencil_map.size());
     for (int i = 0; i < (int)stencil_map.size(); i++) {
-        for (int j = 0; j < (int)stencil_map[i].size(); j++) {
+        int sz = stencil_map[i].size();
+        for (int j = 0; j < sz; j++) {
             stencil_map[i][j] = g2l(stencil_map[i][j]); // in local coordinates
         }
+        std::sort(&stencil_map[i][0], &stencil_map[i][sz]); // GE
     }
 
     // create an R_row array: R_row[i] points to the first element that is in R
@@ -673,8 +676,9 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
     int qrows = Q.size();
     int count = 0;
     int countn = 0;
-    std::vector<int> Qbeg_rows(stencil_map.size());
-    std::vector<int> Qend_rows(stencil_map.size(),-1);
+    Qbeg_rows.resize(stencil_map.size());
+    Qend_rows.resize(stencil_map.size());
+    std::fill(Qend_rows.begin(), Qend_rows.end(), -1);
     for (int i=0; i < (int) stencil_map.size(); i++) {
         Qbeg_rows[i] = stencil_map[i].size()*i;
         //Qend_rows[i] = -1;
@@ -688,13 +692,14 @@ void DomainNoMPI::fillLocalData(vector<NodeType>& rbf_centers, vector<StencilTyp
         if (Qend_rows[i] == -1) {
             Qend_rows[i] = Qbeg_rows[i] + stencil_map[i].size();
             count++;
-        } else {
-            if (countn++ > 1000) continue;
-            printf("\nstencil row %d: \n", i, Qbeg_rows[i], Qend_rows[i]);
+        } /* else {
+            if (countn++ > 10) continue;
+            printf("\nstencil row %d, beg: %d, end: %d: \n", i, Qbeg_rows[i], Qend_rows[i]);
             for (int j=0; j < (int) stencil_map[i].size(); j++) {
                 printf("%d,", stencil_map[i][j]-Q.size()); // negative if in Q, else positive
             }
         }
+        */
     }
     printf("\n");
     printf("*** nb rows without elements in R: %d\n", count);
@@ -759,8 +764,6 @@ void DomainNoMPI::stencilSet(set<int>& s, vector<StencilType>& stencil, set<int>
 }
 
 //----------------------------------------------------------------------
-
-
 void DomainNoMPI::printStencilNodesIn(const vector<StencilType>& stencils, const set<int>& center_set, std::string display_char) {
     for (int i = 0; i < (int)stencils.size(); i++) {
         cout << "Stencil[local:" << i << " (global: " << l2g(i) << ")] = ";
@@ -1144,6 +1147,9 @@ void DomainNoMPI::writeToEllpackBinaryFile(FILE* fd, DomainNoMPI& domain)
         //fprintf(fd, "#nb_rows  nb_nonzeros, extended domain size\n");
         //fprintf(fd, "%d %d %d\n", nb_rows, nb_nonzeros, G.size());
         fwrite(&col_id[0], sizeof(int), col_id.size(), fd);
+        // just in case the number of nonzeros per row is not constant (for future perhaps)
+        fwrite(&Qbeg_rows[0], sizeof(int), Qbeg_rows.size(), fd);
+        fwrite(&Qend_rows[0], sizeof(int), Qend_rows.size(), fd);
         //fclose(fd);
 }
 //----------------------------------------------------------------------

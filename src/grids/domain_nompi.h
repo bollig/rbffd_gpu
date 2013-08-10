@@ -16,6 +16,10 @@
 
 class DomainNoMPI : public Grid //, public MPISendable
 {
+    public:  // added by GE
+    std::vector<int> Qbeg_rows;
+    std::vector<int> Qend_rows;
+
     public: 		// Member Properties
 
         int dim_num;

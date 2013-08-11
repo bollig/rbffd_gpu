@@ -38,6 +38,7 @@
 		#		util/binary_cvt_io
 		util/cusp_simple_example	# needs macro for add_cu_test
 		util/cusp_version_test		# Needs macro for add_cu_test
+		util/cuthill_mckee
 		util/project_settings
 		util/surface_integral
 		util/surface_projection

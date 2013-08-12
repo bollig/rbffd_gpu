@@ -33,7 +33,10 @@ class Reorder
 				for (typename MatType::const_iterator2 col_it = row_it.begin();
 						col_it != row_it.end();
 						++col_it) {
-					boost::add_edge( col_it.index1(), col_it.index2(), G);
+					// Only operate on a square
+					if (col_it.index2() < mat.size1()) { 
+						boost::add_edge( col_it.index1(), col_it.index2(), G);
+					}
 				}
 			}
 		}
@@ -48,12 +51,12 @@ class Reorder
 			// Use the boost::graph cuthill mckee algorithm
 			std::vector<VertexType> inv_perm(boost::num_vertices(G));
 			std::vector<size_type> perm(boost::num_vertices(G));
-			cuthill_mckee_ordering(G, inv_perm.rbegin(), get(boost::vertex_color,G), make_degree_map(G));
-
-			// This order array will convert from reordered to the original ordering
-			for ( size_t i = 0; i < inv_perm.size(); i++ )
-				order[i] = index_map[inv_perm[i]];
-
+#define REVERSE_CUTHILL_MCKEE
+#ifdef REVERSE_CUTHILL_MCKEE
+			cuthill_mckee_ordering(G, order.rbegin(), get(boost::vertex_color,G), make_degree_map(G));
+#else
+			cuthill_mckee_ordering(G, order.begin(), get(boost::vertex_color,G), make_degree_map(G));
+#endif
 		}
 
 
@@ -65,6 +68,7 @@ class Reorder
 
 			for (size_t i = 0; i < order.size(); i++) {
 				inv_order[order[i]] = i;
+				std::cout << order[i] << std::endl;
 			}
 
 			for (typename MatType::const_iterator1 row_it = in_mat.begin1();
@@ -73,17 +77,28 @@ class Reorder
 				for (typename MatType::const_iterator2 col_it = row_it.begin();
 						col_it != row_it.end();
 						++col_it) {
-					size_t row_ind = inv_order[col_it.index1()];
-					size_t col_ind = inv_order[col_it.index2()];
-
-					out_mat(row_ind, col_ind) = *col_it;
+					if (col_it.index2() < in_mat.size1()) {
+						size_t row_ind = inv_order[col_it.index1()];
+						size_t col_ind = inv_order[col_it.index2()];
+						out_mat(row_ind, col_ind) = *col_it;
+					} else {
+						// For nonzeros outside of reordered block we keep original ordering
+						size_t row_ind = inv_order[col_it.index1()];
+						size_t col_ind = col_it.index2();
+						out_mat(row_ind, col_ind) = *col_it; 
+					}
 				}
 			}
 			for (typename VecType::const_iterator row_it = in_vec.begin();
 					row_it != in_vec.end();
 					++row_it) {
-				size_t row_ind = inv_order[row_it.index()];
-				out_vec[row_ind] = *row_it;
+					if (row_it.index() < in_mat.size1()) {
+						size_t row_ind = inv_order[row_it.index()];
+						out_vec[row_ind] = *row_it;
+					} else {
+						size_t row_ind = row_it.index();
+						out_vec[row_ind] = *row_it;
+					}
 			}
 		}
 

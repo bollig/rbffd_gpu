@@ -66,14 +66,14 @@ typedef boost::numeric::ublas::vector<double> VecType;
 	typedef VecType UBLAS_Vec; 
 
 
-	CSR_Mat A(8, 8, values.size()); 
-	CSR_Mat A_reordered(8, 8, values.size()); 
+	CSR_Mat A(5, 8, values.size()); 
+	CSR_Mat A_reordered(5, 8, values.size()); 
 	UBLAS_Vec V(8); 
 	UBLAS_Vec V_reordered(8); 
 
 	// Convert to Boost CSR 
 	int k = 0;
-	for (int i = 0; i < 8; i ++ ){ 
+	for (int i = 0; i < 5; i ++ ){ 
 		V(i) = i; 
 		for (int j = 0; j < 8; j++) { 
 			if (col_ind[k] == j) {
@@ -85,7 +85,7 @@ typedef boost::numeric::ublas::vector<double> VecType;
 
 	AdjacencyGraph agraph; 
 
-	std::vector<int> new_order(8); 
+	std::vector<int> new_order(5); 
 
 	//std::cout << A_reordered << std::endl;
 
@@ -95,7 +95,7 @@ typedef boost::numeric::ublas::vector<double> VecType;
 	r.get_reordered_system(A, V, new_order, A_reordered, V_reordered);
 
 	std::cout << "INPUT:\n";
-	for (int i = 0; i < 8; i ++ ){ 
+	for (int i = 0; i < 5; i ++ ){ 
 		for (int j = 0; j < 8; j++) { 
 			std::cout << A(i,j) << " ";
 		}
@@ -105,7 +105,7 @@ typedef boost::numeric::ublas::vector<double> VecType;
 	
 	std::cout << "\n\nOUTPUT:\n";
 
-	for (int i = 0; i < 8; i ++ ){ 
+	for (int i = 0; i < 5; i ++ ){ 
 		for (int j = 0; j < 8; j++) { 
 			std::cout << A_reordered(i,j) << " ";
 		}

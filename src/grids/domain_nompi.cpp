@@ -38,10 +38,10 @@ DomainNoMPI::DomainNoMPI(int dimension, Grid* grid, int _comm_size)
     this->global_num_nodes = grid->getNodeListSize();
 
     // Forms sets (Q,O,R) and l2g/g2l maps
-    printf("inside DomainNoMPI constructor\n");
-    printf("nodelist size: %d\n", grid->getNodeList().size());
-    printf("stencil size: %d\n", grid->getStencils().size());
-    printf("... fillLocalData from constructor\n");
+    //printf("inside DomainNoMPI constructor\n");
+    //printf("nodelist size: %d\n", grid->getNodeList().size());
+    //printf("stencil size: %d\n", grid->getStencils().size());
+    //printf("... fillLocalData from constructor\n");
   
     // Why fill data on the entire grid. I DO NOT FOLLOW.
     fillLocalData(grid->getNodeList(), grid->getStencils(), grid->getBoundaryIndices(), grid->getStencilRadii(), grid->getMaxStencilRadii(), grid->getMinStencilRadii()); 
@@ -202,8 +202,8 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
 
         int id = igx + x_divisions*(igy + y_divisions*igz);
 
-        printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound);
-        printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
+        //printf("Subdomain[%d (%d of %d)] Extents = (%f, %f) x (%f, %f) x (%f, %f)\n",id, id+1, comm_size, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound);
+        //printf("Tile (ix, iy, iz) = (%d, %d, %d) of (%d, %d, %d)\n", igx, igy, igz,igx == gx-1, igy==gy-1, igz==gz-1); 
         DomainNoMPI* dom = new DomainNoMPI(grid, dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
         //subdomains[id] = new DomainNoMPI(dim_num, global_num_nodes, left_bound, right_bound, bottom_bound, top_bound, front_bound, back_bound, id, comm_size);
         //subdomains[id]->setMaxStencilSize(this->max_st_size);
@@ -219,16 +219,18 @@ void DomainNoMPI::GEgenerateDecomposition(std::vector<DomainNoMPI*>& subdomains,
     for (unsigned int i = 0; i < subdomains.size(); i++) {
         printf("\n ***************** CPU %d ***************** \n", i);
         // Forms sets (Q,O,R) and l2g/g2l maps
-        std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
-        printf("about to enter fillLocalData\n");
+        //std::cout << "GLOBAL STENCIL MAP SIZE= " << this->stencil_map.size() << std::endl;
+        //printf("about to enter fillLocalData\n");
         //Subdomain& s = *subdomains[i];
         Grid& s = *grid;
         subdomains[i]->fillLocalData( grid->getNodeList(), s.getStencils(), s.getBoundaryIndices(), s.getStencilRadii(), s.getMaxStencilRadii(), s.getMinStencilRadii());
+#if 0
         printf("subdomain %d filled\n", i); 
         printf("subdomain %d STENCIL MAP SIZE: %d\n", i, subdomains[i]->stencil_map.size());
         printf("subdomain %d NB NODES: %d\n", i, subdomains[i]->getNodeListSize());
         printf("subdomain %d Q size: %d\n", i, subdomains[i]->Q.size());
         printf("subdomain %d R size: %d\n", i, subdomains[i]->R.size());
+#endif
         //printCenterMemberships(subdomains[i]->G, "G");
 
         char file[80];
@@ -393,13 +395,15 @@ void DomainNoMPI::fill_O_by_rank(std::set<int>& subdomain_R, int subdomain_rank)
     // subdomain_R contains the R for one subdomain. 
     // We take the intersection to find what elements of R on that subdomain
     // are sent by this processor and use the builtin STL inserter for efficiency
+#if 0
     printf("before set_intersection\n");
     printf("subdomain_R size: %d\n", subdomain_R.size());
     printf("this_O size: %d\n", this->O.size());
     printf("rank: %d\n", subdomain_rank);
     printf("O_by_rank size: %d\n", O_by_rank.size());
+#endif
     set_intersection(subdomain_R.begin(), subdomain_R.end(), this->O.begin(), this->O.end(), inserter(O_by_rank[subdomain_rank], O_by_rank[subdomain_rank].end())); 
-    printf("after set_intersection\n");
+    //printf("after set_intersection\n");
     return;
 }
 
@@ -435,9 +439,9 @@ void DomainNoMPI::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilTy
     //
     set<int>::iterator qit;
 
-    printf("... enter fillCenterSets\n");
-    printf("DomainNoMPI %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f (Checking %dD)\n", id, xmin, xmax,
-            ymin, ymax, zmin, zmax, dim_num);
+    //printf("... enter fillCenterSets\n");
+    //printf("DomainNoMPI %d, xmin/max= %f, %f, ymin/max= %f, %f, zmin/max= %f, %f (Checking %dD)\n", id, xmin, xmax,
+            //ymin, ymax, zmin, zmax, dim_num);
     //    printf("NB_NODES: %d\n", rbf_centers.size());
     //   printf("Q_NODES: %d\n", Q.size());
     //   printf("NB_STENCILS: %d\n", stencils.size());
@@ -450,7 +454,7 @@ void DomainNoMPI::fillCenterSets(vector<NodeType>& rbf_centers, vector<StencilTy
 
     // Generate sets Q and D
     // Q represents number of nodes in the domain. The {Qs} form a partition of the entire domain
-    printf("fillCenterSets, nb rbf_centers: %d\n", rbf_centers.size());
+    //printf("fillCenterSets, nb rbf_centers: %d\n", rbf_centers.size());
     for (unsigned int i = 0; i < rbf_centers.size(); i++) {
         NodeType& pt = rbf_centers[i];
         if (this->isInsideSubdomain(pt, i)) {

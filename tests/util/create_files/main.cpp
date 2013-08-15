@@ -84,12 +84,15 @@ void createGrid()
         exit(0);
 	}
     grid->generateStencils(stencil_size, stencil_type);   // nearest nb_points
+    std::vector<StencilType>& stencil = grid->getStencils();
 
     int subx = 1;
     int suby = 2;
     int subz = 2; // index varies fastest in z
     printf("Generate subdomain\n");
     printf("grid node list size= %d\n", grid->getNodeList().size());
+
+#if 0
     dom = new DomainNoMPI(dim, grid, 0);
     printf("dom node list size= %d\n", dom->getNodeList().size());
 
@@ -99,10 +102,15 @@ void createGrid()
     file = "ell_subdomain_" +file; 
     printf("++++++ file= %s ++++++\n", file.c_str());
     printf("--------------------- before GEgenerateDecomposition ----------------------\n");
-    dom->GEgenerateDecomposition(doms, subx, suby, subz);
+    
+    printf("TURNED OFF DOMAIN DECOMPOSITION\n");
+    //dom->GEgenerateDecomposition(doms, subx, suby, subz);
+
     printf("--------------------- after GEgenerateDecomposition ----------------------\n");
     printf("WRITE DOMS\n");
+#endif
 }
+
 //----------------------------------------------------------------------
 void setupDerivativeWeights()
 {
@@ -206,7 +214,9 @@ int main(int argc, char** argv)
 
 	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
     file = "ell_subdomain_" + file;
-    dom->writeToEllpackBinaryFile(file, doms);
+
+    printf("TURNED OFF DOMAIN DECOMPOSITION\n");
+    //dom->writeToEllpackBinaryFile(file, doms);
     printf("number subdomains= %d\n", doms.size());
 
     exit(EXIT_SUCCESS);

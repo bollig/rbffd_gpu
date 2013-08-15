@@ -13,6 +13,7 @@
 // For writing weights in (sparse) matrix market format
 #include "mmio.h"
 #include "utils/random.h"
+#include "grids/vcl_bandwidth_reduction.h"
 
 namespace gercm {
     void geRCM(std::vector<int>& col_id, int nb_rows, int nb_nnz_per_row, std::vector<int>& perm, std::vector<int>& perm_inv);
@@ -1363,13 +1364,60 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         fwrite(&col_id[0], sizeof(int), col_id.size(), fd);
         fclose(fd);
 
-
         printf("TRY REVERSE CUTHILL McGee\n");
+
         std::vector<int> perm;
         std::vector<int> perm_inv;
-        gercm::geRCM(col_id, nb_rows, nb_nonzeros, perm, perm_inv);
-    }
+        //gercm::geRCM(col_id, nb_rows, nb_nonzeros, perm, perm_inv);
 
+        cuthillMcKee(col_id, nb_rows, nb_nonzeros);
+        exit(0);
+    }
+    //--------------------------------------------------------------------
+    void RBFFD::cuthillMcKee(std::vector<int>& col_id, int nb_rows, int stencil_size)
+    {
+        std::vector<int> row_ptr;
+        std::vector<int> new_row_ptr;
+        std::vector<int> new_col_ind;
+
+        printf("*******\nBandwidth reduction using ViennaCL\n");
+        printf("nb_rows= %d, stencil_size= %d\n", nb_rows, stencil_size);
+        //printf("col id size: %d\n", col_id.size());
+        row_ptr.push_back(0);
+        for (int i=0; i < nb_rows; i++) {
+            row_ptr.push_back((i+1)*stencil_size);
+        }
+        //printf("col_id.size= %d\n", col_id.size());
+
+        new_col_ind.resize(0);
+        new_row_ptr.resize(0);
+        vcl::ConvertMatrix d(nb_rows, col_id, row_ptr, new_col_ind, new_row_ptr);
+        float bw_mean, bw_std;
+        int bw = d.calcOrigBandwidth(bw_mean, bw_std);
+        printf("Unordered bandwidth/mean/std: %d, %f, %f\n", bw, bw_mean, bw_std);
+        d.reduceBandwidthRCM();
+        // matrix2/matrix3 not defined
+        //bw = rvcl.calc_bw(matrix2);
+        //printf("bandwidth of reordered matrix2: %d\n", bw);
+        //bw = rvcl.calc_bw(matrix3);
+        //printf("bandwidth of reordered matrix3: %d\n", bw);
+
+        //printf("before reordderedEllMatrix\n");
+        d.computeReorderedEllMatrix(stencil_size);
+        //printf("start registerDensity\n");
+        //printf("new_col_ind[0]= %d\n", new_col_ind[0]);
+        bw = d.bandwidthEllpack(&new_col_ind[0], nb_rows, stencil_size);
+        d.calcFinalBandwidth(bw_mean, bw_std);
+        printf("bandwidth reordered ellpack matrix: %d\n", bw);
+        // Ideally, sort earlier in the pipeline
+        for (int i=0; i < nb_rows; i++) {
+            std::sort(&col_id[i*stencil_size], &col_id[(i+1)*stencil_size]);
+        }
+        d.registerDensity(col_id, nb_rows, stencil_size, "orig matrix: ");
+        d.registerDensity(new_col_ind, nb_rows, stencil_size, "reordered matrix: ");
+        //d.reorderMatrix(); // done in reduceBandwidthwithRCM
+        exit(0);
+    }
     //--------------------------------------------------------------------
 
     void RBFFD::writeToAsciiFile(DerType which, std::string filename) {

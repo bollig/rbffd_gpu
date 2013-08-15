@@ -220,6 +220,8 @@ class RBFFD
 		// Zero weights for testing. Central weight is 1. Diagonal matrix. 
 		void computeWeightsForStencil_Empty(DerType dt, int st_indx);
 
+        // Cuthill McKee using ViennaCL
+        void RBFFD::cuthillMcKee(std::vector<int>& col_id, int nb_rows, int     stencil_size);
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;
             useHyperviscosity = tf; 

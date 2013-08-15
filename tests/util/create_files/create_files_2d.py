@@ -5,36 +5,28 @@ import os
 
 nb_sten = [16,31,32,33,64]
 nb_pts = [8,16,32,64,128]
-nb_sten = [64]
-nb_sten = [32]
-nb_pts = [32,48]
-nb_pts = [64,96]
-nb_pts = [96,128]
-nb_pts = [8]
-nb_pts = [128]
 nb_pts = [48]
-nb_pts = [96]
-nb_pts = [32]
-
+nb_pts = [256]
+nb_pts = [128]
+nb_pts = [32,48,64,128,256]
 nb_sten = [32,64]
-nb_pts = [32,64,96]
-sten = ["compact", "random", "kd-tree"]
+# compact, random, kd-tree
+sten = ["compact"]
 sten = ["kd-tree"]
-#sten = ["compact"]
 
 for ns in nb_sten:
        for np in nb_pts:
                for s in sten:
                        file_content="""
-                         DIMENSION = 3
+                         DIMENSION = 2
                          STENCIL_SIZE = %d
-                         NB_X = %d
-                         NB_Y = %d
-                         NB_Z = %d
+                         NB_X =  %d
+                         NB_Y =  %d
+                         NB_Z = 1
                          NODE_DIST = %s
-                         """ % (ns,np,np,np,s)
+                         """ % (ns,np,np,s)
                        print(file_content)
-                       out_file = "%s_nb_%d_sten_%d_3d.out" % (s,np,ns)
+                       out_file = "%s_nb_%d_sten_%d_2d.out" % (s,np,ns)
                        fd = open('create.conf', 'w')
                        fd.write(file_content)
                        fd.close()

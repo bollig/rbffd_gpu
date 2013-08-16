@@ -1,3 +1,4 @@
+----------------------------------------------------------------------
 Create a range of weight arrays for different grids: 
 
 Surface of a sphere, 
@@ -18,7 +19,331 @@ Within the analysis code, do:
 cuthill_mcgee, reordering based on on space-filling curves.  (alternatives to COMPACT and RANDOM)
 
 ----------------------------------------------------------------------
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+----------------------------------------------------------------------
 June 18, 2013
 create_files.py : create a series of weight files (random and compactly distributed) 
 for benchmarking. Currenlty in ascii form. Should generate binary version directly.
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+Results below: Kd-tree to compute the nearest n stencil points. 
+----------------------------------------------------------------------
+64^3, stencil: 64
+bw= 26923, mean(bw)= 17981.179688, std(bw) = 7347.631836
+bandwidth of reordered matrix2: 26923
+bw= 26923, mean(bw)= 17562.902344, std(bw) = 7286.526855
+bandwidth of reordered matrix3: 26923
+----------------------------------------------------------------------
+Double precision: stencils and bandwidth do not change
+----------------------------------------------------------------------
+64^3, stencil: 32
+bw= 20202, mean(bw)= 13914.222656, std(bw) = 5432.416016
+bandwidth of reordered matrix2: 20202
+bw= 20202, mean(bw)= 13880.382812, std(bw) = 5439.676758
+bandwidth of reordered matrix3: 20202
+----------------------------------------------------------------------
+96^3 Stencil : 32
+bw= 45029, mean(bw)= 31408.089844, std(bw) = 12321.451172
+bandwidth of reordered matrix2: 45029
+bw= 45029, mean(bw)= 31365.570312, std(bw) = 12331.574219
+bandwidth of reordered matrix3: 45029
+----------------------------------------------------------------------
+32^3, stencil: 32
+bw= 4902, mean(bw)= 3430.304688, std(bw) = 1321.581543
+bandwidth of reordered matrix2: 4902
+bw= 4902, mean(bw)= 3416.658691, std(bw) = 1322.197021
+bandwidth of reordered matrix3: 4902
+----------------------------------------------------------------------
+Now, what happens if I do not symmetryzie the matrix.  And do not explicitly 
+add a diagonal element. (change grids/vcl*h)
+----------------------------------------------------------------------
+32^3, stencil: 32
+bw= 6988, mean(bw)= 3439.747070, std(bw) = 1315.894165
+bandwidth of reordered matrix2: 6988
+bw= 6988, mean(bw)= 3439.747070, std(bw) = 1315.894165
+bandwidth of reordered matrix3: 6988
+----------------------------------------------------------------------
+64^3, stencil: 32
+bw= 29272, mean(bw)= 13813.076172, std(bw) = 5316.948242
+bandwidth of reordered matrix2: 29272
+bw= 29272, mean(bw)= 13813.076172, std(bw) = 5316.948242
+bandwidth of reordered matrix3: 29272
+----------------------------------------------------------------------
+Symmetrizing and adding the diagonal decreases the bandwidth by 30% yet 
+leaves the mean and standard deviation unchanged. Very interesting. 
+I DO NOT KNOW WHETEHR THIS IS GENERAL OR NOT. 
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+Get numbers for register density: 
+64^2, 128^2, 256^2, 512^2 before and after bandwidth reduction
+32^2, 64^3, 96^3, 126*3
+stencil size: 32 and 64. 
+----------------------------------------------------------------------
+
+----------------------------------------------------------------------
+Register density, average and standard deviation. 
+Matrix is not symmetrized
+Grids in 2D: 32, 48, 64, 128, 256 squared before and after bandwidth reduction.
+kd-tree_nb_128_sten_32_2d.out:orig matrix:      : mean reg density: 0.244165, std reg density: 0.057145
+kd-tree_nb_128_sten_32_2d.out:reordered matrix: : mean reg density: 0.188601, std reg density: 0.036691
+kd-tree_nb_128_sten_64_2d.out:orig matrix:      : mean reg density: 0.343759, std reg density: 0.101689
+kd-tree_nb_128_sten_64_2d.out:reordered matrix: : mean reg density: 0.241717, std reg density: 0.048922
+kd-tree_nb_256_sten_32_2d.out:orig matrix:      : mean reg density: 0.245250, std reg density: 0.055415
+kd-tree_nb_256_sten_32_2d.out:reordered matrix: : mean reg density: 0.184055, std reg density: 0.027602
+kd-tree_nb_256_sten_64_2d.out:orig matrix:      : mean reg density: 0.346128, std reg density: 0.100137
+kd-tree_nb_256_sten_64_2d.out:reordered matrix: : mean reg density: 0.233596, std reg density: 0.034351
+kd-tree_nb_32_sten_32_2d.out:orig matrix:       : mean reg density: 0.237556, std reg density: 0.065247
+kd-tree_nb_32_sten_32_2d.out:reordered matrix:  : mean reg density: 0.247916, std reg density: 0.086342
+kd-tree_nb_32_sten_64_2d.out:orig matrix:       : mean reg density: 0.330993, std reg density: 0.106870
+kd-tree_nb_32_sten_64_2d.out:reordered matrix:  : mean reg density: 0.345314, std reg density: 0.095242
+kd-tree_nb_48_sten_32_2d.out:orig matrix:       : mean reg density: 0.240347, std reg density: 0.062268
+kd-tree_nb_48_sten_32_2d.out:reordered matrix:  : mean reg density: 0.216676, std reg density: 0.069498
+kd-tree_nb_48_sten_64_2d.out:orig matrix:       : mean reg density: 0.336470, std reg density: 0.105349
+kd-tree_nb_48_sten_64_2d.out:reordered matrix:  : mean reg density: 0.300832, std reg density: 0.090306
+kd-tree_nb_64_sten_32_2d.out:orig matrix:       : mean reg density: 0.242980, std reg density: 0.060477
+kd-tree_nb_64_sten_32_2d.out:reordered matrix:  : mean reg density: 0.203327, std reg density: 0.057693
+kd-tree_nb_64_sten_64_2d.out:orig matrix:       : mean reg density: 0.340071, std reg density: 0.103815
+kd-tree_nb_64_sten_64_2d.out:reordered matrix:  : mean reg density: 0.277597, std reg density: 0.076204
+----------------------------------------------------------------------
+Symmetrized adjacency matrix (constructed from non-symmetric matrix)
+IN THE SYMMETRIC (and perhaps) UNSYMMETRIC cases, why are matrix2 and matrix3 different? 
+kd-tree_nb_128_sten_32_2d.out:orig matrix: : mean reg density: 0.244165, std reg density: 0.057145
+kd-tree_nb_128_sten_32_2d.out:reordered matrix: : mean reg density: 0.190816, std reg density: 0.036428
+kd-tree_nb_128_sten_64_2d.out:orig matrix: : mean reg density: 0.343759, std reg density: 0.101689
+kd-tree_nb_128_sten_64_2d.out:reordered matrix: : mean reg density: 0.246548, std reg density: 0.048761
+kd-tree_nb_256_sten_32_2d.out:orig matrix: : mean reg density: 0.245250, std reg density: 0.055415
+kd-tree_nb_256_sten_32_2d.out:reordered matrix: : mean reg density: 0.188374, std reg density: 0.026793
+kd-tree_nb_256_sten_64_2d.out:orig matrix: : mean reg density: 0.346128, std reg density: 0.100137
+kd-tree_nb_256_sten_64_2d.out:reordered matrix: : mean reg density: 0.242739, std reg density: 0.033307
+kd-tree_nb_32_sten_32_2d.out:orig matrix: : mean reg density: 0.237556, std reg density: 0.065247
+kd-tree_nb_32_sten_32_2d.out:reordered matrix: : mean reg density: 0.265652, std reg density: 0.092970
+kd-tree_nb_32_sten_64_2d.out:orig matrix: : mean reg density: 0.330993, std reg density: 0.106870
+kd-tree_nb_32_sten_64_2d.out:reordered matrix: : mean reg density: 0.339379, std reg density: 0.113867
+kd-tree_nb_48_sten_32_2d.out:orig matrix: : mean reg density: 0.240347, std reg density: 0.062268
+kd-tree_nb_48_sten_32_2d.out:reordered matrix: : mean reg density: 0.222916, std reg density: 0.073974
+kd-tree_nb_48_sten_64_2d.out:orig matrix: : mean reg density: 0.336470, std reg density: 0.105349
+kd-tree_nb_48_sten_64_2d.out:reordered matrix: : mean reg density: 0.294798, std reg density: 0.090191
+kd-tree_nb_64_sten_32_2d.out:orig matrix: : mean reg density: 0.242980, std reg density: 0.060477
+kd-tree_nb_64_sten_32_2d.out:reordered matrix: : mean reg density: 0.212061, std reg density: 0.064847
+kd-tree_nb_64_sten_64_2d.out:orig matrix: : mean reg density: 0.340071, std reg density: 0.103815
+kd-tree_nb_64_sten_64_2d.out:reordered matrix: : mean reg density: 0.267965, std reg density: 0.076522
+.....
+kd-tree_nb_128_sten_32_2d.out:Unordered bandwidth/mean/std: 16268, 2740.209961, 4822.068848
+kd-tree_nb_128_sten_32_2d.out:original bandwidth/mean/std: 16268, 2740.209961, 4822.068848
+kd-tree_nb_128_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 1031, 685.798218, 242.068741
+kd-tree_nb_128_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 1031, 681.483398, 242.630280
+kd-tree_nb_128_sten_32_2d.out:bandwidth reordered ellpack matrix: 1031
+kd-tree_nb_128_sten_64_2d.out:Unordered bandwidth/mean/std: 16274, 3526.127441, 5233.920898
+kd-tree_nb_128_sten_64_2d.out:original bandwidth/mean/std: 16274, 3526.127441, 5233.920898
+kd-tree_nb_128_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 1522, 1028.337891, 360.546417
+kd-tree_nb_128_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 1522, 1019.669312, 361.382568
+kd-tree_nb_128_sten_64_2d.out:bandwidth reordered ellpack matrix: 1522
+kd-tree_nb_256_sten_32_2d.out:Unordered bandwidth/mean/std: 65293, 5680.361328, 14813.895508
+kd-tree_nb_256_sten_32_2d.out:original bandwidth/mean/std: 65293, 5680.361328, 14813.895508
+kd-tree_nb_256_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 2055, 1367.597900, 483.264465
+kd-tree_nb_256_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 2054, 1363.230713, 484.026276
+kd-tree_nb_256_sten_32_2d.out:bandwidth reordered ellpack matrix: 2054
+kd-tree_nb_256_sten_64_2d.out:Unordered bandwidth/mean/std: 65298, 7357.572266, 16441.197266
+kd-tree_nb_256_sten_64_2d.out:original bandwidth/mean/std: 65298, 7357.572266, 16441.197266
+kd-tree_nb_256_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 3059, 2051.452148, 723.201233
+kd-tree_nb_256_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 3058, 2042.512695, 724.335876
+kd-tree_nb_256_sten_64_2d.out:bandwidth reordered ellpack matrix: 3058
+kd-tree_nb_32_sten_32_2d.out:Unordered bandwidth/mean/std: 1005, 549.393555, 343.391357
+kd-tree_nb_32_sten_32_2d.out:original bandwidth/mean/std: 1005, 549.393555, 343.391357
+kd-tree_nb_32_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 258, 176.607422, 59.728016
+kd-tree_nb_32_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 258, 172.713867, 59.994587
+kd-tree_nb_32_sten_32_2d.out:bandwidth reordered ellpack matrix: 258
+kd-tree_nb_32_sten_64_2d.out:Unordered bandwidth/mean/std: 1010, 674.035156, 305.346069
+kd-tree_nb_32_sten_64_2d.out:original bandwidth/mean/std: 1010, 674.035156, 305.346069
+kd-tree_nb_32_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 371, 266.785156, 84.560173
+kd-tree_nb_32_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 370, 259.424805, 83.866524
+kd-tree_nb_32_sten_64_2d.out:bandwidth reordered ellpack matrix: 370
+kd-tree_nb_48_sten_32_2d.out:Unordered bandwidth/mean/std: 2269, 911.044678, 823.860291
+kd-tree_nb_48_sten_32_2d.out:original bandwidth/mean/std: 2269, 911.044678, 823.860291
+kd-tree_nb_48_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 386, 260.245667, 90.177765
+kd-tree_nb_48_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 385, 256.254333, 90.406113
+kd-tree_nb_48_sten_32_2d.out:bandwidth reordered ellpack matrix: 385
+kd-tree_nb_48_sten_64_2d.out:Unordered bandwidth/mean/std: 2274, 1140.729126, 813.447449
+kd-tree_nb_48_sten_64_2d.out:original bandwidth/mean/std: 2274, 1140.729126, 813.447449
+kd-tree_nb_48_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 566, 391.964417, 131.790192
+kd-tree_nb_48_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 565, 384.078125, 131.887833
+kd-tree_nb_48_sten_64_2d.out:bandwidth reordered ellpack matrix: 565
+kd-tree_nb_64_sten_32_2d.out:Unordered bandwidth/mean/std: 4045, 1273.650146, 1433.067749
+kd-tree_nb_64_sten_32_2d.out:original bandwidth/mean/std: 4045, 1273.650146, 1433.067749
+kd-tree_nb_64_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 517, 345.506592, 120.932465
+kd-tree_nb_64_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 517, 341.708008, 121.785088
+kd-tree_nb_64_sten_32_2d.out:bandwidth reordered ellpack matrix: 517
+kd-tree_nb_64_sten_64_2d.out:Unordered bandwidth/mean/std: 4050, 1614.662354, 1476.320801
+kd-tree_nb_64_sten_64_2d.out:original bandwidth/mean/std: 4050, 1614.662354, 1476.320801
+kd-tree_nb_64_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 756, 519.143555, 178.322174
+kd-tree_nb_64_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 754, 510.844727, 179.205124
+kd-tree_nb_64_sten_64_2d.out:bandwidth reordered ellpack matrix: 754
+----------------------------------------------------------------------
+Non-symmetric adjacency matrix
+kd-tree_nb_128_sten_32_2d.out:orig matrix: : mean reg density: 0.244165, std reg density: 0.057145
+kd-tree_nb_128_sten_32_2d.out:reordered matrix: : mean reg density: 0.190816, std reg density: 0.036428
+kd-tree_nb_128_sten_64_2d.out:orig matrix: : mean reg density: 0.343759, std reg density: 0.101689
+kd-tree_nb_128_sten_64_2d.out:reordered matrix: : mean reg density: 0.246548, std reg density: 0.048761
+kd-tree_nb_256_sten_32_2d.out:orig matrix: : mean reg density: 0.245250, std reg density: 0.055415
+kd-tree_nb_256_sten_32_2d.out:reordered matrix: : mean reg density: 0.188374, std reg density: 0.026793
+kd-tree_nb_256_sten_64_2d.out:orig matrix: : mean reg density: 0.346128, std reg density: 0.100137
+kd-tree_nb_256_sten_64_2d.out:reordered matrix: : mean reg density: 0.242739, std reg density: 0.033307
+kd-tree_nb_32_sten_32_2d.out:orig matrix: : mean reg density: 0.237556, std reg density: 0.065247
+kd-tree_nb_32_sten_32_2d.out:reordered matrix: : mean reg density: 0.265652, std reg density: 0.092970
+kd-tree_nb_32_sten_64_2d.out:orig matrix: : mean reg density: 0.330993, std reg density: 0.106870
+kd-tree_nb_32_sten_64_2d.out:reordered matrix: : mean reg density: 0.339379, std reg density: 0.113867
+kd-tree_nb_48_sten_32_2d.out:orig matrix: : mean reg density: 0.240347, std reg density: 0.062268
+kd-tree_nb_48_sten_32_2d.out:reordered matrix: : mean reg density: 0.222916, std reg density: 0.073974
+kd-tree_nb_48_sten_64_2d.out:orig matrix: : mean reg density: 0.336470, std reg density: 0.105349
+kd-tree_nb_48_sten_64_2d.out:reordered matrix: : mean reg density: 0.294798, std reg density: 0.090191
+kd-tree_nb_64_sten_32_2d.out:orig matrix: : mean reg density: 0.242980, std reg density: 0.060477
+kd-tree_nb_64_sten_32_2d.out:reordered matrix: : mean reg density: 0.212061, std reg density: 0.064847
+kd-tree_nb_64_sten_64_2d.out:orig matrix: : mean reg density: 0.340071, std reg density: 0.103815
+kd-tree_nb_64_sten_64_2d.out:reordered matrix: : mean reg density: 0.267965, std reg density: 0.076522
+......
+kd-tree_nb_128_sten_32_2d.out:Unordered bandwidth/mean/std: 16268, 2740.209961, 4822.068848
+kd-tree_nb_128_sten_32_2d.out:original bandwidth/mean/std: 16268, 2740.209961, 4822.068848
+kd-tree_nb_128_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 1031, 685.798218, 242.068741
+kd-tree_nb_128_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 1031, 681.483398, 242.630280
+kd-tree_nb_128_sten_32_2d.out:bandwidth reordered ellpack matrix: 1031
+kd-tree_nb_128_sten_64_2d.out:Unordered bandwidth/mean/std: 16274, 3526.127441, 5233.920898
+kd-tree_nb_128_sten_64_2d.out:original bandwidth/mean/std: 16274, 3526.127441, 5233.920898
+kd-tree_nb_128_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 1522, 1028.337891, 360.546417
+kd-tree_nb_128_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 1522, 1019.669312, 361.382568
+kd-tree_nb_128_sten_64_2d.out:bandwidth reordered ellpack matrix: 1522
+kd-tree_nb_256_sten_32_2d.out:Unordered bandwidth/mean/std: 65293, 5680.361328, 14813.895508
+kd-tree_nb_256_sten_32_2d.out:original bandwidth/mean/std: 65293, 5680.361328, 14813.895508
+kd-tree_nb_256_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 2055, 1367.597900, 483.264465
+kd-tree_nb_256_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 2054, 1363.230713, 484.026276
+kd-tree_nb_256_sten_32_2d.out:bandwidth reordered ellpack matrix: 2054
+kd-tree_nb_256_sten_64_2d.out:Unordered bandwidth/mean/std: 65298, 7357.572266, 16441.197266
+kd-tree_nb_256_sten_64_2d.out:original bandwidth/mean/std: 65298, 7357.572266, 16441.197266
+kd-tree_nb_256_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 3059, 2051.452148, 723.201233
+kd-tree_nb_256_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 3058, 2042.512695, 724.335876
+kd-tree_nb_256_sten_64_2d.out:bandwidth reordered ellpack matrix: 3058
+kd-tree_nb_32_sten_32_2d.out:Unordered bandwidth/mean/std: 1005, 549.393555, 343.391357
+kd-tree_nb_32_sten_32_2d.out:original bandwidth/mean/std: 1005, 549.393555, 343.391357
+kd-tree_nb_32_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 258, 176.607422, 59.728016
+kd-tree_nb_32_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 258, 172.713867, 59.994587
+kd-tree_nb_32_sten_32_2d.out:bandwidth reordered ellpack matrix: 258
+kd-tree_nb_32_sten_64_2d.out:Unordered bandwidth/mean/std: 1010, 674.035156, 305.346069
+kd-tree_nb_32_sten_64_2d.out:original bandwidth/mean/std: 1010, 674.035156, 305.346069
+kd-tree_nb_32_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 371, 266.785156, 84.560173
+kd-tree_nb_32_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 370, 259.424805, 83.866524
+kd-tree_nb_32_sten_64_2d.out:bandwidth reordered ellpack matrix: 370
+kd-tree_nb_48_sten_32_2d.out:Unordered bandwidth/mean/std: 2269, 911.044678, 823.860291
+kd-tree_nb_48_sten_32_2d.out:original bandwidth/mean/std: 2269, 911.044678, 823.860291
+kd-tree_nb_48_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 386, 260.245667, 90.177765
+kd-tree_nb_48_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 385, 256.254333, 90.406113
+kd-tree_nb_48_sten_32_2d.out:bandwidth reordered ellpack matrix: 385
+kd-tree_nb_48_sten_64_2d.out:Unordered bandwidth/mean/std: 2274, 1140.729126, 813.447449
+kd-tree_nb_48_sten_64_2d.out:original bandwidth/mean/std: 2274, 1140.729126, 813.447449
+kd-tree_nb_48_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 566, 391.964417, 131.790192
+kd-tree_nb_48_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 565, 384.078125, 131.887833
+kd-tree_nb_48_sten_64_2d.out:bandwidth reordered ellpack matrix: 565
+kd-tree_nb_64_sten_32_2d.out:Unordered bandwidth/mean/std: 4045, 1273.650146, 1433.067749
+kd-tree_nb_64_sten_32_2d.out:original bandwidth/mean/std: 4045, 1273.650146, 1433.067749
+kd-tree_nb_64_sten_32_2d.out:Reordered(matrix2) bandwidth/mean/std: 517, 345.506592, 120.932465
+kd-tree_nb_64_sten_32_2d.out:Reordered(matrix3) bandwidth/mean/std: 517, 341.708008, 121.785088
+kd-tree_nb_64_sten_32_2d.out:bandwidth reordered ellpack matrix: 517
+kd-tree_nb_64_sten_64_2d.out:Unordered bandwidth/mean/std: 4050, 1614.662354, 1476.320801
+kd-tree_nb_64_sten_64_2d.out:original bandwidth/mean/std: 4050, 1614.662354, 1476.320801
+kd-tree_nb_64_sten_64_2d.out:Reordered(matrix2) bandwidth/mean/std: 756, 519.143555, 178.322174
+kd-tree_nb_64_sten_64_2d.out:Reordered(matrix3) bandwidth/mean/std: 754, 510.844727, 179.205124
+kd-tree_nb_64_sten_64_2d.out:bandwidth reordered ellpack matrix: 754
+----------------------------------------------------------------------
+
+3D (Three-dimensional)
+Symmetric adjacency matrix constructed from the non-symmetric one: adj(j,i) = adj(i,j)
+kd-tree_nb_32_sten_32_3d.out:orig matrix: : mean reg density: 0.144806, std reg density: 0.027386
+kd-tree_nb_32_sten_32_3d.out:reordered matrix: : mean reg density: 0.141500, std reg density: 0.031388
+kd-tree_nb_32_sten_64_3d.out:orig matrix: : mean reg density: 0.169499, std reg density: 0.037005
+kd-tree_nb_32_sten_64_3d.out:reordered matrix: : mean reg density: 0.165490, std reg density: 0.042719
+kd-tree_nb_64_sten_32_3d.out:orig matrix: : mean reg density: 0.149214, std reg density: 0.026356
+kd-tree_nb_64_sten_32_3d.out:reordered matrix: : mean reg density: 0.130480, std reg density: 0.025685
+kd-tree_nb_64_sten_64_3d.out:orig matrix: : mean reg density: 0.171721, std reg density: 0.033434
+kd-tree_nb_64_sten_64_3d.out:reordered matrix: : mean reg density: 0.152857, std reg density: 0.026449
+kd-tree_nb_96_sten_32_3d.out:orig matrix: : mean reg density: 0.150072, std reg density: 0.025268
+kd-tree_nb_96_sten_32_3d.out:reordered matrix: : mean reg density: 0.124923, std reg density: 0.021329
+kd-tree_nb_96_sten_64_3d.out:orig matrix: : mean reg density: 0.172383, std reg density: 0.032001
+kd-tree_nb_96_sten_64_3d.out:reordered matrix: : mean reg density: 0.147718, std reg density: 0.022713
+
+kd-tree_nb_32_sten_32_3d.out:Unordered bandwidth/mean/std: 32409, 14478.085938, 10567.179688
+kd-tree_nb_32_sten_32_3d.out:original bandwidth/mean/std: 32409, 14478.085938, 10567.179688
+kd-tree_nb_32_sten_32_3d.out:Reordered(matrix2) bandwidth/mean/std: 4902, 3430.302490, 1321.565308
+kd-tree_nb_32_sten_32_3d.out:Reordered(matrix3) bandwidth/mean/std: 4902, 3416.666748, 1322.198120
+kd-tree_nb_32_sten_32_3d.out:bandwidth reordered ellpack matrix: 4902
+kd-tree_nb_32_sten_64_3d.out:Unordered bandwidth/mean/std: 32409, 14944.012695, 10620.620117
+kd-tree_nb_32_sten_64_3d.out:original bandwidth/mean/std: 32409, 14944.012695, 10620.620117
+kd-tree_nb_32_sten_64_3d.out:Reordered(matrix2) bandwidth/mean/std: 6573, 4429.757812, 1766.673584
+kd-tree_nb_32_sten_64_3d.out:Reordered(matrix3) bandwidth/mean/std: 6572, 4332.203125, 1747.578003
+kd-tree_nb_32_sten_64_3d.out:bandwidth reordered ellpack matrix: 6572
+kd-tree_nb_64_sten_32_3d.out:Unordered bandwidth/mean/std: 261403, 68258.523438, 85301.109375
+kd-tree_nb_64_sten_32_3d.out:original bandwidth/mean/std: 261403, 68258.523438, 85301.109375
+kd-tree_nb_64_sten_32_3d.out:Reordered(matrix2) bandwidth/mean/std: 20202, 13914.098633, 5432.312012
+kd-tree_nb_64_sten_32_3d.out:Reordered(matrix3) bandwidth/mean/std: 20202, 13880.239258, 5439.476562
+kd-tree_nb_64_sten_32_3d.out:bandwidth reordered ellpack matrix: 20202
+kd-tree_nb_64_sten_64_3d.out:Unordered bandwidth/mean/std: 261405, 69880.250000, 85607.476562
+kd-tree_nb_64_sten_64_3d.out:original bandwidth/mean/std: 261405, 69880.250000, 85607.476562
+kd-tree_nb_64_sten_64_3d.out:Reordered(matrix2) bandwidth/mean/std: 26923, 17983.671875, 7347.333496
+kd-tree_nb_64_sten_64_3d.out:Reordered(matrix3) bandwidth/mean/std: 26923, 17564.367188, 7286.105469
+kd-tree_nb_64_sten_64_3d.out:bandwidth reordered ellpack matrix: 26923
+kd-tree_nb_96_sten_32_3d.out:Unordered bandwidth/mean/std: 883331, 161302.906250, 262633.843750
+kd-tree_nb_96_sten_32_3d.out:original bandwidth/mean/std: 883331, 161302.906250, 262633.843750
+kd-tree_nb_96_sten_32_3d.out:Reordered(matrix2) bandwidth/mean/std: 45029, 31427.291016, 12319.388672
+kd-tree_nb_96_sten_32_3d.out:Reordered(matrix3) bandwidth/mean/std: 45029, 31384.736328, 12330.587891
+kd-tree_nb_96_sten_32_3d.out:bandwidth reordered ellpack matrix: 45029
+kd-tree_nb_96_sten_64_3d.out:Unordered bandwidth/mean/std: 883428, 183227.109375, 275864.812500
+kd-tree_nb_96_sten_64_3d.out:original bandwidth/mean/std: 883428, 183227.109375, 275864.812500
+kd-tree_nb_96_sten_64_3d.out:Reordered(matrix2) bandwidth/mean/std: 59563, 40331.105469, 16463.619141
+kd-tree_nb_96_sten_64_3d.out:Reordered(matrix3) bandwidth/mean/std: 59562, 39728.390625, 16380.099609
+kd-tree_nb_96_sten_64_3d.out:bandwidth reordered ellpack matrix: 59562
+----------------------------------------------------------------------
+3D (Three-dimensional)
+Non-Symmetric adjacency matrix 
+
+kd-tree_nb_32_sten_32_3d.out:orig matrix: : mean reg density: 0.144806, std reg density: 0.027386
+kd-tree_nb_32_sten_32_3d.out:reordered matrix: : mean reg density: 0.143630, std reg density: 0.028968
+kd-tree_nb_32_sten_64_3d.out:orig matrix: : mean reg density: 0.169499, std reg density: 0.037005
+kd-tree_nb_32_sten_64_3d.out:reordered matrix: : mean reg density: 0.164681, std reg density: 0.041755
+kd-tree_nb_64_sten_32_3d.out:orig matrix: : mean reg density: 0.149214, std reg density: 0.026356
+kd-tree_nb_64_sten_32_3d.out:reordered matrix: : mean reg density: 0.137849, std reg density: 0.025494
+kd-tree_nb_64_sten_64_3d.out:orig matrix: : mean reg density: 0.171721, std reg density: 0.033434
+kd-tree_nb_64_sten_64_3d.out:reordered matrix: : mean reg density: 0.149051, std reg density: 0.027089
+kd-tree_nb_96_sten_32_3d.out:orig matrix: : mean reg density: 0.150072, std reg density: 0.025268
+kd-tree_nb_96_sten_32_3d.out:reordered matrix: : mean reg density: 0.131506, std reg density: 0.022753
+kd-tree_nb_96_sten_64_3d.out:orig matrix: : mean reg density: 0.172383, std reg density: 0.032001
+kd-tree_nb_96_sten_64_3d.out:reordered matrix: : mean reg density: 0.146930, std reg density: 0.021874
+
+kd-tree_nb_32_sten_32_3d.out:Unordered bandwidth/mean/std: 32409, 14074.038086, 10614.532227
+kd-tree_nb_32_sten_32_3d.out:original bandwidth/mean/std: 32409, 14074.038086, 10614.532227
+kd-tree_nb_32_sten_32_3d.out:Reordered(matrix2) bandwidth/mean/std: 6988, 3439.728027, 1315.890259
+kd-tree_nb_32_sten_32_3d.out:Reordered(matrix3) bandwidth/mean/std: 6988, 3439.728027, 1315.890259
+kd-tree_nb_32_sten_32_3d.out:bandwidth reordered ellpack matrix: 6988
+kd-tree_nb_32_sten_64_3d.out:Unordered bandwidth/mean/std: 32409, 14886.961914, 10605.371094
+kd-tree_nb_32_sten_64_3d.out:original bandwidth/mean/std: 32409, 14886.961914, 10605.371094
+kd-tree_nb_32_sten_64_3d.out:Reordered(matrix2) bandwidth/mean/std: 9038, 4424.939941, 1792.989624
+kd-tree_nb_32_sten_64_3d.out:Reordered(matrix3) bandwidth/mean/std: 9038, 4424.939941, 1792.989624
+kd-tree_nb_32_sten_64_3d.out:bandwidth reordered ellpack matrix: 9038
+kd-tree_nb_64_sten_32_3d.out:Unordered bandwidth/mean/std: 261403, 63414.503906, 83160.695312
+kd-tree_nb_64_sten_32_3d.out:original bandwidth/mean/std: 261403, 63414.503906, 83160.695312
+kd-tree_nb_64_sten_32_3d.out:Reordered(matrix2) bandwidth/mean/std: 29272, 13809.789062, 5316.594238
+kd-tree_nb_64_sten_32_3d.out:Reordered(matrix3) bandwidth/mean/std: 29272, 13809.789062, 5316.594238
+kd-tree_nb_64_sten_32_3d.out:bandwidth reordered ellpack matrix: 29272
+kd-tree_nb_64_sten_64_3d.out:Unordered bandwidth/mean/std: 261405, 69326.109375, 85692.898438
+kd-tree_nb_64_sten_64_3d.out:original bandwidth/mean/std: 261405, 69326.109375, 85692.898438
+kd-tree_nb_64_sten_64_3d.out:Reordered(matrix2) bandwidth/mean/std: 37828, 17734.927734, 7354.912109
+kd-tree_nb_64_sten_64_3d.out:Reordered(matrix3) bandwidth/mean/std: 37828, 17734.927734, 7354.912109
+kd-tree_nb_64_sten_64_3d.out:bandwidth reordered ellpack matrix: 37828
+kd-tree_nb_96_sten_32_3d.out:Unordered bandwidth/mean/std: 883237, 152014.562500, 256033.859375
+kd-tree_nb_96_sten_32_3d.out:original bandwidth/mean/std: 883237, 152014.562500, 256033.859375
+kd-tree_nb_96_sten_32_3d.out:Reordered(matrix2) bandwidth/mean/std: 66519, 31368.660156, 12266.941406
+kd-tree_nb_96_sten_32_3d.out:Reordered(matrix3) bandwidth/mean/std: 66519, 31368.660156, 12266.941406
+kd-tree_nb_96_sten_32_3d.out:bandwidth reordered ellpack matrix: 66519
+kd-tree_nb_96_sten_64_3d.out:Unordered bandwidth/mean/std: 883428, 166574.000000, 264872.906250
+kd-tree_nb_96_sten_64_3d.out:original bandwidth/mean/std: 883428, 166574.000000, 264872.906250
+kd-tree_nb_96_sten_64_3d.out:Reordered(matrix2) bandwidth/mean/std: 85134, 39950.917969, 16586.716797
+kd-tree_nb_96_sten_64_3d.out:Reordered(matrix3) bandwidth/mean/std: 85134, 39950.917969, 16586.716797
+kd-tree_nb_96_sten_64_3d.out:bandwidth reordered ellpack matrix: 85134
 ----------------------------------------------------------------------

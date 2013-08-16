@@ -288,6 +288,13 @@ public:
 
 public:
 
+#define SYMMETRIZE 1
+#ifdef SYMMETRIZE
+    printf("SYMMETRIZE the adjacency graph\n");
+#else
+    printf("Do NOT SYMMETRIZE adjacency graph\n");
+#endif
+
     ConvertMatrix(int nb_rows_, std::vector<int>& col_ind_, std::vector<int>& row_ptr_,
                                 std::vector<int>& new_col_ind_, std::vector<int>& new_row_ptr_) :
         col_ind(col_ind_), row_ptr(row_ptr_),
@@ -303,9 +310,13 @@ public:
             for (int j=b; j < e; j++) {
                 int col = col_ind[j];
                 matrix[i][col] = 1.0;
-                //matrix[col][i] = 1.0;  // symmetrize for ViennaCL to work (need input control)
+#ifdef SYMMETRIZE
+                matrix[col][i] = 1.0;  // symmetrize for ViennaCL to work (need input control)
+#endif
             }
-            //matrix[i][i] = 1.0; // diagonal elment
+#ifdef SYMMETRIZE
+            matrix[i][i] = 1.0;  // symmetrize for ViennaCL to work (need input control)
+#endif
         }
 
 #if 0

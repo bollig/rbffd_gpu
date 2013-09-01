@@ -40,6 +40,10 @@ class RBFFD
         // NOTE: the ALT_* are alternative ways to express derivative weights
         // as linear combinations of other weights (i.e. ALT_XSFC can be
         // obtained by linear combinations of X, Y, and Z)
+        //
+
+        // 0/1: is adjacency matrix symmetrized?
+        int adj_sym;
 
         enum DerType {
             X       =    0x1,
@@ -164,6 +168,14 @@ class RBFFD
         bool computeSFCoperators;
         bool asciiWeights;
 
+        std::vector<int> col_id;
+
+public:
+        // 0/1 : will adjacency matrix get symmetrized?
+        void setAdjSym(int sym) {
+            adj_sym = sym;
+        }
+
     protected: 
 #if 0
         DerType getDerType(int i) {
@@ -221,7 +233,10 @@ class RBFFD
 		void computeWeightsForStencil_Empty(DerType dt, int st_indx);
 
         // Cuthill McKee using ViennaCL
-        void RBFFD::cuthillMcKee(std::vector<int>& col_id, int nb_rows, int     stencil_size);
+        void colIdFromStencil();
+        void cuthillMcKee(std::vector<int>& col_id, int nb_rows, int     stencil_size);
+        void cuthillMcKee();
+
         void setUseHyperviscosity(int tf) {
             std::cout << "USE " << tf << std::endl;
             useHyperviscosity = tf; 

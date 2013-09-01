@@ -7,7 +7,8 @@
 
 int vcl_main(int, char **)
 {
-    vcl::RCM_VCL vicl;
+    onv
+        :e 
 
   srand(42);
   std::cout << "-- Generating matrix --" << std::endl;

@@ -138,6 +138,7 @@ int main(int argc, char** argv)
 
 	std::string node_dist = REQUIRED<std::string>("NODE_DIST");
 	printf("node_dist= %s\n", node_dist.c_str());
+ 
 
 	createGrid();
 	setupDerivativeWeights();
@@ -208,16 +209,33 @@ int main(int argc, char** argv)
 	}
 #endif
 
-	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
-    file = "ell_" + file;
-    der->writeToEllpackFile(RBFFD::X, file);
+    // 0/1 : is adjacency matrix symmetrized
+	int adj_symmetry = OPTIONAL<int>("SYM_ADJ", "1");
+    der->setAdjSym(adj_symmetry);
 
 	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
-    file = "ell_subdomain_" + file;
+    char filen[255];
+    sprintf(filen, "ell_%s", file.c_str());
+    der->colIdFromStencil(); // ideally should be internal to rbffd. Until then, must call it. 
+    der->writeToEllpackFile(RBFFD::X, filen);
 
-    printf("TURNED OFF DOMAIN DECOMPOSITION\n");
-    //dom->writeToEllpackBinaryFile(file, doms);
+    der->cuthillMcKee();
+	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
+    sprintf(filen, "ell_rcm_sym_%d_%s", adj_symmetry, file.c_str());
+    der->writeToEllpackFile(RBFFD::X, filen);
+
+	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
+    sprintf(filen, "ell_sub_sym_%d_%s", adj_symmetry, file.c_str());
+    printf("filen= %s\n", filen);
+
+#define SUBDOMAIN
+#ifdef SUBDOMAIN
+    printf("DEFINE SUBDOMAIN\n");
+    dom->writeToEllpackBinaryFile(file, doms);
     printf("number subdomains= %d\n", doms.size());
+#else
+    printf("TURNED OFF DOMAIN DECOMPOSITION\n");
+#endif
 
     exit(EXIT_SUCCESS);
 }

@@ -288,15 +288,9 @@ public:
 
 public:
 
-#define SYMMETRIZE 1
-#ifdef SYMMETRIZE
-    printf("SYMMETRIZE the adjacency graph\n");
-#else
-    printf("Do NOT SYMMETRIZE adjacency graph\n");
-#endif
-
     ConvertMatrix(int nb_rows_, std::vector<int>& col_ind_, std::vector<int>& row_ptr_,
-                                std::vector<int>& new_col_ind_, std::vector<int>& new_row_ptr_) :
+                                std::vector<int>& new_col_ind_, std::vector<int>& new_row_ptr_,
+                                int sym_adj) :
         col_ind(col_ind_), row_ptr(row_ptr_),
         new_col_ind(new_col_ind_), new_row_ptr(new_row_ptr_)
     {
@@ -304,19 +298,29 @@ public:
         matrix.resize(nb_rows);
         int sz = col_ind.size();
 
+    if (sym_adj == 1) {
+        printf("SYMMETRIZE the adjacency graph\n");
+    } else {
+        printf("Do NOT SYMMETRIZE adjacency graph\n");
+    }
+
         for (int i=0; i < nb_rows; i++) {
             int b = row_ptr[i];
             int e = row_ptr[i+1];
             for (int j=b; j < e; j++) {
                 int col = col_ind[j];
                 matrix[i][col] = 1.0;
-#ifdef SYMMETRIZE
-                matrix[col][i] = 1.0;  // symmetrize for ViennaCL to work (need input control)
-#endif
+                if (sym_adj == 1) {
+                    matrix[col][i] = 1.0;  // symmetrize for ViennaCL to work (need input control)
+                }
             }
-#ifdef SYMMETRIZE
-            matrix[i][i] = 1.0;  // symmetrize for ViennaCL to work (need input control)
-#endif
+        }
+
+        // Add a unit vector to the diagonal
+        if (sym_adj == 1) {
+            for (int i=0; i < nb_rows; i++) {
+                matrix[i][i] = 1.0;  // symmetrize for ViennaCL to work (need input control)
+            }
         }
 
 #if 0

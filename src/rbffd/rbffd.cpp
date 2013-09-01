@@ -37,6 +37,7 @@ RBFFD::RBFFD(DerTypes typesToCompute, Grid* grid, int dim_num_, int rank_)//, RB
 // I put this on the CPU to allow for CPU optimization if required
     	alignWeights(false), alignMultiple(32)
 {
+    adj_sym = 1;
     int nb_rbfs = grid_ref.getNodeListSize();
 
     for (int i = 0; i < NUM_DERIVATIVE_TYPES; i++) {
@@ -1333,20 +1334,15 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
     void RBFFD::writeToEllpackAsciiFile(DerType which, std::string filename) {
     }
     //----------------------------------------------------------------------
-
-    void RBFFD::writeToEllpackBinaryFile(DerType which, std::string filename) {
-    // write stencil array: where are the non-zeros. 
-    // nb rows: stencil.size()
-    // nb of nonzeros: stencil[0].size()
-    //
-        printf("write to Ellpack binary file\n");
+    void RBFFD::colIdFromStencil()
+    {
         std::vector<StencilType>& stencil = grid_ref.getStencils();
         int nb_rows = stencil.size();
         int nb_nonzeros = stencil[0].size(); // assume all stencils have the same size
 
-        std::vector<int> col_id;
-        std::string ell_filename = "ell_" + filename;
-        printf("1 write to %s\n", ell_filename.c_str());
+        col_id.resize(0);
+        //std::string ell_filename = "ell_" + filename;
+        //printf("1 write to %s\n", ell_filename.c_str());
         printf("nb_rows= %d\n", nb_rows);
         printf("nb_nonzeros= %d\n", nb_nonzeros);
 
@@ -1355,25 +1351,38 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
                 col_id.push_back(stencil[i][j]);
             }
         }
+    }
+    //----------------------------------------------------------------------
+    void RBFFD::writeToEllpackBinaryFile(DerType which, std::string filename)
+        {
+    // write stencil array: where are the non-zeros. 
+    // nb rows: stencil.size()
+    // nb of nonzeros: stencil[0].size()
+    //
+        printf("write to Ellpack binary file\n");
+        std::vector<StencilType>& stencil = grid_ref.getStencils();
+        int nb_rows = stencil.size();
+        int stencil_size = stencil[0].size(); // assume all stencils have the same size
 
         FILE *fd;
-        printf("2 write to %s\n", ell_filename.c_str());
-        fd = fopen(ell_filename.c_str(), "w");
+        fd = fopen(filename.c_str(), "w");
         fprintf(fd, "#nb_rows  nb_nonzeros\n");
-        fprintf(fd, "%d %d\n", nb_rows, nb_nonzeros);
+        fprintf(fd, "%d %d\n", nb_rows, stencil_size);
         fwrite(&col_id[0], sizeof(int), col_id.size(), fd);
         fclose(fd);
 
-        printf("TRY REVERSE CUTHILL McGee\n");
-
-        std::vector<int> perm;
-        std::vector<int> perm_inv;
-        //gercm::geRCM(col_id, nb_rows, nb_nonzeros, perm, perm_inv);
-
-        cuthillMcKee(col_id, nb_rows, nb_nonzeros);
-        exit(0);
     }
     //--------------------------------------------------------------------
+    void RBFFD::cuthillMcKee()
+    {
+        std::vector<StencilType>& stencil = grid_ref.getStencils();
+        int nb_rows = stencil.size();
+        int stencil_size = stencil[0].size(); // assume all stencils have the same size
+        printf("before cuthill, col_id[0] = %d\n", col_id[0]);
+        cuthillMcKee(col_id, nb_rows, stencil_size);
+        printf("after cuthill, col_id[0] = %d\n", col_id[0]);
+    }
+    //----------------------------------------------------------------------
     void RBFFD::cuthillMcKee(std::vector<int>& col_id, int nb_rows, int stencil_size)
     {
         std::vector<int> row_ptr;
@@ -1391,7 +1400,7 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
 
         new_col_ind.resize(0);
         new_row_ptr.resize(0);
-        vcl::ConvertMatrix d(nb_rows, col_id, row_ptr, new_col_ind, new_row_ptr);
+        vcl::ConvertMatrix d(nb_rows, col_id, row_ptr, new_col_ind, new_row_ptr, adj_sym);
         float bw_mean, bw_std;
         int bw = d.calcOrigBandwidth(bw_mean, bw_std);
         printf("Unordered bandwidth/mean/std: %d, %f, %f\n", bw, bw_mean, bw_std);
@@ -1416,7 +1425,10 @@ void RBFFD::getStencilRHS(DerType which, std::vector<NodeType>& rbf_centers, Ste
         d.registerDensity(col_id, nb_rows, stencil_size, "orig matrix: ");
         d.registerDensity(new_col_ind, nb_rows, stencil_size, "reordered matrix: ");
         //d.reorderMatrix(); // done in reduceBandwidthwithRCM
-        exit(0);
+        //exit(0);
+
+        // col_id becomes the bandwidth-reduced version
+        std::copy(new_col_ind.begin(), new_col_ind.end(), col_id.begin()); 
     }
     //--------------------------------------------------------------------
 

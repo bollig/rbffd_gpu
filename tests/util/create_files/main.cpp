@@ -30,6 +30,7 @@ RBFFD* der_cpu;
 RBFFD* der;
 std::vector<DomainNoMPI*> doms;
 DomainNoMPI* dom;
+std::string node_dist;
 
 using namespace std;
 
@@ -70,7 +71,7 @@ void createGrid()
     grid->setSortBoundaryNodes(true); 
     grid->generate();
 
-	std::string node_dist = REQUIRED<std::string>("NODE_DIST");
+	node_dist = REQUIRED<std::string>("NODE_DIST");
 	printf(">>>>>>> node_dist= %s\n", node_dist.c_str());
 	Grid::st_generator_t stencil_type;
 	if (node_dist == "compact") {
@@ -136,7 +137,7 @@ int main(int argc, char** argv)
     	settings->ParseFile("create.conf");
 	}
 
-	std::string node_dist = REQUIRED<std::string>("NODE_DIST");
+	node_dist = REQUIRED<std::string>("NODE_DIST");
 	printf("node_dist= %s\n", node_dist.c_str());
  
 
@@ -215,17 +216,17 @@ int main(int argc, char** argv)
 
 	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
     char filen[255];
-    sprintf(filen, "ell_%s", file.c_str());
+    sprintf(filen, "ell_%s_%s", node_dist.c_str(), file.c_str());
     der->colIdFromStencil(); // ideally should be internal to rbffd. Until then, must call it. 
     der->writeToEllpackFile(RBFFD::X, filen);
 
     der->cuthillMcKee();
 	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
-    sprintf(filen, "ell_rcm_sym_%d_%s", adj_symmetry, file.c_str());
+    sprintf(filen, "ell_%s_rcm_sym_%d_%s", node_dist.c_str(), adj_symmetry, file.c_str());
     der->writeToEllpackFile(RBFFD::X, filen);
 
 	file = der->getFilename(RBFFD::X);    // DOES NOT WORK!!!
-    sprintf(filen, "ell_sub_sym_%d_%s", adj_symmetry, file.c_str());
+    sprintf(filen, "ell_%s_sub_sym_%d_%s", node_dist.c_str(), adj_symmetry, file.c_str());
     printf("filen= %s\n", filen);
 
 #define SUBDOMAIN

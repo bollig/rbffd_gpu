@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Must be used from build/tests/util/create_files
 # Makefile should place it there.  (does not at this time.)
 
@@ -18,9 +19,17 @@ nb_pts = [32]
 
 nb_sten = [32,64]
 nb_pts = [32,64,96]
+nb_sten = [32]
+nb_pts = [32,64]
+nb_pts = [128]
+nb_pts = [128, 192]
+nb_pts = [96]
+nb_pts = [64]
 sten = ["compact", "random", "kd-tree"]
 sten = ["kd-tree"]
 #sten = ["compact"]
+# better results with sym=1 (symmetrize adjacency matrix)
+sym = 1
 
 for ns in nb_sten:
        for np in nb_pts:
@@ -32,9 +41,10 @@ for ns in nb_sten:
                          NB_Y = %d
                          NB_Z = %d
                          NODE_DIST = %s
-                         """ % (ns,np,np,np,s)
+                         SYM_ADJ = %d
+                         """ % (ns,np,np,np,s,sym)
                        print(file_content)
-                       out_file = "%s_nb_%d_sten_%d_3d.out" % (s,np,ns)
+                       out_file = "%s_nb_%d_sten_%d_sym_%d_3d.out" % (s,np,ns,sym)
                        fd = open('create.conf', 'w')
                        fd.write(file_content)
                        fd.close()

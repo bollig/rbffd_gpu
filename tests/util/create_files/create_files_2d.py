@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Must be used from build/tests/util/create_files
 # Makefile should place it there.  (does not at this time.)
 
@@ -13,6 +14,7 @@ nb_sten = [32,64]
 # compact, random, kd-tree
 sten = ["compact"]
 sten = ["kd-tree"]
+sym = 0
 
 for ns in nb_sten:
        for np in nb_pts:
@@ -24,9 +26,10 @@ for ns in nb_sten:
                          NB_Y =  %d
                          NB_Z = 1
                          NODE_DIST = %s
-                         """ % (ns,np,np,s)
+                         SYM_ADJ = %d
+                         """ % (ns,np,np,s, sym)
                        print(file_content)
-                       out_file = "%s_nb_%d_sten_%d_2d.out" % (s,np,ns)
+                       out_file = "%s_nb_%d_sten_%d_sym_%d_2d.out" % (s,np,ns,sym)
                        fd = open('create.conf', 'w')
                        fd.write(file_content)
                        fd.close()

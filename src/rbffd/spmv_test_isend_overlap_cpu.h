@@ -127,7 +127,8 @@ class SpMVTest
 
         void setupTimers() {
             tm["synchronize"] = new EB::Timer("[SpMVTest] Synchronize (Irecv->Waitall)"); 
-            tm["spmv"] = new EB::Timer("[SpMVTest] perform SpMV (Q\\B)");
+            tm["spmv"] = new EB::Timer("[SpMVTest] Compute Full SpMV");
+            tm["spmv1"] = new EB::Timer("[SpMVTest] perform SpMV (Q\\B)");
             tm["spmv2"] = new EB::Timer("[SpMVTest] perform SpMV (B)");
             tm["spmv_w_comm"] = new EB::Timer("[SpMVTest] SpMV + Communication");
             tm["irecv"] = new EB::Timer("[SpMVTest] MPI_Irecv"); 
@@ -149,6 +150,8 @@ class SpMVTest
             std::vector<StencilType>& stencils = grid->getStencils();
             //int nb_nodes = grid->getNodeListSize();
 
+            if (!disable_timers) tm["spmv_w_comm"]->start();
+
 	    int nb_stencils = grid->getStencilsSize();
 	    int nb_nodes = grid->getNodeListSize();
 	    int nb_qmb_rows = grid->QmB_size;
@@ -168,12 +171,32 @@ class SpMVTest
             }
 
 	    //------------
+	    // Send O
+	    //------------
+        //
+        // Send first (in background) while we start computing Q\B. Then wait
+        // for comm to finish before starting B. 
+
+            this->encodeSendBuf(u);
+            if (size > 1) {
+                // I found 8+ processors comm best with Isend/Irecv. Alltoallv
+                // for < 8 
+                if (size > 1) { 
+                    // NOTE: this includes waitall on irecvs
+                    this->postIsends(); 
+                } else {
+                    this->postAlltoallv();
+                }
+            }
+
+
+	    //------------
 	    // Queue Q\B
 	    //------------
 
 
             if (!disable_timers) tm["spmv"]->start();
-	    this->encodeSendBuf(u);
+            if (!disable_timers) tm["spmv1"]->start();
 
             for (unsigned int i=0; i < nb_qmb_rows; i++) {
                 double* w = DM[i];
@@ -185,24 +208,13 @@ class SpMVTest
                 }
                 out_deriv[i] = der;
             }
-	    this->encodeSendBuf(u);
+            if (!disable_timers) tm["spmv1"]->stop();
 
-	    //------------
-	    // Send O
-	    //------------
+            // Barrier: wait for recvs to finish
+            MPI_Waitall(r_comm_size, R_reqs, R_stats); 
+            if (!disable_timers) tm["irecv"]->stop();
 
-	    if (size > 1) {
-		    // I found 8+ processors comm best with Isend/Irecv. Alltoallv
-                // for < 8 
-                if (size > 1) { 
-                    // NOTE: this includes waitall on irecvs
-                    this->postIsends(); 
-                } else {
-                    this->postAlltoallv();
-                }
-            }
             if (!disable_timers) tm["synchronize"]->stop();
-
 
             this->decodeRecvBuf(u);
 
@@ -289,11 +301,7 @@ class SpMVTest
                     o_count++;
                 }
             }
-
-            // Barrier: wait for recvs to finish
-            MPI_Waitall(r_comm_size, R_reqs, R_stats); 
-            if (!disable_timers) tm["irecv"]->stop();
-        }
+       }
 
         void decodeRecvBuf(std::vector<double>& cpu_vec) {
             unsigned int set_Q_size = grid->Q_size;

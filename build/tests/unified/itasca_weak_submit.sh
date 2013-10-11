@@ -1,12 +1,12 @@
 #!/bin/bash -l 
 
-SUFFIX=""
+SUFFIX="_overlap_cpu"
 
 # 128
-for NODES in 1 2 4 8 16 32 64 
+for NODES in 1 2 4 8 16 32 64 128
 do 
 	#17 31 50 101
-for STEN_SIZE in 50
+for STEN_SIZE in 17 31 50 101
 do
 	EXEC_FILE=itasca_weak_${STEN_SIZE}_${NODES}.pbs
 
@@ -40,9 +40,7 @@ echo ------------------------------------------------------
 
 #source \$HOME/../shared/cascade_env.sh
 echo "Loading intel module" 
-module load intel/2013
-module load impi/intel
-module load mkl/11.0.4.183
+module load intel/cluster
 module load cmake
 module load fftw
 module load boost/1.53.0
@@ -85,7 +83,7 @@ do
 	METIS_FILE=metis_stencils.graph.part.\${NPROC}
 	JOB_RAN_FILE=job_ran
 
-	NEW_WORKDIR=\$PBS_O_WORKDIR/four_million_benchmark${SUFFIX}/\${TEST_TYPE}_\${N}_${STEN_SIZE}_\${NPROC}proc
+	NEW_WORKDIR=\$PBS_O_WORKDIR/weak_${SUFFIX}/\${TEST_TYPE}_\${N}_${STEN_SIZE}_\${NPROC}proc
 
 	# If NPROC is 1 then we cant use MPIRUN
 	if [ "\$NPROC" = "1" ]; then
@@ -128,8 +126,8 @@ do
 
 	echo "evaluate_derivatives Exit status: \$?"
 
-	##rm *.ascii *.bmtx *.mtx 
-	##rm metis_stencils*
+	rm *.ascii *.bmtx *.mtx 
+	rm metis_stencils*
 
 	echo "Done with cleanup" 
 

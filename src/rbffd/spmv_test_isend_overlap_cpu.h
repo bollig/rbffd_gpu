@@ -15,46 +15,10 @@
 #include "timer_eb.h"
 #include "common_typedefs.h"
 
-#include "utils/opencl/viennacl_typedefs.h"
-
-#include <viennacl/compressed_matrix.hpp>
-#include <viennacl/coordinate_matrix.hpp>
-#include <viennacl/ell_matrix.hpp>
-#include <viennacl/linalg/gmres.hpp>
-#include <viennacl/linalg/norm_1.hpp>
-#include <viennacl/linalg/norm_2.hpp>
-#include <viennacl/linalg/norm_inf.hpp>
-#include <viennacl/linalg/prod.hpp> 
-#include <viennacl/io/matrix_market.hpp>
-#include <viennacl/matrix.hpp>
-#include <viennacl/vector.hpp> 
-#include <viennacl/vector_proxy.hpp> 
-#include <viennacl/matrix_proxy.hpp> 
-#include <viennacl/linalg/vector_operations.hpp> 
-
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/matrix_sparse.hpp>
-#include <boost/numeric/ublas/matrix_proxy.hpp>
-#include <boost/numeric/ublas/banded.hpp>
-#include <boost/numeric/ublas/vector.hpp>
-#include <boost/numeric/ublas/vector_proxy.hpp>
-#include <boost/numeric/ublas/vector_sparse.hpp>
-#include <boost/numeric/ublas/vector_of_vector.hpp>
-#include <boost/numeric/ublas/vector_expression.hpp>
-#include <boost/numeric/ublas/io.hpp>
-#include <boost/numeric/ublas/operation.hpp>
-#include <boost/numeric/ublas/lu.hpp>
-#include <boost/filesystem.hpp>
-
-#include "viennacl/linalg/parallel_norm_1.hpp"                                                                                     
-#include "viennacl/linalg/parallel_norm_2.hpp"
-#include "viennacl/linalg/parallel_norm_inf.hpp"
-
-
 class SpMVTest
 {
     protected:
-        RBFFD_VCL_OVERLAP* rbffd; 
+        RBFFD* rbffd; 
         Domain* grid; 
         int rank, size;
 
@@ -74,29 +38,15 @@ class SpMVTest
         MPI_Status* R_stats;
 
         EB::TimerList tm; 
-        std::vector<cl_command_queue> queues;
 
         int disable_timers;
 
     public: 
-        SpMVTest(RBFFD_VCL_OVERLAP* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1), disable_timers(0) {
+        SpMVTest(RBFFD* r, Domain* domain, int mpi_rank=0, int mpi_size=0) : rbffd(r), grid(domain), rank(mpi_rank), size(mpi_size), sol_dim(1), disable_timers(0) {
             o_comm_size=0; 
             r_comm_size=0;
             setupTimers(); 
             allocateCommBuffers(); 
-
-           int err; 
-            // We need two queues. One for SpMV and one for mem xfer
-            // (host<->device)
-            viennacl::ocl::current_context().add_queue(viennacl::ocl::current_context().current_device().id() ); 
-            VIENNACL_ERR_CHECK(err);
-
-            std::cout << "ViennaCL uses context: " << viennacl::ocl::current_context().handle().get() << std::endl;
-            std::cout << "ViennaCL uses default queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
-            viennacl::ocl::current_context().switch_queue(1);
-            std::cout << "ViennaCL uses new queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
-            viennacl::ocl::current_context().switch_queue(0);
-            std::cout << "ViennaCL uses first queue: " << viennacl::ocl::current_context().current_queue().handle().get() << std::endl;
         }
 
         ~SpMVTest() {
@@ -192,42 +142,16 @@ class SpMVTest
 
         // Does a simple CPU CSR SpMV
         // can apply to subset of problem 
-        void SpMV(RBFFD::DerType which, VCL_VEC_t& u_gpu, VCL_VEC_t& out_deriv) {
-
-            MPI_Barrier(MPI_COMM_WORLD);
-
-            // TODO: 
-            // GPU Matrix
-            // GPU Vector
-            //
-            //  done - post irecv
-            //  queue Q\B
-            //  copy O down
-            //  assemble sendbuf
-            //  done - post isends
-            //  done - waitall(irecv)
-            //  copy R up
-            //  queue B
-            if (!disable_timers) tm["spmv_w_comm"]->start();
-
-            //std::vector<double*> DM = rbffd->getWeights(which);
-            VCL_ELL_MAT_t& DM_qmb = *(rbffd->getGPUWeightsSetQmB(which));
-            VCL_ELL_MAT_t& DM_b = *(rbffd->getGPUWeightsSetB(which));
+	
+	// EVAN TOOD: finish overlap of CPU. 
+        void SpMV(RBFFD::DerType which, std::vector<double>& u, std::vector<double>& out_deriv) {
+            std::vector<double*> DM = rbffd->getWeights(which);
+            std::vector<StencilType>& stencils = grid->getStencils();
+            //int nb_nodes = grid->getNodeListSize();
 
 	    int nb_stencils = grid->getStencilsSize();
 	    int nb_nodes = grid->getNodeListSize();
 	    int nb_qmb_rows = grid->QmB_size;
-
-            viennacl::range r1(0, nb_stencils);
-            viennacl::range r2(0, nb_nodes);
-
-            // Start of vector
-            viennacl::range r3(0, nb_qmb_rows);
-            // End of vector
-            viennacl::range r4(nb_qmb_rows, nb_stencils);
-
-            //     std::cout << "DM_qmb = " << DM_qmb.size1() << ", " << DM_qmb.size2() << ", " << DM_qmb.nnz() << "\n";
-            //     std::cout << "DM_b = " << DM_b.size1() << ", " << DM_b.size2() << ", " << DM_b.nnz() << "\n";
 
 	    if (!disable_timers) tm["synchronize"]->start();
             //------------
@@ -247,26 +171,21 @@ class SpMVTest
 	    // Queue Q\B
 	    //------------
 
-            viennacl::ocl::current_context().switch_queue(1);
- 
-            if (!disable_timers) tm["spmv"]->start();
-            // SpMV on first QmB rows
-            // NOTE: this is asynchronous
-            // Also, I check for nnz > 0 because there are cases when a proc has
-            // Q\B.size == 0 (i.e., all stencils depend on comm)
-            if (DM_qmb.nnz() > 0) {
-                project(out_deriv, r3) = viennacl::linalg::prod(DM_qmb, u_gpu); 
-            }
-          
-            //------------
-            // Start Async copy O Down
-            //------------
-            //------------
-            // Fill Sendbuf using Q1 
-            //------------
-            viennacl::ocl::current_context().switch_queue(0); 
 
-	    this->encodeSendBuf(u_gpu);
+            if (!disable_timers) tm["spmv"]->start();
+	    this->encodeSendBuf(u);
+
+            for (unsigned int i=0; i < nb_qmb_rows; i++) {
+                double* w = DM[i];
+                StencilType& st = stencils[i];
+                double der = 0.0;
+                unsigned int n = st.size();
+                for (unsigned int s=0; s < n; s++) {
+                    der += w[s] * u[st[s]];
+                }
+                out_deriv[i] = der;
+            }
+	    this->encodeSendBuf(u);
 
 	    //------------
 	    // Send O
@@ -284,31 +203,25 @@ class SpMVTest
             }
             if (!disable_timers) tm["synchronize"]->stop();
 
-            //------------
-            // Copy R up 
-            //------------
 
-            this->decodeRecvBuf(u_gpu);
-
-            //TODO: send to GPU;
+            this->decodeRecvBuf(u);
 
             if (!disable_timers) tm["spmv2"]->start();
-            // Check if nnz > 0 (when mpi_size == 0 this is true)
-            if (DM_b.nnz() > 0) {
-                // FIXME: typecast needed to get projection starting offset to
-                // function properly
-                project(out_deriv, r4) = (VCL_VEC_t) viennacl::linalg::prod(DM_b, u_gpu); 
+	    for (unsigned int i=nb_qmb_rows; i < nb_stencils; i++) {
+                double* w = DM[i];
+                StencilType& st = stencils[i];
+                double der = 0.0;
+                unsigned int n = st.size();
+                for (unsigned int s=0; s < n; s++) {
+                    der += w[s] * u[st[s]];
+                }
+                out_deriv[i] = der;
             }
-
-            viennacl::ocl::current_context().switch_queue(1); 
-            viennacl::ocl::get_queue().finish();
             if (!disable_timers) tm["spmv"]->stop();
-            viennacl::ocl::current_context().switch_queue(0); 
-            viennacl::ocl::get_queue().finish();
             if (!disable_timers) tm["spmv2"]->stop();
 
             if (!disable_timers) tm["spmv_w_comm"]->stop();
-            viennacl::ocl::current_context().switch_queue(0); 
+
         }
 
 
@@ -324,7 +237,7 @@ class SpMVTest
 		}
 	}
 
-        void encodeSendBuf(VCL_VEC_t& gpu_vec) {
+        void encodeSendBuf(std::vector<double>& cpu_vec) {
             unsigned int set_Q_size = grid->Q_size;
             unsigned int set_O_size = grid->O_size;
             unsigned int nb_bnd = grid->getBoundaryIndicesSize();
@@ -344,16 +257,6 @@ class SpMVTest
 
             // std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
 
-            viennacl::vector_range< VCL_VEC_t > setO(gpu_vec, viennacl::range((offset_to_set_O - offset_to_interior) * sol_dim, ((offset_to_set_O-offset_to_interior)+set_O_size) * sol_dim));
-
-            //double* vec = new double[set_O_size * sol_dim];
-            std::vector<double> vec(set_O_size * sol_dim);
-
-            if (!disable_timers) tm["encode_copy"]->start();
-            viennacl::copy(setO, vec); //, set_O_size * sol_dim);
-            viennacl::ocl::get_queue().finish();
-            if (!disable_timers) tm["encode_copy"]->stop();
-
             if (!disable_timers) tm["encode_send"]->start();
             // Prep-Send: Copy elements of set to sbuf
             unsigned int k = 0; 
@@ -362,15 +265,14 @@ class SpMVTest
                 for (size_t j = 0; j < grid->O_by_rank[i].size(); j++) {
 #ifdef SOLDIM_GT_1
                     unsigned int s_indx = grid->g2l(grid->O_by_rank[i][j]);
-                    s_indx -= offset_to_set_O;
                     s_indx *= this->sol_dim; 
                     for (unsigned int d=0; d < this->sol_dim; d++) {
-                        this->sbuf[k] = vec[s_indx+d];
+                        this->sbuf[k] = cpu_vec[s_indx+d];
                         k++; 
                     }
 #else 
-                    int s_indx = grid->g2l(grid->O_by_rank[i][j]) - offset_to_set_O;
-                    this->sbuf[k] = vec[s_indx]; 
+                    int s_indx = grid->g2l(grid->O_by_rank[i][j]); 
+                    this->sbuf[k] = cpu_vec[s_indx]; 
                     k++;
 #endif 
                 }
@@ -393,7 +295,7 @@ class SpMVTest
             if (!disable_timers) tm["irecv"]->stop();
         }
 
-        void decodeRecvBuf(VCL_VEC_t &gpu_vec) {
+        void decodeRecvBuf(std::vector<double>& cpu_vec) {
             unsigned int set_Q_size = grid->Q_size;
             unsigned int set_R_size = grid->R_size;
             unsigned int nb_bnd = grid->getBoundaryIndicesSize();
@@ -408,10 +310,6 @@ class SpMVTest
             unsigned int offset_to_interior = nb_bnd;
             unsigned int offset_to_set_R = set_Q_size;
 
-            viennacl::vector_range< VCL_VEC_t > setR(gpu_vec, viennacl::range((offset_to_set_R-offset_to_interior) * sol_dim, ((offset_to_set_R-offset_to_interior)+set_R_size) * sol_dim));
-
-            //double* vec = new double[set_R_size * sol_dim];
-            std::vector<double> vec(set_R_size * sol_dim);
 
             if (!disable_timers) tm["decode_recv"]->start();
             // Post-Recv: copy elements out
@@ -421,7 +319,6 @@ class SpMVTest
                 for (size_t j = 0; j < grid->R_by_rank[i].size(); j++) {
 #ifdef SOLDIM_GT_1
                     unsigned int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                    r_indx -= offset_to_set_R;
                     r_indx *= this->sol_dim;
                     //std::cout << "r_indx = " << r_indx << ", k = " << k << std::endl;
                     //                                    std::cout << "Receiving " << r_indx << "\n";
@@ -430,22 +327,18 @@ class SpMVTest
                     // boundary are dirichlet and appear first
                     // in the list
                     for (unsigned int d=0; d < this->sol_dim; d++) { 
-                        vec[r_indx+d] = this->rbuf[k];  
+                        cpu_vec[r_indx+d] = this->rbuf[k];  
                         k++; 
                     }
 #else 
                     int r_indx = grid->g2l(grid->R_by_rank[i][j]);
-                    vec[r_indx - offset_to_set_R] = this->rbuf[k];  
+                    cpu_vec[r_indx] = this->rbuf[k];  
                     k++; 
 
 #endif 
                 }
             }
             if (!disable_timers) tm["decode_recv"]->stop();
-
-            if (!disable_timers) tm["decode_copy"]->start();
-            viennacl::copy(vec, setR);
-            if (!disable_timers) tm["decode_copy"]->stop();
         }
 
 

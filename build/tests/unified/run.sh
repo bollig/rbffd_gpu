@@ -21,14 +21,17 @@
 # -l : LSH grid size (<val>^3 overlaid grid)
 
 
-MY_MPI_EXE="mpirun -l "
+MY_MPI_EXE="mpirun "
 date
 
-MD=165
-N=100000
-STEN_SIZE=101
+#MD=165
+MD=100
+#N=100000
+N=10201
+#STEN_SIZE=101
+STEN_SIZE=31
 
-NPROC=32
+NPROC=16
 #NPROC=1
 #~/sphere_grids/md${MD}.${N}
 
@@ -38,7 +41,8 @@ JOB_RAN_FILE=job_ran
 TEST_TYPE=reg
 NEW_WORKDIR=./${TEST_TYPE}_${N}_${STEN_SIZE}_${NPROC}proc
 
-GRID_FILE=$HOME/GRIDS/regular/100_cubed/regulargrid_100x_100y_100z_final.ascii
+#GRID_FILE=$HOME/GRIDS/regular/100_cubed/regulargrid_100x_100y_100z_final.ascii
+GRID_FILE=$HOME/GRIDS/md/md100.10201
 
 mkdir -p $NEW_WORKDIR
 cd $NEW_WORKDIR
@@ -50,7 +54,8 @@ then
 	#./gen_regular_grid.x -x 100 -y 100 -z 100
 
 	# Read grid, generate stencils (Note: -c 4 is required because MD nodes have 4 cols)
-	../sten_gen.x -g ${GRID_FILE} -c 3 -N ${N} -n ${STEN_SIZE} -w 0 -l 100
+	#../sten_gen.x -g ${GRID_FILE} -c 3 -N ${N} -n ${STEN_SIZE} -w 0 -l 100
+	../sten_gen.x -g ${GRID_FILE} -c 4 -N ${N} -n ${STEN_SIZE} -w 0 -l 100
 
 	echo "sten_gen Exit status: $?"
 
@@ -69,7 +74,8 @@ then
 	touch $JOB_RAN_FILE
 fi
 
-${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives_overlap.x -g input_grid.ascii -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+#${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives_overlap.x -g input_grid.ascii -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+${MY_MPI_EXE} -np ${NPROC} ../evaluate_derivatives_overlap_cpu.x -g input_grid.ascii -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 echo "evaluate_derivatives Exit status: $?"
 

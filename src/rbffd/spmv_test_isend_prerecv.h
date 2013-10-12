@@ -170,6 +170,28 @@ class SpMVTest
                 // Else we use Alltoallv and dont need to worry
             }
 
+
+
+	    //------------
+	    // Queue Q\B
+	    //------------
+
+
+            if (!disable_timers) tm["spmv"]->start();
+
+            for (unsigned int i=0; i < nb_stencils; i++) {
+                double* w = DM[i];
+                StencilType& st = stencils[i];
+                double der = 0.0;
+                unsigned int n = st.size();
+                for (unsigned int s=0; s < n; s++) {
+                    der += w[s] * u[st[s]];
+                }
+                out_deriv[i] = der;
+            }
+            if (!disable_timers) tm["spmv"]->stop();
+
+
 	    //------------
 	    // Send O
 	    //------------
@@ -189,27 +211,6 @@ class SpMVTest
                 }
             }
 
-
-	    //------------
-	    // Queue Q\B
-	    //------------
-
-
-            if (!disable_timers) tm["spmv"]->start();
-            if (!disable_timers) tm["spmv1"]->start();
-
-            for (unsigned int i=0; i < nb_qmb_rows; i++) {
-                double* w = DM[i];
-                StencilType& st = stencils[i];
-                double der = 0.0;
-                unsigned int n = st.size();
-                for (unsigned int s=0; s < n; s++) {
-                    der += w[s] * u[st[s]];
-                }
-                out_deriv[i] = der;
-            }
-            if (!disable_timers) tm["spmv1"]->stop();
-
             // Barrier: wait for recvs to finish
             MPI_Waitall(r_comm_size, R_reqs, R_stats); 
             if (!disable_timers) tm["irecv"]->stop();
@@ -217,20 +218,6 @@ class SpMVTest
             if (!disable_timers) tm["synchronize"]->stop();
 
             this->decodeRecvBuf(u);
-
-            if (!disable_timers) tm["spmv2"]->start();
-	    for (unsigned int i=nb_qmb_rows; i < nb_stencils; i++) {
-                double* w = DM[i];
-                StencilType& st = stencils[i];
-                double der = 0.0;
-                unsigned int n = st.size();
-                for (unsigned int s=0; s < n; s++) {
-                    der += w[s] * u[st[s]];
-                }
-                out_deriv[i] = der;
-            }
-            if (!disable_timers) tm["spmv"]->stop();
-            if (!disable_timers) tm["spmv2"]->stop();
 
             if (!disable_timers) tm["spmv_w_comm"]->stop();
 
@@ -320,7 +307,7 @@ class SpMVTest
 
 
             if (!disable_timers) tm["decode_recv"]->start();
-#if 0
+#if 1
             // Post-Recv: copy elements out
             unsigned int k = 0;
             for (size_t i = 0; i < grid->R_by_rank.size(); i++) {

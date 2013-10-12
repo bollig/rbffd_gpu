@@ -1,12 +1,13 @@
 #!/bin/bash -l 
 
-SUFFIX="_overlap_cpu"
+SUFFIX="_prerecv"
 
 # 128
+#1 2 4 8 16 32 64 128
 for NODES in 1 2 4 8 16 32 64 128
 do 
 	#17 31 50 101
-for STEN_SIZE in 17 31 50 101
+for STEN_SIZE in 50
 do
 	EXEC_FILE=itasca_weak_${STEN_SIZE}_${NODES}.pbs
 

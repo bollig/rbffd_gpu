@@ -26,6 +26,8 @@ June 18, 2013
 create_files.py : create a series of weight files (random and compactly distributed) 
 for benchmarking. Currenlty in ascii form. Should generate binary version directly.
 ----------------------------------------------------------------------
+October 12, 2013
+modified create_files_3d to replace total number of points by [nx,ny,nz]
 ----------------------------------------------------------------------
 Results below: Kd-tree to compute the nearest n stencil points. 
 ----------------------------------------------------------------------

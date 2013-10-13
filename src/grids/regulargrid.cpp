@@ -3,15 +3,17 @@
 #include <iostream>
 #include <sstream>
 
+#include "utils/random.h"
 #include "regulargrid.h"
 
 using namespace std;
 
 
 /*----------------------------------------------------------------------*/
-RegularGrid::RegularGrid(int n_x, double minX, double maxX)
+RegularGrid::RegularGrid(int n_x, double minX, double maxX, bool rndom)
     : Grid(n_x), nx(n_x), ny(1), nz(1)
 {
+    this->rndom = rndom;
     xmin = minX;
     xmax = maxX;
     ymin = 0.; 
@@ -21,9 +23,10 @@ RegularGrid::RegularGrid(int n_x, double minX, double maxX)
 }
 
 /*----------------------------------------------------------------------*/
-    RegularGrid::RegularGrid(int n_x, int n_y, double minX, double maxX, double minY, double maxY)
+    RegularGrid::RegularGrid(int n_x, int n_y, double minX, double maxX, double minY, double maxY, bool rndom)
 : Grid(n_x * n_y ), nx(n_x), ny(n_y), nz(1)
 {
+    this->rndom = rndom;
     xmin = minX;
     xmax = maxX;
     ymin = minY; 
@@ -33,9 +36,10 @@ RegularGrid::RegularGrid(int n_x, double minX, double maxX)
 }
 
 /*----------------------------------------------------------------------*/
-    RegularGrid::RegularGrid(int n_x, int n_y, int n_z, double minX, double maxX, double minY, double maxY, double minZ, double maxZ)
+    RegularGrid::RegularGrid(int n_x, int n_y, int n_z, double minX, double maxX, double minY, double maxY, double minZ, double maxZ, bool rndom)
 : Grid(n_x * n_y * n_z), nx(n_x), ny(n_y), nz(n_z)
 {
+    this->rndom = rndom;
     xmin = minX;
     xmax = maxX;
     ymin = minY; 
@@ -67,6 +71,7 @@ void RegularGrid::generate() {
     this->boundary_normals.clear();
 
     unsigned int count = 0;
+    // if random, perturb grid by 0.25*dx[-1,1]
 
     for (unsigned int i = 0; i < nx; i++) {
         for (unsigned int j = 0; j < ny; j++) {
@@ -76,6 +81,16 @@ void RegularGrid::generate() {
                 double x = xmin + i * dx;
                 double y = (ny > 1) ? ymin + j * dy : 0.;
                 double z = (nz > 1) ? zmin + k * dz : 0.;
+
+                float rnd;
+                if (rndom) {
+                    rnd = randf(-.25,.25);
+                    x += rnd*dx;
+                    rnd = randf(-.25,.25);
+                    y += rnd*dx*0.25;
+                    rnd = randf(-.25,.25);
+                    z += rnd*dx*0.25;
+                }
 
                 node_list.push_back(Vec3(x, y, z));
 

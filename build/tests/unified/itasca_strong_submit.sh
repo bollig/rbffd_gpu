@@ -1,17 +1,17 @@
 #!/bin/bash -l 
 
-SUFFIX=""
+SUFFIX="_overlap_cpu"
 
 for NODES in 1 2 4 8 16 32 64 128
 do 
 #17 31 50 101
-for STEN_SIZE in 50
+for STEN_SIZE in 101
 do
 	EXEC_FILE=itasca_strong_${STEN_SIZE}_${NODES}.pbs
 
 cat > ${EXEC_FILE}  << EOF 
 #!/bin/bash -l
-#PBS -l walltime=4:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
+#PBS -l walltime=8:00:00,nodes=${NODES}:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
 #PBS -N strong_${STEN_SIZE}_impi_${NODES}${SUFFIX}
@@ -38,9 +38,7 @@ echo ------------------------------------------------------
 
 #source \$HOME/../shared/cascade_env.sh
 echo "Loading intel module" 
-module load intel/2013
-module load impi/intel
-module load mkl/11.0.4.183
+module load intel/cluster
 module load cmake
 module load fftw
 module load boost/1.53.0
@@ -124,8 +122,8 @@ do
 
 	echo "evaluate_derivatives Exit status: \$?"
 
-	##rm *.ascii *.bmtx *.mtx 
-	##rm metis_stencils*
+	rm *.ascii *.bmtx *.mtx 
+	rm metis_stencils*
 
 	echo "Done with cleanup" 
 
@@ -144,6 +142,6 @@ done
 
 EOF
 
-	qsub ${EXEC_FILE}
+qsub ${EXEC_FILE}
 done 
 done

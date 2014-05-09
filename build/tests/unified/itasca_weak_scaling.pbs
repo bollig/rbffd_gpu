@@ -1,8 +1,8 @@
 #!/bin/bash -l 
-#PBS -l walltime=02:00:00,nodes=128:ppn=8,pmem=2500mb
+#PBS -l walltime=08:00:00,nodes=128:ppn=8,pmem=2500mb
 #PBS -q batch
 #PBS -m ae 
-#PBS -N impi_scaling
+#PBS -N weak_impi_scaling
 ## PBS -e error.$PBS_JOBID
 ## PBS -o output.$PBS_JOBID
 
@@ -26,7 +26,9 @@ echo ------------------------------------------------------
 
 #source $HOME/../shared/cascade_env.sh
 echo "Loading intel module" 
-module load intel/cluster
+module load intel/2013
+module load impi/intel
+module load mkl/11.0.4.183
 module load cmake
 module load fftw
 module load boost/1.53.0
@@ -43,31 +45,37 @@ module list
 
 export LD_LIBRARY_PATH=/opt/intel/opencl/lib64:$LD_LIBRARY_PATH
 
-MY_MPI_EXE="mpirun -l "
 date
 
+TEST_TYPE=weak
 MD=165
-N=4096000
 STEN_SIZE=50
 NPERDIM=160
 GRID_FILE=$HOME/GRIDS/regular/${NPERDIM}_cubed/regulargrid_${NPERDIM}x_${NPERDIM}y_${NPERDIM}z_final.ascii
-
+typeset -i N
+N=4000
+typeset -i NPROC
 NPROC=$PBS_NP
 
-for STEN_SIZE in 17 31 50 101 
+for STEN_SIZE in 17 31 50 101 500 1000
 do
 
 for NPROC in 1 2 4 8 16 32 64 128 256 512 1024
 do
-	#NPROC=2
-	#~/sphere_grids/md${MD}.${N}
+	let N=4000*$NPROC
+
+	MY_MPI_EXE="mpirun -r ssh -l -np ${NPROC}"
+
 
 	METIS_FILE=metis_stencils.graph.part.${NPROC}
 	JOB_RAN_FILE=job_ran
 
-	TEST_TYPE=reg
 	NEW_WORKDIR=$PBS_O_WORKDIR/${TEST_TYPE}_${N}_${STEN_SIZE}_${NPROC}proc
 
+	# If NPROC is 1 then we cant use MPIRUN
+	if [ "$NPROC" = "1" ]; then
+		MY_MPI_EXE=""
+	fi
 
 	mkdir -p $NEW_WORKDIR
 	cd $NEW_WORKDIR
@@ -90,18 +98,18 @@ do
 		echo "gpmetis Exit status: $?"
 		#sleep 5s
 
-		${MY_MPI_EXE} -np ${NPROC} hostname
+		${MY_MPI_EXE} hostname
 		echo "hostname Exit status: $?"
 
 		# add -l for verbose logging of output 
-		${MY_MPI_EXE} -np ${NPROC} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
+		${MY_MPI_EXE} $PBS_O_WORKDIR/compute_weights.x -w 15 -g input_grid.ascii -N ${N} -n ${STEN_SIZE} --eps_c1 0.035 --eps_c2 0.1 -p metis_stencils.graph.part.${NPROC}
 
 		echo "compute_weights Exit status: $?"
 		#sleep 5s
 		touch $JOB_RAN_FILE
 	fi
 
-	${MY_MPI_EXE} -np ${NPROC} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
+	${MY_MPI_EXE} $PBS_O_WORKDIR/evaluate_derivatives.x -g input_grid.ascii -N ${N}  -n ${STEN_SIZE} --eps_c1=0.035 --eps_c2=0.1 -w 15 
 
 	echo "evaluate_derivatives Exit status: $?"
 

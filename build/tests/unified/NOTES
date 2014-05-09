@@ -1,0 +1,65 @@
+- evaluate derivs computes SpMV
+	- DONE: add collective (Reduce) for norms
+		- mention in the thesis that a Reduce is preferred (2ms for N=27556; 8procs) over Allreduce (30ms for N=27556; 8procs) on Itasca	
+	- DONE: iterate
+	- TODO: Overlap comm
+
+
+
+So this computes 100x the X, Y, Z, L derivs of md N=27556 and n=101 (the worst
+case). The time for weights (armadillo with MKL) is hottest. But it happens
+once. And the number of iterations required to amortize the cost of
+preprocessing: 1000 iterations which is an easy requirement to meet. (remember we have four derivs here). 
+
+No alltoallv yet...
+
+
+====================================
+Timers [All times in ms (1/1000 s)]: 
+====================================
+
+[Main] Assemble test vectors                          |  avg:     2.0300  |  tot:     2.0300  |  count=     1
+[Main] Cleanup (delete) Domain and print final norms  |  avg:     2.2450  |  tot:     2.2450  |  count=     1
+[Main] Compute Derivatives                            |  avg:     4.0063  |  tot:  1602.5048  |  count=   400
+[Main] Compute Norms                                  |  avg:     0.0677  |  tot:    40.6400  |  count=   600
+[Main] Setup RBFFD class                              |  avg:     1.4500  |  tot:     1.4500  |  count=     1
+[Main] Load settings and MPI_Init                     |  avg:    44.8920  |  tot:    44.8920  |  count=     1
+[Main] Load Domain from Disk                          |  avg:   426.2480  |  tot:   426.2480  |  count=     1
+[Main] Read weights from file                         |  avg:  6269.5669  |  tot:  6269.5669  |  count=     1
+[Main] Total runtime for this proc                    |  avg:  8400.6230  |  tot:  8400.6230  |  count=     1
+
+NOTE: only timers that have called Timer::start() are shown. 
+      [A time of 0.0 may indicate the timer was not stopped.]
+====================================
+====================================
+Timers [All times in ms (1/1000 s)]: 
+====================================
+
+[Main] Grid generation                              |  avg:    62.7020  |  tot:    62.7020  |  count=     1
+[Main] Grid Reader Load File From Disk              |  avg:     0.0040  |  tot:     0.0040  |  count=     1
+[Main] Load Grid (and Stencils) from Disk           |  avg:     0.2000  |  tot:     0.2000  |  count=     1
+[Main] Load settings                                |  avg:     0.0000  |  tot:     0.0000  |  count=     1
+[Main] Stencil generation                           |  avg:  1532.0850  |  tot:  1532.0850  |  count=     1
+[Main] Total runtime for this proc                  |  avg:  7973.8862  |  tot:  7973.8862  |  count=     1
+[Main] Write Grid (and Stencils) to Disk            |  avg:   217.2460  |  tot:   217.2460  |  count=     1
+[Main] Write Stencils to Disk                       |  avg:  1717.0229  |  tot:  1717.0229  |  count=     1
+
+NOTE: only timers that have called Timer::start() are shown. 
+      [A time of 0.0 may indicate the timer was not stopped.]
+====================================
+====================================
+Timers [All times in ms (1/1000 s)]: 
+====================================
+
+[Main] Setup RBFFD class                            |  avg:     1.4690  |  tot:     1.4690  |  count=     1
+[Main] Grid Reader Load File From Disk              |  avg:     0.0050  |  tot:     0.0050  |  count=     1
+[Main] Load Grid (and Stencils) from Disk           |  avg:   397.1300  |  tot:   397.1300  |  count=     1
+[Main] Load settings                                |  avg:     0.0000  |  tot:     0.0000  |  count=     1
+[Main] Total runtime for this proc                  |  avg: 44897.5312  |  tot: 44897.5312  |  count=     1
+[Main] Compute Weights                              |  avg: 13317.3984  |  tot: 13317.3984  |  count=     1
+[Main] Output weights to file                       |  avg: 18443.2285  |  tot: 18443.2285  |  count=     1
+
+NOTE: only timers that have called Timer::start() are shown. 
+      [A time of 0.0 may indicate the timer was not stopped.]
+====================================
+

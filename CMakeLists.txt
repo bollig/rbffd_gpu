@@ -50,7 +50,7 @@ OPTION (USE_VTK "Enable/Disable the use of VTK (if required by a test)" OFF)
 OPTION (USE_CUDA "Enable/Disable the use of CUDA" OFF)
 OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" OFF)
 OPTION (USE_ICC "Enable/Disable the use of Intel ICC compiler for CUDA" OFF)
-OPTION (USE_MPI "Enable/Disable parallel build and linking with MPI" OFF)
+OPTION (USE_MPI "Enable/Disable parallel build and linking with MPI" ON)
 
 MESSAGE (STATUS "USE_VTK = ${USE_VTK}")
 MESSAGE (STATUS "USE_CUDA = ${USE_CUDA}")

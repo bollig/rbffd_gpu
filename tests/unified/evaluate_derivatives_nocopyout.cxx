@@ -320,6 +320,9 @@ int main(int argc, char** argv) {
     der->overrideFileDetail(true);
     der->setAsciiWeights(ascii_weights);
     int load_err = der->loadAllWeightsFromFile();
+    if (!load_err) { 
+        cout << "Error loading weights: " << load_err << endl;
+    } 
     tm["loadWeights"]->stop();
 
 

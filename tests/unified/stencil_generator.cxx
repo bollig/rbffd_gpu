@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
         // Dump the graph file for METIS
         
         // Assemble the graph inplace in temp file:
-        char* outname = "metis_stencils.graph";
+        const char* outname = "metis_stencils.graph";
         std::ofstream grout(outname);
 
         // Assume we have an adjacency graph with all edges present as described

@@ -689,7 +689,7 @@ T ArrayT<T>::maxval(const Vec3i& min, const Vec3i& max)
 template <class T>
 const ArrayT<T> ArrayT<T>::operator+(const ArrayT<T>& a) const
 {
-		const int* dims = a.getDims();
+		//const int* dims = a.getDims();
 		int nbPts = a.getSize();
 		// check that dimensions of a and b are the same
 		//ArrayT<T>& r = *(new ArrayT<T>(dims));
@@ -706,7 +706,7 @@ const ArrayT<T> ArrayT<T>::operator+(const ArrayT<T>& a) const
 template <class T>
 ArrayT<T> ArrayT<T>::operator+(const ArrayT<T>& a)
 {
-		const int* dims = a.getDims();
+		//const int* dims = a.getDims();
 		int nbPts = a.getSize();
 		// check that dimensions of a and b are the same
 		//ArrayT<T>& r = *(new ArrayT<T>(dims));
@@ -723,7 +723,7 @@ ArrayT<T> ArrayT<T>::operator+(const ArrayT<T>& a)
 template <class T>
 ArrayT<T> ArrayT<T>::operator+(const T& a)
 {
-		const int* dims = this->getDims();
+		//const int* dims = this->getDims();
 		int nbPts = this->getSize();
 		// check that dimensions of a and b are the same
 		//ArrayT<T>& r = *(new ArrayT<T>(dims)); // constructor that takes array argument
@@ -742,7 +742,7 @@ ArrayT<T> ArrayT<T>::operator+(const T& a)
 template <class S>
 ArrayT<S> operator+(S& b, ArrayT<S>& a)   //  T + array
 { 
-	const int* dims = a.getDims();
+	//const int* dims = a.getDims();
 	int nbPts = a.getSize();
 	S* ap = a.getDataPtr();
 	//ArrayT<S>& r = *(new ArrayT<S>(dims));
@@ -757,7 +757,7 @@ ArrayT<S> operator+(S& b, ArrayT<S>& a)   //  T + array
 template <class S>
 ArrayT<S> operator+(ArrayT<S>& a, S& b)   //  T + array
 {
-	const int* dims = a.getDims();
+	//const int* dims = a.getDims();
 	int nbPts = a.getSize();
 	S* ap = a.getDataPtr();
 	//ArrayT<S>& r = *(new ArrayT<S>(dims));
@@ -784,7 +784,7 @@ ArrayT<T>& ArrayT<T>::operator*=(const double b)   //  T * array
 template <class T>
 ArrayT<T> operator*(double& b, ArrayT<T>& a)   //  T * array
 { 
-	const int* dims = a.getDims();
+	//const int* dims = a.getDims();
 	int nbPts = a.getSize();
 	T* ap = a.getDataPtr();
 	//a.getOrigin().print("origin\n");

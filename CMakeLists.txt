@@ -44,10 +44,11 @@ ENDIF (USE_ICC)
 PROJECT(rbffd_gpu)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 	
+SET(BOOST_ROOT /usr/local/Cellar/boost/1.55.0_1)
 
-OPTION (USE_VTK "Enable/Disable the use of VTK (if required by a test)" ON)
-OPTION (USE_CUDA "Enable/Disable the use of CUDA" ON)
-OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" ON)
+OPTION (USE_VTK "Enable/Disable the use of VTK (if required by a test)" OFF)
+OPTION (USE_CUDA "Enable/Disable the use of CUDA" OFF)
+OPTION (USE_OPENCL "Enable/Disable the use of OPENCL" OFF)
 OPTION (USE_ICC "Enable/Disable the use of Intel ICC compiler for CUDA" OFF)
 OPTION (USE_MPI "Enable/Disable parallel build and linking with MPI" ON)
 
@@ -101,6 +102,7 @@ ENDIF(WIN32)
 SET (FRAMEWORK_LIBRARY RBF)	# Name of the framework lib (i.e., lib<name>.dylib)
 SET(FRAMEWORK_CUDA_LIBRARY ${FRAMEWORK_LIBRARY}_cuda)
 SET(FRAMEWORK_OPENCL_LIBRARY ${FRAMEWORK_LIBRARY}_opencl)
+SET(FRAMEWORK_MPI_LIBRARY ${FRAMEWORK_LIBRARY}_mpi)
 SET (FRAMEWORK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 STRING(REPLACE ":" ";" inc_paths "$ENV{INCLUDE_PATH}:.")

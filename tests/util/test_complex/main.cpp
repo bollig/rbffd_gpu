@@ -19,6 +19,7 @@ int main (int argc, char** argv)
 	std::cout << "CEPS: " << ceps << std::endl;
 	std::cout << "CEPS2: " << ceps2 << std::endl;
 	std::cout << "CEPS2ALT: " << ceps2alt << std::endl;
+	std::cout << "scale: " << scale << std::endl;
 	std::cout << "scale ceps by 2: " << scale2 << std::endl; 
 	
 	if (argc > 1) {

@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 	}
 
 
-	int dim = 3;
+	//int dim = 3;
 
 	double minX = -1.;
 	double maxX = 1.;
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 	Grid* grid = new RegularGrid(nx, ny, nz, minX, maxX, minY, maxY, minZ, maxZ); 
 	grid->setSortBoundaryNodes(true); 
 	grid->generate();
-	int grid_size = grid->getNodeListSize();
+	//int grid_size = grid->getNodeListSize();
 	grid->setNSHashDims(hash_resolution, hash_resolution, hash_resolution);
 	grid->generateStencils(stencil_size, Grid::ST_HASH);   // nearest nb_points
 	if (output_filename_specified) { 

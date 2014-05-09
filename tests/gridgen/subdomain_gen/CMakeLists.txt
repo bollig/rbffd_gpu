@@ -25,6 +25,6 @@ require_config()   # Default is to require test.conf
 
 # Add one or more serial or parallel tests with arg list
 # [executableName] [sourceList] [argvForTest] 
-add_serial_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}") 
+#add_serial_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}") 
 add_parallel_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" 1)
 add_parallel_framework_test( "${EXEC_NAME}" "${EXEC_SOURCE_FILES}" "${ARGV}" ${NUM_PROCS})

@@ -1,6 +1,4 @@
 
-#include "utils/comm/communicator.h"
-
 #include <stdlib.h>
 
 #include "utils/conf/projectsettings.h"
@@ -12,9 +10,7 @@ using namespace std;
 
 int main(int argc, char** argv) {
 
-    Communicator* comm_unit = new Communicator(argc, argv);
-
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
+    ProjectSettings* settings = new ProjectSettings(argc, argv); 
 
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required);

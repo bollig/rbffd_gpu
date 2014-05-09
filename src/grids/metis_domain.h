@@ -155,8 +155,8 @@ class METISDomain : public Domain
         // end)
         // If node
         void fill_R_by_rank() {
-            int nb_stencils = this->getStencilsSize(); 
-            int nb_nodes = this->getNodeListSize(); 
+            //int nb_stencils = this->getStencilsSize(); 
+            //int nb_nodes = this->getNodeListSize(); 
 
 #if 0
             //std::cout << "START: " << nb_stencils << "\n";
@@ -196,8 +196,8 @@ class METISDomain : public Domain
         // end)
         // If node
         void fill_O_by_rank() {
-            int nb_stencils = this->getStencilsSize(); 
-            int nb_nodes = this->getNodeListSize(); 
+            //int nb_stencils = this->getStencilsSize(); 
+            //int nb_nodes = this->getNodeListSize(); 
 
             // First we have each ranks send notification of the number of nodes
             // in R_by_rank for each of the other ranks. 

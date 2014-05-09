@@ -37,7 +37,6 @@ class Stencils
             this->xd = xd_;
             //this->xd->print("Stencil::xd = ");
             // printf("Stencil::rad = %f\t Stencil::eps = %f\n", this->rad, this->eps);
-            this->choice = choice;
             //rd2 = new arma::mat(xd->n_rows, xd->n_cols);
             //if (strcmp(choice, "lapl") == 0) {
             // RD2 is a DISTANCE Matrix (without RBF evaluation)

@@ -45,8 +45,8 @@ class Reorder
 		void get_cuthill_mckee_order(AdjacencyGraph& G, std::vector<int>& order) {
 
 			// The initial ordering
-			boost::property_map<AdjacencyGraph,boost::vertex_index_t>::type
-				index_map = get(boost::vertex_index, G);
+			//boost::property_map<AdjacencyGraph,boost::vertex_index_t>::type 
+				//index_map = get(boost::vertex_index, G);
 
 			// Use the boost::graph cuthill mckee algorithm
 			std::vector<VertexType> inv_perm(boost::num_vertices(G));

@@ -1452,7 +1452,7 @@ void ContourSVD::print(mat& v, const char* msg)
     template <class T>
 void ContourSVD::print(Mat<T>& v, const char* msg)
 {
-    const char *txt = (msg == 0) ? "" : msg;
+    //const char *txt = (msg == 0) ? "" : msg;
     for (int j=0; j < v.n_cols; j++) {
         for (int i=0; i < v.n_rows; i++) {
             printf("%s(%d,%d)= %21.14g\n", msg, i, j, (double) v(i,j));

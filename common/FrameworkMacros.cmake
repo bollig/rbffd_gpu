@@ -300,10 +300,16 @@ MACRO ( ADD_PARALLEL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs )
 
             SET (_full_test_name "${_execname}_parallel_test${TEST_COUNT_${_execname}}") 
 
+            ADD_DEPENDENCIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
+            ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_MPI_LIBRARY} )
+            TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
+            TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_MPI_LIBRARY} )
+
+
             # Make doubly sure the mpi libs are linked into the executable
-            TARGET_LINK_LIBRARIES (${_execname}
-                ${MPI_LIBRARIES}
-                )
+            #TARGET_LINK_LIBRARIES (${_execname}
+            #    ${MPI_LIBRARIES}
+            #    )
 
             # Add a Parallel Test
             # Format: ADD_TEST( [TestName] [MPIExecutable] [MPINumProcFlag] [#ofProcs] [MPIOptions] [Executable] [Arg1] [Arg2] ... [ArgN])
@@ -337,10 +343,12 @@ MACRO ( ADD_PARALLEL_OPENCL_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs
     SET (_full_test_name "${_execname}_parallel_opencl_test${TEST_COUNT}") 
     IF (OPENCL_FOUND ) 
         ADD_PARALLEL_FRAMEWORK_TEST( "${_execname}" "${_sourcelist}" "${_argv}" "${_numprocs}")
+        ADD_DEPENDENCIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
+        ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_MPI_LIBRARY} )
         ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
-        TARGET_LINK_LIBRARIES ( ${_execname} 
-            ${FRAMEWORK_OPENCL_LIBRARY} 
-            )
+        TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
+        TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_MPI_LIBRARY} )
+        TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_OPENCL_LIBRARY} )
     ELSE (OPENCL_FOUND)
         MESSAGE (WARNING "${_full_test_name} is disabled because OPENCL_FOUND=${OPENCL_FOUND}.")
     ENDIF (OPENCL_FOUND)
@@ -406,13 +414,15 @@ MACRO ( ADD_PARALLEL_CUDA_FRAMEWORK_TEST _execname _sourcelist _argv _numprocs)
 
 			ADD_DEPENDENCIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES})
 			ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
+			ADD_DEPENDENCIES( ${_execname} ${FRAMEWORK_MPI_LIBRARY} )
 			TARGET_LINK_LIBRARIES (${_execname} ${FRAMEWORK_LIBRARY} ${FRAMEWORK_DEPENDENCIES}) 
 			TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_CUDA_LIBRARY} )
+			TARGET_LINK_LIBRARIES ( ${_execname} ${FRAMEWORK_MPI_LIBRARY} )
 
 			# Make doubly sure the mpi libs are linked into the executable
-			TARGET_LINK_LIBRARIES (${_execname}
-			    ${MPI_LIBRARIES}
-			    )
+			#TARGET_LINK_LIBRARIES (${_execname}
+			#    ${MPI_LIBRARIES}
+			#    )
 
 			# Add a Parallel Test
 			# Format: ADD_TEST( [TestName] [MPIExecutable] [MPINumProcFlag] [#ofProcs] [MPIOptions] [Executable] [Arg1] [Arg2] ... [ArgN])

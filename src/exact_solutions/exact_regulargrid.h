@@ -8,6 +8,7 @@ class ExactRegularGrid : public ExactSolution
     private:
         double freq;
         double decay;
+        /*
         double princ_axis1_inv2;
         double princ_axis1_inv4;
         double princ_axis2_inv2;
@@ -17,6 +18,7 @@ class ExactRegularGrid : public ExactSolution
         double princ_axis1;
         double princ_axis2;
         double princ_axis3;
+        */
 
     public:
         //ExactEllipsoid();

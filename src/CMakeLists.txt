@@ -30,7 +30,6 @@ SET(REQUIRED_SOURCE_FILES
     pdes/parabolic/heat_pde.cpp
     #TODO    pdes/parabolic/convection_diffusion_pde.cpp
     pdes/elliptic/ncar_poisson1.cpp
-    pdes/elliptic/stokes_steady_pde.cpp
     pdes/hyperbolic/vortex_rollup.cpp
     pdes/hyperbolic/cosine_bell.cpp
 
@@ -42,16 +41,19 @@ SET(REQUIRED_SOURCE_FILES
     rbffd/contour_svd.cpp
     rbffd/stencils.cpp
 
-    utils/comm/communicator.cpp
-    utils/comm/mpisendable.cpp
     utils/conf/projectsettings.cpp
     utils/geom/parametric_patch.cpp
     utils/geom/octree.cpp	
     utils/geom/cart2sph.cpp
     utils/random.cpp
     utils/norms.cpp
+)
+
+SET( REQUIRED_MPI_SOURCE_FILES
+    utils/comm/communicator.cpp
+    utils/comm/mpisendable.cpp
     utils/mpi_norms.cpp
-    )
+)
 
 
 SET( REQUIRED_CU_SOURCE_FILES
@@ -72,6 +74,7 @@ SET( REQUIRED_CL_SOURCE_FILES
     #    pdes/hyperbolic/cosine_bell_cl.cpp
     pdes/time_dependent_pde_cl.cpp
     pdes/time_dependent_pde_vcl.cpp
+    pdes/elliptic/stokes_steady_pde.cpp
     rbffd/rbffd_cl.cpp
     rbffd/rbffd_vcl.cpp
     rbffd/rbffd_vcl_overlap.cpp
@@ -141,12 +144,10 @@ ENDIF(OPENCL_FOUND AND USE_OPENCL)
 
 
 IF (MPI_FOUND AND USE_MPI)
-    TARGET_LINK_LIBRARIES (	${FRAMEWORK_LIBRARY}
+    MESSAGE(STATUS "ADDING ${FRAMEWORK_MPI_LIBRARY} TO BUILD PROCESS; ${MPI_LIBRARIES}")
+    ADD_LIBRARY (${FRAMEWORK_MPI_LIBRARY} ${REQUIRED_MPI_SOURCE_FILES} noop.cxx)
+    ADD_DEPENDENCIES( ${FRAMEWORK_MPI_LIBRARY} ${FRAMEWORK_DEPENDENCIES} ${FRAMEWORK_LIBRARY})
+    TARGET_LINK_LIBRARIES (	${FRAMEWORK_MPI_LIBRARY}
         ${MPI_LIBRARIES}
-        )
-    IF (CUDA_FOUND)
-        TARGET_LINK_LIBRARIES (	${FRAMEWORK_CUDA_LIBRARY}
-            ${MPI_LIBRARIES}
-            )
-    ENDIF (CUDA_FOUND)
+    )
 ENDIF (MPI_FOUND AND USE_MPI)

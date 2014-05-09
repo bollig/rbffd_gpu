@@ -153,7 +153,7 @@ class SpMVTest
             if (!disable_timers) tm["spmv_w_comm"]->start();
 
 	    int nb_stencils = grid->getStencilsSize();
-	    int nb_nodes = grid->getNodeListSize();
+	    //int nb_nodes = grid->getNodeListSize();
 	    int nb_qmb_rows = grid->QmB_size;
 
 	    if (!disable_timers) tm["synchronize"]->start();
@@ -250,9 +250,9 @@ class SpMVTest
 	}
 
         void encodeSendBuf(std::vector<double>& cpu_vec) {
-            unsigned int set_Q_size = grid->Q_size;
-            unsigned int set_O_size = grid->O_size;
-            unsigned int nb_bnd = grid->getBoundaryIndicesSize();
+            //unsigned int set_Q_size = grid->Q_size;
+            //unsigned int set_O_size = grid->O_size;
+            //unsigned int nb_bnd = grid->getBoundaryIndicesSize();
 
             //std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
 
@@ -264,8 +264,8 @@ class SpMVTest
             // map to convert from local node indices to the linear
             // system indices (i.e. filter off the dirichlet boundary
             // node indices
-            unsigned int offset_to_interior = nb_bnd;
-            unsigned int offset_to_set_O = (set_Q_size - set_O_size);
+            //unsigned int offset_to_interior = nb_bnd;
+            //unsigned int offset_to_set_O = (set_Q_size - set_O_size);
 
             // std::cout << "set_Q_size = " << set_Q_size << ", set_O_size = " << set_O_size << ", nb_bnd = " << nb_bnd << std::endl;
 
@@ -306,7 +306,7 @@ class SpMVTest
         void decodeRecvBuf(std::vector<double>& cpu_vec) {
             unsigned int set_Q_size = grid->Q_size;
             unsigned int set_R_size = grid->R_size;
-            unsigned int nb_bnd = grid->getBoundaryIndicesSize();
+            //unsigned int nb_bnd = grid->getBoundaryIndicesSize();
 
             // OUR SOLUTION IS ARRANGED IN THIS FASHION:
             //  { Q\B B\O O R } where B = union(D, O) and Q = union(Q\B B\O O)
@@ -315,8 +315,8 @@ class SpMVTest
             // map to convert from local node indices to the linear
             // system indices (i.e. filter off the dirichlet boundary
             // node indices
-            unsigned int offset_to_interior = nb_bnd;
-            unsigned int offset_to_set_R = set_Q_size;
+            //unsigned int offset_to_interior = nb_bnd;
+            //unsigned int offset_to_set_R = set_Q_size;
 
 
             if (!disable_timers) tm["decode_recv"]->start();

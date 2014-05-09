@@ -1,6 +1,4 @@
 
-#include "utils/comm/communicator.h"
-
 #include <stdlib.h>
 #include <iostream>
 
@@ -18,9 +16,7 @@ int main(int argc, char** argv) {
     tm["hash"] = new EB::Timer("Generate stencils using Hash");
     tm["brute"] = new EB::Timer("Generate stencils using Brute Force");
 
-    Communicator* comm_unit = new Communicator(argc, argv);
-
-    ProjectSettings* settings = new ProjectSettings(argc, argv, comm_unit->getRank());
+    ProjectSettings* settings = new ProjectSettings(argc, argv);
 
 
     int dim = settings->GetSettingAs<int>("DIMENSION", ProjectSettings::required);

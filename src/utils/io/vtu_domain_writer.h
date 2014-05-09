@@ -1,6 +1,7 @@
 #ifndef __VTU_DOMAIN_WRITER_H__
 #define __VTU_DOMAIN_WRITER_H__
 
+#ifdef USE_VTK
 
 // Writes a Domain class grid to file. 
 
@@ -147,3 +148,4 @@ class VtuDomainWriter
 };
 
 #endif
+#endif 

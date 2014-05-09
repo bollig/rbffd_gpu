@@ -118,7 +118,7 @@ class SpMVTest
             this->R_stats = new MPI_Status[r_comm_size];
             tm["allocateCommBufs"]->stop();
 
-            unsigned int *O_tot_all;
+            unsigned int *O_tot_all = NULL;
             if (rank == 0) {
                 O_tot_all = new unsigned int[this->size*5];
             }

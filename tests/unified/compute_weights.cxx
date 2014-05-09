@@ -21,7 +21,11 @@
 #include "grids/grid_reader.h"
 #include "grids/domain.h"
 #include "grids/metis_domain.h"
+
+#ifdef USE_VTU_WRITER
 #include "utils/io/vtu_domain_writer.h"
+#endif 
+
 #include "rbffd/rbffd.h"
 
 #include <boost/program_options.hpp>
@@ -254,7 +258,8 @@ int main(int argc, char** argv) {
 	Domain* subdomain; 
 	subdomain = new METISDomain(mpi_rank, mpi_size, grid, grid_dim, partition_filename, part_file_loaded); 
 	subdomain->writeToFile(); 
-#if 0
+
+#ifdef USE_VTU_WRITER
 	VtuDomainWriter* vtu = new VtuDomainWriter(subdomain, mpi_rank, mpi_size);
 	std::cout << "DECOMPOSED\n";
 #endif 
